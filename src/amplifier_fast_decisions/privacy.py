@@ -98,6 +98,12 @@ SAFE_FIELDS = {
     "state_chars",
     "domain",
     "allow_external_state",
+    # Auto-observatory (session-start viewer bootstrap): a fixed action label,
+    # a fixed reason code, and the local loopback port -- never the
+    # token-bearing URL, which is never placed in event data.
+    "action",
+    "reason",
+    "port",
 }
 
 

@@ -10,9 +10,11 @@ import inspect
 import json
 import os
 import re
+import signal
 import sys
 import threading
 import webbrowser
+from datetime import UTC, datetime
 from pathlib import Path
 
 from . import __version__
@@ -26,10 +28,12 @@ from .bench import (
 )
 from .bench.suite import DeterministicSuiteBackend, ForbiddenLabelSource
 from .demo import run_demo
+from .observatory import read_state, remove_state, viewer_is_alive, write_state_atomic
 from .server import STATIC, EventIndex, ViewerServer
 
 DEFAULT_EVENTS = Path.home() / ".amplifier" / "fast-decisions" / "events"
 DEFAULT_SUITE = Path(__file__).resolve().parents[2] / "suites" / "v1.jsonl"
+DEFAULT_STATE_FILE = Path.home() / ".amplifier" / "fast-decisions" / "serve.json"
 
 
 def doctor(require_amplifier: bool = False) -> int:
@@ -240,6 +244,35 @@ def bench_suite(args) -> int:
     return 0
 
 
+def stop_server(state_file: str | Path) -> int:
+    """``afast serve --stop``: read the state file, signal the pid, remove it.
+
+    Exit 1 with a clear message only when there is nothing running (no state
+    file). Otherwise best-effort SIGTERM (a pid that is already gone is not
+    an error -- the end state, "no viewer running", is already achieved) and
+    always remove the state file, exit 0.
+    """
+    state = read_state(state_file)
+    if state is None:
+        print(
+            f"afast: no viewer running (no state file at {state_file})", file=sys.stderr
+        )
+        return 1
+    pid = state.get("pid")
+    was_alive = viewer_is_alive(state)
+    if isinstance(pid, int):
+        try:
+            os.kill(pid, signal.SIGTERM)
+        except ProcessLookupError:
+            pass
+        except OSError as exc:
+            print(f"afast: failed to signal viewer (pid {pid}): {exc}", file=sys.stderr)
+    remove_state(state_file)
+    status = "was" if was_alive else "was not (already stopped)"
+    print(f"Stopped viewer (pid {pid}); it {status} responding before the signal.")
+    return 0
+
+
 def _load_module_bundle_yaml(path: Path) -> dict:
     """Parse a module-source bundle file: plain YAML, or YAML frontmatter (.md).
 
@@ -360,6 +393,9 @@ def main(argv=None) -> int:
         command.add_argument("--open", action="store_true")
         if name == "demo":
             command.add_argument("--record-only", action="store_true")
+        if name == "serve":
+            command.add_argument("--state-file", default=str(DEFAULT_STATE_FILE))
+            command.add_argument("--stop", action="store_true")
     command = commands.add_parser("export")
     command.add_argument("--events", required=True)
     command.add_argument("--output", default="decision-observatory.html")
@@ -426,6 +462,8 @@ def main(argv=None) -> int:
             return bench_replay(args)
         if args.command == "bench" and args.bench_command == "suite":
             return bench_suite(args)
+        if args.command == "serve" and args.stop:
+            return stop_server(args.state_file)
         if args.command == "demo" and args.record_only:
             asyncio.run(run_demo(args.events))
             print("Synthetic demo recorded in " + str(Path(args.events).resolve()))
@@ -442,6 +480,21 @@ def main(argv=None) -> int:
                 daemon=True,
             )
             worker.start()
+        state_file = (
+            Path(args.state_file).expanduser() if args.command == "serve" else None
+        )
+        if state_file is not None:
+            write_state_atomic(
+                state_file,
+                {
+                    "pid": os.getpid(),
+                    "port": server.server_port,
+                    "url": server.url,
+                    "events_dir": str(Path(args.events).expanduser().resolve()),
+                    "started_at": datetime.now(UTC).isoformat(),
+                    "version": __version__,
+                },
+            )
         print("Read-only local viewer: " + server.url, flush=True)
         print(
             "Telemetry directory: " + str(Path(args.events).expanduser().resolve()),
@@ -458,6 +511,8 @@ def main(argv=None) -> int:
             server.server_close()
             if worker:
                 worker.join(timeout=3)
+            if state_file is not None:
+                remove_state(state_file)
         return 0
     except (ValueError, OSError) as exc:
         print("afast: " + str(exc), file=sys.stderr)

@@ -32,6 +32,15 @@ Shadow is on by default with the deterministic (in-process, offline)
 backend. Run a normal session; `shadow_*` events appear in
 `~/.amplifier/fast-decisions/events` with no API key involved.
 
+The first top-level session also auto-opens the local observatory
+(`http://127.0.0.1:8765`, token-protected, loopback-only) so `shadow_*`
+telemetry is visible live -- no separate `afast serve` step needed. It
+reuses an already-running viewer rather than spawning a second one, stays
+off for child sessions and non-TTY runs, and can be disabled with
+`observatory.open_browser: never` or `AFAST_OBSERVATORY=off`. Stop it any
+time with `afast serve --stop`. See `docs/PRIVACY.md` ("Viewer") for what
+the state file holds.
+
 ### For real Jev in shadow
 
 Real Jev scoring (still shadow -- never enacted) needs
