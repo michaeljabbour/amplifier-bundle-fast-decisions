@@ -20,13 +20,33 @@ target").
 ## `afast bench replay`
 
 Offline replay over recorded telemetry. Joins `requested` -> `scored` ->
-`routed` -> `shadow_agreement` / `role_agreement` by `decision_id`. Accepts a
-directory of `*.jsonl` files or a single JSONL file (e.g.
-`examples/demo-events.jsonl`).
+`routed` -> `shadow_proposed` -> `shadow_agreement` / `role_agreement` by
+`decision_id`.
+
+**Input formats accepted (freely mixed within one file or directory):**
+
+- A directory of `*.jsonl` files -- the bundle recorder's own layout
+  (`events_dir`, e.g. `~/.amplifier/fast-decisions/events`, one file per
+  session).
+- A single JSONL file (e.g. `examples/demo-events.jsonl`), each line the
+  bundle recorder's **flat** record: `{event, event_id, decision_id, seq,
+  turn_id, session_id, data: {...payload...}, ...}`.
+- A **kernel session directory** (`~/.amplifier/projects/*/sessions/<id>/`)
+  or its `events.jsonl` directly. The kernel's own session logger wraps our
+  flat record one level deeper, inside its own log envelope's `data` field:
+  `{ts, lvl, schema, event, redaction, session_id, data: {data:
+  {...payload...}, decision_id, event, event_id, monotonic_ns, parent_id,
+  parent_session_id, schema_version, seq, synthetic, turn_id}}`.
+  `load_events` detects this shape (a top-level `data` that is itself a
+  dict carrying its own `event`/`event_id`) and unwraps it automatically --
+  every other line in the same directory or file (recorder-flat, or a
+  sibling non-`fast_decisions:*` file like `transcript.jsonl`) is read
+  normally or skipped, never misclassified.
 
 ```bash
 afast bench replay examples/demo-events.jsonl --json | python3 -m json.tool
 afast bench replay ~/.amplifier/fast-decisions/events --md uat.md
+afast bench replay ~/.amplifier/projects/<project>/sessions/<id>/ --json
 ```
 
 ## `afast bench suite`

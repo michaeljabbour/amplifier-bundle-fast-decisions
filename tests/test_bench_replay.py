@@ -10,6 +10,7 @@ import unittest
 from pathlib import Path
 
 from amplifier_fast_decisions.bench.replay import (
+    _unwrap_kernel_envelope,
     join_by_decision_id,
     load_events,
     replay_events,
@@ -34,6 +35,39 @@ def _event(event_id, decision_id, kind, data, seq=1, turn_id="t1"):
         "monotonic_ns": seq,
         "synthetic": True,
         "data": data,
+    }
+
+
+def _kernel_envelope(event_id, decision_id, kind, data, seq=1, turn_id="t1", session_id="s1"):
+    """Build a record shaped exactly like the kernel's session-log envelope
+    (``~/.amplifier/projects/*/sessions/<id>/events.jsonl``), one level of
+    nesting deeper than the bundle's own recorder output: our whole flat
+    record (event/event_id/decision_id/seq/turn_id/schema_version/synthetic/
+    monotonic_ns/data) sits under the kernel envelope's own top-level
+    ``data`` key, with the kernel's own ``event``/``session_id`` duplicated
+    at the outer level and no ``session_id`` inside the inner record --
+    this exact key set was verified against a real session file (see
+    ``bench/replay.py::_unwrap_kernel_envelope``)."""
+    return {
+        "ts": "2026-09-17T00:00:00+00:00",
+        "lvl": "INFO",
+        "schema": {"name": "amplifier.log", "ver": "1.0.0"},
+        "event": f"fast_decisions:{kind}",
+        "redaction": {"applied": True, "rules": ["secrets", "pii-basic"]},
+        "session_id": session_id,
+        "data": {
+            "data": data,
+            "decision_id": decision_id,
+            "event": f"fast_decisions:{kind}",
+            "event_id": event_id,
+            "monotonic_ns": seq,
+            "parent_id": None,
+            "parent_session_id": None,
+            "schema_version": "1.0",
+            "seq": seq,
+            "synthetic": False,
+            "turn_id": turn_id,
+        },
     }
 
 
@@ -375,6 +409,137 @@ class HookOnlySessionTests(unittest.TestCase):
                     "latency_kind": "decision_model_wall_time",
                     "choice": "c1",
                     "selected_probability": 0.9,
+                },
+                seq=2,
+            ),
+        ]
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "mixed.jsonl"
+            path.write_text(
+                "\n".join(json.dumps(e) for e in events) + "\n", encoding="utf-8"
+            )
+            result = asyncio.run(replay_events(path))
+        self.assertEqual(result.n_decisions, 2)
+        self.assertIn("read-target", result.per_domain)
+        self.assertIn("tool-choice", result.per_domain)
+
+
+class KernelEnvelopeUnwrapTests(unittest.TestCase):
+    """Regression coverage for the kernel session-log envelope
+    (``~/.amplifier/projects/*/sessions/<id>/events.jsonl``) -- verified
+    against a real session file, not just a guessed shape (see
+    ``bench/replay.py::_unwrap_kernel_envelope``)."""
+
+    def _hook_only_envelope_events(self):
+        return [
+            _kernel_envelope(
+                "so1",
+                "d1",
+                "shadow_observed",
+                {"tool": "fast_workspace", "tool_call_id": "call_1"},
+                seq=1,
+            ),
+            _kernel_envelope(
+                "sp1",
+                "d1",
+                "shadow_proposed",
+                {
+                    "choice": "read_d82ab49f91a6",
+                    "domain": "read-target",
+                    "state_chars": 2416,
+                    "selected_probability": 0.97,
+                },
+                seq=2,
+            ),
+            _kernel_envelope(
+                "sa1",
+                "d1",
+                "shadow_agreement",
+                {
+                    "agreement": "match",
+                    "proposed_candidate": "read_d82ab49f91a6",
+                    "actual_tool": "fast_workspace",
+                    "would_have_avoided_llm_turn": True,
+                    "domain": "read-target",
+                },
+                seq=3,
+            ),
+        ]
+
+    def test_unwrap_extracts_the_flat_inner_record(self):
+        envelope = _kernel_envelope("e1", "d1", "shadow_proposed", {"domain": "read-target"})
+        unwrapped = _unwrap_kernel_envelope(envelope)
+        self.assertEqual(unwrapped["event"], "fast_decisions:shadow_proposed")
+        self.assertEqual(unwrapped["event_id"], "e1")
+        self.assertEqual(unwrapped["decision_id"], "d1")
+        self.assertEqual(unwrapped["data"], {"domain": "read-target"})
+        # session_id is absent from the inner record; unwrap fills it in
+        # from the outer envelope.
+        self.assertEqual(unwrapped["session_id"], "s1")
+
+    def test_unwrap_is_a_noop_on_a_flat_recorder_record(self):
+        flat = _event("e1", "d1", "shadow_proposed", {"domain": "read-target"})
+        self.assertEqual(_unwrap_kernel_envelope(flat), flat)
+
+    def test_load_events_reads_kernel_envelope_lines(self):
+        events = self._hook_only_envelope_events()
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "events.jsonl"
+            path.write_text(
+                "\n".join(json.dumps(e) for e in events) + "\n", encoding="utf-8"
+            )
+            loaded = load_events(path)
+        self.assertEqual(len(loaded), 3)
+        kinds = {e["event"] for e in loaded}
+        self.assertEqual(
+            kinds,
+            {
+                "fast_decisions:shadow_observed",
+                "fast_decisions:shadow_proposed",
+                "fast_decisions:shadow_agreement",
+            },
+        )
+
+    def test_kernel_envelope_session_dir_produces_agreement_rate_and_state_chars(self):
+        events = self._hook_only_envelope_events()
+        with tempfile.TemporaryDirectory() as tmp:
+            # A session directory, e.g. .../sessions/<id>/, alongside a
+            # non-fast_decisions sibling file (transcript.jsonl) that must
+            # be ignored, not merely tolerated.
+            session_dir = Path(tmp)
+            (session_dir / "events.jsonl").write_text(
+                "\n".join(json.dumps(e) for e in events) + "\n", encoding="utf-8"
+            )
+            (session_dir / "transcript.jsonl").write_text(
+                json.dumps({"role": "user", "content": "hi"}) + "\n", encoding="utf-8"
+            )
+            result = asyncio.run(replay_events(session_dir))
+        self.assertEqual(result.n_decisions, 1)
+        self.assertEqual(result.agreement_rate, 1.0)
+        self.assertEqual(result.state_chars_p50, 2416.0)
+        self.assertIn("read-target", result.per_domain)
+        self.assertEqual(result.per_domain["read-target"]["agreement_rate"], 1.0)
+
+    def test_mixed_kernel_envelope_and_flat_recorder_lines_in_one_file(self):
+        # One decision recorded in the kernel-envelope shape, another in
+        # the bundle recorder's flat shape -- both must be counted.
+        events = self._hook_only_envelope_events() + [
+            _event(
+                "sp2",
+                "d2",
+                "shadow_proposed",
+                {"domain": "tool-choice", "state_chars": 100, "selected_probability": 0.9},
+                seq=1,
+            ),
+            _event(
+                "sa2",
+                "d2",
+                "shadow_agreement",
+                {
+                    "agreement": "match",
+                    "actual_tool": "delegate",
+                    "would_have_avoided_llm_turn": True,
+                    "domain": "tool-choice",
                 },
                 seq=2,
             ),
