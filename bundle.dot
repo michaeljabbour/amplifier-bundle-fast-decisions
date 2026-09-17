@@ -8,12 +8,12 @@ digraph fast_decisions {
     nodesep=0.6
     ranksep=0.7
     bgcolor="white"
-    source_hash="0fc128ae02ca443f024921b06badeee23aebfb5c4630c4abccd8dcdd7bcfde1d"
+    source_hash="9d96540b9fa89938074a1d0bd9c7180cdce736687eaff66330c070efa7e20155"
 
     node [fontname="Helvetica", fontsize=11, style="filled,rounded"]
     edge [fontname="Helvetica", fontsize=9]
 
-    root_fast_decisions [label="fast-decisions v0.1.0\n0 tools · 0 agents\n~205 tok aggregate", shape=box, fillcolor="#80cbc4", style="filled,rounded,bold", penwidth=2]
+    root_fast_decisions [label="fast-decisions v0.1.0\n0 tools · 0 agents\n~142 tok aggregate", shape=box, fillcolor="#80cbc4", style="filled,rounded,bold", penwidth=2]
 
     subgraph cluster_behaviors {
         label="Behaviors"
