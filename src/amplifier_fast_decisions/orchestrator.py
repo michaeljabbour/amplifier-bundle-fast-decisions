@@ -223,7 +223,7 @@ async def mount(coordinator, config: dict):
     runtime, _ = get_runtime(coordinator, config, owner=True)
     try:
         orchestrator = HybridOrchestrator(config, coordinator, runtime)
-        await coordinator.mount("session", orchestrator, name="orchestrator")
+        await coordinator.mount("orchestrator", orchestrator)
     except Exception:
         await runtime.close()
         raise

@@ -32,7 +32,7 @@ uv tool install "git+https://github.com/michaeljabbour/amplifier-bundle-fast-dec
 Python 3.11 or newer. No installation, API key, Node build, or network required:
 
 ```bash
-cd amplifier-fast-decisions
+cd amplifier-bundle-fast-decisions
 python3 -m amplifier_fast_decisions demo --open
 ```
 
