@@ -14,7 +14,7 @@ Add the capability to your Amplifier app (hook + read-only `fast_workspace` tool
 amplifier bundle add "git+https://github.com/michaeljabbour/amplifier-bundle-fast-decisions@main#subdirectory=behaviors/fast-decisions.yaml" --app
 ```
 
-Start any session; the observatory opens at `http://127.0.0.1:8765` (token-protected, loopback) the first time a top-level session starts, with shadow measurement already on against the offline backend. It reuses an already-running viewer instead of spawning a second one. Stop it with `afast serve --stop`. Disable auto-open with `observatory.open_browser: never` in the hook config, or `AFAST_OBSERVATORY=off` (or `AMPLIFIER_NO_BROWSER=1`) in the environment; it also stays off for child sessions and non-interactive (non-TTY) runs.
+Start any session; the observatory opens at `http://127.0.0.1:8765` (token-protected, loopback) the first time a top-level session starts, with shadow measurement already on against the offline backend. It reuses an already-running viewer instead of spawning a second one. If port 8765 is busy, `afast serve` picks a free port instead; the state file and printed URL tell you which. Stop it with `afast serve --stop`. Disable auto-open with `observatory.open_browser: never` in the hook config, or `AFAST_OBSERVATORY=off` (or `AMPLIFIER_NO_BROWSER=1`) in the environment; it also stays off for child sessions and non-interactive (non-TTY) runs.
 
 To run the decision orchestrator's active fast path (a fast decision model actually substituting a prepared read-only action for an LLM turn), load the standalone active bundle instead:
 

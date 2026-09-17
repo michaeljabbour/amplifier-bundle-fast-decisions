@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import errno
 import importlib
 import importlib.metadata
 import inspect
@@ -396,6 +397,7 @@ def main(argv=None) -> int:
         if name == "serve":
             command.add_argument("--state-file", default=str(DEFAULT_STATE_FILE))
             command.add_argument("--stop", action="store_true")
+            command.add_argument("--no-fallback", action="store_true")
     command = commands.add_parser("export")
     command.add_argument("--events", required=True)
     command.add_argument("--output", default="decision-observatory.html")
@@ -468,7 +470,25 @@ def main(argv=None) -> int:
             asyncio.run(run_demo(args.events))
             print("Synthetic demo recorded in " + str(Path(args.events).resolve()))
             return 0
-        server = ViewerServer(args.events, args.port)
+        requested_port = args.port
+        no_fallback = args.command == "serve" and getattr(args, "no_fallback", False)
+        try:
+            server = ViewerServer(args.events, requested_port)
+        except OSError as exc:
+            can_fall_back = (
+                args.command == "serve"
+                and requested_port != 0
+                and not no_fallback
+                and exc.errno == errno.EADDRINUSE
+            )
+            if not can_fall_back:
+                raise
+            server = ViewerServer(args.events, 0)
+            print(
+                f"afast: port {requested_port} was busy; using port "
+                f"{server.server_port} instead",
+                file=sys.stderr,
+            )
         stop = threading.Event()
         worker = None
         if args.command == "demo":
