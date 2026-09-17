@@ -141,8 +141,11 @@ class DecisionTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(provider.calls,1)
         self.assertTrue(any(e['data'].get('reason_code')=='model_abstained' for e in events))
     async def test_timeout_and_circuit(self):
-        p=Policy(mode='active',timeout_ms=20,allowed_tools=('demo_inspect',),allow_synthetic_active=True)
-        backend=ScriptedBackend([{'delay_ms':100}],delay_ms=0)
+        # timeout_ms>=100 with a >=5x backend delay keeps this deterministic under
+        # CI scheduling jitter (see test_build_contracts.py's shared-deadline test
+        # for the failure mode a too-tight margin produces).
+        p=Policy(mode='active',timeout_ms=100,allowed_tools=('demo_inspect',),allow_synthetic_active=True)
+        backend=ScriptedBackend([{'delay_ms':500}],delay_ms=0)
         service,_,events,_=setup_service(policy=p,backend=backend)
         self.assertIsNone(await service.choose(request(),{'demo_inspect':DemoTool()}))
         self.assertTrue(any(e['data'].get('reason_code')=='decision_timeout' for e in events))
