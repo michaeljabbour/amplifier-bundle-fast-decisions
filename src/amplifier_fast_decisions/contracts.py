@@ -6,6 +6,7 @@ import hashlib
 import json
 import math
 import re
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from typing import Any, Literal, Protocol
 
@@ -129,6 +130,33 @@ class Candidate:
 def candidate_order_key(candidate: Candidate) -> tuple[str, str]:
     """Canonical stable sort key for serialisation: ``(origin, id)``."""
     return (candidate.origin, candidate.id)
+
+
+DOMAIN_TOOL_CHOICE = "tool-choice"
+DOMAIN_READ_TARGET = "read-target"
+DOMAIN_MODEL_ROLE = "model-role"
+DOMAINS = (DOMAIN_TOOL_CHOICE, DOMAIN_READ_TARGET, DOMAIN_MODEL_ROLE)
+
+
+def classify_domain(candidates: Sequence[Candidate], *, kind: str = "action") -> str:
+    """One pure classifier, reused everywhere a domain label is recorded
+    (service.py's main decision path, shadow.py's off-critical-path
+    scoring, router.py's model-role proposals, and bench's offline
+    replay/suite reporting) so there is exactly one place this decision is
+    made, at the point the candidate set is built:
+
+    - ``kind="role"`` (a model-role router decision, which has no
+      candidate set of its own) always classifies as ``"model-role"``.
+    - Every candidate targeting ``fast_workspace`` (and at least one
+      candidate present) classifies as ``"read-target"``.
+    - Anything else -- mixed tools, non-workspace tools, or an empty
+      candidate set -- classifies as ``"tool-choice"``.
+    """
+    if kind == "role":
+        return DOMAIN_MODEL_ROLE
+    if candidates and all(c.tool == "fast_workspace" for c in candidates):
+        return DOMAIN_READ_TARGET
+    return DOMAIN_TOOL_CHOICE
 
 
 def compute_candidate_order_hash(

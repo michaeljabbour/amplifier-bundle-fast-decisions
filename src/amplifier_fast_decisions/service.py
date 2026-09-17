@@ -15,6 +15,8 @@ from .contracts import (
     DecisionRequest,
     Policy,
     TurnState,
+    canonical,
+    classify_domain,
     compute_candidate_order_hash,
 )
 from .questions import collect_questions
@@ -161,12 +163,19 @@ class DecisionService:
         if not candidates:
             return await slow("no_eligible_candidates")
         order_hash = compute_candidate_order_hash(candidates)
+        # Decided once, here, at the point the candidate set is built --
+        # reused verbatim in scored/routed/fallback (via `common`) and by
+        # the shadow scorer / role router (their own candidate sets).
+        domain = classify_domain(candidates)
+        common["domain"] = domain
         state = build_state(request, self.policy.max_state_chars)
+        state_chars = len(canonical(state))
         await self.emit(
             "requested",
             {
                 **common,
                 "state_hash": snapshot_hash,
+                "state_chars": state_chars,
                 "candidate_count": len(candidates),
                 "question_count": len(questions),
                 "candidate_order_hash": order_hash,

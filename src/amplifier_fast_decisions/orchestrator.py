@@ -236,7 +236,8 @@ class HybridOrchestrator:
             # on routed/slow_start/slow_end). See docs/UPSTREAM_CONTRACT.md.
             await service.emit("turn_start", {"mode": service.policy.mode,
                 "backend": service.backend.name, "engine": "upstream-loop-streaming",
-                "policy_version": service.policy.version})
+                "policy_version": service.policy.version,
+                "allow_external_state": service.policy.allow_external_state})
             # Provider keys and defaults are unchanged. Upstream pins and selections apply.
             wrapped_tools = {key: ObservedTool(tool, self.runtime, key) for key, tool in tools.items()}
             wrapped_providers = {key: RoutedProvider(provider, self.runtime, tools,

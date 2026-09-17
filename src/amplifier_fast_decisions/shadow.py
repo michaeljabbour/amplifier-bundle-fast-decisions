@@ -15,7 +15,15 @@ import time
 from dataclasses import dataclass
 from typing import Any, Literal
 
-from .contracts import SLOW, Candidate, DecisionRequest, Question, digest
+from .contracts import (
+    SLOW,
+    Candidate,
+    DecisionRequest,
+    Question,
+    canonical,
+    classify_domain,
+    digest,
+)
 
 
 @dataclass(frozen=True)
@@ -74,6 +82,12 @@ class ShadowWorker:
         self._proposals: dict[str, _Proposal] = {}
         self._pending_outcomes: dict[str, ShadowOutcome] = {}
         self.dropped_shadow_jobs = 0
+        # Turn ids whose first shadow_proposed event has already carried
+        # allow_external_state -- a per-turn context field, not repeated on
+        # every decision within the same turn. Bounded defensively; turn
+        # ids are never reused, so an extremely long-lived session is the
+        # only way this grows without bound.
+        self._turn_context_emitted: set[str] = set()
 
     def submit(self, job: ShadowJob) -> bool:
         """Non-blocking enqueue. False when the queue is full (counted)."""
@@ -151,19 +165,28 @@ class ShadowWorker:
         p = decision.probabilities[decision.choice]
         others = [v for k, v in decision.probabilities.items() if k != decision.choice]
         margin = p - max(others, default=0)
-        await self._service.emit(
-            "shadow_proposed",
-            {
-                "choice": decision.choice,
-                "probabilities": decision.probabilities,
-                "selected_probability": p,
-                "margin": margin,
-                "duration_ms": duration,
-                "state_source": job.state_source,
-                "candidate_count": len(job.candidates),
-            },
-            job.decision_id,
+        domain = classify_domain(
+            job.candidates, kind="role" if job.kind == "role" else "action"
         )
+        proposed_data = {
+            "choice": decision.choice,
+            "probabilities": decision.probabilities,
+            "selected_probability": p,
+            "margin": margin,
+            "duration_ms": duration,
+            "state_source": job.state_source,
+            "candidate_count": len(job.candidates),
+            "domain": domain,
+            "state_chars": len(canonical(job.state)),
+        }
+        if job.turn_id not in self._turn_context_emitted:
+            if len(self._turn_context_emitted) >= 4096:
+                self._turn_context_emitted.clear()
+            self._turn_context_emitted.add(job.turn_id)
+            proposed_data["allow_external_state"] = (
+                self._service.policy.allow_external_state
+            )
+        await self._service.emit("shadow_proposed", proposed_data, job.decision_id)
         proposal = _Proposal(
             job, decision.choice, decision.probabilities, p, margin, duration
         )
@@ -197,6 +220,10 @@ class ShadowWorker:
                 and digest(candidate.arguments) == outcome.actual_arguments_hash
             )
             agreement = "match" if matched else "mismatch"
+        domain = classify_domain(
+            proposal.job.candidates,
+            kind="role" if proposal.job.kind == "role" else "action",
+        )
         await self._service.emit(
             "shadow_agreement",
             {
@@ -204,6 +231,7 @@ class ShadowWorker:
                 "proposed_candidate": proposal.choice,
                 "actual_tool": outcome.actual_tool,
                 "would_have_avoided_llm_turn": agreement == "match",
+                "domain": domain,
             },
             proposal.job.decision_id,
         )

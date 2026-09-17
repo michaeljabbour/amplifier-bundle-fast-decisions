@@ -92,6 +92,12 @@ SAFE_FIELDS = {
     # codes for rejected contributions -- never the contributions themselves.
     "candidate_order_hash",
     "question_count",
+    # Bench measurement fields (PR D amendment): small, privacy-safe
+    # scalars only -- an integer length, a fixed label, a boolean -- never
+    # the state text itself. See docs/BENCH.md and contracts.classify_domain.
+    "state_chars",
+    "domain",
+    "allow_external_state",
 }
 
 

@@ -93,6 +93,29 @@ class DecisionTests(unittest.IsolatedAsyncioTestCase):
         result=await service.choose(request(),{'demo_inspect':DemoTool()})
         self.assertEqual(result.id,'read_0')
         self.assertTrue(any(e['event'].endswith('scored') for e in events))
+    async def test_requested_carries_domain_and_state_chars(self):
+        service,_,events,_=setup_service()
+        await service.choose(request(),{'demo_inspect':DemoTool()})
+        requested=[e for e in events if e['event'].endswith('requested')]
+        self.assertEqual(len(requested),1)
+        # demo_inspect is not fast_workspace, so the classifier's
+        # tool-choice/read-target distinction lands on tool-choice here.
+        self.assertEqual(requested[0]['data']['domain'],'tool-choice')
+        self.assertIsInstance(requested[0]['data']['state_chars'],int)
+        self.assertGreater(requested[0]['data']['state_chars'],0)
+        scored=[e for e in events if e['event'].endswith('scored')]
+        self.assertEqual(scored[0]['data']['domain'],'tool-choice')
+    async def test_requested_domain_is_read_target_for_workspace_candidates(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp);(root/'README.md').write_text('Hello')
+            workspace=WorkspaceTool(root)
+            candidate=workspace.candidate_for_path('README.md',0)
+            policy=Policy(mode='active',allowed_tools=('fast_workspace',),allow_synthetic_active=True)
+            service,_,events,_=setup_service(policy=policy,candidates=[candidate])
+            await service.choose(request(tools=[{'name':'fast_workspace'}]),{'fast_workspace':workspace})
+        requested=[e for e in events if e['event'].endswith('requested')]
+        self.assertEqual(len(requested),1)
+        self.assertEqual(requested[0]['data']['domain'],'read-target')
     async def test_shadow_does_not_execute(self):
         p=Policy(mode='shadow',allowed_tools=('demo_inspect',))
         service,_,events,_=setup_service(policy=p)

@@ -115,11 +115,91 @@
       const choose=()=>{selectedId=event.event_id;render();};tr.addEventListener('click',choose);tr.addEventListener('keydown',e=>{if(e.key==='Enter')choose();});tbody.append(tr);
     }
   }
+  let mismatchFirst=true;
+  function decisionRecords(data) {
+    const byId=new Map();
+    for(const e of data) {
+      if(!e.decision_id) continue;
+      const rec=byId.get(e.decision_id)||{requested:null,scored:null,routed:null,shadow:null,role:null};
+      const kind=label(e), d=e.data;
+      if(kind==='requested') rec.requested=d;
+      else if(kind==='scored') rec.scored=d;
+      else if(kind==='routed') rec.routed=d;
+      else if(kind==='shadow_agreement') rec.shadow=d;
+      else if(kind==='role_agreement') rec.role=d;
+      byId.set(e.decision_id,rec);
+    }
+    return byId;
+  }
+  function rungBanner(data) {
+    const turnStart=data.findLast(e=>label(e)==='turn_start');
+    const d=turnStart?.data||{};
+    put('rungMode',(d.mode||'--').toUpperCase());
+    put('rungBackend',d.backend||'--');
+    // Real field (turn_start.allow_external_state), not a backend-name guess.
+    const known=typeof d.allow_external_state==='boolean';
+    put('rungExternal',known?(d.allow_external_state?'yes':'no'):'--');
+    put('rungPolicy',d.policy_version||'--');
+  }
+  function changedCounters(records) {
+    let avoided=0, differentAction=0;
+    for(const rec of records.values()) {
+      if(!rec.shadow) continue;
+      if(rec.shadow.would_have_avoided_llm_turn) avoided++;
+      else if(rec.shadow.agreement==='mismatch') differentAction++;
+    }
+    put('mAvoided',avoided);
+    put('mMismatchAction',differentAction);
+  }
+  function reliabilityPlot(records) {
+    const bins=Array.from({length:10},()=>({n:0,correct:0,confSum:0}));
+    for(const rec of records.values()) {
+      if(!rec.scored||!rec.shadow) continue;
+      const p=rec.scored.selected_probability;
+      if(!Number.isFinite(p)) continue;
+      const idx=Math.min(9,Math.floor(p*10));
+      bins[idx].n++; bins[idx].confSum+=p;
+      if(rec.shadow.agreement==='match') bins[idx].correct++;
+    }
+    const svg=$('reliabilitySvg'); svg.replaceChildren();
+    const pad=28, size=260-2*pad;
+    const axis=document.createElementNS('http://www.w3.org/2000/svg','path');
+    axis.setAttribute('d',`M${pad} ${pad} V${pad+size} H${pad+size}`); axis.setAttribute('stroke','#35445b'); axis.setAttribute('fill','none'); svg.append(axis);
+    const diag=document.createElementNS('http://www.w3.org/2000/svg','line');
+    diag.setAttribute('class','diag'); diag.setAttribute('x1',pad); diag.setAttribute('y1',pad+size); diag.setAttribute('x2',pad+size); diag.setAttribute('y2',pad); svg.append(diag);
+    for(const bin of bins) {
+      if(!bin.n) continue;
+      const meanConf=bin.confSum/bin.n, acc=bin.correct/bin.n;
+      const cx=pad+meanConf*size, cy=pad+size-acc*size;
+      const circle=document.createElementNS('http://www.w3.org/2000/svg','circle');
+      circle.setAttribute('cx',cx); circle.setAttribute('cy',cy); circle.setAttribute('r',Math.max(3,Math.min(10,Math.sqrt(bin.n)*1.6)));
+      circle.setAttribute('class','point'+(bin.n<30?' low-n':''));
+      circle.setAttribute('data-n',bin.n);
+      const title=document.createElementNS('http://www.w3.org/2000/svg','title');
+      title.textContent=`n=${bin.n}, mean confidence=${meanConf.toFixed(2)}, empirical accuracy=${acc.toFixed(2)}`;
+      circle.append(title); svg.append(circle);
+    }
+  }
+  function decisionList(records) {
+    const tbody=$('decisionList'); tbody.replaceChildren();
+    let rows=[...records.entries()].filter(([,r])=>r.scored||r.shadow);
+    if(mismatchFirst) rows.sort((a,b)=>(b[1].shadow?.agreement==='mismatch')-(a[1].shadow?.agreement==='mismatch'));
+    if(!rows.length) { const tr=document.createElement('tr'); const td=document.createElement('td'); td.colSpan=8; td.className='empty'; td.textContent='No shadow/decision telemetry yet.'; tr.append(td); tbody.append(tr); return; }
+    for(const [decisionId,rec] of rows.slice(0,200)) {
+      const tr=document.createElement('tr'); tr.classList.toggle('mismatch',rec.shadow?.agreement==='mismatch');
+      const values=[decisionId.slice(0,8),rec.shadow?.proposed_candidate||rec.scored?.choice||'',rec.shadow?.actual_tool||'',rec.shadow?.agreement||(rec.routed?.route==='fast'?'fast (no shadow)':''),Number.isFinite(rec.scored?.selected_probability)?rec.scored.selected_probability.toFixed(3):'',Number.isFinite(rec.scored?.margin)?rec.scored.margin.toFixed(3):'',fmt(rec.scored?.duration_ms),pretty(rec.routed?.reason_code||'')];
+      values.forEach(value=>{const td=document.createElement('td'); td.textContent=value; tr.append(td);});
+      tbody.append(tr);
+    }
+  }
+  $('sortMismatchBtn').onclick=()=>{mismatchFirst=!mismatchFirst;render();};
   function render() {
     const all=filtered();pointer=Math.min(pointer,all.length-1);const data=visible();notice();counts(data);
     $('scrubber').max=Math.max(0,all.length-1);$('scrubber').value=Math.max(0,pointer);put('position',(pointer+1)+' / '+all.length);
     const current=data.at(-1), selected=data.find(e=>e.event_id===selectedId)||current;
     graph(selected);inspect(selected,data);timeline(data);
+    const records=decisionRecords(data);
+    rungBanner(data);changedCounters(records);reliabilityPlot(records);decisionList(records);
     const fast=data.findLast(e=>label(e)==='scored'),slow=data.findLast(e=>label(e)==='slow_start');
     put('jevModel',fast?(fast.data.synthetic?'Scripted demo, not Jev':(fast.data.model||'Jev').slice(0,29)):'Typed candidate selection');
     put('slowModel',slow?(slow.data.model||slow.data.provider).slice(0,28):'Existing provider and model');

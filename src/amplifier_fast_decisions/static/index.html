@@ -65,6 +65,28 @@
     <div class="panel-head"><div><div class="eyebrow">EXECUTION TRACE</div><h3 id="timeline-title">Decisions leave a trail</h3></div><div class="timeline-tools"><label for="eventFilter" class="sr-only">Filter events</label><select id="eventFilter"><option value="meaningful">Decisions + execution</option><option value="all">All events</option><option value="fallback">Fallbacks</option><option value="tool">Tool execution</option></select><span id="traceCount" class="mono">0 events</span></div></div>
     <div class="table-wrap"><table><thead><tr><th>TIME</th><th>EVENT</th><th>ROUTE / DESTINATION</th><th>REASON / STATUS</th><th>DURATION</th><th>DECISION</th></tr></thead><tbody id="timeline"><tr><td colspan="6" class="empty">No telemetry yet.</td></tr></tbody></table></div>
   </section>
+  <section class="panel bench-panel" aria-labelledby="bench-title">
+    <div class="panel-head"><div><div class="eyebrow">BENCH / UAT</div><h3 id="bench-title">Would we have let it act?</h3></div></div>
+    <div id="rungBanner" class="rung-banner">
+      <div><span>MODE</span><strong id="rungMode">--</strong></div>
+      <div><span>BACKEND</span><strong id="rungBackend">--</strong></div>
+      <div><span>EXTERNAL STATE</span><strong id="rungExternal">--</strong></div>
+      <div><span>POLICY VERSION</span><strong id="rungPolicy">--</strong></div>
+    </div>
+    <div class="changed-counters">
+      <article><div class="metric-label">AVOIDED LLM TURNS</div><div id="mAvoided" class="metric-value">0</div><div class="metric-foot">Shadow proposals that matched what actually happened</div></article>
+      <article><div class="metric-label">MISMATCHES: DIFFERENT ACTION</div><div id="mMismatchAction" class="metric-value">0</div><div class="metric-foot">Shadow proposed something else entirely -- a different risk than a plain miss</div></article>
+    </div>
+    <div class="reliability-wrap">
+      <svg id="reliabilitySvg" class="reliability-plot" viewBox="0 0 260 260" width="260" height="260" role="img" aria-label="Reliability plot: stated probability versus empirical correctness across 10 bins"></svg>
+      <p class="reliability-legend">Reliability plot: 10 equal-width bins of stated probability (x) against empirical correctness (y), diagonal = perfect calibration. Bins below n=30 are shown lighter (not reliable). Probability is not authorization.</p>
+    </div>
+    <div class="decision-list-tools">
+      <span class="section-label">DECISION LIST</span>
+      <button id="sortMismatchBtn" title="Toggle mismatch-first sort">Sort: mismatch-first</button>
+    </div>
+    <div class="table-wrap"><table><thead><tr><th>DECISION</th><th>PROPOSED</th><th>ACTUAL</th><th>AGREEMENT</th><th>PROBABILITY</th><th>MARGIN</th><th>LATENCY</th><th>REASON</th></tr></thead><tbody id="decisionList" class="decision-list"><tr><td colspan="8" class="empty">No shadow/decision telemetry yet.</td></tr></tbody></table></div>
+  </section>
   <footer><span>AMPLIFIER FAST DECISIONS <b>v0.1.0</b></span><span id="health">Local / read-only / metadata only</span><span>No claimed whole-task speedup. No hidden reasoning captured.</span></footer>
 </main>
 <script src="app.js"></script>

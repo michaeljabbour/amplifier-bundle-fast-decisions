@@ -57,6 +57,53 @@ class ShadowWorkerTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(agreements), 1)
         self.assertEqual(agreements[0]["data"]["agreement"], "match")
         self.assertTrue(agreements[0]["data"]["would_have_avoided_llm_turn"])
+        self.assertEqual(agreements[0]["data"]["domain"], "tool-choice")
+
+    async def test_shadow_proposed_carries_domain_and_state_chars(self):
+        candidate = Candidate("read_x", "Read x", "demo_inspect", {"target": "x"})
+        events = []
+        service, _ = make_service(events, backend=ScriptedBackend([{"choice": "read_x"}], delay_ms=0))
+        worker = ShadowWorker(service, capacity=8)
+        await worker._score(make_job("d1", candidates=(candidate,)))
+        proposed = [e for e in events if e["event"].endswith("shadow_proposed")]
+        self.assertEqual(len(proposed), 1)
+        self.assertEqual(proposed[0]["data"]["domain"], "tool-choice")
+        self.assertIsInstance(proposed[0]["data"]["state_chars"], int)
+
+    async def test_shadow_proposed_workspace_candidates_are_read_target(self):
+        candidate = Candidate("read_ws", "Read ws", "fast_workspace", {"operation": "read", "path": "x"})
+        events = []
+        service, _ = make_service(events, backend=ScriptedBackend([{"choice": "read_ws"}], delay_ms=0))
+        worker = ShadowWorker(service, capacity=8)
+        await worker._score(make_job("d1", candidates=(candidate,)))
+        proposed = [e for e in events if e["event"].endswith("shadow_proposed")]
+        self.assertEqual(proposed[0]["data"]["domain"], "read-target")
+
+    async def test_allow_external_state_only_on_first_shadow_proposed_per_turn(self):
+        candidate = Candidate("read_x", "Read x", "demo_inspect", {"target": "x"})
+        events = []
+        service, _ = make_service(events, backend=ScriptedBackend([{"choice": "read_x"}], delay_ms=0))
+        worker = ShadowWorker(service, capacity=8)
+        job1 = ShadowJob(kind="turn", turn_id="t1", decision_id="d1", state={},
+                          candidates=(candidate,), questions=(), state_source="context_mount",
+                          state_hash="h", state_revision=0)
+        job2 = ShadowJob(kind="turn", turn_id="t1", decision_id="d2", state={},
+                          candidates=(candidate,), questions=(), state_source="context_mount",
+                          state_hash="h", state_revision=0)
+        await worker._score(job1)
+        await worker._score(job2)
+        proposed = [e for e in events if e["event"].endswith("shadow_proposed")]
+        self.assertEqual(len(proposed), 2)
+        self.assertIn("allow_external_state", proposed[0]["data"])
+        self.assertNotIn("allow_external_state", proposed[1]["data"])
+
+        # A new turn_id gets its own first-shadow_proposed field.
+        job3 = ShadowJob(kind="turn", turn_id="t2", decision_id="d3", state={},
+                          candidates=(candidate,), questions=(), state_source="context_mount",
+                          state_hash="h", state_revision=0)
+        await worker._score(job3)
+        proposed3 = [e for e in events if e["event"].endswith("shadow_proposed")][-1]
+        self.assertIn("allow_external_state", proposed3["data"])
 
         events2 = []
         service2, _ = make_service(events2, backend=ScriptedBackend([{"choice": "read_x"}], delay_ms=0))
