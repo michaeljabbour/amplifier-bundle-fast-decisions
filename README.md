@@ -8,18 +8,19 @@ The orchestrator composes `StreamingOrchestrator`; it does not replace the Rust 
 
 ## Install
 
-Add the capability to your Amplifier app (hook + read-only `fast_workspace` tool, orchestrator untouched):
+Add the capability to your Amplifier app (hook + read-only `fast_workspace` tool, orchestrator untouched). The hook ships with shadow measurement on by default (`mode: shadow`), so this alone gets you "what would we have chosen" telemetry on top of whatever orchestrator you already run -- no orchestrator swap required:
 
 ```bash
 amplifier bundle add "git+https://github.com/michaeljabbour/amplifier-bundle-fast-decisions@main#subdirectory=behaviors/fast-decisions.yaml" --app
 ```
 
-To run the decision orchestrator, load one of the standalone bundles instead (shadow records what it would have chosen and never overrides the model; active is the opt-in fast path):
+To run the decision orchestrator's active fast path (a fast decision model actually substituting a prepared read-only action for an LLM turn), load the standalone active bundle instead:
 
 ```bash
-amplifier bundle add "git+https://github.com/michaeljabbour/amplifier-bundle-fast-decisions@main#subdirectory=bundles/shadow.yaml" --app
 amplifier bundle add "git+https://github.com/michaeljabbour/amplifier-bundle-fast-decisions@main#subdirectory=bundles/active.yaml" --app
 ```
+
+`bundles/shadow.yaml` still exists and still resolves, but it is **DEPRECATED** -- it forwards to `bundle.md` unchanged (your orchestrator stays in place) and no longer swaps `session.orchestrator`. Prefer composing `bundle.md` (or `behaviors/fast-decisions.yaml`) directly; the forwarding alias is removed in 0.3.0.
 
 The `afast` CLI (local decision observatory + doctor) installs as a tool:
 
@@ -94,9 +95,9 @@ Only user-explicit, eligible text-file paths become automatic built-in candidate
 
 | Layer | What it provides |
 |---|---|
-| `bundle.md` | Root: telemetry hook + `fast_workspace` tool; orchestrator untouched |
-| `behaviors/fast-decisions.yaml` | `hooks-fast-decisions` + `tool-fast-workspace` (no session config) |
-| `bundles/shadow.yaml` | Root + decision orchestrator in shadow mode (records, never overrides) |
+| `bundle.md` | Root: telemetry hook (shadow measurement on by default) + `fast_workspace` tool; orchestrator untouched |
+| `behaviors/fast-decisions.yaml` | `hooks-fast-decisions` (`mode: shadow` by default) + `tool-fast-workspace` |
+| `bundles/shadow.yaml` | **DEPRECATED** -- forwards to `bundle.md` unchanged; no longer swaps the orchestrator |
 | `bundles/active.yaml` | Root + decision orchestrator in active mode (opt-in fast path) |
 
 | Part | Implementation |

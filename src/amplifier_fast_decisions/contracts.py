@@ -17,6 +17,7 @@ EVENT_PREFIX = "fast_decisions:"
 EVENT_NAMES = tuple(EVENT_PREFIX + n for n in (
     "turn_start", "turn_end", "requested", "scored", "routed", "fallback",
     "slow_start", "slow_end", "tool_start", "tool_end", "cancelled", "health",
+    "shadow_proposed", "shadow_observed", "shadow_agreement",
 ))
 
 
@@ -109,6 +110,12 @@ class Policy:
     allow_external_state: bool = False
     allow_synthetic_active: bool = False
     allowed_tools: tuple[str, ...] = ("fast_workspace",)
+    # Hard bounds for the shadow snapshot, which runs on the hook's critical
+    # path (only backend scoring is deferred to the shadow worker). Exceeding
+    # either is a normal, counted outcome (reason_code shadow_snapshot_budget_exceeded),
+    # never an exception into the hook chain. See docs/design/redesign-2026-09-17.md P3.
+    shadow_max_messages: int = 12
+    shadow_snapshot_budget_ms: int = 25
     version: str = "policy-v1"
 
     def __post_init__(self) -> None:
@@ -124,6 +131,10 @@ class Policy:
             raise ValueError("Decision limits must be positive")
         if not 512 <= self.max_state_chars <= 100000:
             raise ValueError("max_state_chars must be between 512 and 100000")
+        if not 1 <= self.shadow_max_messages <= 200:
+            raise ValueError("shadow_max_messages must be between 1 and 200")
+        if not 1 <= self.shadow_snapshot_budget_ms <= 5000:
+            raise ValueError("shadow_snapshot_budget_ms must be between 1 and 5000")
 
     @classmethod
     def from_config(cls, config: dict[str, Any]) -> Policy:

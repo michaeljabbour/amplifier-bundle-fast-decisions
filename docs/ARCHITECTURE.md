@@ -34,6 +34,26 @@ The hook bridge reuses the existing runtime when the orchestrator already mounte
 
 The service's `choose(request, tools)` is orchestration-sensitive: it requires an active turn and serial use. It is not a stateless, concurrent general-purpose RPC API. Consumers should contribute prepared candidates rather than call it from parallel hooks. The independently reusable backend interface is `decide(state, candidates)`.
 
+## Shadow measurement (the hook, not the orchestrator)
+
+`hooks-fast-decisions` composes onto **any** orchestrator, including the untouched upstream loop, to measure "what would we have chosen" without ever touching the turn. This is the shipped default (`bundle.md`, `behaviors/fast-decisions.yaml`, config `mode: shadow`): no orchestrator swap is required to get shadow telemetry.
+
+```text
+provider:request  -> snapshot (context mount, candidates, hashing) -- ON the critical path, hard-bounded
+                   -> enqueue ShadowJob onto Runtime's shadow worker -- OFF the critical path
+tool:pre          -> resolve the pending job into a ShadowOutcome; emit shadow_observed
+worker (background) -> score the job against the backend; emit shadow_proposed, then shadow_agreement
+execution:end     -> sweep any proposal that never saw a matching tool:pre this turn
+```
+
+The snapshot reads the mounted context manager (`coordinator.get("context")`), not the request object -- `provider:request` carries no request, so this is the only available seam. That view is close to, but not identical to, what the orchestrator actually dispatches (injections/compaction apply later); every shadow record carries `state_source` so an eval never silently mixes the two. The snapshot is bounded by `shadow_max_messages` (messages read), `max_state_chars` (total snapshot size) and `shadow_snapshot_budget_ms` (wall clock, enforced with `asyncio.timeout`); exceeding any of them abandons the snapshot, counts `shadow_snapshot_budget_exceeded`, and returns `continue` -- never an exception into the hook chain.
+
+Policy ownership: the orchestrator, when present, is the sole owner of `Policy` (mode, thresholds, allowed tools) via `get_runtime(..., owner=True)`. The hook never requests ownership and cannot make `mode: active` stick (it downgrades to `shadow` and emits `fallback` with `hook_cannot_own_active` if its own config asks for it). Mount order across module types is a documented, guaranteed kernel contract (orchestrator mounts before hooks within a session), so no race exists between the two mounting the shared `Runtime` -- the owner re-apply in `get_runtime` is defensive, covering only out-of-session construction (unit tests, `afast demo`, a future non-kernel host).
+
+The shadow worker is a single background `asyncio.Task` owned by `Runtime`: created lazily (on first submit, so construction outside a running event loop is safe), drained with a bounded budget (`shadow_drain_ms`, default 2s) and then cancelled in `Runtime.close()`, so no shadow work outlives the session and no task is left pending at interpreter exit.
+
+`bundles/shadow.yaml` is retained for one release cycle as a **deprecated forwarding bundle**: it composes `bundle.md` unchanged and no longer swaps `session.orchestrator`. `bundles/active.yaml` remains the only standalone bundle that swaps the orchestrator, because that is a root-bundle concern.
+
 ## State and candidates
 
 The snapshot uses at most the latest 12 messages, bounded per-message and total size. It excludes system/developer text and private thinking blocks. It is not a rolling external memory cache. The actual request fingerprint includes messages/tools/model; no raw request is recorded in telemetry.
