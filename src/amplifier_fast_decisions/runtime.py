@@ -38,11 +38,20 @@ class Runtime:
                 await asyncio.to_thread(self.recorder.close)
 
 
-def get_runtime(coordinator: Any, config: dict[str, Any]) -> tuple[Runtime, bool]:
+def get_runtime(coordinator: Any, config: dict[str, Any], *, owner: bool = False) -> tuple[Runtime, bool]:
     existing = coordinator.get_capability(RUNTIME_CAPABILITY)
     if existing is not None:
         if not isinstance(existing, Runtime):
             raise TypeError("fast_decisions.runtime has an incompatible implementation")
+        if owner:
+            # The orchestrator is the sole owner of decision policy (mode,
+            # thresholds, allowed_tools). Mount order across module types is
+            # a kernel implementation detail, not a contract -- if a
+            # non-owning module (e.g. the observer hook, which mounts with
+            # config: {}) built the runtime first, its Policy must not stick.
+            # Re-apply the owner's Policy now. Backend/telemetry remain the
+            # one-per-session singleton regardless of who built them first.
+            existing.service.policy = Policy.from_config(config)
         return existing, False
     policy = Policy.from_config(config)
     session_id, parent = session_identity(coordinator)

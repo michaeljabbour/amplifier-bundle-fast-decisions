@@ -1,4 +1,4 @@
-name: offline-tests
+name: tests
 on: [push, pull_request, workflow_dispatch]
 jobs:
   offline:
@@ -14,4 +14,41 @@ jobs:
       - run: python -m pip install -e '.[test]'
       - run: python -m unittest discover -s tests -v
       - run: python -m compileall -q src/amplifier_fast_decisions
-# Deliberately no live inference, API keys or shell/tool execution in CI.
+# Deliberately no live inference, API keys or shell/tool execution in this job.
+
+  upstream:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -e '.[test,amplifier]'
+      - run: python -m pip install "git+https://github.com/microsoft/amplifier-foundation@main"
+      - run: python -m unittest discover -s tests -v
+      - run: python -m amplifier_fast_decisions doctor
+        # Not --require-amplifier: that flag's module_entry_points check needs the
+        # modules/*/ packages (loop-fast-decisions, hooks-fast-decisions,
+        # tool-fast-workspace) installed too, which is the Amplifier bundle
+        # loader's job, not this job's `pip install -e '.[test,amplifier]'`.
+        # Failing on that here would be a packaging-scope gap, not a real
+        # regression, so this lane runs the plain (non-failing) doctor check.
+
+  upstream-main:
+    # Drift canary against the unpinned @main branches of amplifier-core and
+    # amplifier-module-loop-streaming (the pinned SHAs are the real gate,
+    # in the `upstream` job above). continue-on-error: true means this job
+    # never blocks merges; it only surfaces upstream API drift early.
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -e '.[test]'
+      - run: python -m pip install "git+https://github.com/microsoft/amplifier-core@main"
+      - run: python -m pip install "git+https://github.com/microsoft/amplifier-module-loop-streaming@main"
+      - run: python -m pip install "git+https://github.com/microsoft/amplifier-foundation@main"
+      - run: python -m unittest discover -s tests -v
+      - run: python -m amplifier_fast_decisions doctor

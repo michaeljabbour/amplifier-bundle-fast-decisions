@@ -219,7 +219,8 @@ class HybridOrchestrator:
 async def mount(coordinator, config: dict):
     # Validate envelope construction before entering any user turn.
     action_response(Candidate("compat_check", "Schema check", "fast_workspace", {"operation": "list", "path": "."}), "compat_check")
-    runtime, _ = get_runtime(coordinator, config)
+    # The orchestrator owns decision policy; win regardless of module mount order.
+    runtime, _ = get_runtime(coordinator, config, owner=True)
     try:
         orchestrator = HybridOrchestrator(config, coordinator, runtime)
         await coordinator.mount("session", orchestrator, name="orchestrator")

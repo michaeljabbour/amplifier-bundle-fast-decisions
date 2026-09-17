@@ -18,7 +18,7 @@ from amplifier_fast_decisions.contracts import Candidate, EVENT_NAMES, Policy
 from amplifier_fast_decisions.candidates import parse_candidate
 from amplifier_fast_decisions.privacy import safe_data
 from amplifier_fast_decisions.runtime import get_runtime
-from amplifier_fast_decisions.demo import DemoCoordinator, DemoTool, DemoProvider, demo_response
+from amplifier_fast_decisions.demo import DemoCoordinator, DemoTool, DemoProvider
 from amplifier_fast_decisions.orchestrator import RoutedProvider
 from test_decisions import setup_service, request
 
@@ -126,6 +126,60 @@ class LifecycleTests(unittest.IsolatedAsyncioTestCase):
         # timed against the identical deadline (not a fresh one per phase).
         self.assertGreaterEqual(len(deadlines),2)
         self.assertEqual(deadlines[0],deadlines[1])
+
+    async def test_candidate_collection_timeout_reports_decision_timeout(self):
+        # ISSUE A: phase 1 (candidate collection) used to catch the TimeoutError
+        # raised by asyncio.timeout_at in a blanket `except Exception` and report
+        # reason_code="candidate_source_error" instead of "decision_timeout".
+        # A candidate source that never returns inside the deadline must still be
+        # classified as a timeout, and must still fail closed to the slow path.
+        service,_,events,coord=setup_service(policy=Policy(mode='active',timeout_ms=100,
+            allowed_tools=('demo_inspect',),allow_synthetic_active=True))
+        async def hanging_candidates(req):
+            await asyncio.sleep(10)
+            return []
+        coord.capabilities['fast_decisions.candidates']=hanging_candidates
+        result=await service.choose(request(),{'demo_inspect':DemoTool()})
+        self.assertIsNone(result)
+        self.assertEqual(events[-1]['data']['reason_code'],'decision_timeout')
+        self.assertTrue(any(e['event'].endswith('fallback') and e['data'].get('reason_code')=='decision_timeout'
+                             for e in events))
+
+class MountOrderTests(unittest.IsolatedAsyncioTestCase):
+    # ISSUE B: get_runtime() was first-caller-wins. hooks-fast-decisions mounts
+    # with config: {} (observer.py forwards config straight through and reads
+    # nothing itself); loop-fast-decisions (the orchestrator) mounts with the
+    # real policy config (mode, thresholds, allowed_tools). amplifier_core
+    # 1.6.1's initialize_session() (_session_init.py) loads modules in a fixed
+    # order -- orchestrator, then context, then providers, then tools, then
+    # hooks last -- so the orchestrator always mounts before the hook today.
+    # That ordering is a loader implementation detail, not a documented
+    # contract (KERNEL_PHILOSOPHY.md: modules must not depend on incidental
+    # kernel behavior), so fast_decisions must not rely on it. This test
+    # mounts the hook FIRST against the real production entrypoints
+    # (observer.mount, orchestrator.mount) to prove the orchestrator's config
+    # still wins even under the adversarial order.
+    @unittest.skipUnless(HAS_CORE, "Actual amplifier_core is not installed")
+    @unittest.skipUnless(HAS_LOOP, "Actual loop-streaming is not installed")
+    async def test_orchestrator_config_wins_when_hook_mounts_first(self):
+        from amplifier_fast_decisions import observer, orchestrator as orchestrator_module
+
+        coord = DemoCoordinator()
+        hook_cleanup = await observer.mount(coord, {})
+        real_config = {"mode": "active", "timeout_ms": 5000,
+                        "allowed_tools": ("demo_inspect",), "allow_synthetic_active": True}
+        try:
+            orchestrator_cleanup = await orchestrator_module.mount(coord, real_config)
+        finally:
+            pass
+        try:
+            runtime = coord.get_capability("fast_decisions.runtime")
+            self.assertEqual(runtime.service.policy.mode, "active")
+            self.assertEqual(runtime.service.policy.allowed_tools, ("demo_inspect",))
+        finally:
+            await orchestrator_cleanup()
+            await hook_cleanup()
+
 
 class InstalledUpstreamTests(unittest.TestCase):
     @unittest.skipUnless(HAS_CORE,'Actual amplifier_core is not installed')
