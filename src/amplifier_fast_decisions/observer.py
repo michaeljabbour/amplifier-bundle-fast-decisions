@@ -9,7 +9,9 @@ to Runtime's shadow worker. Every handler always returns "continue" and
 never raises into the hook chain -- a bug in shadow measurement must never
 affect a real turn.
 """
+
 from __future__ import annotations
+
 import asyncio
 from types import SimpleNamespace
 from typing import Any
@@ -17,6 +19,7 @@ from uuid import uuid4
 
 from .candidates import collect_candidates
 from .contracts import digest, field_value
+from .router import RoleRouter
 from .runtime import get_runtime
 from .shadow import ShadowJob, ShadowOutcome
 from .state import build_state
@@ -31,6 +34,7 @@ def _continue_result() -> Any:
     codebase (or amplifier_core's own hook dispatch) checks."""
     try:
         from amplifier_core.models import HookResult
+
         return HookResult(action="continue")
     except ImportError:
         return SimpleNamespace(action="continue")
@@ -49,8 +53,12 @@ class ShadowScorer:
         self._runtime = runtime
         self._coordinator = coordinator
         policy = runtime.service.policy
-        self._max_messages = config.get("shadow_max_messages", policy.shadow_max_messages)
-        self._budget_ms = config.get("shadow_snapshot_budget_ms", policy.shadow_snapshot_budget_ms)
+        self._max_messages = config.get(
+            "shadow_max_messages", policy.shadow_max_messages
+        )
+        self._budget_ms = config.get(
+            "shadow_snapshot_budget_ms", policy.shadow_snapshot_budget_ms
+        )
         self._state_source = config.get("shadow_state_source", "context_mount")
         self._turn_id: str | None = None
         self._pending_decision_id: str | None = None
@@ -75,16 +83,25 @@ class ShadowScorer:
                 arguments = data.get("tool_input")
                 if arguments is None:
                     arguments = data.get("arguments")
-                arguments_hash = digest(arguments) if isinstance(arguments, dict) else None
-                await self._runtime.service.emit("shadow_observed", {
-                    "tool": tool, "tool_call_id": data.get("tool_call_id"),
-                    "arguments_hash": arguments_hash,
-                }, decision_id)
-                self._runtime.resolve_shadow(ShadowOutcome(
-                    decision_id=decision_id,
-                    actual_tool=tool,
-                    actual_arguments_hash=arguments_hash,
-                ))
+                arguments_hash = (
+                    digest(arguments) if isinstance(arguments, dict) else None
+                )
+                await self._runtime.service.emit(
+                    "shadow_observed",
+                    {
+                        "tool": tool,
+                        "tool_call_id": data.get("tool_call_id"),
+                        "arguments_hash": arguments_hash,
+                    },
+                    decision_id,
+                )
+                self._runtime.resolve_shadow(
+                    ShadowOutcome(
+                        decision_id=decision_id,
+                        actual_tool=tool,
+                        actual_arguments_hash=arguments_hash,
+                    )
+                )
         except asyncio.CancelledError:
             raise
         except Exception:
@@ -120,7 +137,9 @@ class ShadowScorer:
             async with asyncio.timeout(self._budget_ms / 1000):
                 job = await self._build_job()
         except TimeoutError:
-            await self._runtime.service.emit("fallback", {"reason_code": "shadow_snapshot_budget_exceeded"})
+            await self._runtime.service.emit(
+                "fallback", {"reason_code": "shadow_snapshot_budget_exceeded"}
+            )
             return
         if job is not None:
             self._pending_decision_id = job.decision_id
@@ -132,11 +151,19 @@ class ShadowScorer:
         if context is None or not hasattr(context, "get_messages"):
             return None
         messages = list(await context.get_messages())
-        messages = messages[-self._max_messages:] if self._max_messages > 0 else []
+        messages = messages[-self._max_messages :] if self._max_messages > 0 else []
         tools = (getter("tools") if callable(getter) else None) or {}
-        pseudo_request = SimpleNamespace(messages=messages, tools=None, tool_choice=None, model=None)
+        pseudo_request = SimpleNamespace(
+            messages=messages, tools=None, tool_choice=None, model=None
+        )
         service = self._runtime.service
-        candidates = await collect_candidates(self._coordinator, pseudo_request, tools, service.configured_candidates)
+        candidates, _reject_reasons = await collect_candidates(
+            self._coordinator,
+            pseudo_request,
+            tools,
+            service.configured_candidates,
+            service.policy.max_candidates,
+        )
         eligible = []
         for candidate in candidates:
             if await service._eligible(candidate, tools):
@@ -148,14 +175,21 @@ class ShadowScorer:
         if self._turn_id is None:
             self._turn_id = uuid4().hex
         return ShadowJob(
-            kind="turn", turn_id=self._turn_id, decision_id=uuid4().hex,
-            state=state, candidates=tuple(eligible), questions=(),
-            state_source="context_mount", state_hash=digest(state), state_revision=0,
+            kind="turn",
+            turn_id=self._turn_id,
+            decision_id=uuid4().hex,
+            state=state,
+            candidates=tuple(eligible),
+            questions=(),
+            state_source="context_mount",
+            state_hash=digest(state),
+            state_revision=0,
         )
 
 
 async def mount(coordinator, config: dict):
     from amplifier_core.models import HookResult
+
     # The hook has no execution authority: it can never own an "active"
     # policy. If its own config asks for one (only meaningful when no
     # orchestrator is mounted -- the normal shadow rung -- and this call is
@@ -168,7 +202,9 @@ async def mount(coordinator, config: dict):
         effective_config["mode"] = "shadow"
     runtime, owner = get_runtime(coordinator, effective_config)
     if hook_requested_active:
-        await runtime.service.emit("fallback", {"reason_code": "hook_cannot_own_active"})
+        await runtime.service.emit(
+            "fallback", {"reason_code": "hook_cannot_own_active"}
+        )
     registrations = []
 
     async def observe(event: str, data: dict):
@@ -176,10 +212,17 @@ async def mount(coordinator, config: dict):
         tool = data.get("tool_name") or data.get("tool")
         if not isinstance(tool, str):
             tool = field_value(tool, "name", None)
-        await runtime.service.emit("health", {"native_event": event,
-            "event_source": "native-hook-bridge", "tool": tool,
-            "tool_call_id": data.get("tool_call_id"), "phase": data.get("phase"),
-            "status": "observed"})
+        await runtime.service.emit(
+            "health",
+            {
+                "native_event": event,
+                "event_source": "native-hook-bridge",
+                "tool": tool,
+                "tool_call_id": data.get("tool_call_id"),
+                "phase": data.get("phase"),
+                "status": "observed",
+            },
+        )
         return HookResult(action="continue")
 
     for event in ("tool:pre", "tool:post", "provider:error"):
@@ -195,10 +238,43 @@ async def mount(coordinator, config: dict):
     ):
         registrations.append(coordinator.hooks.register(event, handler, priority=999))
 
+    # P4: the model-role router. Shadow-only -- never modifies the delegate
+    # call. Cheap membership check per tool:pre/tool:post; the router itself
+    # no-ops immediately when role_router is off (the default).
+    router = RoleRouter(runtime, coordinator, config)
+
+    async def on_role_pre(event: str, data: dict):
+        tool = data.get("tool_name") or data.get("tool")
+        if tool in router.tools:
+            try:
+                await router.on_delegate_pre(data)
+            except asyncio.CancelledError:
+                raise
+            except Exception:
+                pass
+        return _continue_result()
+
+    async def on_role_post(event: str, data: dict):
+        tool = data.get("tool_name") or data.get("tool")
+        if tool in router.tools:
+            try:
+                router.on_delegate_post(data)
+            except Exception:
+                pass
+        return _continue_result()
+
+    registrations.append(
+        coordinator.hooks.register("tool:pre", on_role_pre, priority=999)
+    )
+    registrations.append(
+        coordinator.hooks.register("tool:post", on_role_post, priority=999)
+    )
+
     async def cleanup():
         for unregister in registrations:
             if callable(unregister):
                 unregister()
         if owner:
             await runtime.close()
+
     return cleanup

@@ -8,7 +8,28 @@ A Candidate contains a unique label-like ID (not `reason`), a human-readable lab
 
 The policy `allowed_tools` must include every permitted fast-path tool. For tools other than the bundled workspace, register `fast_decisions.validate_candidate` as a sync/async callable accepting one candidate and returning a boolean. Only one capability occupies that namespace; compose multiple validators deliberately. This is not a replacement for native per-tool permission and approval hooks.
 
-The service evaluates one next-action choice over candidates and abstention per boundary. It does not yet batch arbitrary named judgment questions, select model roles, dynamically change role resolvers or synthesize plans. Candidate branching is the supported extension mechanism in this version. A richer decision-question API can be added behind the same event boundary later without changing the core.
+The service evaluates one next-action choice over candidates and abstention per boundary, batched in a single backend request with every contributed judgment question (see below). It does not synthesize plans or actively change model routing. Candidate branching and contributed questions are the supported extension mechanisms in this version.
+
+## Contributing judgment questions
+
+`fast_decisions.questions` is the native contribution channel for bounded judgment questions, evaluated in the *same* batched backend request as the action choice -- one request per state regardless of how many questions are attached. Register a no-argument callback returning a list of `Question` objects or dictionaries:
+
+```python
+coordinator.register_contributor("fast_decisions.questions", "my-module", lambda: [
+    {"name": "needs_fresh_context", "type": "noul",
+     "instructions": "Is the workspace state in the observations stale for this task?"},
+    {"name": "risk", "type": "score",
+     "instructions": "How risky is acting without another LLM turn? 0 safe, 1 dangerous."},
+])
+```
+
+A `Question` has a `name` (`^[a-z][a-z0-9_]{0,31}$`, never `next_action`), a `type` matching the vendor's own primitives (`choice`, `score`, `noul` -- no translation table), `instructions` (<=512 chars), and `criteria` (a `choice`-only dict of 2..255 labels). The service adds `next_action` itself; contributed questions never include it.
+
+Bounded by `max_questions` (default 8, `0` disables contributed questions entirely). Malformed or conflicting contributions from one module are dropped and counted (`contribution_shape_invalid`, `contribution_conflict`, `contribution_truncated`, `question_criteria_invalid`) -- they never disable the fast path for other contributors' candidates or questions. As with candidates, this is extensibility, never authority: contributing a question grants no execution rights.
+
+## The model-role router (shadow-only)
+
+`hooks-fast-decisions` also runs a shadow-only model-role router (P4): at `delegate` calls it proposes a `model_role` and records it against what the delegate actually resolved, without ever changing the call. It is opt-in (`role_router: false` by default) and reads the `model_role_resolver` capability, when one is mounted (e.g. by a routing-matrix bundle), purely to enumerate live roles -- an explicit `model_role` on the call always makes it abstain, and it never reads or writes `conversation.provider_pin`.
 
 ## Policy tuning
 

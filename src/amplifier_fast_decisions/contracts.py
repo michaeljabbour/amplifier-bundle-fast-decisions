@@ -1,36 +1,83 @@
 """Small vendor-neutral contracts; no Amplifier or network imports."""
+
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Any, Literal, Protocol
 import hashlib
 import json
 import math
 import re
+from dataclasses import dataclass, field
+from typing import Any, Literal, Protocol
 
 SERVICE_CAPABILITY = "fast_decisions.service"
 RUNTIME_CAPABILITY = "fast_decisions.runtime"
 CANDIDATES_CAPABILITY = "fast_decisions.candidates"
+CANDIDATES_CHANNEL = "fast_decisions.candidates"
+QUESTIONS_CHANNEL = "fast_decisions.questions"
 VALIDATOR_CAPABILITY = "fast_decisions.validate_candidate"
 SLOW = "reason"
+NEXT_ACTION = "next_action"
+QUESTION_NAME_RE = re.compile(r"^[a-z][a-z0-9_]{0,31}$")
 EVENT_PREFIX = "fast_decisions:"
-EVENT_NAMES = tuple(EVENT_PREFIX + n for n in (
-    "turn_start", "turn_end", "requested", "scored", "routed", "fallback",
-    "slow_start", "slow_end", "tool_start", "tool_end", "cancelled", "health",
-    "shadow_proposed", "shadow_observed", "shadow_agreement",
-))
+EVENT_NAMES = tuple(
+    EVENT_PREFIX + n
+    for n in (
+        "turn_start",
+        "turn_end",
+        "requested",
+        "scored",
+        "routed",
+        "fallback",
+        "slow_start",
+        "slow_end",
+        "tool_start",
+        "tool_end",
+        "cancelled",
+        "health",
+        "shadow_proposed",
+        "shadow_observed",
+        "shadow_agreement",
+        "role_proposed",
+        "role_agreement",
+    )
+)
 
 
 def canonical(value: Any) -> str:
-    return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False)
+    return json.dumps(
+        value,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+        allow_nan=False,
+    )
 
 
 def digest(value: Any) -> str:
     return hashlib.sha256(canonical(value).encode()).hexdigest()
 
 
-def field_value(value: Any, key: str, default: Any = None) -> Any:
-    return value.get(key, default) if isinstance(value, dict) else getattr(value, key, default)
+def field_value(value: Any, name: str, fallback: Any = None) -> Any:
+    return (
+        value.get(name, fallback)
+        if isinstance(value, dict)
+        else getattr(value, name, fallback)
+    )
+
+
+def indexed(container: Any, name: str, fallback: Any = None) -> Any:
+    """Subscript access (``container[name]``), falling back to attribute access.
+
+    The verified Jev SDK shape is ``response.answers["next_action"]`` --
+    subscriptable, not necessarily a plain dict. Falls back to attribute
+    access so a dict-like *or* an attribute-bearing object both work.
+    """
+    if container is None:
+        return fallback
+    try:
+        return container[name]
+    except (TypeError, KeyError, IndexError):
+        return getattr(container, name, fallback)
 
 
 def jsonable(value: Any) -> Any:
@@ -49,6 +96,7 @@ def jsonable(value: Any) -> Any:
 @dataclass(frozen=True)
 class Candidate:
     """Prepared action, never a permission grant. Args are copied at the boundary."""
+
     id: str
     label: str
     tool: str
@@ -68,7 +116,88 @@ class Candidate:
 
     @property
     def fingerprint(self) -> str:
-        return digest({"id": self.id, "tool": self.tool, "args": self.arguments, "revision": self.revision})
+        return digest(
+            {
+                "id": self.id,
+                "tool": self.tool,
+                "args": self.arguments,
+                "revision": self.revision,
+            }
+        )
+
+
+def candidate_order_key(candidate: Candidate) -> tuple[str, str]:
+    """Canonical stable sort key for serialisation: ``(origin, id)``."""
+    return (candidate.origin, candidate.id)
+
+
+def compute_candidate_order_hash(
+    candidates: list[Candidate] | tuple[Candidate, ...],
+) -> str:
+    """Deterministic hash of the canonical ``(origin, id)`` ordering.
+
+    Computed once per request. Two runs over the same candidate set
+    (regardless of collection/iteration order) produce the same hash.
+    """
+    ordered = sorted(candidates, key=candidate_order_key)
+    return digest([[c.origin, c.id] for c in ordered])
+
+
+QuestionType = Literal["choice", "score", "noul"]
+
+
+class InvalidCriteria(ValueError):
+    """A choice question's criteria count is outside the vendor's 2..255 bound."""
+
+
+@dataclass(frozen=True)
+class Question:
+    """A bounded judgment question, evaluated in the same backend request as
+    the action choice. ``type`` uses the vendor's own primitive names
+    (``choice`` / ``score`` / ``noul``) so no translation table is needed.
+    """
+
+    name: str
+    type: QuestionType
+    instructions: str
+    criteria: dict[str, str] = field(default_factory=dict)
+    origin: str = "contributed"
+
+    def __post_init__(self) -> None:
+        if not QUESTION_NAME_RE.fullmatch(self.name) or self.name == NEXT_ACTION:
+            raise ValueError("Invalid or reserved question name")
+        if self.type not in ("choice", "score", "noul"):
+            raise ValueError("Invalid question type")
+        if not self.instructions or len(self.instructions) > 512:
+            raise ValueError("instructions must be 1..512 chars")
+        if self.type == "choice":
+            if not 2 <= len(self.criteria) <= 255:
+                raise InvalidCriteria("choice question needs 2..255 criteria")
+        elif self.criteria:
+            raise ValueError("criteria only valid for choice questions")
+
+
+@dataclass(frozen=True)
+class DecisionRequest:
+    """One batched request per state: the action choice plus every
+    contributed question, scored independently by the backend in a single
+    call. ``questions`` never includes ``next_action`` -- the backend
+    assembles that from ``candidates`` itself."""
+
+    state: dict[str, Any]
+    candidates: tuple[Candidate, ...]
+    questions: tuple[Question, ...] = ()
+    candidate_order_hash: str = ""
+
+
+@dataclass(frozen=True)
+class Answer:
+    """One question's result. ``probabilities`` for choice/score,
+    ``noul`` for noul questions."""
+
+    probabilities: dict[str, float] = field(default_factory=dict)
+    confidence: float | None = None
+    noul: float | None = None
 
 
 @dataclass(frozen=True)
@@ -84,17 +213,38 @@ class Decision:
         if self.choice not in choices or set(self.probabilities) != choices:
             raise ValueError("Decision alternatives do not match the request")
         vals = list(self.probabilities.values())
-        if any(isinstance(v, bool) or not isinstance(v, (int, float)) or not math.isfinite(v)
-               or not 0 <= v <= 1 for v in vals):
+        if any(
+            isinstance(v, bool)
+            or not isinstance(v, (int, float))
+            or not math.isfinite(v)
+            or not 0 <= v <= 1
+            for v in vals
+        ):
             raise ValueError("Invalid probability")
         if not math.isclose(sum(vals), 1.0, abs_tol=0.025):
             raise ValueError("Probabilities do not sum to one")
         if self.probabilities[self.choice] + 1e-9 < max(vals):
-            raise ValueError("Selected choice is not the maximum-probability alternative")
+            raise ValueError(
+                "Selected choice is not the maximum-probability alternative"
+            )
         if self.reported_confidence is not None and (
-            not math.isfinite(self.reported_confidence) or not 0 <= self.reported_confidence <= 1
+            not math.isfinite(self.reported_confidence)
+            or not 0 <= self.reported_confidence <= 1
         ):
             raise ValueError("Invalid reported confidence")
+
+
+@dataclass(frozen=True)
+class DecisionResult:
+    """The full batched response: the ``next_action`` choice plus every
+    contributed question's answer, keyed by name."""
+
+    action: Decision
+    answers: dict[str, Answer] = field(default_factory=dict)
+    model: str = "unknown"
+    input_tokens: int | None = None
+    output_tokens: int | None = None
+    synthetic: bool = False
 
 
 @dataclass(frozen=True)
@@ -106,6 +256,7 @@ class Policy:
     max_fast_streak: int = 3
     max_fast_per_turn: int = 12
     max_candidates: int = 12
+    max_questions: int = 8
     max_state_chars: int = 12000
     allow_external_state: bool = False
     allow_synthetic_active: bool = False
@@ -129,6 +280,8 @@ class Policy:
             raise ValueError("max_candidates must be between 1 and 63")
         if min(self.max_fast_streak, self.max_fast_per_turn, self.max_candidates) < 1:
             raise ValueError("Decision limits must be positive")
+        if not 0 <= self.max_questions <= 64:
+            raise ValueError("max_questions must be between 0 and 64")
         if not 512 <= self.max_state_chars <= 100000:
             raise ValueError("max_state_chars must be between 512 and 100000")
         if not 1 <= self.shadow_max_messages <= 200:
@@ -148,7 +301,8 @@ class Policy:
 class DecisionBackend(Protocol):
     name: str
     external: bool
-    async def decide(self, state: dict[str, Any], candidates: list[Candidate]) -> Decision: ...
+
+    async def ask(self, request: DecisionRequest) -> DecisionResult: ...
     async def close(self) -> None: ...
 
 

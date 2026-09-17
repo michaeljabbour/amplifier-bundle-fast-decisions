@@ -39,7 +39,9 @@
         "fast_decisions:health",
         "fast_decisions:shadow_proposed",
         "fast_decisions:shadow_observed",
-        "fast_decisions:shadow_agreement"
+        "fast_decisions:shadow_agreement",
+        "fast_decisions:role_proposed",
+        "fast_decisions:role_agreement"
       ]
     },
     "session_id": {
