@@ -8,7 +8,7 @@ digraph fast_decisions {
     nodesep=0.6
     ranksep=0.7
     bgcolor="white"
-    source_hash="48899fb870bc077362bb3b95b66a69ffca12e01e5e815d5638b795ba01025da3"
+    source_hash="ab5d613a790c623edcdade079b4133c242643d17d6da3925cf1b7182e813fa53"
 
     node [fontname="Helvetica", fontsize=11, style="filled,rounded"]
     edge [fontname="Helvetica", fontsize=9]
@@ -21,7 +21,7 @@ digraph fast_decisions {
         fillcolor="#f9f9f9"
         color="#999999"
 
-        beh_fast_decisions_behavior [label="fast-decisions-behavior\n2 tools\n~268 tok", shape=box, fillcolor="#e0f2f1", style="filled,rounded"]
+        beh_fast_decisions_behavior [label="fast-decisions-behavior\n2 tools\n~300 tok", shape=box, fillcolor="#e0f2f1", style="filled,rounded"]
     }
 
     subgraph cluster_standalones {
