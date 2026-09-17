@@ -23,12 +23,8 @@ test = ["pytest>=8", "pytest-asyncio>=0.23", "jsonschema>=4", "PyYAML>=6"]
 [project.scripts]
 afast = "amplifier_fast_decisions.cli:main"
 
-[project.entry-points."amplifier.modules"]
-loop-fast-decisions = "amplifier_fast_decisions.orchestrator:mount"
-hooks-fast-decisions = "amplifier_fast_decisions.observer:mount"
-tool-fast-workspace = "amplifier_fast_decisions.workspace:mount"
-
 [tool.setuptools.packages.find]
+where = ["src"]
 include = ["amplifier_fast_decisions*"]
 
 [tool.setuptools.package-data]
@@ -36,5 +32,6 @@ amplifier_fast_decisions = ["static/*"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+pythonpath = ["src"]
 testpaths = ["tests"]
 markers = ["upstream: requires installed real Amplifier core and loop", "live: requires an explicit live Jev API opt-in"]

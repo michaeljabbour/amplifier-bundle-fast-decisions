@@ -45,7 +45,7 @@ class BuildTests(unittest.TestCase):
             data=json.loads(output.read_text().split('---')[1])
             self.assertEqual(data['bundle']['name'],'fast-decisions-shadow')
             self.assertTrue(data['includes'][0]['bundle'].startswith('file:///'))
-            self.assertEqual(data['tools'][0]['config']['root'],temp)
+            self.assertEqual(data['tools'][0]['config']['root'],str(Path(temp).resolve(strict=True)))
     def test_active_requires_external_opt_in(self):
         with self.assertRaises(ValueError):
             configure(SimpleNamespace(bundle_root=str(ROOT),mode='active',allow_external_state=False))
@@ -85,14 +85,47 @@ class LifecycleTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(service.turn.fast_total,0)
         self.assertFalse(any(e['event'].endswith('routed') and e['data'].get('route')=='fast' for e in events))
     async def test_deadline_shared_across_candidate_and_model(self):
-        service,_,events,coord=setup_service(policy=Policy(mode='active',timeout_ms=25,
+        # This used a 25ms deadline raced against an ~18ms candidate-collection
+        # sleep and a 20ms backend delay. On Python 3.11 CI runners the shared
+        # deadline sometimes expires *during* candidate collection instead of
+        # during the backend call: service.py's collection-phase `except
+        # Exception` handler (unlike the backend-phase handler) never checks
+        # `isinstance(exc, TimeoutError)` and unconditionally reports
+        # reason_code="candidate_source_error" -- so the same 25ms deadline
+        # expiring a few milliseconds earlier flips the observed reason code
+        # and the assertion misses. Confirmed by forcing candidate collection
+        # to overrun the deadline on its own (30ms sleep vs a 25ms deadline),
+        # which reliably reproduces reason_code="candidate_source_error"
+        # instead of "decision_timeout".
+        #
+        # Fix: stop racing real time. Use a generous, unambiguous margin (a
+        # 200ms deadline, a 20ms candidate sleep, and a backend that never
+        # returns on its own inside 200ms) so the timeout is guaranteed to
+        # fire during the backend phase regardless of scheduler jitter. Then
+        # prove budget *sharing* directly and deterministically: patch
+        # asyncio.timeout_at to record the deadline passed to each phase and
+        # assert both phases were given the exact same deadline -- i.e.
+        # candidate collection does not reset the model call's budget.
+        deadlines: list[float] = []
+        real_timeout_at = asyncio.timeout_at
+
+        def recording_timeout_at(when):
+            deadlines.append(when)
+            return real_timeout_at(when)
+
+        service,_,events,coord=setup_service(policy=Policy(mode='active',timeout_ms=200,
             allowed_tools=('demo_inspect',),allow_synthetic_active=True))
-        service.backend.delay_ms=20
-        async def slow_candidates(req):await asyncio.sleep(.018);return []
+        service.backend.delay_ms=2000  # 10x timeout_ms: never completes before the shared deadline
+        async def slow_candidates(req):await asyncio.sleep(.02);return []  # small next to the 200ms budget
         coord.capabilities['fast_decisions.candidates']=slow_candidates
-        result=await service.choose(request(),{'demo_inspect':DemoTool()})
+        with patch('amplifier_fast_decisions.service.asyncio.timeout_at',side_effect=recording_timeout_at):
+            result=await service.choose(request(),{'demo_inspect':DemoTool()})
         self.assertIsNone(result)
         self.assertTrue(any(e['data'].get('reason_code')=='decision_timeout' for e in events))
+        # Budget sharing: candidate collection and the backend call must be
+        # timed against the identical deadline (not a fresh one per phase).
+        self.assertGreaterEqual(len(deadlines),2)
+        self.assertEqual(deadlines[0],deadlines[1])
 
 class InstalledUpstreamTests(unittest.TestCase):
     @unittest.skipUnless(HAS_CORE,'Actual amplifier_core is not installed')
