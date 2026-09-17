@@ -92,7 +92,7 @@ It joins the taxonomy's own JSONL on `session_id` -- no mapping layer.
 | `avoided_llm_turn_rate` | `would_have_avoided_llm_turn` count / total decisions. |
 | `projected_task_latency_delta_ms` / `_cost_delta_usd` | **A model, not a measurement.** `projection_basis: "model"` and `projection_assumptions` (holds generation/tool time constant, avoided turns independent) are always present alongside the number. |
 | `unsafe_autonomous_actions` | Count of `routed` events with `route == "fast"` whose destination is outside the default `allowed_tools` (`fast_workspace`). By construction (`DecisionService._eligible`) this must be `0`; non-zero is a release blocker, not a metric to trend. |
-| `state_chars_p50/p95`, `state_size_vs_latency` | From the explicit `state_chars` field on `requested` (paired with `scored.duration_ms` for the size-vs-latency series). See "Telemetry fields this bench relies on" below for what emits it and the legacy fallback. |
+| `state_chars_p50/p95`, `state_size_vs_latency` | From the explicit `state_chars` field on `requested`, falling back to `shadow_proposed` for hook-only sessions that never call `DecisionService.choose` (paired with `scored.duration_ms` for the size-vs-latency series -- that pairing needs `scored`, so it stays empty for hook-only sessions). See "Telemetry fields this bench relies on" below for what emits it and the legacy fallback. |
 | `shadow_snapshot_budget_exceeded`, `dropped_shadow_jobs` | From `fallback` events (reason code `shadow_snapshot_budget_exceeded`) and the `health` event's worker-health fields, respectively -- how an operator learns shadow is costing more than it admits. |
 
 ### `accuracy_proxy` block

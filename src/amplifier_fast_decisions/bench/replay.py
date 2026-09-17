@@ -1,8 +1,16 @@
 """Offline replay over recorded ``fast_decisions:*`` JSONL telemetry.
 
 Zero network, zero LLM. Joins ``requested`` -> ``scored`` -> ``routed`` ->
-``shadow_agreement`` / ``role_agreement`` by ``decision_id``. Harness-agnostic
-core -- no Amplifier or network imports.
+``shadow_proposed`` -> ``shadow_agreement`` / ``role_agreement`` by
+``decision_id``. Harness-agnostic core -- no Amplifier or network imports.
+
+A decision opportunity is any join carrying ``requested`` (the active,
+DecisionService.choose path) **or** ``shadow_proposed`` (a hook-only session:
+ShadowScorer builds its own ShadowJob directly and never calls
+DecisionService.choose, so `requested`/`scored` never fire for it -- see
+observer.py). Restricting to `requested is not None` silently dropped every
+hook-only session's decisions from ``agreement_rate``, ``per_domain`` and
+``state_chars_p50/p95`` (docs/design/redesign-2026-09-17.md P3 postmortem).
 
 ``requested`` and ``shadow_proposed`` events carry an explicit ``state_chars``
 field (the length of the serialised state actually sent -- never the state
@@ -82,6 +90,13 @@ class DecisionJoin:
     scored: dict[str, Any] | None = None
     routed: list[dict[str, Any]] = field(default_factory=list)
     fallback: list[dict[str, Any]] = field(default_factory=list)
+    # Hook-only (shadow-in-the-hook) sessions never call DecisionService.choose
+    # -- ShadowScorer builds its own ShadowJob directly and emits
+    # shadow_proposed/shadow_agreement with no matching `requested`/`scored`
+    # pair. shadow_proposed carries the same `domain`/`state_chars` fields
+    # `requested` would, so it is the state/domain source of truth whenever
+    # `requested` is absent.
+    shadow_proposed: dict[str, Any] | None = None
     shadow_agreement: dict[str, Any] | None = None
     role_agreement: dict[str, Any] | None = None
     slow_end: dict[str, Any] | None = None
@@ -113,6 +128,8 @@ def join_by_decision_id(events: list[dict[str, Any]]) -> dict[str, DecisionJoin]
             join.routed.append(data)
         elif kind == "fallback":
             join.fallback.append(data)
+        elif kind == "shadow_proposed":
+            join.shadow_proposed = data
         elif kind == "shadow_agreement":
             join.shadow_agreement = data
         elif kind == "role_agreement":
@@ -131,6 +148,7 @@ def _domain_of(join: DecisionJoin) -> tuple[str, bool]:
     for source in (
         join.requested,
         join.scored,
+        join.shadow_proposed,
         join.shadow_agreement,
         join.role_agreement,
     ):
@@ -232,7 +250,13 @@ async def replay_events(
 ) -> ReplayResult:
     events = load_events(events_path, session_id=session_id)
     joins = join_by_decision_id(events)
-    decisions = [j for j in joins.values() if j.requested is not None]
+    # A decision opportunity exists whenever either the active path recorded
+    # `requested` (DecisionService.choose) or a hook-only session recorded
+    # `shadow_proposed` (ShadowScorer, no DecisionService.choose call at
+    # all) -- see DecisionJoin.shadow_proposed.
+    decisions = [
+        j for j in joins.values() if j.requested is not None or j.shadow_proposed is not None
+    ]
     n_decisions = len(decisions)
 
     decision_latencies = [
@@ -343,10 +367,14 @@ async def replay_events(
             ):
                 unsafe += 1
 
+    def _state_chars_of(j: DecisionJoin) -> float | None:
+        for source in (j.requested, j.shadow_proposed):
+            if source and isinstance(source.get("state_chars"), (int, float)):
+                return float(source["state_chars"])
+        return None
+
     state_chars: list[float] = [
-        float(j.requested["state_chars"])
-        for j in decisions
-        if j.requested and isinstance(j.requested.get("state_chars"), (int, float))
+        v for v in (_state_chars_of(j) for j in decisions) if v is not None
     ]
     state_p50 = m.percentile(state_chars, 50) if state_chars else None
     state_p95 = m.percentile(state_chars, 95) if state_chars else None

@@ -29,7 +29,7 @@ Bounded by `max_questions` (default 8, `0` disables contributed questions entire
 
 ## The model-role router (shadow-only)
 
-`hooks-fast-decisions` also runs a shadow-only model-role router (P4): at `delegate` calls it proposes a `model_role` and records it against what the delegate actually resolved, without ever changing the call. It is opt-in (`role_router: false` by default) and reads the `model_role_resolver` capability, when one is mounted (e.g. by a routing-matrix bundle), purely to enumerate live roles -- an explicit `model_role` on the call always makes it abstain, and it never reads or writes `conversation.provider_pin`.
+`hooks-fast-decisions` also runs a shadow-only model-role router (P4): at `delegate` calls it proposes a `model_role` and records it against what the delegate actually resolved, without ever changing the call. It ships on by default (`role_router: true` in `behaviors/fast-decisions.yaml`; unconfigured library default is `false`) and reads the `model_role_resolver` capability, when one is mounted (e.g. by a routing-matrix bundle), purely to enumerate live roles -- an explicit `model_role` on the call always makes it abstain, and it never reads or writes `conversation.provider_pin`.
 
 ## Policy tuning
 

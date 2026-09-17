@@ -161,9 +161,13 @@ class ShadowScorerTests(unittest.IsolatedAsyncioTestCase):
         context.get_messages = boom
 
         try:
+            # No-op by design (see observer.py's ShadowScorer.on_provider_request
+            # docstring): the snapshot now happens in on_tool_pre.
             result = await scorer.on_provider_request("provider:request", {})
             self.assertEqual(result.action, "continue")
 
+            # context.get_messages is broken -> the snapshot inside on_tool_pre
+            # must still swallow the failure and return continue.
             result = await scorer.on_tool_pre("tool:pre", {"tool_name": "demo_inspect", "tool_input": {}})
             self.assertEqual(result.action, "continue")
 
@@ -190,7 +194,9 @@ class ShadowScorerTests(unittest.IsolatedAsyncioTestCase):
 
         try:
             start = time.perf_counter()
-            result = await scorer.on_provider_request("provider:request", {})
+            result = await scorer.on_tool_pre(
+                "tool:pre", {"tool_name": "demo_inspect", "tool_input": {}}
+            )
             elapsed = time.perf_counter() - start
             self.assertEqual(result.action, "continue")
             self.assertLess(elapsed, 0.15, "snapshot must abandon well before the 200ms sleep completes")

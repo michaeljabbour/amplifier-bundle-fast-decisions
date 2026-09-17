@@ -61,89 +61,93 @@ class ShadowScorer:
         )
         self._state_source = config.get("shadow_state_source", "context_mount")
         self._turn_id: str | None = None
-        self._pending_decision_id: str | None = None
 
     async def on_provider_request(self, event: str, data: dict) -> Any:
-        try:
-            await self._snapshot_and_submit()
-        except asyncio.CancelledError:
-            raise
-        except Exception:
-            pass
+        # No-op by design: upstream (loop-streaming) emits iteration 1's
+        # provider:request BEFORE appending the turn's own user message to
+        # the mounted context (amplifier_module_loop_streaming/__init__.py,
+        # the "hoisted" provider:request block -- see
+        # docs/UPSTREAM_CONTRACT.md and docs/design/redesign-2026-09-17.md
+        # P3 postmortem). A snapshot taken here sees an empty/stale
+        # ``context.get_messages()`` on that first iteration of every turn,
+        # so no candidates are ever found and the real tool call that
+        # follows is silently never scored. The snapshot instead happens in
+        # ``on_tool_pre``, the earliest point at which the mounted context
+        # is guaranteed (observed in a live DTU trace) to already include
+        # this iteration's own user/assistant messages.
         return _continue_result()
 
     async def on_tool_pre(self, event: str, data: dict) -> Any:
         try:
-            decision_id = self._pending_decision_id
-            if decision_id is not None:
-                self._pending_decision_id = None
-                tool = data.get("tool_name") or data.get("tool")
-                if not isinstance(tool, str):
-                    tool = field_value(tool, "name", None)
-                arguments = data.get("tool_input")
-                if arguments is None:
-                    arguments = data.get("arguments")
-                arguments_hash = (
-                    digest(arguments) if isinstance(arguments, dict) else None
-                )
-                await self._runtime.service.emit(
-                    "shadow_observed",
-                    {
-                        "tool": tool,
-                        "tool_call_id": data.get("tool_call_id"),
-                        "arguments_hash": arguments_hash,
-                    },
-                    decision_id,
-                )
-                self._runtime.resolve_shadow(
-                    ShadowOutcome(
-                        decision_id=decision_id,
-                        actual_tool=tool,
-                        actual_arguments_hash=arguments_hash,
-                    )
-                )
+            await self._propose_and_observe(data)
         except asyncio.CancelledError:
             raise
         except Exception:
             pass
         return _continue_result()
 
+    async def _propose_and_observe(self, data: dict) -> None:
+        """Snapshot, propose, and immediately resolve against this same
+        tool call -- all in one pass, now that ``on_tool_pre`` is the only
+        point in the upstream loop where the mounted context is guaranteed
+        to reflect this iteration's own messages (see ``on_provider_request``).
+        The snapshot/candidate-collection step is bounded by the same
+        ``shadow_snapshot_budget_ms`` as before; only backend scoring
+        (``ShadowWorker._score``) remains deferred to the background task.
+        """
+        job = await self._snapshot()
+        if job is None:
+            return
+        tool = data.get("tool_name") or data.get("tool")
+        if not isinstance(tool, str):
+            tool = field_value(tool, "name", None)
+        arguments = data.get("tool_input")
+        if arguments is None:
+            arguments = data.get("arguments")
+        arguments_hash = digest(arguments) if isinstance(arguments, dict) else None
+        self._runtime.submit_shadow(job)
+        await self._runtime.service.emit(
+            "shadow_observed",
+            {
+                "tool": tool,
+                "tool_call_id": data.get("tool_call_id"),
+                "arguments_hash": arguments_hash,
+            },
+            job.decision_id,
+        )
+        self._runtime.resolve_shadow(
+            ShadowOutcome(
+                decision_id=job.decision_id,
+                actual_tool=tool,
+                actual_arguments_hash=arguments_hash,
+            )
+        )
+
     async def on_tool_post(self, event: str, data: dict) -> Any:
-        # Defensive only: a missed tool:pre join (denied call, hook
-        # ordering) must not leak a stale correlation into the next
-        # iteration's tool:pre.
-        self._pending_decision_id = None
         return _continue_result()
 
     async def on_provider_error(self, event: str, data: dict) -> Any:
-        # An errored iteration produces no tool call for this decision;
-        # drop the pending correlation instead of leaving it dangling.
-        self._pending_decision_id = None
         return _continue_result()
 
     async def on_execution_end(self, event: str, data: dict) -> Any:
         self._turn_id = None
-        self._pending_decision_id = None
         try:
             self._runtime.shadow_worker.sweep_unobserved()
         except Exception:
             pass
         return _continue_result()
 
-    async def _snapshot_and_submit(self) -> None:
+    async def _snapshot(self) -> ShadowJob | None:
         if self._state_source == "off":
-            return
+            return None
         try:
             async with asyncio.timeout(self._budget_ms / 1000):
-                job = await self._build_job()
+                return await self._build_job()
         except TimeoutError:
             await self._runtime.service.emit(
                 "fallback", {"reason_code": "shadow_snapshot_budget_exceeded"}
             )
-            return
-        if job is not None:
-            self._pending_decision_id = job.decision_id
-            self._runtime.submit_shadow(job)
+            return None
 
     async def _build_job(self) -> ShadowJob | None:
         getter = getattr(self._coordinator, "get", None)
@@ -240,7 +244,8 @@ async def mount(coordinator, config: dict):
 
     # P4: the model-role router. Shadow-only -- never modifies the delegate
     # call. Cheap membership check per tool:pre/tool:post; the router itself
-    # no-ops immediately when role_router is off (the default).
+    # no-ops immediately when role_router is off (opt-out via config;
+    # the shipped behaviors/fast-decisions.yaml default is on).
     router = RoleRouter(runtime, coordinator, config)
 
     async def on_role_pre(event: str, data: dict):
