@@ -37,6 +37,18 @@ hooks:
       role_probe_timeout_ms: 2000
       role_router_tools:
         - delegate
+      # Auto-observatory: on this session's first session:start (top-level
+      # only -- a session with a parent_id is skipped), reuse-or-spawn a
+      # detached `afast serve` and open it in a browser. Skipped when
+      # AFAST_OBSERVATORY=off or AMPLIFIER_NO_BROWSER=1 is set, or when
+      # neither stdin nor stdout is a TTY (e.g. `amplifier run` in a
+      # pipe/CI). Never delays session start -- the spawn/health-check work
+      # runs in an owned background task. See docs/UAT.md and
+      # docs/PRIVACY.md ("Viewer").
+      observatory:
+        enabled: true
+        open_browser: always
+        port: 8765
 
 tools:
   - module: tool-fast-workspace
