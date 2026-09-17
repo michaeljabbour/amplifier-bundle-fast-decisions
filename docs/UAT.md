@@ -37,9 +37,11 @@ The first top-level session also auto-opens the local observatory
 telemetry is visible live -- no separate `afast serve` step needed. It
 reuses an already-running viewer rather than spawning a second one, stays
 off for child sessions and non-TTY runs, and can be disabled with
-`observatory.open_browser: never` or `AFAST_OBSERVATORY=off`. Stop it any
-time with `afast serve --stop`. See `docs/PRIVACY.md` ("Viewer") for what
-the state file holds.
+`observatory.open_browser: never` or `AFAST_OBSERVATORY=off`. If 8765 is
+busy, the viewer picks a free port instead; the state file and printed URL
+tell you which (`--no-fallback` fails loud instead, for a deliberate fixed
+port). Stop it any time with `afast serve --stop`. See `docs/PRIVACY.md`
+("Viewer") for what the state file holds.
 
 ### For real Jev in shadow
 

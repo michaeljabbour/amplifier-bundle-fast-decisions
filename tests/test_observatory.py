@@ -27,10 +27,13 @@ from __future__ import annotations
 
 import asyncio
 import importlib.util
+import socket
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
+import urllib.request
 from pathlib import Path
 from types import SimpleNamespace
 from unittest import mock
@@ -213,6 +216,102 @@ class StopServerTests(unittest.TestCase):
             code = stop_server(state_file)
             self.assertEqual(code, 0)
             self.assertFalse(state_file.exists())
+
+
+class ServePortFallbackTests(unittest.TestCase):
+    """`afast serve` binds a real OS socket, so the busy-port scenario is
+    exercised via a real subprocess against a real pre-bound socket, not a
+    mock -- the same style already used by StopServerTests above."""
+
+    @staticmethod
+    def _wait_for_state(state_file: Path, timeout: float = 5.0):
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            state = observatory.read_state(state_file)
+            if state is not None:
+                return state
+            time.sleep(0.05)
+        return None
+
+    def test_falls_back_to_free_port_when_requested_port_is_busy(self):
+        busy_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        busy_socket.bind(("127.0.0.1", 0))
+        busy_socket.listen()
+        busy_port = busy_socket.getsockname()[1]
+        try:
+            with tempfile.TemporaryDirectory() as tmp:
+                events_dir = Path(tmp) / "events"
+                events_dir.mkdir()
+                state_file = Path(tmp) / "serve.json"
+                proc = subprocess.Popen(
+                    [
+                        sys.executable,
+                        "-m",
+                        "amplifier_fast_decisions",
+                        "serve",
+                        "--events",
+                        str(events_dir),
+                        "--port",
+                        str(busy_port),
+                        "--state-file",
+                        str(state_file),
+                    ],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                )
+                try:
+                    state = self._wait_for_state(state_file)
+                    self.assertIsNotNone(state, "server never wrote a state file")
+                    assert state is not None  # narrows for the type checker
+                    self.assertNotEqual(state["port"], busy_port)
+                    self.assertIn(str(state["port"]), state["url"])
+                    request = urllib.request.Request(
+                        f"http://127.0.0.1:{state['port']}/", method="GET"
+                    )
+                    with urllib.request.urlopen(request, timeout=2) as response:
+                        self.assertEqual(response.status, 200)
+                finally:
+                    code = stop_server(state_file)
+                    self.assertEqual(code, 0)
+                    proc.wait(timeout=5)
+        finally:
+            busy_socket.close()
+
+    def test_no_fallback_exits_nonzero_with_message(self):
+        busy_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        busy_socket.bind(("127.0.0.1", 0))
+        busy_socket.listen()
+        busy_port = busy_socket.getsockname()[1]
+        try:
+            with tempfile.TemporaryDirectory() as tmp:
+                events_dir = Path(tmp) / "events"
+                events_dir.mkdir()
+                state_file = Path(tmp) / "serve.json"
+                proc = subprocess.run(
+                    [
+                        sys.executable,
+                        "-m",
+                        "amplifier_fast_decisions",
+                        "serve",
+                        "--events",
+                        str(events_dir),
+                        "--port",
+                        str(busy_port),
+                        "--state-file",
+                        str(state_file),
+                        "--no-fallback",
+                    ],
+                    capture_output=True,
+                    text=True,
+                    timeout=5,
+                    check=False,
+                )
+                self.assertNotEqual(proc.returncode, 0)
+                self.assertIn("afast:", proc.stderr)
+                self.assertFalse(state_file.exists())
+        finally:
+            busy_socket.close()
 
 
 # ---------------------------------------------------------------------------
