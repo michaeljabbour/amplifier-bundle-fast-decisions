@@ -140,6 +140,21 @@ AFAST_RUN_LIVE=1 python scripts/test_live_jev.py
 
 API key must already be set. The live request is opt-in, not part of the default tests or demo.
 
+## Bench: offline replay and the synthetic suite
+
+```bash
+afast bench replay examples/demo-events.jsonl --json | python3 -m json.tool
+afast bench suite suites/v1.jsonl --json
+```
+
+`afast bench replay` computes decision latency/cost, agreement, calibration
+(ECE), and abstention from telemetry the system already wrote -- zero
+network. `afast bench suite` runs a small, checked-in, labelled suite
+against a fully offline deterministic backend by default (`--backend jev
+--live` requires both `FAST_DECISIONS_LIVE=1` and `TYPESAFE_API_KEY`). See
+[BENCH.md](docs/BENCH.md) for metric definitions and known gaps, and
+[UAT.md](docs/UAT.md) for the full shadow-then-active walkthrough.
+
 ## Replay an actual trace
 
 ```bash
@@ -164,6 +179,6 @@ Open the resulting HTML in a browser. Review telemetry before sharing: file/tool
 
 ## Developer map
 
-Start with [ARCHITECTURE.md](docs/ARCHITECTURE.md), [EVENTS.md](docs/EVENTS.md), [EXTENDING.md](docs/EXTENDING.md), and [AGENT-HANDOFF.md](docs/AGENT-HANDOFF.md).
+Start with [ARCHITECTURE.md](docs/ARCHITECTURE.md), [EVENTS.md](docs/EVENTS.md), [EXTENDING.md](docs/EXTENDING.md), [BENCH.md](docs/BENCH.md), [UAT.md](docs/UAT.md), and [AGENT-HANDOFF.md](docs/AGENT-HANDOFF.md).
 
 MIT licensed. This experimental package is not an official Microsoft or TypeSafe release.

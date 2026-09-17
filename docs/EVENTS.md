@@ -8,20 +8,20 @@ Session identity is read from the coordinator/session if exposed. A generated fa
 
 | Event suffix | Meaning |
 |---|---|
-| `turn_start` / `turn_end` | Hybrid turn boundary, mode, configured backend, final submission/provider counters and recorder health |
-| `requested` | Eligible prepared candidates sent for a decision; includes state hash, `candidate_count`, `question_count`, `candidate_order_hash`, no raw state |
-| `scored` | Returned distribution/model/usage and measured backend wall time, whether or not acted on; carries `candidate_order_hash` |
-| `routed` | Actual fast submission or slow route, plus mechanical reason; shadow can include `proposed_route` |
+| `turn_start` / `turn_end` | Hybrid turn boundary, mode, configured backend, `allow_external_state`, final submission/provider counters and recorder health |
+| `requested` | Eligible prepared candidates sent for a decision; includes state hash, `state_chars`, `candidate_count`, `question_count`, `candidate_order_hash`, `domain`, no raw state |
+| `scored` | Returned distribution/model/usage and measured backend wall time, whether or not acted on; carries `candidate_order_hash`, `domain` |
+| `routed` | Actual fast submission or slow route, plus mechanical reason; shadow can include `proposed_route`; carries `domain` once a candidate set has been built (early guard-clause routes, e.g. `mode_off`, precede that and carry none) |
 | `fallback` | Error/timeout/envelope incompatibility; exception type only |
 | `slow_start` / `slow_end` | Actual original provider complete or stream invocation, destination, time and available usage |
 | `tool_start` / `tool_end` | Actual `execute()` reached and outcome; a native pre-hook alone does not produce these |
 | `cancelled` | Cancellation observed and propagated |
 | `health` | Recorder or metadata-only native-hook bridge status |
-| `shadow_proposed` | The shadow worker scored a snapshot taken from the mounted context manager (`state_source: "context_mount"`); off the critical path, includes `choice`, `probabilities`, `selected_probability`, `margin`, `duration_ms`, `state_source`, `candidate_count` |
+| `shadow_proposed` | The shadow worker scored a snapshot taken from the mounted context manager (`state_source: "context_mount"`); off the critical path, includes `choice`, `probabilities`, `selected_probability`, `margin`, `duration_ms`, `state_source`, `candidate_count`, `domain`, `state_chars`; carries `allow_external_state` only on the first `shadow_proposed` emitted for a given `turn_id` (a per-turn context field, not repeated every decision) |
 | `shadow_observed` | The next `tool:pre` after a `shadow_proposed` snapshot was seen; carries `tool`, `tool_call_id`, `arguments_hash` -- what the LLM actually did, not what was proposed |
-| `shadow_agreement` | A `shadow_proposed` proposal and its matching `shadow_observed` outcome were joined; `agreement` is `match` / `mismatch` / `abstained` / `unobserved`, plus `proposed_candidate`, `actual_tool`, `would_have_avoided_llm_turn` |
-| `role_proposed` | The shadow-only model-role router (P4) proposed a role for a `delegate` call, or recorded why it abstained (`explicit_role_present`, `role_resolver_unavailable`); carries `proposed_model_role`, `eligible_roles`, `reason_code` |
-| `role_agreement` | A `role_proposed` proposal and the delegate's actual routing were joined; `agreement` is `match` / `mismatch` / `unobserved`, plus `proposed_model_role`, `actual_model_role` (`null` = resolver default) |
+| `shadow_agreement` | A `shadow_proposed` proposal and its matching `shadow_observed` outcome were joined; `agreement` is `match` / `mismatch` / `abstained` / `unobserved`, plus `proposed_candidate`, `actual_tool`, `would_have_avoided_llm_turn`, `domain` |
+| `role_proposed` | The shadow-only model-role router (P4) proposed a role for a `delegate` call, or recorded why it abstained (`explicit_role_present`, `role_resolver_unavailable`); carries `proposed_model_role`, `eligible_roles`, `reason_code`, `domain` (always `"model-role"`) |
+| `role_agreement` | A `role_proposed` proposal and the delegate's actual routing were joined; `agreement` is `match` / `mismatch` / `unobserved`, plus `proposed_model_role`, `actual_model_role` (`null` = resolver default), `domain` |
 
 Fast tool IDs match the synthesized core ToolCall ID when the argument fingerprint still matches. If upstream modifies a call, or for ordinary slow-path calls, the tool facade may allocate an `observed_*` correlation ID instead. The native hook bridge can carry the original native ID. Do not assume these are identical in every path.
 
@@ -46,5 +46,19 @@ misbehaving contributor (wrong shape, conflicting identifiers, or over the
 `fallback` events with reason codes `contribution_shape_invalid`,
 `contribution_conflict`, `contribution_truncated`, `question_criteria_invalid`
 -- it can never disable the fast path for the other contributors.
+
+**Three bench measurement fields, all small privacy-safe scalars.** `domain`
+(one of `tool-choice` / `read-target` / `model-role`) is decided once, at the
+point a decision's candidate set is built, by the single classifier
+`contracts.classify_domain`: `"model-role"` for router (model-role)
+decisions; `"read-target"` when every candidate targets `fast_workspace`;
+`"tool-choice"` otherwise. `state_chars` (an integer, never the state text)
+is `len(canonical(state))` for the state actually sent to the backend, on
+`requested` (the main decision path) and `shadow_proposed` (the shadow
+path). `allow_external_state` (a boolean, the shipped policy's own
+external-state opt-in) is on `turn_start`, and on the *first*
+`shadow_proposed` per `turn_id` only -- it is turn-level context, not
+per-decision, so it is not repeated on every shadow proposal within the
+same turn. All three are in `privacy.SAFE_FIELDS`.
 
 **Shadow scoring runs off the critical path; the snapshot does not.** `hooks.emit` applies no per-handler timeout, so only the *backend scoring* that produces `shadow_proposed`/`shadow_agreement` is deferred to a background worker owned by `Runtime`. The *snapshot* (reading the mounted context manager, collecting candidates, hashing) runs inline in the `provider:request` handler and is hard-bounded by `shadow_max_messages`, `max_state_chars` and `shadow_snapshot_budget_ms`. Exceeding the wall-clock budget is a normal, counted outcome -- the snapshot is abandoned and `fallback` fires with `reason_code: shadow_snapshot_budget_exceeded`, never an exception into the hook chain. No handler in the shadow scorer can raise into the hook chain or change the turn; every handler returns `continue` unconditionally.

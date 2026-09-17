@@ -5,6 +5,12 @@ amplifier_foundation, transitively, within this package.
 
 An import-graph scan over src/, not a runtime check -- it holds even when
 amplifier_core/amplifier_foundation are not installed.
+
+``bench/`` is a subpackage (PR D): its modules are included in the scanned
+set via a recursive walk, and relative imports are resolved with full
+Python package semantics (level-1 imports resolve within the module's own
+package; level-2+ walk up one package per extra dot), not the flat
+same-directory assumption that was sufficient before bench/ existed.
 """
 
 from __future__ import annotations
@@ -15,7 +21,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1] / "src" / "amplifier_fast_decisions"
 
-# Harness-agnostic core (must not import the kernel, transitively).
+# Harness-agnostic core (must not import the kernel, transitively). Dotted
+# names are relative to ROOT; "bench" is the bench/__init__.py package
+# itself, "bench.metrics" etc. are its submodules.
 AGNOSTIC = {
     "contracts",
     "state",
@@ -25,53 +33,94 @@ AGNOSTIC = {
     "backends",
     "privacy",
     "telemetry",
+    "bench",
+    "bench.metrics",
+    "bench.replay",
+    "bench.suite",
+    "bench.report",
 }
-# bench/* is named in the design doc but does not exist yet in this PR.
 
 FORBIDDEN_PREFIXES = ("amplifier_core", "amplifier_foundation")
 
 
+def _dotted_key(path: Path) -> str:
+    """``ROOT/contracts.py`` -> ``"contracts"``; ``ROOT/bench/metrics.py`` ->
+    ``"bench.metrics"``; ``ROOT/bench/__init__.py`` -> ``"bench"``."""
+    relative = path.relative_to(ROOT).with_suffix("")
+    parts = list(relative.parts)
+    if parts[-1] == "__init__":
+        parts = parts[:-1]
+    return ".".join(parts)
+
+
+def _own_package(path: Path, key: str) -> str:
+    """The dotted package a module's own relative imports are resolved
+    against -- itself, for an ``__init__.py``; its parent otherwise."""
+    if path.name == "__init__.py":
+        return key
+    return key.rsplit(".", 1)[0] if "." in key else ""
+
+
+def all_module_paths() -> list[Path]:
+    return [p for p in ROOT.rglob("*.py") if "__pycache__" not in p.parts]
+
+
 def module_imports(path: Path) -> set[str]:
+    """Absolute (non-relative) import targets only; relative imports are
+    resolved separately via the local package graph below."""
     tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
     names: set[str] = set()
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):
             for alias in node.names:
                 names.add(alias.name)
-        elif isinstance(node, ast.ImportFrom):
-            if node.module:
-                names.add(node.module)
-            # Relative imports (`from .foo import bar`) are resolved by name
-            # below via the local module graph, not by dotted prefix.
+        elif isinstance(node, ast.ImportFrom) and node.level == 0 and node.module:
+            names.add(node.module)
     return names
 
 
 def local_module_names() -> set[str]:
-    return {p.stem for p in ROOT.glob("*.py")}
+    return {_dotted_key(p) for p in all_module_paths()}
+
+
+def _resolve_relative(
+    node: ast.ImportFrom, own_package: str, local_names: set[str]
+) -> set[str]:
+    """Resolve one ``from .foo import bar`` / ``from . import foo`` node
+    (``node.level >= 1``) against the *dotted* package it is relative to,
+    following ordinary Python relative-import semantics: level 1 is the
+    module's own package, level 2 its parent, etc."""
+    parts = own_package.split(".") if own_package else []
+    drop = node.level - 1
+    base_parts = parts[: len(parts) - drop] if drop <= len(parts) else []
+    base = ".".join(base_parts)
+    targets: set[str] = set()
+    if node.module:
+        candidate = f"{base}.{node.module}" if base else node.module
+        if candidate in local_names:
+            targets.add(candidate)
+    else:
+        for alias in node.names:
+            candidate = f"{base}.{alias.name}" if base else alias.name
+            if candidate in local_names:
+                targets.add(candidate)
+    return targets
 
 
 def build_local_graph() -> dict[str, set[str]]:
-    """Maps each local module name to the *local* modules it imports
-    (relative imports only -- ``from .foo import bar`` / ``from . import foo``)."""
-    graph: dict[str, set[str]] = {}
+    """Maps each local module's dotted key to the *local* dotted module
+    keys it imports via relative imports."""
     local_names = local_module_names()
-    for path in ROOT.glob("*.py"):
-        name = path.stem
+    graph: dict[str, set[str]] = {}
+    for path in all_module_paths():
+        key = _dotted_key(path)
+        own_package = _own_package(path, key)
         tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
         deps: set[str] = set()
         for node in ast.walk(tree):
             if isinstance(node, ast.ImportFrom) and node.level and node.level >= 1:
-                if node.module:
-                    candidate = node.module.split(".")[0]
-                    if candidate in local_names:
-                        deps.add(candidate)
-                # `from . import x, y` -- each imported name may itself be a
-                # local module.
-                if node.module is None:
-                    for alias in node.names:
-                        if alias.name in local_names:
-                            deps.add(alias.name)
-        graph[name] = deps
+                deps |= _resolve_relative(node, own_package, local_names)
+        graph[key] = deps
     return graph
 
 
@@ -101,10 +150,10 @@ def transitive_kernel_imports(
 class LayeringTests(unittest.TestCase):
     def test_agnostic_core_never_imports_the_kernel_transitively(self):
         graph = build_local_graph()
-        all_imports = {p.stem: module_imports(p) for p in ROOT.glob("*.py")}
+        all_imports = {_dotted_key(p): module_imports(p) for p in all_module_paths()}
         violations: dict[str, set[str]] = {}
         for module in AGNOSTIC:
-            self.assertIn(module, all_imports, f"{module}.py not found under {ROOT}")
+            self.assertIn(module, all_imports, f"{module} not found under {ROOT}")
             hits = transitive_kernel_imports(module, graph, all_imports)
             if hits:
                 violations[module] = hits
@@ -115,9 +164,8 @@ class LayeringTests(unittest.TestCase):
         )
 
     def test_agnostic_list_matches_the_design_doc(self):
-        # Guards against silent drift between this test and the design doc's
-        # "Smart-tool packaging target" boundary list (bench/* excluded --
-        # it does not exist yet in this PR).
+        # Guards against silent drift between this test and the design
+        # doc's "Smart-tool packaging target" boundary list.
         expected = {
             "contracts",
             "state",
@@ -127,8 +175,27 @@ class LayeringTests(unittest.TestCase):
             "backends",
             "privacy",
             "telemetry",
+            "bench",
+            "bench.metrics",
+            "bench.replay",
+            "bench.suite",
+            "bench.report",
         }
         self.assertEqual(AGNOSTIC, expected)
+
+    def test_bench_modules_are_scanned(self):
+        # A regression guard for the scan itself: bench/*.py must actually
+        # appear in the local module graph, not silently be skipped by a
+        # non-recursive glob.
+        found = local_module_names()
+        for name in (
+            "bench",
+            "bench.metrics",
+            "bench.replay",
+            "bench.suite",
+            "bench.report",
+        ):
+            self.assertIn(name, found)
 
 
 if __name__ == "__main__":

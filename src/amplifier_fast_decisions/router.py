@@ -18,10 +18,15 @@ import asyncio
 from typing import Any
 from uuid import uuid4
 
+from .contracts import classify_domain
+
 # Owned by routing-matrix (or any other resolver bundle); read-only here.
 ROLE_RESOLVER_CAPABILITY = "model_role_resolver"
 # Named ONLY to document, and test, that this module never touches it.
 PROVIDER_PIN_CAPABILITY = "conversation.provider_pin"
+# Every event this module emits is a model-role decision, by construction --
+# one call to the shared classifier, reused verbatim (contracts.classify_domain).
+_ROLE_DOMAIN = classify_domain((), kind="role")
 
 
 class RoleRouter:
@@ -60,7 +65,8 @@ class RoleRouter:
         )
         if resolver is None:
             await self._runtime.service.emit(
-                "role_proposed", {"reason_code": "role_resolver_unavailable"}
+                "role_proposed",
+                {"reason_code": "role_resolver_unavailable", "domain": _ROLE_DOMAIN},
             )
             return ()
         known_roles = getattr(resolver, "known_roles", None)
@@ -71,7 +77,8 @@ class RoleRouter:
             isinstance(r, str) for r in known_roles
         ):
             await self._runtime.service.emit(
-                "role_proposed", {"reason_code": "role_resolver_unavailable"}
+                "role_proposed",
+                {"reason_code": "role_resolver_unavailable", "domain": _ROLE_DOMAIN},
             )
             return ()
         live: list[str] = []
@@ -88,12 +95,14 @@ class RoleRouter:
                         live.append(role)
         except TimeoutError:
             await self._runtime.service.emit(
-                "role_proposed", {"reason_code": "role_resolver_unavailable"}
+                "role_proposed",
+                {"reason_code": "role_resolver_unavailable", "domain": _ROLE_DOMAIN},
             )
             return ()
         if not live:
             await self._runtime.service.emit(
-                "role_proposed", {"reason_code": "role_resolver_unavailable"}
+                "role_proposed",
+                {"reason_code": "role_resolver_unavailable", "domain": _ROLE_DOMAIN},
             )
         return tuple(live)
 
@@ -108,7 +117,11 @@ class RoleRouter:
         if explicit_role:
             await self._runtime.service.emit(
                 "role_proposed",
-                {"reason_code": "explicit_role_present", "proposed_model_role": None},
+                {
+                    "reason_code": "explicit_role_present",
+                    "proposed_model_role": None,
+                    "domain": _ROLE_DOMAIN,
+                },
             )
             return
         tool_call_id = data.get("tool_call_id")
@@ -135,6 +148,7 @@ class RoleRouter:
             {
                 "proposed_model_role": proposed,
                 "eligible_roles": list(roles),
+                "domain": _ROLE_DOMAIN,
             },
             decision_id,
         )
@@ -162,6 +176,7 @@ class RoleRouter:
                     "actual_model_role": actual,
                     "agreement": agreement,
                     "tool_call_id": tool_call_id,
+                    "domain": _ROLE_DOMAIN,
                 },
                 decision_id,
             )
