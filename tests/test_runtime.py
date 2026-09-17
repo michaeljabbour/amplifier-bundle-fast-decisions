@@ -10,6 +10,7 @@ import asyncio
 import tempfile
 import unittest
 
+from amplifier_fast_decisions.backends import JevBackend, ScriptedBackend, UnavailableBackend
 from amplifier_fast_decisions.contracts import Policy
 from amplifier_fast_decisions.demo import DemoCoordinator
 from amplifier_fast_decisions.runtime import get_runtime
@@ -82,6 +83,57 @@ class RuntimeCloseTests(unittest.IsolatedAsyncioTestCase):
             self.assertTrue(task.done())
             pending = [t for t in asyncio.all_tasks() if t is not asyncio.current_task() and not t.done()]
             self.assertEqual(pending, [])
+
+
+class BackendSelectionTests(unittest.IsolatedAsyncioTestCase):
+    """get_runtime's backend config -> instance mapping.
+
+    Confirms the deterministic backend is wireable (GAP1's root cause: it
+    previously wasn't, so the shipped shadow rung could only ever hit the
+    external_state_not_enabled fallback) and that jev/unavailable still
+    behave as before.
+    """
+
+    async def test_backend_deterministic_selects_scripted_backend(self):
+        coordinator = DemoCoordinator()
+        with tempfile.TemporaryDirectory() as tmp:
+            runtime, _ = get_runtime(
+                coordinator, {"backend": "deterministic", "events_dir": tmp}
+            )
+            try:
+                self.assertIsInstance(runtime.service.backend, ScriptedBackend)
+                self.assertFalse(runtime.service.backend.external)
+            finally:
+                await runtime.close()
+
+    async def test_backend_jev_selects_jev_backend(self):
+        coordinator = DemoCoordinator()
+        with tempfile.TemporaryDirectory() as tmp:
+            runtime, _ = get_runtime(
+                coordinator, {"backend": "jev", "events_dir": tmp}
+            )
+            try:
+                self.assertIsInstance(runtime.service.backend, JevBackend)
+                self.assertTrue(runtime.service.backend.external)
+            finally:
+                await runtime.close()
+
+    async def test_backend_unavailable_selects_unavailable_backend(self):
+        coordinator = DemoCoordinator()
+        with tempfile.TemporaryDirectory() as tmp:
+            runtime, _ = get_runtime(
+                coordinator, {"backend": "unavailable", "events_dir": tmp}
+            )
+            try:
+                self.assertIsInstance(runtime.service.backend, UnavailableBackend)
+            finally:
+                await runtime.close()
+
+    async def test_unknown_backend_name_still_rejected(self):
+        coordinator = DemoCoordinator()
+        with tempfile.TemporaryDirectory() as tmp:
+            with self.assertRaises(ValueError):
+                get_runtime(coordinator, {"backend": "scripted", "events_dir": tmp})
 
 
 if __name__ == "__main__":

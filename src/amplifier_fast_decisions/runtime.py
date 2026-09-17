@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
-from .backends import JevBackend, UnavailableBackend
+from .backends import JevBackend, ScriptedBackend, UnavailableBackend
 from .contracts import SERVICE_CAPABILITY, RUNTIME_CAPABILITY, EVENT_NAMES, Policy
 from .service import DecisionService
 from .shadow import ShadowJob, ShadowOutcome, ShadowWorker
@@ -118,10 +118,22 @@ def get_runtime(coordinator: Any, config: dict[str, Any], *, owner: bool = False
     recorder = JsonlRecorder(events_dir, session_id)
     emitter = Emitter(session_id, parent_session_id=parent, hooks=coordinator.hooks, recorder=recorder)
     backend_name = config.get("backend", "jev")
-    if backend_name not in {"jev", "unavailable"}:
+    if backend_name not in {"jev", "unavailable", "deterministic"}:
         recorder.close()
-        raise ValueError("Production backend must be jev or unavailable; scripted is demo-only")
-    backend = JevBackend(model=config.get("model"), timeout_ms=policy.timeout_ms) if backend_name == "jev" else UnavailableBackend()
+        raise ValueError(
+            "Production backend must be jev, deterministic, or unavailable"
+        )
+    if backend_name == "jev":
+        backend = JevBackend(model=config.get("model"), timeout_ms=policy.timeout_ms)
+    elif backend_name == "deterministic":
+        # In-process, offline scorer (external=False, never gated by
+        # allow_external_state): the "shadow, external=false" rung on the
+        # design's rung ladder (docs/design/redesign-2026-09-17.md P3
+        # decision 5). Explicitly opted into via config -- not a silent
+        # substitution for jev.
+        backend = ScriptedBackend()
+    else:
+        backend = UnavailableBackend()
     service = DecisionService(policy, backend, emitter, coordinator, config.get("candidates"))
     runtime = Runtime(service, recorder, shadow_capacity=config.get("shadow_capacity", 64),
                        shadow_drain_ms=config.get("shadow_drain_ms", 2000))
