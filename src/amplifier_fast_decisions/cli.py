@@ -9,6 +9,7 @@ import importlib.metadata
 import inspect
 import json
 import os
+import re
 import sys
 import threading
 import webbrowser
@@ -239,6 +240,31 @@ def bench_suite(args) -> int:
     return 0
 
 
+def _load_module_bundle_yaml(path: Path) -> dict:
+    """Parse a module-source bundle file: plain YAML, or YAML frontmatter (.md).
+
+    Requires PyYAML, which is not a runtime dependency of the zero-dependency
+    offline demo path (doctor/demo/serve/export/bench) -- only ``configure``
+    needs it, and only to read this project's own behaviors/*.yaml and
+    bundles/*.yaml so their module ``source:`` values are never duplicated
+    (and therefore never drift) in cli.py.
+    """
+    try:
+        import yaml
+    except ImportError as exc:
+        raise ValueError(
+            f"configure requires PyYAML to read {path}; "
+            "install it with `pip install pyyaml`"
+        ) from exc
+    text = path.read_text(encoding="utf-8")
+    if path.suffix == ".md":
+        match = re.match(r"^---\n(.*?)\n---\n?", text, re.DOTALL)
+        if not match:
+            raise ValueError(f"No YAML frontmatter found in {path}")
+        text = match.group(1)
+    return yaml.safe_load(text)
+
+
 def configure(args) -> int:
     root = Path(args.bundle_root or Path(__file__).resolve().parents[1]).resolve()
     if not (root / "bundle.md").is_file():
@@ -248,22 +274,63 @@ def configure(args) -> int:
             "Active Jev requires --allow-external-state; review docs/PRIVACY.md first"
         )
     workspace = Path(args.workspace).expanduser().resolve(strict=True)
-    config = {
-        "mode": args.mode,
-        "allow_external_state": args.allow_external_state,
-        "events_dir": str(Path(args.events).expanduser().resolve()),
-        "timeout_ms": args.timeout_ms,
-    }
+    events_dir = str(Path(args.events).expanduser().resolve())
+
     data = {
         "bundle": {"name": "fast-decisions-" + args.mode, "version": __version__},
         "includes": [{"bundle": root.as_uri()}],
-        "session": {
-            "orchestrator": {"module": "loop-fast-decisions", "config": config}
-        },
         "tools": [
             {"module": "tool-fast-workspace", "config": {"root": str(workspace)}}
         ],
     }
+
+    if args.mode == "active":
+        # Active swaps the orchestrator, exactly as bundles/active.yaml does.
+        # Read it rather than hardcode it so the two never drift.
+        active_yaml = _load_module_bundle_yaml(root / "bundles" / "active.yaml")
+        orchestrator = dict(active_yaml["session"]["orchestrator"])
+        config = dict(orchestrator.get("config") or {})
+        config.update(
+            {
+                "allow_external_state": args.allow_external_state,
+                "events_dir": events_dir,
+                "timeout_ms": args.timeout_ms,
+            }
+        )
+        orchestrator["config"] = config
+        data["session"] = {"orchestrator": orchestrator}
+    else:
+        # shadow/off: no orchestrator swap (P3) -- shadow measurement lives on
+        # hooks-fast-decisions and composes onto whatever orchestrator is
+        # already mounted. Re-declare the hook (same source the behavior
+        # uses) with our overrides; compose()'s merge_module_lists deep-merges
+        # by module id with the later (this profile's) declaration winning.
+        behavior_yaml = _load_module_bundle_yaml(
+            root / "behaviors" / "fast-decisions.yaml"
+        )
+        hook_entry = next(
+            h for h in behavior_yaml["hooks"] if h["module"] == "hooks-fast-decisions"
+        )
+        backend = "jev" if args.allow_external_state else "deterministic"
+        config = dict(hook_entry.get("config") or {})
+        config.update(
+            {
+                "mode": args.mode,
+                "backend": backend,
+                "allow_external_state": args.allow_external_state,
+                "events_dir": events_dir,
+                "timeout_ms": args.timeout_ms,
+                "role_router": True,
+            }
+        )
+        data["hooks"] = [
+            {
+                "module": "hooks-fast-decisions",
+                "source": hook_entry["source"],
+                "config": config,
+            }
+        ]
+
     output = Path(args.output).expanduser()
     output.parent.mkdir(parents=True, exist_ok=True)
     # JSON is a YAML subset: no extra dependency needed for valid frontmatter.

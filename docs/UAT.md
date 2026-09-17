@@ -7,32 +7,55 @@ number means, and `docs/PRIVACY.md` before enabling `--allow-external-state`.
 ## 1. Confirm the environment
 
 ```bash
-python3 -m amplifier_fast_decisions doctor --require-amplifier
+afast doctor --require-amplifier
 ```
 
-All required checks green. `TYPESAFE_API_KEY_present` should be `true` if
-you intend to exercise real Jev (its value is never displayed).
+Run this from the Amplifier tool venv's interpreter (or via the `afast`
+entry point it installs) -- `--require-amplifier` checks for
+`amplifier_core`/`amplifier_module_loop_streaming`, which live only there,
+not in a bare source checkout. All required checks green.
+`TYPESAFE_API_KEY_present` should be `true` if you intend to exercise real
+Jev (its value is never displayed).
 
-## 2. Generate a local shadow profile
+## 2. The default: shadow is already on, no configure step needed
+
+The simplest UAT is the already-installed behavior. Shadow measurement
+lives on the hook (`hooks-fast-decisions`), not the orchestrator (P3), so
+it composes onto whatever orchestrator you already run -- no bundle profile
+required for the deterministic rung:
 
 ```bash
+amplifier bundle add "git+https://github.com/michaeljabbour/amplifier-bundle-fast-decisions@main#subdirectory=behaviors/fast-decisions.yaml" --app
+```
+
+Shadow is on by default with the deterministic (in-process, offline)
+backend. Run a normal session; `shadow_*` events appear in
+`~/.amplifier/fast-decisions/events` with no API key involved.
+
+### For real Jev in shadow
+
+Real Jev scoring (still shadow -- never enacted) needs
+`TYPESAFE_API_KEY` and an explicit opt-in to external state:
+
+```bash
+export TYPESAFE_API_KEY=...
 export WORKSPACE="$(pwd)"
-python3 -m amplifier_fast_decisions configure \
+afast configure \
   --bundle-root "$PWD" \
   --workspace "$WORKSPACE" \
   --mode shadow \
   --allow-external-state \
   --output "$PWD/local-shadow.md"
-
-amplifier bundle add "file://$PWD/local-shadow.md" --app
 ```
 
 `--allow-external-state` is what makes this shadow rung "real Jev, zero
 behaviour change" rather than deterministic-only shadow (see
-`docs/design/redesign-2026-09-17.md` P3, rung ladder). Do not add `--app`
-during this test; select the profile per-run instead:
+`docs/design/redesign-2026-09-17.md` P3, rung ladder). Add it with `--app`
+to keep it mounted, or select it per-run instead:
 
 ```bash
+amplifier bundle add "file://$PWD/local-shadow.md" --app
+# or, without --app:
 amplifier run --bundle fast-decisions-shadow \
   "A normal working task, not a synthetic prompt."
 ```
@@ -46,6 +69,13 @@ criterion for this rung: shadow scoring runs entirely off the critical path
 user's seat, from the same session without it.
 
 ## 4. Replay the recorded telemetry
+
+```bash
+afast bench replay ~/.amplifier/projects/<project>/sessions/<id>/ --md uat.md
+```
+
+`bench replay` accepts a real Amplifier session directory directly (it reads
+the kernel's `events.jsonl`), or the recorder's own events directory:
 
 ```bash
 afast bench replay ~/.amplifier/fast-decisions/events --md uat.md
@@ -80,8 +110,11 @@ see the design doc's "Decisions taken", #1). Promotion criteria:
   the thresholds you are about to trust are measuring candidate
   serialisation, not the task.
 
+Either the profile `configure` generates, or the checked-in
+`bundles/active.yaml` via `amplifier bundle use`, will do:
+
 ```bash
-python3 -m amplifier_fast_decisions configure \
+afast configure \
   --bundle-root "$PWD" --workspace "$WORKSPACE" \
   --mode active --allow-external-state --output "$PWD/local-active.md"
 amplifier bundle add "file://$PWD/local-active.md" --app

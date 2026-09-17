@@ -206,13 +206,16 @@ class BundleLoadTests(unittest.TestCase):
 
         orchestrator = mount_plan["session"]["orchestrator"]
         self.assertEqual(
-            orchestrator["module"], "loop-streaming",
+            orchestrator["module"],
+            "loop-streaming",
             "bundles/shadow.yaml must no longer swap the orchestrator",
         )
 
         hook_modules = {h["module"]: h for h in mount_plan.get("hooks", [])}
         self.assertIn("hooks-fast-decisions", hook_modules)
-        self.assertEqual(hook_modules["hooks-fast-decisions"]["config"]["mode"], "shadow")
+        self.assertEqual(
+            hook_modules["hooks-fast-decisions"]["config"]["mode"], "shadow"
+        )
 
         tool_modules = {t["module"] for t in mount_plan.get("tools", [])}
         self.assertIn("tool-fast-workspace", tool_modules)
@@ -224,6 +227,102 @@ class BundleLoadTests(unittest.TestCase):
             expected_mode="active",
             expected_allow_external=True,
         )
+
+
+def _configure(tmp_path: Path, mode: str, output_name: str) -> Path:
+    from types import SimpleNamespace
+
+    from amplifier_fast_decisions.cli import configure
+
+    output = tmp_path / output_name
+    args = SimpleNamespace(
+        bundle_root=str(ROOT),
+        workspace=str(tmp_path),
+        mode=mode,
+        allow_external_state=True,
+        events=str(tmp_path / "events"),
+        timeout_ms=750,
+        output=str(output),
+    )
+    configure(args)
+    return output
+
+
+class ConfigureFrontmatterTests(unittest.TestCase):
+    """Plain-lane (no amplifier_foundation) checks on the generated profile shape."""
+
+    def test_shadow_profile_has_no_session_block(self):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            output = _configure(Path(tmp), "shadow", "local-shadow.md")
+            data = _load_frontmatter(output)
+            self.assertNotIn("session", data)
+            hook_modules = {h["module"]: h for h in data.get("hooks", [])}
+            self.assertIn("hooks-fast-decisions", hook_modules)
+            self.assertIn("source", hook_modules["hooks-fast-decisions"])
+            self.assertEqual(
+                hook_modules["hooks-fast-decisions"]["config"]["mode"], "shadow"
+            )
+
+    def test_active_profile_has_orchestrator_source(self):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            output = _configure(Path(tmp), "active", "local-active.md")
+            data = _load_frontmatter(output)
+            orchestrator = data["session"]["orchestrator"]
+            self.assertIn("source", orchestrator)
+            self.assertEqual(orchestrator["module"], "loop-fast-decisions")
+            self.assertEqual(orchestrator["config"]["mode"], "active")
+
+
+@unittest.skipUnless(
+    _amplifier_foundation_importable(),
+    "amplifier_foundation not installed (or not importable)",
+)
+class ConfigureProfileCompositionTests(unittest.TestCase):
+    """Generate shadow/active profiles via configure() and compose them for real."""
+
+    @staticmethod
+    def _load(path: Path):
+        from amplifier_foundation import load_bundle
+
+        return asyncio.run(load_bundle("file://" + str(path.resolve())))
+
+    def test_generated_shadow_profile_keeps_loop_streaming(self):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            output = _configure(Path(tmp), "shadow", "local-shadow.md")
+            bundle = self._load(output)
+            mount_plan = bundle.to_mount_plan()
+
+            orchestrator = mount_plan["session"]["orchestrator"]
+            self.assertEqual(
+                orchestrator["module"],
+                "loop-streaming",
+                "generated shadow profile must not swap the orchestrator",
+            )
+
+            hook_modules = {h["module"]: h for h in mount_plan.get("hooks", [])}
+            self.assertIn("hooks-fast-decisions", hook_modules)
+            hook_config = hook_modules["hooks-fast-decisions"]["config"]
+            self.assertEqual(hook_config["backend"], "jev")
+            self.assertIs(hook_config["allow_external_state"], True)
+
+    def test_generated_active_profile_swaps_orchestrator(self):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            output = _configure(Path(tmp), "active", "local-active.md")
+            bundle = self._load(output)
+            mount_plan = bundle.to_mount_plan()
+
+            orchestrator = mount_plan["session"]["orchestrator"]
+            self.assertEqual(orchestrator["module"], "loop-fast-decisions")
+            self.assertIn("source", orchestrator)
+            self.assertEqual(orchestrator["config"]["mode"], "active")
 
 
 if __name__ == "__main__":
