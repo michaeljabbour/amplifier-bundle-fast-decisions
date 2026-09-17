@@ -59,7 +59,7 @@ class RuntimeCloseTests(unittest.IsolatedAsyncioTestCase):
             name = "hanging"
             external = False
 
-            async def decide(self, state, candidates):
+            async def ask(self, request):
                 await asyncio.sleep(10)
 
             async def close(self):

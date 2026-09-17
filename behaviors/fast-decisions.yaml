@@ -21,6 +21,11 @@ hooks:
       shadow_snapshot_budget_ms: 25
       shadow_drain_ms: 2000
       max_state_chars: 12000
+      max_questions: 8
+      role_router: false
+      role_probe_timeout_ms: 2000
+      role_router_tools:
+        - delegate
 
 tools:
   - module: tool-fast-workspace

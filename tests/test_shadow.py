@@ -76,7 +76,7 @@ class ShadowWorkerTests(unittest.IsolatedAsyncioTestCase):
             name = "external-demo"
             external = True
 
-            async def decide(self, state, candidates):
+            async def ask(self, request):
                 constructed.append(True)
                 raise AssertionError("must never be called while allow_external_state is False")
 

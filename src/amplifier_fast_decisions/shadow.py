@@ -7,6 +7,7 @@ task owned by Runtime. Nothing here can change the turn: a scoring failure
 is swallowed, never raised, and no result from this module denies, modifies
 or injects anything into the hook chain.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -14,7 +15,7 @@ import time
 from dataclasses import dataclass
 from typing import Any, Literal
 
-from .contracts import SLOW, Candidate, digest
+from .contracts import SLOW, Candidate, DecisionRequest, Question, digest
 
 
 @dataclass(frozen=True)
@@ -31,7 +32,7 @@ class ShadowJob:
     decision_id: str
     state: dict[str, Any]
     candidates: tuple[Candidate, ...]
-    questions: tuple[Any, ...]
+    questions: tuple[Question, ...]
     state_source: Literal["context_mount", "provider_complete"]
     state_hash: str
     state_revision: int
@@ -67,7 +68,9 @@ class ShadowWorker:
 
     def __init__(self, service: Any, capacity: int = 64):
         self._service = service
-        self._queue: asyncio.Queue[tuple[str, Any]] = asyncio.Queue(maxsize=max(1, capacity))
+        self._queue: asyncio.Queue[tuple[str, Any]] = asyncio.Queue(
+            maxsize=max(1, capacity)
+        )
         self._proposals: dict[str, _Proposal] = {}
         self._pending_outcomes: dict[str, ShadowOutcome] = {}
         self.dropped_shadow_jobs = 0
@@ -90,7 +93,10 @@ class ShadowWorker:
 
     @property
     def health(self) -> dict[str, int]:
-        return {"dropped_shadow_jobs": self.dropped_shadow_jobs, "pending": self._queue.qsize()}
+        return {
+            "dropped_shadow_jobs": self.dropped_shadow_jobs,
+            "pending": self._queue.qsize(),
+        }
 
     async def join(self) -> None:
         """Wait for the queue to drain. Used by Runtime.close's bounded drain."""
@@ -119,27 +125,48 @@ class ShadowWorker:
         # explicit opt-in. This runs before any backend method is touched, so
         # an external backend's client (e.g. JevBackend's lazy AsyncTypeSafeClient)
         # is never constructed while the gate is closed.
-        if self._service.backend.external and not self._service.policy.allow_external_state:
-            await self._service.emit("fallback", {"reason_code": "external_state_not_enabled"}, job.decision_id)
+        if (
+            self._service.backend.external
+            and not self._service.policy.allow_external_state
+        ):
+            await self._service.emit(
+                "fallback",
+                {"reason_code": "external_state_not_enabled"},
+                job.decision_id,
+            )
             return
         start = time.perf_counter()
         try:
-            decision = await self._service.backend.decide(job.state, list(job.candidates))
-            decision.validate({c.id for c in job.candidates} | {SLOW})
+            request = DecisionRequest(
+                state=job.state, candidates=job.candidates, questions=job.questions
+            )
+            result = await self._service.backend.ask(request)
+            result.action.validate({c.id for c in job.candidates} | {SLOW})
         except asyncio.CancelledError:
             raise
         except Exception:
             return
+        decision = result.action
         duration = (time.perf_counter() - start) * 1000
         p = decision.probabilities[decision.choice]
         others = [v for k, v in decision.probabilities.items() if k != decision.choice]
         margin = p - max(others, default=0)
-        await self._service.emit("shadow_proposed", {
-            "choice": decision.choice, "probabilities": decision.probabilities,
-            "selected_probability": p, "margin": margin, "duration_ms": duration,
-            "state_source": job.state_source, "candidate_count": len(job.candidates),
-        }, job.decision_id)
-        proposal = _Proposal(job, decision.choice, decision.probabilities, p, margin, duration)
+        await self._service.emit(
+            "shadow_proposed",
+            {
+                "choice": decision.choice,
+                "probabilities": decision.probabilities,
+                "selected_probability": p,
+                "margin": margin,
+                "duration_ms": duration,
+                "state_source": job.state_source,
+                "candidate_count": len(job.candidates),
+            },
+            job.decision_id,
+        )
+        proposal = _Proposal(
+            job, decision.choice, decision.probabilities, p, margin, duration
+        )
         outcome = self._pending_outcomes.pop(job.decision_id, None)
         if outcome is not None:
             await self._emit_agreement(proposal, outcome)
@@ -153,24 +180,33 @@ class ShadowWorker:
             return
         await self._emit_agreement(proposal, outcome)
 
-    async def _emit_agreement(self, proposal: _Proposal, outcome: ShadowOutcome) -> None:
+    async def _emit_agreement(
+        self, proposal: _Proposal, outcome: ShadowOutcome
+    ) -> None:
         if proposal.choice == SLOW:
             agreement = "abstained"
         elif outcome.actual_tool is None:
             agreement = "unobserved"
         else:
-            candidate = next((c for c in proposal.job.candidates if c.id == proposal.choice), None)
+            candidate = next(
+                (c for c in proposal.job.candidates if c.id == proposal.choice), None
+            )
             matched = (
                 candidate is not None
                 and candidate.tool == outcome.actual_tool
                 and digest(candidate.arguments) == outcome.actual_arguments_hash
             )
             agreement = "match" if matched else "mismatch"
-        await self._service.emit("shadow_agreement", {
-            "agreement": agreement, "proposed_candidate": proposal.choice,
-            "actual_tool": outcome.actual_tool,
-            "would_have_avoided_llm_turn": agreement == "match",
-        }, proposal.job.decision_id)
+        await self._service.emit(
+            "shadow_agreement",
+            {
+                "agreement": agreement,
+                "proposed_candidate": proposal.choice,
+                "actual_tool": outcome.actual_tool,
+                "would_have_avoided_llm_turn": agreement == "match",
+            },
+            proposal.job.decision_id,
+        )
 
     def sweep_unobserved(self) -> None:
         """Drop any proposals that never saw a matching outcome this turn.

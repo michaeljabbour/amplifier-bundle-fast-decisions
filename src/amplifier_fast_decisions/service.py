@@ -1,19 +1,36 @@
 """Fast decisions propose prepared actions; the upstream loop still executes them."""
+
 from __future__ import annotations
+
 import asyncio
 import time
 from typing import Any
 from uuid import uuid4
 
-from .contracts import Candidate, Policy, TurnState, VALIDATOR_CAPABILITY, SLOW
-from .candidates import capability, maybe_await, collect_candidates
+from .candidates import capability, collect_candidates, maybe_await
+from .contracts import (
+    SLOW,
+    VALIDATOR_CAPABILITY,
+    Candidate,
+    DecisionRequest,
+    Policy,
+    TurnState,
+    compute_candidate_order_hash,
+)
+from .questions import collect_questions
 from .state import automatic_tools, build_state, request_fingerprint, tool_names
 from .telemetry import Emitter
 
 
 class DecisionService:
-    def __init__(self, policy: Policy, backend: Any, emitter: Emitter,
-                 coordinator: Any = None, configured_candidates: list[dict] | None = None):
+    def __init__(
+        self,
+        policy: Policy,
+        backend: Any,
+        emitter: Emitter,
+        coordinator: Any = None,
+        configured_candidates: list[dict] | None = None,
+    ):
         self.policy = policy
         self.backend = backend
         self.emitter = emitter
@@ -25,11 +42,18 @@ class DecisionService:
         self.unhealthy_until = 0.0
 
     async def emit(self, kind: str, data: dict, decision_id: str | None = None):
-        return await self.emitter.emit(kind, data, turn_id=self.turn.id if self.turn else None,
-                                       decision_id=decision_id or self.last_decision_id)
+        return await self.emitter.emit(
+            kind,
+            data,
+            turn_id=self.turn.id if self.turn else None,
+            decision_id=decision_id or self.last_decision_id,
+        )
 
     async def _eligible(self, candidate: Candidate, tools: dict[str, Any]) -> bool:
-        if candidate.tool not in self.policy.allowed_tools or candidate.tool not in tools:
+        if (
+            candidate.tool not in self.policy.allowed_tools
+            or candidate.tool not in tools
+        ):
             return False
         tool = tools[candidate.tool]
         # The bundled workspace validates containment, exclusions and revision.
@@ -48,20 +72,35 @@ class DecisionService:
         turn.decision_count += 1
         self.last_decision_id = uuid4().hex
         decision_id = self.last_decision_id
-        common = {"mode": self.policy.mode, "backend": self.backend.name,
-                  "policy_version": self.policy.version, "step": turn.decision_count,
-                  "state_revision": turn.revision}
+        common = {
+            "mode": self.policy.mode,
+            "backend": self.backend.name,
+            "policy_version": self.policy.version,
+            "step": turn.decision_count,
+            "state_revision": turn.revision,
+        }
 
         async def slow(reason: str, **extra):
-            await self.emit("routed", {**common, "route": "slow", "destination": "provider",
-                            "reason_code": reason, **extra}, decision_id)
-            return None
+            await self.emit(
+                "routed",
+                {
+                    **common,
+                    "route": "slow",
+                    "destination": "provider",
+                    "reason_code": reason,
+                    **extra,
+                },
+                decision_id,
+            )
 
         if self.policy.mode == "off":
             return await slow("mode_off")
         if not automatic_tools(request) or not tool_names(request):
             return await slow("no_automatic_tool_boundary")
-        if turn.fast_streak >= self.policy.max_fast_streak or turn.fast_total >= self.policy.max_fast_per_turn:
+        if (
+            turn.fast_streak >= self.policy.max_fast_streak
+            or turn.fast_total >= self.policy.max_fast_per_turn
+        ):
             return await slow("fast_path_budget")
         if time.monotonic() < self.unhealthy_until:
             return await slow("backend_circuit_open")
@@ -72,59 +111,134 @@ class DecisionService:
         snapshot_hash = request_fingerprint(request)
         try:
             async with asyncio.timeout_at(deadline):
-                candidates = await collect_candidates(self.coordinator, request, tools, self.configured_candidates)
+                candidates, candidate_reasons = await collect_candidates(
+                    self.coordinator,
+                    request,
+                    tools,
+                    self.configured_candidates,
+                    self.policy.max_candidates,
+                )
+                questions, question_reasons = await collect_questions(
+                    self.coordinator, self.policy.max_questions
+                )
                 mounted = tool_names(request)
-                candidates = [c for c in candidates if c.tool in mounted and c.fingerprint not in turn.used]
+                candidates = [
+                    c
+                    for c in candidates
+                    if c.tool in mounted and c.fingerprint not in turn.used
+                ]
                 eligible = []
                 for c in candidates:
                     if await self._eligible(c, tools):
                         eligible.append(c)
-                candidates = eligible[:self.policy.max_candidates]
+                candidates = eligible[: self.policy.max_candidates]
         except asyncio.CancelledError:
             raise
         except TimeoutError as exc:
-            await self.emit("fallback", {**common, "reason_code": "decision_timeout",
-                                         "exception_type": type(exc).__name__}, decision_id)
+            await self.emit(
+                "fallback",
+                {
+                    **common,
+                    "reason_code": "decision_timeout",
+                    "exception_type": type(exc).__name__,
+                },
+                decision_id,
+            )
             return await slow("decision_timeout")
         except Exception as exc:
-            await self.emit("fallback", {**common, "reason_code": "candidate_source_error",
-                                         "exception_type": type(exc).__name__}, decision_id)
+            await self.emit(
+                "fallback",
+                {
+                    **common,
+                    "reason_code": "candidate_source_error",
+                    "exception_type": type(exc).__name__,
+                },
+                decision_id,
+            )
             return await slow("candidate_source_error")
+        for code in (*candidate_reasons, *question_reasons):
+            await self.emit("fallback", {**common, "reason_code": code}, decision_id)
         if not candidates:
             return await slow("no_eligible_candidates")
+        order_hash = compute_candidate_order_hash(candidates)
         state = build_state(request, self.policy.max_state_chars)
-        await self.emit("requested", {**common, "state_hash": snapshot_hash,
-            "candidate_count": len(candidates),
-            "candidates": [{"id": c.id, "label": c.label, "tool": c.tool} for c in candidates]}, decision_id)
+        await self.emit(
+            "requested",
+            {
+                **common,
+                "state_hash": snapshot_hash,
+                "candidate_count": len(candidates),
+                "question_count": len(questions),
+                "candidate_order_hash": order_hash,
+                "candidates": [
+                    {"id": c.id, "label": c.label, "tool": c.tool} for c in candidates
+                ],
+            },
+            decision_id,
+        )
         start = time.perf_counter()
         try:
             async with asyncio.timeout_at(deadline):
-                decision = await self.backend.decide(state, candidates)
-            decision.validate({c.id for c in candidates} | {SLOW})
+                decision_request = DecisionRequest(
+                    state=state,
+                    candidates=tuple(candidates),
+                    questions=tuple(questions),
+                    candidate_order_hash=order_hash,
+                )
+                result = await self.backend.ask(decision_request)
+            result.action.validate({c.id for c in candidates} | {SLOW})
         except asyncio.CancelledError:
-            await self.emit("cancelled", {**common, "reason_code": "decision_cancelled"}, decision_id)
+            await self.emit(
+                "cancelled",
+                {**common, "reason_code": "decision_cancelled"},
+                decision_id,
+            )
             raise
         except Exception as exc:
-            reason = "decision_timeout" if isinstance(exc, TimeoutError) else "backend_error"
+            reason = (
+                "decision_timeout" if isinstance(exc, TimeoutError) else "backend_error"
+            )
             self.unhealthy_until = time.monotonic() + 5.0
-            await self.emit("fallback", {**common, "reason_code": reason,
-                "duration_ms": (time.perf_counter() - start) * 1000,
-                "exception_type": type(exc).__name__}, decision_id)
+            await self.emit(
+                "fallback",
+                {
+                    **common,
+                    "reason_code": reason,
+                    "duration_ms": (time.perf_counter() - start) * 1000,
+                    "exception_type": type(exc).__name__,
+                },
+                decision_id,
+            )
             return await slow(reason)
+        decision = result.action
         duration = (time.perf_counter() - start) * 1000
         p = decision.probabilities[decision.choice]
         others = [v for k, v in decision.probabilities.items() if k != decision.choice]
         margin = p - max(others, default=0)
-        result = {**common, "choice": decision.choice, "probabilities": decision.probabilities,
-                  "selected_probability": p, "reported_confidence": decision.reported_confidence,
-                  "margin": margin, "duration_ms": duration, "model": decision.model,
-                  "input_tokens": decision.input_tokens, "synthetic": decision.synthetic,
-                  "latency_kind": "decision_model_wall_time"}
-        await self.emit("scored", result, decision_id)
+        scored_data = {
+            **common,
+            "choice": decision.choice,
+            "probabilities": decision.probabilities,
+            "selected_probability": p,
+            "reported_confidence": decision.reported_confidence,
+            "margin": margin,
+            "duration_ms": duration,
+            "model": decision.model,
+            "input_tokens": decision.input_tokens,
+            "output_tokens": result.output_tokens,
+            "synthetic": decision.synthetic,
+            "candidate_order_hash": order_hash,
+            "latency_kind": "decision_model_wall_time",
+        }
+        await self.emit("scored", scored_data, decision_id)
         proposed = "fast" if decision.choice != SLOW else "slow"
         if self.policy.mode == "shadow":
-            return await slow("shadow_only", proposed_route=proposed, shadow=True,
-                              selected_candidate=decision.choice)
+            return await slow(
+                "shadow_only",
+                proposed_route=proposed,
+                shadow=True,
+                selected_candidate=decision.choice,
+            )
         if decision.synthetic and not self.policy.allow_synthetic_active:
             return await slow("synthetic_backend_not_authorized")
         if decision.choice == SLOW:

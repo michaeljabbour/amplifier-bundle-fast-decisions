@@ -32,7 +32,7 @@ Capabilities registered during mounting:
 
 The hook bridge reuses the existing runtime when the orchestrator already mounted. Cleanup is idempotent. Each executed turn resets its candidate-use set, fast counters and decision ID. A session-local circuit breaker can survive between turns for five seconds after a backend error.
 
-The service's `choose(request, tools)` is orchestration-sensitive: it requires an active turn and serial use. It is not a stateless, concurrent general-purpose RPC API. Consumers should contribute prepared candidates rather than call it from parallel hooks. The independently reusable backend interface is `decide(state, candidates)`.
+The service's `choose(request, tools)` is orchestration-sensitive: it requires an active turn and serial use. It is not a stateless, concurrent general-purpose RPC API. Consumers should contribute prepared candidates (and questions) rather than call it from parallel hooks. The independently reusable backend interface is `ask(request: DecisionRequest) -> DecisionResult`: one batched call carrying the action candidates plus every contributed judgment question, scored independently by the vendor in a single request.
 
 ## Shadow measurement (the hook, not the orchestrator)
 
@@ -58,7 +58,11 @@ The shadow worker is a single background `asyncio.Task` owned by `Runtime`: crea
 
 The snapshot uses at most the latest 12 messages, bounded per-message and total size. It excludes system/developer text and private thinking blocks. It is not a rolling external memory cache. The actual request fingerprint includes messages/tools/model; no raw request is recorded in telemetry.
 
-Candidate sources are trusted config, the `fast_decisions.candidates` capability callback, the native contribution channel of the same name, and explicitly mentioned workspace text files. Candidate arguments are copied. Duplicate conflicting IDs reject the candidate set. Tools must be present both in the request's advertised tools and the actual mounted tools and also appear in the policy allowlist.
+Candidate sources are trusted config, the `fast_decisions.candidates` capability callback, the native contribution channel of the same name, and explicitly mentioned workspace text files. Candidate arguments are copied. Candidates are collected as groups, one per contributor; a group with an internal or cross-group conflicting ID is dropped in full and counted (`contribution_conflict`) -- it cannot remove another contributor's candidates. The surviving set is serialised in canonical `(origin, id)` order; a `candidate_order_hash` digest of that order is computed once per request and appears on `requested`/`scored`. Tools must be present both in the request's advertised tools and the actual mounted tools and also appear in the policy allowlist.
+
+Judgment questions (`fast_decisions.questions`, new) follow the identical per-contributor rejection model, bounded by `max_questions` (default 8) with `choice` questions further bounded to 2..255 criteria. Both channels are validated and truncated inside the same shared decision deadline, and both feed the single batched `ask()` call -- one backend request per state regardless of question count.
+
+The model-role router (P4) is a second, independent consumer of the same shadow measurement path: at `delegate` calls it proposes a `model_role`, records it against what the delegate actually resolved, and never mutates the call (the upstream loop does not honor `modify` at `tool:pre`, so an active router through this seam is not just undesired but structurally impossible today). It is off by default (`role_router: false`), reads `model_role_resolver` read-only to enumerate live roles once per session, and never reads or writes `conversation.provider_pin`.
 
 Non-workspace tools additionally need `fast_decisions.validate_candidate`. The bundled workspace tool validates containment, excluded names, permitted operations, file revisions and size. File and conversation state are rechecked after inference. Neither eligibility nor confidence is an approval token.
 
@@ -80,4 +84,4 @@ The web viewer polls an authenticated local read endpoint every 250 ms. Polling 
 
 ## Deliberately not in v0.1.0
 
-No local Jev weights, Rust kernel changes, learned action generation, autonomous stopping, model-role resolver integration, production accuracy claim, forced fleet-wide rollout, automatic transcript export, or mandatory replacement of Foundation. These are separate experiments with separate acceptance criteria.
+No local Jev weights, Rust kernel changes, learned action generation, autonomous stopping, an *active* model-role router (shadow-only only -- see P4), production accuracy claim, forced fleet-wide rollout, automatic transcript export, or mandatory replacement of Foundation. These are separate experiments with separate acceptance criteria.

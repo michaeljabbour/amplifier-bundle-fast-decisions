@@ -8,7 +8,7 @@ import unittest
 from unittest.mock import patch
 
 from amplifier_fast_decisions.backends import JevBackend, ScriptedBackend, BackendUnavailable
-from amplifier_fast_decisions.contracts import Candidate, Decision, Policy, TurnState, VALIDATOR_CAPABILITY
+from amplifier_fast_decisions.contracts import Candidate, Decision, DecisionRequest, Policy, Question, TurnState, VALIDATOR_CAPABILITY
 from amplifier_fast_decisions.demo import DemoCoordinator, DemoProvider, DemoTool, DemoContext, DemoLoop, demo_response
 from amplifier_fast_decisions.orchestrator import RoutedProvider, HybridOrchestrator, ObservedTool
 from amplifier_fast_decisions.runtime import Runtime
@@ -166,8 +166,8 @@ class DecisionTests(unittest.IsolatedAsyncioTestCase):
     async def test_stale_request_rejected(self):
         req=request()
         class Mutating(ScriptedBackend):
-            async def decide(self,state,candidates):
-                answer=await super().decide(state,candidates)
+            async def ask(self,decision_request):
+                answer=await super().ask(decision_request)
                 req.messages.append({'role':'user','content':'Cancel the old objective'})
                 return answer
         service,_,events,_=setup_service(backend=Mutating(delay_ms=0))
@@ -348,16 +348,37 @@ class BackendTests(unittest.IsolatedAsyncioTestCase):
         class Client:
             async def system_one(self,**kwargs):
                 self.kwargs=kwargs
-                return NS(choices={'next_action':NS(choice='read_0', probabilities={'read_0':.95,'reason':.05}, confidence=.9)},
-                          model='actual-returned-model',usage=NS(input_tokens=17))
+                return NS(answers={'next_action':NS(probabilities={'read_0':.95,'reason':.05}, confidence=.9)},
+                          model='actual-returned-model',usage=NS(input_tokens=17,output_tokens=0))
             async def aclose(self):self.closed=True
         client=Client();backend=JevBackend(client=client,model='test-model')
-        result=await backend.decide({'task':'inspect'},[make_candidate()])
+        req=DecisionRequest(state={'task':'inspect'},candidates=(make_candidate(),))
+        result=await backend.ask(req)
+        self.assertEqual(result.action.choice,'read_0')
         self.assertEqual(result.model,'actual-returned-model');self.assertEqual(result.input_tokens,17)
         self.assertEqual(client.kwargs['questions']['next_action']['type'],'choice')
         self.assertIn('reason',client.kwargs['questions']['next_action']['criteria'])
         self.assertFalse(result.synthetic)
         await backend.close();self.assertTrue(client.closed)
+    async def test_batches_contributed_questions_in_one_call(self):
+        class Client:
+            calls=0
+            async def system_one(self,**kwargs):
+                self.calls+=1;self.kwargs=kwargs
+                return NS(answers={
+                    'next_action':NS(probabilities={'read_0':.95,'reason':.05}, confidence=.9),
+                    'risk':NS(probabilities={'x':1.0},confidence=.4),
+                    'stale':NS(noul=.7),
+                },model='m',usage=NS(input_tokens=5,output_tokens=0))
+            async def aclose(self):pass
+        client=Client();backend=JevBackend(client=client,model='m')
+        questions=(Question('risk','score','How risky?'),Question('stale','noul','Stale?'))
+        req=DecisionRequest(state={},candidates=(make_candidate(),),questions=questions)
+        result=await backend.ask(req)
+        self.assertEqual(client.calls,1)
+        self.assertEqual(set(client.kwargs['questions']),{'next_action','risk','stale'})
+        self.assertEqual(result.answers['risk'].confidence,.4)
+        self.assertEqual(result.answers['stale'].noul,.7)
     async def test_key_not_assumed(self):
         with patch.dict('os.environ',{},clear=True):
             with self.assertRaises(BackendUnavailable):JevBackend()._get_client()
