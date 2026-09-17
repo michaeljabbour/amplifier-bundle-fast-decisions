@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+*.egg-info/
+build/
+dist/
+.afast-demo-events/
+.amplifier/
+.env
+.env.*
+playwright-report/
+.DS_Store

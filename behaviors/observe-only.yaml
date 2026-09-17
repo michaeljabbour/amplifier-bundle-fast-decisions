@@ -1,0 +1,10 @@
+description: >-
+  Native metadata observation only. Does not replace the orchestrator and does
+  not classify or accelerate provider decisions. Useful to validate collection.
+  Reference profile: not included by bundle.md by default.
+hooks:
+  - module: hooks-fast-decisions
+    source: fast-decisions:modules/hooks-fast-decisions
+    config:
+      mode: off
+      backend: unavailable

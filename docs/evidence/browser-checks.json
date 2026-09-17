@@ -1,0 +1,13 @@
+{
+  "checks": [
+    "standalone HTML renders correct synthetic counters",
+    "selecting an event updates graph and probability inspector",
+    "tool-only event filtering",
+    "replay, pause and single step",
+    "mobile viewport without page-wide overflow"
+  ],
+  "errors": [],
+  "live_browser_limitation": "Sandbox browser navigation policy blocked localhost navigation. Offline HTML rendering and interaction passed; HTTP server authentication/headers/read-only behavior were tested separately through local Python HTTP requests.",
+  "passed": false,
+  "offline_checks_passed": true
+}

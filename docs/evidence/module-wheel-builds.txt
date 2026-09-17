@@ -1,0 +1,24 @@
+WARNING: The directory '/home/oai/.cache/pip' or its parent directory is not owned or is not writable by the current user. The cache has been disabled. Check the permissions and owner of that directory. If executing pip with sudo, you should use sudo's -H flag.
+Processing ./modules/loop-fast-decisions
+  Preparing metadata (pyproject.toml): started
+  Preparing metadata (pyproject.toml): finished with status 'done'
+Processing ./modules/hooks-fast-decisions
+  Preparing metadata (pyproject.toml): started
+  Preparing metadata (pyproject.toml): finished with status 'done'
+Processing ./modules/tool-fast-workspace
+  Preparing metadata (pyproject.toml): started
+  Preparing metadata (pyproject.toml): finished with status 'done'
+Building wheels for collected packages: amplifier-module-loop-fast-decisions, amplifier-module-hooks-fast-decisions, amplifier-module-tool-fast-workspace
+  Building wheel for amplifier-module-loop-fast-decisions (pyproject.toml): started
+  Building wheel for amplifier-module-loop-fast-decisions (pyproject.toml): finished with status 'done'
+  Created wheel for amplifier-module-loop-fast-decisions: filename=amplifier_module_loop_fast_decisions-0.1.0-py3-none-any.whl size=2054 sha256=6f27beafda8105682cca649e61bb54ac88b3d75b41694372bd9aabb392853bea
+  Stored in directory: /tmp/pip-ephem-wheel-cache-b0w6tl87/wheels/36/18/ba/5e650163369aa63fd1166942244492325c3f0625b958a9dd1e
+  Building wheel for amplifier-module-hooks-fast-decisions (pyproject.toml): started
+  Building wheel for amplifier-module-hooks-fast-decisions (pyproject.toml): finished with status 'done'
+  Created wheel for amplifier-module-hooks-fast-decisions: filename=amplifier_module_hooks_fast_decisions-0.1.0-py3-none-any.whl size=1974 sha256=1c4ea7831abde246f93d0965a50fe9ab39761a0df483fd788220c923c8607c73
+  Stored in directory: /tmp/pip-ephem-wheel-cache-b0w6tl87/wheels/7b/b3/8f/cff7d99405f48989015382fd03dcd56ab16c0be9bde8be8e0f
+  Building wheel for amplifier-module-tool-fast-workspace (pyproject.toml): started
+  Building wheel for amplifier-module-tool-fast-workspace (pyproject.toml): finished with status 'done'
+  Created wheel for amplifier-module-tool-fast-workspace: filename=amplifier_module_tool_fast_workspace-0.1.0-py3-none-any.whl size=1962 sha256=0c238d746cb98eef228556b3e959cacbc205c598a2c525c70a2f2bff771221f1
+  Stored in directory: /tmp/pip-ephem-wheel-cache-b0w6tl87/wheels/64/97/00/8dad93b08475d39984c64a60d48105e9b7e97ed27afbf43c63
+Successfully built amplifier-module-loop-fast-decisions amplifier-module-hooks-fast-decisions amplifier-module-tool-fast-workspace

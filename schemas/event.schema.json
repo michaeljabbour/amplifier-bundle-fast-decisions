@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:amplifier-fast-decisions:event:1.0",
+  "title": "Fast decision telemetry event",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "event_id",
+    "event",
+    "session_id",
+    "seq",
+    "timestamp",
+    "monotonic_ns",
+    "synthetic",
+    "data"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "event_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "event": {
+      "enum": [
+        "fast_decisions:turn_start",
+        "fast_decisions:turn_end",
+        "fast_decisions:requested",
+        "fast_decisions:scored",
+        "fast_decisions:routed",
+        "fast_decisions:fallback",
+        "fast_decisions:slow_start",
+        "fast_decisions:slow_end",
+        "fast_decisions:tool_start",
+        "fast_decisions:tool_end",
+        "fast_decisions:cancelled",
+        "fast_decisions:health"
+      ]
+    },
+    "session_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "parent_session_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "turn_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "decision_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "seq": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "monotonic_ns": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "synthetic": {
+      "type": "boolean"
+    },
+    "data": {
+      "type": "object"
+    },
+    "cursor": {
+      "type": "integer",
+      "minimum": 0
+    }
+  }
+}

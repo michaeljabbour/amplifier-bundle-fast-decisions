@@ -1,0 +1,21 @@
+# Privacy, security and operating boundary
+
+## Three different data paths
+
+1. **TypeSafe:** external requests are disabled by default. Opt-in sends the bounded current task snapshot and prepared candidate descriptions. The state projection excludes system/developer messages, private thinking blocks, images and executable argument objects. Public user/tool/assistant text can contain confidential information. Labels and rationales can also contain sensitive details.
+2. **Local observatory:** stores allowlisted metadata, probability distributions, model/tool names, hashes, IDs and timing. It excludes raw prompts, arguments, tool outputs, exception messages and private reasoning. Metadata can still be sensitive. Review it before exporting.
+3. **Other Amplifier modules:** their existing tracing/logging policies are unchanged. This bundle cannot promise that unrelated native loggers redact all content.
+
+Scrubbing masks common key, bearer, secret-assignment and private-key patterns. **It is not a DLP system, prompt-injection defense or guarantee of anonymization.** Test only public/disposable workspaces initially. Review TypeSafe's data handling separately before using private company material. The SDK documents header redaction but not body redaction; do not enable HTTP/SDK debug body logging with private state.
+
+## Actions and authority
+
+The bundled workspace tool supports read/list only, resolves paths under an explicit root, rejects symlink components, traversal, absolute paths, hidden/sensitive filenames, binary data and unsupported file types, bounds output and rechecks revisions. It is a convenience guard, not an OS-level sandbox against an adversary racing filesystem changes. Use a disposable checkout or container with appropriate file permissions.
+
+Other tools require explicit allowlisting and a trusted validator. Those controls restrict routing eligibility, but native permission hooks are still required for actions that need them. Do not base mandatory authorization on an optional observer hook or a model confidence score. Do not treat the read-only default as authorization to enable writes globally.
+
+## Viewer
+
+The server binds only to 127.0.0.1, requires a random bearer token on data endpoints, checks Host/Origin, applies a content-security policy and serves a fixed static asset allowlist. It has no execution, approval, configuration or write API. The token is delivered in the URL fragment, moved to session storage and removed from the visible location. Do not publish the printed token-bearing URL. Loopback plus a token does not defend against compromised local processes.
+
+The original logs use private file permissions where supported. The queue is bounded and best-effort, not a regulatory-grade audit ledger. Offline HTML and JSONL exports are deliberately shareable files and are not encrypted. Protect or delete them according to your organization's retention policy.

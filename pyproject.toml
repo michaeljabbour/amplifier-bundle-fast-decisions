@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "amplifier-fast-decisions"
+version = "0.1.0"
+description = "A Foundation-compatible hybrid decision orchestrator and local routing observatory"
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+authors = [{name = "Amplifier Fast Decisions contributors"}]
+dependencies = []
+
+[project.optional-dependencies]
+jev = ["typesafe-sdk"]
+amplifier = [
+  "amplifier-core @ git+https://github.com/microsoft/amplifier-core@6d4cd217f83bb29b671b5c9d854aaa08be14db1b",
+  "amplifier-module-loop-streaming @ git+https://github.com/microsoft/amplifier-module-loop-streaming@20aac7a9eb26034d230357f6aa6805f27c86df52",
+]
+test = ["pytest>=8", "pytest-asyncio>=0.23", "jsonschema>=4", "PyYAML>=6"]
+
+[project.scripts]
+afast = "amplifier_fast_decisions.cli:main"
+
+[project.entry-points."amplifier.modules"]
+loop-fast-decisions = "amplifier_fast_decisions.orchestrator:mount"
+hooks-fast-decisions = "amplifier_fast_decisions.observer:mount"
+tool-fast-workspace = "amplifier_fast_decisions.workspace:mount"
+
+[tool.setuptools.packages.find]
+include = ["amplifier_fast_decisions*"]
+
+[tool.setuptools.package-data]
+amplifier_fast_decisions = ["static/*"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+markers = ["upstream: requires installed real Amplifier core and loop", "live: requires an explicit live Jev API opt-in"]

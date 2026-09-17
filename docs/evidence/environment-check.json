@@ -1,0 +1,45 @@
+{
+  "version": "0.1.0",
+  "checks": [
+    {
+      "check": "python",
+      "ok": true,
+      "value": "3.13.5"
+    },
+    {
+      "check": "amplifier_core",
+      "ok": false,
+      "value": "ModuleNotFoundError"
+    },
+    {
+      "check": "amplifier_module_loop_streaming",
+      "ok": false,
+      "value": "ModuleNotFoundError"
+    },
+    {
+      "check": "typesafe_sdk",
+      "ok": false,
+      "value": "ModuleNotFoundError"
+    },
+    {
+      "check": "rust_extension_importable",
+      "ok": false,
+      "note": "Not required for the offline demo"
+    },
+    {
+      "check": "TYPESAFE_API_KEY_present",
+      "ok": false,
+      "note": "Value is never displayed"
+    },
+    {
+      "check": "module_entry_points",
+      "ok": true,
+      "value": [
+        "hooks-fast-decisions",
+        "loop-fast-decisions",
+        "tool-fast-workspace"
+      ]
+    }
+  ],
+  "note": "Import/schema checks are not a full Rust-kernel or live-Jev integration test."
+}

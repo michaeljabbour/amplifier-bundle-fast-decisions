@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Amplifier | Decision Observatory</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to routing view</a>
+<header>
+  <div class="brand"><div class="mark" aria-hidden="true"><i></i><i></i><i></i><i></i></div><div><div class="eyebrow">AMPLIFIER / EXPERIMENTAL</div><h1>Decision Observatory</h1></div></div>
+  <div class="header-actions"><span id="connection" class="badge">CONNECTING</span><button id="loadBtn">Open JSONL</button><button id="exportBtn">Export trace</button><input id="fileInput" type="file" accept=".jsonl,.json" multiple hidden></div>
+</header>
+<main id="main">
+  <div class="intro"><div><h2>See the decision. Follow the execution.</h2><p>Fast judgments, generative calls, and actual tool work. One observable loop.</p></div><div class="filter"><label for="session">SESSION</label><select id="session"><option value="">All sessions</option></select></div></div>
+  <div id="notice" class="notice" role="status">Read-only telemetry. This interface cannot change runtime policy or authorize tools.</div>
+  <section class="metrics" aria-label="Observed counts">
+    <article><div class="metric-label">DECISIONS SCORED</div><div id="mDecisions" class="metric-value">0</div><div id="mDecisionLatency" class="metric-foot">Decision median: not observed</div></article>
+    <article><div class="metric-label"><span class="dot fast"></span>FAST SUBMISSIONS</div><div id="mFast" class="metric-value">0</div><div class="metric-foot">Prepared actions, not permission grants</div></article>
+    <article><div class="metric-label"><span class="dot slow"></span>REASONER CALLS</div><div id="mSlow" class="metric-value">0</div><div id="mSlowLatency" class="metric-foot">Provider median: not observed</div></article>
+    <article><div class="metric-label">TOOLS COMPLETED</div><div id="mTools" class="metric-value">0</div><div id="mToolsFoot" class="metric-foot">Measured at actual execute()</div></article>
+  </section>
+  <div class="workspace-grid">
+  <section class="panel graph-panel" aria-labelledby="graph-title">
+    <div class="panel-head"><div><div class="eyebrow">LIVE CONTROL FLOW</div><h3 id="graph-title">Intelligence in the loop</h3></div><div class="legend"><span><i class="dot fast"></i>Fast</span><span><i class="dot slow"></i>Slow</span><span><i class="dot neutral"></i>Runtime</span></div></div>
+    <div class="graph-wrap">
+    <svg viewBox="0 0 1050 430" class="graph" role="img" aria-label="State flows through a decision gate, Jev or the reasoning model, then policy checks and tool execution.">
+      <defs><pattern id="grid" width="22" height="22" patternUnits="userSpaceOnUse"><circle cx="1" cy="1" r=".7" fill="#273343"/></pattern><filter id="glow"><feGaussianBlur stdDeviation="3"/></filter></defs>
+      <rect width="1050" height="430" fill="url(#grid)" opacity=".55"/>
+      <g class="edges" fill="none" stroke-width="2">
+        <path id="edge-state" d="M210 195 H265"/>
+        <path id="edge-fast" d="M405 180 C432 180 421 94 460 94"/>
+        <path id="edge-slow" d="M405 210 C430 210 425 337 460 337"/>
+        <path id="edge-policy" d="M650 94 H705"/>
+        <path id="edge-escalate" d="M555 139 V290"/>
+        <path id="edge-execute-fast" d="M850 118 C911 118 946 117 946 170"/>
+        <path id="edge-execute-slow" d="M650 337 C802 337 946 339 946 255"/>
+        <path id="edge-feedback" d="M947 255 V400 H121 V247"/>
+      </g>
+      <g class="graph-labels"><text x="460" y="30">BOUNDED CHOICE</text><text x="570" y="220">abstain / fall back</text><text x="735" y="325">generate / plan</text><text x="335" y="392">observations return to the next decision</text></g>
+      <g id="node-state" class="node"><rect x="35" y="145" width="175" height="100" rx="13"/><text class="node-kicker" x="52" y="170">01 / STATE</text><text class="node-title" x="52" y="198">Task + observations</text><text class="node-note" x="52" y="221">Bounded, scrubbed snapshot</text></g>
+      <g id="node-gate" class="node"><rect x="265" y="154" width="140" height="85" rx="13"/><text class="node-kicker" x="282" y="177">02 / RULES</text><text class="node-title" x="282" y="200">Eligible actions</text><text class="node-note" x="282" y="220">Budget / tool constraints</text></g>
+      <g id="node-jev" class="node fast-node"><rect x="460" y="48" width="190" height="92" rx="13"/><text class="node-kicker" x="478" y="73">03 / FAST DECISION</text><text class="node-title" x="478" y="98">Jev</text><text class="node-note" id="jevModel" x="478" y="120">Typed candidate selection</text></g>
+      <g id="node-slow" class="node slow-node"><rect x="460" y="290" width="190" height="92" rx="13"/><text class="node-kicker" x="478" y="315">03 / GENERATIVE</text><text class="node-title" x="478" y="340">Reasoning model</text><text class="node-note" id="slowModel" x="478" y="361">Existing provider and model</text></g>
+      <g id="node-policy" class="node"><rect x="705" y="72" width="145" height="86" rx="13"/><text class="node-kicker" x="722" y="96">04 / POLICY</text><text class="node-title" x="722" y="119">Revalidate</text><text class="node-note" x="722" y="139">No model grants authority</text></g>
+      <g id="node-executor" class="node"><rect x="875" y="170" width="151" height="85" rx="13"/><text class="node-kicker" x="892" y="194">05 / UPSTREAM</text><text class="node-title" x="892" y="217">Hooks + tool loop</text><text class="node-note" x="892" y="238">Measure real execute()</text></g>
+    </svg>
+    </div>
+    <div class="route-status"><span id="routeDot" class="dot neutral"></span><div><strong id="routeTitle">Waiting for events</strong><span id="routeDetail">Start an Amplifier session, run the demo, or open a JSONL trace.</span></div><span id="eventTime" class="mono"></span></div>
+    <div class="transport"><button id="playBtn">Replay</button><button id="stepBtn" title="Advance one event">Step</button><button id="liveBtn" class="primary">Live</button><label for="speed" class="sr-only">Playback speed</label><select id="speed"><option value=".5">0.5x</option><option value="1" selected>1x</option><option value="2">2x</option><option value="4">4x</option></select><input id="scrubber" type="range" min="0" max="0" value="0" aria-label="Event position"><span id="position" class="mono">0 / 0</span></div>
+  </section>
+  <aside class="panel inspector" aria-labelledby="inspector-title">
+    <div class="panel-head"><div><div class="eyebrow">DECISION INSPECTOR</div><h3 id="inspector-title">Why this route?</h3></div><span id="modeBadge" class="badge small">NO EVENT</span></div>
+    <div class="inspector-content">
+      <div class="label">MECHANICAL REASON</div><div id="reason" class="reason">No route selected</div><p class="muted">Reason codes explain the control path. They are not private model reasoning.</p>
+      <div class="decision-meta"><div><span>Destination</span><strong id="destination">Not observed</strong></div><div><span>Decision latency</span><strong id="decisionLatency">Not observed</strong></div></div>
+      <div class="section-label">CANDIDATE DISTRIBUTION<span id="confidence"></span></div>
+      <div id="probabilities" class="probabilities"><div class="empty">Select a scored decision to see its alternatives.</div></div>
+      <p class="tiny">Probability is not authorization or an independently verified accuracy estimate.</p>
+      <details id="details"><summary>Inspect event metadata</summary><pre id="eventJson">{}</pre></details>
+    </div>
+  </aside>
+  </div>
+  <section class="panel timeline-panel" aria-labelledby="timeline-title">
+    <div class="panel-head"><div><div class="eyebrow">EXECUTION TRACE</div><h3 id="timeline-title">Decisions leave a trail</h3></div><div class="timeline-tools"><label for="eventFilter" class="sr-only">Filter events</label><select id="eventFilter"><option value="meaningful">Decisions + execution</option><option value="all">All events</option><option value="fallback">Fallbacks</option><option value="tool">Tool execution</option></select><span id="traceCount" class="mono">0 events</span></div></div>
+    <div class="table-wrap"><table><thead><tr><th>TIME</th><th>EVENT</th><th>ROUTE / DESTINATION</th><th>REASON / STATUS</th><th>DURATION</th><th>DECISION</th></tr></thead><tbody id="timeline"><tr><td colspan="6" class="empty">No telemetry yet.</td></tr></tbody></table></div>
+  </section>
+  <footer><span>AMPLIFIER FAST DECISIONS <b>v0.1.0</b></span><span id="health">Local / read-only / metadata only</span><span>No claimed whole-task speedup. No hidden reasoning captured.</span></footer>
+</main>
+<script src="app.js"></script>
+</body></html>
