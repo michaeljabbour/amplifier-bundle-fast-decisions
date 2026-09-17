@@ -82,6 +82,10 @@ class DecisionService:
                 candidates = eligible[:self.policy.max_candidates]
         except asyncio.CancelledError:
             raise
+        except TimeoutError as exc:
+            await self.emit("fallback", {**common, "reason_code": "decision_timeout",
+                                         "exception_type": type(exc).__name__}, decision_id)
+            return await slow("decision_timeout")
         except Exception as exc:
             await self.emit("fallback", {**common, "reason_code": "candidate_source_error",
                                          "exception_type": type(exc).__name__}, decision_id)
@@ -136,6 +140,8 @@ class DecisionService:
                 still_valid = await self._eligible(candidate, tools)
         except asyncio.CancelledError:
             raise
+        except TimeoutError:
+            return await slow("decision_timeout")
         except Exception:
             still_valid = False
         if not still_valid:
