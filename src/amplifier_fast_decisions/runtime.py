@@ -45,12 +45,19 @@ def get_runtime(coordinator: Any, config: dict[str, Any], *, owner: bool = False
             raise TypeError("fast_decisions.runtime has an incompatible implementation")
         if owner:
             # The orchestrator is the sole owner of decision policy (mode,
-            # thresholds, allowed_tools). Mount order across module types is
-            # a kernel implementation detail, not a contract -- if a
-            # non-owning module (e.g. the observer hook, which mounts with
-            # config: {}) built the runtime first, its Policy must not stick.
-            # Re-apply the owner's Policy now. Backend/telemetry remain the
-            # one-per-session singleton regardless of who built them first.
+            # thresholds, allowed_tools). Mount order across module types IS
+            # a documented, guaranteed kernel contract (@core:CONTRACTS.md
+            # Module Lifecycle; amplifier_core's _session_init.py loads
+            # orchestrator (:74) before context (:104), providers (:154),
+            # tools (:222) and hooks (:248)) -- within a session the
+            # orchestrator always builds the runtime before the hook mounts,
+            # so no race exists to solve here. This re-apply is defensive,
+            # not a race resolution: it protects out-of-session construction
+            # paths (unit tests, `afast demo`, a future non-kernel host)
+            # where a non-owning module (e.g. the observer hook, which
+            # mounts with config: {}) might build the runtime first. Backend/
+            # telemetry remain the one-per-session singleton regardless of
+            # who built them first.
             existing.service.policy = Policy.from_config(config)
         return existing, False
     policy = Policy.from_config(config)

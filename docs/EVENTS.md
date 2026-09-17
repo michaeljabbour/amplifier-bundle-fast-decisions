@@ -13,7 +13,7 @@ Session identity is read from the coordinator/session if exposed. A generated fa
 | `scored` | Returned distribution/model/usage and measured backend wall time, whether or not acted on |
 | `routed` | Actual fast submission or slow route, plus mechanical reason; shadow can include `proposed_route` |
 | `fallback` | Error/timeout/envelope incompatibility; exception type only |
-| `slow_start` / `slow_end` | Actual original provider complete invocation, destination, time and available usage |
+| `slow_start` / `slow_end` | Actual original provider complete or stream invocation, destination, time and available usage |
 | `tool_start` / `tool_end` | Actual `execute()` reached and outcome; a native pre-hook alone does not produce these |
 | `cancelled` | Cancellation observed and propagated |
 | `health` | Recorder or metadata-only native-hook bridge status |
@@ -23,5 +23,7 @@ Fast tool IDs match the synthesized core ToolCall ID when the argument fingerpri
 `duration_ms` has a `latency_kind` on score/provider completion events. The decision duration measures the backend call, not candidate collection, serialization, UI polling or total turn duration. Provider time includes whatever the provider does inside `complete()`. No ratio is presented as measured whole-task acceleration. Missing usage stays unknown, not zero. The synthetic tool-call envelope uses zero generative tokens; Jev input usage is recorded separately.
 
 A fast `routed` event means a valid response envelope was submitted to the upstream loop. It does not mean that a tool was permitted or executed. A `tool_end` with success/error status is the execution observation. A shadow result never increments the fast-submission counter.
+
+`routed` / `slow_start` / `slow_end` carry `transport_measured`: `"provider-complete"` or `"provider-stream"`, set at the point the provider facade is actually entered -- never a claim made at `turn_start`, since a single turn can enter the facade through both transports. The fast path is attempted only on the `provider-complete` transport; a `provider-stream` entry always routes slow with reason code `fast_path_unavailable_on_transport`, because loop-streaming's streaming branch cannot dispatch a tool call it receives (see `docs/UPSTREAM_CONTRACT.md`). Failing closed (defer to the real provider) is deliberate: the alternative is a prepared action silently dropped by upstream.
 
 The visualizer's explanation is `reason_code`, not private model reasoning. Probability is neither calibrated task accuracy nor authority. The optional native hook bridge emits `health` metadata for `tool:pre`, `tool:post` and `provider:error`; it does not infer the final result of the whole hook chain.
