@@ -147,7 +147,14 @@ def _register_recorders(hooks, events: list[dict]):
         hooks.register(name, record)
 
 
-async def _run_turn(*, backend: str, allow_external_state: bool, tmp_workspace: str, tmp_events: str):
+async def _run_turn(
+    *,
+    backend: str,
+    allow_external_state: bool,
+    tmp_workspace: str,
+    tmp_events: str,
+    prompt: str = "Please read notes.md, then delegate the rest to a helper.",
+):
     from amplifier_core.testing import MockCoordinator, MockContextManager
     from amplifier_module_loop_streaming import StreamingOrchestrator
 
@@ -155,14 +162,22 @@ async def _run_turn(*, backend: str, allow_external_state: bool, tmp_workspace: 
     from amplifier_fast_decisions.workspace import WorkspaceTool
 
     coordinator = MockCoordinator()
-    context = MockContextManager(
-        messages=[
-            {
-                "role": "user",
-                "content": "Please read notes.md, then delegate the rest to a helper.",
-            }
-        ]
-    )
+    # Empty starting context, matching a fresh session's very first turn --
+    # the exact real-CLI condition that exposed the bug (see the P3
+    # postmortem in docs/design/redesign-2026-09-17.md): upstream
+    # (loop-streaming) appends `prompt` as the turn's own user message via
+    # `context.add_message` only *after* emitting iteration 1's
+    # `provider:request` (the "hoisted" provider:request block). Seeding the
+    # filename into the context's pre-existing history instead of the
+    # `prompt` argument (as an earlier version of this fixture did) hid the
+    # bug: the candidate was already visible in `get_messages()` regardless
+    # of when the snapshot ran. With no pre-existing history, the
+    # "notes.md" candidate exists *only* once the prompt has been appended,
+    # so a snapshot taken at `provider:request` (before that append) sees
+    # zero candidates -- this fixture would have failed
+    # `test_deterministic_backend_produces_shadow_and_role_telemetry`'s
+    # `shadow_observed`/`shadow_agreement` assertions under that bug.
+    context = MockContextManager(messages=[])
     await coordinator.mount("context", context)
 
     workspace_tool = WorkspaceTool(root=tmp_workspace)
@@ -193,7 +208,7 @@ async def _run_turn(*, backend: str, allow_external_state: bool, tmp_workspace: 
     orch = StreamingOrchestrator({})
     try:
         result = await orch.execute(
-            "hi", context, {"fake": provider}, tools, hooks, coordinator=coordinator
+            prompt, context, {"fake": provider}, tools, hooks, coordinator=coordinator
         )
         # Let fire-and-forget router probes/joins (asyncio.ensure_future,
         # never awaited by the hook chain) finish before we inspect events.
@@ -258,6 +273,45 @@ class ShadowRealKernelTests(unittest.IsolatedAsyncioTestCase):
         # Never mutates the call: the delegate tool saw its original,
         # unmodified arguments.
         self.assertEqual(delegate_tool.calls, [{"agent": "child", "prompt": "help"}])
+
+    async def test_first_iteration_tool_call_is_scored_not_just_the_trailing_one(self):
+        """Regression test for the P3 postmortem (docs/design/redesign-2026-09-17.md):
+        a snapshot taken on `provider:request` never scored iteration 1's own
+        tool call, because upstream appends the turn's user message to the
+        mounted context *after* emitting iteration 1's `provider:request`
+        (see `_run_turn`'s docstring-comment above and
+        `docs/UPSTREAM_CONTRACT.md`). Under that bug this fixture -- an empty
+        starting context, the candidate filename living only in the turn's
+        own prompt -- produced a `shadow_proposed` for the *second*
+        `provider:request` (after the tool already ran, with no further tool
+        call to match against) and zero `shadow_observed`/`shadow_agreement`
+        for the `fast_workspace` call that actually happened. Snapshotting
+        in `on_tool_pre` instead fixes this: the proposal for the
+        `fast_workspace` decision must resolve to a real `match`.
+        """
+        result, events, _delegate_tool = await _run_turn(
+            backend="deterministic",
+            allow_external_state=False,
+            tmp_workspace=self._workspace.name,
+            tmp_events=self._events_a.name,
+        )
+        self.assertEqual(result, "done")
+
+        def of(suffix):
+            return [e for e in events if e["event"].endswith(suffix)]
+
+        workspace_agreements = [
+            e
+            for e in of("shadow_agreement")
+            if e["data"].get("actual_tool") == "fast_workspace"
+        ]
+        self.assertEqual(
+            len(workspace_agreements),
+            1,
+            "the fast_workspace tool call must have a matching shadow_agreement "
+            "record, not just an unmatched trailing shadow_proposed",
+        )
+        self.assertEqual(workspace_agreements[0]["data"]["agreement"], "match")
 
     async def test_jev_backend_falls_back_once_per_decision_no_client_built(self):
         os.environ.pop("TYPESAFE_API_KEY", None)

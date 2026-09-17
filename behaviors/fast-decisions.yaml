@@ -27,7 +27,13 @@ hooks:
       shadow_drain_ms: 2000
       max_state_chars: 12000
       max_questions: 8
-      role_router: false
+      # Shadow-only (see router.py: "modify" is never honored at tool:pre in
+      # the upstream loop, so this can never become active through this
+      # seam). Defaulting it on costs nothing beyond one resolver probe per
+      # session and turns a UAT/DTU session into a real proposal/agreement
+      # trail instead of a wall of role_router_disabled abstains. See
+      # docs/design/redesign-2026-09-17.md P4.
+      role_router: true
       role_probe_timeout_ms: 2000
       role_router_tools:
         - delegate
