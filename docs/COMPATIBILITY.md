@@ -14,9 +14,22 @@ See [SOURCES.md](SOURCES.md) for source documents and pinned indexed snapshots. 
 
 ## Transport tradeoff
 
-The provider facade deliberately does not expose `.stream`. It makes the upstream loop take its `complete()` path, where the common tool handling operates. A provider can still use internal streaming in its `complete()` implementation. A provider that requires the separate `.stream` transport loses that transport in this prototype. This is not a transparent zero-regression wrapper for every provider.
+The provider facade is transport-transparent: `.stream` is mirrored exactly when the wrapped
+provider has it, and proxied verbatim, so `callable(getattr(provider, "stream", None))` --
+loop-streaming's own transport-selection expression -- returns the same answer wrapped or
+unwrapped. No shipped provider currently implements `.stream` (verified by probing all nine
+installed provider modules), so today this changes nothing about which transport runs; it removes a
+latent, silent regression for any conforming third-party or future provider that does add one.
 
-The next upstream-facing improvement would be a vendor-neutral decision boundary directly inside `loop-streaming`, tested in both transports. That would remove the need to hide `.stream`. It is not included as a speculative patch to unverified source in this release.
+The fast path (a synthesized response standing in for an LLM turn) is attempted **only** inside
+`complete()`. It is never attempted on the `stream` transport, because loop-streaming's streaming
+branch cannot dispatch tool calls at all: `_has_pending_tools` is hard-coded to return `False`, and
+`_process_tools` has no body on that path (see `docs/UPSTREAM_CONTRACT.md`). A prepared action
+submitted through `stream()` would be silently dropped -- failing *open*. We fail *closed* instead:
+the stream transport always defers to the real provider, with reason code
+`fast_path_unavailable_on_transport`.
+
+The next upstream-facing improvement would be a vendor-neutral decision boundary directly inside `loop-streaming`, tested in both transports. That would let the fast path reach the stream transport as well. It is not included as a speculative patch to unverified source in this release.
 
 ## Required host checks
 

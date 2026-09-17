@@ -146,22 +146,24 @@ class LifecycleTests(unittest.IsolatedAsyncioTestCase):
                              for e in events))
 
 class MountOrderTests(unittest.IsolatedAsyncioTestCase):
-    # ISSUE B: get_runtime() was first-caller-wins. hooks-fast-decisions mounts
-    # with config: {} (observer.py forwards config straight through and reads
-    # nothing itself); loop-fast-decisions (the orchestrator) mounts with the
-    # real policy config (mode, thresholds, allowed_tools). amplifier_core
-    # 1.6.1's initialize_session() (_session_init.py) loads modules in a fixed
-    # order -- orchestrator, then context, then providers, then tools, then
-    # hooks last -- so the orchestrator always mounts before the hook today.
-    # That ordering is a loader implementation detail, not a documented
-    # contract (KERNEL_PHILOSOPHY.md: modules must not depend on incidental
-    # kernel behavior), so fast_decisions must not rely on it. This test
-    # mounts the hook FIRST against the real production entrypoints
-    # (observer.mount, orchestrator.mount) to prove the orchestrator's config
-    # still wins even under the adversarial order.
+    # Mount order across module types IS a documented, guaranteed kernel
+    # contract: amplifier_core 1.6.1's initialize_session() (_session_init.py)
+    # loads orchestrator (:74) before context (:104), providers (:154), tools
+    # (:222) and hooks (:248) -- see @core:CONTRACTS.md Module Lifecycle. So
+    # within a real session, loop-fast-decisions (the orchestrator) always
+    # mounts before hooks-fast-decisions (the hook), and no race exists for
+    # get_runtime()'s owner re-apply to resolve.
+    #
+    # This test is therefore defensive, not a race resolution: it covers
+    # OUT-OF-SESSION construction paths where that ordering guarantee does not
+    # apply -- unit tests, `afast demo`, or a future non-kernel host that
+    # mounts modules in whatever order it likes. It mounts the hook FIRST
+    # against the real production entrypoints (observer.mount,
+    # orchestrator.mount) to prove the orchestrator's config still wins even
+    # under that adversarial, out-of-session order.
     @unittest.skipUnless(HAS_CORE, "Actual amplifier_core is not installed")
     @unittest.skipUnless(HAS_LOOP, "Actual loop-streaming is not installed")
-    async def test_orchestrator_config_wins_when_hook_mounts_first(self):
+    async def test_owner_policy_defensive_reapply(self):
         from amplifier_fast_decisions import observer, orchestrator as orchestrator_module
 
         coord = DemoCoordinator()

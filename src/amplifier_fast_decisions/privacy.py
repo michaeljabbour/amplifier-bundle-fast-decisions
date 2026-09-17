@@ -21,6 +21,7 @@ SAFE_FIELDS = {
     "duration_ms", "input_tokens", "output_tokens", "total_tokens", "tool", "tool_call_id",
     "status", "success", "exception_type", "fast_total", "slow_total", "shadow", "synthetic",
     "dropped_events", "recording_error", "queue_depth", "step", "engine", "transport",
+    "transport_measured",
     "event_source", "native_event", "latency_kind", "selected_candidate", "message_count",
     "result_bytes", "hook_ms", "event_count", "phase", "session_label", "warmup",
     "state_revision", "candidate_revision", "upstream_complete_calls", "output_path_redacted",

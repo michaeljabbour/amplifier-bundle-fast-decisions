@@ -34,9 +34,13 @@ def usage_fields(response: Any) -> dict:
 class RoutedProvider:
     """Preserve the Provider protocol while intercepting complete() boundaries.
 
-The nonstandard .stream path is deliberately hidden. The upstream loop's
-complete() path retains normal tool handling. A provider may still stream
-internally via complete(). See docs/COMPATIBILITY.md.
+The facade is transport-transparent: `stream` is mirrored iff the wrapped
+provider actually has it, and proxied verbatim -- the fast path is attempted
+only in complete(). loop-streaming's streaming branch cannot dispatch tool
+calls (_has_pending_tools is hard-coded False), so synthesizing a response
+on that transport would fail open (drop the action silently) instead of
+failing closed (defer to the LLM). See docs/COMPATIBILITY.md and
+docs/UPSTREAM_CONTRACT.md.
 """
     def __init__(self, provider: Any, runtime: Runtime, tools: dict[str, Any],
                  response_factory=action_response, provider_key: str | None = None):
@@ -48,8 +52,11 @@ internally via complete(). See docs/COMPATIBILITY.md.
         self._synthetic_responses: dict[int, Any] = {}
 
     def __getattr__(self, name: str):
-        if name in {"stream", "__wrapped__"}:
-            raise AttributeError(name)
+        if name == "stream":
+            inner = getattr(self._provider, "stream", None)
+            if not callable(inner):
+                raise AttributeError(name)  # mirror absence exactly
+            return self._stream_proxy
         return getattr(self._provider, name)
 
     @property
@@ -83,7 +90,8 @@ internally via complete(). See docs/COMPATIBILITY.md.
                 await service.emit("fallback", {"reason_code": "envelope_incompatible",
                                                  "exception_type": type(exc).__name__})
                 await service.emit("routed", {"route": "slow", "destination": self._provider_key,
-                                              "reason_code": "envelope_incompatible"})
+                                              "reason_code": "envelope_incompatible",
+                                              "transport_measured": "provider-complete"})
             else:
                 turn.used.add(candidate.fingerprint)
                 turn.fast_streak += 1
@@ -92,7 +100,7 @@ internally via complete(). See docs/COMPATIBILITY.md.
                     "backend": service.backend.name, "policy_version": service.policy.version,
                     "route": "fast", "destination": candidate.tool,
                     "selected_candidate": candidate.id, "reason_code": "prepared_action_selected",
-                    "status": "submitted_to_upstream"})
+                    "status": "submitted_to_upstream", "transport_measured": "provider-complete"})
                 turn.tool_decisions[tool_call_id] = {
                     "decision_id": service.last_decision_id, "tool": candidate.tool,
                     "arguments_hash": digest(candidate.arguments), "claimed": False,
@@ -104,24 +112,54 @@ internally via complete(). See docs/COMPATIBILITY.md.
         model = field_value(request, "model") or "provider-default"
         decision_id = service.last_decision_id
         await service.emit("slow_start", {"provider": self._provider_key, "model": model,
-            "route": "slow", "destination": self._provider_key, "status": "running"}, decision_id)
+            "route": "slow", "destination": self._provider_key, "status": "running",
+            "transport_measured": "provider-complete"}, decision_id)
         start = time.perf_counter()
         try:
             # Preserve the actual request, model override, kwargs, and response identity.
             response = await self._provider.complete(request, **kwargs)
         except asyncio.CancelledError:
             await service.emit("slow_end", {"provider": self._provider_key, "model": model,
-                "status": "cancelled", "duration_ms": (time.perf_counter() - start) * 1000}, decision_id)
+                "status": "cancelled", "duration_ms": (time.perf_counter() - start) * 1000,
+                "transport_measured": "provider-complete"}, decision_id)
             raise
         except Exception as exc:
             await service.emit("slow_end", {"provider": self._provider_key, "model": model,
                 "status": "error", "exception_type": type(exc).__name__,
-                "duration_ms": (time.perf_counter() - start) * 1000}, decision_id)
+                "duration_ms": (time.perf_counter() - start) * 1000,
+                "transport_measured": "provider-complete"}, decision_id)
             raise
         await service.emit("slow_end", {"provider": self._provider_key, "model": model,
             "status": "ok", "duration_ms": (time.perf_counter() - start) * 1000,
-            **usage_fields(response), "latency_kind": "provider_complete_wall_time"}, decision_id)
+            **usage_fields(response), "latency_kind": "provider_complete_wall_time",
+            "transport_measured": "provider-complete"}, decision_id)
         return response
+
+    async def _stream_proxy(self, request, **kwargs):
+        """Verbatim proxy of the provider's stream transport.
+
+        The fast path is structurally unavailable here: loop-streaming's
+        streaming branch cannot dispatch tool calls (`_has_pending_tools`
+        always returns False, see docs/UPSTREAM_CONTRACT.md). We therefore
+        never ask the service and never synthesize a response on this
+        transport -- fail closed (defer to the real provider) rather than
+        fail open (drop a prepared action silently).
+        """
+        service = self._runtime.service
+        await service.emit("routed", {"route": "slow", "destination": self._provider_key,
+            "reason_code": "fast_path_unavailable_on_transport",
+            "transport_measured": "provider-stream"})
+        start = time.perf_counter()
+        await service.emit("slow_start", {"provider": self._provider_key,
+            "route": "slow", "destination": self._provider_key, "status": "running",
+            "transport_measured": "provider-stream"})
+        try:
+            async for chunk in self._provider.stream(request, **kwargs):
+                yield chunk
+        finally:
+            await service.emit("slow_end", {"provider": self._provider_key,
+                "duration_ms": (time.perf_counter() - start) * 1000,
+                "transport_measured": "provider-stream"})
 
 
 class ObservedTool:
@@ -192,9 +230,13 @@ class HybridOrchestrator:
             service.last_decision_id = None
             service.slow_total = 0
             service.emitter.hooks = hooks
+            # No self-authored "transport" claim here: a turn may enter the
+            # facade through complete() and/or stream() multiple times, each
+            # measured independently at the point of entry (transport_measured
+            # on routed/slow_start/slow_end). See docs/UPSTREAM_CONTRACT.md.
             await service.emit("turn_start", {"mode": service.policy.mode,
                 "backend": service.backend.name, "engine": "upstream-loop-streaming",
-                "transport": "provider-complete", "policy_version": service.policy.version})
+                "policy_version": service.policy.version})
             # Provider keys and defaults are unchanged. Upstream pins and selections apply.
             wrapped_tools = {key: ObservedTool(tool, self.runtime, key) for key, tool in tools.items()}
             wrapped_providers = {key: RoutedProvider(provider, self.runtime, tools,

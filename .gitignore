@@ -11,3 +11,4 @@ dist/
 .env.*
 playwright-report/
 .DS_Store
+.ruff_cache/

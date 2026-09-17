@@ -214,10 +214,49 @@ class FacadeTests(unittest.IsolatedAsyncioTestCase):
         provider=Provider(delay_ms=0)
         response=await RoutedProvider(provider,runtime,{},demo_response).complete(req,flag='preserved')
         self.assertIs(response,sentinel);self.assertTrue(provider.asserted)
-    async def test_hides_stream_not_other_attributes(self):
-        _,runtime,_,_=setup_service();provider=DemoProvider();provider.stream=lambda: None;provider.extra='preserved'
+    async def test_facade_mirrors_absent_stream(self):
+        _,runtime,_,_=setup_service();provider=DemoProvider();provider.extra='preserved'
         facade=RoutedProvider(provider,runtime,{},demo_response)
         self.assertFalse(hasattr(facade,'stream'));self.assertEqual(facade.extra,'preserved')
+    async def test_facade_mirrors_present_stream(self):
+        _,runtime,_,_=setup_service();provider=DemoProvider()
+        async def fake_stream(request,**kwargs):
+            for chunk in ('a','b','c'): yield chunk
+        provider.stream=fake_stream
+        facade=RoutedProvider(provider,runtime,{},demo_response)
+        self.assertTrue(callable(getattr(facade,'stream',None)))
+        chunks=[c async for c in facade.stream(request())]
+        self.assertEqual(chunks,['a','b','c'])
+    async def test_stream_transport_never_calls_service(self):
+        service,runtime,events,_=setup_service()
+        provider=DemoProvider()
+        async def fake_stream(request,**kwargs):
+            yield 'chunk'
+        provider.stream=fake_stream
+        facade=RoutedProvider(provider,runtime,{'demo_inspect':DemoTool()},demo_response)
+        chunks=[c async for c in facade.stream(request())]
+        self.assertEqual(chunks,['chunk'])
+        self.assertEqual(service.backend.calls,0)
+        routed=[e for e in events if e['event'].endswith('routed')]
+        self.assertEqual(len(routed),1)
+        self.assertEqual(routed[0]['data']['reason_code'],'fast_path_unavailable_on_transport')
+        self.assertEqual(routed[0]['data']['transport_measured'],'provider-stream')
+        self.assertTrue(any(e['event'].endswith('slow_start') and e['data'].get('transport_measured')=='provider-stream' for e in events))
+        self.assertTrue(any(e['event'].endswith('slow_end') and e['data'].get('transport_measured')=='provider-stream' for e in events))
+    async def test_transport_measured_is_recorded(self):
+        _,runtime,events,_=setup_service(policy=Policy(mode='off'))
+        provider=DemoProvider(delay_ms=0)
+        facade=RoutedProvider(provider,runtime,{},demo_response)
+        await facade.complete(request())
+        ends=[e for e in events if e['event'].endswith('slow_end')]
+        self.assertEqual(ends[-1]['data']['transport_measured'],'provider-complete')
+    async def test_turn_start_does_not_claim_transport(self):
+        _,runtime,events,coord=setup_service()
+        loop=HybridOrchestrator({},coord,runtime,upstream=DemoLoop(),response_factory=demo_response)
+        await loop.execute('Inspect',DemoContext(),{'p':DemoProvider(delay_ms=0)},{'demo_inspect':DemoTool()},coord.hooks)
+        starts=[e for e in events if e['event'].endswith('turn_start')]
+        self.assertEqual(len(starts),1)
+        self.assertNotIn('transport',starts[0]['data'])
     async def test_synthetic_parse_does_not_call_provider_parser(self):
         _,runtime,_,_=setup_service()
         class Provider(DemoProvider):
