@@ -13,7 +13,12 @@ hooks:
     source: git+https://github.com/michaeljabbour/amplifier-bundle-fast-decisions@main#subdirectory=modules/hooks-fast-decisions
     config:
       mode: shadow
-      backend: jev
+      # deterministic: in-process, offline scorer (external=False) -- the
+      # shipped "shadow, external=false" rung actually measures something
+      # instead of only ever hitting the external_state_not_enabled
+      # fallback. Set backend: jev (and allow_external_state: true) to move
+      # to the next rung. See docs/design/redesign-2026-09-17.md P3.
+      backend: deterministic
       allow_external_state: false
       shadow_capacity: 64
       shadow_state_source: context_mount

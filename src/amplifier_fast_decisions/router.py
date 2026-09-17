@@ -18,7 +18,7 @@ import asyncio
 from typing import Any
 from uuid import uuid4
 
-from .contracts import classify_domain
+from .contracts import classify_domain, field_value
 
 # Owned by routing-matrix (or any other resolver bundle); read-only here.
 ROLE_RESOLVER_CAPABILITY = "model_role_resolver"
@@ -109,6 +109,19 @@ class RoleRouter:
     async def on_delegate_pre(self, data: dict) -> None:
         """Enqueue only; never awaits the resolver on this call."""
         if not self._enabled:
+            # Shadow-only, but never silent: the router being off by
+            # config (the shipped default) is itself a recorded decision,
+            # not the absence of one. See docs/design/redesign-2026-09-17.md
+            # P4: "must record proposed vs actual OR an explicit abstain
+            # reason -- silence is not acceptable."
+            await self._runtime.service.emit(
+                "role_proposed",
+                {
+                    "reason_code": "role_router_disabled",
+                    "proposed_model_role": None,
+                    "domain": _ROLE_DOMAIN,
+                },
+            )
             return
         tool_input = data.get("tool_input")
         explicit_role = (
@@ -162,8 +175,20 @@ class RoleRouter:
         if decision_id is None:
             return
         proposed = self._proposed.pop(decision_id, None)
-        routing = data.get("provider_routing")
-        actual = routing.get("model_role") if isinstance(routing, dict) else None
+        # The real tool:post payload (loop-streaming:6348-6357) nests the
+        # tool's own return value under "result" (a dumped ToolResult), not
+        # a top-level "provider_routing" key. tool-delegate's execute()
+        # places the routing summary at result.output.provider_routing
+        # (amplifier_module_tool_delegate/__init__.py, "Build provider
+        # routing summary"). Reading data.get("provider_routing") directly
+        # always returned None -- every role_agreement reported "mismatch"
+        # regardless of what actually happened. field_value duck-types
+        # across a plain dict (model_dump()'d ToolResult) or an attribute-
+        # bearing object, matching how result_data may arrive either way.
+        result = data.get("result")
+        output = field_value(result, "output", None)
+        routing = field_value(output, "provider_routing", None)
+        actual = field_value(routing, "model_role", None)
         if proposed is None:
             agreement = "unobserved"
         else:

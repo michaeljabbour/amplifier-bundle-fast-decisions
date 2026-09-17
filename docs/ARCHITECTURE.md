@@ -70,7 +70,7 @@ Non-workspace tools additionally need `fast_decisions.validate_candidate`. The b
 
 A single cooperative asynchronous deadline covers candidate collection, inference and revalidation. Synchronous callbacks, local file-system operations or native hooks that block the event loop can exceed the wall-clock budget; this is not a hard real-time scheduler. Backend HTTP retries are disabled. A backend failure opens a five-second cooldown. Invalid labels, malformed probabilities, an abstention, stale state, missing key, unknown alternatives, no eligible candidate or a timeout return to the original generative provider.
 
-Cancellation propagates. It does not authorize a pending action. SDK outages are not silently replaced with a scripted model. The active path cannot use a synthetic backend unless an explicit test-only policy flag is set; production configuration exposes only `jev` and `unavailable`.
+Cancellation propagates. It does not authorize a pending action. SDK outages are not silently replaced with a scripted model. Production configuration exposes three `backend` choices -- `jev`, `deterministic` (in-process, offline, `external=False`, never gated by `allow_external_state`; the shipped shadow default) and `unavailable`. The active path cannot submit a synthetic decision unless the explicit `allow_synthetic_active` policy flag is set, regardless of which backend produced it.
 
 The default limits are three consecutive fast submissions, twelve per turn, twelve candidate actions and a 750 ms decision deadline. Submission budgets count denied submissions too, to avoid repeating them indefinitely. Used candidate identity includes its revision and arguments.
 

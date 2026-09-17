@@ -148,11 +148,68 @@ class RoleRouterTests(unittest.IsolatedAsyncioTestCase):
         await asyncio.sleep(0.1)
 
     async def test_disabled_when_role_router_off(self):
+        # role_router off (the shipped default) never enqueues a job or
+        # touches the call, but it is not silent: it records an explicit
+        # abstain reason (docs/design/redesign-2026-09-17.md P4: "must
+        # record proposed vs actual OR an explicit abstain reason --
+        # silence is not acceptable").
         events = []
         runtime, coordinator = make_runtime(events)
         router = RoleRouter(runtime, coordinator, {"role_router": False})
         await router.on_delegate_pre({"tool_input": {}, "tool_call_id": "1"})
-        self.assertEqual(events, [])
+        self.assertEqual(len(events), 1)
+        self.assertEqual(events[0]["event"], "fast_decisions:role_proposed")
+        self.assertEqual(events[0]["data"]["reason_code"], "role_router_disabled")
+        self.assertIsNone(events[0]["data"]["proposed_model_role"])
+        self.assertEqual(router._pending, {})
+
+    async def test_on_delegate_post_reads_real_nested_payload_shape(self):
+        # tool:post's real payload (loop-streaming:6348-6357) nests the
+        # tool's return value under "result" (a dumped ToolResult), and
+        # tool-delegate places its routing summary at
+        # result.output.provider_routing.model_role -- never at a
+        # top-level data["provider_routing"]. Before the fix, actual was
+        # always None here, so agreement was always "mismatch".
+        events = []
+        runtime, coordinator = make_runtime(events)
+        router = RoleRouter(runtime, coordinator, {"role_router": True})
+        router._pending["call1"] = "d1"
+        router._proposed["d1"] = "coding"
+        router.on_delegate_post(
+            {
+                "tool_call_id": "call1",
+                "result": {
+                    "success": True,
+                    "output": {"provider_routing": {"model_role": "coding"}},
+                },
+            }
+        )
+        await asyncio.sleep(0)
+        agreements = [e for e in events if e["event"].endswith("role_agreement")]
+        self.assertEqual(len(agreements), 1)
+        self.assertEqual(agreements[0]["data"]["actual_model_role"], "coding")
+        self.assertEqual(agreements[0]["data"]["agreement"], "match")
+
+    async def test_on_delegate_post_mismatch_with_real_nested_payload_shape(self):
+        events = []
+        runtime, coordinator = make_runtime(events)
+        router = RoleRouter(runtime, coordinator, {"role_router": True})
+        router._pending["call1"] = "d1"
+        router._proposed["d1"] = "coding"
+        router.on_delegate_post(
+            {
+                "tool_call_id": "call1",
+                "result": {
+                    "success": True,
+                    "output": {"provider_routing": {"model_role": "fast"}},
+                },
+            }
+        )
+        await asyncio.sleep(0)
+        agreements = [e for e in events if e["event"].endswith("role_agreement")]
+        self.assertEqual(len(agreements), 1)
+        self.assertEqual(agreements[0]["data"]["actual_model_role"], "fast")
+        self.assertEqual(agreements[0]["data"]["agreement"], "mismatch")
 
 
 if __name__ == "__main__":
