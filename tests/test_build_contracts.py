@@ -45,7 +45,7 @@ class BuildTests(unittest.TestCase):
             data=json.loads(output.read_text().split('---')[1])
             self.assertEqual(data['bundle']['name'],'fast-decisions-shadow')
             self.assertTrue(data['includes'][0]['bundle'].startswith('file:///'))
-            self.assertEqual(data['tools'][0]['config']['root'],temp)
+            self.assertEqual(data['tools'][0]['config']['root'],str(Path(temp).resolve(strict=True)))
     def test_active_requires_external_opt_in(self):
         with self.assertRaises(ValueError):
             configure(SimpleNamespace(bundle_root=str(ROOT),mode='active',allow_external_state=False))

@@ -6,6 +6,27 @@ Experimental v0.1.0. A Foundation-compatible bundle, a hybrid orchestrator, a ho
 
 The orchestrator composes `StreamingOrchestrator`; it does not replace the Rust kernel or duplicate its tool-execution loop. At each eligible `Provider.complete()` boundary, the decision service may return a prepared tool-call envelope instead of calling the generative provider. The upstream loop handles that envelope normally. This is an executable integration candidate, not a claim of production certification.
 
+## Install
+
+Add the capability to your Amplifier app (hook + read-only `fast_workspace` tool, orchestrator untouched):
+
+```bash
+amplifier bundle add "git+https://github.com/michaeljabbour/amplifier-bundle-fast-decisions@main#subdirectory=behaviors/fast-decisions.yaml" --app
+```
+
+To run the decision orchestrator, load one of the standalone bundles instead (shadow records what it would have chosen and never overrides the model; active is the opt-in fast path):
+
+```bash
+amplifier bundle add "git+https://github.com/michaeljabbour/amplifier-bundle-fast-decisions@main#subdirectory=bundles/shadow.yaml" --app
+amplifier bundle add "git+https://github.com/michaeljabbour/amplifier-bundle-fast-decisions@main#subdirectory=bundles/active.yaml" --app
+```
+
+The `afast` CLI (local decision observatory + doctor) installs as a tool:
+
+```bash
+uv tool install "git+https://github.com/michaeljabbour/amplifier-bundle-fast-decisions@main"
+```
+
 ## Start with the no-key demo
 
 Python 3.11 or newer. No installation, API key, Node build, or network required:
@@ -37,7 +58,7 @@ python3 -m amplifier_fast_decisions configure \
   --allow-external-state \
   --output "$PWD/local-shadow.md"
 
-amplifier bundle add "file://$PWD/local-shadow.md"
+amplifier bundle add "file://$PWD/local-shadow.md" --app
 amplifier run --bundle fast-decisions-shadow \
   "Read README.md and explain what this project does."
 ```
@@ -60,7 +81,7 @@ To enable the prepared-action fast path after inspecting shadow traces:
 python3 -m amplifier_fast_decisions configure \
   --bundle-root "$PWD" --workspace "$WORKSPACE" \
   --mode active --allow-external-state --output "$PWD/local-active.md"
-amplifier bundle add "file://$PWD/local-active.md"
+amplifier bundle add "file://$PWD/local-active.md" --app
 amplifier run --bundle fast-decisions-active \
   "Read README.md and explain what this project does."
 ```
@@ -71,9 +92,15 @@ Only user-explicit, eligible text-file paths become automatic built-in candidate
 
 ## What ships
 
+| Layer | What it provides |
+|---|---|
+| `bundle.md` | Root: telemetry hook + `fast_workspace` tool; orchestrator untouched |
+| `behaviors/fast-decisions.yaml` | `hooks-fast-decisions` + `tool-fast-workspace` (no session config) |
+| `bundles/shadow.yaml` | Root + decision orchestrator in shadow mode (records, never overrides) |
+| `bundles/active.yaml` | Root + decision orchestrator in active mode (opt-in fast path) |
+
 | Part | Implementation |
 |---|---|
-| Bundle composition | `bundle.md` composes `behaviors/hybrid.yaml` by default. `behaviors/observe-only.yaml` is a reference profile, not included by default -- compose it explicitly (`includes: - bundle: fast-decisions:behaviors/observe-only.yaml`) in place of `hybrid.yaml` for metadata-only observation. |
 | Hybrid orchestrator | `loop-fast-decisions`, composing the installed upstream loop |
 | Native observer | `hooks-fast-decisions`, optional metadata-only hook bridge |
 | Prepared tool | `tool-fast-workspace`, constrained read/list operations |
@@ -97,7 +124,7 @@ For a dedicated integration environment with network access:
 ```bash
 python3 -m venv .venv
 . .venv/bin/activate
-python -m pip install -e '.[amplifier,jev,test]'
+uv pip install -e '.[amplifier,jev,test]'
 python -m amplifier_fast_decisions doctor --require-amplifier
 python -m unittest discover -s tests -v
 ```
@@ -136,6 +163,6 @@ Open the resulting HTML in a browser. Review telemetry before sharing: file/tool
 
 ## Developer map
 
-Start with [ARCHITECTURE.md](docs/ARCHITECTURE.md), [EVENTS.md](docs/EVENTS.md), [EXTENDING.md](docs/EXTENDING.md), and [AGENT-HANDOFF.md](docs/AGENT-HANDOFF.md). The build evidence and exact test status are in [BUILD-REPORT.md](BUILD-REPORT.md).
+Start with [ARCHITECTURE.md](docs/ARCHITECTURE.md), [EVENTS.md](docs/EVENTS.md), [EXTENDING.md](docs/EXTENDING.md), and [AGENT-HANDOFF.md](docs/AGENT-HANDOFF.md).
 
 MIT licensed. This experimental package is not an official Microsoft or TypeSafe release.

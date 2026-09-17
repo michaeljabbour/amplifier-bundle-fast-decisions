@@ -1,0 +1,18 @@
+bundle:
+  name: fast-decisions-behavior
+  version: 0.1.0
+  description: >-
+    Fast-decision telemetry hook plus the read-only fast_workspace tool.
+    Carries no session config; orchestrator choice lives in bundles/*.yaml.
+
+hooks:
+  - module: hooks-fast-decisions
+    source: git+https://github.com/michaeljabbour/amplifier-bundle-fast-decisions@main#subdirectory=modules/hooks-fast-decisions
+    config: {}
+
+tools:
+  - module: tool-fast-workspace
+    source: git+https://github.com/michaeljabbour/amplifier-bundle-fast-decisions@main#subdirectory=modules/tool-fast-workspace
+    config:
+      root: .
+      max_bytes: 32768

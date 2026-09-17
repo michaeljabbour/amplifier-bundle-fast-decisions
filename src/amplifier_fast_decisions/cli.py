@@ -54,7 +54,8 @@ def doctor(require_amplifier: bool = False) -> int:
     checks.append({"check": "TYPESAFE_API_KEY_present", "ok": bool(os.getenv("TYPESAFE_API_KEY")), "note": "Value is never displayed"})
     entries = {e.name for e in importlib.metadata.entry_points(group="amplifier.modules")}
     checks.append({"check": "module_entry_points", "ok": {"loop-fast-decisions", "hooks-fast-decisions", "tool-fast-workspace"} <= entries,
-                   "value": sorted(e for e in entries if "fast-" in e)})
+                   "value": sorted(e for e in entries if "fast-" in e),
+                   "note": "Provided by the modules/* packages, which the Amplifier loader installs when the bundle is loaded; absent in a bare source checkout"})
     print(json.dumps({"version": __version__, "checks": checks,
           "note": "Import/schema checks are not a full Rust-kernel or live-Jev integration test."}, indent=2))
     return 1 if require_amplifier and not required_ok else 0

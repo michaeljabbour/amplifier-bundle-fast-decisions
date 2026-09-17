@@ -1,0 +1,29 @@
+bundle:
+  name: fast-decisions-shadow
+  version: 0.1.0
+  description: >-
+    Root fast-decisions bundle plus the decision orchestrator in shadow mode:
+    it records what it would have chosen and never overrides the LLM.
+
+includes:
+  - bundle: fast-decisions:bundle.md
+
+session:
+  orchestrator:
+    module: loop-fast-decisions
+    source: git+https://github.com/michaeljabbour/amplifier-bundle-fast-decisions@main#subdirectory=modules/loop-fast-decisions
+    config:
+      mode: shadow
+      backend: jev
+      allow_external_state: false
+      timeout_ms: 750
+      min_probability: 0.90
+      min_margin: 0.20
+      max_fast_streak: 3
+      max_fast_per_turn: 12
+      max_candidates: 12
+      max_state_chars: 12000
+      allowed_tools: [fast_workspace]
+      upstream:
+        max_iterations: 100
+        extended_thinking: true

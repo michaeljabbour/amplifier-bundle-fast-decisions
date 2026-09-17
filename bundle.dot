@@ -8,12 +8,12 @@ digraph fast_decisions {
     nodesep=0.6
     ranksep=0.7
     bgcolor="white"
-    source_hash="8a980f37b427ceffaf255278897db9efac034f673afdc7f835c91e0891c2af25"
+    source_hash="0fc128ae02ca443f024921b06badeee23aebfb5c4630c4abccd8dcdd7bcfde1d"
 
     node [fontname="Helvetica", fontsize=11, style="filled,rounded"]
     edge [fontname="Helvetica", fontsize=9]
 
-    root_fast_decisions [label="fast-decisions v0.1.0\n0 tools · 0 agents\n~108 tok aggregate", shape=box, fillcolor="#80cbc4", style="filled,rounded,bold", penwidth=2]
+    root_fast_decisions [label="fast-decisions v0.1.0\n0 tools · 0 agents\n~205 tok aggregate", shape=box, fillcolor="#80cbc4", style="filled,rounded,bold", penwidth=2]
 
     subgraph cluster_behaviors {
         label="Behaviors"
@@ -21,8 +21,17 @@ digraph fast_decisions {
         fillcolor="#f9f9f9"
         color="#999999"
 
-        beh_hybrid [label="hybrid\n2 tools\n~186 tok", shape=box, fillcolor="#e0f2f1", style="filled,rounded"]
-        beh_observe_only [label="observe-only\n1 tools\n~77 tok", shape=box, fillcolor="#e0f2f1", style="filled,rounded"]
+        beh_fast_decisions_behavior [label="fast-decisions-behavior\n2 tools\n~156 tok", shape=box, fillcolor="#e0f2f1", style="filled,rounded"]
+    }
+
+    subgraph cluster_standalones {
+        label="Standalone Bundles"
+        style="filled"
+        fillcolor="#f9f9f9"
+        color="#999999"
+
+        sta_fast_decisions_active [label="fast-decisions-active", shape=box, fillcolor="#80cbc4", style="filled,rounded"]
+        sta_fast_decisions_shadow [label="fast-decisions-shadow", shape=box, fillcolor="#80cbc4", style="filled,rounded"]
     }
 
     subgraph cluster_modules {
@@ -60,8 +69,9 @@ digraph fast_decisions {
     ext_githttps___github_com_microsoft_amplifier_foundation_main [label="amplifier-foundation\n(external, cost)", shape=box, fillcolor="#80cbc4", style="dashed", color="red", penwidth=2]
 
     root_fast_decisions -> ext_githttps___github_com_microsoft_amplifier_foundation_main [style=dashed]
-    root_fast_decisions -> beh_hybrid [label="composes"]
-    beh_hybrid -> mod_tool_fast_workspace [label="uses", penwidth=0.8]
-    beh_hybrid -> mod_hooks_fast_decisions [label="uses", penwidth=0.8]
-    beh_observe_only -> mod_hooks_fast_decisions [label="uses", penwidth=0.8]
+    root_fast_decisions -> beh_fast_decisions_behavior [label="composes"]
+    beh_fast_decisions_behavior -> mod_tool_fast_workspace [label="uses", penwidth=0.8]
+    beh_fast_decisions_behavior -> mod_hooks_fast_decisions [label="uses", penwidth=0.8]
+    sta_fast_decisions_active -> root_fast_decisions [label="extends", style=dashed]
+    sta_fast_decisions_shadow -> root_fast_decisions [label="extends", style=dashed]
 }
