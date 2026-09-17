@@ -2,7 +2,7 @@
 
 ## Three different data paths
 
-1. **TypeSafe:** external requests are disabled by default. Opt-in sends the bounded current task snapshot and prepared candidate descriptions. The state projection excludes system/developer messages, private thinking blocks, images and executable argument objects. Public user/tool/assistant text can contain confidential information. Labels and rationales can also contain sensitive details.
+1. **TypeSafe:** external requests are disabled by default. Opt-in sends the bounded current task snapshot and prepared candidate descriptions. The state projection excludes system/developer messages, private thinking blocks, images and executable argument objects. Public user/tool/assistant text can contain confidential information. Labels and rationales can also contain sensitive details. This applies identically to shadow measurement running in `hooks-fast-decisions`: with `allow_external_state: false` (the shipped default) no TypeSafe/Jev client is ever constructed for shadow scoring; the snapshot it reads comes from the mounted context manager, bounded by `shadow_max_messages` and `max_state_chars`, same bounds and same opt-in gate as the active path.
 2. **Local observatory:** stores allowlisted metadata, probability distributions, model/tool names, hashes, IDs and timing. It excludes raw prompts, arguments, tool outputs, exception messages and private reasoning. Metadata can still be sensitive. Review it before exporting.
 3. **Other Amplifier modules:** their existing tracing/logging policies are unchanged. This bundle cannot promise that unrelated native loggers redact all content.
 

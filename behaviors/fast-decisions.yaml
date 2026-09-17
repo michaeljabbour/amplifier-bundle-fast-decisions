@@ -3,12 +3,24 @@ bundle:
   version: 0.1.0
   description: >-
     Fast-decision telemetry hook plus the read-only fast_workspace tool.
-    Carries no session config; orchestrator choice lives in bundles/*.yaml.
+    The hook carries its own shadow config (mode: shadow by default): compose
+    this behavior onto any orchestrator to get shadow measurement -- no
+    orchestrator swap required. Orchestrator swaps (fast-path execution)
+    remain opt-in via bundles/active.yaml.
 
 hooks:
   - module: hooks-fast-decisions
     source: git+https://github.com/michaeljabbour/amplifier-bundle-fast-decisions@main#subdirectory=modules/hooks-fast-decisions
-    config: {}
+    config:
+      mode: shadow
+      backend: jev
+      allow_external_state: false
+      shadow_capacity: 64
+      shadow_state_source: context_mount
+      shadow_max_messages: 12
+      shadow_snapshot_budget_ms: 25
+      shadow_drain_ms: 2000
+      max_state_chars: 12000
 
 tools:
   - module: tool-fast-workspace

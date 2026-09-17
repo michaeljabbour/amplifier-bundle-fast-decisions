@@ -9,6 +9,7 @@ from uuid import uuid4
 from .backends import JevBackend, UnavailableBackend
 from .contracts import SERVICE_CAPABILITY, RUNTIME_CAPABILITY, EVENT_NAMES, Policy
 from .service import DecisionService
+from .shadow import ShadowJob, ShadowOutcome, ShadowWorker
 from .telemetry import Emitter, JsonlRecorder
 
 
@@ -20,18 +21,68 @@ def session_identity(coordinator: Any) -> tuple[str, str | None]:
 
 
 class Runtime:
-    def __init__(self, service: DecisionService, recorder: JsonlRecorder | None = None):
+    def __init__(self, service: DecisionService, recorder: JsonlRecorder | None = None, *,
+                 shadow_capacity: int = 64, shadow_drain_ms: int = 2000):
         self.service = service
         self.recorder = recorder
         self.lock = asyncio.Lock()
         self.closed = False
+        self.shadow_worker = ShadowWorker(service, shadow_capacity)
+        self.shadow_drain_ms = shadow_drain_ms
+        self._shadow_task: asyncio.Task | None = None
+
+    def start_shadow_worker(self) -> None:
+        """Idempotent. The runtime's creator owns this task (mirrors runtime
+        lifecycle ownership: whichever module builds the Runtime also closes
+        it -- see get_runtime's owner semantics below).
+
+        Runtime/get_runtime can be constructed outside a running event loop
+        (e.g. a synchronous test wiring a fake runtime via get_runtime), so
+        this silently no-ops rather than raising when there is no loop to
+        schedule onto; submit_shadow/resolve_shadow call this again lazily,
+        and by the time either fires on the real hook path a loop is always
+        running."""
+        if self._shadow_task is not None and not self._shadow_task.done():
+            return
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError:
+            self._shadow_task = None
+            return
+        self._shadow_task = asyncio.create_task(self.shadow_worker.run())
+
+    def submit_shadow(self, job: ShadowJob) -> bool:
+        """Non-blocking enqueue. False when the queue is full (counted as dropped_shadow_jobs)."""
+        self.start_shadow_worker()
+        return self.shadow_worker.submit(job)
+
+    def resolve_shadow(self, outcome: ShadowOutcome) -> None:
+        """Non-blocking. Records what the LLM actually did against a pending proposal."""
+        self.start_shadow_worker()
+        self.shadow_worker.resolve(outcome)
 
     async def close(self):
+        """Idempotent. Drains the shadow worker with a bounded budget, then
+        cancels the task and awaits it, so no shadow work outlives the
+        session and no task is left pending at interpreter exit."""
         if self.closed:
             return
         self.closed = True
         try:
-            await self.service.emit("health", self.recorder.health if self.recorder else {})
+            await self.service.emit("health", {
+                **(self.recorder.health if self.recorder else {}),
+                **self.shadow_worker.health,
+            })
+            if self._shadow_task is not None:
+                try:
+                    await asyncio.wait_for(self.shadow_worker.join(), timeout=self.shadow_drain_ms / 1000)
+                except TimeoutError:
+                    pass
+                self._shadow_task.cancel()
+                try:
+                    await self._shadow_task
+                except asyncio.CancelledError:
+                    pass
             await self.service.close()
         finally:
             if self.recorder:
@@ -72,7 +123,13 @@ def get_runtime(coordinator: Any, config: dict[str, Any], *, owner: bool = False
         raise ValueError("Production backend must be jev or unavailable; scripted is demo-only")
     backend = JevBackend(model=config.get("model"), timeout_ms=policy.timeout_ms) if backend_name == "jev" else UnavailableBackend()
     service = DecisionService(policy, backend, emitter, coordinator, config.get("candidates"))
-    runtime = Runtime(service, recorder)
+    runtime = Runtime(service, recorder, shadow_capacity=config.get("shadow_capacity", 64),
+                       shadow_drain_ms=config.get("shadow_drain_ms", 2000))
+    # The runtime's creator (whichever module calls get_runtime first this
+    # session) owns the shadow worker's lifecycle: it starts the task here
+    # and drains/cancels it in Runtime.close, which the same module's
+    # cleanup calls (observer.py/orchestrator.py both do this today).
+    runtime.start_shadow_worker()
     coordinator.register_capability(RUNTIME_CAPABILITY, runtime)
     coordinator.register_capability(SERVICE_CAPABILITY, service)
     if hasattr(coordinator, "register_contributor"):

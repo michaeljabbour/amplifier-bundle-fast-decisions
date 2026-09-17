@@ -36,7 +36,10 @@
         "fast_decisions:tool_start",
         "fast_decisions:tool_end",
         "fast_decisions:cancelled",
-        "fast_decisions:health"
+        "fast_decisions:health",
+        "fast_decisions:shadow_proposed",
+        "fast_decisions:shadow_observed",
+        "fast_decisions:shadow_agreement"
       ]
     },
     "session_id": {

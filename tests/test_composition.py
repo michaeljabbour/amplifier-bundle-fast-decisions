@@ -193,13 +193,29 @@ class BundleLoadTests(unittest.TestCase):
         self.assertIn("tool-fast-workspace", tool_modules)
         self.assertIn("hooks-fast-decisions", hook_modules)
 
-    def test_shadow_bundle(self):
-        self._assert_decision_bundle(
-            "bundles/shadow.yaml",
-            expected_name="fast-decisions-shadow",
-            expected_mode="shadow",
-            expected_allow_external=False,
+    def test_shadow_bundle_is_deprecated_forwarding_alias(self):
+        """bundles/shadow.yaml no longer swaps session.orchestrator (P3): shadow
+        measurement now lives on the hook and composes onto any orchestrator.
+        This bundle still resolves and still names/configures the shadow
+        rung, but the orchestrator stays loop-streaming (inherited via
+        bundle.md), and its description opens with DEPRECATED."""
+        bundle = self._load("bundles/shadow.yaml")
+        self.assertEqual(bundle.name, "fast-decisions-shadow")
+        self.assertTrue(bundle.description.strip().startswith("DEPRECATED"))
+        mount_plan = bundle.to_mount_plan()
+
+        orchestrator = mount_plan["session"]["orchestrator"]
+        self.assertEqual(
+            orchestrator["module"], "loop-streaming",
+            "bundles/shadow.yaml must no longer swap the orchestrator",
         )
+
+        hook_modules = {h["module"]: h for h in mount_plan.get("hooks", [])}
+        self.assertIn("hooks-fast-decisions", hook_modules)
+        self.assertEqual(hook_modules["hooks-fast-decisions"]["config"]["mode"], "shadow")
+
+        tool_modules = {t["module"] for t in mount_plan.get("tools", [])}
+        self.assertIn("tool-fast-workspace", tool_modules)
 
     def test_active_bundle(self):
         self._assert_decision_bundle(

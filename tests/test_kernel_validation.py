@@ -31,9 +31,15 @@ ROOT = Path(__file__).resolve().parents[1]
 HAS_CORE = importlib.util.find_spec("amplifier_core") is not None
 
 
-def _shadow_orchestrator_config() -> dict:
+def _active_orchestrator_config() -> dict:
+    """bundles/shadow.yaml no longer swaps the orchestrator (P3): shadow
+    measurement lives on the hook and composes onto any orchestrator. The
+    only remaining bundle that configures amplifier_fast_decisions.orchestrator
+    is bundles/active.yaml -- use it to validate the orchestrator's own mount
+    contract (unrelated to shadow/active mode, which the hook config below
+    exercises separately via behaviors/fast-decisions.yaml)."""
     data = yaml.safe_load(
-        (ROOT / "bundles" / "shadow.yaml").read_text(encoding="utf-8")
+        (ROOT / "bundles" / "active.yaml").read_text(encoding="utf-8")
     )
     return data["session"]["orchestrator"]["config"]
 
@@ -62,7 +68,7 @@ class KernelValidationTests(unittest.IsolatedAsyncioTestCase):
     async def test_orchestrator_mount_point_contract(self):
         from amplifier_core.validation.orchestrator import OrchestratorValidator
 
-        config = _shadow_orchestrator_config()
+        config = _active_orchestrator_config()
         result = await OrchestratorValidator().validate(
             "amplifier_fast_decisions.orchestrator", config=config
         )

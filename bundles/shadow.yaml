@@ -2,28 +2,13 @@ bundle:
   name: fast-decisions-shadow
   version: 0.1.0
   description: >-
-    Root fast-decisions bundle plus the decision orchestrator in shadow mode:
-    it records what it would have chosen and never overrides the LLM.
+    DEPRECATED -- compose bundle.md (or behaviors/fast-decisions) instead;
+    removed in 0.3.0. Shadow measurement now lives on the hook
+    (hooks-fast-decisions, config: {mode: shadow, ...}) and composes onto
+    any orchestrator, so this bundle no longer swaps session.orchestrator.
+    It forwards to the root bundle unchanged: your orchestrator (loop-streaming
+    by default) stays in place, and the shadow hook records what it would
+    have chosen without ever overriding the model.
 
 includes:
   - bundle: fast-decisions:bundle.md
-
-session:
-  orchestrator:
-    module: loop-fast-decisions
-    source: git+https://github.com/michaeljabbour/amplifier-bundle-fast-decisions@main#subdirectory=modules/loop-fast-decisions
-    config:
-      mode: shadow
-      backend: jev
-      allow_external_state: false
-      timeout_ms: 750
-      min_probability: 0.90
-      min_margin: 0.20
-      max_fast_streak: 3
-      max_fast_per_turn: 12
-      max_candidates: 12
-      max_state_chars: 12000
-      allowed_tools: [fast_workspace]
-      upstream:
-        max_iterations: 100
-        extended_thinking: true

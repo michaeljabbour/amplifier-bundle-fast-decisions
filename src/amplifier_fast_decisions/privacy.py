@@ -25,6 +25,11 @@ SAFE_FIELDS = {
     "event_source", "native_event", "latency_kind", "selected_candidate", "message_count",
     "result_bytes", "hook_ms", "event_count", "phase", "session_label", "warmup",
     "state_revision", "candidate_revision", "upstream_complete_calls", "output_path_redacted",
+    # Shadow (P3): the proposal/observation join and worker health, never
+    # arguments/outputs/raw state.
+    "agreement", "proposed_candidate", "actual_tool", "would_have_avoided_llm_turn",
+    "state_source", "arguments_hash", "dropped_shadow_jobs", "pending",
+    "proposed_model_role", "actual_model_role", "eligible_roles",
 }
 
 

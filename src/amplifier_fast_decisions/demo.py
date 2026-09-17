@@ -75,6 +75,17 @@ class DemoCoordinator:
         return [cb() for cb in self.contributors.get(channel, [])]
     async def mount(self, category, value, name=None):
         self.mounts.setdefault(category, {})[name] = value
+    def get(self, mount_point, name=None):
+        # Mirrors amplifier_core's coordinator.get(mount_point, name=None):
+        # a singleton mount point (e.g. "context", mounted with no name)
+        # returns the object directly; a multi-instance one (e.g. "tools")
+        # returns the whole name -> value dict when no name is given.
+        bucket = self.mounts.get(mount_point, {})
+        if name is not None:
+            return bucket.get(name)
+        if None in bucket:
+            return bucket[None]
+        return bucket
 
 
 class DemoContext:
