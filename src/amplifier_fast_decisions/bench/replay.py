@@ -52,12 +52,55 @@ def _iter_jsonl_paths(events_path: str | Path) -> list[Path]:
     raise FileNotFoundError(f"No such events file or directory: {path}")
 
 
+def _unwrap_kernel_envelope(record: dict[str, Any]) -> dict[str, Any]:
+    """Detect and unwrap the kernel session-log envelope.
+
+    The bundle's own recorder (``telemetry.JsonlRecorder``) writes our flat
+    record directly at the top level: ``{event, event_id, decision_id, seq,
+    turn_id, session_id, data: {...payload...}, ...}``. The kernel's own
+    session logger (what lands in
+    ``~/.amplifier/projects/*/sessions/<id>/events.jsonl``) instead wraps
+    that entire flat record, unchanged, inside its own log envelope's
+    ``data`` field: ``{ts, lvl, schema, event, redaction, session_id, data:
+    {data: {...payload...}, decision_id, event, event_id, monotonic_ns,
+    parent_id, parent_session_id, schema_version, seq, synthetic,
+    turn_id}}`` -- one extra level of nesting, with the kernel's own
+    top-level ``event``/``session_id`` duplicating (not replacing) ours.
+
+    Detected purely by shape -- a top-level ``data`` that is itself a dict
+    carrying its own ``event``/``event_id`` keys -- never by which file or
+    directory the caller passed, so a directory or even a single file
+    mixing both layouts (recorder-written and kernel-logged) is normalised
+    line by line. Our own flat records' ``data`` is always the bare payload
+    dict (no nested ``event``/``event_id`` keys of its own), so this check
+    can never misfire on them. The kernel envelope's inner record has no
+    ``session_id`` of its own; it is filled in from the outer envelope so
+    the ``session_id=`` filter below still works unwrapped.
+    """
+    inner = record.get("data")
+    if (
+        isinstance(inner, dict)
+        and isinstance(inner.get("event"), str)
+        and isinstance(inner.get("event_id"), str)
+    ):
+        unwrapped = dict(inner)
+        unwrapped.setdefault("session_id", record.get("session_id"))
+        return unwrapped
+    return record
+
+
 def load_events(
     events_path: str | Path, *, session_id: str | None = None
 ) -> list[dict[str, Any]]:
     """Read every valid, deduplicated ``fast_decisions:*`` event from a
-    directory of JSONL files or a single JSONL file. Out-of-order files and
-    duplicate ``event_id``s produce exactly one record each."""
+    directory of JSONL files, a single JSONL file, or a session directory
+    (``.../sessions/<id>/``, whose ``events.jsonl`` is picked up by the
+    same ``*.jsonl`` glob used for a recorder's events directory). Each
+    line is unwrapped from the kernel session-log envelope when present
+    (see ``_unwrap_kernel_envelope``) before any other check runs, so
+    recorder-written and kernel-logged lines are accepted -- and may be
+    mixed -- in the same file. Out-of-order files and duplicate
+    ``event_id``s produce exactly one record each."""
     seen: set[str] = set()
     events: list[dict[str, Any]] = []
     for path in _iter_jsonl_paths(events_path):
@@ -69,7 +112,10 @@ def load_events(
                 event = json.loads(line)
             except (ValueError, TypeError):
                 continue
-            if not isinstance(event, dict) or not isinstance(event.get("event"), str):
+            if not isinstance(event, dict):
+                continue
+            event = _unwrap_kernel_envelope(event)
+            if not isinstance(event.get("event"), str):
                 continue
             if not event["event"].startswith(EVENT_PREFIX):
                 continue
