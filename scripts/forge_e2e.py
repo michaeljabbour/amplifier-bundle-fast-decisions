@@ -30,6 +30,7 @@ import sys
 import time
 import urllib.request
 
+import forge_workloads
 from forge_workloads import SPECS, STARTERS, PUBLIC, evaluate
 
 FORGE = Path.home()/'.agents/skills/amplifier-skill-forge/tools/forge.py'
@@ -108,6 +109,107 @@ def available(name):
     except metadata.PackageNotFoundError:return False
 
 
+def _battery_task(task):
+    """Look up ``task`` in battery_tasks.TASKS, if that module is importable
+    and knows about it. Returns None otherwise (never raises)."""
+    try:
+        import battery_tasks
+    except ImportError:
+        return None
+    return getattr(battery_tasks, 'TASKS', {}).get(task)
+
+
+def _task_files(task):
+    """Initial workspace files for ``task``: {relpath: text}.
+
+    Delegates to ``forge_workloads.task_files`` (the contract point where a
+    task-generalizing sibling module registers new task shapes). Falls back,
+    in order, to: the legacy README/solution/test_public trio (for this
+    module's own SPECS/STARTERS/PUBLIC tasks), then battery_tasks.TASKS
+    directly -- so this module works standalone whether or not
+    forge_workloads has been generalized yet.
+    """
+    fn = getattr(forge_workloads, 'task_files', None)
+    if fn is not None:
+        return fn(task)
+    if task in SPECS:
+        return {'README.md': SPECS[task], 'solution.py': STARTERS[task], 'test_public.py': PUBLIC[task]}
+    entry = _battery_task(task)
+    if entry is not None:
+        return entry.files
+    raise KeyError(task)
+
+
+def _task_prompt(task):
+    """Per-task prompt override, or None to use the run/manifest default."""
+    fn = getattr(forge_workloads, 'task_prompt', None)
+    if fn is not None:
+        return fn(task)
+    if task in SPECS:
+        return None
+    entry = _battery_task(task)
+    return getattr(entry, 'prompt', None) if entry is not None else None
+
+
+def _task_protected(task):
+    """Files the agent must not modify for ``task``."""
+    fn = getattr(forge_workloads, 'task_protected', None)
+    if fn is not None:
+        return fn(task)
+    if task in SPECS:
+        return ('README.md', 'test_public.py')
+    entry = _battery_task(task)
+    return tuple(entry.protected) if entry is not None else ('README.md', 'test_public.py')
+
+
+def _task_kind(task):
+    """'code' (evaluator-checked) or 'answer' (message-checked). Legacy SPECS-only
+    tasks and any task battery_tasks does not know about are 'code'."""
+    try:
+        import battery_tasks
+    except ImportError:
+        return 'code'
+    entry = getattr(battery_tasks, 'TASKS', {}).get(task)
+    return getattr(entry, 'kind', 'code') if entry is not None else 'code'
+
+
+def _extract_final_message(session_dir, workspace):
+    """Best-effort extraction of the assistant's final response text.
+
+    Primary source: the last ``llm:response`` event's ``data.raw.content``
+    ``text``-type blocks (verified against real session events.jsonl files).
+    Falls back to the last line of ``.amplifier-final-answer.txt`` in the
+    workspace, if present. Returns None when neither source is usable.
+    """
+    if session_dir is not None:
+        events_path = Path(session_dir)/'events.jsonl'
+        if events_path.exists():
+            last_text = None
+            for line in events_path.read_text().splitlines():
+                try:
+                    e = json.loads(line)
+                except ValueError:
+                    continue
+                if e.get('event') != 'llm:response':
+                    continue
+                raw = (e.get('data') or {}).get('raw') or {}
+                content = raw.get('content')
+                if not isinstance(content, list):
+                    continue
+                texts = [b.get('text') for b in content
+                         if isinstance(b, dict) and b.get('type') == 'text' and b.get('text')]
+                if texts:
+                    last_text = '\n'.join(texts)
+            if last_text is not None:
+                return last_text
+    marker = Path(workspace)/'.amplifier-final-answer.txt'
+    if marker.exists():
+        lines = marker.read_text().splitlines()
+        if lines:
+            return lines[-1]
+    return None
+
+
 def _default_config():
     tasks = list(SPECS)
     runs = []
@@ -151,9 +253,10 @@ def _side_profile(name, side, task, workspace, config):
 def _build_workspace(run_dir, task):
     workspace = run_dir/'workspace'
     (workspace/'.amplifier').mkdir(parents=True, exist_ok=True)
-    (workspace/'README.md').write_text(SPECS[task])
-    (workspace/'solution.py').write_text(STARTERS[task])
-    (workspace/'test_public.py').write_text(PUBLIC[task])
+    for relpath, content in _task_files(task).items():
+        target = workspace/relpath
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(content)
     (workspace/'.amplifier/settings.local.yaml').write_text('bundle:\n  app: []\n')
     subprocess.run(['git', 'init', '-q', str(workspace)], check=True)
     return workspace
@@ -163,15 +266,23 @@ def _build_run(root, run_spec, config, sides):
     name = run_spec['name']
     run = root/name
     run.mkdir(parents=True, exist_ok=True)
-    workspace = _build_workspace(run, run_spec['task'])
+    task = run_spec['task']
+    workspace = _build_workspace(run, task)
     side = sides[run_spec['side']]
-    profile = _side_profile(name, side, run_spec['task'], workspace, config)
+    profile = _side_profile(name, side, task, workspace, config)
     (run/'profile.md').write_text('---\n'+json.dumps(profile, indent=2)+'\n---\n')
-    return {
-        'task': run_spec['task'], 'side': run_spec['side'], 'rep': run_spec.get('rep', 1),
+    prompt = run_spec.get('prompt') or _task_prompt(task) or config.get('prompt', PROMPT)
+    item = {
+        'task': task, 'side': run_spec['side'], 'rep': run_spec.get('rep', 1),
         'attempt': run_spec.get('attempt', 1), 'block': run_spec.get('block'), 'seed': run_spec.get('seed'),
         'workspace_hash': hash_files(workspace), 'profile_sha256': hashlib.sha256((run/'profile.md').read_bytes()).hexdigest(),
+        'prompt_sha256': hashlib.sha256(prompt.encode()).hexdigest(),
     }
+    if 'prompt' in run_spec:
+        item['prompt'] = run_spec['prompt']
+    if 'deadline_seconds' in run_spec:
+        item['deadline_seconds'] = run_spec['deadline_seconds']
+    return item
 
 
 def prepare(root, config=None):
@@ -227,7 +338,7 @@ def add_run(root, run_spec):
     """Append one more run to an already-prepared root (used for retries)."""
     manifest = json.loads((root/'manifest.json').read_text())
     config = {'events_dir': manifest['events_dir'], 'upstream_loop_source': manifest['upstream_loop_source'],
-              'limits': manifest['limits']}
+              'limits': manifest['limits'], 'prompt': manifest.get('prompt', PROMPT)}
     manifest['runs'][run_spec['name']] = _build_run(root, run_spec, config, manifest['sides'])
     manifest['run_order'].append(run_spec['name'])
     task, rep = run_spec['task'], run_spec.get('rep', 1)
@@ -348,6 +459,8 @@ def worker(root,name):
     source_root = Path(side['source_root'])
     if tree_sha256(source_root/'src'/'amplifier_fast_decisions') != side['source_tree_sha256']:
         raise RuntimeError('Source changed during the experiment')
+    prompt = item.get('prompt') or manifest['prompt']
+    deadline_seconds = item.get('deadline_seconds') or manifest['limits']['timeout_seconds']
     warm=urllib.request.Request('http://127.0.0.1:11434/api/generate',data=json.dumps({'model':'qwen3:0.6b','stream':False,'keep_alive':'20m','options':{'num_ctx':4096}}).encode(),headers={'Content-Type':'application/json'})
     with urllib.request.urlopen(warm,timeout=60) as response:json.load(response)
     slug=str(workspace.resolve()).replace('/','-').replace('\\','-').replace(':','')
@@ -355,15 +468,15 @@ def worker(root,name):
     before=set(sessions.iterdir()) if sessions.exists() else set()
     env=dict(os.environ,AFAST_OBSERVATORY='off')
     env['PYTHONPATH'] = str(source_root/'src')
-    command=['amplifier','run','--bundle',(run/'profile.md').as_uri(),'--mode','single','--provider',manifest['provider'],'--model',manifest['model'],'--output-format','json',manifest.get('prompt', PROMPT)]
+    command=['amplifier','run','--bundle',(run/'profile.md').as_uri(),'--mode','single','--provider',manifest['provider'],'--model',manifest['model'],'--output-format','json',prompt]
     started_at=datetime.now(timezone.utc).isoformat();started=time.perf_counter()
     process=subprocess.Popen(command,cwd=workspace,env=env)
     dump(run/'running.json',{'started_at':started_at,'name':name,'controller_pid':os.getpid(),'pid':process.pid,
-                              'attempt':item.get('attempt',1),'deadline_seconds':manifest['limits']['timeout_seconds'],
+                              'attempt':item.get('attempt',1),'deadline_seconds':deadline_seconds,
                               'tty':sys.stdout.isatty()})
     print('FORGE_E2E_STARTED '+name,flush=True)
     timed_out=False
-    try:code=process.wait(timeout=manifest['limits']['timeout_seconds'])
+    try:code=process.wait(timeout=deadline_seconds)
     except subprocess.TimeoutExpired:
         timed_out=True;process.terminate()
         try:code=process.wait(timeout=15)
@@ -382,21 +495,38 @@ def worker(root,name):
     # (purging sys.modules here broke unrelated tests that patch amplifier_fast_decisions.operations).
     events_dir = Path(manifest.get('events_dir', str(EVENTS)))
     measured = extract_receipts(source_root, events_dir, sid, run) if sid else None
-    # Execute the independent evaluator in its own process with a deadline.
-    try:
-        test=subprocess.run([sys.executable,str(Path(__file__).resolve()),'evaluate',str(root),name],capture_output=True,text=True,timeout=45)
-        quality=json.loads(test.stdout)
-    except (ValueError,subprocess.TimeoutExpired):
-        quality={'checks':0,'passed':0,'failed':1,'failure_labels':['evaluator_failed_or_timed_out']}
-    try:
-        public=subprocess.run([sys.executable,'-m','unittest','-v','test_public.py'],cwd=workspace,capture_output=True,text=True,timeout=45)
-        public_ok=public.returncode==0
-    except subprocess.TimeoutExpired:public_ok=False
-    try:
-        suite=subprocess.run([sys.executable,'-m','unittest','discover','-v'],cwd=workspace,capture_output=True,text=True,timeout=45)
-        suite_ok=suite.returncode==0
-    except subprocess.TimeoutExpired:suite_ok=False
-    unchanged={f:(workspace/f).read_text()==text for f,text in {'README.md':SPECS[item['task']],'test_public.py':PUBLIC[item['task']]}.items()}
+    kind = _task_kind(item['task'])
+    if kind == 'answer':
+        final_message = _extract_final_message(found[0] if len(found)==1 else None, workspace)
+        try:
+            import battery_tasks
+            quality = battery_tasks.check_answer(battery_tasks.TASKS[item['task']], final_message)
+        except Exception:
+            quality = {'checks':0,'passed':0,'failed':1,'failure_labels':['check_answer_failed']}
+        public_ok = None
+        suite_ok = None
+    else:
+        final_message = None
+        # Execute the independent evaluator in its own process with a deadline.
+        try:
+            test=subprocess.run([sys.executable,str(Path(__file__).resolve()),'evaluate',str(root),name],capture_output=True,text=True,timeout=45)
+            quality=json.loads(test.stdout)
+        except (ValueError,subprocess.TimeoutExpired):
+            quality={'checks':0,'passed':0,'failed':1,'failure_labels':['evaluator_failed_or_timed_out']}
+        if (workspace/'test_public.py').exists():
+            try:
+                public=subprocess.run([sys.executable,'-m','unittest','-v','test_public.py'],cwd=workspace,capture_output=True,text=True,timeout=45)
+                public_ok=public.returncode==0
+            except subprocess.TimeoutExpired:public_ok=False
+        else:
+            public_ok=None
+        try:
+            suite=subprocess.run([sys.executable,'-m','unittest','discover','-v'],cwd=workspace,capture_output=True,text=True,timeout=45)
+            suite_ok=suite.returncode==0
+        except subprocess.TimeoutExpired:suite_ok=False
+    protected = _task_protected(item['task'])
+    files = _task_files(item['task'])
+    unchanged={f:(workspace/f).exists() and (workspace/f).read_text()==files.get(f,'') for f in protected}
     source_observed = _source_observed(run)
     source_expected = {'git_sha': side['source_git_sha'], 'tree_sha256': side['source_tree_sha256']}
     if source_observed is None:
@@ -408,17 +538,25 @@ def worker(root,name):
     mode_match = None if mode_observed is None else (
         (mode_observed == {'active'}) if side['mode'] == 'active' else mode_observed <= {'off'})
     infrastructure_failure = sid is None or code is None
+    harness = 'amplifier-fd' if side['mode'] == 'active' else 'amplifier-plain'
+    model = next((e['model'] for e in effort if e.get('model')), None)
     result={'name':name,'task':item['task'],'side':item['side'],'session_id':sid,'exit_code':code,'timed_out':timed_out,
             'wall_time_ms':elapsed,'native':native,'measurements':measured,'quality':quality,'public_tests_passed':public_ok,
             'workspace_tests_passed':suite_ok,'protected_files_unchanged':unchanged,
-            'final_solution_sha256':hashlib.sha256((workspace/'solution.py').read_bytes()).hexdigest(),
-            'attempt': item.get('attempt', 1), 'deadline_seconds': manifest['limits']['timeout_seconds'],
+            'final_solution_sha256':hashlib.sha256((workspace/'solution.py').read_bytes()).hexdigest() if (workspace/'solution.py').exists() else None,
+            'attempt': item.get('attempt', 1), 'deadline_seconds': deadline_seconds,
             'started_at': started_at, 'ended_at': ended_at,
             'source_expected': source_expected, 'source_observed': source_observed, 'source_match': source_match,
             'mode_expected': side['mode'], 'mode_observed': sorted(mode_observed) if mode_observed is not None else None, 'mode_match': mode_match,
             'retry_count': native['provider_retries'] if native else None, 'effort_receipts': effort,
-            'new_session_dirs': len(found), 'infrastructure_failure': infrastructure_failure}
-    result['outcome_passed']=code==0 and not timed_out and quality['failed']==0 and public_ok and suite_ok and all(unchanged.values())
+            'new_session_dirs': len(found), 'infrastructure_failure': infrastructure_failure,
+            'harness': harness, 'model': model, 'final_message': final_message[:4000] if isinstance(final_message, str) else final_message}
+    outcome_passed = code==0 and not timed_out and quality['failed']==0 and all(unchanged.values())
+    if public_ok is not None:
+        outcome_passed = outcome_passed and public_ok
+    if suite_ok is not None:
+        outcome_passed = outcome_passed and suite_ok
+    result['outcome_passed']=outcome_passed
     dump(run/'result.json',result)
     print('FORGE_E2E_FINISHED '+json.dumps({'name':name,'outcome':result['outcome_passed'],'wall_ms':round(elapsed),'checks':quality,'session_id':sid}),flush=True)
     return 0 if result['outcome_passed'] else 1
