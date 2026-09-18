@@ -45,7 +45,9 @@ def workspace_name(config: dict | None = None) -> str | None:
     """
     configured = (config or {}).get("workspace_name")
     if isinstance(configured, str) and configured.strip():
-        return configured.strip()[:120]
+        # Normalize both Windows and POSIX separators even on another OS.
+        name = configured.strip().replace("\\", "/").rstrip("/").rsplit("/", 1)[-1]
+        return name[:120] or None
     try:
         name = Path.cwd().name
     except OSError:

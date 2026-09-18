@@ -51,3 +51,7 @@ class WorkspaceNameTests(unittest.TestCase):
         self.assertEqual(observer.workspace_name({'workspace_name': ''}), observer.workspace_name({}))
         self.assertEqual(safe_data({'workspace_name': 'repo', 'cwd': '/Users/private/repo'}), {'workspace_name': 'repo'})
 
+
+    def test_override_strips_windows_and_posix_parent_paths(self):
+        for value in ('/Users/private/repo/', r'C:\Users\private\repo'):
+            self.assertEqual(observer.workspace_name({'workspace_name': value}), 'repo')

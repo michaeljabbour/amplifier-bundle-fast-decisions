@@ -81,3 +81,9 @@ was checked:
   in live to confirm arrival highlighting, the pinned in-flight row and working/idle
   state changes. These fixture renders are not host execution evidence.
 
+
+Release review added regression checks for cancelled/unknown execution, selection
+versus confirmed submission, provider completion, retry recovery, and configured
+POSIX/Windows workspace paths. Full-path overrides are reduced to a basename.
+The merged release candidate passed 254 tests in the actual Amplifier Python
+environment, including Chromium live-tail checks, and 15 Node projection tests.

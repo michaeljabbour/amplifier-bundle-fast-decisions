@@ -120,6 +120,9 @@
     const label = id => names.get(id) || id; // a raw candidate id stays verbatim (rendered monospace)
     const choice = score?.data.choice;
     const probability = score ? (Number.isFinite(score.data.selected_probability) ? score.data.selected_probability : score.data.probabilities?.[choice]) : NaN;
+    const submitted = routed?.data.route === 'fast' && routed.data.status === 'submitted_to_upstream';
+    const toolOK = !!toolEnd && (toolEnd.data.success === true || toolEnd.data.status === 'ok') && !['error', 'cancelled'].includes(toolEnd.data.status) && toolEnd.data.success !== false;
+    const providerOK = slowEnd?.data.status === 'ok';
     const terminal = !!(toolEnd || slowEnd || agreement || fallback || roleAgreement || nat('tool:post') || group.some(e => e.data.phase === 'advisory_result') || (routed && routed.data.route !== 'fast' && !opts.live));
     const inFlight = !!opts.live && !terminal && (opts.now - stamp(group.at(-1))) < 90000;
     // proposed
@@ -130,8 +133,8 @@
     else if (request) proposed = { title: 'Awaiting score', detail: (request.data.candidate_count ?? '?') + ' candidates' };
     // happened
     let happened = { title: '—', detail: '' };
-    if (routed?.data.route === 'fast') happened = { title: 'Fast action → ' + (routed.data.destination || routed.data.selected_candidate || 'tool'), detail: toolEnd ? (toolEnd.data.success === false || toolEnd.data.status === 'error' ? 'execution failed' : 'executed' + (Number.isFinite(toolEnd.data.duration_ms) ? ' in ' + fmt(toolEnd.data.duration_ms) : '')) : routed.data.status === 'submitted_to_upstream' ? 'submitted to upstream · no execution recorded' : pretty(routed.data.status) };
-    else if (routed) happened = { title: 'Reasoning provider' + (slowEnd?.data.provider || routed.data.destination ? ' · ' + (slowEnd?.data.provider || routed.data.destination) : ''), detail: (slowEnd && Number.isFinite(slowEnd.data.duration_ms) ? 'answered in ' + fmt(slowEnd.data.duration_ms) + ' · ' : '') + pretty(routed.data.reason_code) };
+    if (routed?.data.route === 'fast') happened = { title: 'Fast action → ' + (routed.data.destination || routed.data.selected_candidate || 'tool'), detail: toolEnd ? (!toolOK ? 'execution ' + (toolEnd.data.status || 'outcome unknown') : 'executed' + (Number.isFinite(toolEnd.data.duration_ms) ? ' in ' + fmt(toolEnd.data.duration_ms) : '')) : routed.data.status === 'submitted_to_upstream' ? 'submitted to upstream · no execution recorded' : pretty(routed.data.status) };
+    else if (routed) happened = { title: 'Reasoning provider' + (slowEnd?.data.provider || routed.data.destination ? ' · ' + (slowEnd?.data.provider || routed.data.destination) : ''), detail: (providerOK && Number.isFinite(slowEnd.data.duration_ms) ? 'answered in ' + fmt(slowEnd.data.duration_ms) + ' · ' : '') + pretty(routed.data.reason_code) };
     else if (advisory) happened = { title: 'Suggestion returned to caller', detail: 'no execution or bypass claimed' };
     else if (observed) happened = { title: 'LLM called ' + (observed.data.tool || 'a tool'), detail: nat('tool:post') ? 'result observed' : inFlight ? 'running…' : 'no result observed' };
     else if (roleAgreement) happened = { title: 'Delegate used role ' + (roleAgreement.data.actual_model_role || 'default'), detail: 'read from the tool result' };
@@ -141,8 +144,14 @@
     let verdict;
     if (simulated) verdict = { label: 'Scripted', tone: 'warn', note: 'Scripted evidence · excluded from counts' };
     else if (advisory) verdict = { label: 'Advisory', tone: 'adv', note: 'Advisory only · no execution or savings claimed' };
-    else if (routed?.data.route === 'fast') verdict = toolEnd ? (toolEnd.data.success === false || toolEnd.data.status === 'error' ? { label: 'Fast · failed', tone: 'bad', note: 'Generative call bypassed · tool execution failed' } : { label: 'Fast · executed', tone: 'ok', note: 'Generative call bypassed · tool executed · task quality unverified' }) : { label: 'Fast · submitted', tone: 'ok', note: 'Generative call bypassed · no completed tool recorded' };
-    else if (routed) verdict = { label: 'Reasoning model', tone: 'info', note: pretty(routed.data.reason_code) + ' · provider answered' };
+    else if (routed?.data.route === 'fast') {
+      const bypassNote = submitted ? 'Generative call bypassed' : 'Bypass not confirmed';
+      verdict = toolEnd
+        ? toolOK ? { label: 'Fast · executed', tone: 'ok', note: bypassNote + ' · tool executed · task quality unverified' }
+          : { label: 'Fast · ' + (toolEnd.data.status === 'cancelled' ? 'cancelled' : toolEnd.data.success === false || toolEnd.data.status === 'error' ? 'failed' : 'outcome unknown'), tone: 'bad', note: bypassNote + ' · successful execution not recorded' }
+        : { label: submitted ? 'Fast · submitted' : 'Fast · selected', tone: submitted ? 'ok' : 'info', note: bypassNote + ' · no completed tool recorded' };
+    }
+    else if (routed) verdict = { label: 'Reasoning model', tone: 'info', note: pretty(routed.data.reason_code) + (providerOK ? ' · provider answered' : slowEnd ? ' · provider ' + (slowEnd.data.status || 'outcome unknown') : ' · no provider completion recorded') };
     else if (fallback && fallback.data.reason_code === 'no_eligible_candidates') verdict = { label: 'No candidate', tone: 'muted', note: 'No eligible prepared action · provider path unchanged' };
     else if (fallback) verdict = { label: 'Fallback', tone: fallback.data.exception_type ? 'bad' : 'warn', note: pretty(fallback.data.reason_code) + ' · deferred to the provider' };
     else if (agreement) verdict = ({ match: { label: 'Match', tone: 'ok' }, mismatch: { label: 'Mismatch', tone: 'warn' }, abstained: { label: 'Abstained', tone: 'info' } }[agreement.data.agreement] || { label: pretty(agreement.data.agreement), tone: 'muted' });
