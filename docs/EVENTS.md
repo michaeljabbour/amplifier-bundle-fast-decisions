@@ -49,14 +49,30 @@ The mechanics view projects the recorded sequence for one session and decision I
 
 Portable Smart Tool calls emit `requested`, `scored`, and `health` with `phase: advisory_result`, `mode: advisory`, and `event_source: portable-smart-tool`. These prove only scoring and a returned suggestion. The caller supplies lineage IDs; no persistent session heartbeat, execution, or provider bypass is inferred. Failure returns typed abstention and is not counted as successful advice.
 
-**One backend request per state, regardless of question count.** `requested`
-and `scored` both carry `candidate_order_hash`: the digest of the candidate
-set in canonical `(origin, id)` order, computed once per request. Two runs
-over the same candidate set produce the same hash. `question_count` is the
-number of contributed judgment questions (`fast_decisions.questions`
-channel) batched into that same request alongside the action choice --
-batching is a pure latency/cost win because the vendor scores every
-question independently; it never changes an individual answer. A
+**Backend batching is a capability, not a latency guarantee.** Jev submits the
+primary action and contributed questions in one `system_one` API call. The local
+Ollama scorer supports only the primary action and explicitly rejects contributed
+questions. An API batch does not prove shared KV computation, independent answers,
+or a latency/cost improvement; those require backend-specific measurement.
+
+`candidate_order_hash` retains its existing meaning: candidate IDs/origins sorted
+into canonical order. It cannot detect option permutations or changed descriptions.
+New `scored` and `shadow_proposed` records carry `option_set_hash` when the backend
+supplies it. This SHA-256 digest covers the exact ordered action-option presentation,
+including abstention and ID bindings, after backend rendering. Ollama hashes its
+rendered action text and letter bindings (`ollama-options-v1`); Jev hashes its ordered
+criteria entries (`jev-options-v1`). These hashes describe different representations
+and must not be compared across backends. No raw target path is logged. Hashes are
+identifiers, not encryption or anonymization. They do not fingerprint the shared
+state, system prompt, contributed questions, model revision, or complete request.
+
+`probability_kind`, `reported_confidence`, and `confidence_kind` are separate fields.
+Ollama reports token mass with abstention residual and `confidence_kind: not_reported`.
+Jev confidence remains `typesafe_reported_unspecified`: this adapter does not know
+the remote formula/version. Neither statistic establishes empirical calibration.
+Old records lacking these fields remain readable; missing metadata is unknown.
+
+`question_count` is the number of contributed judgment questions. A
 misbehaving contributor (wrong shape, conflicting identifiers, or over the
 `max_candidates`/`max_questions` bound) is dropped and counted via
 `fallback` events with reason codes `contribution_shape_invalid`,

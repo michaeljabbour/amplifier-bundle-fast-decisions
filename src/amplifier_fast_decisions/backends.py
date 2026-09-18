@@ -2,9 +2,8 @@
 
 ``ask`` replaces ``decide`` (P5, docs/design/redesign-2026-09-17.md): one
 ``DecisionRequest`` carries the action candidates AND every contributed
-question, scored in a single ``system_one`` call. Batching is a pure
-latency/cost win -- questions are scored independently by the vendor, so
-this changes no individual answer.
+question, submitted in a single ``system_one`` call. This records API
+batching, not proof of shared GPU work, lower latency, or answer invariance.
 """
 
 from __future__ import annotations
@@ -21,6 +20,7 @@ from .contracts import (
     DecisionResult,
     field_value,
     indexed,
+    digest,
 )
 
 
@@ -38,7 +38,8 @@ def _question_payload(question) -> dict[str, Any]:
     return payload
 
 
-def _decision_from_answer(answer: Any, model: str, input_tokens: Any) -> Decision:
+def _decision_from_answer(answer: Any, model: str, input_tokens: Any,
+                          option_set_hash: str | None = None) -> Decision:
     probabilities = dict(field_value(answer, "probabilities", {}) or {})
     if not probabilities:
         raise BackendUnavailable("next_action answer missing probabilities")
@@ -49,6 +50,10 @@ def _decision_from_answer(answer: Any, model: str, input_tokens: Any) -> Decisio
         reported_confidence=field_value(answer, "confidence"),
         model=model,
         input_tokens=input_tokens,
+        # The remote service does not version its statistic in this response.
+        # Do not assume a formula from a different adapter or backend.
+        confidence_kind="typesafe_reported_unspecified",
+        option_set_hash=option_set_hash,
     )
 
 
@@ -100,6 +105,8 @@ class JevBackend:
         for question in request.questions:
             questions[question.name] = _question_payload(question)
 
+        option_set_hash = digest({"format": "jev-options-v1",
+                                  "options": list(criteria.items())})
         result = await self._get_client().system_one(
             state=request.state,
             questions=questions,
@@ -113,7 +120,7 @@ class JevBackend:
         output_tokens = field_value(usage, "output_tokens")
 
         next_action_answer = indexed(answers_raw, "next_action")
-        action = _decision_from_answer(next_action_answer, model, input_tokens)
+        action = _decision_from_answer(next_action_answer, model, input_tokens, option_set_hash)
 
         answers: dict[str, Answer] = {}
         for question in request.questions:

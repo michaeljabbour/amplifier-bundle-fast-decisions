@@ -173,3 +173,18 @@ owns the classifier prompt, candidate encoding, Ollama call, response
 validation, thresholds, abstention and receipts. The caller states a task and
 offers allowed targets. No calling agent has to load the classifier's domain
 prompt or conduct its reasoning on the tool's behalf.
+
+## Decision evidence and shutdown
+
+Successful local selections include `confidence_kind: not_reported` and an
+`option_set_hash` of the backend's ordered option presentation, including abstention
+and the mapping from letters to caller IDs. Reordering or changing a rendered target
+changes the hash. The hash is metadata, not a disclosure of paths or a complete
+request fingerprint. Token mass is not calibrated correctness.
+
+Recorder shutdown now wakes an idle writer immediately instead of waiting for a
+100 ms queue poll. The library flushes in a worker thread so other asynchronous
+callers remain responsive. This retains the existing recording-failure behavior;
+it does not turn best-effort telemetry into a durable audit log. Native Amplifier
+hook delivery and optional Emitter callbacks still run inline; isolating those
+observers is a separate integration change.

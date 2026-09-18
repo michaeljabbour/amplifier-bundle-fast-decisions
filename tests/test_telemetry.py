@@ -2,10 +2,12 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import queue
 from pathlib import Path
 import tempfile
 import threading
 import unittest
+from unittest.mock import patch
 import urllib.request
 import urllib.error
 from amplifier_fast_decisions.telemetry import Emitter, JsonlRecorder
@@ -50,6 +52,61 @@ class EmitterTests(unittest.IsolatedAsyncioTestCase):
         with tempfile.TemporaryDirectory() as tmp:
             r=JsonlRecorder(tmp,'test');await asyncio.to_thread(r.close);r.submit(event())
             self.assertEqual(r.dropped,1)
+
+
+class RecorderShutdownTests(unittest.TestCase):
+    def test_shutdown_wakes_idle_writer_without_polling_timeout(self):
+        waiting = threading.Event()
+        class LongPollingQueue(queue.Queue):
+            def get(self, block=True, timeout=None):
+                waiting.set()
+                return super().get(block=block, timeout=30)
+        with tempfile.TemporaryDirectory() as tmp, patch(
+            'amplifier_fast_decisions.telemetry.queue.Queue', LongPollingQueue
+        ):
+            recorder = JsonlRecorder(tmp, 'idle')
+            self.assertTrue(waiting.wait(2))
+            recorder.close()
+            recorder.close()  # Idempotent; no extra stop marker remains queued.
+            self.assertFalse(recorder._thread.is_alive())
+            self.assertIsNone(recorder.error)
+            self.assertEqual(recorder.health['queue_depth'], 0)
+
+    def test_shutdown_drains_accepted_records_in_order(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            recorder = JsonlRecorder(tmp, 'ordered', capacity=128)
+            for index in range(100):
+                recorder.submit({'index': index})
+            recorder.close()
+            self.assertEqual([json.loads(line)['index'] for line in recorder.path.read_text().splitlines()], list(range(100)))
+            self.assertEqual(recorder.dropped, 0)
+
+    def test_shutdown_drains_when_queue_has_no_room_for_stop_marker(self):
+        entered, release = threading.Event(), threading.Event()
+        with tempfile.TemporaryDirectory() as tmp:
+            recorder = JsonlRecorder(tmp, 'full', capacity=1)
+            stream = recorder._file
+            class BlockedWriter:
+                def write(self, line):
+                    entered.set()
+                    release.wait(5)
+                    return stream.write(line)
+                def close(self):
+                    stream.close()
+            recorder._file = BlockedWriter()
+            try:
+                recorder.submit({'index': 0})
+                self.assertTrue(entered.wait(2))
+                recorder.submit({'index': 1})
+                closer = threading.Thread(target=recorder.close, daemon=True)
+                closer.start()
+                self.assertTrue(recorder._stop.wait(2))
+            finally:
+                release.set()
+            closer.join(2)
+            self.assertFalse(closer.is_alive())
+            self.assertEqual([json.loads(line)['index'] for line in recorder.path.read_text().splitlines()], [0, 1])
+            self.assertEqual(recorder.dropped, 0)
 
 
 class IndexTests(unittest.TestCase):

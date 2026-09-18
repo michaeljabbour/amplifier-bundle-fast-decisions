@@ -153,6 +153,30 @@ def mean_or_none(values: Sequence[float | None]) -> float | None:
     return sum(known) / len(known)
 
 
+def comparable_confidence_mean(records: Sequence[dict[str, Any]]) -> float | None:
+    """Never pool different backends/models/statistics or an unknown formula.
+
+    Raw values remain available in the trace. This is a distribution-statistic
+    summary, not a calibration or correctness estimate.
+    """
+    values = []
+    sources = set()
+    for row in records:
+        value = row.get('reported_confidence')
+        if value is None:
+            continue
+        if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or not 0 <= value <= 1:
+            return None
+        source = tuple(row.get(key) for key in ('backend', 'model', 'confidence_kind'))
+        if any(not isinstance(item, str) or not item or item == 'unknown' for item in source):
+            return None
+        if source[2] in {'unspecified', 'not_reported'} or source[2].endswith('_unspecified'):
+            return None
+        sources.add(source)
+        values.append(value)
+    return mean_or_none(values) if len(sources) == 1 else None
+
+
 def rate(numerator: int, denominator: int) -> float | None:
     if denominator <= 0:
         return None

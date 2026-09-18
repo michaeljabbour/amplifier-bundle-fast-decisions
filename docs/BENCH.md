@@ -175,3 +175,29 @@ inference.
 
 All four are computed client-side in `app.js` from the already-ingested
 event stream; no control endpoint was added.
+
+## Confidence and local robustness checks
+
+Replay leaves `mean_reported_confidence` null when the formula is unspecified or
+records mix backend/model/statistic identities. The individual provider values
+remain in the trace. This summary is not an estimate of correctness. Legacy
+records without statistic metadata cannot establish comparability. The synthetic
+suite's single-backend summary is only a fixture statistic.
+
+The local development probes cover option reversal, distractor insertion, duplicate
+distractors, insufficient information, missing targets, negation, generation requests
+and conflicting tool observations:
+
+```bash
+PYTHONPATH=src python scripts/bench_local.py \
+  --suite suites/local-robustness.jsonl --repeats 3 --output /tmp/local-robustness.json
+```
+
+Requires the local extra and running Ollama. These are specification-derived public
+fixtures authored during development, not independent human labels or a held-out
+quality evaluation. Repeats are not independent examples. Labels and tags are never
+sent to the model. Reported timing includes loopback scoring with a reused client;
+CLI startup, target execution and full-task quality are outside this benchmark.
+The runner records raw distributions, option fingerprints, probability shifts and
+both argmax and policy order stability. Model revision remains null unless verified
+separately; the model name alone does not pin its weights.
