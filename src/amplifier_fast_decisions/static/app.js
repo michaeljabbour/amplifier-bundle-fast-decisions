@@ -1,270 +1,202 @@
-/* No dependencies, no remote assets, no control-plane write endpoint. */
+/* Read-only event projection. No generated events, animation clock or inferred savings. */
 (() => {
   'use strict';
-  const $ = id => document.getElementById(id);
-  let events = [], seen = new Set(), pointer = -1, live = false, playing = false;
-  let selectedId = null, cursor = 0, epoch = null, timer = null, session = '', source = 'live';
-  const tokenParams = new URLSearchParams(location.hash.slice(1));
-  const tokenKey = 'afast-token:' + location.host;
-  let token = tokenParams.get('token');
-  try { if(token) sessionStorage.setItem(tokenKey, token); else token = sessionStorage.getItem(tokenKey); } catch (_) {}
-  if(location.hash.startsWith('#token=')) history.replaceState(null, '', location.pathname + location.search);
-  const label = event => event.event.replace('fast_decisions:', '');
-  const fmt = ms => Number.isFinite(ms) ? (ms >= 1000 ? (ms/1000).toFixed(2)+' s' : ms.toFixed(0)+' ms') : 'Not observed';
-  const med = values => { const a=values.filter(Number.isFinite).sort((x,y)=>x-y); return a.length ? (a[Math.floor((a.length-1)/2)] + a[Math.floor(a.length/2)])/2 : NaN; };
-  const pretty = text => String(text || '').replaceAll('_', ' ');
-  const time = event => { const date=new Date(event.timestamp); return isNaN(date) ? '' : date.toLocaleTimeString([], {hour12:false, hour:'2-digit', minute:'2-digit', second:'2-digit'}) + '.' + String(date.getMilliseconds()).padStart(3,'0'); };
-  function put(id, text) { $(id).textContent = text; }
-  function filtered() { return session ? events.filter(e=>e.session_id===session) : events; }
-  function visible() { return filtered().slice(0, pointer+1); }
-  function valid(e) { return e && e.schema_version==='1.0' && typeof e.event_id==='string' && typeof e.event==='string' && e.event.startsWith('fast_decisions:') && typeof e.session_id==='string' && e.data && typeof e.data==='object'; }
-  function ingest(batch) {
-    for(const e of batch) if(valid(e) && !seen.has(e.event_id)) { events.push(e); seen.add(e.event_id); }
-    if(events.length > 20000) { events=events.slice(-20000); seen=new Set(events.map(e=>e.event_id)); }
-    updateSessions();
-    if(live) pointer=filtered().length-1;
-    render();
-  }
-  function updateSessions() {
-    const ids=[...new Set(events.map(e=>e.session_id))];
-    if($('session').options.length===ids.length+1) return;
-    $('session').replaceChildren(new Option('All sessions',''));
-    for(const id of ids) { const event=events.find(e=>e.session_id===id); const parent=event?.parent_session_id; $('session').add(new Option((parent?'Child: ':'')+id.slice(0,24)+(parent?' → '+parent.slice(0,12):''),id)); }
-    $('session').value=session;
-  }
-  const isScore = e => ['scored','shadow_proposed'].includes(label(e));
+  const kind = e => e.event.replace('fast_decisions:', '');
   const native = e => e.data.native_event || '';
-  const meaningful = e => label(e)!=='health' || native(e) || e.data.reason_code || e.data.phase==='configuration';
-  function configuration(data) {
-    return data.findLast(e=>label(e)==='turn_start'||e.data.phase==='configuration')?.data
-      || (data.some(e=>label(e)==='shadow_proposed') ? {mode:'shadow',...data.findLast(e=>label(e)==='shadow_proposed').data} : {});
+  const decisionKey = e => e.session_id + ':' + e.decision_id;
+  const isScore = e => ['scored', 'shadow_proposed'].includes(kind(e));
+  const stamp = e => Date.parse(e.timestamp) || 0;
+  const fmt = n => Number.isFinite(n) ? (n >= 1000 ? (n / 1000).toFixed(2) + ' s' : Math.round(n) + ' ms') : '—';
+  const pretty = s => String(s || '').replaceAll('_', ' ');
+  const valid = e => e && e.schema_version === '1.0' && typeof e.event_id === 'string' && typeof e.session_id === 'string' && typeof e.event === 'string' && e.event.startsWith('fast_decisions:') && e.data && typeof e.data === 'object' && !Array.isArray(e.data);
+  function scriptedKeys(events) {
+    return new Set(events.filter(e => e.decision_id && (e.synthetic || e.data.synthetic || (isScore(e) && e.data.backend === 'scripted-demo'))).map(decisionKey));
   }
-  function notice() {
-    const demo=filtered().some(e=>e.synthetic);
-    const cfg=configuration(visible());
-    $('notice').classList.toggle('demo',demo);
-    put('notice', demo ? 'SYNTHETIC DEMO. Real routing code with scripted models, tools, and loop fixtures. These timings are not Jev benchmarks.' : cfg.mode==='shadow' ? 'SHADOW ONLY. Proposals do not change execution. Amplifier keeps its normal orchestrator. '+(cfg.backend==='scripted-demo'?'Offline scripted scoring; Jev is not connected. ':'')+'Native hook observations are shown separately from measured execution.' : 'Read-only telemetry. Metadata only; no prompts, tool contents, or private reasoning. This interface cannot authorize actions.');
+  const synthetic = (e, keys) => !!(e.synthetic || e.data.synthetic || (e.decision_id && !['health','observatory'].includes(kind(e)) && keys.has(decisionKey(e))));
+  const issue = e => ['provider:error','provider:retry'].includes(native(e)) || ['error','cancelled'].includes(e.data.status) || kind(e) === 'fallback';
+  const useful = e => kind(e) !== 'health' || native(e) || e.data.reason_code || ['configuration','session_closed'].includes(e.data.phase);
+  const backendName = b => ({'scripted-demo':'Scripted scorer',deterministic:'Scripted scorer','ollama-token':'Local model',ollama:'Local model',jev:'Jev',unavailable:'No scorer'}[b] || b || 'Backend not recorded');
+  function configFor(events, id) {
+    return events.filter(e => e.session_id === id && (e.data.phase === 'configuration' || kind(e) === 'turn_start')).reduce((config,e)=>({...config,...e.data}),{});
   }
-  function counts(data) {
-    const scored=data.filter(isScore);
-    const routes=new Map(); for(const e of data) if(label(e)==='routed') routes.set(e.decision_id,e);
-    const slow=data.filter(e=>label(e)==='slow_start');
-    const completed=data.filter(e=>label(e)==='tool_end');
-    put('mDecisions',scored.length);
-    put('mFast',[...routes.values()].filter(e=>e.data.route==='fast').length);
-    const measuredProviderSessions=new Set(slow.map(e=>e.session_id));
-    const requests=data.filter(e=>native(e)==='provider:request'&&!measuredProviderSessions.has(e.session_id));
-    const measuredToolSessions=new Set(data.filter(e=>['tool_start','tool_end'].includes(label(e))).map(e=>e.session_id));
-    const posts=data.filter(e=>native(e)==='tool:post'&&!measuredToolSessions.has(e.session_id));
-    put('mSlowLabel',requests.length?'PROVIDER REQUESTS / CALLS':'REASONER CALLS');
-    put('mToolsLabel',posts.length?'TOOL RESULTS OBSERVED':'TOOLS COMPLETED');
-    put('mSlow',slow.length+requests.length);
-    put('mTools',completed.filter(e=>e.data.status==='ok').length+posts.length);
-    put('mDecisionLatency','Decision median: '+fmt(med(scored.map(e=>e.data.duration_ms)))+(scored.some(e=>label(e)==='shadow_proposed')?' (includes shadow)':''));
-    put('mSlowLatency',requests.length ? requests.length+' native requests; invocation not measured' : 'Provider median: '+fmt(med(data.filter(e=>label(e)==='slow_end').map(e=>e.data.duration_ms))));
-    const errors=completed.filter(e=>e.data.status!=='ok').length;
-    put('mToolsFoot', posts.length ? posts.length+' native post hooks; success/duration not inferred' : errors ? errors+' failed or cancelled executions' : 'Measured at actual execute()');
-    const drops=Math.max(0,...data.map(e=>e.data.dropped_events||0));
-    put('health', drops ? 'Warning: '+drops+' recorder events dropped' : 'Local / read-only / metadata only');
+  function sessionsFor(events, now) {
+    const map = new Map();
+    for (const e of events) {
+      let s = map.get(e.session_id);
+      if (!s) { s = {id:e.session_id, parent:null, events:[], latest:e, config:{}}; map.set(s.id,s); }
+      s.events.push(e);
+      if (e.parent_session_id) s.parent = e.parent_session_id;
+      if (stamp(e) >= stamp(s.latest)) s.latest = e;
+      if (e.data.phase === 'configuration' || kind(e) === 'turn_start') s.config = {...s.config,...e.data};
+    }
+    for (const s of map.values()) {
+      const life = s.events.findLast(e => ['execution:start','execution:end','session:end','provider:error','provider:retry'].includes(native(e)) || ['turn_start','turn_end'].includes(kind(e)) || e.data.phase === 'session_closed');
+      const beat = s.events.findLast(e => ['session_heartbeat','configuration'].includes(e.data.phase));
+      const closed = life && (life.data.phase === 'session_closed' || native(life) === 'session:end');
+      s.reporting = !closed && !!beat && now - stamp(beat) < 45000;
+      s.state = closed ? 'Session closed' : !s.reporting ? 'No recent heartbeat' : !life ? 'Connected, idle' : issue(life) ? 'Provider issue reported' : ['execution:end'].includes(native(life)) || kind(life)==='turn_end' ? 'Connected, idle' : 'Working';
+    }
+    return [...map.values()].sort((a,b) => stamp(b.latest)-stamp(a.latest));
   }
-  function graph(event) {
-    document.querySelectorAll('.edges path').forEach(e=>e.classList.remove('active-fast','active-slow','active-neutral'));
-    document.querySelectorAll('.node').forEach(e=>e.classList.remove('active'));
-    if(!event) { put('routeTitle','Waiting for events'); put('routeDetail','No event at this replay position.'); put('eventTime',''); return; }
-    const type=label(event), d=event.data;
-    const activate=(nodes,edges,style)=>{for(const id of nodes) $('node-'+id)?.classList.add('active');for(const id of edges) $('edge-'+id)?.classList.add('active-'+style);};
-    if(type==='requested') activate(['state','gate','jev'],['state','fast'],'fast');
-    else if(type==='scored'||type==='shadow_proposed') activate(['jev'],['fast'],'fast');
-    else if(type==='routed'&&d.route==='fast') activate(['jev','policy','executor'],['policy','execute-fast'],'fast');
-    else if(type==='routed'||type==='slow_start'||type==='slow_end'||type==='fallback') activate(['slow'],['slow',...(type==='slow_end'?['execute-slow']:[])],'slow');
-    else if(type==='tool_start') activate(['executor'],[],'neutral');
-    else if(type==='tool_end') activate(['executor','state'],['feedback'],'neutral');
-    else if(native(event)==='provider:request'||native(event)==='provider:error') activate(['slow'],['slow'],'slow');
-    else if(native(event)==='tool:pre') activate(['executor'],[],'neutral');
-    else if(native(event)==='tool:post') activate(['executor','state'],['feedback'],'neutral');
-    else activate(['state'],['state'],'neutral');
-    let title=pretty(type), detail=d.reason_code?pretty(d.reason_code):d.status||'';
-    if(type==='routed') { title=d.route==='fast'?'Fast action submitted to upstream':'Routed to the reasoning provider'; if(d.shadow) detail='Shadow suggestion only. The actual route remains slow.'; }
-    if(type==='scored') title='Candidate distribution returned';
-    if(type==='shadow_proposed') { title='Shadow candidate scored'; detail='Suggestion only; execution was not changed.'; }
-    if(type==='shadow_agreement') { title='Shadow comparison: '+pretty(d.agreement); detail='Compared with the observed tool call; no fast submission.'; }
-    if(native(event)) { title='Native '+native(event)+' observed'; detail=d.tool||d.provider||'Hook observation; not a measured execute() call.'; }
-    if(d.phase==='configuration') { title='Runtime: '+pretty(d.mode); detail=pretty(d.backend)+'; external state '+(d.allow_external_state?'enabled':'disabled'); }
-    if(d.reason_code==='no_eligible_candidates') { title='No eligible prepared action'; detail='Built-in candidates require an explicit eligible text-file path under the workspace root.'; }
-    if(type==='tool_start') title='Tool execution actually started';
-    if(type==='tool_end') title='Tool execution '+(d.status==='ok'?'completed':d.status);
-    if(type==='slow_start') title='Generative provider call started';
-    if(type==='slow_end') title='Generative provider call '+d.status;
-    put('routeTitle',title); put('routeDetail',detail||d.destination||d.tool||'Observed event'); put('eventTime',time(event));
-    $('routeDot').className='dot '+(d.route==='fast'||['scored','requested','shadow_proposed'].includes(type)?'fast':type.startsWith('slow')||d.route==='slow'?'slow':'neutral');
+  function metrics(events) {
+    const scores=events.filter(isScore), fast=new Set(events.filter(e=>kind(e)==='routed'&&e.data.route==='fast').map(decisionKey));
+    const executions=events.filter(e=>kind(e)==='tool_end'&&(e.data.success===true||e.data.status==='ok'));
+    const nativePosts=events.filter(e=>native(e)==='tool:post');
+    const postSessions=new Set(nativePosts.map(e=>e.session_id));
+    const durations=scores.map(e=>e.data.duration_ms).filter(Number.isFinite).sort((a,b)=>a-b);
+    return {scores:scores.length,fast:fast.size,fastExecuted:executions.filter(e=>fast.has(decisionKey(e))).length,
+      tools:nativePosts.length+executions.filter(e=>!postSessions.has(e.session_id)).length,
+      issues:events.filter(issue).length,p95:durations.length?durations[Math.ceil(durations.length*.95)-1]:NaN};
   }
-  function inspect(event,data) {
-    if(!event) { put('modeBadge','NO EVENT'); put('reason','No route selected'); put('destination','Not observed'); put('decisionLatency','Not observed'); put('confidence',''); $('probabilities').replaceChildren(); put('eventJson','{}'); return; }
-    const related=event.decision_id ? data.filter(e=>e.decision_id===event.decision_id) : [event];
-    const scored=related.findLast(isScore);
-    const requested=related.find(e=>label(e)==='requested');
-    const route=related.findLast(e=>label(e)==='routed');
-    const slow=related.findLast(e=>label(e).startsWith('slow_'));
-    const d=route?.data||event.data;
-    put('modeBadge',(d.mode||event.data.mode||(label(event).startsWith('shadow_')?'shadow':'OBSERVED')).toUpperCase());
-    $('modeBadge').classList.toggle('warn',d.mode==='shadow');
-    put('reason',pretty(d.reason_code||event.data.status||label(event)));
-    put('destination',d.route==='slow' ? (slow?.data.provider||'Existing provider') : d.destination||event.data.tool||'Not observed');
-    put('decisionLatency',fmt(scored?.data.duration_ms));
-    put('confidence',Number.isFinite(scored?.data.selected_probability)?(scored.data.probability_kind==='token_mass_with_abstention_residual'?'Uncalibrated token score = ':'p = ')+scored.data.selected_probability.toFixed(3):'');
-    const target=$('probabilities'); target.replaceChildren();
-    if(scored) {
-      const names=new Map((requested?.data.candidates||[]).map(c=>[c.id,c.label])); names.set('reason','Use reasoning model');
-      const rows=Object.entries(scored.data.probabilities||{}).sort((a,b)=>b[1]-a[1]);
-      for(const [id,p] of rows) {
-        const row=document.createElement('div'), caption=document.createElement('div');caption.className='prob-label';
-        const text=document.createElement('span');text.textContent=names.get(id)||id;
-        const percent=document.createElement('span');percent.textContent=(p*100).toFixed(1)+'%';caption.append(text,percent);
-        const track=document.createElement('div');track.className='prob-track';const fill=document.createElement('div');fill.className='prob-fill'+(id===scored.data.choice?' selected':'')+(id==='reason'?' slow':'');fill.style.width=Math.max(0,Math.min(100,p*100))+'%';track.append(fill);row.append(caption,track);target.append(row);
-      }
-    } else { const empty=document.createElement('div');empty.className='empty';empty.textContent='No score was recorded for this event. Native hook observations do not include a decision distribution.';target.append(empty); }
-    put('eventJson',JSON.stringify(event,null,2));
+  function decisionPath(events, session, selected) {
+    const focus = events.find(e => e.event_id === selected && e.decision_id && e.session_id === session)
+      || events.findLast(e => e.session_id === session && e.decision_id && kind(e) === 'scored')
+      || events.findLast(e => e.session_id === session && e.decision_id && kind(e) === 'requested')
+      || events.findLast(e => e.session_id === session && e.decision_id && isScore(e));
+    if (!focus) return [];
+    const stages = new Set(['requested','scored','shadow_proposed','shadow_observed','routed','fallback','tool_start','tool_end','slow_start','slow_end','shadow_agreement']);
+    return events.filter(e => decisionKey(e) === decisionKey(focus) && stages.has(kind(e)))
+      .sort((a,b) => stamp(a)-stamp(b) || (a.seq||0)-(b.seq||0));
   }
-  function timeline(data) {
-    const filter=$('eventFilter').value;
-    const rows=data.filter(e=>filter==='all'||filter==='fallback'?(filter==='all'||label(e)==='fallback'||['decision_timeout','selection_threshold','backend_error','model_abstained','backend_circuit_open'].includes(e.data.reason_code)):filter==='tool'?(label(e).startsWith('tool_')||native(e).startsWith('tool:')):meaningful(e));
-    put('traceCount',rows.length+' events');
-    const tbody=$('timeline');tbody.replaceChildren();
-    for(const event of rows.slice(-100).reverse()) {
-      const d=event.data,tr=document.createElement('tr');tr.tabIndex=0;tr.dataset.eventId=event.event_id;tr.classList.toggle('selected',event.event_id===selectedId);
-      const values=[time(event),pretty(label(event)),d.destination||d.provider||d.tool||d.route||'',pretty(d.reason_code||d.reason||d.agreement||d.action||d.status||''),Number.isFinite(d.duration_ms)?fmt(d.duration_ms):'',(event.decision_id||'').slice(0,8)];
-      values.forEach((value,i)=>{const td=document.createElement('td');if(i===1){const pill=document.createElement('span');pill.className='pill'+(d.route==='fast'?' fast':d.route==='slow'||label(event).startsWith('slow')?' slow':'');pill.textContent=native(event)||value;td.append(pill);}else td.textContent=value;if(i===0||i===4||i===5)td.classList.add('mono');tr.append(td);});
-      const choose=()=>{selectedId=event.event_id;render();};tr.addEventListener('click',choose);tr.addEventListener('keydown',e=>{if(e.key==='Enter')choose();});tbody.append(tr);
+  function describe(e, simulated=false) {
+    const k=kind(e), d=e.data, n=native(e);
+    let title=pretty(k), detail=d.reason_code?pretty(d.reason_code):d.status||'Recorded metadata', source='Runtime record', tone='runtime';
+    if(n){title=({'execution:start':'Turn started','execution:end':'Turn finished','session:end':'Session ended','provider:request':'Provider request','provider:retry':'Provider retry','provider:error':'Provider error','tool:pre':'Tool proposed','tool:post':'Tool result observed','context:compaction':'Context compaction observed','llm:response':'Provider response observed'}[n]||n);detail=[d.tool||d.provider,d.exception_type,d.retry_attempt?'Attempt '+d.retry_attempt:'',d.status_code?'HTTP '+d.status_code:''].filter(Boolean).join(' · ')||'Reported by an Amplifier hook';source='Native hook observation';}
+    if(d.phase==='configuration'){title='Bundle mounted';detail=backendName(d.backend)+' · '+(d.mode||'Mode not recorded');source='Runtime configuration';}
+    if(d.phase==='session_closed'){title='Telemetry session closed';detail='The bundle observer was unmounted.';}
+    if(k==='requested'){title='Decision requested';detail=(d.candidate_count??'?')+' prepared candidates';source='Decision service';tone='decision';}
+    if(isScore(e)){title=k==='shadow_proposed'?'Shadow proposal scored':'Decision scored';detail=d.model||backendName(d.backend);source=simulated?'Scripted score': 'Model score';tone='decision';}
+    if(k==='routed'){title=d.route==='fast'?'Fast action submitted':'Reasoning provider selected';detail=pretty(d.reason_code);source='Routing decision';tone='decision';}
+    if(k==='tool_start'){title='Tool execution started';detail=d.tool||'Tool not recorded';source='Measured execution';}
+    if(k==='tool_end'){title=d.success===false||d.status==='error'?'Tool execution failed':'Tool execution '+(d.status==='ok'?'completed':(d.status||'ended'));detail=d.tool||'Tool not recorded';source='Measured execution';}
+    if(k==='slow_start'||k==='slow_end'){title=k==='slow_start'?'Model invocation started':'Model invocation ended';detail=d.provider||d.model||'Provider not recorded';source='Measured invocation';}
+    if(k==='shadow_observed'){title='Tool choice observed';detail=d.tool||'Tool not recorded';source='Shadow observation';}
+    if(k==='shadow_agreement'){title='Shadow comparison: '+pretty(d.agreement);detail='Compared with the observed tool choice; no execution changed.';source='Shadow comparison';}
+    if(k==='role_proposed'||k==='role_agreement'){title='Model-role '+(k==='role_proposed'?'suggestion':'comparison');detail='Shadow only; provider selection is unchanged.';source='Shadow comparison';}
+    if(d.reason_code==='no_eligible_candidates'){title='No prepared action available';detail='The request did not produce an eligible candidate.';}
+    if(k==='turn_start'){title='Hybrid turn started';detail=backendName(d.backend)+' · '+d.mode;}
+    if(k==='turn_end'){title='Hybrid turn finished';detail=(d.fast_total??0)+' fast submissions · '+(d.slow_total??0)+' measured provider calls';}
+    if(k==='observatory'){title='Viewer '+(d.action||'event');detail=pretty(d.reason)||'Viewer lifecycle metadata';}
+    if(issue(e))tone='error';
+    if(simulated){source='Synthetic / scripted';tone='synthetic';}
+    return {title,detail,source,tone};
+  }
+  // Pure projections are exported for regression tests; browser code remains dependency-free.
+  if(typeof module!=='undefined')module.exports={kind,valid,scriptedKeys,synthetic,sessionsFor,metrics,describe,decisionPath};
+  if(typeof document==='undefined')return;
+  const $=id=>document.getElementById(id), put=(id,text)=>{$(id).textContent=text;};
+  const make=(tag,cls,text)=>{const node=document.createElement(tag);if(cls)node.className=cls;if(text!==undefined)node.textContent=text;return node;};
+  let events=[],seen=new Set(),cursor=0,epoch=null,session='',selected=null,category='activity',following=true,source='live',lastPoll=0,connectionError='',retained=0,invalidLines=0,windowGap=false,hasMore=false;
+  let frozenIds=null,expanded=new Set(),token='',pollTimer=null,pollGeneration=0;
+  const tokenKey='afast-token:'+location.host;
+  try {token=new URLSearchParams(location.hash.slice(1)).get('token')||sessionStorage.getItem(tokenKey)||'';if(token)sessionStorage.setItem(tokenKey,token);}catch(_){}
+  if(location.hash.startsWith('#token='))history.replaceState(null,'',location.pathname+location.search);
+  const age=t=>{const n=Math.max(0,Math.floor((Date.now()-t)/1000));return n<5?'just now':n<60?n+'s ago':n<3600?Math.floor(n/60)+'m ago':n<86400?Math.floor(n/3600)+'h ago':Math.floor(n/86400)+'d ago';};
+  const clock=e=>new Date(e.timestamp).toLocaleTimeString([],{hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  function ingest(batch){for(const e of batch)if(valid(e)&&!seen.has(e.event_id)){seen.add(e.event_id);events.push(e);}events.sort((a,b)=>stamp(a)-stamp(b)||(a.session_id===b.session_id?(a.seq||0)-(b.seq||0):0));if(events.length>20000){events=events.slice(-20000);seen=new Set(events.map(e=>e.event_id));}render();}
+  function currentWindow(){const limit=$('timeWindow').value;return events.filter(e=>(limit==='all'||Date.now()-stamp(e)<=Number(limit))&&(!frozenIds||frozenIds.has(e.event_id)));}
+  function scopeData(base){const children=$('includeChildren').checked;const parents=new Map(events.filter(e=>e.parent_session_id).map(e=>[e.session_id,e.parent_session_id]));const descendant=id=>{const visited=new Set();while(parents.has(id)&&!visited.has(id)){visited.add(id);id=parents.get(id);if(id===session)return true;}return false;};return base.filter(e=>session?(e.session_id===session||(children&&descendant(e.session_id))):(children||!parents.has(e.session_id)));}
+  function selectSession(id){session=id;selected=null;render();}
+  function renderSessions(base,keys){
+    const sessions=sessionsFor(base,Date.now()), map=new Map(sessions.map(s=>[s.id,s]));
+    const roots=sessions.filter(s=>!s.parent), orphans=sessions.filter(s=>s.parent&&!map.has(s.parent));
+    for(const child of orphans)if(!roots.some(s=>s.id===child.parent))roots.push({id:child.parent,parent:null,events:[],latest:child.latest,config:{},state:'Parent not observed',reporting:false});
+    const search=$('sessionSearch').value.toLowerCase();
+    put('sessionCount',roots.length);put('allSessionCount',roots.length);
+    $('allSessions').classList.toggle('selected',!session);$('allSessions').setAttribute('aria-pressed',String(!session));
+    const target=$('sessions');target.replaceChildren();
+    function row(s,child=false){const button=make('button','session-row'+(s.id===session?' selected':'')+(child?' child':''));button.setAttribute('aria-pressed',String(s.id===session));button.title=s.id;button.dataset.sessionId=s.id;const top=make('span','session-top');top.append(make('span','session-name',s.config.session_label||s.id.slice(0,8)),make('span','session-age',age(stamp(s.latest))));button.append(top,make('span','session-config',s.config.mode?backendName(s.config.backend)+' / '+s.config.mode:'Configuration not recorded'),make('span','session-state'+(s.state==='Provider issue reported'?' issue':''),s.state));button.onclick=()=>selectSession(s.id);return button;}
+    function group(s,level=0,visited=new Set()){if(visited.has(s.id))return null;visited=new Set([...visited,s.id]);const kids=sessions.filter(x=>x.parent===s.id);const matches=[s,...kids].some(x=>(x.id+' '+(x.config.session_label||'')).toLowerCase().includes(search));if(!matches)return null;const wrap=make('div','session-group');wrap.append(row(s,level>0));if(kids.length){const toggle=make('button','children-toggle',(expanded.has(s.id)?'Hide ':'Show ')+kids.length+' child session'+(kids.length===1?'':'s'));toggle.dataset.childrenId=s.id;toggle.setAttribute('aria-expanded',String(expanded.has(s.id)));toggle.onclick=()=>{expanded.has(s.id)?expanded.delete(s.id):expanded.add(s.id);render();};wrap.append(toggle);if(expanded.has(s.id))for(const child of kids){const g=group(child,level+1,visited);if(g)wrap.append(g);}}return wrap;}
+    for(const s of roots){const g=group(s);if(g)target.append(g);}
+    if(!roots.length)target.append(make('p','session-config','No parent sessions in this window.'));
+    return sessions;
+  }
+  function renderDetails(e,keys){
+    $('detailEmpty').hidden=!!e;$('detailContent').hidden=!e;
+    if(!e){put('evidenceKind','No selection');return;}
+    const simulated=synthetic(e,keys), info=describe(e,simulated), d=e.data;
+    put('evidenceKind',info.source);$('evidenceKind').className='tag '+info.tone;
+    put('detailTitle',info.title);put('detailDescription',info.detail);
+    const cfg=configFor(events,e.session_id), related=e.decision_id?events.filter(x=>decisionKey(x)===decisionKey(e)):[e];
+    const score=related.findLast(isScore), request=related.find(x=>kind(x)==='requested');
+    const facts=[['Session',e.session_id],...(e.parent_session_id?[['Parent session',e.parent_session_id]]:[]),['Recorded',new Date(e.timestamp).toLocaleString()],['Event',e.event],['Source',info.source],...(d.tool_call_id?[['Tool call',d.tool_call_id]]:[]),...(e.decision_id?[['Decision',e.decision_id]]:[]),...(Number.isFinite(d.duration_ms)?[['Measured duration',fmt(d.duration_ms)]]:[]),...(d.reason_code?[['Reason code',pretty(d.reason_code)]]:[])];
+    $('eventFacts').replaceChildren();for(const [label,value] of facts){const row=make('div');row.append(make('dt','',label),make('dd','',value));$('eventFacts').append(row);}
+    put('sessionConfig',cfg.mode?backendName(cfg.backend)+' in '+cfg.mode+' mode. '+(cfg.backend==='scripted-demo'?'Scores are scripted; no model is connected to this scorer.':cfg.mode==='shadow'?'Proposals do not change execution.':'Fast selections still pass native approval.'):'No configuration event is available for this session.');
+    $('distribution').hidden=!score;$('probabilities').replaceChildren();
+    if(score){put('scoreMeaning',synthetic(score,keys)?'Scripted values. These did not come from a model.':score.data.probability_kind==='token_mass_with_abstention_residual'?'Uncalibrated token scores. They do not measure correctness.':'Backend-reported scores; not independent evidence of correctness.');const names=new Map((request?.data.candidates||[]).map(c=>[c.id,c.label]));names.set('reason','Use reasoning model');for(const [id,p] of Object.entries(score.data.probabilities||{}).filter(([,p])=>Number.isFinite(p)).sort((a,b)=>b[1]-a[1])){const row=make('div','prob-row'), caption=make('div','prob-label'), track=make('div','prob-track'), fill=make('div','prob-fill');caption.append(make('span','',names.get(id)||id),make('span','',(p*100).toFixed(1)+'%'));fill.style.width=Math.max(0,Math.min(100,p*100))+'%';track.append(fill);row.append(caption,track);$('probabilities').append(row);}}
+    put('eventJson',JSON.stringify(e,null,2));
+  }
+  function renderMechanics(scoped, keys) {
+    $('mechanics').hidden=!session;
+    const path=decisionPath(scoped,session,selected);
+    $('decisionPath').replaceChildren();
+    put('pathNote',path.length?'Decision '+path[0].decision_id+' · recorded sequence in this session. Select a stage to inspect its evidence.':'No scored decision path recorded in this window. Native activity is listed below.');
+    for(const e of path){
+      const info=describe(e,synthetic(e,keys)), node=make('button','path-stage '+info.tone+(e.event_id===selected?' selected':''));
+      node.dataset.stageId=e.event_id;node.setAttribute('aria-pressed',String(e.event_id===selected));
+      node.append(make('span','path-time',clock(e)),make('strong','',info.title),make('span','',info.detail));
+      if(Number.isFinite(e.data.duration_ms))node.append(make('span','path-duration',fmt(e.data.duration_ms)));
+      node.onclick=()=>{selected=e.event_id;render();};$('decisionPath').append(node);
     }
   }
-  let mismatchFirst=true;
-  function decisionRecords(data) {
-    const byId=new Map();
-    for(const e of data) {
-      if(!e.decision_id) continue;
-      const rec=byId.get(e.decision_id)||{requested:null,scored:null,routed:null,shadow:null,role:null};
-      const kind=label(e), d=e.data;
-      if(kind==='requested') rec.requested=d;
-      else if(kind==='scored'||kind==='shadow_proposed') rec.scored=d;
-      else if(kind==='routed') rec.routed=d;
-      else if(kind==='shadow_agreement') rec.shadow=d;
-      else if(kind==='role_agreement') rec.role=d;
-      byId.set(e.decision_id,rec);
-    }
-    return byId;
+  function render(){
+    const focused=document.activeElement;
+    const focusKey=['eventId','sessionId','childrenId','stageId'].find(key=>focused?.dataset?.[key]);
+    const focusValue=focusKey?focused.dataset[focusKey]:null;
+    const keys=scriptedKeys(events), base=currentWindow(), realBase=base.filter(e=>!synthetic(e,keys));
+    const sessions=renderSessions($('includeSynthetic').checked?base:realBase,keys);
+    const scoped=scopeData(base), hidden=scoped.filter(e=>synthetic(e,keys)).length;
+    const real=scoped.filter(e=>!synthetic(e,keys)), m=metrics(real);
+    put('modelCount',m.scores);put('fastCount',m.fast);put('toolCount',m.tools);put('errorCount',m.issues);put('fastExecuted',m.fastExecuted);put('scorerP95',fmt(m.p95));
+    put('impactDetail',m.fastExecuted?'Confirmed tool executions after a fast submission. Whole-task time saved has not been measured.':m.fast?'Fast actions were submitted. No successful fast-path tool execution is recorded in this window.':'No executed fast path recorded in this window. Shadow suggestions do not change execution.');
+    put('scopeNotice','Counts exclude scripted/demo events. Tool results may be hook observations; only instrumented execution proves a completed fast path.');
+    const cfg=session?configFor(events,session):null;
+    put('viewTitle',session?(cfg.session_label||'Session '+session.slice(0,8)):'Across parent sessions');
+    put('viewSubtitle',session?(cfg.mode?backendName(cfg.backend)+' / '+cfg.mode:'Configuration not recorded'):'Runtime activity from '+sessions.filter(s=>!s.parent&&s.reporting).length+' parent session(s) currently reporting.');
+    put('syntheticCount',hidden?'('+hidden+($('includeSynthetic').checked?' shown)':' hidden)'):'');
+    const display=scoped.filter(e=>($('includeSynthetic').checked||!synthetic(e,keys))&&useful(e)&&(category==='decisions'?['requested','scored','routed','shadow_proposed','shadow_agreement','role_proposed','role_agreement','fallback'].includes(kind(e)):category==='errors'?issue(e):true));
+    const rows=display.slice(-250).reverse();$('feed').replaceChildren();
+    if(selected&&!scoped.some(e=>e.event_id===selected&&($('includeSynthetic').checked||!synthetic(e,keys))))selected=null;
+    for(const e of rows){const info=describe(e,synthetic(e,keys)), button=make('button','event-row'+(selected===e.event_id?' selected':''));button.setAttribute('aria-pressed',String(selected===e.event_id));button.dataset.eventId=e.event_id;const icon=make('span','event-icon '+info.tone,info.tone==='error'?'!':info.tone==='decision'?'◆':info.tone==='synthetic'?'~':'·'),body=make('span');body.append(make('span','event-title',info.title),make('span','event-description',info.detail),make('span','event-source',info.source));const when=make('span','event-time',clock(e));if(Number.isFinite(e.data.duration_ms))when.append(make('span','event-duration',fmt(e.data.duration_ms)));button.append(icon,body,make('span','event-session',e.session_id.slice(0,8)),when);button.onclick=()=>{selected=e.event_id;render();};$('feed').append(button);}
+    $('emptyState').hidden=rows.length>0;
+    put('emptyTitle',connectionError?'Connection needs attention':hidden?'Scripted events are hidden':category==='errors'?'No issues recorded':'No activity in this window');
+    put('emptyDetail',connectionError?'Restore the viewer connection above. Existing records remain available.':hidden?'Enable scripted & demo events to inspect them. They never count as model decisions or measured improvements.':source!=='live'?'This is a saved trace. Try another category or session.':'The viewer is listening. Start a turn in a session with the bundle loaded, or widen the time window.');
+    put('feedCount',display.length>250?'Latest 250 of '+display.length+' events':display.length+' events');
+    put('dataHealth',invalidLines?invalidLines+' invalid records skipped':windowGap?'Older events expired from the retained window':'No prompts or tool contents.');
+    put('freshness',source!=='live'?'Saved trace · no live updates':lastPoll?'Checked '+age(lastPoll)+' · last event '+(events.length?age(stamp(events.at(-1))):'not received'):'Waiting for first response');
+    put('followBtn',source!=='live'?'Return to live':following?'Following live':'Resume live');$('followBtn').setAttribute('aria-pressed',String(source==='live'&&following));
+    renderMechanics(scoped.filter(e=>$('includeSynthetic').checked||!synthetic(e,keys)),keys);
+    renderDetails(events.find(e=>e.event_id===selected),keys);
+    if(source!=='live'){put('connection','Saved trace');$('connection').className='connection replay';}
+    else if(connectionError){put('connection','Disconnected');$('connection').className='connection problem';}
+    else {put('connection',lastPoll?(hasMore?'Syncing history':following?'Connected':'Connected · paused'):'Connecting');$('connection').className='connection'+(lastPoll?' connected':'');}
+    $('connectionNotice').hidden=!connectionError;put('connectionNotice',connectionError);
+    if(focusKey){const replacement=[...document.querySelectorAll('button')].find(node=>node.dataset[focusKey]===focusValue);replacement?.focus({preventScroll:true});}
   }
-  function rungBanner(data) {
-    const d=configuration(data);
-    put('rungMode',(d.mode||'--').toUpperCase());
-    put('rungBackend',d.backend||'--');
-    // Real field (turn_start.allow_external_state), not a backend-name guess.
-    const known=typeof d.allow_external_state==='boolean';
-    put('rungExternal',known?(d.allow_external_state?'yes':'no'):'--');
-    put('rungPolicy',d.policy_version||'--');
-  }
-  function changedCounters(records) {
-    let avoided=0, differentAction=0;
-    for(const rec of records.values()) {
-      if(!rec.shadow) continue;
-      if(rec.shadow.would_have_avoided_llm_turn) avoided++;
-      else if(rec.shadow.agreement==='mismatch') differentAction++;
-    }
-    put('mAvoided',avoided);
-    put('mMismatchAction',differentAction);
-  }
-  function reliabilityPlot(records) {
-    const bins=Array.from({length:10},()=>({n:0,correct:0,confSum:0}));
-    for(const rec of records.values()) {
-      if(!rec.scored||!rec.shadow) continue;
-      const p=rec.scored.selected_probability;
-      if(!Number.isFinite(p)) continue;
-      const idx=Math.min(9,Math.floor(p*10));
-      bins[idx].n++; bins[idx].confSum+=p;
-      if(rec.shadow.agreement==='match') bins[idx].correct++;
-    }
-    const svg=$('reliabilitySvg'); svg.replaceChildren();
-    const pad=28, size=260-2*pad;
-    const axis=document.createElementNS('http://www.w3.org/2000/svg','path');
-    axis.setAttribute('d',`M${pad} ${pad} V${pad+size} H${pad+size}`); axis.setAttribute('stroke','#35445b'); axis.setAttribute('fill','none'); svg.append(axis);
-    const diag=document.createElementNS('http://www.w3.org/2000/svg','line');
-    diag.setAttribute('class','diag'); diag.setAttribute('x1',pad); diag.setAttribute('y1',pad+size); diag.setAttribute('x2',pad+size); diag.setAttribute('y2',pad); svg.append(diag);
-    for(const bin of bins) {
-      if(!bin.n) continue;
-      const meanConf=bin.confSum/bin.n, acc=bin.correct/bin.n;
-      const cx=pad+meanConf*size, cy=pad+size-acc*size;
-      const circle=document.createElementNS('http://www.w3.org/2000/svg','circle');
-      circle.setAttribute('cx',cx); circle.setAttribute('cy',cy); circle.setAttribute('r',Math.max(3,Math.min(10,Math.sqrt(bin.n)*1.6)));
-      circle.setAttribute('class','point'+(bin.n<30?' low-n':''));
-      circle.setAttribute('data-n',bin.n);
-      const title=document.createElementNS('http://www.w3.org/2000/svg','title');
-      title.textContent=`n=${bin.n}, mean confidence=${meanConf.toFixed(2)}, empirical accuracy=${acc.toFixed(2)}`;
-      circle.append(title); svg.append(circle);
-    }
-  }
-  function decisionList(records) {
-    const tbody=$('decisionList'); tbody.replaceChildren();
-    let rows=[...records.entries()].filter(([,r])=>r.scored||r.shadow);
-    if(mismatchFirst) rows.sort((a,b)=>(b[1].shadow?.agreement==='mismatch')-(a[1].shadow?.agreement==='mismatch'));
-    if(!rows.length) { const tr=document.createElement('tr'); const td=document.createElement('td'); td.colSpan=8; td.className='empty'; td.textContent='No shadow/decision telemetry yet.'; tr.append(td); tbody.append(tr); return; }
-    for(const [decisionId,rec] of rows.slice(0,200)) {
-      const tr=document.createElement('tr'); tr.classList.toggle('mismatch',rec.shadow?.agreement==='mismatch');
-      const values=[decisionId.slice(0,8),rec.shadow?.proposed_candidate||rec.scored?.choice||'',rec.shadow?.actual_tool||'',rec.shadow?.agreement||(rec.routed?.route==='fast'?'fast (no shadow)':''),Number.isFinite(rec.scored?.selected_probability)?rec.scored.selected_probability.toFixed(3):'',Number.isFinite(rec.scored?.margin)?rec.scored.margin.toFixed(3):'',fmt(rec.scored?.duration_ms),pretty(rec.routed?.reason_code||'')];
-      values.forEach(value=>{const td=document.createElement('td'); td.textContent=value; tr.append(td);});
-      tbody.append(tr);
-    }
-  }
-  $('sortMismatchBtn').onclick=()=>{mismatchFirst=!mismatchFirst;render();};
-  function render() {
-    const all=filtered();pointer=Math.min(pointer,all.length-1);const data=visible();notice();counts(data);
-    $('scrubber').max=Math.max(0,all.length-1);$('scrubber').value=Math.max(0,pointer);put('position',(pointer+1)+' / '+all.length);
-    const current=data.findLast(meaningful)||data.at(-1), selected=data.find(e=>e.event_id===selectedId)||current;
-    graph(selected);inspect(selected,data);timeline(data);
-    const records=decisionRecords(data);
-    rungBanner(data);changedCounters(records);reliabilityPlot(records);decisionList(records);
-    const fast=data.findLast(isScore),slow=data.findLast(e=>label(e)==='slow_start'||native(e)==='provider:request');
-    const cfg=configuration(data);
-    put('fastTitle',cfg.backend==='scripted-demo'||fast?.data.backend==='scripted-demo'?'Offline scorer':cfg.backend==='jev'?'Jev':cfg.backend==='ollama-token'||cfg.backend==='ollama'||fast?.data.backend==='ollama-token'?'Local model':'Decision scorer');
-    put('jevModel',fast?(fast.data.synthetic?'Scripted scores, not Jev':(fast.data.model||'Backend not recorded').slice(0,29)):'Typed candidate selection');
-    put('slowModel',slow?(slow.data.model||slow.data.provider||'Existing provider').slice(0,28):'Existing provider and model');
-    document.body.classList.toggle('paused',!live&&!playing);
-    $('liveBtn').disabled=source!=='live';
-  }
-  function pause() { playing=false;clearTimeout(timer);put('playBtn','Replay'); }
-  function step() { pause();live=false;selectedId=null;pointer=pointer>=filtered().length-1?0:pointer+1;render(); }
-  function tick() {
-    if(!playing)return;
-    const all=filtered();if(pointer>=all.length-1){pause();return;}
-    pointer++;selectedId=null;render();
-    const a=Date.parse(all[pointer]?.timestamp),b=Date.parse(all[pointer+1]?.timestamp);
-    const delay=Math.min(650,Math.max(60,b-a||120))/Number($('speed').value);
-    timer=setTimeout(tick,delay);
-  }
-  $('playBtn').onclick=()=>{if(playing){pause();render();return;}live=false;playing=true;if(pointer>=filtered().length-1)pointer=-1;put('playBtn','Pause');tick();};
-  $('stepBtn').onclick=step;
-  $('liveBtn').onclick=()=>{pause();live=true;pointer=filtered().length-1;selectedId=null;render();};
-  $('scrubber').oninput=()=>{pause();live=false;pointer=Number($('scrubber').value);selectedId=null;render();};
-  $('session').onchange=()=>{session=$('session').value;pointer=filtered().length-1;selectedId=null;render();};
-  $('eventFilter').onchange=render;
+  $('allSessions').onclick=()=>selectSession('');$('sessionSearch').oninput=render;
+  for(const id of ['timeWindow','includeSynthetic','includeChildren'])$(id).onchange=()=>{selected=null;render();};
+  document.querySelectorAll('[data-filter]').forEach(b=>{b.onclick=()=>{category=b.dataset.filter;document.querySelectorAll('[data-filter]').forEach(x=>{x.classList.toggle('active',x===b);x.setAttribute('aria-pressed',String(x===b));});render();};});
+  $('followBtn').onclick=()=>{if(source!=='live'){pollGeneration++;source='live';events=[];seen.clear();cursor=0;epoch=null;selected=null;session='';following=true;frozenIds=null;$('timeWindow').value='3600000';schedule(0);}else{following=!following;frozenIds=following?null:new Set(events.map(e=>e.event_id));}render();};
   $('loadBtn').onclick=()=>$('fileInput').click();
-  $('fileInput').onchange=async()=>{
-    pause();live=false;source='file';events=[];seen.clear();
-    try{for(const file of $('fileInput').files){const text=await file.text();const batch=text.trim().startsWith('[')?JSON.parse(text):text.split(/\r?\n/).filter(Boolean).map(line=>JSON.parse(line));ingest(batch);}pointer=filtered().length-1;put('connection','LOCAL REPLAY');render();}catch(error){put('notice','Unable to parse the trace: '+error.message);}
-  };
-  $('exportBtn').onclick=()=>{const blob=new Blob([filtered().map(e=>JSON.stringify(e)).join('\n')+'\n'],{type:'application/x-ndjson'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='amplifier-decision-trace.jsonl';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);};
-  document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'&&!['INPUT','SELECT'].includes(document.activeElement.tagName)){e.preventDefault();step();}});
-  async function poll() {
+  $('fileInput').onchange=async()=>{try{const batch=[];for(const file of $('fileInput').files){const text=await file.text();batch.push(...(text.trim().startsWith('[')?JSON.parse(text):text.split(/\r?\n/).filter(Boolean).map(JSON.parse)));}pollGeneration++;clearTimeout(pollTimer);source='file';events=[];seen.clear();selected=null;session='';frozenIds=null;following=false;connectionError='';$('reconnectPanel').hidden=true;$('timeWindow').value='all';ingest(batch);}catch(_){connectionError='Could not read this trace. Choose a JSON array or a JSONL event file.';render();}};
+  $('exportBtn').onclick=()=>{const keys=scriptedKeys(events),data=scopeData(currentWindow()).filter(e=>$('includeSynthetic').checked||!synthetic(e,keys)), blob=new Blob([data.map(e=>JSON.stringify(e)).join('\n')+'\n'],{type:'application/x-ndjson'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='amplifier-events.jsonl';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);};
+  $('connectForm').onsubmit=e=>{e.preventDefault();try{const url=new URL($('viewerLink').value);if(url.origin!==location.origin)throw Error();const value=new URLSearchParams(url.hash.slice(1)).get('token');if(!value)throw Error();pollGeneration++;token=value;try{sessionStorage.setItem(tokenKey,token);}catch(_){}$('viewerLink').value='';connectionError='';$('reconnectPanel').hidden=true;schedule(0);}catch(_){connectionError='Use the full viewer link for this same local address and port.';render();}};
+  function schedule(delay){clearTimeout(pollTimer);pollTimer=setTimeout(poll,delay);}
+  async function poll(){
     if(source!=='live')return;
-    try {
-      const response=await fetch('/api/events?after='+cursor,{headers:{Authorization:'Bearer '+(token||'')}});
-      if(!response.ok)throw new Error(response.status===401?'Open the token-bearing localhost URL printed in your terminal.':'Telemetry connection error: '+response.status);
+    if(!token){connectionError='This tab has no viewer access token. Reopen the full launching link or reconnect below.';$('reconnectPanel').hidden=false;render();return;}
+    const generation=++pollGeneration;
+    try{const response=await fetch('/api/events?after='+cursor,{headers:{Authorization:'Bearer '+token},signal:AbortSignal.timeout(5000)});
+      if(source!=='live'||generation!==pollGeneration)return;
+      if(!response.ok){if(response.status===401){$('reconnectPanel').hidden=false;throw Error('The viewer link has expired or is missing its access token. Reopen the launching link.');}throw Error('The local viewer returned HTTP '+response.status+'. Retrying…');}
       const payload=await response.json();
-      if(epoch&&epoch!==payload.epoch){events=[];seen.clear();cursor=0;epoch=payload.epoch;return;}
-      epoch=payload.epoch;cursor=payload.cursor;
-      ingest(payload.events);put('connection',live?'LIVE / READ ONLY':'CONNECTED / PAUSED');$('connection').classList.remove('warn');
-      if(payload.invalid_lines)put('health',payload.invalid_lines+' malformed trace records skipped');
-    } catch(error) {put('connection','DISCONNECTED');$('connection').classList.add('warn');if(!events.length)put('notice',error.message);}
-    finally {setTimeout(poll,250);}
+      if(source!=='live'||generation!==pollGeneration)return;
+      if(epoch&&epoch!==payload.epoch){events=[];seen.clear();cursor=0;epoch=payload.epoch;selected=null;windowGap=false;schedule(0);return;}
+      if(cursor&&payload.first_cursor>cursor+1)windowGap=true;
+      epoch=payload.epoch;cursor=payload.cursor;retained=payload.retained;invalidLines=payload.invalid_lines||0;hasMore=!!payload.has_more;lastPoll=Date.now();connectionError='';$('reconnectPanel').hidden=true;ingest(payload.events||[]);
+    }catch(error){if(source!=='live'||generation!==pollGeneration)return;connectionError=error.name==='TimeoutError'?'The viewer did not respond within 5 seconds. Retrying…':error instanceof TypeError?'Cannot reach the local viewer. Retrying…':error.message;render();}
+    if(source==='live'&&generation===pollGeneration)schedule(connectionError?2000:hasMore?0:500);
   }
-  if(window.AFAST_EMBEDDED){source='embedded';live=false;ingest(window.AFAST_EMBEDDED);pointer=filtered().length-1;put('connection','OFFLINE REPLAY');render();}
-  else {live=true;poll();}
+  if(window.AFAST_EMBEDDED){source='embedded';following=false;$('timeWindow').value='all';ingest(window.AFAST_EMBEDDED);}
+  else {render();schedule(0);}
 })();

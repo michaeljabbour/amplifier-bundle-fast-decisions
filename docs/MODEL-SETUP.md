@@ -1,0 +1,199 @@
+# Model setup: local first, hosting optional
+
+Start with **Ollama + [`qwen3:0.6b` (Q4_K_M)](https://ollama.com/library/qwen3:0.6b)** for the bundle's bounded read/list
+decisions. This is the model we have exercised in an actual Amplifier CLI
+session. In the seven-case development suite its warm p95 was 23.9 ms on an
+Apple M5 Max, versus 67.9 ms for Llama 3.1 8B. Qwen accepted 15 of 42 requests
+at the current thresholds; Llama accepted 3. Those requests repeat the same
+seven cases in two candidate orders. Neither result establishes general
+accuracy or a guarantee for other hardware, larger inputs, or concurrent sessions.
+See [the evidence and limitations](LOCAL-SCORER.md).
+
+The model is a small autoregressive classifier requesting one token. It does
+not reproduce Jev's architecture, calibration, or broader decision primitives.
+The current adapter supports prepared `fast_workspace` read/list candidates;
+it does not support batched questions, model-role scoring, or context compaction.
+
+## Simple local setup
+
+You need an existing working Amplifier installation and generative provider,
+Python 3.11+, `uv`, and an extracted checkout of this repository. Install and
+start Ollama using the [macOS/Windows download](https://ollama.com/download) or
+[Linux instructions](https://docs.ollama.com/linux). The tested runtime was
+Ollama 0.34.1; use a version supporting native `/api/generate` token log
+probabilities. The backend rejects responses without them.
+
+From the repository directory, pull and warm the model. The empty generation
+request preloads the weights; `num_ctx` matches the scorer's request. This
+warmup may take seconds and is outside the 500 ms decision budget.
+
+```bash
+export AFAST_REPO="$PWD"
+ollama pull qwen3:0.6b
+curl --fail --silent --show-error http://127.0.0.1:11434/api/generate \
+  -H 'Content-Type: application/json' \
+  -d '{"model":"qwen3:0.6b","stream":false,"keep_alive":"10m","options":{"num_ctx":4096}}'
+ollama ps
+```
+
+Install the `local` extra and the profile generator's YAML dependency in the
+**Python environment that runs Amplifier**. For the usual `uv tool` installation
+named `amplifier`, use the following. If your installation differs, set
+`AFAST_HOST_PYTHON` to its actual Python executable instead; a separate venv will
+not install these dependencies into the host.
+
+```bash
+export AFAST_HOST_PYTHON="$(uv tool dir)/amplifier/bin/python"
+uv pip install --python "$AFAST_HOST_PYTHON" -e "${AFAST_REPO}[local]" pyyaml
+"$AFAST_HOST_PYTHON" -m amplifier_fast_decisions doctor --require-amplifier
+```
+
+Create a fresh public fixture workspace and its local profile. The project-local
+`app: []` prevents installed app bundles from overriding this test's selected
+backend or orchestrator. These commands write only into a new temporary
+directory; they do not edit global Amplifier settings or an existing project.
+
+```bash
+export AFAST_PILOT="$(mktemp -d "${TMPDIR:-/tmp}/afast-pilot.XXXXXX")"
+mkdir -p "$AFAST_PILOT/workspace/.amplifier"
+cp "$AFAST_REPO/README.md" "$AFAST_PILOT/workspace/README.md"
+cp "$AFAST_REPO/LICENSE" "$AFAST_PILOT/workspace/LICENSE.md"
+printf 'bundle:\n  app: []\n' > "$AFAST_PILOT/workspace/.amplifier/settings.local.yaml"
+
+"$AFAST_HOST_PYTHON" -m amplifier_fast_decisions configure \
+  --bundle-root "$AFAST_REPO" --workspace "$AFAST_PILOT/workspace" \
+  --mode shadow --backend ollama --model qwen3:0.6b \
+  --timeout-ms 500 --local-sources --output "$AFAST_PILOT/shadow.md"
+
+cd "$AFAST_PILOT/workspace"
+PYTHONPATH="$AFAST_REPO/src" amplifier run \
+  --bundle "file://$AFAST_PILOT/shadow.md" --mode single \
+  "Read README.md, not LICENSE.md. Give a one-sentence summary."
+```
+
+In the Observatory, inspect this session's configuration: backend should be
+`ollama-token` and mode `shadow`. A real score identifies `qwen3:0.6b` and
+`probability_kind: token_mass_with_abstention_residual`. The configuration proves
+which backend was selected; only a scored event proves it responded. Shadow
+proposals leave the ordinary provider/tool path in charge. A successful CLI
+exit by itself does not establish that any decision was scored.
+
+To exercise the active path in the same isolated workspace:
+
+```bash
+"$AFAST_HOST_PYTHON" -m amplifier_fast_decisions configure \
+  --bundle-root "$AFAST_REPO" --workspace "$AFAST_PILOT/workspace" \
+  --mode active --backend ollama --model qwen3:0.6b \
+  --timeout-ms 500 --local-sources --output "$AFAST_PILOT/active.md"
+PYTHONPATH="$AFAST_REPO/src" amplifier run \
+  --bundle "file://$AFAST_PILOT/active.md" --mode single \
+  "Read README.md, not LICENSE.md. Give a one-sentence summary."
+```
+
+An accepted selection emits a fast submission. Native approvals still apply;
+a matching successful `tool_end` establishes execution. A low score, unsupported
+request, or timeout falls back to the existing provider. No TypeSafe key or
+`--allow-external-state` flag is needed for this loopback scorer. Your usual
+provider still handles its normal agent context and may incur usage charges.
+
+The viewer normally opens for interactive TTY sessions. If needed, run
+`"$AFAST_HOST_PYTHON" -m amplifier_fast_decisions serve --open` in another
+terminal and open the full token-bearing link. If an auto-viewer already owns
+that events directory, reuse it or stop it with `serve --stop` before starting
+another. Keep the temporary workspace until you finish inspecting the pilot.
+
+## Configuration and tuning
+
+`configure` writes a profile; it does not change the default app. Use
+`configure --help` for its supported flags. For settings without a flag, edit
+the generated profile's `hooks` entry for `hooks-fast-decisions` in shadow mode,
+or `session.orchestrator.config` in active mode.
+
+| Setting | Starting value | What to change, and why |
+|---|---|---|
+| `backend`, `model` | `ollama`, `qwen3:0.6b` | Set through `--backend` / `--model`; benchmark every model change before active use. |
+| `ollama_url` | `http://127.0.0.1:11434` | `--ollama-url` accepts a literal loopback HTTP origin, including another local port. No remote hostname, path, credentials, or HTTPS endpoint. |
+| `timeout_ms` | `500` | Set `--timeout-ms 500` explicitly; the general CLI default is 750. This bounds scoring and queue wait, not the whole agent turn. Measure warm p95 below 500 ms with headroom. |
+| `min_probability`, `min_margin` | `0.90`, `0.20` | Keep these initially. Raising them reduces accepted actions. Lowering them can accept wrong actions; evaluate held-out cases and candidate-order changes first. |
+| `max_state_chars` | `2048` for generated Ollama profiles | Limits the snapshot. A separate backend input-byte guard can still reject a request; increasing this does not expand the model contract. |
+| `max_candidates` | `12` | The local backend supports 1–12 candidates. Reduce the set through precise eligibility; do not omit legitimate choices just to inflate confidence. |
+| `max_fast_streak`, `max_fast_per_turn` | `3`, `12` | Active-path budgets. Start here; faster scoring does not justify unbounded tool runs. |
+
+The adapter itself fixes `think: false`, `temperature: 0`, `num_predict: 1`,
+`num_ctx: 4096`, `top_logprobs: 20`, and `keep_alive: "10m"`. These are **not**
+exposed as bundle tuning settings. Unknown extra config fields will not change
+them. Changing one-token or non-thinking behavior would violate the adapter's
+response validation. Recognized action tokens retain their original probability
+mass; everything else becomes abstention. These scores are not calibrated
+probabilities of correctness.
+
+For latency, warm the model before a run, check residency with `ollama ps`, and
+avoid sharing its inference queue with long generations. Each score requests
+another ten minutes of residency; after a longer idle period, rewarm before
+testing. Ollama's [API](https://docs.ollama.com/api/generate) documents the
+request fields, and its [FAQ](https://docs.ollama.com/faq) explains residency
+and how `ollama ps` reports GPU/CPU placement. Larger models, more parallel
+sessions, and larger inputs need fresh measurements.
+
+Run the development benchmark from the repository:
+
+```bash
+cd "$AFAST_REPO"
+PYTHONPATH=src "$AFAST_HOST_PYTHON" scripts/bench_local.py \
+  --model qwen3:0.6b --timeout-ms 500 --repeats 3 \
+  --output "$AFAST_PILOT/qwen-benchmark.json"
+```
+
+Check `errors`, `wrong_accepted`, acceptance coverage, `order_stable_pairs`, and
+warm p95 together. The benchmark warms once with a longer timeout, then measures
+sequential requests; it is not a load test or a held-out accuracy evaluation.
+It currently uses the default local port 11434 and has no `--ollama-url` flag.
+Compare complete, equivalent tasks with and without acceleration before claiming
+time or money saved; a short decision call alone does not prove either.
+
+## Hosting without RunPod
+
+No RunPod account or deployment is required. Use an existing private workstation,
+server, or rented Linux host and run **both Amplifier and Ollama on that machine**.
+Install Ollama using its [Linux guide](https://docs.ollama.com/linux), keep its
+listener on loopback, and repeat the setup above in that host's shell. Start with
+the same Qwen model and measure the host before upgrading hardware. The recorded
+Mac timings do not predict CPU-only or rented GPU performance.
+
+Connect to the host by SSH to run Amplifier. Keep the raw inference service
+private. Observatory records stay on that host; they are not automatically
+aggregated with sessions on your laptop. Its loopback viewer can be inspected
+through an SSH local port forward, using the viewer's actual port and temporary
+token. This is a viewer-access option, not distributed telemetry ingestion.
+
+The current scorer intentionally rejects a remote model URL. Forwarding a remote
+scorer into a local port would still transmit the snapshot to another machine,
+while today's adapter labels it local (`external=False`). Do not treat that as
+supported hosted scoring. Keeping Amplifier and Ollama together honors the
+current boundary; a future remote adapter needs explicit external-state opt-in,
+authentication, and end-to-end network measurements.
+
+Do not start with a bigger or more aggressively quantized model just to imitate
+Jev. The tested 4-bit model is the practical baseline; new quantization, BitNet,
+fine-tuning, and different runtimes require their own compatibility and quality
+evaluation. No cloud resource was provisioned for this guide.
+
+## If it does not score
+
+| Symptom | Check |
+|---|---|
+| Viewer says disconnected | Open its complete printed URL, including the temporary token; a bare localhost address cannot access events. |
+| Backend is `scripted-demo` | An app bundle likely overrode your selected profile. Run from the fresh isolated workspace above and inspect the new configuration event. |
+| No eligible candidates | Use an explicit readable text-file path under the configured workspace root. Generic questions and edits are outside this pilot. |
+| Cold or timed-out decisions | Warm the model, check `ollama ps`, and inspect queue/load pressure. Keep the 500 ms target while diagnosing. |
+| Backend unavailable / no probabilities | Check Ollama's version and native log-probability support, exact model name, HTTP availability, and `httpx` in the actual Amplifier Python environment. |
+| Scores exist but no fast execution | Shadow mode only proposes. In active mode, inspect abstention, thresholds, budgets, and native approval outcomes. |
+| The normal provider retries or fails | Diagnose the generative provider separately; the local scorer does not replace its authentication, network access, or final-answer generation. |
+
+## Smart Tool direction
+
+Portable library contracts are described in the
+[Teamwork Smart Tool design](design/teamwork-portable-tool.md). Packaging this
+as an OS- and harness-agnostic Smart Tool is deferred. The present deliverable
+is a useful Amplifier integration with observable real execution and measured
+benefits; this guide does not claim that portability is already implemented.

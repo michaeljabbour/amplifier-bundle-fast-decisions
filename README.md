@@ -2,10 +2,15 @@
 
 Experimental v0.1.0. A Foundation-compatible bundle, a hybrid orchestrator, a hosted Jev adapter, structured events, and a read-only local visualizer.
 
-No Jev key? The [local Ollama pilot](docs/LOCAL-SCORER.md) provides real one-token
-scoring below 500 ms on the tested Mac. It remains an experimental classifier
-with explicit abstention. The [Teamwork portability design](docs/design/teamwork-portable-tool.md)
-maps the library/adapter boundary toward a harness-independent Smart Tool.
+No Jev key? Start with **Ollama + `qwen3:0.6b` (Q4_K_M)**. Our small development
+benchmark measured 23.9 ms warm p95 on an M5 Max; this is an experimental
+one-token classifier, not a Jev replica or a general latency/accuracy guarantee.
+The [simple setup and tuning guide](docs/MODEL-SETUP.md) covers local use and
+hosting without RunPod; [pilot evidence](docs/LOCAL-SCORER.md) records the limits.
+
+The [Teamwork portability design](docs/design/teamwork-portable-tool.md) is a
+future direction. Smart Tool packaging is deferred until the current Amplifier
+integration is useful and its improvements are measured.
 
 **A fast judgment is not a permission grant. A proposed action is not an executed action.**
 
@@ -57,6 +62,41 @@ The `afast` CLI (local decision observatory + doctor) installs as a tool:
 uv tool install "git+https://github.com/michaeljabbour/amplifier-bundle-fast-decisions@main"
 ```
 
+## Use a real local model without Jev or RunPod
+
+Use **`qwen3:0.6b` with Ollama** for the current prepared read/list pilot. Keep
+your existing generative provider for reasoning and the final answer. A local
+decision scorer does not make the whole Amplifier session local.
+
+| Where to run | Starting configuration |
+|---|---|
+| Your Mac or workstation | Ollama + `qwen3:0.6b`, warmed before the session; 500 ms scoring deadline |
+| Your own server or rented host | Run Amplifier and Ollama together on that host, using loopback; start with the same model and benchmark that hardware |
+| A remote inference API from your laptop | Not supported by the current Ollama adapter; it accepts only literal loopback HTTP origins |
+
+After installing and starting [Ollama](https://ollama.com/download), the model
+setup is:
+
+```bash
+ollama pull qwen3:0.6b
+curl --fail --silent --show-error http://127.0.0.1:11434/api/generate \
+  -H 'Content-Type: application/json' \
+  -d '{"model":"qwen3:0.6b","stream":false,"keep_alive":"10m","options":{"num_ctx":4096}}'
+ollama ps
+```
+
+Then follow the [copy/paste isolated session setup](docs/MODEL-SETUP.md#simple-local-setup)
+to install the Python dependency, generate a local **shadow** profile, and run
+a public two-file example. Generate a separate **active** profile to test actual
+fast submissions after checking the shadow output. Installing the app behavior
+alone still uses the scripted shadow scorer; it does not select Qwen.
+
+The guide covers [configuration and tuning](docs/MODEL-SETUP.md#configuration-and-tuning),
+[hosting without RunPod](docs/MODEL-SETUP.md#hosting-without-runpod), and common
+setup failures. Leave the selection score at 0.90 and margin at 0.20 initially;
+these are uncalibrated token thresholds. More accepted actions are useful only
+if correctness and complete-task latency also improve.
+
 ## Start with the no-key demo
 
 Python 3.11 or newer. No installation, API key, Node build, or network required:
@@ -70,7 +110,19 @@ Open the localhost URL printed by the command. It includes a temporary access to
 
 The demo runs the real decision service and facades against **explicitly synthetic loop, model, and tool fixtures**. It demonstrates prepared-action execution, ambiguity, abstention, shadow mode, timeout, and a fast-path budget. Its artificial delays are not Jev benchmarks.
 
-The observatory provides an animated routing graph, destination/model labels, decision distributions, mechanical fallback reasons, actual tool-execution timings, session selection, event inspection, playback, scrubbing, and JSONL import/export. It never displays private chain of thought.
+The Observatory opens on **parent sessions**, with child sessions available on demand.
+It polls recorded bundle events across local sessions, separates observer presence
+from working/idle state, and shows native activity, retries, real model decisions,
+and instrumented fast-path executions. Select a session to inspect its recorded
+decision mechanics and candidate scores. Scripted/demo events are hidden by default
+and excluded from improvement counters; enable them when inspecting the demo.
+
+The feed supports pause/resume, time windows, JSONL import/export, and a recoverable
+connection state if the viewer token is missing. Saved traces are labeled separately
+from live updates. Decision p95 is backend scoring time; whole-task savings are not
+inferred. Existing running sessions need to reload the updated observer to emit
+15-second presence heartbeats. No prompts, tool contents, or private reasoning are
+shown. See [event semantics and limits](docs/EVENTS.md).
 
 ## First real Amplifier test
 
