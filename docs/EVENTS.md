@@ -29,6 +29,7 @@ Session identity is read from the coordinator/session if exposed. A generated fa
 | `role_agreement` | A `role_proposed` proposal and the delegate's actual routing were joined; `agreement` is `match` / `mismatch` / `unobserved`, plus `proposed_model_role`, `actual_model_role` (`null` = resolver default), `domain` |
 | `observatory` | The auto-observatory's once-per-session `session:start` bootstrap; `action` is `reused` / `started` / `skipped` / `failed`, plus `reason` and (when relevant) `port` -- never the token-bearing URL, which never enters event data |
 | `source` | Once per session, at mount, in every mode including `off`: which source actually ran. `source_kind` is `installed-cache` / `worktree` / `site-packages` / `unknown`; `source_git_sha` (40-hex or `null`) and `source_tree_sha256` (a SHA-256 over every `*.py` file's relative path and bytes, skipping `__pycache__`) identify the exact code; `source_py_files`, `package_version`, `python`, `mode`, and `module` (`hooks-fast-decisions` or `loop-fast-decisions`) round it out. Never a filesystem path -- see `provenance.describe_source` and docs/PRIVACY.md |
+| `effort_routed` | HC03 (opt-in, off unless `Policy.effort_routing` is configured): emitted once per slow (`RoutedProvider.complete`) request, before the upstream provider call; carries `phase` (`orient` / `explore` / `implement`), `requested_effort` (the string set on `request.reasoning_effort`, or `null` when left unchanged), `default_effort` (always `"provider_default"` -- the policy never claims to know the provider's actual default), `reason_code` (`phase_policy` / `default_effort` / `host_pinned` / `escalated_max_explore` / `escalated_after_error`), `explore_requests` (this turn's explore-phase request count so far), `provider_call_id`, and `mode` |
 
 Fast tool IDs match the synthesized core ToolCall ID when the argument fingerprint still matches. If upstream modifies a call, or for ordinary slow-path calls, the tool facade may allocate an `observed_*` correlation ID instead. The native hook bridge can carry the original native ID. Do not assume these are identical in every path.
 
@@ -107,6 +108,25 @@ same turn. All three are in `privacy.SAFE_FIELDS`.
 **The model-role router's `actual_model_role` is read from the tool's own return value, not a top-level hook field.** `tool:post`'s real payload (`loop-streaming:6348-6357`) carries the tool's dumped `ToolResult` under `result`; `tool-delegate` places its routing summary at `result.output.provider_routing.model_role`, never at a top-level `data["provider_routing"]`. Reading the wrong location always returned `None` for `actual`, so every observed `role_agreement` reported `"mismatch"` regardless of what the delegate actually resolved to. `router.on_delegate_post` now reads the nested field via `field_value`, which duck-types across a plain dict or an attribute-bearing object.
 
 **The router is never silent, even when disabled.** `role_router: false` (the unconfigured library default; the shipped `behaviors/fast-decisions.yaml` sets `role_router: true`) previously made `on_delegate_pre` return with no event at all for a `delegate` call -- indistinguishable from a crash or a missed registration. It now emits `role_proposed` with `reason_code: role_router_disabled` (no job enqueued, no probe, no turn behaviour change) so "no telemetry" never has to be interpreted as "the router isn't wired up".
+
+**HC03 (phase-specific effort routing) never touches the model or approvals.**
+`effort_routed` is the only new surface: `orchestrator.effort.classify_phase`
+deterministically reads `request.messages` for the CURRENT turn only (messages
+after the last `user` message), classifying `orient` (no assistant message
+yet), `explore` (an assistant message exists, no write-like tool call has
+occurred this turn, and the most recent assistant message's tool calls are
+all read-like), or `implement` (a write-like tool call has occurred -- this
+also covers "verify" requests such as running tests via `bash`, which are
+write-like and therefore fold into `implement`'s default-effort treatment).
+When the policy's `effort_routing.explore` effort applies, `RoutedProvider`
+sets `request.reasoning_effort` via `setattr`/item-assignment before
+forwarding to the real provider; it never sets `request.model`. An explicit
+per-request `request.reasoning_effort` already present is always honored
+untouched (`reason_code: host_pinned`). `Policy.effort_routing` defaults to
+`None`: routing is fully opt-in, and disabled routing emits no
+`effort_routed` event at all and never reads or writes
+`request.reasoning_effort`. See docs/ARCHITECTURE.md's "Phase-specific
+effort routing (HC03, opt-in)" section.
 
 ## Correlated execution receipts
 

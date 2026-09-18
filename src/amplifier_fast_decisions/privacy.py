@@ -134,6 +134,16 @@ SAFE_FIELDS = {
     # HC02a: per-turn completed-read ledger suppression count -- an
     # integer, never a path or argument.
     "candidates_suppressed_already_read",
+    # HC03 ("phase-specific effort routing", opt-in): the classified phase
+    # label, the effort string actually requested (or null when unchanged),
+    # the provider-default label, and a per-turn explore-request counter --
+    # never raw messages, tool arguments or model output. reason_code and
+    # provider_call_id (already listed above) are reused verbatim.
+    "phase",
+    "requested_effort",
+    "default_effort",
+    "explore_requests",
+    "effort_routing_enabled",
 }
 
 

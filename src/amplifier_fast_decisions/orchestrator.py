@@ -17,6 +17,7 @@ from .contracts import (
     digest,
     candidate_read_identity,
 )
+from . import effort
 from .runtime import Runtime, get_runtime
 from . import provenance
 
@@ -127,6 +128,37 @@ docs/UPSTREAM_CONTRACT.md.
         model = field_value(request, "model") or "provider-default"
         decision_id = service.last_decision_id
         provider_call_id = "provider_" + uuid4().hex
+        # HC03 ("phase-specific effort routing", opt-in): entirely skipped
+        # -- no attribute touched, no event emitted -- when the policy has
+        # no effort_routing configured. See effort.py and docs/EVENTS.md.
+        effort_routing = service.policy.effort_routing
+        if effort_routing:
+            phase = effort.classify_phase(request)
+            explore_requests = (
+                turn.explore_requests + 1 if phase == effort.PHASE_EXPLORE else turn.explore_requests
+            )
+            host_pinned = field_value(request, "reasoning_effort", None) is not None
+            applied_effort, reason_code = effort.decide_effort(
+                phase,
+                effort_routing,
+                explore_requests=explore_requests,
+                provider_errors_seen=turn.provider_errors_seen,
+                host_pinned=host_pinned,
+            )
+            if phase == effort.PHASE_EXPLORE:
+                turn.explore_requests = explore_requests
+            if applied_effort is not None:
+                if isinstance(request, dict):
+                    request["reasoning_effort"] = applied_effort
+                else:
+                    setattr(request, "reasoning_effort", applied_effort)
+                turn.effort_routed_requests += 1
+            await service.emit("effort_routed", {
+                "phase": phase, "requested_effort": applied_effort,
+                "default_effort": "provider_default", "reason_code": reason_code,
+                "explore_requests": turn.explore_requests,
+                "provider_call_id": provider_call_id, "mode": service.policy.mode,
+            }, decision_id)
         await service.emit("slow_start", {"provider": self._provider_key, "model": model,
             "provider_call_id": provider_call_id,
             "route": "slow", "destination": self._provider_key, "status": "running",
@@ -142,6 +174,7 @@ docs/UPSTREAM_CONTRACT.md.
                 "transport_measured": "provider-complete"}, decision_id)
             raise
         except Exception as exc:
+            turn.provider_errors_seen += 1
             await service.emit("slow_end", {"provider": self._provider_key, "model": model,
                 "provider_call_id": provider_call_id,
                 "status": "error", "exception_type": type(exc).__name__,
@@ -318,7 +351,8 @@ class HybridOrchestrator:
             await service.emit("turn_start", {"mode": service.policy.mode,
                 "backend": service.backend.name, "engine": "upstream-loop-streaming",
                 "policy_version": service.policy.version,
-                "allow_external_state": service.policy.allow_external_state})
+                "allow_external_state": service.policy.allow_external_state,
+                "effort_routing_enabled": bool(service.policy.effort_routing)})
             # Provider keys and defaults are unchanged. Upstream pins and selections apply.
             workspace_tool = tools.get("fast_workspace")
             wrapped_tools = {

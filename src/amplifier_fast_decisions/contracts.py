@@ -42,8 +42,38 @@ EVENT_NAMES = tuple(
         "role_agreement",
         "observatory",
         "source",
+        "effort_routed",
     )
 )
+
+# HC03 ("phase-specific effort routing"): the effort strings a host provider
+# accepts on a per-request override (`request.reasoning_effort`). Kept here,
+# not in effort.py, so Policy validation (below) has no dependency on that
+# module -- effort.py imports FROM contracts, never the reverse.
+ALLOWED_EFFORTS = frozenset({"low", "medium", "high", "xhigh", "max"})
+
+
+def validate_effort_routing(effort_routing: Any) -> None:
+    """Fail loud on a malformed ``effort_routing`` policy at mount time.
+
+    ``None`` or an empty dict is the default-off shape and always valid --
+    routing stays fully opt-in. Never silently ignores a bad value.
+    """
+    if not effort_routing:
+        return
+    if not isinstance(effort_routing, dict):
+        raise ValueError("effort_routing must be a dict")
+    explore = effort_routing.get("explore")
+    if explore is not None and explore not in ALLOWED_EFFORTS:
+        raise ValueError(
+            f"effort_routing.explore must be one of {sorted(ALLOWED_EFFORTS)}"
+        )
+    for key in ("max_explore_requests", "escalate_after_provider_errors"):
+        value = effort_routing.get(key)
+        if value is not None and (
+            isinstance(value, bool) or not isinstance(value, int) or value < 1
+        ):
+            raise ValueError(f"effort_routing.{key} must be a positive integer")
 
 
 def canonical(value: Any) -> str:
@@ -307,6 +337,10 @@ class Policy:
     # ledger already shows as read this turn. Default True so the candidate
     # profile exercises it; the baseline never runs the decision loop at all.
     suppress_completed_reads: bool = True
+    # HC03 ("phase-specific effort routing", opt-in): None/empty means fully
+    # off -- RoutedProvider never reads request.reasoning_effort and never
+    # emits fast_decisions:effort_routed. See effort.py and docs/ARCHITECTURE.md.
+    effort_routing: dict[str, Any] | None = None
     version: str = "policy-v1"
 
     def __post_init__(self) -> None:
@@ -328,6 +362,7 @@ class Policy:
             raise ValueError("shadow_max_messages must be between 1 and 200")
         if not 1 <= self.shadow_snapshot_budget_ms <= 5000:
             raise ValueError("shadow_snapshot_budget_ms must be between 1 and 5000")
+        validate_effort_routing(self.effort_routing)
 
     @classmethod
     def from_config(cls, config: dict[str, Any]) -> Policy:
@@ -361,6 +396,15 @@ class TurnState:
     # Reset with the rest of TurnState at turn start; never records a denied
     # or failed call.
     completed_reads: dict[str, str] = field(default_factory=dict)
+    # HC03 ("phase-specific effort routing"): per-turn counters. Reset with
+    # the rest of TurnState at turn start. explore_requests counts every
+    # explore-phase slow request seen this turn (1-indexed as consulted by
+    # decide_effort); effort_routed_requests counts only those where effort
+    # was actually lowered; provider_errors_seen counts upstream provider
+    # exceptions (never CancelledError) observed this turn.
+    explore_requests: int = 0
+    effort_routed_requests: int = 0
+    provider_errors_seen: int = 0
 
 
 def candidate_read_identity(

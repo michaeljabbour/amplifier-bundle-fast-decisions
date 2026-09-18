@@ -1,0 +1,386 @@
+"""HC03: phase-specific effort routing. No amplifier_core, no network."""
+
+from __future__ import annotations
+
+import unittest
+from types import SimpleNamespace as NS
+
+from amplifier_fast_decisions import effort
+from amplifier_fast_decisions.contracts import Policy, TurnState
+from amplifier_fast_decisions.demo import DemoProvider, demo_response
+from amplifier_fast_decisions.orchestrator import RoutedProvider
+from amplifier_fast_decisions.runtime import Runtime
+from amplifier_fast_decisions.service import DecisionService
+from amplifier_fast_decisions.backends import ScriptedBackend
+from amplifier_fast_decisions.telemetry import Emitter
+
+
+def user(content="Fix the bug"):
+    return {"role": "user", "content": content}
+
+
+def assistant(tool_calls=None, content=""):
+    msg = {"role": "assistant", "content": content}
+    if tool_calls is not None:
+        msg["tool_calls"] = tool_calls
+    return msg
+
+
+def tool_result(content="ok"):
+    return {"role": "tool", "content": content}
+
+
+def call(name, call_id="c1"):
+    return {"id": call_id, "name": name}
+
+
+def call_obj(name, call_id="c1"):
+    """Object-shaped tool call, mirroring an SDK model with a nested `.function.name`."""
+    return NS(id=call_id, function=NS(name=name))
+
+
+def request(messages):
+    return NS(messages=messages, tools=[], tool_choice="auto", model="pinned-model")
+
+
+class ClassifyPhaseTests(unittest.TestCase):
+    def test_orient_first_request_of_turn(self):
+        self.assertEqual(effort.classify_phase(request([user()])), effort.PHASE_ORIENT)
+
+    def test_orient_when_no_messages(self):
+        self.assertEqual(effort.classify_phase(request([])), effort.PHASE_ORIENT)
+
+    def test_explore_after_read_like_tool_call(self):
+        messages = [user(), assistant(tool_calls=[call("read_file")]), tool_result()]
+        self.assertEqual(effort.classify_phase(request(messages)), effort.PHASE_EXPLORE)
+
+    def test_explore_with_multiple_read_like_tools(self):
+        messages = [
+            user(),
+            assistant(tool_calls=[call("grep")]),
+            tool_result(),
+            assistant(tool_calls=[call("glob")]),
+            tool_result(),
+        ]
+        self.assertEqual(effort.classify_phase(request(messages)), effort.PHASE_EXPLORE)
+
+    def test_implement_after_write_like_tool_call(self):
+        messages = [user(), assistant(tool_calls=[call("edit_file")]), tool_result()]
+        self.assertEqual(
+            effort.classify_phase(request(messages)), effort.PHASE_IMPLEMENT
+        )
+
+    def test_implement_once_write_seen_even_if_later_reads_follow(self):
+        messages = [
+            user(),
+            assistant(tool_calls=[call("edit_file")]),
+            tool_result(),
+            assistant(tool_calls=[call("read_file")]),
+            tool_result(),
+        ]
+        self.assertEqual(
+            effort.classify_phase(request(messages)), effort.PHASE_IMPLEMENT
+        )
+
+    def test_unknown_tool_treated_as_write_like(self):
+        messages = [
+            user(),
+            assistant(tool_calls=[call("some_future_tool")]),
+            tool_result(),
+        ]
+        self.assertEqual(
+            effort.classify_phase(request(messages)), effort.PHASE_IMPLEMENT
+        )
+
+    def test_verify_bash_treated_as_implement(self):
+        messages = [
+            user(),
+            assistant(tool_calls=[call("bash")]),
+            tool_result("pytest passed"),
+        ]
+        self.assertEqual(
+            effort.classify_phase(request(messages)), effort.PHASE_IMPLEMENT
+        )
+
+    def test_messages_before_last_user_message_ignored(self):
+        # An old turn's write-like tool call must not leak into this turn's
+        # classification once a new user message starts a fresh turn.
+        messages = [
+            user("Old task"),
+            assistant(tool_calls=[call("edit_file")]),
+            tool_result(),
+            user("New task"),
+        ]
+        self.assertEqual(effort.classify_phase(request(messages)), effort.PHASE_ORIENT)
+
+    def test_object_shaped_messages_and_tool_calls(self):
+        messages = [
+            NS(role="user", content="Fix it"),
+            NS(role="assistant", content="", tool_calls=[call_obj("read_file")]),
+            NS(role="tool", content="ok"),
+        ]
+        self.assertEqual(effort.classify_phase(request(messages)), effort.PHASE_EXPLORE)
+
+    def test_dict_message_with_object_tool_call_mixed_shapes(self):
+        messages = [
+            user(),
+            {"role": "assistant", "content": "", "tool_calls": [call_obj("grep")]},
+            tool_result(),
+        ]
+        self.assertEqual(effort.classify_phase(request(messages)), effort.PHASE_EXPLORE)
+
+    def test_assistant_text_only_no_tool_calls_is_not_explore(self):
+        messages = [user(), assistant(content="Thinking about it...")]
+        self.assertEqual(
+            effort.classify_phase(request(messages)), effort.PHASE_IMPLEMENT
+        )
+
+
+class DecideEffortTests(unittest.TestCase):
+    def setUp(self):
+        self.routing = {
+            "explore": "low",
+            "max_explore_requests": 6,
+            "escalate_after_provider_errors": 1,
+        }
+
+    def test_explore_applies_low_effort(self):
+        applied, reason = effort.decide_effort(
+            effort.PHASE_EXPLORE,
+            self.routing,
+            explore_requests=1,
+            provider_errors_seen=0,
+            host_pinned=False,
+        )
+        self.assertEqual(applied, "low")
+        self.assertEqual(reason, effort.REASON_PHASE_POLICY)
+
+    def test_non_explore_phase_untouched(self):
+        for phase in (effort.PHASE_ORIENT, effort.PHASE_IMPLEMENT):
+            applied, reason = effort.decide_effort(
+                phase,
+                self.routing,
+                explore_requests=1,
+                provider_errors_seen=0,
+                host_pinned=False,
+            )
+            self.assertIsNone(applied)
+            self.assertEqual(reason, effort.REASON_DEFAULT_EFFORT)
+
+    def test_seventh_explore_request_escalates_past_max(self):
+        # First 6 (1-indexed) apply; the 7th does not.
+        for i in range(1, 7):
+            applied, reason = effort.decide_effort(
+                effort.PHASE_EXPLORE,
+                self.routing,
+                explore_requests=i,
+                provider_errors_seen=0,
+                host_pinned=False,
+            )
+            self.assertEqual(applied, "low", f"request {i} should still apply")
+            self.assertEqual(reason, effort.REASON_PHASE_POLICY)
+        applied, reason = effort.decide_effort(
+            effort.PHASE_EXPLORE,
+            self.routing,
+            explore_requests=7,
+            provider_errors_seen=0,
+            host_pinned=False,
+        )
+        self.assertIsNone(applied)
+        self.assertEqual(reason, effort.REASON_ESCALATED_MAX_EXPLORE)
+
+    def test_escalates_after_provider_error(self):
+        applied, reason = effort.decide_effort(
+            effort.PHASE_EXPLORE,
+            self.routing,
+            explore_requests=1,
+            provider_errors_seen=1,
+            host_pinned=False,
+        )
+        self.assertIsNone(applied)
+        self.assertEqual(reason, effort.REASON_ESCALATED_AFTER_ERROR)
+
+    def test_host_pinned_request_untouched(self):
+        applied, reason = effort.decide_effort(
+            effort.PHASE_EXPLORE,
+            self.routing,
+            explore_requests=1,
+            provider_errors_seen=0,
+            host_pinned=True,
+        )
+        self.assertIsNone(applied)
+        self.assertEqual(reason, effort.REASON_HOST_PINNED)
+
+    def test_missing_explore_effort_leaves_default(self):
+        applied, reason = effort.decide_effort(
+            effort.PHASE_EXPLORE,
+            {},
+            explore_requests=1,
+            provider_errors_seen=0,
+            host_pinned=False,
+        )
+        self.assertIsNone(applied)
+        self.assertEqual(reason, effort.REASON_DEFAULT_EFFORT)
+
+
+class PolicyValidationTests(unittest.TestCase):
+    def test_none_and_empty_are_valid(self):
+        Policy(effort_routing=None)
+        Policy(effort_routing={})
+
+    def test_invalid_effort_string_raises(self):
+        with self.assertRaises(ValueError):
+            Policy(effort_routing={"explore": "ludicrous"})
+
+    def test_invalid_max_explore_requests_raises(self):
+        with self.assertRaises(ValueError):
+            Policy(effort_routing={"explore": "low", "max_explore_requests": 0})
+
+    def test_invalid_escalate_after_provider_errors_raises(self):
+        with self.assertRaises(ValueError):
+            Policy(
+                effort_routing={"explore": "low", "escalate_after_provider_errors": -1}
+            )
+
+    def test_valid_routing_accepted(self):
+        Policy(
+            effort_routing={
+                "explore": "low",
+                "max_explore_requests": 6,
+                "escalate_after_provider_errors": 1,
+            }
+        )
+
+
+def setup_service(*, policy=None):
+    from amplifier_fast_decisions.demo import DemoCoordinator
+
+    events = []
+    coordinator = DemoCoordinator()
+    policy = policy or Policy(
+        mode="active", allowed_tools=("demo_inspect",), allow_synthetic_active=True
+    )
+    emitter = Emitter(coordinator.session_id, callback=events.append)
+    service = DecisionService(
+        policy, ScriptedBackend(delay_ms=0), emitter, coordinator, []
+    )
+    service.turn = TurnState("test-turn")
+    runtime = Runtime(service)
+    return service, runtime, events
+
+
+class RoutedProviderIntegrationTests(unittest.IsolatedAsyncioTestCase):
+    """Fake provider + fake emitter integration -- no amplifier_core required."""
+
+    async def test_explore_request_gets_low_effort_and_emits_event(self):
+        policy = Policy(
+            mode="off", effort_routing={"explore": "low", "max_explore_requests": 6}
+        )
+        service, runtime, events = setup_service(policy=policy)
+        provider = DemoProvider(delay_ms=0)
+        facade = RoutedProvider(provider, runtime, {}, demo_response)
+        messages = [user(), assistant(tool_calls=[call("read_file")]), tool_result()]
+        req = request(messages)
+
+        response = await facade.complete(req)
+
+        self.assertEqual(provider.calls, 1)
+        self.assertEqual(getattr(req, "reasoning_effort", None), "low")
+        routed = [e for e in events if e["event"].endswith("effort_routed")]
+        self.assertEqual(len(routed), 1)
+        self.assertEqual(routed[0]["data"]["phase"], "explore")
+        self.assertEqual(routed[0]["data"]["requested_effort"], "low")
+        self.assertEqual(routed[0]["data"]["default_effort"], "provider_default")
+        self.assertEqual(routed[0]["data"]["reason_code"], "phase_policy")
+        self.assertEqual(routed[0]["data"]["explore_requests"], 1)
+        self.assertIn("provider_call_id", routed[0]["data"])
+        self.assertIsNotNone(response)
+
+    async def test_routing_disabled_leaves_request_untouched_and_emits_no_event(self):
+        policy = Policy(mode="off", effort_routing=None)
+        service, runtime, events = setup_service(policy=policy)
+        provider = DemoProvider(delay_ms=0)
+        facade = RoutedProvider(provider, runtime, {}, demo_response)
+        messages = [user(), assistant(tool_calls=[call("read_file")]), tool_result()]
+        req = request(messages)
+
+        await facade.complete(req)
+
+        self.assertFalse(hasattr(req, "reasoning_effort"))
+        self.assertFalse(any(e["event"].endswith("effort_routed") for e in events))
+
+    async def test_implement_phase_request_untouched(self):
+        policy = Policy(
+            mode="off", effort_routing={"explore": "low", "max_explore_requests": 6}
+        )
+        service, runtime, events = setup_service(policy=policy)
+        provider = DemoProvider(delay_ms=0)
+        facade = RoutedProvider(provider, runtime, {}, demo_response)
+        messages = [user(), assistant(tool_calls=[call("edit_file")]), tool_result()]
+        req = request(messages)
+
+        await facade.complete(req)
+
+        self.assertFalse(hasattr(req, "reasoning_effort"))
+        routed = [e for e in events if e["event"].endswith("effort_routed")]
+        self.assertEqual(len(routed), 1)
+        self.assertEqual(routed[0]["data"]["phase"], "implement")
+        self.assertIsNone(routed[0]["data"]["requested_effort"])
+        self.assertEqual(routed[0]["data"]["reason_code"], "default_effort")
+
+    async def test_host_pinned_request_untouched(self):
+        policy = Policy(
+            mode="off", effort_routing={"explore": "low", "max_explore_requests": 6}
+        )
+        service, runtime, events = setup_service(policy=policy)
+        provider = DemoProvider(delay_ms=0)
+        facade = RoutedProvider(provider, runtime, {}, demo_response)
+        messages = [user(), assistant(tool_calls=[call("read_file")]), tool_result()]
+        req = request(messages)
+        req.reasoning_effort = "max"
+
+        await facade.complete(req)
+
+        self.assertEqual(req.reasoning_effort, "max")
+        routed = [e for e in events if e["event"].endswith("effort_routed")]
+        self.assertEqual(routed[0]["data"]["reason_code"], "host_pinned")
+        self.assertIsNone(routed[0]["data"]["requested_effort"])
+
+    async def test_escalates_after_max_explore_requests_across_turn(self):
+        policy = Policy(
+            mode="off", effort_routing={"explore": "low", "max_explore_requests": 2}
+        )
+        service, runtime, events = setup_service(policy=policy)
+        provider = DemoProvider(delay_ms=0)
+        facade = RoutedProvider(provider, runtime, {}, demo_response)
+        messages = [user(), assistant(tool_calls=[call("read_file")]), tool_result()]
+
+        for _ in range(3):
+            req = request(list(messages))
+            await facade.complete(req)
+
+        routed = [e for e in events if e["event"].endswith("effort_routed")]
+        self.assertEqual(len(routed), 3)
+        self.assertEqual(
+            [r["data"]["reason_code"] for r in routed],
+            ["phase_policy", "phase_policy", "escalated_max_explore"],
+        )
+        self.assertEqual([r["data"]["explore_requests"] for r in routed], [1, 2, 3])
+
+    async def test_never_touches_model(self):
+        policy = Policy(
+            mode="off", effort_routing={"explore": "low", "max_explore_requests": 6}
+        )
+        service, runtime, events = setup_service(policy=policy)
+        provider = DemoProvider(delay_ms=0)
+        facade = RoutedProvider(provider, runtime, {}, demo_response)
+        messages = [user(), assistant(tool_calls=[call("read_file")]), tool_result()]
+        req = request(messages)
+
+        await facade.complete(req)
+
+        self.assertEqual(req.model, "pinned-model")
+
+
+if __name__ == "__main__":
+    unittest.main()
