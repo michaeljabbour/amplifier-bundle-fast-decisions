@@ -44,7 +44,8 @@ The installed behavior uses shadow mode with an offline scripted scorer;
 it never replaces a provider call. The bundle list's “No bundle active”
 refers to primary bundle selection and does not disable app bundles.
 
-Shadow proposals count as decisions scored, but never as fast submissions.
+Real model shadow proposals count as model decisions, but never as fast submissions.
+Scripted shadow proposals are excluded from model and improvement counters.
 The viewer shows native provider requests and tool post hooks separately
 from measured provider invocations and actual `execute()` outcomes. Hook
 observations do not establish successful execution or its duration.
@@ -124,7 +125,7 @@ inferred. Existing running sessions need to reload the updated observer to emit
 15-second presence heartbeats. No prompts, tool contents, or private reasoning are
 shown. See [event semantics and limits](docs/EVENTS.md).
 
-## First real Amplifier test
+## Optional Jev test (requires API access)
 
 Use a disposable checkout containing public files. Your existing Amplifier CLI must already work with a generative provider. Keep this repository extracted; do not install only the wheel for bundle use. Foundation activates the shared root Python package and the three local module packages.
 

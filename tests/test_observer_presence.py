@@ -1,11 +1,13 @@
 """Presence and retry observations must remain metadata-only and owned by mount."""
 import asyncio
+import importlib.util
 import tempfile
 import unittest
 from unittest.mock import patch
 from amplifier_fast_decisions.demo import DemoCoordinator
 from amplifier_fast_decisions import observer
 
+@unittest.skipUnless(importlib.util.find_spec('amplifier_core'), 'Requires real Amplifier hook contract')
 class PresenceTests(unittest.IsolatedAsyncioTestCase):
     async def test_heartbeat_stops_at_cleanup_and_retry_excludes_error_body(self):
         coordinator=DemoCoordinator()
