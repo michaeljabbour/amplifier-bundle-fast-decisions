@@ -302,6 +302,11 @@ class Policy:
     # never an exception into the hook chain. See docs/design/redesign-2026-09-17.md P3.
     shadow_max_messages: int = 12
     shadow_snapshot_budget_ms: int = 25
+    # HC02a ("revision-aware completed-read suppression"): drop fast_workspace
+    # read/list candidates whose (path, revision) the turn's completed-read
+    # ledger already shows as read this turn. Default True so the candidate
+    # profile exercises it; the baseline never runs the decision loop at all.
+    suppress_completed_reads: bool = True
     version: str = "policy-v1"
 
     def __post_init__(self) -> None:
@@ -350,3 +355,44 @@ class TurnState:
     decision_count: int = 0
     revision: int = 0
     tool_decisions: dict[str, dict[str, Any]] = field(default_factory=dict)
+    # HC02a: per-turn completed-read ledger, normalized path -> revision.
+    # Fed by both fast submissions (orchestrator.RoutedProvider.complete) and
+    # successful native/provider-selected reads (orchestrator.ObservedTool.execute).
+    # Reset with the rest of TurnState at turn start; never records a denied
+    # or failed call.
+    completed_reads: dict[str, str] = field(default_factory=dict)
+
+
+def candidate_read_identity(
+    candidate: Candidate, tools: dict[str, Any]
+) -> tuple[str, str] | None:
+    """``(normalized path, current revision)`` for a ``fast_workspace``
+    read/list candidate, else ``None``.
+
+    Recomputes the *live* revision through the tool's own ``read_identity``
+    (mirrors ``_eligible``'s live recheck via ``validate_candidate``) so the
+    completed-read ledger and candidate eligibility share one identity space
+    with workspace.py's own revision function. Never raises: a tool without
+    ``read_identity``, a malformed argument shape, or a resolution error all
+    return ``None`` (candidate is simply not suppression-eligible).
+    """
+    if candidate.tool != "fast_workspace":
+        return None
+    args = candidate.arguments
+    if set(args) != {"operation", "path"} or args.get("operation") not in (
+        "read",
+        "list",
+    ):
+        return None
+    tool = tools.get("fast_workspace")
+    identity_fn = getattr(tool, "read_identity", None)
+    if not callable(identity_fn):
+        return None
+    try:
+        result = identity_fn(args["path"], args["operation"])
+    except Exception:
+        return None
+    if not isinstance(result, tuple) or len(result) != 2:
+        return None
+    path, rev = result
+    return str(path), str(rev)

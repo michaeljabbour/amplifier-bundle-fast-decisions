@@ -66,6 +66,14 @@ The model-role router (P4) is a second, independent consumer of the same shadow 
 
 Non-workspace tools additionally need `fast_decisions.validate_candidate`. The bundled workspace tool validates containment, excluded names, permitted operations, file revisions and size. File and conversation state are rechecked after inference. Neither eligibility nor confidence is an approval token.
 
+### Completed-read ledger (HC02a)
+
+Each turn carries a small ledger (`TurnState.completed_reads`, normalized path -> revision) of what has already been read this turn. It is fed from two places: a fast-submitted `fast_workspace` read/list candidate (`orchestrator.RoutedProvider.complete`), and any *successful* `fast_workspace` or native `read_file` execution actually reached (`orchestrator.ObservedTool.execute`) -- including provider-selected reads the model made on its own, not just fast-routed ones. A denied or failed call is never recorded: `ObservedTool` only records after `execute()` returns without raising and `success is not False`, and a denied call never reaches `execute()` at all.
+
+Identity is `(normalized path, revision)`, computed once by `workspace.WorkspaceTool.read_identity` and reused everywhere -- candidate construction, eligibility, and ledger recording all call the same function, so a changed file (new revision) is eligible again immediately. The ledger is strictly per-turn: it lives on `TurnState` and is discarded with the rest of that state when the turn ends, exactly like `used`.
+
+At candidate-eligibility time (`DecisionService.choose`), a `fast_workspace` read/list candidate whose identity is already in the ledger is dropped and counted (`candidates_suppressed_already_read`), never sent to the backend for scoring. When every surviving candidate is suppressed this way, the route goes slow with `reason_code: already_read_unchanged` -- still with no backend call, the same cheap path as `no_eligible_candidates`. Gated by the `suppress_completed_reads` policy flag (default `True`); when `False` the ledger is neither fed nor consulted and behavior is unchanged from before HC02a.
+
 ## Deadlines, budgets and failures
 
 A single cooperative asynchronous deadline covers candidate collection, inference and revalidation. Synchronous callbacks, local file-system operations or native hooks that block the event loop can exceed the wall-clock budget; this is not a hard real-time scheduler. Backend HTTP retries are disabled. A backend failure opens a five-second cooldown. Invalid labels, malformed probabilities, an abstention, stale state, missing key, unknown alternatives, no eligible candidate or a timeout return to the original generative provider.

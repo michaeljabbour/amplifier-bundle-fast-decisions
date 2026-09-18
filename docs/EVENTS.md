@@ -14,7 +14,7 @@ Session identity is read from the coordinator/session if exposed. A generated fa
 | Event suffix | Meaning |
 |---|---|
 | `turn_start` / `turn_end` | Hybrid turn boundary, mode, configured backend, `allow_external_state`, final submission/provider counters and recorder health |
-| `requested` | Eligible prepared candidates sent for a decision; includes state hash, `state_chars`, `candidate_count`, `question_count`, `candidate_order_hash`, `domain`, no raw state |
+| `requested` | Eligible prepared candidates sent for a decision; includes state hash, `state_chars`, `candidate_count`, `question_count`, `candidate_order_hash`, `candidates_suppressed_already_read`, `domain`, no raw state |
 | `scored` | Returned distribution/model/usage and measured backend wall time, whether or not acted on; carries `candidate_order_hash`, `domain` |
 | `routed` | Actual fast submission or slow route, plus mechanical reason; shadow can include `proposed_route`; carries `domain` once a candidate set has been built (early guard-clause routes, e.g. `mode_off`, precede that and carry none) |
 | `fallback` | Error/timeout/envelope incompatibility; exception type only |
@@ -72,6 +72,8 @@ Ollama reports token mass with abstention residual and `confidence_kind: not_rep
 Jev confidence remains `typesafe_reported_unspecified`: this adapter does not know
 the remote formula/version. Neither statistic establishes empirical calibration.
 Old records lacking these fields remain readable; missing metadata is unknown.
+
+`requested` also carries `candidates_suppressed_already_read` (HC02a): the count of fast_workspace read/list candidates dropped this decision because their (path, revision) was already present in the turn's completed-read ledger (fed by both fast submissions and successful native/provider-selected reads -- see docs/ARCHITECTURE.md's Completed-read ledger section). When every remaining candidate is suppressed and none are left to even reach eligibility, `routed` fires with `reason_code: already_read_unchanged` instead of the generic `no_eligible_candidates` -- still with no backend scoring call. Suppression is gated by the `suppress_completed_reads` policy flag (default `True`).
 
 `requested` also carries observation-loss telemetry from `build_state` (HC01): `observation_count` (messages actually included), `observations_available` (candidate messages the window/task-anchor step considered, before role or budget filtering), `observations_dropped` (available minus included, for any reason), `observations_clipped` (how many included messages were truncated by the budget's binary search), `task_anchored` (whether a user task message was found and survived into the state), and `truncation_reason` (`no_messages` / `budget` / `none`). These make state loss visible on every decision, not just inferable from `state_chars`.
 

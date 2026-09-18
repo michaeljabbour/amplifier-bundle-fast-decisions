@@ -131,6 +131,9 @@ SAFE_FIELDS = {
     "observations_clipped",
     "task_anchored",
     "truncation_reason",
+    # HC02a: per-turn completed-read ledger suppression count -- an
+    # integer, never a path or argument.
+    "candidates_suppressed_already_read",
 }
 
 

@@ -10,7 +10,13 @@ import time
 from typing import Any
 from uuid import uuid4
 
-from .contracts import Candidate, TurnState, field_value, digest
+from .contracts import (
+    Candidate,
+    TurnState,
+    field_value,
+    digest,
+    candidate_read_identity,
+)
 from .runtime import Runtime, get_runtime
 from . import provenance
 
@@ -97,6 +103,13 @@ docs/UPSTREAM_CONTRACT.md.
                 turn.used.add(candidate.fingerprint)
                 turn.fast_streak += 1
                 turn.fast_total += 1
+                # HC02a: a fast submission is a completed read too -- record
+                # it so a second proposal of the same unchanged file is
+                # suppressed on the next decision in this turn.
+                if service.policy.suppress_completed_reads:
+                    identity = candidate_read_identity(candidate, self._tools)
+                    if identity is not None:
+                        turn.completed_reads[identity[0]] = identity[1]
                 await service.emit("routed", {"mode": service.policy.mode,
                     "backend": service.backend.name, "policy_version": service.policy.version,
                     "route": "fast", "destination": candidate.tool,
@@ -179,11 +192,56 @@ docs/UPSTREAM_CONTRACT.md.
 
 class ObservedTool:
     """Measure actual execute(), not merely a tool:pre hook which may be denied."""
-    def __init__(self, tool: Any, runtime: Runtime, tool_key: str):
+    def __init__(
+        self, tool: Any, runtime: Runtime, tool_key: str, *, workspace: Any = None
+    ):
         self._tool, self._runtime, self._tool_key = tool, runtime, tool_key
+        # HC02a: the raw fast_workspace tool (never wrapped, never executed
+        # from here) used only to normalize a native read_file's file_path
+        # into the same (path, revision) identity space as candidates.
+        self._workspace = workspace
 
     def __getattr__(self, name):
         return getattr(self._tool, name)
+
+    def _completed_read_identity(self, input: dict[str, Any]) -> tuple[str, str] | None:
+        """HC02a: ``(normalized path, revision)`` for a successful read/list
+        this tool call just performed, or ``None`` when this tool/shape is
+        not part of the ledger (or the path cannot be normalized).
+
+        Covers ``fast_workspace`` read/list (via its own ``read_identity``)
+        and the native ``read_file`` tool's ``file_path`` (resolved against
+        the fast_workspace tool's configured root, if one is mounted).
+        """
+        if not isinstance(input, dict):
+            return None
+        if self._tool_key == "fast_workspace":
+            operation = input.get("operation")
+            path = input.get("path")
+            identity_fn = getattr(self._tool, "read_identity", None)
+        elif self._tool_key == "read_file":
+            operation, path = "read", input.get("file_path")
+            identity_fn = (
+                getattr(self._workspace, "read_identity", None)
+                if self._workspace
+                else None
+            )
+        else:
+            return None
+        if (
+            not callable(identity_fn)
+            or not isinstance(path, str)
+            or operation not in ("read", "list")
+        ):
+            return None
+        try:
+            result = identity_fn(path, operation)
+        except Exception:
+            return None
+        if not isinstance(result, tuple) or len(result) != 2:
+            return None
+        key, revision = result
+        return str(key), str(revision)
 
     async def execute(self, input: dict[str, Any], **kwargs):
         service = self._runtime.service
@@ -214,6 +272,14 @@ class ObservedTool:
             raise
         else:
             success = field_value(result, "success", None)
+            if (
+                turn
+                and success is not False
+                and service.policy.suppress_completed_reads
+            ):
+                identity = self._completed_read_identity(input)
+                if identity is not None:
+                    turn.completed_reads[identity[0]] = identity[1]
             await service.emit("tool_end", {**fields, "status": "ok" if success is not False else "error",
                 "success": success, "duration_ms": (time.perf_counter() - start) * 1000}, decision_id)
             return result
@@ -254,7 +320,11 @@ class HybridOrchestrator:
                 "policy_version": service.policy.version,
                 "allow_external_state": service.policy.allow_external_state})
             # Provider keys and defaults are unchanged. Upstream pins and selections apply.
-            wrapped_tools = {key: ObservedTool(tool, self.runtime, key) for key, tool in tools.items()}
+            workspace_tool = tools.get("fast_workspace")
+            wrapped_tools = {
+                key: ObservedTool(tool, self.runtime, key, workspace=workspace_tool)
+                for key, tool in tools.items()
+            }
             wrapped_providers = {key: RoutedProvider(provider, self.runtime, tools,
                 self.response_factory, key) for key, provider in providers.items()}
             kwargs.setdefault("coordinator", self.coordinator)

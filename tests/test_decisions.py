@@ -6,6 +6,7 @@ from pathlib import Path
 from types import SimpleNamespace as NS
 import unittest
 from unittest.mock import patch
+from uuid import uuid4
 
 from amplifier_fast_decisions.backends import JevBackend, ScriptedBackend, BackendUnavailable
 from amplifier_fast_decisions.contracts import Candidate, Decision, DecisionRequest, Policy, Question, TurnState, VALIDATOR_CAPABILITY, canonical
@@ -468,5 +469,125 @@ class BackendTests(unittest.IsolatedAsyncioTestCase):
         with patch.dict('os.environ',{},clear=True):
             with self.assertRaises(BackendUnavailable):JevBackend()._get_client()
 
+
+
+class RaisingBackend:
+    """HC02a: proves the suppressed-to-empty route never reaches the backend."""
+    name = "raising"
+    external = False
+
+    def __init__(self):
+        self.calls = 0
+
+    async def ask(self, request):
+        self.calls += 1
+        raise AssertionError("backend must not be called when every candidate is suppressed")
+
+    async def close(self):
+        pass
+
+
+class CompletedReadLedgerTests(unittest.IsolatedAsyncioTestCase):
+    """HC02a: revision-aware completed-read suppression."""
+
+    async def test_already_read_candidate_suppressed_no_backend_call(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp);(root/'README.md').write_text('Hello')
+            workspace=WorkspaceTool(root)
+            candidate=workspace.candidate_for_path('README.md',0)
+            identity=workspace.read_identity('README.md','read')
+            policy=Policy(mode='active',allowed_tools=('fast_workspace',),allow_synthetic_active=True)
+            backend=RaisingBackend()
+            service,_,events,_=setup_service(policy=policy,backend=backend,candidates=[candidate])
+            # Simulate a native read_file already having read this exact revision.
+            service.turn.completed_reads[identity[0]]=identity[1]
+            result=await service.choose(request(tools=[{'name':'fast_workspace'}]),{'fast_workspace':workspace})
+        self.assertIsNone(result)
+        self.assertEqual(backend.calls,0)
+        routed=[e for e in events if e['event'].endswith('routed')]
+        self.assertEqual(routed[-1]['data']['reason_code'],'already_read_unchanged')
+        self.assertEqual(routed[-1]['data']['candidates_suppressed_already_read'],1)
+        self.assertFalse(any(e['event'].endswith('requested') for e in events))
+
+    async def test_changed_revision_is_eligible_again(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp);(root/'README.md').write_text('Hello')
+            workspace=WorkspaceTool(root)
+            stale_identity=workspace.read_identity('README.md','read')
+            # File changes after the recorded read: a fresh candidate carries
+            # the new revision, so it no longer matches the stale ledger entry.
+            (root/'README.md').write_text('Changed content, different revision now')
+            candidate=workspace.candidate_for_path('README.md',0)
+            self.assertNotEqual(candidate.revision,stale_identity[1])
+            policy=Policy(mode='active',allowed_tools=('fast_workspace',),allow_synthetic_active=True)
+            backend=ScriptedBackend(delay_ms=0)
+            service,_,events,_=setup_service(policy=policy,backend=backend,candidates=[candidate])
+            service.turn.completed_reads[stale_identity[0]]=stale_identity[1]
+            result=await service.choose(request(tools=[{'name':'fast_workspace'}]),{'fast_workspace':workspace})
+        self.assertEqual(result.id,candidate.id)
+        self.assertEqual(backend.calls,1)
+        requested=[e for e in events if e['event'].endswith('requested')]
+        self.assertEqual(requested[0]['data']['candidates_suppressed_already_read'],0)
+
+    async def test_fast_submission_records_ledger_and_suppresses_next_request(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp);(root/'README.md').write_text('Hello')
+            workspace=WorkspaceTool(root)
+            revision=workspace.read_identity('README.md','read')[1]
+            # Two distinct candidate ids pointing at the identical (path, revision):
+            # proves suppression is driven by the ledger, not the existing
+            # per-fingerprint `turn.used` dedup (candidate_b has a different id
+            # and therefore a different fingerprint than candidate_a).
+            candidate_a=Candidate('read_a','Read A','fast_workspace',{'operation':'read','path':'README.md'},revision=revision)
+            candidate_b=Candidate('read_b','Read B','fast_workspace',{'operation':'read','path':'README.md'},revision=revision)
+            policy=Policy(mode='active',allowed_tools=('fast_workspace',),allow_synthetic_active=True)
+            backend=ScriptedBackend([{'choice':'read_a'}],delay_ms=0)
+            service,runtime,events,_=setup_service(policy=policy,backend=backend,candidates=[candidate_a,candidate_b])
+            facade=RoutedProvider(DemoProvider(delay_ms=0),runtime,{'fast_workspace':workspace},demo_response)
+            first=await facade.complete(request(tools=[{'name':'fast_workspace'}]))
+            self.assertTrue(first.tool_calls)
+            self.assertIn(str((root/'README.md').resolve()),service.turn.completed_reads)
+            second=await facade.complete(request(tools=[{'name':'fast_workspace'}]))
+        self.assertFalse(second.tool_calls)
+        self.assertEqual(backend.calls,1)
+        routed=[e for e in events if e['event'].endswith('routed')]
+        self.assertEqual(routed[-1]['data']['reason_code'],'already_read_unchanged')
+        self.assertEqual(routed[-1]['data']['candidates_suppressed_already_read'],1)
+
+    async def test_denied_or_failed_read_not_recorded(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp);(root/'README.md').write_text('Hello')
+            workspace=WorkspaceTool(root)
+            class FailingReadFile:
+                async def execute(self,input,**kwargs):
+                    return NS(success=False,error={'message':'denied'})
+            service,runtime,_,_=setup_service()
+            observed=ObservedTool(FailingReadFile(),runtime,'read_file',workspace=workspace)
+            await observed.execute({'file_path':str(root/'README.md')})
+        self.assertEqual(service.turn.completed_reads,{})
+
+    async def test_ledger_resets_on_new_turn(self):
+        service,_,_,_=setup_service()
+        service.turn.completed_reads['/some/path']='rev1'
+        self.assertTrue(service.turn.completed_reads)
+        # Mirrors HybridOrchestrator.execute's per-turn TurnState replacement.
+        service.turn=TurnState(uuid4().hex)
+        self.assertEqual(service.turn.completed_reads,{})
+
+    async def test_flag_disabled_behaves_as_before(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp);(root/'README.md').write_text('Hello')
+            workspace=WorkspaceTool(root)
+            candidate=workspace.candidate_for_path('README.md',0)
+            identity=workspace.read_identity('README.md','read')
+            policy=Policy(mode='active',allowed_tools=('fast_workspace',),allow_synthetic_active=True,suppress_completed_reads=False)
+            backend=ScriptedBackend(delay_ms=0)
+            service,_,events,_=setup_service(policy=policy,backend=backend,candidates=[candidate])
+            service.turn.completed_reads[identity[0]]=identity[1]
+            result=await service.choose(request(tools=[{'name':'fast_workspace'}]),{'fast_workspace':workspace})
+        self.assertEqual(result.id,candidate.id)
+        self.assertEqual(backend.calls,1)
+        requested=[e for e in events if e['event'].endswith('requested')]
+        self.assertEqual(requested[0]['data']['candidates_suppressed_already_read'],0)
 
 if __name__=='__main__':unittest.main()
