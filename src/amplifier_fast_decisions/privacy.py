@@ -50,6 +50,8 @@ SAFE_FIELDS = {
     "status",
     "success",
     "exception_type",
+    "retry_attempt",
+    "status_code",
     "fast_total",
     "slow_total",
     "shadow",

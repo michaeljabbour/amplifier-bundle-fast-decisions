@@ -97,6 +97,7 @@ class EventIndex:
             events = [dict(e) for e in self.events if e["cursor"] > after][:limit]
             return {"events": events, "cursor": events[-1]["cursor"] if events else self.cursor,
                     "epoch": self.epoch, "retained": len(self.events),
+                    "has_more": bool(events and events[-1]["cursor"] < self.cursor),
                     "first_cursor": self.events[0]["cursor"] if self.events else 0,
                     "invalid_lines": self.invalid_lines}
 
@@ -158,7 +159,7 @@ class Handler(BaseHTTPRequestHandler):
                     return self._json(400, {"error": "Invalid cursor"})
                 return self._json(200, self.server.index.get(after, limit))
             if parsed.path == "/api/health":
-                return self._json(200, {"read_only": True, "transport": "poll-250ms", "version": "0.1.0"})
+                return self._json(200, {"read_only": True, "transport": "poll-500ms", "version": "0.1.0"})
             return self._json(404, {"error": "Not found"})
         name = {"/": "index.html", "/index.html": "index.html", "/app.js": "app.js", "/style.css": "style.css"}.get(parsed.path)
         if not name:

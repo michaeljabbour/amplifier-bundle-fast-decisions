@@ -21,7 +21,11 @@ amplifier = [
 ]
 test = ["pytest>=8", "pytest-asyncio>=0.23", "jsonschema>=4", "PyYAML>=6"]
 
+[project.urls]
+Repository = "https://github.com/michaeljabbour/amplifier-bundle-fast-decisions"
+
 [project.scripts]
+amplifier-fast-decisions = "amplifier_fast_decisions.smart_cli:main"
 afast = "amplifier_fast_decisions.cli:main"
 
 [tool.setuptools.packages.find]
@@ -29,7 +33,7 @@ where = ["src"]
 include = ["amplifier_fast_decisions*"]
 
 [tool.setuptools.package-data]
-amplifier_fast_decisions = ["static/*"]
+amplifier_fast_decisions = ["static/*", "SMART_TOOL.md"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

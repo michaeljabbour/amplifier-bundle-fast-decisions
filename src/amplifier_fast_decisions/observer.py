@@ -33,6 +33,7 @@ DEFAULT_OBSERVATORY_STATE_FILE = (
 )
 
 __amplifier_module_type__ = "hook"
+_HEARTBEAT_INTERVAL_SECONDS = 15
 
 
 def _continue_result() -> Any:
@@ -235,7 +236,24 @@ async def mount(coordinator, config: dict):
         "allow_external_state": runtime.service.policy.allow_external_state,
         "policy_version": runtime.service.policy.version,
         "event_source": "native-hook-bridge",
+        "session_label": config.get("session_label") if isinstance(config.get("session_label"), str) else None,
     })
+
+    async def heartbeat():
+        # Reports that this observer is still mounted, never that a tool or
+        # provider is busy. The native lifecycle events carry turn state.
+        while True:
+            await asyncio.sleep(_HEARTBEAT_INTERVAL_SECONDS)
+            try:
+                await runtime.service.emit("health", {
+                    "phase": "session_heartbeat", "event_source": "native-hook-bridge",
+                })
+            except asyncio.CancelledError:
+                raise
+            except Exception:
+                pass
+
+    heartbeat_task = asyncio.create_task(heartbeat())
 
     async def observe(event: str, data: dict):
         # Allowlisted structural fields only. Never copy native event bodies.
@@ -252,12 +270,16 @@ async def mount(coordinator, config: dict):
                 "phase": data.get("phase"),
                 "provider": data.get("provider") if isinstance(data.get("provider"), str) else None,
                 "status": "observed",
+                "retry_attempt": data.get("attempt") if event == "provider:retry" else None,
+                "status_code": data.get("status_code") if event in {"provider:retry", "provider:error"} else None,
+                "exception_type": data.get("error_type") if isinstance(data.get("error_type"), str) else None,
             },
         )
         return HookResult(action="continue")
 
     for event in ("execution:start", "execution:end", "provider:request",
-                  "tool:pre", "tool:post", "provider:error"):
+                  "tool:pre", "tool:post", "provider:error", "provider:retry",
+                  "session:end", "context:compaction"):
         registrations.append(coordinator.hooks.register(event, observe, priority=999))
 
     scorer = ShadowScorer(runtime, coordinator, config)
@@ -414,6 +436,17 @@ async def mount(coordinator, config: dict):
     )
 
     async def cleanup():
+        heartbeat_task.cancel()
+        try:
+            await heartbeat_task
+        except asyncio.CancelledError:
+            pass
+        try:
+            await runtime.service.emit("health", {
+                "phase": "session_closed", "event_source": "native-hook-bridge",
+            })
+        except Exception:
+            pass
         for unregister in registrations:
             if callable(unregister):
                 unregister()

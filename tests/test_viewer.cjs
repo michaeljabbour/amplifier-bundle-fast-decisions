@@ -1,75 +1,68 @@
-// Run with: node --test tests/test_viewer.cjs
 const {test} = require('node:test');
 const assert = require('node:assert/strict');
-const fs = require('node:fs');
-const vm = require('node:vm');
-const path = require('node:path');
-const source = fs.readFileSync(path.join(__dirname,'../src/amplifier_fast_decisions/static/app.js'),'utf8');
-function viewer(events) {
-  const nodes = new Map();
-  function element() {
-    return {textContent:'',children:[],style:{},dataset:{},options:[],value:'decisions',
-      classList:{add(){},remove(){},toggle(){}},append(...xs){this.children.push(...xs)},
-      replaceChildren(...xs){this.children=xs},add(x){this.options.push(x)},
-      setAttribute(){},addEventListener(){}};
-  }
-  const document = {getElementById(id){if(!nodes.has(id))nodes.set(id,element());return nodes.get(id)},
-    createElement:element,createElementNS:element,querySelectorAll(){return []},
-    addEventListener(){},body:element()};
-  vm.runInNewContext(source,{document,window:{AFAST_EMBEDDED:events},
-    location:{hash:'',host:'test'},sessionStorage:{getItem(){return ''}},
-    URLSearchParams,Option:function(text,value){return {text,value}},setTimeout,clearTimeout});
-  return nodes;
-}
+const {scriptedKeys,synthetic,sessionsFor,metrics,describe,valid,decisionPath} = require('../src/amplifier_fast_decisions/static/app.js');
 let seq=0;
-const event=(kind,data={},decision='d1',session='s1')=>({schema_version:'1.0',event_id:String(++seq),event:'fast_decisions:'+kind,session_id:session,decision_id:decision,timestamp:'2026-09-17T00:00:00Z',data});
-test('local model scores are explicitly uncalibrated',()=>{
-  const nodes=viewer([event('scored',{backend:'ollama-token',model:'test-local',selected_probability:.92,probability_kind:'token_mass_with_abstention_residual'})]);
-  assert.equal(nodes.get('fastTitle').textContent,'Local model');
-  assert.match(nodes.get('confidence').textContent,/Uncalibrated token score/);
+const now=Date.parse('2026-09-18T03:00:00Z');
+const event=(kind,data={},decision=null,session='parent',extra={})=>({schema_version:'1.0',event_id:String(++seq),event:'fast_decisions:'+kind,session_id:session,decision_id:decision,timestamp:new Date(now).toISOString(),data,...extra});
+function real(events){const keys=scriptedKeys(events);return events.filter(e=>!synthetic(e,keys));}
+test('scripted decision chains never count as model decisions or fast-path gains',()=>{
+ const events=[event('health',{phase:'configuration',backend:'scripted-demo',mode:'shadow'}),event('requested',{},'d1'),event('shadow_proposed',{synthetic:true,backend:'scripted-demo'},'d1'),event('shadow_agreement',{agreement:'match',would_have_avoided_llm_turn:true},'d1'),event('health',{native_event:'tool:post'},'d1')];
+ assert.equal(real(events).length,2);assert.equal(metrics(real(events)).scores,0);assert.equal(metrics(real(events)).tools,1);assert.equal(metrics(real(events)).fastExecuted,0);
 });
-test('shadow score appears in metrics, inspector and decision list without a fast submission',()=>{
-  const nodes=viewer([
-    event('health',{phase:'configuration',mode:'shadow',backend:'scripted-demo',allow_external_state:false}),
-    event('shadow_proposed',{choice:'read',probabilities:{read:.97,reason:.03},selected_probability:.97,duration_ms:12,mode:'shadow',backend:'scripted-demo',synthetic:true}),
-    event('shadow_agreement',{agreement:'match',proposed_candidate:'read',actual_tool:'fast_workspace'}),
-    event('health',{queue_depth:0},null),
-  ]);
-  assert.equal(nodes.get('mDecisions').textContent,1);
-  assert.equal(nodes.get('mFast').textContent,0);
-  assert.equal(nodes.get('decisionLatency').textContent,'12 ms');
-  assert.equal(nodes.get('probabilities').children.length,2);
-  assert.equal(nodes.get('decisionList').children[0].children[6].textContent,'12 ms');
-  assert.match(nodes.get('notice').textContent,/SHADOW ONLY.*Jev is not connected/);
-  assert.equal(nodes.get('fastTitle').textContent,'Offline scorer');
-  assert.equal(nodes.get('routeTitle').textContent,'Shadow comparison: match');
+test('native and measured tool events do not double count within a session',()=>{
+ const events=[event('health',{native_event:'tool:post'}),event('tool_end',{status:'ok'}),event('tool_end',{status:'ok'},null,'other')];
+ assert.equal(metrics(events).tools,2);
 });
-test('legacy native health events stay visible without claiming measured execution',()=>{
-  const nodes=viewer([
-    event('health',{native_event:'provider:request',provider:'test'}),
-    event('health',{native_event:'tool:pre',tool:'read_file'}),
-    event('health',{native_event:'tool:post',tool:'read_file'}),
-  ]);
-  assert.equal(nodes.get('mSlow').textContent,1);
-  assert.equal(nodes.get('mTools').textContent,1);
-  assert.match(nodes.get('mSlowLatency').textContent,/invocation not measured/);
-  assert.match(nodes.get('mToolsFoot').textContent,/success\/duration not inferred/);
-  assert.equal(nodes.get('timeline').children.length,3);
-  assert.equal(nodes.get('routeTitle').textContent,'Native tool:post observed');
+test('fast submission alone never proves an executed action',()=>{
+ const events=[event('routed',{route:'fast'},'d1')];assert.equal(metrics(events).fast,1);assert.equal(metrics(events).fastExecuted,0);
+ events.push(event('tool_end',{status:'ok'},'d1'));assert.equal(metrics(events).fastExecuted,1);
 });
-test('active facade measurements and native hooks are not double counted',()=>{
-  const nodes=viewer([
-    event('health',{native_event:'provider:request'}),event('slow_start'),
-    event('health',{native_event:'tool:post'}),event('tool_end',{status:'ok'}),
-    event('routed',{route:'fast'}),event('scored',{duration_ms:2}),
-  ]);
-  assert.equal(nodes.get('mSlow').textContent,1);
-  assert.equal(nodes.get('mTools').textContent,1);
-  assert.equal(nodes.get('mFast').textContent,1);
+test('decision ids cannot link execution across sessions',()=>{
+ const events=[event('routed',{route:'fast'},'same','one'),event('tool_end',{status:'ok'},'same','two')];
+ assert.equal(metrics(events).fastExecuted,0);
 });
-test('candidate absence has an explanation and is visible in the default trace',()=>{
-  const nodes=viewer([event('health',{phase:'shadow',reason_code:'no_eligible_candidates',candidate_count:0})]);
-  assert.equal(nodes.get('routeTitle').textContent,'No eligible prepared action');
-  assert.equal(nodes.get('timeline').children.length,1);
-  assert.equal(nodes.get('mFast').textContent,0);
+test('synthetic flag on an entire fixture session excludes native-looking data',()=>{
+ const e=event('health',{native_event:'tool:post'},null,'demo',{synthetic:true});assert.equal(real([e]).length,0);
+});
+test('children retain their parent identity; parents remain independently selectable',()=>{
+ const events=[event('health',{phase:'configuration',backend:'ollama-token',mode:'active'}),event('health',{phase:'configuration'},null,'child',{parent_session_id:'parent'})];
+ const sessions=sessionsFor(events,now);assert.equal(sessions.filter(s=>!s.parent).length,1);assert.equal(sessions.find(s=>s.id==='child').parent,'parent');
+});
+test('connected viewer does not make old sessions appear alive',()=>{
+ const e=event('health',{phase:'configuration'});assert.equal(sessionsFor([e],now+60000)[0].reporting,false);
+ const recentNative=event('health',{native_event:'provider:request'});assert.equal(sessionsFor([recentNative],now)[0].reporting,false);
+});
+test('heartbeats distinguish mounted idle sessions from working sessions and closed sessions',()=>{
+ const events=[event('health',{phase:'session_heartbeat'})];assert.equal(sessionsFor(events,now)[0].state,'Connected, idle');
+ events.push(event('health',{native_event:'execution:start'}));assert.equal(sessionsFor(events,now)[0].state,'Working');
+ events.push(event('health',{native_event:'execution:end'}));assert.equal(sessionsFor(events,now)[0].state,'Connected, idle');
+ events.push(event('health',{phase:'session_closed'}));assert.equal(sessionsFor(events,now)[0].reporting,false);
+});
+test('retry events explain real provider issues without error bodies',()=>{
+ const e=event('health',{native_event:'provider:retry',provider:'anthropic',retry_attempt:2,exception_type:'ConnectTimeout'});
+ assert.match(describe(e).detail,/anthropic.*ConnectTimeout.*Attempt 2/);assert.equal(metrics([e]).issues,1);
+});
+test('local model scores are model evidence; scripted scores remain explicit',()=>{
+ const e=event('scored',{model:'qwen3:0.6b',duration_ms:24,probability_kind:'token_mass_with_abstention_residual'});
+ assert.equal(describe(e).source,'Model score');assert.equal(describe(e,true).source,'Synthetic / scripted');assert.equal(metrics([e]).p95,24);
+});
+test('malformed imported data is rejected',()=>{
+ assert.equal(valid({...event('health'),data:[]}),false);assert.equal(valid(event('health')),true);
+});
+
+test('mechanics joins only the selected session and decision, without inventing missing stages',()=>{
+ const scored=event('scored',{model:'qwen3:0.6b'},'same','one');
+ const other=event('tool_end',{status:'ok'},'same','two');
+ const next=event('scored',{},'later','one');
+ const events=[scored,other,next];
+ assert.deepEqual(decisionPath(events,'one',scored.event_id),[scored]);
+ assert.deepEqual(decisionPath(events,'one',null),[next]);
+ assert.deepEqual(decisionPath(events,'two',null),[]);
+});
+
+test('bypassed calls require instrumented submission; advisory scores never imply savings',()=>{
+ const events=[event('scored',{mode:'advisory'},'advice'),event('routed',{route:'fast'},'incomplete')];
+ assert.equal(metrics(events).bypassed,0);
+ events.push(event('routed',{route:'fast',status:'submitted_to_upstream'},'actual'));
+ assert.equal(metrics(events).bypassed,1);assert.equal(metrics(events).fastExecuted,0);
 });

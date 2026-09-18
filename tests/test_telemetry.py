@@ -80,8 +80,10 @@ class IndexTests(unittest.TestCase):
     def test_cursor_resume(self):
         self.file.write_text(''.join(json.dumps(event(i))+'\n' for i in range(3)))
         index=EventIndex(self.root);data=index.get(limit=2)
+        self.assertTrue(data['has_more'])
         second=index.get(after=data['cursor'])
         self.assertEqual(len(second['events']),1)
+        self.assertFalse(second['has_more'])
     def test_symlink_not_read(self):
         with tempfile.NamedTemporaryFile(mode='w',suffix='.jsonl') as secret:
             secret.write(json.dumps(event())+'\n');secret.flush()
