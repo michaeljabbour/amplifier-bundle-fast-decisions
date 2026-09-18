@@ -37,6 +37,8 @@ FORGE = Path.home()/'.agents/skills/amplifier-skill-forge/tools/forge.py'
 CACHE = Path.home()/'.amplifier/cache/amplifier-bundle-fast-decisions-703c3edc7c970204'
 EVENTS = Path.home()/'.amplifier/fast-decisions/events'
 HOST_PYTHON = Path.home()/'.local/share/uv/tools/amplifier/bin/python'
+BENCHMARK_BUNDLE_NAME = 'afast-benchmark-run'
+
 PROMPT = ('Read README.md first, then repair the implementation to satisfy its full contract. '
           'Work directly in this workspace without delegating or using the network. '
           'Modify solution.py and add tests if useful, but do not change README.md or existing test_public.py. '
@@ -244,7 +246,10 @@ def _side_profile(name, side, task, workspace, config):
         loop = {'module': 'loop-streaming', 'source': config.get('upstream_loop_source', UPSTREAM_LOOP_SOURCE), 'config': upstream}
         off_config = {**decision, 'events_dir': config['events_dir'], 'upstream': upstream, 'session_label': f'Forge {task}', 'observatory': {'enabled': False}}
         hooks = [{'module': 'hooks-fast-decisions', 'source': (source_root/'modules/hooks-fast-decisions').as_uri(), 'config': {**off_config, 'mode': 'off'}}]
-    return {'bundle': {'name': f'forge-{name}', 'version': '0.1.0'}, 'includes': [{'bundle': source_root.as_uri()}],
+    # One fixed bundle name for every benchmark profile: Amplifier records each `--bundle` it loads in
+    # ~/.amplifier/registry.json keyed by name, so unique per-run names left 80+ stale 'Local' entries.
+    # The worker also removes the entry after the run (see _unregister_benchmark_bundle).
+    return {'bundle': {'name': BENCHMARK_BUNDLE_NAME, 'version': '0.1.0'}, 'includes': [{'bundle': source_root.as_uri()}],
             'session': {'orchestrator': loop},
             'tools': [{'module': 'tool-fast-workspace', 'source': (source_root/'modules/tool-fast-workspace').as_uri(), 'config': {'root': str(workspace)}}],
             'hooks': hooks}
@@ -436,6 +441,14 @@ def extract_receipts(source_root, events_dir, sid, run, python=None, timeout=120
     return json.loads((run/'measurements.json').read_text())
 
 
+def _unregister_benchmark_bundle(name=None):
+    """Remove the benchmark profile's registry entry that `amplifier run --bundle` just created (best effort)."""
+    try:
+        subprocess.run(['amplifier','bundle','remove',name or BENCHMARK_BUNDLE_NAME],capture_output=True,text=True,timeout=120)
+    except (OSError,subprocess.TimeoutExpired):
+        pass
+
+
 def _mode_observed(run):
     """Distinct decision modes reported by the run's own receipts (turn_start/requested/routed/source events)."""
     receipts = run/'receipts.jsonl'
@@ -559,6 +572,7 @@ def worker(root,name):
         outcome_passed = outcome_passed and suite_ok
     result['outcome_passed']=outcome_passed
     dump(run/'result.json',result)
+    _unregister_benchmark_bundle()
     print('FORGE_E2E_FINISHED '+json.dumps({'name':name,'outcome':result['outcome_passed'],'wall_ms':round(elapsed),'checks':quality,'session_id':sid}),flush=True)
     return 0 if result['outcome_passed'] else 1
 
