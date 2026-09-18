@@ -14,3 +14,5 @@
 .reliability-legend{font-size:11px;color:var(--muted);max-width:260px}
 .decision-list-tools{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
 .decision-list tr.mismatch td:first-child{border-left:3px solid var(--slow)}
+
+.filter select{min-width:0;flex:1}

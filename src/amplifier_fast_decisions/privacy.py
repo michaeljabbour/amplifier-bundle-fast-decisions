@@ -37,6 +37,7 @@ SAFE_FIELDS = {
     "candidates",
     "choice",
     "probabilities",
+    "probability_kind",
     "reported_confidence",
     "selected_probability",
     "margin",

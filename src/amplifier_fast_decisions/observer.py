@@ -161,6 +161,9 @@ class ShadowScorer:
         getter = getattr(self._coordinator, "get", None)
         context = getter("context") if callable(getter) else None
         if context is None or not hasattr(context, "get_messages"):
+            await self._runtime.service.emit(
+                "health", {"phase": "shadow", "reason_code": "shadow_context_unavailable"}
+            )
             return None
         messages = list(await context.get_messages())
         messages = messages[-self._max_messages :] if self._max_messages > 0 else []
@@ -182,6 +185,10 @@ class ShadowScorer:
                 eligible.append(candidate)
         eligible = eligible[: service.policy.max_candidates]
         if not eligible:
+            await service.emit(
+                "health", {"phase": "shadow", "reason_code": "no_eligible_candidates",
+                           "candidate_count": 0}
+            )
             return None
         state = build_state(pseudo_request, service.policy.max_state_chars)
         if self._turn_id is None:
@@ -219,6 +226,17 @@ async def mount(coordinator, config: dict):
         )
     registrations = []
 
+    # Report the shared runtime's effective policy, including when an active
+    # orchestrator created it before this observer mounted.
+    await runtime.service.emit("health", {
+        "phase": "configuration",
+        "mode": runtime.service.policy.mode,
+        "backend": runtime.service.backend.name,
+        "allow_external_state": runtime.service.policy.allow_external_state,
+        "policy_version": runtime.service.policy.version,
+        "event_source": "native-hook-bridge",
+    })
+
     async def observe(event: str, data: dict):
         # Allowlisted structural fields only. Never copy native event bodies.
         tool = data.get("tool_name") or data.get("tool")
@@ -232,12 +250,14 @@ async def mount(coordinator, config: dict):
                 "tool": tool,
                 "tool_call_id": data.get("tool_call_id"),
                 "phase": data.get("phase"),
+                "provider": data.get("provider") if isinstance(data.get("provider"), str) else None,
                 "status": "observed",
             },
         )
         return HookResult(action="continue")
 
-    for event in ("tool:pre", "tool:post", "provider:error"):
+    for event in ("execution:start", "execution:end", "provider:request",
+                  "tool:pre", "tool:post", "provider:error"):
         registrations.append(coordinator.hooks.register(event, observe, priority=999))
 
     scorer = ShadowScorer(runtime, coordinator, config)

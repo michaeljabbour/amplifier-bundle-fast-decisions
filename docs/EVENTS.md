@@ -1,5 +1,10 @@
 # Event contract v1.0
 
+`probability_kind` describes score semantics. The local scorer emits
+`token_mass_with_abstention_residual`: raw one-token probability mass with all
+unrecognized/missing mass assigned to abstention. This is uncalibrated and does
+not estimate real-world correctness. Other backends default to `backend_reported`.
+
 Schema: `schemas/event.schema.json`. Names are added through the native `observability.events` contribution channel. Native events are not renamed or replaced.
 
 Every event has `schema_version`, globally random `event_id`, `event`, `session_id`, optional `parent_session_id`, optional `turn_id`/`decision_id`, per-emitter `seq`, UTC `timestamp`, process-local `monotonic_ns`, a `synthetic` flag, and allowlisted `data`.
@@ -32,7 +37,9 @@ A fast `routed` event means a valid response envelope was submitted to the upstr
 
 `routed` / `slow_start` / `slow_end` carry `transport_measured`: `"provider-complete"` or `"provider-stream"`, set at the point the provider facade is actually entered -- never a claim made at `turn_start`, since a single turn can enter the facade through both transports. The fast path is attempted only on the `provider-complete` transport; a `provider-stream` entry always routes slow with reason code `fast_path_unavailable_on_transport`, because loop-streaming's streaming branch cannot dispatch a tool call it receives (see `docs/UPSTREAM_CONTRACT.md`). Failing closed (defer to the real provider) is deliberate: the alternative is a prepared action silently dropped by upstream.
 
-The visualizer's explanation is `reason_code`, not private model reasoning. Probability is neither calibrated task accuracy nor authority. The optional native hook bridge emits `health` metadata for `tool:pre`, `tool:post` and `provider:error`; it does not infer the final result of the whole hook chain.
+The visualizer's explanation is `reason_code`, not private model reasoning. Probability is neither calibrated task accuracy nor authority. The optional native hook bridge emits `health` metadata for `execution:start`, `execution:end`, `provider:request`, `tool:pre`, `tool:post` and `provider:error`; it does not infer the final result of the whole hook chain. These records remain visible in the default trace and animate their corresponding graph nodes. Native requests/post hooks are labeled as observations, with no inferred execution duration or success. Sessions with facade measurements use those measurements for counters instead of double-counting their native hooks.
+
+At mount, `health` with `phase: configuration` records the shared runtime's effective mode, backend, external-state setting and policy version. Shadow snapshots without context or eligible candidates emit a `health` reason (`shadow_context_unavailable` or `no_eligible_candidates`). Routine recorder-health records do not displace the last meaningful graph event. `shadow_proposed` includes backend/model identity, `mode: shadow`, and whether its scores are synthetic; scripted scoring does not imply the surrounding Amplifier execution was synthetic. The viewer includes these scores in metrics, distributions and the decision list, without incrementing fast submissions.
 
 **One backend request per state, regardless of question count.** `requested`
 and `scored` both carry `candidate_order_hash`: the digest of the candidate

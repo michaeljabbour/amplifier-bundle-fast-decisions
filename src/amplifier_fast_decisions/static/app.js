@@ -32,24 +32,38 @@
     for(const id of ids) { const event=events.find(e=>e.session_id===id); const parent=event?.parent_session_id; $('session').add(new Option((parent?'Child: ':'')+id.slice(0,24)+(parent?' → '+parent.slice(0,12):''),id)); }
     $('session').value=session;
   }
+  const isScore = e => ['scored','shadow_proposed'].includes(label(e));
+  const native = e => e.data.native_event || '';
+  const meaningful = e => label(e)!=='health' || native(e) || e.data.reason_code || e.data.phase==='configuration';
+  function configuration(data) {
+    return data.findLast(e=>label(e)==='turn_start'||e.data.phase==='configuration')?.data
+      || (data.some(e=>label(e)==='shadow_proposed') ? {mode:'shadow',...data.findLast(e=>label(e)==='shadow_proposed').data} : {});
+  }
   function notice() {
-    const demo=filtered().some(e=>e.synthetic||e.data.synthetic);
+    const demo=filtered().some(e=>e.synthetic);
+    const cfg=configuration(visible());
     $('notice').classList.toggle('demo',demo);
-    put('notice', demo ? 'SYNTHETIC DEMO. Real routing code with scripted models, tools, and loop fixtures. These timings are not Jev benchmarks.' : 'Read-only telemetry. Metadata only; no prompts, tool contents, or private reasoning. This interface cannot authorize actions.');
+    put('notice', demo ? 'SYNTHETIC DEMO. Real routing code with scripted models, tools, and loop fixtures. These timings are not Jev benchmarks.' : cfg.mode==='shadow' ? 'SHADOW ONLY. Proposals do not change execution. Amplifier keeps its normal orchestrator. '+(cfg.backend==='scripted-demo'?'Offline scripted scoring; Jev is not connected. ':'')+'Native hook observations are shown separately from measured execution.' : 'Read-only telemetry. Metadata only; no prompts, tool contents, or private reasoning. This interface cannot authorize actions.');
   }
   function counts(data) {
-    const scored=data.filter(e=>label(e)==='scored');
+    const scored=data.filter(isScore);
     const routes=new Map(); for(const e of data) if(label(e)==='routed') routes.set(e.decision_id,e);
     const slow=data.filter(e=>label(e)==='slow_start');
     const completed=data.filter(e=>label(e)==='tool_end');
     put('mDecisions',scored.length);
     put('mFast',[...routes.values()].filter(e=>e.data.route==='fast').length);
-    put('mSlow',slow.length);
-    put('mTools',completed.filter(e=>e.data.status==='ok').length);
-    put('mDecisionLatency','Decision median: '+fmt(med(scored.map(e=>e.data.duration_ms))));
-    put('mSlowLatency','Provider median: '+fmt(med(data.filter(e=>label(e)==='slow_end').map(e=>e.data.duration_ms))));
+    const measuredProviderSessions=new Set(slow.map(e=>e.session_id));
+    const requests=data.filter(e=>native(e)==='provider:request'&&!measuredProviderSessions.has(e.session_id));
+    const measuredToolSessions=new Set(data.filter(e=>['tool_start','tool_end'].includes(label(e))).map(e=>e.session_id));
+    const posts=data.filter(e=>native(e)==='tool:post'&&!measuredToolSessions.has(e.session_id));
+    put('mSlowLabel',requests.length?'PROVIDER REQUESTS / CALLS':'REASONER CALLS');
+    put('mToolsLabel',posts.length?'TOOL RESULTS OBSERVED':'TOOLS COMPLETED');
+    put('mSlow',slow.length+requests.length);
+    put('mTools',completed.filter(e=>e.data.status==='ok').length+posts.length);
+    put('mDecisionLatency','Decision median: '+fmt(med(scored.map(e=>e.data.duration_ms)))+(scored.some(e=>label(e)==='shadow_proposed')?' (includes shadow)':''));
+    put('mSlowLatency',requests.length ? requests.length+' native requests; invocation not measured' : 'Provider median: '+fmt(med(data.filter(e=>label(e)==='slow_end').map(e=>e.data.duration_ms))));
     const errors=completed.filter(e=>e.data.status!=='ok').length;
-    put('mToolsFoot', errors ? errors+' failed or cancelled executions' : 'Measured at actual execute()');
+    put('mToolsFoot', posts.length ? posts.length+' native post hooks; success/duration not inferred' : errors ? errors+' failed or cancelled executions' : 'Measured at actual execute()');
     const drops=Math.max(0,...data.map(e=>e.data.dropped_events||0));
     put('health', drops ? 'Warning: '+drops+' recorder events dropped' : 'Local / read-only / metadata only');
   }
@@ -60,36 +74,44 @@
     const type=label(event), d=event.data;
     const activate=(nodes,edges,style)=>{for(const id of nodes) $('node-'+id)?.classList.add('active');for(const id of edges) $('edge-'+id)?.classList.add('active-'+style);};
     if(type==='requested') activate(['state','gate','jev'],['state','fast'],'fast');
-    else if(type==='scored') activate(['jev'],['fast'],'fast');
+    else if(type==='scored'||type==='shadow_proposed') activate(['jev'],['fast'],'fast');
     else if(type==='routed'&&d.route==='fast') activate(['jev','policy','executor'],['policy','execute-fast'],'fast');
     else if(type==='routed'||type==='slow_start'||type==='slow_end'||type==='fallback') activate(['slow'],['slow',...(type==='slow_end'?['execute-slow']:[])],'slow');
     else if(type==='tool_start') activate(['executor'],[],'neutral');
     else if(type==='tool_end') activate(['executor','state'],['feedback'],'neutral');
+    else if(native(event)==='provider:request'||native(event)==='provider:error') activate(['slow'],['slow'],'slow');
+    else if(native(event)==='tool:pre') activate(['executor'],[],'neutral');
+    else if(native(event)==='tool:post') activate(['executor','state'],['feedback'],'neutral');
     else activate(['state'],['state'],'neutral');
     let title=pretty(type), detail=d.reason_code?pretty(d.reason_code):d.status||'';
     if(type==='routed') { title=d.route==='fast'?'Fast action submitted to upstream':'Routed to the reasoning provider'; if(d.shadow) detail='Shadow suggestion only. The actual route remains slow.'; }
     if(type==='scored') title='Candidate distribution returned';
+    if(type==='shadow_proposed') { title='Shadow candidate scored'; detail='Suggestion only; execution was not changed.'; }
+    if(type==='shadow_agreement') { title='Shadow comparison: '+pretty(d.agreement); detail='Compared with the observed tool call; no fast submission.'; }
+    if(native(event)) { title='Native '+native(event)+' observed'; detail=d.tool||d.provider||'Hook observation; not a measured execute() call.'; }
+    if(d.phase==='configuration') { title='Runtime: '+pretty(d.mode); detail=pretty(d.backend)+'; external state '+(d.allow_external_state?'enabled':'disabled'); }
+    if(d.reason_code==='no_eligible_candidates') { title='No eligible prepared action'; detail='Built-in candidates require an explicit eligible text-file path under the workspace root.'; }
     if(type==='tool_start') title='Tool execution actually started';
     if(type==='tool_end') title='Tool execution '+(d.status==='ok'?'completed':d.status);
     if(type==='slow_start') title='Generative provider call started';
     if(type==='slow_end') title='Generative provider call '+d.status;
     put('routeTitle',title); put('routeDetail',detail||d.destination||d.tool||'Observed event'); put('eventTime',time(event));
-    $('routeDot').className='dot '+(d.route==='fast'||['scored','requested'].includes(type)?'fast':type.startsWith('slow')||d.route==='slow'?'slow':'neutral');
+    $('routeDot').className='dot '+(d.route==='fast'||['scored','requested','shadow_proposed'].includes(type)?'fast':type.startsWith('slow')||d.route==='slow'?'slow':'neutral');
   }
   function inspect(event,data) {
     if(!event) { put('modeBadge','NO EVENT'); put('reason','No route selected'); put('destination','Not observed'); put('decisionLatency','Not observed'); put('confidence',''); $('probabilities').replaceChildren(); put('eventJson','{}'); return; }
     const related=event.decision_id ? data.filter(e=>e.decision_id===event.decision_id) : [event];
-    const scored=related.findLast(e=>label(e)==='scored');
+    const scored=related.findLast(isScore);
     const requested=related.find(e=>label(e)==='requested');
     const route=related.findLast(e=>label(e)==='routed');
     const slow=related.findLast(e=>label(e).startsWith('slow_'));
     const d=route?.data||event.data;
-    put('modeBadge',(d.mode||event.data.mode||'OBSERVED').toUpperCase());
+    put('modeBadge',(d.mode||event.data.mode||(label(event).startsWith('shadow_')?'shadow':'OBSERVED')).toUpperCase());
     $('modeBadge').classList.toggle('warn',d.mode==='shadow');
     put('reason',pretty(d.reason_code||event.data.status||label(event)));
     put('destination',d.route==='slow' ? (slow?.data.provider||'Existing provider') : d.destination||event.data.tool||'Not observed');
     put('decisionLatency',fmt(scored?.data.duration_ms));
-    put('confidence',Number.isFinite(scored?.data.selected_probability)?'p = '+scored.data.selected_probability.toFixed(3):'');
+    put('confidence',Number.isFinite(scored?.data.selected_probability)?(scored.data.probability_kind==='token_mass_with_abstention_residual'?'Uncalibrated token score = ':'p = ')+scored.data.selected_probability.toFixed(3):'');
     const target=$('probabilities'); target.replaceChildren();
     if(scored) {
       const names=new Map((requested?.data.candidates||[]).map(c=>[c.id,c.label])); names.set('reason','Use reasoning model');
@@ -100,18 +122,18 @@
         const percent=document.createElement('span');percent.textContent=(p*100).toFixed(1)+'%';caption.append(text,percent);
         const track=document.createElement('div');track.className='prob-track';const fill=document.createElement('div');fill.className='prob-fill'+(id===scored.data.choice?' selected':'')+(id==='reason'?' slow':'');fill.style.width=Math.max(0,Math.min(100,p*100))+'%';track.append(fill);row.append(caption,track);target.append(row);
       }
-    } else { const empty=document.createElement('div');empty.className='empty';empty.textContent='No model distribution for this event. Deterministic routing does not need one.';target.append(empty); }
+    } else { const empty=document.createElement('div');empty.className='empty';empty.textContent='No score was recorded for this event. Native hook observations do not include a decision distribution.';target.append(empty); }
     put('eventJson',JSON.stringify(event,null,2));
   }
   function timeline(data) {
     const filter=$('eventFilter').value;
-    const rows=data.filter(e=>filter==='all'||filter==='fallback'?(filter==='all'||label(e)==='fallback'||['decision_timeout','selection_threshold','backend_error','model_abstained','backend_circuit_open'].includes(e.data.reason_code)):filter==='tool'?label(e).startsWith('tool_'):label(e)!=='health');
+    const rows=data.filter(e=>filter==='all'||filter==='fallback'?(filter==='all'||label(e)==='fallback'||['decision_timeout','selection_threshold','backend_error','model_abstained','backend_circuit_open'].includes(e.data.reason_code)):filter==='tool'?(label(e).startsWith('tool_')||native(e).startsWith('tool:')):meaningful(e));
     put('traceCount',rows.length+' events');
     const tbody=$('timeline');tbody.replaceChildren();
     for(const event of rows.slice(-100).reverse()) {
       const d=event.data,tr=document.createElement('tr');tr.tabIndex=0;tr.dataset.eventId=event.event_id;tr.classList.toggle('selected',event.event_id===selectedId);
-      const values=[time(event),pretty(label(event)),d.destination||d.provider||d.tool||d.route||'',pretty(d.reason_code||d.status||''),Number.isFinite(d.duration_ms)?fmt(d.duration_ms):'',(event.decision_id||'').slice(0,8)];
-      values.forEach((value,i)=>{const td=document.createElement('td');if(i===1){const pill=document.createElement('span');pill.className='pill'+(d.route==='fast'?' fast':d.route==='slow'||label(event).startsWith('slow')?' slow':'');pill.textContent=value;td.append(pill);}else td.textContent=value;if(i===0||i===4||i===5)td.classList.add('mono');tr.append(td);});
+      const values=[time(event),pretty(label(event)),d.destination||d.provider||d.tool||d.route||'',pretty(d.reason_code||d.reason||d.agreement||d.action||d.status||''),Number.isFinite(d.duration_ms)?fmt(d.duration_ms):'',(event.decision_id||'').slice(0,8)];
+      values.forEach((value,i)=>{const td=document.createElement('td');if(i===1){const pill=document.createElement('span');pill.className='pill'+(d.route==='fast'?' fast':d.route==='slow'||label(event).startsWith('slow')?' slow':'');pill.textContent=native(event)||value;td.append(pill);}else td.textContent=value;if(i===0||i===4||i===5)td.classList.add('mono');tr.append(td);});
       const choose=()=>{selectedId=event.event_id;render();};tr.addEventListener('click',choose);tr.addEventListener('keydown',e=>{if(e.key==='Enter')choose();});tbody.append(tr);
     }
   }
@@ -123,7 +145,7 @@
       const rec=byId.get(e.decision_id)||{requested:null,scored:null,routed:null,shadow:null,role:null};
       const kind=label(e), d=e.data;
       if(kind==='requested') rec.requested=d;
-      else if(kind==='scored') rec.scored=d;
+      else if(kind==='scored'||kind==='shadow_proposed') rec.scored=d;
       else if(kind==='routed') rec.routed=d;
       else if(kind==='shadow_agreement') rec.shadow=d;
       else if(kind==='role_agreement') rec.role=d;
@@ -132,8 +154,7 @@
     return byId;
   }
   function rungBanner(data) {
-    const turnStart=data.findLast(e=>label(e)==='turn_start');
-    const d=turnStart?.data||{};
+    const d=configuration(data);
     put('rungMode',(d.mode||'--').toUpperCase());
     put('rungBackend',d.backend||'--');
     // Real field (turn_start.allow_external_state), not a backend-name guess.
@@ -196,13 +217,15 @@
   function render() {
     const all=filtered();pointer=Math.min(pointer,all.length-1);const data=visible();notice();counts(data);
     $('scrubber').max=Math.max(0,all.length-1);$('scrubber').value=Math.max(0,pointer);put('position',(pointer+1)+' / '+all.length);
-    const current=data.at(-1), selected=data.find(e=>e.event_id===selectedId)||current;
+    const current=data.findLast(meaningful)||data.at(-1), selected=data.find(e=>e.event_id===selectedId)||current;
     graph(selected);inspect(selected,data);timeline(data);
     const records=decisionRecords(data);
     rungBanner(data);changedCounters(records);reliabilityPlot(records);decisionList(records);
-    const fast=data.findLast(e=>label(e)==='scored'),slow=data.findLast(e=>label(e)==='slow_start');
-    put('jevModel',fast?(fast.data.synthetic?'Scripted demo, not Jev':(fast.data.model||'Jev').slice(0,29)):'Typed candidate selection');
-    put('slowModel',slow?(slow.data.model||slow.data.provider).slice(0,28):'Existing provider and model');
+    const fast=data.findLast(isScore),slow=data.findLast(e=>label(e)==='slow_start'||native(e)==='provider:request');
+    const cfg=configuration(data);
+    put('fastTitle',cfg.backend==='scripted-demo'||fast?.data.backend==='scripted-demo'?'Offline scorer':cfg.backend==='jev'?'Jev':cfg.backend==='ollama-token'||cfg.backend==='ollama'||fast?.data.backend==='ollama-token'?'Local model':'Decision scorer');
+    put('jevModel',fast?(fast.data.synthetic?'Scripted scores, not Jev':(fast.data.model||'Backend not recorded').slice(0,29)):'Typed candidate selection');
+    put('slowModel',slow?(slow.data.model||slow.data.provider||'Existing provider').slice(0,28):'Existing provider and model');
     document.body.classList.toggle('paused',!live&&!playing);
     $('liveBtn').disabled=source!=='live';
   }

@@ -118,13 +118,25 @@ def get_runtime(coordinator: Any, config: dict[str, Any], *, owner: bool = False
     recorder = JsonlRecorder(events_dir, session_id)
     emitter = Emitter(session_id, parent_session_id=parent, hooks=coordinator.hooks, recorder=recorder)
     backend_name = config.get("backend", "jev")
-    if backend_name not in {"jev", "unavailable", "deterministic"}:
+    if backend_name not in {"jev", "unavailable", "deterministic", "ollama"}:
         recorder.close()
         raise ValueError(
-            "Production backend must be jev, deterministic, or unavailable"
+            "Backend must be jev, deterministic, ollama, or unavailable"
         )
     if backend_name == "jev":
         backend = JevBackend(model=config.get("model"), timeout_ms=policy.timeout_ms)
+    elif backend_name == "ollama":
+        from .local_backend import OllamaBackend
+
+        try:
+            backend = OllamaBackend(
+                model=config.get("model", "qwen3:0.6b"),
+                url=config.get("ollama_url", "http://127.0.0.1:11434"),
+                timeout_ms=policy.timeout_ms,
+            )
+        except Exception:
+            recorder.close()
+            raise
     elif backend_name == "deterministic":
         # In-process, offline scorer (external=False, never gated by
         # allow_external_state): the "shadow, external=false" rung on the

@@ -237,6 +237,7 @@ class Decision:
     model: str = "unknown"
     input_tokens: int | None = None
     synthetic: bool = False
+    probability_kind: str = "backend_reported"
 
     def validate(self, choices: set[str]) -> None:
         if self.choice not in choices or set(self.probabilities) != choices:
