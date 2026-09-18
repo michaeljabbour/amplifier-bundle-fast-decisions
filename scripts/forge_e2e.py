@@ -292,6 +292,39 @@ def _source_observed(run):
     return None
 
 
+RECEIPT_EXTRACTOR = """
+import json, sys
+from pathlib import Path
+from amplifier_fast_decisions.operations import measure, read_receipts
+events_dir, sid, run = Path(sys.argv[1]), sys.argv[2], Path(sys.argv[3])
+measured = measure(events_dir, session_id=sid)
+rows, _ = read_receipts(events_dir)
+ids = {s['session_id'] for s in measured['sessions']}
+(run/'receipts.jsonl').write_text(''.join(json.dumps(e)+'\\n' for e in rows if e['session_id'] in ids))
+(run/'measurements.json').write_text(json.dumps(measured))
+"""
+
+
+def extract_receipts(source_root, events_dir, sid, run, python=None, timeout=120):
+    """Write ``run/receipts.jsonl`` + ``run/measurements.json`` using the SIDE's source and return the measurements.
+
+    Runs in a subprocess with ``PYTHONPATH=<source_root>/src`` so the side under test decides which event
+    names and fields survive (its own allowlist), and so the calling process keeps its imported modules.
+    Returns None (and writes ``receipts-error.txt``) when extraction fails; the run is still reported.
+    """
+    env = dict(os.environ, PYTHONPATH=str(Path(source_root)/'src'))
+    try:
+        proc = subprocess.run([python or sys.executable, '-c', RECEIPT_EXTRACTOR, str(events_dir), sid, str(run)],
+                              env=env, capture_output=True, text=True, timeout=timeout)
+    except subprocess.TimeoutExpired:
+        (run/'receipts-error.txt').write_text('receipt extraction timed out\n')
+        return None
+    if proc.returncode != 0 or not (run/'measurements.json').exists():
+        (run/'receipts-error.txt').write_text(proc.stderr[-4000:])
+        return None
+    return json.loads((run/'measurements.json').read_text())
+
+
 def _mode_observed(run):
     """Distinct decision modes reported by the run's own receipts (turn_start/requested/routed/source events)."""
     receipts = run/'receipts.jsonl'
@@ -345,15 +378,10 @@ def worker(root,name):
     effort=effort_summary(found[0]) if len(found)==1 else []
     # Extract receipts with the side's own source: the installed package's allowlist would silently drop
     # event names/fields that only the side under test emits (observed in HC00: no source event, no observation stats).
-    sys.path.insert(0, str(source_root/'src'))
-    for _m in [m for m in list(sys.modules) if m == 'amplifier_fast_decisions' or m.startswith('amplifier_fast_decisions.')]:
-        del sys.modules[_m]
-    from amplifier_fast_decisions.operations import measure,read_receipts
+    # Done in a subprocess with PYTHONPATH=<side>/src so this process never swaps already-imported modules
+    # (purging sys.modules here broke unrelated tests that patch amplifier_fast_decisions.operations).
     events_dir = Path(manifest.get('events_dir', str(EVENTS)))
-    measured=measure(events_dir,session_id=sid) if sid else None
-    if sid:
-        rows,_=read_receipts(events_dir);ids={s['session_id'] for s in measured['sessions']}
-        (run/'receipts.jsonl').write_text(''.join(json.dumps(e)+'\n' for e in rows if e['session_id'] in ids))
+    measured = extract_receipts(source_root, events_dir, sid, run) if sid else None
     # Execute the independent evaluator in its own process with a deadline.
     try:
         test=subprocess.run([sys.executable,str(Path(__file__).resolve()),'evaluate',str(root),name],capture_output=True,text=True,timeout=45)
