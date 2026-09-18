@@ -36,6 +36,25 @@ __amplifier_module_type__ = "hook"
 _HEARTBEAT_INTERVAL_SECONDS = 15
 
 
+def workspace_name(config: dict | None = None) -> str | None:
+    """Basename of the session's working directory, for the viewer's session list.
+
+    Never the full path: the parent directories are not recorded anywhere.
+    ``workspace_name`` in the hook config overrides it; a missing or
+    unreadable cwd yields ``None`` rather than raising into mount.
+    """
+    configured = (config or {}).get("workspace_name")
+    if isinstance(configured, str) and configured.strip():
+        # Normalize both Windows and POSIX separators even on another OS.
+        name = configured.strip().replace("\\", "/").rstrip("/").rsplit("/", 1)[-1]
+        return name[:120] or None
+    try:
+        name = Path.cwd().name
+    except OSError:
+        return None
+    return name[:120] or None
+
+
 def _continue_result() -> Any:
     """Duck-typed 'continue' result: the real amplifier_core HookResult when
     importable (real kernel), a plain stand-in otherwise (offline unit
@@ -239,6 +258,7 @@ async def mount(coordinator, config: dict):
         "policy_version": runtime.service.policy.version,
         "event_source": "native-hook-bridge",
         "session_label": config.get("session_label") if isinstance(config.get("session_label"), str) else None,
+        "workspace_name": workspace_name(config),
     })
 
     async def heartbeat():
