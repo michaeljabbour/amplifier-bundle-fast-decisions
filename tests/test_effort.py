@@ -104,14 +104,29 @@ class ClassifyPhaseTests(unittest.TestCase):
 
     def test_messages_before_last_user_message_ignored(self):
         # An old turn's write-like tool call must not leak into this turn's
-        # classification once a new user message starts a fresh turn.
+        # classification once a new user message starts a fresh turn. In the
+        # installed loop a turn ends with an assistant message WITHOUT tool
+        # calls; the next user message opens the new turn.
         messages = [
             user("Old task"),
             assistant(tool_calls=[call("edit_file")]),
             tool_result(),
+            assistant(),
             user("New task"),
         ]
         self.assertEqual(effort.classify_phase(request(messages)), effort.PHASE_ORIENT)
+
+    def test_user_message_right_after_a_tool_result_is_a_continuation(self):
+        # Hook reminders and steering arrive as user messages mid-turn; they
+        # must not reset the turn (otherwise every request looks like the
+        # first one, as observed live in campaign run HC03).
+        messages = [
+            user("Task"),
+            assistant(tool_calls=[call("edit_file")]),
+            tool_result(),
+            user("<system-reminder/>"),
+        ]
+        self.assertEqual(effort.classify_phase(request(messages)), effort.PHASE_IMPLEMENT)
 
     def test_object_shaped_messages_and_tool_calls(self):
         messages = [
@@ -384,3 +399,49 @@ class RoutedProviderIntegrationTests(unittest.IsolatedAsyncioTestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+
+class LiveLoopShapeTests(unittest.TestCase):
+    """Regression: the installed loop's real message shapes (observed in campaign run HC03)."""
+
+    @staticmethod
+    def _user(text="hi"):
+        return {"role": "user", "content": [{"type": "text", "text": text}]}
+
+    @staticmethod
+    def _assistant(*tool_names, text=None):
+        blocks = [{"type": "thinking", "thinking": "..."}]
+        if text:
+            blocks.append({"type": "text", "text": text})
+        blocks += [{"type": "tool_call", "id": f"t{i}", "name": n, "input": {}} for i, n in enumerate(tool_names)]
+        return {"role": "assistant", "content": blocks}
+
+    @staticmethod
+    def _tool(i=0):
+        return {"role": "tool", "tool_call_id": f"t{i}", "content": [{"type": "tool_result", "tool_call_id": f"t{i}", "content": "..."}]}
+
+    def test_hook_reminder_user_messages_do_not_reset_the_turn(self):
+        # U(reminder) U(prompt) A(read x3) T T T U(reminder) A(read) T  -> explore, not orient
+        messages = [self._user("<system-reminder/>"), self._user("Read README.md first"),
+                    self._assistant("read_file", "read_file", "read_file"), self._tool(0), self._tool(1), self._tool(2),
+                    self._user("<system-reminder source=hooks-python-check/>"),
+                    self._assistant("read_file"), self._tool(0)]
+        self.assertEqual(effort.classify_phase(NS(messages=messages)), effort.PHASE_EXPLORE)
+
+    def test_tool_result_carrier_user_messages_do_not_reset_the_turn(self):
+        # Anthropic-style: tool results carried in user-role messages
+        carrier = {"role": "user", "content": [{"type": "tool_result", "tool_call_id": "t0", "content": "..."}]}
+        messages = [self._user("task"), self._assistant("read_file"), carrier, self._user("<reminder/>"), self._assistant("glob"), carrier]
+        self.assertEqual(effort.classify_phase(NS(messages=messages)), effort.PHASE_EXPLORE)
+
+    def test_tool_call_content_blocks_mark_implement(self):
+        messages = [self._user("task"), self._assistant("read_file"), self._tool(0), self._assistant("edit_file"), self._tool(0)]
+        self.assertEqual(effort.classify_phase(NS(messages=messages)), effort.PHASE_IMPLEMENT)
+
+    def test_new_prompt_after_a_finished_turn_is_orient(self):
+        messages = [self._user("task"), self._assistant("edit_file"), self._tool(0), self._assistant(text="done"), self._user("now do X")]
+        self.assertEqual(effort.classify_phase(NS(messages=messages)), effort.PHASE_ORIENT)
+
+    def test_first_request_of_turn_is_orient(self):
+        self.assertEqual(effort.classify_phase(NS(messages=[self._user("<reminder/>"), self._user("task")])), effort.PHASE_ORIENT)

@@ -45,9 +45,24 @@ REASON_ESCALATED_MAX_EXPLORE = "escalated_max_explore"
 REASON_ESCALATED_AFTER_ERROR = "escalated_after_error"
 
 
+def _content_blocks(message: Any) -> list[Any]:
+    content = field_value(message, "content")
+    return list(content) if isinstance(content, list) else []
+
+
 def _tool_call_names(message: Any) -> list[str]:
-    """Names of the tool calls attached to one assistant message, else []."""
-    calls = field_value(message, "tool_calls")
+    """Names of the tool calls attached to one assistant message, else [].
+
+    Reads both a ``tool_calls`` field and ``tool_call`` content blocks
+    (``amplifier_core.message_models.ToolCallBlock``), which is how the
+    installed loop represents calls at the provider seam.
+    """
+    calls = list(field_value(message, "tool_calls") or [])
+    calls += [
+        block
+        for block in _content_blocks(message)
+        if field_value(block, "type") == "tool_call"
+    ]
     if not calls:
         return []
     names: list[str] = []
@@ -63,6 +78,46 @@ def _tool_call_names(message: Any) -> list[str]:
 
 def _is_write_like(tool_name: str) -> bool:
     return tool_name not in READ_LIKE_TOOLS
+
+
+def _carries_tool_results(message: Any) -> bool:
+    blocks = _content_blocks(message)
+    return bool(blocks) and all(
+        field_value(block, "type") == "tool_result" for block in blocks
+    )
+
+
+def _turn_boundary(messages: list[Any]) -> int | None:
+    """Index of the user message that starts the CURRENT turn, or None.
+
+    The installed loop injects hook reminders and steering text as extra
+    ``user`` messages in the middle of a turn (observed live: roles
+    ``U U A T T U A T ...``), and some providers carry tool results in
+    user-role messages. A user message therefore starts a new turn only
+    when it follows nothing, another turn-opening/system-style message, or
+    an assistant message that finished WITHOUT tool calls. A user message
+    that follows a ``tool`` message, a tool-result carrier, an assistant
+    message with tool calls, or another mid-turn user message is a
+    continuation of the same turn.
+    """
+    boundary: int | None = None
+    continuation = False
+    for i, message in enumerate(messages):
+        role = field_value(message, "role")
+        if role == "assistant":
+            continuation = bool(_tool_call_names(message))
+            continue
+        if role in ("tool", "function") or (
+            role == "user" and _carries_tool_results(message)
+        ):
+            continuation = True
+            continue
+        if role == "user":
+            if not continuation:
+                boundary = i
+            continue
+        # system/developer messages neither open nor continue a turn
+    return boundary
 
 
 def classify_phase(request: Any) -> str:
@@ -84,11 +139,8 @@ def classify_phase(request: Any) -> str:
       ``bash`` -- which are write-like and therefore fold into
       ``implement``, matching HC03's default-effort treatment for verify).
     """
-    messages = field_value(request, "messages") or []
-    last_user_index: int | None = None
-    for i, message in enumerate(messages):
-        if field_value(message, "role") == "user":
-            last_user_index = i
+    messages = list(field_value(request, "messages") or [])
+    last_user_index = _turn_boundary(messages)
     turn_messages = (
         messages[last_user_index + 1 :]
         if last_user_index is not None
