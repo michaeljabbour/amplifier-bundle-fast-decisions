@@ -82,3 +82,4 @@ jobs:
       - run: amplifier-fast-decisions manifest
       - run: amplifier-fast-decisions describe
       - run: python -m unittest discover -s tests -p 'test_smart_tool.py' -v
+      - run: python -m unittest discover -s tests -p 'test_operations.py' -v

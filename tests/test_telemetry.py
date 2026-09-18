@@ -166,6 +166,15 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(e.exception.code,401)
     def test_valid_token(self):
         with self.fetch('/api/events',{'Authorization':'Bearer test-token'}) as response:self.assertEqual(response.status,200)
+    def test_measure_requires_auth_and_reports_empty_coverage(self):
+        with self.assertRaises(urllib.error.HTTPError) as error:
+            self.fetch('/api/measure')
+        self.assertEqual(error.exception.code, 401)
+        with self.fetch('/api/measure?session=missing', {'Authorization':'Bearer test-token'}) as response:
+            report = json.load(response)
+        self.assertEqual(report['scope']['sessions'], 0)
+        self.assertFalse(report['totals']['instrumented_coverage_complete'])
+        self.assertIsNone(report['totals']['net_cost_saved_usd'])
     def test_origin_blocked(self):
         with self.assertRaises(urllib.error.HTTPError) as e:self.fetch('/api/events',{'Authorization':'Bearer test-token','Origin':'https://evil.example'})
         self.assertEqual(e.exception.code,403)

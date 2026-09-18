@@ -6,6 +6,7 @@ no real kernel, no network.
 """
 from __future__ import annotations
 import asyncio
+from dataclasses import replace
 import tempfile
 import time
 import unittest
@@ -35,6 +36,15 @@ def make_job(decision_id="d1", candidates=()):
 
 
 class ShadowWorkerTests(unittest.IsolatedAsyncioTestCase):
+    async def test_off_mode_never_calls_shadow_backend(self):
+        events = []
+        service, coordinator = make_service(events)
+        service.policy = replace(service.policy, mode='off')
+        worker = ShadowWorker(service)
+        await worker._score(make_job(candidates=(Candidate('read', 'Read', 'demo_inspect', {}),)))
+        self.assertEqual(service.backend.calls, 0)
+        self.assertEqual(events, [])
+
     async def test_queue_overflow_is_counted_not_blocking(self):
         events = []
         service, _ = make_service(events)

@@ -27,6 +27,9 @@ CAPABILITIES = {
     'manifest': ('deterministic', 'Read the installed tool manifest as JSON.'),
     'describe': ('deterministic', 'Describe the input schema, result and calling contract.'),
     'install-skill': ('deterministic', 'Install a minimal Agent Skill for selected local harnesses.'),
+    'diagnose': ('deterministic', 'Inspect installation, session integration, local model and viewer health.'),
+    'measure': ('deterministic', 'Count observed provider and tool executions across a session tree.'),
+    'compare': ('deterministic', 'Compare matched baseline/enabled runs with explicit outcome checks.'),
     'select': ('model-backed', 'Suggest one caller-supplied read/list target, or abstain.'),
 }
 
@@ -167,6 +170,19 @@ def skill(capability: str | None = None) -> str:
         lines += [CAPABILITIES[capability][1], 'Deterministic; no arguments or provider required.',
                   f'Example: `{info["name"]} {capability}`.',
                   'Result: one JSON object on stdout. Exit 0 on success; invalid flags exit 2.']
+    elif capability in {'diagnose', 'measure', 'compare'}:
+        lines += [
+            CAPABILITIES[capability][1],
+            'No inference or configuration changes. Results are JSON on stdout; errors on stderr.',
+            'diagnose/measure: --events DIRECTORY_OR_JSONL and optional --session PARENT_ID (includes children).',
+            'diagnose: optional --state-file FILE, --ollama-url LOOPBACK_ORIGIN, --model NAME, --offline.',
+            'Without --offline, diagnose probes local Ollama and authenticated viewer health; no model call.',
+            'compare: --input FILE in paired-runs-v1 format. Relative receipt paths resolve beside FILE.',
+            'See docs/OPERATIONS.md for the schema, commands and evidence limits.',
+            'Exit 0 means report produced; inspect statuses and eligibility, not only the exit code.',
+            'Invalid input exits 2. Missing telemetry is unknown, not proof of zero activity.',
+            'Library equivalents: operations.diagnose(), operations.measure(), operations.compare(payload, base_dir=...).',
+        ]
     elif capability == 'install-skill':
         lines += [
             'Deterministic installation of a minimal discovery skill; no model is used.',

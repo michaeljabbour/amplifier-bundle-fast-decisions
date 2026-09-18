@@ -2,7 +2,11 @@
 
 Updated 2026-09-18. Ordered implementation plan, grounded in the
 [current source review](design/smart-decision-review-2026-09-18.md).
-Only B01 is already implemented locally; the remaining rows describe planned work.
+B01 was merged in PR #18. B02/B03 diagnostics and accounting, and B04 comparison
+tooling are implemented in the operational-measurement change. B04's broader
+held-out quality and pinned-provider evaluation gate remains open. The ledger UI
+is tracked separately in PR #19. Release/install receipts are reported separately
+from local implementation.
 
 Product direction: a portable decision library with its own inference capability,
 a thin CLI and optional adapters. Amplifier is the first deep integration. The
@@ -14,7 +18,7 @@ including transport and wrapper overhead.
 
 | ID | Work | Completion criteria | Dependency |
 |---|---|---|---|
-| B01 | Release the local latency and evidence fixes. Commit the owned changes, open a PR, run CI, merge, and update the installed Smart Tool. Include option fingerprints, explicit confidence semantics and robustness fixtures. | Reviewed changes exclude unrelated work; CI passes; the installed revision is verified outside the checkout. Current evidence: 251 local tests and 16 conformance checks passed. | Already built locally; release pending |
+| B01 | Release the local latency and evidence fixes. Commit the owned changes, open a PR, run CI, merge, and update the installed Smart Tool. Include option fingerprints, explicit confidence semantics and robustness fixtures. | Reviewed changes exclude unrelated work; CI passes; the installed revision is verified outside the checkout. Current evidence: 251 local tests and 16 conformance checks passed. | Merged PR #18; installed revision verified at release |
 | B02 | Make operational status obvious. Add a diagnostic that follows installation → host composition → effective backend/mode → eligible decisions → telemetry delivery → viewer connection. Provide an explicit local-model setup command/profile and actionable remediation. | A fresh Amplifier parent/child session is visible. The UI distinguishes absent integration, scripted shadow, real-model shadow, active routing, idle, disconnected and failed inference. Existing global configuration is preserved. | B01 |
 | B03 | Instrument actual efficiency and execution outcomes. Add correlation for provider calls, tool calls, retries, token usage, decision overhead, fallback and completion across a session tree. | A bypass requires host evidence; tool suppression requires its own receipt. Unknown costs remain unknown. Parent totals include children once, with drill-down. No advice is counted as execution or savings. | B02 |
 | B04 | Build matched baseline-versus-enabled task evaluations. Use isolated equivalent workspaces, checked task outcomes, fixed model/backend revisions and recorded timing. | Report complete-task time, actual call/token counts, attributable costs where available, failure/retry rates and outcome quality. Hold out evaluation tasks from tuning. Establish outcome parity for each supported workflow before expanding active use. | B03 |

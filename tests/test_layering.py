@@ -26,6 +26,7 @@ ROOT = Path(__file__).resolve().parents[1] / "src" / "amplifier_fast_decisions"
 # itself, "bench.metrics" etc. are its submodules.
 AGNOSTIC = {
     "contracts",
+    "operations",
     "state",
     "candidates",
     "questions",
@@ -170,6 +171,7 @@ class LayeringTests(unittest.TestCase):
         # doc's "Smart-tool packaging target" boundary list.
         expected = {
             "contracts",
+    "operations",
             "state",
             "candidates",
             "questions",

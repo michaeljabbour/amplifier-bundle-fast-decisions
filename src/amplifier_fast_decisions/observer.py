@@ -123,6 +123,8 @@ class ShadowScorer:
         ``shadow_snapshot_budget_ms`` as before; only backend scoring
         (``ShadowWorker._score``) remains deferred to the background task.
         """
+        if self._runtime.service.policy.mode == "off":
+            return
         job = await self._snapshot()
         if job is None:
             return
@@ -319,6 +321,8 @@ async def mount(coordinator, config: dict):
     router = RoleRouter(runtime, coordinator, config)
 
     async def on_role_pre(event: str, data: dict):
+        if runtime.service.policy.mode == "off":
+            return _continue_result()
         tool = data.get("tool_name") or data.get("tool")
         if tool in router.tools:
             try:

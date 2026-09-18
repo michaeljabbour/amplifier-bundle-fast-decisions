@@ -99,6 +99,7 @@ docs/UPSTREAM_CONTRACT.md.
                 await service.emit("routed", {"mode": service.policy.mode,
                     "backend": service.backend.name, "policy_version": service.policy.version,
                     "route": "fast", "destination": candidate.tool,
+                    "tool_call_id": tool_call_id,
                     "selected_candidate": candidate.id, "reason_code": "prepared_action_selected",
                     "status": "submitted_to_upstream", "transport_measured": "provider-complete"})
                 turn.tool_decisions[tool_call_id] = {
@@ -111,7 +112,9 @@ docs/UPSTREAM_CONTRACT.md.
         service.slow_total += 1
         model = field_value(request, "model") or "provider-default"
         decision_id = service.last_decision_id
+        provider_call_id = "provider_" + uuid4().hex
         await service.emit("slow_start", {"provider": self._provider_key, "model": model,
+            "provider_call_id": provider_call_id,
             "route": "slow", "destination": self._provider_key, "status": "running",
             "transport_measured": "provider-complete"}, decision_id)
         start = time.perf_counter()
@@ -120,16 +123,19 @@ docs/UPSTREAM_CONTRACT.md.
             response = await self._provider.complete(request, **kwargs)
         except asyncio.CancelledError:
             await service.emit("slow_end", {"provider": self._provider_key, "model": model,
+                "provider_call_id": provider_call_id,
                 "status": "cancelled", "duration_ms": (time.perf_counter() - start) * 1000,
                 "transport_measured": "provider-complete"}, decision_id)
             raise
         except Exception as exc:
             await service.emit("slow_end", {"provider": self._provider_key, "model": model,
+                "provider_call_id": provider_call_id,
                 "status": "error", "exception_type": type(exc).__name__,
                 "duration_ms": (time.perf_counter() - start) * 1000,
                 "transport_measured": "provider-complete"}, decision_id)
             raise
         await service.emit("slow_end", {"provider": self._provider_key, "model": model,
+            "provider_call_id": provider_call_id,
             "status": "ok", "duration_ms": (time.perf_counter() - start) * 1000,
             **usage_fields(response), "latency_kind": "provider_complete_wall_time",
             "transport_measured": "provider-complete"}, decision_id)
@@ -150,14 +156,22 @@ docs/UPSTREAM_CONTRACT.md.
             "reason_code": "fast_path_unavailable_on_transport",
             "transport_measured": "provider-stream"})
         start = time.perf_counter()
+        provider_call_id = "provider_" + uuid4().hex
         await service.emit("slow_start", {"provider": self._provider_key,
+            "provider_call_id": provider_call_id,
             "route": "slow", "destination": self._provider_key, "status": "running",
             "transport_measured": "provider-stream"})
+        status = "error"
         try:
             async for chunk in self._provider.stream(request, **kwargs):
                 yield chunk
+            status = "ok"
+        except asyncio.CancelledError:
+            status = "cancelled"
+            raise
         finally:
             await service.emit("slow_end", {"provider": self._provider_key,
+                "provider_call_id": provider_call_id, "status": status,
                 "duration_ms": (time.perf_counter() - start) * 1000,
                 "transport_measured": "provider-stream"})
 
@@ -243,13 +257,19 @@ class HybridOrchestrator:
             wrapped_providers = {key: RoutedProvider(provider, self.runtime, tools,
                 self.response_factory, key) for key, provider in providers.items()}
             kwargs.setdefault("coordinator", self.coordinator)
+            started = time.perf_counter()
+            status = "error"
             try:
-                return await self.upstream.execute(prompt, context, wrapped_providers, wrapped_tools, hooks, **kwargs)
+                response = await self.upstream.execute(prompt, context, wrapped_providers, wrapped_tools, hooks, **kwargs)
+                status = "ok"
+                return response
             except asyncio.CancelledError:
+                status = "cancelled"
                 await service.emit("cancelled", {"reason_code": "turn_cancelled"})
                 raise
             finally:
                 await service.emit("turn_end", {"fast_total": service.turn.fast_total,
+                    "status": status, "duration_ms": (time.perf_counter() - started) * 1000,
                     "slow_total": service.slow_total,
                     **(self.runtime.recorder.health if self.runtime.recorder else {})})
                 service.turn = None

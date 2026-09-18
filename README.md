@@ -201,6 +201,18 @@ Only user-explicit, eligible text-file paths become automatic built-in candidate
 | Replay | JSONL import/export and a self-contained HTML export |
 | Tests | Offline unit/contract-double tests, optional real-envelope checks, explicit live SDK probe |
 
+## Operational diagnostics and measured comparisons
+
+```bash
+amplifier-fast-decisions diagnose
+amplifier-fast-decisions measure --session PARENT_SESSION_ID
+amplifier-fast-decisions compare --input runs.json
+```
+
+See [OPERATIONS.md](docs/OPERATIONS.md) for setup remediation, parent/child
+accounting, exact receipt semantics and the opt-in live comparison runner.
+These reports distinguish observed activity, actual executions and checked outcomes.
+
 ## Health checks and tests
 
 ```bash

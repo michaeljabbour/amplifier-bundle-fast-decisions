@@ -160,6 +160,14 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(200, self.server.index.get(after, limit))
             if parsed.path == "/api/health":
                 return self._json(200, {"read_only": True, "transport": "poll-500ms", "version": "0.1.0"})
+            if parsed.path == "/api/measure":
+                from .operations import summarize
+                query = parse_qs(parsed.query)
+                snapshot = self.server.index.get(limit=self.server.index.capacity)
+                report = summarize(snapshot["events"], session_id=query.get("session", [None])[0])
+                report["source"] = {"retained": snapshot["retained"], "invalid_records": snapshot["invalid_lines"],
+                                    "truncated": snapshot["first_cursor"] > 1}
+                return self._json(200, report)
             return self._json(404, {"error": "Not found"})
         name = {"/": "index.html", "/index.html": "index.html", "/app.js": "app.js", "/style.css": "style.css"}.get(parsed.path)
         if not name:

@@ -8,6 +8,7 @@ from pathlib import Path
 import sys
 
 from . import smart_tool as lib
+from . import operations
 
 
 def main(argv=None) -> int:
@@ -21,6 +22,16 @@ def main(argv=None) -> int:
         command.add_argument('-h', action='help', help='Show short usage')
         if name == 'install-skill':
             command.add_argument('--host', required=True, choices=[*lib.SKILL_HOSTS, 'all'])
+        if name in {'diagnose', 'measure'}:
+            command.add_argument('--events', default=str(operations.DEFAULT_EVENTS))
+            command.add_argument('--session')
+        if name == 'diagnose':
+            command.add_argument('--state-file', default=str(operations.DEFAULT_STATE))
+            command.add_argument('--ollama-url', default='http://127.0.0.1:11434')
+            command.add_argument('--model', default='qwen3:0.6b')
+            command.add_argument('--offline', action='store_true')
+        if name == 'compare':
+            command.add_argument('--input', required=True, metavar='FILE')
         if name == 'select':
             command.add_argument('--input', default='-', metavar='FILE')
             command.add_argument('--model', default='qwen3:0.6b')
@@ -36,6 +47,23 @@ def main(argv=None) -> int:
         print(json.dumps(lib.manifest(), indent=2)); return 0
     if args.command == 'describe':
         print(json.dumps(lib.describe(), indent=2)); return 0
+    if args.command in {'diagnose', 'measure', 'compare'}:
+        try:
+            if args.command == 'diagnose':
+                result = operations.diagnose(events_dir=args.events, session_id=args.session,
+                    state_file=args.state_file, ollama_url=args.ollama_url, model=args.model, probe=not args.offline)
+            elif args.command == 'measure':
+                result = operations.measure(args.events, session_id=args.session)
+            else:
+                path = Path(args.input).expanduser()
+                if path.stat().st_size > 2_000_000:
+                    raise ValueError('Comparison input exceeds 2 MB')
+                result = operations.compare(json.loads(path.read_text(encoding='utf-8')), base_dir=path.resolve().parent)
+            print(json.dumps(result, indent=2, allow_nan=False))
+            return 0
+        except (OSError, ValueError, TypeError, KeyError) as exc:
+            print(f'Unable to produce report ({type(exc).__name__}); check input and capability --help.', file=sys.stderr)
+            return 2
     if args.command == 'install-skill':
         try:
             print(json.dumps(lib.install_skill(args.host), indent=2))
