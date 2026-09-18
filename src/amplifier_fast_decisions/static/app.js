@@ -13,11 +13,11 @@
     return new Set(events.filter(e => e.decision_id && (e.synthetic || e.data.synthetic || (isScore(e) && e.data.backend === 'scripted-demo'))).map(decisionKey));
   }
   const synthetic = (e, keys) => !!(e.synthetic || e.data.synthetic || (e.decision_id && !['health','observatory'].includes(kind(e)) && keys.has(decisionKey(e))));
-  const issue = e => ['provider:error','provider:retry'].includes(native(e)) || ['error','cancelled'].includes(e.data.status) || kind(e) === 'fallback';
-  const useful = e => kind(e) !== 'health' || native(e) || e.data.reason_code || ['configuration','session_closed'].includes(e.data.phase);
+  const issue = e => (e.data.phase==='advisory_result'&&e.data.success===false) || ['provider:error','provider:retry'].includes(native(e)) || ['error','cancelled'].includes(e.data.status) || kind(e) === 'fallback';
+  const useful = e => kind(e) !== 'health' || native(e) || e.data.reason_code || ['configuration','session_closed','advisory_result'].includes(e.data.phase);
   const backendName = b => ({'scripted-demo':'Scripted scorer',deterministic:'Scripted scorer','ollama-token':'Local model',ollama:'Local model',jev:'Jev',unavailable:'No scorer'}[b] || b || 'Backend not recorded');
   function configFor(events, id) {
-    return events.filter(e => e.session_id === id && (e.data.phase === 'configuration' || kind(e) === 'turn_start')).reduce((config,e)=>({...config,...e.data}),{});
+    return events.filter(e => e.session_id === id && (e.data.phase === 'configuration' || kind(e) === 'turn_start' || e.data.mode === 'advisory')).reduce((config,e)=>({...config,...e.data}),{});
   }
   function sessionsFor(events, now) {
     const map = new Map();
@@ -27,14 +27,14 @@
       s.events.push(e);
       if (e.parent_session_id) s.parent = e.parent_session_id;
       if (stamp(e) >= stamp(s.latest)) s.latest = e;
-      if (e.data.phase === 'configuration' || kind(e) === 'turn_start') s.config = {...s.config,...e.data};
+      if (e.data.phase === 'configuration' || kind(e) === 'turn_start' || e.data.mode === 'advisory') s.config = {...s.config,...e.data};
     }
     for (const s of map.values()) {
       const life = s.events.findLast(e => ['execution:start','execution:end','session:end','provider:error','provider:retry'].includes(native(e)) || ['turn_start','turn_end'].includes(kind(e)) || e.data.phase === 'session_closed');
       const beat = s.events.findLast(e => ['session_heartbeat','configuration'].includes(e.data.phase));
       const closed = life && (life.data.phase === 'session_closed' || native(life) === 'session:end');
       s.reporting = !closed && !!beat && now - stamp(beat) < 45000;
-      s.state = closed ? 'Session closed' : !s.reporting ? 'No recent heartbeat' : !life ? 'Connected, idle' : issue(life) ? 'Provider issue reported' : ['execution:end'].includes(native(life)) || kind(life)==='turn_end' ? 'Connected, idle' : 'Working';
+      s.state = s.config.mode === 'advisory' ? 'Advisory invocation recorded' : closed ? 'Session closed' : !s.reporting ? 'No recent heartbeat' : !life ? 'Connected, idle' : issue(life) ? 'Provider issue reported' : ['execution:end'].includes(native(life)) || kind(life)==='turn_end' ? 'Connected, idle' : 'Working';
     }
     return [...map.values()].sort((a,b) => stamp(b.latest)-stamp(a.latest));
   }
@@ -46,6 +46,9 @@
     const durations=scores.map(e=>e.data.duration_ms).filter(Number.isFinite).sort((a,b)=>a-b);
     return {scores:scores.length,fast:fast.size,fastExecuted:executions.filter(e=>fast.has(decisionKey(e))).length,
       tools:nativePosts.length+executions.filter(e=>!postSessions.has(e.session_id)).length,
+      bypassed:new Set(events.filter(e=>kind(e)==='routed'&&e.data.route==='fast'&&e.data.status==='submitted_to_upstream').map(decisionKey)).size,
+      comparisons:events.filter(e=>kind(e)==='shadow_agreement'&&['match','mismatch'].includes(e.data.agreement)),
+      failedFast:events.filter(e=>kind(e)==='tool_end'&&fast.has(decisionKey(e))&&(e.data.status==='error'||e.data.success===false)).length,
       issues:events.filter(issue).length,p95:durations.length?durations[Math.ceil(durations.length*.95)-1]:NaN};
   }
   function decisionPath(events, session, selected) {
@@ -66,6 +69,8 @@
     if(d.phase==='session_closed'){title='Telemetry session closed';detail='The bundle observer was unmounted.';}
     if(k==='requested'){title='Decision requested';detail=(d.candidate_count??'?')+' prepared candidates';source='Decision service';tone='decision';}
     if(isScore(e)){title=k==='shadow_proposed'?'Shadow proposal scored':'Decision scored';detail=d.model||backendName(d.backend);source=simulated?'Scripted score': 'Model score';tone='decision';}
+    if(d.mode==='advisory'&&isScore(e)){title='Advisory decision scored';source='Portable Smart Tool';}
+    if(d.phase==='advisory_result'){title='Advisory result returned';detail='Caller owns execution and policy; no bypass claimed.';source='Portable Smart Tool';}
     if(k==='routed'){title=d.route==='fast'?'Fast action submitted':'Reasoning provider selected';detail=pretty(d.reason_code);source='Routing decision';tone='decision';}
     if(k==='tool_start'){title='Tool execution started';detail=d.tool||'Tool not recorded';source='Measured execution';}
     if(k==='tool_end'){title=d.success===false||d.status==='error'?'Tool execution failed':'Tool execution '+(d.status==='ok'?'completed':(d.status||'ended'));detail=d.tool||'Tool not recorded';source='Measured execution';}
@@ -86,14 +91,14 @@
   if(typeof document==='undefined')return;
   const $=id=>document.getElementById(id), put=(id,text)=>{$(id).textContent=text;};
   const make=(tag,cls,text)=>{const node=document.createElement(tag);if(cls)node.className=cls;if(text!==undefined)node.textContent=text;return node;};
-  let events=[],seen=new Set(),cursor=0,epoch=null,session='',selected=null,category='activity',following=true,source='live',lastPoll=0,connectionError='',retained=0,invalidLines=0,windowGap=false,hasMore=false;
-  let frozenIds=null,expanded=new Set(),token='',pollTimer=null,pollGeneration=0;
+  let events=[],seen=new Set(),cursor=0,epoch=null,session='',selected=null,category='live',following=true,source='live',lastPoll=0,connectionError='',retained=0,invalidLines=0,windowGap=false,hasMore=false;
+  let frozenIds=null,expanded=new Set(),token='',pollTimer=null,pollGeneration=0,arrivals=new Set(),renderedAt=0;
   const tokenKey='afast-token:'+location.host;
   try {token=new URLSearchParams(location.hash.slice(1)).get('token')||sessionStorage.getItem(tokenKey)||'';if(token)sessionStorage.setItem(tokenKey,token);}catch(_){}
   if(location.hash.startsWith('#token='))history.replaceState(null,'',location.pathname+location.search);
   const age=t=>{const n=Math.max(0,Math.floor((Date.now()-t)/1000));return n<5?'just now':n<60?n+'s ago':n<3600?Math.floor(n/60)+'m ago':n<86400?Math.floor(n/3600)+'h ago':Math.floor(n/86400)+'d ago';};
   const clock=e=>new Date(e.timestamp).toLocaleTimeString([],{hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'});
-  function ingest(batch){for(const e of batch)if(valid(e)&&!seen.has(e.event_id)){seen.add(e.event_id);events.push(e);}events.sort((a,b)=>stamp(a)-stamp(b)||(a.session_id===b.session_id?(a.seq||0)-(b.seq||0):0));if(events.length>20000){events=events.slice(-20000);seen=new Set(events.map(e=>e.event_id));}render();}
+  function ingest(batch,force=false){arrivals=new Set(source==='live'&&events.length?batch.filter(e=>!seen.has(e.event_id)).map(e=>e.event_id):[]);for(const e of batch)if(valid(e)&&!seen.has(e.event_id)){seen.add(e.event_id);events.push(e);}events.sort((a,b)=>stamp(a)-stamp(b)||(a.session_id===b.session_id?(a.seq||0)-(b.seq||0):0));if(events.length>20000){events=events.slice(-20000);seen=new Set(events.map(e=>e.event_id));}if(force||batch.length||source!=='live'||Date.now()-renderedAt>5000)render();arrivals.clear();}
   function currentWindow(){const limit=$('timeWindow').value;return events.filter(e=>(limit==='all'||Date.now()-stamp(e)<=Number(limit))&&(!frozenIds||frozenIds.has(e.event_id)));}
   function scopeData(base){const children=$('includeChildren').checked;const parents=new Map(events.filter(e=>e.parent_session_id).map(e=>[e.session_id,e.parent_session_id]));const descendant=id=>{const visited=new Set();while(parents.has(id)&&!visited.has(id)){visited.add(id);id=parents.get(id);if(id===session)return true;}return false;};return base.filter(e=>session?(e.session_id===session||(children&&descendant(e.session_id))):(children||!parents.has(e.session_id)));}
   function selectSession(id){session=id;selected=null;render();}
@@ -121,13 +126,51 @@
     const score=related.findLast(isScore), request=related.find(x=>kind(x)==='requested');
     const facts=[['Session',e.session_id],...(e.parent_session_id?[['Parent session',e.parent_session_id]]:[]),['Recorded',new Date(e.timestamp).toLocaleString()],['Event',e.event],['Source',info.source],...(d.tool_call_id?[['Tool call',d.tool_call_id]]:[]),...(e.decision_id?[['Decision',e.decision_id]]:[]),...(Number.isFinite(d.duration_ms)?[['Measured duration',fmt(d.duration_ms)]]:[]),...(d.reason_code?[['Reason code',pretty(d.reason_code)]]:[])];
     $('eventFacts').replaceChildren();for(const [label,value] of facts){const row=make('div');row.append(make('dt','',label),make('dd','',value));$('eventFacts').append(row);}
-    put('sessionConfig',cfg.mode?backendName(cfg.backend)+' in '+cfg.mode+' mode. '+(cfg.backend==='scripted-demo'?'Scores are scripted; no model is connected to this scorer.':cfg.mode==='shadow'?'Proposals do not change execution.':'Fast selections still pass native approval.'):'No configuration event is available for this session.');
+    put('sessionConfig',cfg.mode?backendName(cfg.backend)+' in '+cfg.mode+' mode. '+(cfg.backend==='scripted-demo'?'Scores are scripted; no model is connected to this scorer.':cfg.mode==='shadow'?'Proposals do not change execution.':cfg.mode==='advisory'?'Portable suggestion only; caller owns execution.':'Fast selections still pass native approval.'):'No configuration event is available for this session.');
     $('distribution').hidden=!score;$('probabilities').replaceChildren();
     if(score){put('scoreMeaning',synthetic(score,keys)?'Scripted values. These did not come from a model.':score.data.probability_kind==='token_mass_with_abstention_residual'?'Uncalibrated token scores. They do not measure correctness.':'Backend-reported scores; not independent evidence of correctness.');const names=new Map((request?.data.candidates||[]).map(c=>[c.id,c.label]));names.set('reason','Use reasoning model');for(const [id,p] of Object.entries(score.data.probabilities||{}).filter(([,p])=>Number.isFinite(p)).sort((a,b)=>b[1]-a[1])){const row=make('div','prob-row'), caption=make('div','prob-label'), track=make('div','prob-track'), fill=make('div','prob-fill');caption.append(make('span','',names.get(id)||id),make('span','',(p*100).toFixed(1)+'%'));fill.style.width=Math.max(0,Math.min(100,p*100))+'%';track.append(fill);row.append(caption,track);$('probabilities').append(row);}}
     put('eventJson',JSON.stringify(e,null,2));
   }
+  function renderFlows(scoped,keys){
+    $('liveFlows').hidden=category!=='live';
+    if(category!=='live')return;
+    const groups=new Map();
+    for(const e of scoped){const nativeCall=!e.decision_id&&native(e)&&e.data.tool_call_id;if(!nativeCall&&(!e.decision_id||(['health','observatory'].includes(kind(e))&&e.data.phase!=='advisory_result')))continue;const key=nativeCall?e.session_id+':native:'+e.data.tool_call_id:decisionKey(e);if(!groups.has(key))groups.set(key,[]);groups.get(key).push(e);}
+    const ordered=[...groups.values()].sort((a,b)=>stamp(b.at(-1))-stamp(a.at(-1))).slice(0,8);
+    const roots=sessionsFor(scoped,Date.now());
+    $('runtimeStrip').replaceChildren();
+    for(const item of roots.filter(s=>s.reporting||(Date.now()-stamp(s.latest)<120000&&s.events.some(e=>native(e)))).slice(0,8)){
+      const observed=item.events.findLast(e=>native(e)), row=make('button','runtime-pulse'+(arrivals.has(observed?.event_id)?' arriving':''));
+      row.dataset.runtimeSessionId=item.id;
+      row.append(make('span','live-dot'),make('strong','',item.config.session_label||item.id.slice(0,8)),make('span','',(item.parent?'Child · ':'')+(observed?describe(observed).title+' · ':'')+(item.reporting?item.state:'Presence unknown')));
+      row.onclick=()=>selectSession(item.id);$('runtimeStrip').append(row);
+    }
+    put('flowStatus',source!=='live'?'Saved records':!following?'Paused':ordered.length?'Following recorded decisions':'Waiting for decisions');
+    $('flowCards').replaceChildren();$('flowEmpty').hidden=ordered.length>0;
+    for(const group of ordered){
+      const latest=group.at(-1), simulated=synthetic(latest,keys), cfg=configFor(events,latest.session_id), card=make('article','flow-card'+(group.some(e=>arrivals.has(e.event_id))?' arriving':''));
+      card.dataset.decisionKey=latest.decision_id?decisionKey(latest):latest.session_id+':native:'+latest.data.tool_call_id;
+      const heading=make('div','flow-card-heading'), sessionButton=make('button','flow-session',cfg.session_label||latest.session_id.slice(0,8));
+      sessionButton.onclick=()=>selectSession(latest.session_id);
+      heading.append(sessionButton,make('span','tag',simulated?'Scripted':group.some(e=>e.data.mode==='advisory')?'Advisory':group.some(e=>kind(e).startsWith('shadow_'))?'Shadow':group.some(e=>native(e))?'Native hooks':'Runtime'),make('span','flow-parent',latest.parent_session_id?'Child of '+latest.parent_session_id.slice(0,8):'Parent session'),make('time','',clock(latest)));
+      const stages=make('div','flow-stages');
+      for(const e of group.filter(e=>['requested','scored','routed','fallback','tool_start','tool_end','slow_start','slow_end','shadow_proposed','shadow_agreement'].includes(kind(e))||e.data.phase==='advisory_result'||(native(e)&&e.data.tool_call_id))){
+        const info=describe(e,synthetic(e,keys)),stage=make('button','flow-stage '+info.tone+(arrivals.has(e.event_id)?' arriving':'')+(e.event_id===selected?' selected':''));
+        stage.dataset.stageId=e.event_id;stage.setAttribute('aria-pressed',String(e.event_id===selected));
+        stage.append(make('strong','',info.title),make('span','',info.detail));
+        if(Number.isFinite(e.data.duration_ms))stage.append(make('span','flow-duration',fmt(e.data.duration_ms)));
+        stage.onclick=()=>{selected=e.event_id;render();};stages.append(stage);
+      }
+      const outcome=make('p','flow-outcome');
+      const fast=group.some(e=>kind(e)==='routed'&&e.data.route==='fast'&&e.data.status==='submitted_to_upstream');
+      const done=group.some(e=>kind(e)==='tool_end'&&(e.data.status==='ok'||e.data.success===true));
+      outcome.textContent=simulated?'Scripted evidence · excluded from savings':fast?(done?'Generative call bypassed · tool executed · task quality unverified':group.some(e=>kind(e)==='tool_end'&&(e.data.status==='error'||e.data.success===false))?'Generative call bypassed · tool execution failed':'Generative call bypassed · no completed tool recorded'):group.some(e=>e.data.mode==='advisory')?'Advisory only · no execution or savings claimed':group.some(e=>kind(e).startsWith('shadow_'))?'Shadow comparison · execution unchanged':'Recorded runtime path · no fast bypass claimed';
+      card.append(heading,stages,outcome);$('flowCards').append(card);if(following&&group.some(e=>arrivals.has(e.event_id)))stages.scrollLeft=stages.scrollWidth;
+    }
+  }
   function renderMechanics(scoped, keys) {
-    $('mechanics').hidden=!session;
+    $('mechanics').hidden=!session||category==='live';
+    if($('mechanics').hidden){$('decisionPath').replaceChildren();return;}
     const path=decisionPath(scoped,session,selected);
     $('decisionPath').replaceChildren();
     put('pathNote',path.length?'Decision '+path[0].decision_id+' · recorded sequence in this session. Select a stage to inspect its evidence.':'No scored decision path recorded in this window. Native activity is listed below.');
@@ -140,8 +183,9 @@
     }
   }
   function render(){
+    renderedAt=Date.now();
     const focused=document.activeElement;
-    const focusKey=['eventId','sessionId','childrenId','stageId'].find(key=>focused?.dataset?.[key]);
+    const focusKey=['eventId','sessionId','childrenId','stageId','runtimeSessionId'].find(key=>focused?.dataset?.[key]);
     const focusValue=focusKey?focused.dataset[focusKey]:null;
     const keys=scriptedKeys(events), base=currentWindow(), realBase=base.filter(e=>!synthetic(e,keys));
     const sessions=renderSessions($('includeSynthetic').checked?base:realBase,keys);
@@ -158,13 +202,15 @@
     const rows=display.slice(-250).reverse();$('feed').replaceChildren();
     if(selected&&!scoped.some(e=>e.event_id===selected&&($('includeSynthetic').checked||!synthetic(e,keys))))selected=null;
     for(const e of rows){const info=describe(e,synthetic(e,keys)), button=make('button','event-row'+(selected===e.event_id?' selected':''));button.setAttribute('aria-pressed',String(selected===e.event_id));button.dataset.eventId=e.event_id;const icon=make('span','event-icon '+info.tone,info.tone==='error'?'!':info.tone==='decision'?'◆':info.tone==='synthetic'?'~':'·'),body=make('span');body.append(make('span','event-title',info.title),make('span','event-description',info.detail),make('span','event-source',info.source));const when=make('span','event-time',clock(e));if(Number.isFinite(e.data.duration_ms))when.append(make('span','event-duration',fmt(e.data.duration_ms)));button.append(icon,body,make('span','event-session',e.session_id.slice(0,8)),when);button.onclick=()=>{selected=e.event_id;render();};$('feed').append(button);}
-    $('emptyState').hidden=rows.length>0;
+    $('emptyState').hidden=category==='live'||rows.length>0;$('feed').hidden=category==='live';$('feedHeading').hidden=category==='live';
     put('emptyTitle',connectionError?'Connection needs attention':hidden?'Scripted events are hidden':category==='errors'?'No issues recorded':'No activity in this window');
     put('emptyDetail',connectionError?'Restore the viewer connection above. Existing records remain available.':hidden?'Enable scripted & demo events to inspect them. They never count as model decisions or measured improvements.':source!=='live'?'This is a saved trace. Try another category or session.':'The viewer is listening. Start a turn in a session with the bundle loaded, or widen the time window.');
     put('feedCount',display.length>250?'Latest 250 of '+display.length+' events':display.length+' events');
     put('dataHealth',invalidLines?invalidLines+' invalid records skipped':windowGap?'Older events expired from the retained window':'No prompts or tool contents.');
     put('freshness',source!=='live'?'Saved trace · no live updates':lastPoll?'Checked '+age(lastPoll)+' · last event '+(events.length?age(stamp(events.at(-1))):'not received'):'Waiting for first response');
     put('followBtn',source!=='live'?'Return to live':following?'Following live':'Resume live');$('followBtn').setAttribute('aria-pressed',String(source==='live'&&following));
+    put('bypassedCount',m.bypassed);put('qualityEvidence','Quality evidence: '+m.failedFast+' failed fast executions · '+m.comparisons.filter(e=>e.data.agreement==='match').length+'/'+m.comparisons.length+' shadow tool-choice matches. Task correctness and quality parity have not been evaluated.');
+    renderFlows(scoped.filter(e=>$('includeSynthetic').checked||!synthetic(e,keys)),keys);
     renderMechanics(scoped.filter(e=>$('includeSynthetic').checked||!synthetic(e,keys)),keys);
     renderDetails(events.find(e=>e.event_id===selected),keys);
     if(source!=='live'){put('connection','Saved trace');$('connection').className='connection replay';}
@@ -193,7 +239,8 @@
       if(source!=='live'||generation!==pollGeneration)return;
       if(epoch&&epoch!==payload.epoch){events=[];seen.clear();cursor=0;epoch=payload.epoch;selected=null;windowGap=false;schedule(0);return;}
       if(cursor&&payload.first_cursor>cursor+1)windowGap=true;
-      epoch=payload.epoch;cursor=payload.cursor;retained=payload.retained;invalidLines=payload.invalid_lines||0;hasMore=!!payload.has_more;lastPoll=Date.now();connectionError='';$('reconnectPanel').hidden=true;ingest(payload.events||[]);
+      const repaint=!lastPoll||!!connectionError||hasMore!==!!payload.has_more;
+      epoch=payload.epoch;cursor=payload.cursor;retained=payload.retained;invalidLines=payload.invalid_lines||0;hasMore=!!payload.has_more;lastPoll=Date.now();connectionError='';$('reconnectPanel').hidden=true;ingest(payload.events||[],repaint);
     }catch(error){if(source!=='live'||generation!==pollGeneration)return;connectionError=error.name==='TimeoutError'?'The viewer did not respond within 5 seconds. Retrying…':error instanceof TypeError?'Cannot reach the local viewer. Retrying…':error.message;render();}
     if(source==='live'&&generation===pollGeneration)schedule(connectionError?2000:hasMore?0:500);
   }

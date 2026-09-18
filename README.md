@@ -8,9 +8,11 @@ one-token classifier, not a Jev replica or a general latency/accuracy guarantee.
 The [simple setup and tuning guide](docs/MODEL-SETUP.md) covers local use and
 hosting without RunPod; [pilot evidence](docs/LOCAL-SCORER.md) records the limits.
 
-The [Teamwork portability design](docs/design/teamwork-portable-tool.md) is a
-future direction. Smart Tool packaging is deferred until the current Amplifier
-integration is useful and its improvements are measured.
+The decision service is also a [portable Smart Tool](docs/SMART-TOOL.md): a
+Python library with its own local model capability, a manifest, and a thin CLI.
+Its deterministic help/manifest/schema commands need no model. Claude Code,
+Codex, Amplifier, or any harness with shell access can call its advisory selection
+capability; native Amplifier interception remains a separate adapter.
 
 **A fast judgment is not a permission grant. A proposed action is not an executed action.**
 
@@ -111,17 +113,21 @@ Open the localhost URL printed by the command. It includes a temporary access to
 
 The demo runs the real decision service and facades against **explicitly synthetic loop, model, and tool fixtures**. It demonstrates prepared-action execution, ambiguity, abstention, shadow mode, timeout, and a fast-path budget. Its artificial delays are not Jev benchmarks.
 
-The Observatory opens on **parent sessions**, with child sessions available on demand.
+The Observatory groups **parent sessions**, includes child activity by default,
+and lets you expand or select children separately.
 It polls recorded bundle events across local sessions, separates observer presence
 from working/idle state, and shows native activity, retries, real model decisions,
-and instrumented fast-path executions. Select a session to inspect its recorded
-decision mechanics and candidate scores. Scripted/demo events are hidden by default
+and instrumented fast-path executions. The default live-flow view shows successive recorded decision stages and
+highlights new arrivals. Select a stage to inspect its candidate scores and
+metadata. A muted neutral palette keeps long-running monitoring comfortable. Scripted/demo events are hidden by default
 and excluded from improvement counters; enable them when inspecting the demo.
 
 The feed supports pause/resume, time windows, JSONL import/export, and a recoverable
 connection state if the viewer token is missing. Saved traces are labeled separately
-from live updates. Decision p95 is backend scoring time; whole-task savings are not
-inferred. Existing running sessions need to reload the updated observer to emit
+from live updates. Generative calls bypassed require a recorded provider-boundary submission.
+Tool calls eliminated, net time/cost savings, and task-quality parity stay
+unmeasured until instrumented; shadow agreement is not independent correctness.
+Decision p95 is backend scoring time, not whole-task speedup. Existing running sessions need to reload the updated observer to emit
 15-second presence heartbeats. No prompts, tool contents, or private reasoning are
 shown. See [event semantics and limits](docs/EVENTS.md).
 

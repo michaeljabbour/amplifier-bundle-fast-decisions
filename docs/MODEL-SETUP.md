@@ -190,10 +190,15 @@ evaluation. No cloud resource was provisioned for this guide.
 | Scores exist but no fast execution | Shadow mode only proposes. In active mode, inspect abstention, thresholds, budgets, and native approval outcomes. |
 | The normal provider retries or fails | Diagnose the generative provider separately; the local scorer does not replace its authentication, network access, or final-answer generation. |
 
-## Smart Tool direction
+## Use it as a Smart Tool
 
-Portable library contracts are described in the
-[Teamwork Smart Tool design](design/teamwork-portable-tool.md). Packaging this
-as an OS- and harness-agnostic Smart Tool is deferred. The present deliverable
-is a useful Amplifier integration with observable real execution and measured
-benefits; this guide does not claim that portability is already implemented.
+The [portable Smart Tool](SMART-TOOL.md) packages the same local model capability
+as a library and thin CLI. Deterministic help/manifest/schema commands need no
+model; `select` owns model invocation and returns typed advisory selection or
+abstention. It can be discovered through a skill in Claude Code, Codex, and
+Amplifier. It never asserts that a suggestion executed or saved a provider call.
+
+Automatic provider bypass remains the Amplifier adapter described above. The
+[Teamwork portability design](design/teamwork-portable-tool.md) discusses deeper
+harness integration; universal call interception and context retention are not
+implemented by installing a discovery skill.

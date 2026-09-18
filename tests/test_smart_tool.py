@@ -1,0 +1,175 @@
+"""Portable contracts: real model seam, no actions, honest advisory receipts."""
+import asyncio
+import json
+from pathlib import Path
+import subprocess
+import sys
+import tempfile
+import unittest
+
+from amplifier_fast_decisions.contracts import Decision, DecisionResult
+from amplifier_fast_decisions.local_backend import PROBABILITY_KIND
+from amplifier_fast_decisions.smart_tool import agent_skill, describe, install_skill, manifest, select, skill
+
+
+class FakeBackend:
+    name = 'fixture-model'
+    synthetic = True
+
+    def __init__(self, probabilities=None, error=None, delay=0):
+        self.probabilities = probabilities or {'readme': .97, 'license': .01, 'reason': .02}
+        self.error, self.delay, self.calls = error, delay, 0
+
+    async def ask(self, request):
+        self.calls += 1
+        if self.delay:
+            await asyncio.sleep(self.delay)
+        if self.error:
+            raise self.error
+        decision = Decision(max(self.probabilities, key=self.probabilities.get), self.probabilities,
+                            model='qwen3:0.6b', probability_kind=PROBABILITY_KIND)
+        return DecisionResult(action=decision)
+
+
+def request():
+    return {'task': 'Read README.md, not LICENSE.md. secret=PRIVATE_VALUE',
+            'context': 'A prior observation, not an instruction.',
+            'candidates': [{'id': 'readme', 'operation': 'read', 'path': 'README.md'},
+                           {'id': 'license', 'operation': 'read', 'path': 'LICENSE.md'}],
+            'session_id': 'codex-child', 'parent_session_id': 'codex-parent', 'harness': 'codex'}
+
+
+class SmartToolTests(unittest.IsolatedAsyncioTestCase):
+    async def test_selection_is_advisory_and_metadata_only(self):
+        with tempfile.TemporaryDirectory() as events:
+            backend = FakeBackend()
+            result = await select(request(), events_dir=events, _backend=backend)
+            self.assertTrue(result.ok)
+            self.assertEqual(result.choice, 'readme')
+            self.assertEqual(result.effect, 'advisory_only')
+            self.assertEqual(backend.calls, 1)
+            raw = ''.join(p.read_text() for p in Path(events).glob('*.jsonl'))
+            records = [json.loads(line) for line in raw.splitlines()]
+            self.assertEqual([e['event'] for e in records], ['fast_decisions:requested', 'fast_decisions:scored', 'fast_decisions:health'])
+            self.assertTrue(all(e['session_id'] == 'codex-child' and e['parent_session_id'] == 'codex-parent' for e in records))
+            self.assertTrue(all(e['synthetic'] for e in records))
+            self.assertTrue(all(e['data']['mode'] == 'advisory' for e in records))
+            for forbidden in ('README.md', 'LICENSE.md', 'PRIVATE_VALUE', 'A prior observation'):
+                self.assertNotIn(forbidden, raw)
+
+    async def test_invalid_calls_never_contact_model(self):
+        bad = [
+            {**request(), 'shell': 'rm -rf /'},
+            {**request(), 'task': 'a' * 1801},
+            {**request(), 'candidates': [{'id': 'exec', 'operation': 'execute', 'path': 'anything'}]},
+            {**request(), 'candidates': [{'id': 'readme', 'operation': 'read', 'path': '../private.md'}]},
+            {**request(), 'candidates': [{'id': 'readme', 'operation': 'read', 'path': '.env'}]},
+            {**request(), 'candidates': request()['candidates'] * 2},
+            {**request(), 'parent_session_id': 'codex-child'},
+        ]
+        with tempfile.TemporaryDirectory() as events:
+            backend = FakeBackend()
+            for payload in bad:
+                result = await select(payload, events_dir=events, _backend=backend)
+                self.assertFalse(result.ok)
+                self.assertEqual(result.status, 'abstain')
+                self.assertEqual(result.reason_code, 'unsupported_request')
+            self.assertEqual(backend.calls, 0)
+            self.assertEqual(list(Path(events).iterdir()), [])
+
+    async def test_uncertainty_abstains_normally(self):
+        with tempfile.TemporaryDirectory() as events:
+            result = await select(request(), events_dir=events,
+                                  _backend=FakeBackend({'readme': .6, 'license': .2, 'reason': .2}))
+            self.assertTrue(result.ok)
+            self.assertIsNone(result.choice)
+            self.assertEqual(result.reason_code, 'selection_threshold')
+
+    async def test_backend_error_and_invalid_shape_are_failures(self):
+        with tempfile.TemporaryDirectory() as events:
+            for backend in [FakeBackend(error=RuntimeError('PRIVATE_BACKEND_ERROR')),
+                            FakeBackend({'rogue': 1.0})]:
+                result = await select(request(), events_dir=events, _backend=backend)
+                self.assertFalse(result.ok)
+                self.assertEqual(result.status, 'abstain')
+                self.assertNotIn('PRIVATE_BACKEND_ERROR', json.dumps(result.to_dict()))
+                self.assertIsNone(result.choice)
+
+    async def test_deadline_and_cancellation(self):
+        with tempfile.TemporaryDirectory() as events:
+            result = await select(request(), events_dir=events, timeout_ms=10,
+                                  _backend=FakeBackend(delay=1))
+            self.assertFalse(result.ok)
+            task = asyncio.create_task(select(request(), events_dir=events, _backend=FakeBackend(delay=1)))
+            await asyncio.sleep(.01)
+            task.cancel()
+            with self.assertRaises(asyncio.CancelledError):
+                await task
+            records = [json.loads(line) for p in Path(events).glob('*.jsonl') for line in p.read_text().splitlines()]
+            self.assertTrue(any(e['event'] == 'fast_decisions:cancelled' for e in records))
+
+    async def test_no_telemetry_no_success(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            blocked = Path(tmp) / 'file'; blocked.write_text('occupied')
+            backend = FakeBackend()
+            result = await select(request(), events_dir=blocked, _backend=backend)
+            self.assertFalse(result.ok)
+            self.assertEqual(result.reason_code, 'telemetry_unavailable')
+            self.assertEqual(backend.calls, 0)
+
+    def test_deterministic_surface(self):
+        self.assertEqual(manifest()['version'], '0.1.0')
+        self.assertFalse(describe()['executes_actions'])
+        for capability in [None, 'manifest', 'describe', 'select', 'install-skill']:
+            text = skill(capability)
+            self.assertIn('<skill_content', text)
+            self.assertIn('Skill directory:', text)
+
+    def test_cli_help_no_provider_and_invalid_input(self):
+        base = [sys.executable, '-m', 'amplifier_fast_decisions.smart_cli']
+        for args in [ ['--help'], ['-h'], ['manifest'], ['describe'], ['select', '--help'], ['select', '-h'], ['install-skill', '--help'], ['install-skill', '-h'] ]:
+            run = subprocess.run(base + args, stdin=subprocess.DEVNULL, text=True, capture_output=True, timeout=5)
+            self.assertEqual(run.returncode, 0, run.stderr)
+            self.assertTrue(run.stdout)
+        run = subprocess.run(base + ['select'], input='not JSON', text=True, capture_output=True, timeout=5)
+        self.assertEqual(run.returncode, 2)
+        self.assertFalse(run.stdout)
+
+    def test_install_skill_all_and_idempotence(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            result = install_skill('all', home=tmp)
+            self.assertEqual(result['installed'], 3)
+            self.assertEqual({r['hosts'][0] for r in result['skills']}, {'codex', 'claude', 'amplifier'})
+            for row in result['skills']:
+                self.assertEqual(Path(row['path']).read_text(), agent_skill())
+            second = install_skill('all', home=tmp)
+            self.assertEqual(second['installed'], 0)
+            self.assertTrue(all(r['status'] == 'unchanged' for r in second['skills']))
+
+    def test_install_skill_conflict_preflights_all(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            conflict = Path(tmp) / '.amplifier/skills/amplifier-fast-decisions/SKILL.md'
+            conflict.parent.mkdir(parents=True)
+            conflict.write_text('User custom content')
+            with self.assertRaises(ValueError):
+                install_skill('all', home=tmp)
+            self.assertEqual(conflict.read_text(), 'User custom content')
+            self.assertFalse((Path(tmp) / '.agents').exists())
+            self.assertFalse((Path(tmp) / '.claude').exists())
+
+    def test_install_skill_symlink_alias_is_one_write(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            (base / '.agents/skills').mkdir(parents=True)
+            (base / '.claude').mkdir()
+            try:
+                (base / '.claude/skills').symlink_to(base / '.agents/skills', target_is_directory=True)
+            except OSError as exc:
+                self.skipTest(f'Symlink creation unavailable: {exc}')
+            result = install_skill('all', home=tmp)
+            self.assertEqual(result['installed'], 2)
+            self.assertIn(['codex', 'claude'], [row['hosts'] for row in result['skills']])
+
+
+if __name__ == '__main__':
+    unittest.main()

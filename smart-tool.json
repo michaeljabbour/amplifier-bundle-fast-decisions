@@ -1,0 +1,5 @@
+{
+  "manifest": "src/amplifier_fast_decisions/SMART_TOOL.md",
+  "cli_argv": ["amplifier-fast-decisions"],
+  "deterministic_smoke": ["manifest"]
+}

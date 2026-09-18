@@ -59,3 +59,10 @@ test('mechanics joins only the selected session and decision, without inventing 
  assert.deepEqual(decisionPath(events,'one',null),[next]);
  assert.deepEqual(decisionPath(events,'two',null),[]);
 });
+
+test('bypassed calls require instrumented submission; advisory scores never imply savings',()=>{
+ const events=[event('scored',{mode:'advisory'},'advice'),event('routed',{route:'fast'},'incomplete')];
+ assert.equal(metrics(events).bypassed,0);
+ events.push(event('routed',{route:'fast',status:'submitted_to_upstream'},'actual'));
+ assert.equal(metrics(events).bypassed,1);assert.equal(metrics(events).fastExecuted,0);
+});

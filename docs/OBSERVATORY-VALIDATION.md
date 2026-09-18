@@ -1,7 +1,7 @@
 # Observatory validation — 2026-09-17
 
 The redesigned viewer projects recorded events across local Amplifier sessions.
-Parent sessions are the default scope; child activity is opt-in. The mechanics
+Parent sessions are the default scope; child activity is included by default. The mechanics
 view correlates only by both session and decision ID, keeps missing stages absent,
 and defaults to an actual decision attempt before a shadow proposal.
 
@@ -28,10 +28,10 @@ Only the pilot workspace excluded app bundles; global configuration was unchange
 
 ## Automated and visual checks
 
-- Actual Amplifier Python: 233 discovered tests passed at the full-suite check
+- Actual Amplifier Python: 244 discovered tests passed at the full-suite check
   (including dependency-based skips where applicable). New checks cover observer
   heartbeat ownership, retry metadata privacy, and stopping emissions on cleanup.
-- Twelve Node projection tests cover provenance, parent identity, stale presence,
+- Thirteen Node projection tests cover provenance, parent identity, stale presence,
   submission versus execution, and cross-session correlation isolation.
 - Optional Chromium integration test uses only temporary fixture JSONL. It
   checks two parents plus a child, live appended events, mechanics, pause/resume,
@@ -41,6 +41,13 @@ Only the pilot workspace excluded app bundles; global configuration was unchange
   browser errors or horizontal document overflow. The feed and side panels have
   bounded scrolling. Candidate probabilities remain explicitly uncalibrated.
 
-No RunPod resource was provisioned, no Jev API call was made, and no context
-retention optimizer or portable Smart Tool runtime is claimed by this change.
-Those remain separate from this observability and setup work.
+The neutral live-flow view highlights newly arrived recorded stages, supports
+child aggregation by default, and explicitly separates generative-call bypass
+from unmeasured tool pruning, net savings, and task-quality parity. Browser
+integration checks newly appended stages receive arrival highlighting.
+
+Portable Smart Tool validation is documented in [SMART-TOOL.md](SMART-TOOL.md):
+installed conformance, deterministic skill installation, real local model calls,
+and strict separation of advisory scores from runtime actions. No RunPod
+resource, Jev API invocation, or context-retention optimizer is part of this
+change.

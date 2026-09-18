@@ -21,7 +21,7 @@
     <div class="sessions-heading"><h2>Parent sessions</h2><span id="sessionCount" class="count">0</span></div>
     <label class="sr-only" for="sessionSearch">Find a session</label><input id="sessionSearch" class="search" type="search" placeholder="Find a session…">
     <button id="allSessions" class="all-sessions selected" aria-pressed="true"><span>All sessions</span><span id="allSessionCount">0</span></button>
-    <div id="sessions" class="session-list"></div><label class="children-option"><input type="checkbox" id="includeChildren"> Include child activity</label>
+    <div id="sessions" class="session-list"></div><label class="children-option"><input type="checkbox" id="includeChildren" checked> Include child activity</label>
     <div class="sidebar-note"><span class="small-dot"></span><p>Local, read-only telemetry.<br>Only sessions with the bundle can report here.</p></div>
   </aside>
   <main id="activity" class="activity-panel">
@@ -31,10 +31,12 @@
     </div>
     <p id="scopeNotice" class="scope-note">Counts describe recorded events, not estimated time saved.</p>
     <section class="impact" aria-label="Measured bundle impact"><div><h2>Bundle impact</h2><p id="impactDetail">Waiting for recorded fast-path execution.</p></div><div class="impact-metric"><strong id="fastExecuted">0</strong><span>Fast-path tools completed</span></div><div class="impact-metric"><strong id="scorerP95">—</strong><span>Decision p95</span></div></section>
+    <section class="efficiency" aria-label="Efficiency and quality"><div><strong id="bypassedCount">0</strong><span>Generative calls bypassed</span></div><div><strong>Unmeasured</strong><span>Tool calls eliminated</span></div><div><strong>Unmeasured</strong><span>Net time / cost saved</span></div><p id="qualityEvidence">Task quality has not been evaluated.</p></section>
     <section id="mechanics" class="mechanics" hidden aria-label="Observed decision path"><h2>Decision mechanics</h2><p id="pathNote"></p><div id="decisionPath" class="decision-path"></div></section>
-    <div class="feed-toolbar"><div class="feed-tabs" role="group" aria-label="Event category"><button data-filter="activity" class="active" aria-pressed="true">Activity</button><button data-filter="decisions" aria-pressed="false">Decisions</button><button data-filter="errors" aria-pressed="false">Issues</button></div><label class="time-filter"><span class="sr-only">Time window</span><select id="timeWindow"><option value="3600000">Last hour</option><option value="86400000">Last 24 hours</option><option value="all">All retained</option></select></label></div>
+    <div class="feed-toolbar"><div class="feed-tabs" role="group" aria-label="Event category"><button data-filter="live" class="active" aria-pressed="true">Live flows</button><button data-filter="activity" aria-pressed="false">Events</button><button data-filter="decisions" aria-pressed="false">Decisions</button><button data-filter="errors" aria-pressed="false">Issues</button></div><label class="time-filter"><span class="sr-only">Time window</span><select id="timeWindow"><option value="3600000">Last hour</option><option value="86400000">Last 24 hours</option><option value="all">All retained</option></select></label></div>
     <div class="feed-options"><label><input type="checkbox" id="includeSynthetic"> Show scripted &amp; demo events <span id="syntheticCount"></span></label><span id="freshness">Waiting for first response</span></div>
-    <div class="feed-heading"><span>Event / source</span><span>Session</span><span>Time</span></div>
+    <section id="liveFlows" class="live-flows" aria-label="Live decision flows"><div class="flows-heading"><h2>Decisions in motion</h2><span id="flowStatus">Waiting for recorded events</span></div><div id="runtimeStrip" class="runtime-strip"></div><div id="flowCards"></div><p id="flowEmpty" class="flow-empty">No decisions recorded in this window. Native activity appears above as it arrives. Scripted shadow mode does not bypass model calls.</p></section>
+    <div id="feedHeading" class="feed-heading"><span>Event / source</span><span>Session</span><span>Time</span></div>
     <div id="feed" class="feed" aria-label="Recorded activity"></div>
     <div id="emptyState" class="empty-state" hidden><div class="empty-symbol" aria-hidden="true">∷</div><h2 id="emptyTitle">Waiting for activity</h2><p id="emptyDetail">Start an Amplifier turn with the bundle loaded. Events appear here as they arrive.</p></div>
     <div class="feed-footer"><span id="feedCount">0 events</span><span id="dataHealth">No prompts, tool contents, or private reasoning.</span></div>
