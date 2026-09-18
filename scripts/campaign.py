@@ -891,10 +891,10 @@ def cmd_evaluate(args):
                     truncation_reasons[str(data.get('truncation_reason'))] += 1
             elif kind == 'scored':
                 scored += 1
-                if data.get('reason_code') == 'model_abstained' or data.get('choice') in (None, 'abstain'):
-                    abstained += 1
             elif kind == 'routed':
                 routed += 1
+                if data.get('reason_code') == 'model_abstained':
+                    abstained += 1
                 if data.get('route') == 'fast':
                     fast_routes += 1
                 else:
