@@ -8,7 +8,7 @@ import unittest
 from unittest.mock import patch
 
 from amplifier_fast_decisions.backends import JevBackend, ScriptedBackend, BackendUnavailable
-from amplifier_fast_decisions.contracts import Candidate, Decision, DecisionRequest, Policy, Question, TurnState, VALIDATOR_CAPABILITY
+from amplifier_fast_decisions.contracts import Candidate, Decision, DecisionRequest, Policy, Question, TurnState, VALIDATOR_CAPABILITY, canonical
 from amplifier_fast_decisions.demo import DemoCoordinator, DemoProvider, DemoTool, DemoContext, DemoLoop, demo_response
 from amplifier_fast_decisions.orchestrator import RoutedProvider, HybridOrchestrator, ObservedTool
 from amplifier_fast_decisions.runtime import Runtime
@@ -86,6 +86,37 @@ class PrivacyTests(unittest.TestCase):
         req=request(messages=[{'role':'user','content':'x'*4000} for _ in range(15)])
         import json
         self.assertLessEqual(len(json.dumps(build_state(req,1000))),1100)
+    def test_long_tool_result_keeps_task_and_recent_evidence(self):
+        req=request(messages=[{'role':'user','content':'Repair solution.py from README.md'},
+                              {'role':'tool','content':'FAILED test_cycle\n'+'x'*5000}])
+        state=build_state(req,2048)
+        self.assertLessEqual(len(canonical(state)),2048)
+        self.assertEqual([x['role'] for x in state['observations']],['user','tool'])
+        self.assertIn('Repair solution.py',state['observations'][0]['text'])
+        self.assertIn('FAILED test_cycle',state['observations'][1]['text'])
+    def test_task_survives_more_than_twelve_messages(self):
+        req=request(messages=[{'role':'user','content':'Original task: inspect README.md'}]+
+                    [{'role':'tool','content':f'Observation {i}'} for i in range(20)])
+        state=build_state(req,512)
+        self.assertLessEqual(len(canonical(state)),512)
+        text=str(state['observations'])
+        self.assertIn('Original task',text)
+        self.assertIn('Observation 19',text)
+    def test_escaped_and_unicode_observations_stay_bounded_and_scrubbed(self):
+        req=request(messages=[{'role':'user','content':'Task '+'"\\\n😀'*1000},
+                    {'role':'tool','content':'api_key=abcdefghijklmnop '+'"\\\n😀'*1000}])
+        for budget in (512,1000,2048):
+            state=build_state(req,budget)
+            self.assertLessEqual(len(canonical(state)),budget)
+            self.assertEqual(len(state['observations']),2)
+            self.assertNotIn('abcdefghijklmnop',canonical(state))
+    def test_latest_user_task_supersedes_old_task_anchor(self):
+        req=request(messages=[{'role':'user','content':'Old task'},
+                    {'role':'user','content':'Current task'}]+
+                    [{'role':'tool','content':'recent evidence '*300} for _ in range(15)])
+        state=build_state(req,512)
+        self.assertIn('Current task',str(state))
+        self.assertNotIn('Old task',str(state))
     def test_fingerprint_changes(self):
         a=request(); before=request_fingerprint(a);a.messages.append({'role':'tool','content':'new'})
         self.assertNotEqual(before,request_fingerprint(a))
