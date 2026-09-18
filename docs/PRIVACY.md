@@ -20,4 +20,6 @@ The server binds only to 127.0.0.1, requires a random bearer token on data endpo
 
 **Auto-observatory state file:** when the hook auto-starts the viewer (`observatory.enabled: true`, the default), it writes `~/.amplifier/fast-decisions/serve.json` (`--state-file` to override) containing the viewer's pid, port, the token-bearing URL, events directory, start time and version. This file is written mode `0600` (owner read/write only) via atomic tmp-file-plus-rename, and is removed on clean shutdown (`afast serve --stop`, or the server's own exit handler). Treat it like the token itself: local-only, not for sharing, and readable only by the invoking user's account. `afast serve --stop` reads it, signals the pid and removes it regardless of whether the process was still alive.
 
+The configuration event carries `workspace_name`, the basename of the session's working directory (for example `my-repo`), so the viewer can name sessions; parent directories, home paths and full paths are never recorded. Set `workspace_name` in the hook config to override it.
+
 The original logs use private file permissions where supported. The queue is bounded and best-effort, not a regulatory-grade audit ledger. Offline HTML and JSONL exports are deliberately shareable files and are not encrypted. Protect or delete them according to your organization's retention policy.

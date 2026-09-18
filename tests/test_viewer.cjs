@@ -1,6 +1,6 @@
 const {test} = require('node:test');
 const assert = require('node:assert/strict');
-const {scriptedKeys,synthetic,sessionsFor,metrics,describe,valid,decisionPath} = require('../src/amplifier_fast_decisions/static/app.js');
+const {scriptedKeys,synthetic,sessionsFor,metrics,describe,valid,decisionPath,summarize,sessionName} = require('../src/amplifier_fast_decisions/static/app.js');
 let seq=0;
 const now=Date.parse('2026-09-18T03:00:00Z');
 const event=(kind,data={},decision=null,session='parent',extra={})=>({schema_version:'1.0',event_id:String(++seq),event:'fast_decisions:'+kind,session_id:session,decision_id:decision,timestamp:new Date(now).toISOString(),data,...extra});
@@ -65,4 +65,24 @@ test('bypassed calls require instrumented submission; advisory scores never impl
  assert.equal(metrics(events).bypassed,0);
  events.push(event('routed',{route:'fast',status:'submitted_to_upstream'},'actual'));
  assert.equal(metrics(events).bypassed,1);assert.equal(metrics(events).fastExecuted,0);
+});
+
+test('ledger requires explicit completion and submission evidence',()=>{
+ const route=event('routed',{route:'fast'},'d');
+ assert.equal(summarize([route]).verdict.label,'Fast · selected');
+ assert.match(summarize([route]).verdict.note,/Bypass not confirmed/);
+ route.data.status='submitted_to_upstream';
+ assert.equal(summarize([route]).verdict.label,'Fast · submitted');
+ const cancelled=event('tool_end',{status:'cancelled'},'d');
+ assert.equal(summarize([route,cancelled]).verdict.label,'Fast · cancelled');
+ assert.doesNotMatch(summarize([route,cancelled]).happened.detail,/executed/);
+ const slow=event('routed',{route:'slow'},'slow');
+ assert.doesNotMatch(summarize([slow]).verdict.note,/provider answered/);
+ assert.match(summarize([slow,event('slow_end',{status:'ok'},'slow')]).verdict.note,/provider answered/);
+});
+test('session labels prefer explicit names and recover after retries',()=>{
+ assert.equal(sessionName({workspace_name:'repo'},'abcdefghi'),'repo');
+ assert.equal(sessionName({workspace_name:'repo',session_label:'Review'},'id'),'Review');
+ const rows=[event('health',{phase:'configuration'}),event('health',{native_event:'provider:retry'}),event('health',{native_event:'tool:pre'})];
+ assert.equal(sessionsFor(rows,now)[0].state,'Working');
 });

@@ -77,6 +77,9 @@ SAFE_FIELDS = {
     "session_label",
     "warmup",
     "state_revision",
+    # Basename of the session's working directory (observer.workspace_name):
+    # a single path component for the viewer's session list, never a path.
+    "workspace_name",
     "candidate_revision",
     "upstream_complete_calls",
     "output_path_redacted",
