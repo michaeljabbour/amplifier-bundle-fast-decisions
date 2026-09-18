@@ -28,3 +28,26 @@ class PresenceTests(unittest.IsolatedAsyncioTestCase):
                 count=len(coordinator.hooks.events)
                 await asyncio.sleep(.025)
                 self.assertEqual(len(coordinator.hooks.events),count)
+
+
+class WorkspaceNameTests(unittest.TestCase):
+    """The viewer names sessions by directory basename; the hook must never record a path."""
+    def test_basename_only_never_a_path(self):
+        with tempfile.TemporaryDirectory() as directory:
+            target = __import__('pathlib').Path(directory) / 'my-project'
+            target.mkdir()
+            previous = __import__('os').getcwd()
+            __import__('os').chdir(target)
+            try:
+                name = observer.workspace_name({})
+            finally:
+                __import__('os').chdir(previous)
+            self.assertEqual(name, 'my-project')
+            self.assertNotIn('/', name)
+            self.assertNotIn(directory, name)
+    def test_config_override_and_allowlist(self):
+        from amplifier_fast_decisions.privacy import safe_data
+        self.assertEqual(observer.workspace_name({'workspace_name': ' Custom name '}), 'Custom name')
+        self.assertEqual(observer.workspace_name({'workspace_name': ''}), observer.workspace_name({}))
+        self.assertEqual(safe_data({'workspace_name': 'repo', 'cwd': '/Users/private/repo'}), {'workspace_name': 'repo'})
+

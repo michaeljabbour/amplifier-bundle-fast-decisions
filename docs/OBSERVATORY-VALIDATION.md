@@ -51,3 +51,33 @@ installed conformance, deterministic skill installation, real local model calls,
 and strict separation of advisory scores from runtime actions. No RunPod
 resource, Jev API invocation, or context-retention optimizer is part of this
 change.
+
+## Ledger redesign — 2026-09-18
+
+The live view is now a decision ledger (one row per session + decision id) with the
+stage chain under each row, instead of one card per decision. What changed and how it
+was checked:
+
+- Sessions are named by `workspace_name` (the working-directory basename the hook now
+  records at mount; `session_label` still wins when configured) with the short id as a
+  secondary line. The hook never records a full path; `privacy.SAFE_FIELDS` allowlists
+  the single component and `tests/test_observer_presence.py` covers basename-only,
+  config override, and allowlist behaviour.
+- A native `tool:pre` / `tool:post` pair joins the shadow decision that recorded the
+  same `tool_call_id`, so "model proposed X → LLM called Y → match/mismatch" reads on
+  one row. `shadow_observed` is rendered as a stage. Rows with no decision remain
+  hook-observation rows, dimmed and labelled "Not scored".
+- Verdicts are labelled chips with a tone (fast executed / submitted / failed, reasoning
+  model, match / mismatch / abstained, no candidate, fallback, advisory, scripted,
+  in flight, not scored); the label carries the meaning, never the colour alone.
+- Session state treats `provider:request`, `tool:pre`, `tool:post` and `llm:response`
+  as work signals, so a single retry no longer leaves "Provider issue reported" showing
+  after the session has resumed.
+- Verification: the 13 Node projection tests and the optional Chromium integration test
+  (`tests/test_viewer_browser.py`) pass unchanged against the new markup; the Python
+  suite passes on 3.12 apart from repo-layout tests that need the full checkout. A
+  synthetic local fixture (not host telemetry) was rendered at 390, 768, 1150, 1280 and
+  1440 px with no page errors or horizontal document overflow, and with events dripped
+  in live to confirm arrival highlighting, the pinned in-flight row and working/idle
+  state changes. These fixture renders are not host execution evidence.
+
