@@ -91,3 +91,8 @@ score proves scoring occurred. It proves neither execution nor a provider call
 avoided. No fast-submission or tool-execution events are invented. For automatic
 Amplifier interception use the separately configured active bundle and native
 approval path. The portable interface is an advisory library/CLI surface.
+
+Successful selections also return `confidence_kind: not_reported` and
+`option_set_hash`, an order-sensitive digest of the local model's presented options
+and ID bindings. The digest records neither actual execution nor correctness, and
+is not a hash of the complete request.

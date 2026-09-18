@@ -9,8 +9,10 @@ import argparse
 import asyncio
 from datetime import datetime, timezone
 import json
+import hashlib
 import math
 from pathlib import Path
+import platform
 import statistics
 import time
 
@@ -25,6 +27,8 @@ def percentile(values, p):
 
 async def main(args):
     cases = [c for c in load_suite(args.suite) if c.domain != 'model-role']
+    if not cases:
+        raise ValueError('Suite contains no local action cases')
     backend = OllamaBackend(model=args.model, timeout_ms=30000)
     rows=[]
     try:
@@ -45,6 +49,8 @@ async def main(args):
                         margin=p-max((v for k,v in d.probabilities.items() if k!=d.choice),default=0)
                         accepted=d.choice!='reason' and p>=.90 and margin>=.20
                         row.update(choice=d.choice,probability=p,margin=margin,
+                                   probabilities=d.probabilities, option_set_hash=d.option_set_hash,
+                                   confidence_kind=d.confidence_kind,
                                    policy_choice=d.choice if accepted else 'reason',accepted=accepted,
                                    correct=d.choice==case.expected_choice,
                                    wrong_accepted=accepted and d.choice!=case.expected_choice,
@@ -57,6 +63,10 @@ async def main(args):
     durations=[r['duration_ms'] for r in rows]
     pairs=[(rows[i],rows[i+1]) for i in range(0,len(rows),2)]
     report={'created_at':datetime.now(timezone.utc).isoformat(),'model':args.model,
+            'model_revision':None, 'platform':platform.platform(), 'machine':platform.machine(),
+            'python':platform.python_version(), 'transport':'loopback HTTP; reused client; one request per choice',
+            'suite_sha256':hashlib.sha256(Path(args.suite).read_bytes()).hexdigest(),
+            'policy':{'min_probability':.90,'min_margin':.20},
             'backend':'ollama-token','external_state':False,'target_ms':args.timeout_ms,
             'suite':str(args.suite),'suite_kind':'public development fixtures, not held-out evaluation',
             'warmup_ms':warmup_ms,'requests':len(rows),'errors':sum('error' in r for r in rows),
@@ -66,6 +76,8 @@ async def main(args):
             'policy_agreement':sum(r.get('policy_choice')==r['expected'] for r in rows)/len(rows),
             'accepted':sum(r['accepted'] for r in rows),'wrong_accepted':sum(r['wrong_accepted'] for r in rows),
             'order_stable_pairs':sum(a.get('choice')==b.get('choice') and 'error' not in a and 'error' not in b for a,b in pairs),
+            'policy_order_stable_pairs':sum(a.get('policy_choice')==b.get('policy_choice') and 'error' not in a and 'error' not in b for a,b in pairs),
+            'max_order_probability_shift':max((max(abs(a['probabilities'][key]-b['probabilities'][key]) for key in a['probabilities']) for a,b in pairs if 'probabilities' in a and 'probabilities' in b), default=None),
             'pairs':len(pairs),'rows':rows}
     if args.output:
         Path(args.output).parent.mkdir(parents=True,exist_ok=True)
@@ -82,4 +94,5 @@ if __name__=='__main__':
     p.add_argument('--output')
     args=p.parse_args()
     if args.repeats<1:p.error('--repeats must be positive')
+    if not 10<=args.timeout_ms<=500:p.error('--timeout-ms must be between 10 and 500')
     asyncio.run(main(args))

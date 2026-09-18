@@ -39,6 +39,8 @@ SAFE_FIELDS = {
     "probabilities",
     "probability_kind",
     "reported_confidence",
+    "confidence_kind",
+    "option_set_hash",
     "selected_probability",
     "margin",
     "duration_ms",

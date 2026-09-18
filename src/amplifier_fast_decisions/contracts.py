@@ -238,6 +238,8 @@ class Decision:
     input_tokens: int | None = None
     synthetic: bool = False
     probability_kind: str = "backend_reported"
+    confidence_kind: str = "unspecified"
+    option_set_hash: str | None = None
 
     def validate(self, choices: set[str]) -> None:
         if self.choice not in choices or set(self.probabilities) != choices:
@@ -258,7 +260,9 @@ class Decision:
                 "Selected choice is not the maximum-probability alternative"
             )
         if self.reported_confidence is not None and (
-            not math.isfinite(self.reported_confidence)
+            isinstance(self.reported_confidence, bool)
+            or not isinstance(self.reported_confidence, (int, float))
+            or not math.isfinite(self.reported_confidence)
             or not 0 <= self.reported_confidence <= 1
         ):
             raise ValueError("Invalid reported confidence")

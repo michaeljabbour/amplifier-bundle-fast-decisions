@@ -1,5 +1,6 @@
 from __future__ import annotations
 import asyncio
+from dataclasses import replace
 import json
 import math
 from pathlib import Path
@@ -46,12 +47,29 @@ class LocalBackendTests(unittest.IsolatedAsyncioTestCase):
         self.assertAlmostEqual(result.action.probabilities['read'],.92)
         self.assertAlmostEqual(result.action.probabilities['reason'],.08)
         self.assertIsNone(result.action.reported_confidence)
+        self.assertEqual(result.action.confidence_kind, 'not_reported')
+        self.assertEqual(len(result.action.option_set_hash), 64)
         self.assertFalse(result.synthetic)
         self.assertEqual(result.action.probability_kind,'token_mass_with_abstention_residual')
         body=client.calls[0][1]['json']
         self.assertEqual(body['options']['num_predict'],1)
         self.assertFalse(body['think'])
         await backend.close();self.assertTrue(client.closed)
+
+    async def test_option_hash_tracks_order_and_rendered_targets_not_unseen_arguments(self):
+        first = request().candidates[0]
+        other = replace(first, id='other', arguments={'operation':'read','path':'LICENSE.md'})
+        req = replace(request(), candidates=(first, other))
+        backend = OllamaBackend(model='test-local', client=Client())
+        async def fingerprint(value):
+            return (await backend.ask(value)).action.option_set_hash
+        baseline = await fingerprint(req)
+        self.assertNotEqual(baseline, await fingerprint(replace(req, candidates=(other, first))))
+        changed = replace(first, arguments={'operation':'read','path':'CHANGED.md'})
+        self.assertNotEqual(baseline, await fingerprint(replace(req, candidates=(changed, other))))
+        # Changing state or non-model-facing metadata must not change the option fingerprint.
+        hidden = replace(first, label='hidden label', arguments={**first.arguments, 'private':'not sent'})
+        self.assertEqual(baseline, await fingerprint(replace(req, candidates=(hidden, other), state={})))
 
     async def test_missing_scores_and_bad_models_fail_closed(self):
         for change in ({'logprobs':[]},{'model':'different'},{'thinking':'hidden'},

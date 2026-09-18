@@ -11,7 +11,7 @@ import math
 from urllib.parse import urlsplit
 
 from .backends import BackendUnavailable
-from .contracts import Decision, DecisionRequest, DecisionResult, SLOW, canonical
+from .contracts import Decision, DecisionRequest, DecisionResult, SLOW, canonical, digest
 from .privacy import scrub
 
 SYSTEM = (
@@ -77,6 +77,10 @@ class OllamaBackend:
         self._lock = asyncio.Lock()
 
     def request_body(self, request: DecisionRequest) -> tuple[dict, dict[str, str]]:
+        body, labels, _ = self._prepare_request(request)
+        return body, labels
+
+    def _prepare_request(self, request: DecisionRequest) -> tuple[dict, dict[str, str], str]:
         if request.questions:
             raise BackendUnavailable("Local action scorer does not support batched questions")
         if not 1 <= len(request.candidates) <= 12:
@@ -100,10 +104,15 @@ class OllamaBackend:
         # fields. Runtime state already excludes thinking.
         observations = request.state.get("observations", [])
         prompt = "Observations: " + scrub(canonical(observations), 3501)
-        prompt += "\nAvailable actions:\n" + "\n".join(
+        options = "\n".join(
             f"{letter}. {description}" for letter, description in zip(labels, descriptions)
         )
-        prompt += "\nZ. None of the above / ask the reasoning model.\nWhich action should be taken?"
+        options += "\nZ. None of the above / ask the reasoning model."
+        prompt += "\nAvailable actions:\n" + options + "\nWhich action should be taken?"
+        # Hash the exact rendered options and ordered label-to-ID binding,
+        # including abstention. Never log target paths or the prompt itself.
+        option_set_hash = digest({"format": "ollama-options-v1", "options": options,
+                                  "bindings": [*labels.items(), ("Z", SLOW)]})
         # Bound bytes conservatively below the 4096-token context (including
         # the system/template overhead). Refuse rather than silently truncate.
         if len(prompt.encode("utf-8")) + len(SYSTEM.encode("utf-8")) > 3500:
@@ -113,10 +122,10 @@ class OllamaBackend:
             "think": False, "stream": False, "logprobs": True,
             "top_logprobs": 20, "keep_alive": "10m",
             "options": {"temperature": 0, "num_predict": 1, "num_ctx": 4096},
-        }, labels
+        }, labels, option_set_hash
 
     async def ask(self, request: DecisionRequest) -> DecisionResult:
-        body, labels = self.request_body(request)
+        body, labels, option_set_hash = self._prepare_request(request)
         if self._client is None:
             try:
                 import httpx
@@ -145,7 +154,8 @@ class OllamaBackend:
         choice = max(probabilities, key=probabilities.get)
         decision = Decision(choice=choice, probabilities=probabilities, model=self.model,
                             input_tokens=payload.get("prompt_eval_count"),
-                            probability_kind=PROBABILITY_KIND)
+                            probability_kind=PROBABILITY_KIND,
+                            confidence_kind="not_reported", option_set_hash=option_set_hash)
         decision.validate(set(labels.values()) | {SLOW})
         return DecisionResult(action=decision, model=self.model,
                               input_tokens=decision.input_tokens, output_tokens=1)

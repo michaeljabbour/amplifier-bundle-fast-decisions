@@ -59,6 +59,10 @@ class DistributionTests(unittest.TestCase):
         with self.assertRaises(ValueError): Policy(timeout_ms=0)
     def test_boolean_probability(self):
         with self.assertRaises(ValueError): Decision("a",{"a":True,"reason":0}).validate({"a","reason"})
+    def test_invalid_reported_confidence(self):
+        for value in (True, '0.9', float('nan'), float('inf'), -.1, 1.1):
+            with self.subTest(value=value), self.assertRaises(ValueError):
+                Decision('a', {'a':.9, 'reason':.1}, reported_confidence=value).validate({'a','reason'})
 
 
 class PrivacyTests(unittest.TestCase):

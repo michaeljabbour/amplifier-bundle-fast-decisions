@@ -8,6 +8,7 @@ single-batched-request JevBackend.ask shape. All offline; no network.
 from __future__ import annotations
 
 import unittest
+from dataclasses import replace
 from types import SimpleNamespace as NS
 
 from amplifier_fast_decisions.backends import JevBackend, ScriptedBackend
@@ -214,6 +215,14 @@ class BackendBatchTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(set(client.kwargs["questions"]), {"next_action", "risk"})
         self.assertEqual(result.action.choice, "a")
         self.assertIn("risk", result.answers)
+        self.assertEqual(result.action.reported_confidence, .8)
+        self.assertEqual(result.action.confidence_kind, 'typesafe_reported_unspecified')
+        self.assertEqual(len(result.action.option_set_hash), 64)
+        second = Candidate('b', 'Another action', 't', {})
+        forward = await backend.ask(replace(req, candidates=(*req.candidates, second)))
+        reverse = await backend.ask(replace(req, candidates=(second, *req.candidates)))
+        self.assertNotEqual(forward.action.option_set_hash, reverse.action.option_set_hash)
+        self.assertEqual(list(client.kwargs['questions']['next_action']['criteria']), ['b', 'a', 'reason'])
 
 
 if __name__ == "__main__":
