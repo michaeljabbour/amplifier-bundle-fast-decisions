@@ -109,3 +109,15 @@ class ForgeControllerTests(unittest.TestCase):
 
 
 if __name__=='__main__':unittest.main()
+
+
+class SideProfileModeTests(unittest.TestCase):
+    def test_active_side_profile_pins_mode_active(self):
+        import forge_e2e
+        cfg = {'limits': {'max_iterations': 30, 'extended_thinking': True}, 'events_dir': '/tmp/e', 'upstream_loop_source': 'git+x'}
+        active = forge_e2e._side_profile('n', {'source_root': '/tmp/s', 'mode': 'active'}, 'scheduler', '/tmp/w', cfg)
+        self.assertEqual(active['session']['orchestrator']['config']['mode'], 'active')
+        self.assertEqual(active['hooks'][0]['config']['mode'], 'active')
+        off = forge_e2e._side_profile('n', {'source_root': '/tmp/s', 'mode': 'off'}, 'scheduler', '/tmp/w', cfg)
+        self.assertEqual(off['session']['orchestrator']['module'], 'loop-streaming')
+        self.assertEqual(off['hooks'][0]['config']['mode'], 'off')

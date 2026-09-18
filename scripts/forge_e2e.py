@@ -134,7 +134,7 @@ def _side_profile(name, side, task, workspace, config):
     source_root = Path(side['source_root'])
     decision = {**DEFAULT_DECISION, **side.get('decision_overrides', {})}
     if side['mode'] == 'active':
-        loop_config = {**decision, 'allow_external_state': False, 'events_dir': config['events_dir'], 'upstream': upstream}
+        loop_config = {**decision, 'mode': 'active', 'allow_external_state': False, 'events_dir': config['events_dir'], 'upstream': upstream}
         loop = {'module': 'loop-fast-decisions', 'source': (source_root/'modules/loop-fast-decisions').as_uri(), 'config': loop_config}
         hook_config = {**loop_config, 'session_label': f'Forge {task} / active', 'observatory': {'enabled': False}}
         hooks = [{'module': 'hooks-fast-decisions', 'source': (source_root/'modules/hooks-fast-decisions').as_uri(), 'config': hook_config}]
@@ -292,6 +292,22 @@ def _source_observed(run):
     return None
 
 
+def _mode_observed(run):
+    """Distinct decision modes reported by the run's own receipts (turn_start/requested/routed/source events)."""
+    receipts = run/'receipts.jsonl'
+    if not receipts.exists():
+        return None
+    modes = set()
+    for line in receipts.read_text().splitlines():
+        try:e = json.loads(line)
+        except ValueError:continue
+        if e.get('event') in {'fast_decisions:turn_start', 'fast_decisions:requested', 'fast_decisions:routed', 'fast_decisions:source'}:
+            m = (e.get('data') or {}).get('mode')
+            if m is not None:
+                modes.add(m)
+    return modes
+
+
 def worker(root,name):
     manifest=json.loads((root/'manifest.json').read_text());run=root/name;workspace=run/'workspace';item=manifest['runs'][name]
     if hash_files(workspace)!=item['workspace_hash']:raise RuntimeError('Starting workspace changed')
@@ -327,6 +343,11 @@ def worker(root,name):
     sid=found[0].name if len(found)==1 else None
     native=native_summary(found[0]) if len(found)==1 else None
     effort=effort_summary(found[0]) if len(found)==1 else []
+    # Extract receipts with the side's own source: the installed package's allowlist would silently drop
+    # event names/fields that only the side under test emits (observed in HC00: no source event, no observation stats).
+    sys.path.insert(0, str(source_root/'src'))
+    for _m in [m for m in list(sys.modules) if m == 'amplifier_fast_decisions' or m.startswith('amplifier_fast_decisions.')]:
+        del sys.modules[_m]
     from amplifier_fast_decisions.operations import measure,read_receipts
     events_dir = Path(manifest.get('events_dir', str(EVENTS)))
     measured=measure(events_dir,session_id=sid) if sid else None
@@ -355,6 +376,9 @@ def worker(root,name):
     else:
         source_match = (source_observed.get('source_git_sha') == source_expected['git_sha']
                          and source_observed.get('source_tree_sha256') == source_expected['tree_sha256'])
+    mode_observed = _mode_observed(run)
+    mode_match = None if mode_observed is None else (
+        (mode_observed == {'active'}) if side['mode'] == 'active' else mode_observed <= {'off'})
     infrastructure_failure = sid is None or code is None
     result={'name':name,'task':item['task'],'side':item['side'],'session_id':sid,'exit_code':code,'timed_out':timed_out,
             'wall_time_ms':elapsed,'native':native,'measurements':measured,'quality':quality,'public_tests_passed':public_ok,
@@ -363,6 +387,7 @@ def worker(root,name):
             'attempt': item.get('attempt', 1), 'deadline_seconds': manifest['limits']['timeout_seconds'],
             'started_at': started_at, 'ended_at': ended_at,
             'source_expected': source_expected, 'source_observed': source_observed, 'source_match': source_match,
+            'mode_expected': side['mode'], 'mode_observed': sorted(mode_observed) if mode_observed is not None else None, 'mode_match': mode_match,
             'retry_count': native['provider_retries'] if native else None, 'effort_receipts': effort,
             'new_session_dirs': len(found), 'infrastructure_failure': infrastructure_failure}
     result['outcome_passed']=code==0 and not timed_out and quality['failed']==0 and public_ok and suite_ok and all(unchanged.values())

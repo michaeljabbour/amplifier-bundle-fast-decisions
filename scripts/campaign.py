@@ -595,6 +595,10 @@ def cmd_preregister(args):
         'gate_results': {f'G{i}': 'pending' for i in range(6)},
         'decision': 'pending', 'evidence_references': [],
         'note': None,
+        'overrides': {k: v for k, v in {
+            'provider': getattr(args, 'provider', None), 'model': getattr(args, 'model', None),
+            'deadline_seconds': getattr(args, 'deadline_seconds', None),
+            'per_launch_usd': getattr(args, 'per_launch_usd', None)}.items() if v is not None},
     }
     _dump(experiment_dir/'proposal.json', proposal)
 
@@ -605,9 +609,10 @@ def cmd_preregister(args):
             'candidate': {'source_root': str(snapshot), 'mode': 'active', 'decision_overrides': decision_overrides},
         },
         'upstream_loop_source': protocol['baseline']['orchestrator'],
-        'provider': campaign['proposal'].get('provider', 'anthropic'),
-        'model': campaign['proposal'].get('model', 'claude-fable-5-1'),
-        'limits': {'timeout_seconds': protocol['deadline_seconds'], 'max_iterations': 30, 'extended_thinking': True},
+        'provider': proposal['overrides'].get('provider') or campaign['proposal'].get('provider', 'anthropic'),
+        'model': proposal['overrides'].get('model') or campaign['proposal'].get('model', 'claude-fable-5-1'),
+        'limits': {'timeout_seconds': proposal['overrides'].get('deadline_seconds') or protocol['deadline_seconds'],
+                   'max_iterations': 30, 'extended_thinking': True},
         'events_dir': campaign['events_dir'], 'host_python': campaign['host_python'], 'forge_py': campaign['forge_py'],
         'prompt': forge_e2e.PROMPT,
     }
@@ -627,6 +632,9 @@ def cmd_run(args, launcher=None, waiter=None):
     runs_root = experiment_dir/'runs'
     protocol = _read_json(root/'protocol.json')
     per_launch = protocol['reservation_policy']['per_launch_usd']
+    proposal_path = experiment_dir/'proposal.json'
+    if proposal_path.exists():
+        per_launch = (_read_json(proposal_path).get('overrides') or {}).get('per_launch_usd') or per_launch
     launcher = launcher or forge_e2e.launch_run
     waiter = waiter or forge_e2e.wait_for_result
 
@@ -856,7 +864,9 @@ def cmd_evaluate(args):
     truncation_reasons = Counter()
     latencies = []
     source_matches = []
+    mode_matches = []
     for key, a in assigned.items():
+        mode_matches.append(a['result'].get('mode_match') if a['result'] else None)
         if key[2] != 'candidate':
             continue
         source_matches.append(a['result'].get('source_match') if a['result'] else None)
@@ -904,6 +914,8 @@ def cmd_evaluate(args):
     request_to_route_p95 = latencies[math.ceil(.95*len(latencies))-1] if latencies else None
     mechanism = {
         'source_match_all_candidate': bool(source_matches) and all(m is True for m in source_matches),
+        'mode_match_all': bool(mode_matches) and all(m is True for m in mode_matches),
+        'mode_match_per_run': mode_matches,
         'requested_count': requested, 'scored_count': scored,
         'zero_observation_requests': zero_observation_requests,
         'requests_with_observation_stats': requests_with_observation_stats,
@@ -922,7 +934,7 @@ def cmd_evaluate(args):
     critical = len(critical_new_failures) > 0
     all_have_evidence = not missing_evidence
     gates = {
-        'G0': 'pass' if (all_have_evidence and mechanism['source_match_all_candidate']) else 'fail',
+        'G0': 'pass' if (all_have_evidence and mechanism['source_match_all_candidate'] and mechanism['mode_match_all']) else 'fail',
         'G1': 'fail' if critical else 'pass',
         'G2': 'pass' if (point is not None and point < 1.0 and success_rate_candidate >= success_rate_baseline) else 'fail',
         'G3': 'not_evaluated_at_screen_tier', 'G4': 'not_evaluated', 'G5': 'not_evaluated',
@@ -1117,6 +1129,10 @@ def main(argv=None):
     p.add_argument('--falsification')
     p.add_argument('--baseline-source')
     p.add_argument('--mechanism-check', action='append')
+    p.add_argument('--provider', help='override the provider id for this experiment (configured providers only)')
+    p.add_argument('--model', help='override the model pin for this experiment (configured providers only)')
+    p.add_argument('--deadline-seconds', type=int, help='override the protocol deadline for this experiment')
+    p.add_argument('--per-launch-usd', type=float, help='override the per-launch reservation (must stay conservative)')
     p.set_defaults(func=cmd_preregister)
 
     p = sub.add_parser('run')
