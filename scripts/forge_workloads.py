@@ -146,7 +146,43 @@ def scheduler_oracle(jobs, capacity):
     return {'waves': waves, 'elapsed': elapsed, 'critical_path': max(scores.values(), default=0)}
 
 
+def task_files(task):
+    """Starter workspace files for `task`: relative path -> text."""
+    if task in SPECS:
+        return {'README.md': SPECS[task], 'solution.py': STARTERS[task], 'test_public.py': PUBLIC[task]}
+    import battery_tasks
+    if task in battery_tasks.TASKS:
+        return dict(battery_tasks.TASKS[task].files)
+    raise KeyError(f'unknown task: {task}')
+
+
+def task_prompt(task):
+    """The exact user prompt for `task`, or None for legacy tasks with no
+    fixed prompt (README.md + test_public.py stand alone)."""
+    if task in SPECS:
+        return None
+    import battery_tasks
+    if task in battery_tasks.TASKS:
+        return battery_tasks.TASKS[task].prompt
+    raise KeyError(f'unknown task: {task}')
+
+
+def task_protected(task):
+    """Files the agent must not modify for `task`."""
+    if task in SPECS:
+        return ('README.md', 'test_public.py')
+    import battery_tasks
+    if task in battery_tasks.TASKS:
+        return battery_tasks.TASKS[task].protected
+    raise KeyError(f'unknown task: {task}')
+
+
 def evaluate(task, workspace):
+    if task not in SPECS:
+        import battery_tasks
+        if task in battery_tasks.TASKS:
+            return battery_tasks.TASKS[task].evaluate(Path(workspace))
+        raise KeyError(f'unknown task: {task}')
     spec = importlib.util.spec_from_file_location('candidate_solution', Path(workspace)/'solution.py')
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
