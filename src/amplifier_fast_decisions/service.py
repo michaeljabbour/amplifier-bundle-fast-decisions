@@ -228,6 +228,7 @@ class DecisionService:
             **common,
             "choice": decision.choice,
             "probabilities": decision.probabilities,
+            "probability_kind": decision.probability_kind,
             "selected_probability": p,
             "reported_confidence": decision.reported_confidence,
             "margin": margin,

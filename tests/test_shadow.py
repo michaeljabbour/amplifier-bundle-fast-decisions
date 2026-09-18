@@ -69,6 +69,9 @@ class ShadowWorkerTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(proposed), 1)
         self.assertEqual(proposed[0]["data"]["domain"], "tool-choice")
         self.assertIsInstance(proposed[0]["data"]["state_chars"], int)
+        self.assertEqual(proposed[0]["data"]["mode"], "shadow")
+        self.assertEqual(proposed[0]["data"]["backend"], "scripted-demo")
+        self.assertTrue(proposed[0]["data"]["synthetic"])
 
     async def test_shadow_proposed_workspace_candidates_are_read_target(self):
         candidate = Candidate("read_ws", "Read ws", "fast_workspace", {"operation": "read", "path": "x"})

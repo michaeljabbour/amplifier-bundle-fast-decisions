@@ -303,7 +303,10 @@ def configure(args) -> int:
     root = Path(args.bundle_root or Path(__file__).resolve().parents[1]).resolve()
     if not (root / "bundle.md").is_file():
         raise ValueError("Pass --bundle-root pointing to the extracted source bundle")
-    if args.mode == "active" and not args.allow_external_state:
+    backend = getattr(args, "backend", None) or (
+        "jev" if args.mode == "active" or args.allow_external_state else "deterministic"
+    )
+    if args.mode == "active" and backend == "jev" and not args.allow_external_state:
         raise ValueError(
             "Active Jev requires --allow-external-state; review docs/PRIVACY.md first"
         )
@@ -326,6 +329,7 @@ def configure(args) -> int:
         config = dict(orchestrator.get("config") or {})
         config.update(
             {
+                "backend": backend,
                 "allow_external_state": args.allow_external_state,
                 "events_dir": events_dir,
                 "timeout_ms": args.timeout_ms,
@@ -345,7 +349,6 @@ def configure(args) -> int:
         hook_entry = next(
             h for h in behavior_yaml["hooks"] if h["module"] == "hooks-fast-decisions"
         )
-        backend = "jev" if args.allow_external_state else "deterministic"
         config = dict(hook_entry.get("config") or {})
         config.update(
             {
@@ -364,6 +367,20 @@ def configure(args) -> int:
                 "config": config,
             }
         ]
+
+    if getattr(args, "model", None):
+        config["model"] = args.model
+    if backend == "ollama":
+        config["ollama_url"] = args.ollama_url
+        config["max_state_chars"] = 2048
+    if getattr(args, "local_sources", False):
+        for entry in data.get("hooks", []) + data["tools"]:
+            entry["source"] = (root / "modules" / entry["module"]).as_uri()
+        if args.mode == "active":
+            orchestrator["source"] = (root / "modules" / orchestrator["module"]).as_uri()
+            # Override the included behavior's remote hook source as well.
+            data["hooks"] = [{"module": "hooks-fast-decisions", "source":
+                              (root / "modules" / "hooks-fast-decisions").as_uri()}]
 
     output = Path(args.output).expanduser()
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -404,6 +421,10 @@ def main(argv=None) -> int:
     command = commands.add_parser("doctor")
     command.add_argument("--require-amplifier", action="store_true")
     command = commands.add_parser("configure")
+    command.add_argument("--backend", choices=["jev", "deterministic", "ollama"])
+    command.add_argument("--model")
+    command.add_argument("--ollama-url", default="http://127.0.0.1:11434")
+    command.add_argument("--local-sources", action="store_true")
     command.add_argument("--bundle-root")
     command.add_argument("--workspace", default=".")
     command.add_argument(

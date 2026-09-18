@@ -1,0 +1,515 @@
+{
+  "evidence_kind": "actual Amplifier CLI and Foundation, real Ollama scorer, native workspace execution, actual Anthropic generative finalizer; disposable public workspace with project-local app isolation",
+  "exit_code": 0,
+  "session_id": "b261eace-a41d-448e-8659-34d3616dfca0",
+  "events": [
+    {
+      "data": {
+        "allow_external_state": false,
+        "backend": "ollama-token",
+        "event_source": "native-hook-bridge",
+        "mode": "active",
+        "phase": "configuration",
+        "policy_version": "policy-v1"
+      },
+      "decision_id": null,
+      "event": "fast_decisions:health",
+      "event_id": "956aca199652470db35f157e0470a327",
+      "monotonic_ns": 1405922179655333,
+      "parent_session_id": null,
+      "schema_version": "1.0",
+      "seq": 1,
+      "session_id": "b261eace-a41d-448e-8659-34d3616dfca0",
+      "synthetic": false,
+      "timestamp": "2026-09-18T01:42:30.379558+00:00",
+      "turn_id": null
+    },
+    {
+      "data": {
+        "action": "skipped",
+        "reason": "env_disabled"
+      },
+      "decision_id": null,
+      "event": "fast_decisions:observatory",
+      "event_id": "732b366735624642b10b86d2c24ca337",
+      "monotonic_ns": 1405932238937791,
+      "parent_session_id": null,
+      "schema_version": "1.0",
+      "seq": 2,
+      "session_id": "b261eace-a41d-448e-8659-34d3616dfca0",
+      "synthetic": false,
+      "timestamp": "2026-09-18T01:42:40.438323+00:00",
+      "turn_id": null
+    },
+    {
+      "data": {
+        "allow_external_state": false,
+        "backend": "ollama-token",
+        "engine": "upstream-loop-streaming",
+        "mode": "active",
+        "policy_version": "policy-v1"
+      },
+      "decision_id": null,
+      "event": "fast_decisions:turn_start",
+      "event_id": "0183642703a24b378124ae0711ad475f",
+      "monotonic_ns": 1405932256063375,
+      "parent_session_id": null,
+      "schema_version": "1.0",
+      "seq": 3,
+      "session_id": "b261eace-a41d-448e-8659-34d3616dfca0",
+      "synthetic": false,
+      "timestamp": "2026-09-18T01:42:40.455448+00:00",
+      "turn_id": "615649b19bae4aa58957d12234ee6975"
+    },
+    {
+      "data": {
+        "event_source": "native-hook-bridge",
+        "native_event": "execution:start",
+        "phase": null,
+        "provider": null,
+        "status": "observed",
+        "tool": null,
+        "tool_call_id": null
+      },
+      "decision_id": null,
+      "event": "fast_decisions:health",
+      "event_id": "5edb1915fad8468b881abcb5b6d47880",
+      "monotonic_ns": 1405932262416041,
+      "parent_session_id": null,
+      "schema_version": "1.0",
+      "seq": 4,
+      "session_id": "b261eace-a41d-448e-8659-34d3616dfca0",
+      "synthetic": false,
+      "timestamp": "2026-09-18T01:42:40.461801+00:00",
+      "turn_id": "615649b19bae4aa58957d12234ee6975"
+    },
+    {
+      "data": {
+        "event_source": "native-hook-bridge",
+        "native_event": "provider:request",
+        "phase": "turn_start",
+        "provider": "anthropic-primary",
+        "status": "observed",
+        "tool": null,
+        "tool_call_id": null
+      },
+      "decision_id": null,
+      "event": "fast_decisions:health",
+      "event_id": "12b5fb3625f44818a88d05e9b1434a79",
+      "monotonic_ns": 1405932312908708,
+      "parent_session_id": null,
+      "schema_version": "1.0",
+      "seq": 5,
+      "session_id": "b261eace-a41d-448e-8659-34d3616dfca0",
+      "synthetic": false,
+      "timestamp": "2026-09-18T01:42:40.512284+00:00",
+      "turn_id": "615649b19bae4aa58957d12234ee6975"
+    },
+    {
+      "data": {
+        "backend": "ollama-token",
+        "candidate_count": 2,
+        "candidate_order_hash": "468c5eed72ccde419c65ce925286191e1ba92b45b0860a0c9ae14c813d357df7",
+        "candidates": [
+          {
+            "id": "read_66b905d8ebe4",
+            "label": "Read requested file 2",
+            "tool": "fast_workspace"
+          },
+          {
+            "id": "read_d82ab49f91a6",
+            "label": "Read requested file 1",
+            "tool": "fast_workspace"
+          }
+        ],
+        "domain": "read-target",
+        "mode": "active",
+        "policy_version": "policy-v1",
+        "question_count": 0,
+        "state_chars": 328,
+        "state_hash": "b4ea2eec17e19f08e2396eb972f3dd12f696976f34262b91904070ac6c0d9b69",
+        "state_revision": 0,
+        "step": 1
+      },
+      "decision_id": "3e32191dff074290933ec1b6f820c646",
+      "event": "fast_decisions:requested",
+      "event_id": "f7cb4e56ac7247bcb2f5300ea83ffdf1",
+      "monotonic_ns": 1405937404926875,
+      "parent_session_id": null,
+      "schema_version": "1.0",
+      "seq": 6,
+      "session_id": "b261eace-a41d-448e-8659-34d3616dfca0",
+      "synthetic": false,
+      "timestamp": "2026-09-18T01:42:45.604042+00:00",
+      "turn_id": "615649b19bae4aa58957d12234ee6975"
+    },
+    {
+      "data": {
+        "backend": "ollama-token",
+        "candidate_order_hash": "468c5eed72ccde419c65ce925286191e1ba92b45b0860a0c9ae14c813d357df7",
+        "choice": "read_d82ab49f91a6",
+        "domain": "read-target",
+        "duration_ms": 70.78087492845953,
+        "input_tokens": 138,
+        "latency_kind": "decision_model_wall_time",
+        "margin": 0.9998137432088818,
+        "mode": "active",
+        "model": "qwen3:0.6b",
+        "output_tokens": 1,
+        "policy_version": "policy-v1",
+        "probabilities": {
+          "read_66b905d8ebe4": 9.005489464089678e-05,
+          "read_d82ab49f91a6": 0.9999037981035227,
+          "reason": 6.147001836431798e-06
+        },
+        "probability_kind": "token_mass_with_abstention_residual",
+        "reported_confidence": null,
+        "selected_probability": 0.9999037981035227,
+        "state_revision": 0,
+        "step": 1,
+        "synthetic": false
+      },
+      "decision_id": "3e32191dff074290933ec1b6f820c646",
+      "event": "fast_decisions:scored",
+      "event_id": "ffd9f7ac07934335ae0b52669cf78b5a",
+      "monotonic_ns": 1405937479011958,
+      "parent_session_id": null,
+      "schema_version": "1.0",
+      "seq": 7,
+      "session_id": "b261eace-a41d-448e-8659-34d3616dfca0",
+      "synthetic": false,
+      "timestamp": "2026-09-18T01:42:45.678117+00:00",
+      "turn_id": "615649b19bae4aa58957d12234ee6975"
+    },
+    {
+      "data": {
+        "backend": "ollama-token",
+        "destination": "fast_workspace",
+        "mode": "active",
+        "policy_version": "policy-v1",
+        "reason_code": "prepared_action_selected",
+        "route": "fast",
+        "selected_candidate": "read_d82ab49f91a6",
+        "status": "submitted_to_upstream",
+        "transport_measured": "provider-complete"
+      },
+      "decision_id": "3e32191dff074290933ec1b6f820c646",
+      "event": "fast_decisions:routed",
+      "event_id": "614856cab3184c8790bd83aba8ed9df9",
+      "monotonic_ns": 1405937485387583,
+      "parent_session_id": null,
+      "schema_version": "1.0",
+      "seq": 8,
+      "session_id": "b261eace-a41d-448e-8659-34d3616dfca0",
+      "synthetic": false,
+      "timestamp": "2026-09-18T01:42:45.684504+00:00",
+      "turn_id": "615649b19bae4aa58957d12234ee6975"
+    },
+    {
+      "data": {
+        "event_source": "native-hook-bridge",
+        "native_event": "tool:pre",
+        "phase": null,
+        "provider": null,
+        "status": "observed",
+        "tool": "fast_workspace",
+        "tool_call_id": "fd_eaa45178b1744b1584a670eb"
+      },
+      "decision_id": "3e32191dff074290933ec1b6f820c646",
+      "event": "fast_decisions:health",
+      "event_id": "d8c610fbfc6740e7835d2248fbb60538",
+      "monotonic_ns": 1405937490274291,
+      "parent_session_id": null,
+      "schema_version": "1.0",
+      "seq": 9,
+      "session_id": "b261eace-a41d-448e-8659-34d3616dfca0",
+      "synthetic": false,
+      "timestamp": "2026-09-18T01:42:45.689387+00:00",
+      "turn_id": "615649b19bae4aa58957d12234ee6975"
+    },
+    {
+      "data": {
+        "arguments_hash": "2b71efd3a7a029ba32359b20b2c58776f2ea1862f6e6735e37d7ea089f13b2bd",
+        "tool": "fast_workspace",
+        "tool_call_id": "fd_eaa45178b1744b1584a670eb"
+      },
+      "decision_id": "74fce61b9147406fadff5e2105223161",
+      "event": "fast_decisions:shadow_observed",
+      "event_id": "6dbb5947b3eb40658b86e06d79afbc76",
+      "monotonic_ns": 1405937493581208,
+      "parent_session_id": null,
+      "schema_version": "1.0",
+      "seq": 10,
+      "session_id": "b261eace-a41d-448e-8659-34d3616dfca0",
+      "synthetic": false,
+      "timestamp": "2026-09-18T01:42:45.692698+00:00",
+      "turn_id": "615649b19bae4aa58957d12234ee6975"
+    },
+    {
+      "data": {
+        "status": "running",
+        "tool": "fast_workspace",
+        "tool_call_id": "fd_eaa45178b1744b1584a670eb"
+      },
+      "decision_id": "3e32191dff074290933ec1b6f820c646",
+      "event": "fast_decisions:tool_start",
+      "event_id": "b31b3ab4087d430f8af730fbdb2ba743",
+      "monotonic_ns": 1405937496139333,
+      "parent_session_id": null,
+      "schema_version": "1.0",
+      "seq": 11,
+      "session_id": "b261eace-a41d-448e-8659-34d3616dfca0",
+      "synthetic": false,
+      "timestamp": "2026-09-18T01:42:45.695256+00:00",
+      "turn_id": "615649b19bae4aa58957d12234ee6975"
+    },
+    {
+      "data": {
+        "duration_ms": 0.4668331239372492,
+        "status": "ok",
+        "success": true,
+        "tool": "fast_workspace",
+        "tool_call_id": "fd_eaa45178b1744b1584a670eb"
+      },
+      "decision_id": "3e32191dff074290933ec1b6f820c646",
+      "event": "fast_decisions:tool_end",
+      "event_id": "574c44546f774ef0be3eb42f5c674553",
+      "monotonic_ns": 1405937498065833,
+      "parent_session_id": null,
+      "schema_version": "1.0",
+      "seq": 12,
+      "session_id": "b261eace-a41d-448e-8659-34d3616dfca0",
+      "synthetic": false,
+      "timestamp": "2026-09-18T01:42:45.697182+00:00",
+      "turn_id": "615649b19bae4aa58957d12234ee6975"
+    },
+    {
+      "data": {
+        "event_source": "native-hook-bridge",
+        "native_event": "tool:post",
+        "phase": null,
+        "provider": null,
+        "status": "observed",
+        "tool": "fast_workspace",
+        "tool_call_id": "fd_eaa45178b1744b1584a670eb"
+      },
+      "decision_id": "3e32191dff074290933ec1b6f820c646",
+      "event": "fast_decisions:health",
+      "event_id": "ee64728dbab741299d5dd98a50549311",
+      "monotonic_ns": 1405937501509416,
+      "parent_session_id": null,
+      "schema_version": "1.0",
+      "seq": 13,
+      "session_id": "b261eace-a41d-448e-8659-34d3616dfca0",
+      "synthetic": false,
+      "timestamp": "2026-09-18T01:42:45.700625+00:00",
+      "turn_id": "615649b19bae4aa58957d12234ee6975"
+    },
+    {
+      "data": {
+        "allow_external_state": false,
+        "backend": "ollama-token",
+        "candidate_count": 2,
+        "choice": "read_d82ab49f91a6",
+        "domain": "read-target",
+        "duration_ms": 22.434999933466315,
+        "margin": 0.9998234588081905,
+        "mode": "shadow",
+        "model": "qwen3:0.6b",
+        "probabilities": {
+          "read_66b905d8ebe4": 8.510766334839772e-05,
+          "read_d82ab49f91a6": 0.9999085664715388,
+          "reason": 6.3258651128439425e-06
+        },
+        "probability_kind": "token_mass_with_abstention_residual",
+        "selected_probability": 0.9999085664715388,
+        "state_chars": 328,
+        "state_source": "context_mount",
+        "synthetic": false
+      },
+      "decision_id": "74fce61b9147406fadff5e2105223161",
+      "event": "fast_decisions:shadow_proposed",
+      "event_id": "a69554a2eddd405b84d9f9c759cbf642",
+      "monotonic_ns": 1405937516157375,
+      "parent_session_id": null,
+      "schema_version": "1.0",
+      "seq": 14,
+      "session_id": "b261eace-a41d-448e-8659-34d3616dfca0",
+      "synthetic": false,
+      "timestamp": "2026-09-18T01:42:45.715265+00:00",
+      "turn_id": "615649b19bae4aa58957d12234ee6975"
+    },
+    {
+      "data": {
+        "actual_tool": "fast_workspace",
+        "agreement": "match",
+        "domain": "read-target",
+        "proposed_candidate": "read_d82ab49f91a6",
+        "would_have_avoided_llm_turn": true
+      },
+      "decision_id": "74fce61b9147406fadff5e2105223161",
+      "event": "fast_decisions:shadow_agreement",
+      "event_id": "6b27f1c3e435402babedc17321a1911c",
+      "monotonic_ns": 1405937521154583,
+      "parent_session_id": null,
+      "schema_version": "1.0",
+      "seq": 15,
+      "session_id": "b261eace-a41d-448e-8659-34d3616dfca0",
+      "synthetic": false,
+      "timestamp": "2026-09-18T01:42:45.720266+00:00",
+      "turn_id": "615649b19bae4aa58957d12234ee6975"
+    },
+    {
+      "data": {
+        "event_source": "native-hook-bridge",
+        "native_event": "provider:request",
+        "phase": null,
+        "provider": "anthropic-primary",
+        "status": "observed",
+        "tool": null,
+        "tool_call_id": null
+      },
+      "decision_id": "3e32191dff074290933ec1b6f820c646",
+      "event": "fast_decisions:health",
+      "event_id": "5d11a3f11b144a2a82c2f9160193f941",
+      "monotonic_ns": 1405937535388416,
+      "parent_session_id": null,
+      "schema_version": "1.0",
+      "seq": 16,
+      "session_id": "b261eace-a41d-448e-8659-34d3616dfca0",
+      "synthetic": false,
+      "timestamp": "2026-09-18T01:42:45.734500+00:00",
+      "turn_id": "615649b19bae4aa58957d12234ee6975"
+    },
+    {
+      "data": {
+        "backend": "ollama-token",
+        "destination": "provider",
+        "mode": "active",
+        "policy_version": "policy-v1",
+        "reason_code": "no_eligible_candidates",
+        "route": "slow",
+        "state_revision": 2,
+        "step": 2
+      },
+      "decision_id": "6c3ae9b1e97e42c49c386b724eab74fa",
+      "event": "fast_decisions:routed",
+      "event_id": "833654080dfe4444996366f1fae51899",
+      "monotonic_ns": 1405942553977333,
+      "parent_session_id": null,
+      "schema_version": "1.0",
+      "seq": 17,
+      "session_id": "b261eace-a41d-448e-8659-34d3616dfca0",
+      "synthetic": false,
+      "timestamp": "2026-09-18T01:42:50.752816+00:00",
+      "turn_id": "615649b19bae4aa58957d12234ee6975"
+    },
+    {
+      "data": {
+        "destination": "anthropic-primary",
+        "model": "provider-default",
+        "provider": "anthropic-primary",
+        "route": "slow",
+        "status": "running",
+        "transport_measured": "provider-complete"
+      },
+      "decision_id": "6c3ae9b1e97e42c49c386b724eab74fa",
+      "event": "fast_decisions:slow_start",
+      "event_id": "dd1e29d067a048e488c7614f41874bde",
+      "monotonic_ns": 1405942556787583,
+      "parent_session_id": null,
+      "schema_version": "1.0",
+      "seq": 18,
+      "session_id": "b261eace-a41d-448e-8659-34d3616dfca0",
+      "synthetic": false,
+      "timestamp": "2026-09-18T01:42:50.755642+00:00",
+      "turn_id": "615649b19bae4aa58957d12234ee6975"
+    },
+    {
+      "data": {
+        "duration_ms": 9862.017749808729,
+        "input_tokens": 4,
+        "latency_kind": "provider_complete_wall_time",
+        "model": "provider-default",
+        "output_tokens": 37,
+        "provider": "anthropic-primary",
+        "status": "ok",
+        "total_tokens": 41,
+        "transport_measured": "provider-complete"
+      },
+      "decision_id": "6c3ae9b1e97e42c49c386b724eab74fa",
+      "event": "fast_decisions:slow_end",
+      "event_id": "042e451285ef4ded92649f6bdf4647ad",
+      "monotonic_ns": 1405952421214416,
+      "parent_session_id": null,
+      "schema_version": "1.0",
+      "seq": 19,
+      "session_id": "b261eace-a41d-448e-8659-34d3616dfca0",
+      "synthetic": false,
+      "timestamp": "2026-09-18T01:43:00.619558+00:00",
+      "turn_id": "615649b19bae4aa58957d12234ee6975"
+    },
+    {
+      "data": {
+        "event_source": "native-hook-bridge",
+        "native_event": "execution:end",
+        "phase": null,
+        "provider": null,
+        "status": "observed",
+        "tool": null,
+        "tool_call_id": null
+      },
+      "decision_id": "6c3ae9b1e97e42c49c386b724eab74fa",
+      "event": "fast_decisions:health",
+      "event_id": "8b4cea70036d48a2bb2675f2dc4f35fe",
+      "monotonic_ns": 1405952431744833,
+      "parent_session_id": null,
+      "schema_version": "1.0",
+      "seq": 20,
+      "session_id": "b261eace-a41d-448e-8659-34d3616dfca0",
+      "synthetic": false,
+      "timestamp": "2026-09-18T01:43:00.630093+00:00",
+      "turn_id": "615649b19bae4aa58957d12234ee6975"
+    },
+    {
+      "data": {
+        "dropped_events": 0,
+        "fast_total": 1,
+        "queue_depth": 0,
+        "recording_error": null,
+        "slow_total": 1
+      },
+      "decision_id": "6c3ae9b1e97e42c49c386b724eab74fa",
+      "event": "fast_decisions:turn_end",
+      "event_id": "5e6d60d2145f4b31a08bc691d007f586",
+      "monotonic_ns": 1405952436172041,
+      "parent_session_id": null,
+      "schema_version": "1.0",
+      "seq": 21,
+      "session_id": "b261eace-a41d-448e-8659-34d3616dfca0",
+      "synthetic": false,
+      "timestamp": "2026-09-18T01:43:00.634520+00:00",
+      "turn_id": "615649b19bae4aa58957d12234ee6975"
+    },
+    {
+      "data": {
+        "dropped_events": 0,
+        "dropped_shadow_jobs": 0,
+        "pending": 0,
+        "queue_depth": 0,
+        "recording_error": null
+      },
+      "decision_id": null,
+      "event": "fast_decisions:health",
+      "event_id": "0b4d35db5db14215b8783eac4b6c1f5c",
+      "monotonic_ns": 1405952504474625,
+      "parent_session_id": null,
+      "schema_version": "1.0",
+      "seq": 22,
+      "session_id": "b261eace-a41d-448e-8659-34d3616dfca0",
+      "synthetic": false,
+      "timestamp": "2026-09-18T01:43:00.702816+00:00",
+      "turn_id": null
+    }
+  ]
+}

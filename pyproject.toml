@@ -14,6 +14,7 @@ dependencies = []
 
 [project.optional-dependencies]
 jev = ["typesafe-sdk"]
+local = ["httpx>=0.27,<1"]
 amplifier = [
   "amplifier-core @ git+https://github.com/microsoft/amplifier-core@6d4cd217f83bb29b671b5c9d854aaa08be14db1b",
   "amplifier-module-loop-streaming @ git+https://github.com/microsoft/amplifier-module-loop-streaming@20aac7a9eb26034d230357f6aa6805f27c86df52",

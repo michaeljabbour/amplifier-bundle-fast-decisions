@@ -36,6 +36,7 @@ HAS_CORE = importlib.util.find_spec("amplifier_core") is not None
 HAS_LOOP = importlib.util.find_spec("amplifier_module_loop_streaming") is not None
 
 SHADOW_EVENTS = (
+    "fast_decisions:health",
     "fast_decisions:shadow_proposed",
     "fast_decisions:shadow_observed",
     "fast_decisions:shadow_agreement",
@@ -231,6 +232,23 @@ class ShadowRealKernelTests(unittest.IsolatedAsyncioTestCase):
         self._workspace.cleanup()
         self._events_a.cleanup()
         self._events_b.cleanup()
+
+    async def test_observer_reports_native_activity_and_effective_configuration(self):
+        result, events, _ = await _run_turn(
+            backend="deterministic", allow_external_state=False,
+            tmp_workspace=self._workspace.name, tmp_events=self._events_a.name,
+            prompt="Use the tools, then answer.",
+        )
+        self.assertEqual(result, "done")
+        health = [e["data"] for e in events if e["event"].endswith(":health")]
+        config = next(d for d in health if d.get("phase") == "configuration")
+        self.assertEqual(config["mode"], "shadow")
+        self.assertEqual(config["backend"], "scripted-demo")
+        self.assertFalse(config["allow_external_state"])
+        self.assertEqual(sum(d.get("native_event") == "provider:request" for d in health), 3)
+        self.assertEqual(sum(d.get("native_event") == "tool:post" for d in health), 2)
+        self.assertTrue(any(d.get("reason_code") == "no_eligible_candidates" for d in health))
+        self.assertFalse(any("prompt" in d or "result" in d or "tool_input" in d for d in health))
 
     async def test_deterministic_backend_produces_shadow_and_role_telemetry(self):
         result, events, delegate_tool = await _run_turn(

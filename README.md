@@ -2,6 +2,11 @@
 
 Experimental v0.1.0. A Foundation-compatible bundle, a hybrid orchestrator, a hosted Jev adapter, structured events, and a read-only local visualizer.
 
+No Jev key? The [local Ollama pilot](docs/LOCAL-SCORER.md) provides real one-token
+scoring below 500 ms on the tested Mac. It remains an experimental classifier
+with explicit abstention. The [Teamwork portability design](docs/design/teamwork-portable-tool.md)
+maps the library/adapter boundary toward a harness-independent Smart Tool.
+
 **A fast judgment is not a permission grant. A proposed action is not an executed action.**
 
 The orchestrator composes `StreamingOrchestrator`; it does not replace the Rust kernel or duplicate its tool-execution loop. At each eligible `Provider.complete()` boundary, the decision service may return a prepared tool-call envelope instead of calling the generative provider. The upstream loop handles that envelope normally. This is an executable integration candidate, not a claim of production certification.
@@ -19,8 +24,30 @@ Start any session; the observatory opens at `http://127.0.0.1:8765` (token-prote
 To run the decision orchestrator's active fast path (a fast decision model actually substituting a prepared read-only action for an LLM turn), load the standalone active bundle instead:
 
 ```bash
-amplifier bundle add "git+https://github.com/michaeljabbour/amplifier-bundle-fast-decisions@main#subdirectory=bundles/active.yaml" --app
+amplifier bundle add "git+https://github.com/michaeljabbour/amplifier-bundle-fast-decisions@main#subdirectory=bundles/active.yaml"
+amplifier run --bundle fast-decisions-active "Read README.md and explain what this project does."
 ```
+
+This active profile enables external state transmission to TypeSafe. Review
+[PRIVACY.md](docs/PRIVACY.md), install the Jev SDK in the host environment,
+and supply `TYPESAFE_API_KEY` securely before this test. Use public files.
+
+### Why the observatory can be live without a fast path
+
+An `app` entry for `fast-decisions` confirms composition, not active routing.
+The installed behavior uses shadow mode with an offline scripted scorer;
+it never replaces a provider call. The bundle list's “No bundle active”
+refers to primary bundle selection and does not disable app bundles.
+
+Shadow proposals count as decisions scored, but never as fast submissions.
+The viewer shows native provider requests and tool post hooks separately
+from measured provider invocations and actual `execute()` outcomes. Hook
+observations do not establish successful execution or its duration.
+The effective mode/backend appear in telemetry even before a score exists.
+With no eligible prepared action, the observer reports
+`no_eligible_candidates`; built-in candidates need an explicit eligible
+text-file path under the configured workspace root. Generic prompts do not
+automatically produce fast paths, and model-role suggestions remain shadow-only.
 
 `bundles/shadow.yaml` still exists and still resolves, but it is **DEPRECATED** -- it forwards to `bundle.md` unchanged (your orchestrator stays in place) and no longer swaps `session.orchestrator`. Prefer composing `bundle.md` (or `behaviors/fast-decisions.yaml`) directly; the forwarding alias is removed in 0.3.0.
 
@@ -61,7 +88,7 @@ python3 -m amplifier_fast_decisions configure \
   --allow-external-state \
   --output "$PWD/local-shadow.md"
 
-amplifier bundle add "file://$PWD/local-shadow.md" --app
+amplifier bundle add "file://$PWD/local-shadow.md"
 amplifier run --bundle fast-decisions-shadow \
   "Read README.md and explain what this project does."
 ```
@@ -84,7 +111,7 @@ To enable the prepared-action fast path after inspecting shadow traces:
 python3 -m amplifier_fast_decisions configure \
   --bundle-root "$PWD" --workspace "$WORKSPACE" \
   --mode active --allow-external-state --output "$PWD/local-active.md"
-amplifier bundle add "file://$PWD/local-active.md" --app
+amplifier bundle add "file://$PWD/local-active.md"
 amplifier run --bundle fast-decisions-active \
   "Read README.md and explain what this project does."
 ```
@@ -117,6 +144,7 @@ Only user-explicit, eligible text-file paths become automatic built-in candidate
 
 ```bash
 python3 -m unittest discover -s tests -v
+node --test tests/test_viewer.cjs  # viewer regression tests; Node only needed for this check
 python3 -m amplifier_fast_decisions doctor
 ```
 

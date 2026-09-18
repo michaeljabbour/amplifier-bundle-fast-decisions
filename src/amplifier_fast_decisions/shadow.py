@@ -169,8 +169,13 @@ class ShadowWorker:
             job.candidates, kind="role" if job.kind == "role" else "action"
         )
         proposed_data = {
+            "mode": "shadow",
+            "backend": self._service.backend.name,
+            "model": decision.model,
+            "synthetic": result.synthetic,
             "choice": decision.choice,
             "probabilities": decision.probabilities,
+            "probability_kind": decision.probability_kind,
             "selected_probability": p,
             "margin": margin,
             "duration_ms": duration,
