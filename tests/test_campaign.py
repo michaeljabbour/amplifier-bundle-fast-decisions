@@ -394,7 +394,9 @@ class EvaluateTests(unittest.TestCase):
                 {'event': 'fast_decisions:requested', 'decision_id': 'd2', 'timestamp': '2026-09-18T00:00:01',
                  'data': {'observation_count': 3, 'truncation_reason': 'none'}},
                 {'event': 'fast_decisions:scored', 'decision_id': 'd1', 'timestamp': '2026-09-18T00:00:02',
-                 'data': {'reason_code': 'model_abstained'}},
+                 'data': {'choice': 'read_x'}},
+                {'event': 'fast_decisions:routed', 'decision_id': 'd1', 'timestamp': '2026-09-18T00:00:02',
+                 'data': {'route': 'slow', 'reason_code': 'model_abstained'}},
                 {'event': 'fast_decisions:tool_end', 'decision_id': 'd1', 'timestamp': '2026-09-18T00:00:03',
                  'data': {'success': True}},
             ]
@@ -433,3 +435,35 @@ class CheckpointTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class LaunchFailureTests(unittest.TestCase):
+    def test_launch_exception_settles_zero_and_retries_once(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            root, src = _init_campaign(base, {})
+            campaign.cmd_preregister(_prereg_args(root, src, 'lf', 'scheduler', reps=1, seed=3))
+            runs_root = root/'experiments'/'lf'/'runs'
+            calls = []
+            def _write_fake_result(rr, name):
+                (rr/name).mkdir(parents=True, exist_ok=True)
+                (rr/name/'result.json').write_text(json.dumps({
+                    'name': name, 'outcome_passed': True, 'timed_out': False, 'wall_time_ms': 1000.0,
+                    'native': {'usage': {'cost_usd': 0.5}}, 'quality': {'checks': 1, 'passed': 1, 'failed': 0, 'failure_labels': []},
+                    'protected_files_unchanged': {'README.md': True}, 'source_match': True, 'mode_match': True,
+                    'infrastructure_failure': False, 'attempt': 2 if name.endswith('-a2') else 1}))
+            def launcher(rr, name):
+                calls.append(name)
+                if name.endswith('-a1') and 'baseline' in name:
+                    raise RuntimeError('forge launch failed: Maximum sessions (10) reached')
+                _write_fake_result(rr, name)
+            def waiter(rr, name, timeout):
+                return (rr/name/'result.json').exists()
+            campaign.cmd_run(SimpleNamespace(root=str(root), experiment='lf'), launcher=launcher, waiter=waiter, closer=lambda rr, n: None)
+            ledger = [json.loads(l) for l in (root/'ledger.jsonl').read_text().splitlines()]
+            failed = [e for e in ledger if e['type'] == 'launch_failed']
+            self.assertEqual(len(failed), 1)
+            zero = [e for e in ledger if e['type'] == 'settlement' and e.get('actual_usd') == 0.0]
+            self.assertEqual(len(zero), 1)
+            self.assertTrue(any(n.endswith('baseline-a2') for n in calls), calls)
+            self.assertTrue((runs_root/[n for n in calls if n.endswith('baseline-a2')][0]/'result.json').exists())

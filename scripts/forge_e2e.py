@@ -410,16 +410,67 @@ def launch_run(root, name, forge_module=None):
         import forge as forge_module
     host_python = manifest.get('host_python', str(HOST_PYTHON))
     cmd=shlex.join([str(host_python),str(Path(__file__).resolve()),'worker',str(root),name])
-    try:
-        result=forge_module.call('run_command',{'command':'/bin/zsh','args':['-lc',cmd],
-            'cwd':str(run/'workspace'),'timeoutMs':60000})
-    except SystemExit as exc:
-        try:result=json.loads(str(exc).removeprefix('forge: '))
-        except ValueError:raise
-        if result.get('timeout') is not True:raise
+    for attempt in (1, 2):
+        try:
+            result=forge_module.call('run_command',{'command':'/bin/zsh','args':['-lc',cmd],
+                'cwd':str(run/'workspace'),'timeoutMs':60000})
+            break
+        except SystemExit as exc:
+            text=str(exc).removeprefix('forge: ')
+            try:result=json.loads(text)
+            except ValueError:
+                # Forge refuses new terminals once exited ones pile up. Reap only OUR exited worker
+                # terminals (never live or unowned sessions) and retry once; otherwise fail loud.
+                if 'Maximum sessions' in text and attempt == 1 and reap_exited_worker_terminals(forge_module, root):
+                    continue
+                raise RuntimeError('forge launch failed: '+text) from None
+            if result.get('timeout') is not True:
+                raise RuntimeError('forge launch failed: '+text) from None
+            break
     (run/'forge-output.txt').write_text(result.pop('output',''))
     dump(run/'forge-observation.json',result)
     return result
+
+
+def reap_exited_worker_terminals(forge_module, root):
+    """Close Forge terminals that have EXITED and were launched by this runner for ``root``.
+
+    Live sessions and sessions that do not reference this campaign root are never touched.
+    Returns True when at least one terminal was closed.
+    """
+    try:
+        sessions=forge_module.call('list_terminals',{})
+    except SystemExit:
+        return False
+    if isinstance(sessions,dict):
+        sessions=sessions.get('sessions') or sessions.get('terminals') or []
+    closed=0
+    for s in sessions:
+        if not isinstance(s,dict) or s.get('status')!='exited':
+            continue
+        if str(root) not in (s.get('name') or '')+' '+(s.get('cwd') or ''):
+            continue
+        try:forge_module.call('close_terminal',{'id':s['id']});closed+=1
+        except SystemExit:pass
+    return closed>0
+
+
+def close_worker_terminal(root, name, forge_module=None):
+    """Close the terminal this runner opened for ``name`` (recorded in forge-observation.json), if any."""
+    obs=root/name/'forge-observation.json'
+    if not obs.exists():
+        return False
+    try:sid=json.loads(obs.read_text()).get('sessionId')
+    except ValueError:return False
+    if not sid:
+        return False
+    if forge_module is None:
+        manifest=json.loads((root/'manifest.json').read_text())
+        forge_py=Path(manifest.get('forge_py', str(FORGE))).expanduser()
+        sys.path.insert(0,str(forge_py.parent))
+        import forge as forge_module
+    try:forge_module.call('close_terminal',{'id':sid});return True
+    except SystemExit:return False
 
 
 def wait_for_result(root, name, timeout_seconds):

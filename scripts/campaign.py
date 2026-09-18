@@ -626,7 +626,7 @@ def cmd_preregister(args):
 # run
 # --------------------------------------------------------------------------
 
-def cmd_run(args, launcher=None, waiter=None):
+def cmd_run(args, launcher=None, waiter=None, closer=None):
     root = Path(args.root).expanduser().resolve()
     experiment_dir = root/'experiments'/args.experiment
     runs_root = experiment_dir/'runs'
@@ -637,6 +637,7 @@ def cmd_run(args, launcher=None, waiter=None):
         per_launch = (_read_json(proposal_path).get('overrides') or {}).get('per_launch_usd') or per_launch
     launcher = launcher or forge_e2e.launch_run
     waiter = waiter or forge_e2e.wait_for_result
+    closer = closer or forge_e2e.close_worker_terminal
 
     i = 0
     while True:
@@ -678,8 +679,18 @@ def cmd_run(args, launcher=None, waiter=None):
         _ledger_append(root, {'type': 'reservation', 'id': rid, 'usd': per_launch, 'purpose': f'run:{name}'})
         _ledger_append(root, {'type': 'run_launched', 'experiment': args.experiment, 'run': name,
                               'reservation': rid, 'attempt': item.get('attempt', 1)})
-        launcher(runs_root, name)
-        ok = waiter(runs_root, name, wait_seconds)
+        try:
+            launcher(runs_root, name)
+        except Exception as exc:  # launch never started a worker: settle at 0, record, retry once below
+            _ledger_append(root, {'type': 'settlement', 'reservation': rid, 'actual_usd': 0.0, 'note': 'launch_failed_no_process'})
+            _ledger_append(root, {'type': 'launch_failed', 'experiment': args.experiment, 'run': name, 'reason': str(exc)[:300]})
+            ok = False
+        else:
+            ok = waiter(runs_root, name, wait_seconds)
+            try:
+                closer(runs_root, name)
+            except Exception:
+                pass
 
         outcome = _read_json(run_dir/'result.json') if ok and (run_dir/'result.json').exists() else None
         if outcome is not None:
