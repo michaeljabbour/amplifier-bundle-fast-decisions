@@ -28,6 +28,7 @@ Session identity is read from the coordinator/session if exposed. A generated fa
 | `role_proposed` | The shadow-only model-role router (P4) proposed a role for a `delegate` call, or recorded why it abstained (`explicit_role_present`, `role_resolver_unavailable`, `role_router_disabled`); carries `proposed_model_role`, `eligible_roles`, `reason_code`, `domain` (always `"model-role"`) |
 | `role_agreement` | A `role_proposed` proposal and the delegate's actual routing were joined; `agreement` is `match` / `mismatch` / `unobserved`, plus `proposed_model_role`, `actual_model_role` (`null` = resolver default), `domain` |
 | `observatory` | The auto-observatory's once-per-session `session:start` bootstrap; `action` is `reused` / `started` / `skipped` / `failed`, plus `reason` and (when relevant) `port` -- never the token-bearing URL, which never enters event data |
+| `source` | Once per session, at mount, in every mode including `off`: which source actually ran. `source_kind` is `installed-cache` / `worktree` / `site-packages` / `unknown`; `source_git_sha` (40-hex or `null`) and `source_tree_sha256` (a SHA-256 over every `*.py` file's relative path and bytes, skipping `__pycache__`) identify the exact code; `source_py_files`, `package_version`, `python`, `mode`, and `module` (`hooks-fast-decisions` or `loop-fast-decisions`) round it out. Never a filesystem path -- see `provenance.describe_source` and docs/PRIVACY.md |
 
 Fast tool IDs match the synthesized core ToolCall ID when the argument fingerprint still matches. If upstream modifies a call, or for ordinary slow-path calls, the tool facade may allocate an `observed_*` correlation ID instead. The native hook bridge can carry the original native ID. Do not assume these are identical in every path.
 
@@ -71,6 +72,8 @@ Ollama reports token mass with abstention residual and `confidence_kind: not_rep
 Jev confidence remains `typesafe_reported_unspecified`: this adapter does not know
 the remote formula/version. Neither statistic establishes empirical calibration.
 Old records lacking these fields remain readable; missing metadata is unknown.
+
+`requested` also carries observation-loss telemetry from `build_state` (HC01): `observation_count` (messages actually included), `observations_available` (candidate messages the window/task-anchor step considered, before role or budget filtering), `observations_dropped` (available minus included, for any reason), `observations_clipped` (how many included messages were truncated by the budget's binary search), `task_anchored` (whether a user task message was found and survived into the state), and `truncation_reason` (`no_messages` / `budget` / `none`). These make state loss visible on every decision, not just inferable from `state_chars`.
 
 `question_count` is the number of contributed judgment questions. A
 misbehaving contributor (wrong shape, conflicting identifiers, or over the

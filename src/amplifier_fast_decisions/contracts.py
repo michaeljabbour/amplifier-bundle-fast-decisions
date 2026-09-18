@@ -41,6 +41,7 @@ EVENT_NAMES = tuple(
         "role_proposed",
         "role_agreement",
         "observatory",
+        "source",
     )
 )
 

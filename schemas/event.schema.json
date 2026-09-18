@@ -42,7 +42,8 @@
         "fast_decisions:shadow_agreement",
         "fast_decisions:role_proposed",
         "fast_decisions:role_agreement",
-        "fast_decisions:observatory"
+        "fast_decisions:observatory",
+        "fast_decisions:source"
       ]
     },
     "session_id": {

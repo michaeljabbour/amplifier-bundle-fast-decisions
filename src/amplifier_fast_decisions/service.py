@@ -168,7 +168,8 @@ class DecisionService:
         # the shadow scorer / role router (their own candidate sets).
         domain = classify_domain(candidates)
         common["domain"] = domain
-        state = build_state(request, self.policy.max_state_chars)
+        state_stats: dict[str, Any] = {}
+        state = build_state(request, self.policy.max_state_chars, state_stats)
         state_chars = len(canonical(state))
         await self.emit(
             "requested",
@@ -182,6 +183,14 @@ class DecisionService:
                 "candidates": [
                     {"id": c.id, "label": c.label, "tool": c.tool} for c in candidates
                 ],
+                # HC01: what build_state actually included, so state loss
+                # can never hide behind a fast timing statistic alone.
+                "observation_count": state_stats.get("observation_count"),
+                "observations_available": state_stats.get("observations_available"),
+                "observations_dropped": state_stats.get("observations_dropped"),
+                "observations_clipped": state_stats.get("observations_clipped"),
+                "task_anchored": state_stats.get("task_anchored"),
+                "truncation_reason": state_stats.get("truncation_reason"),
             },
             decision_id,
         )

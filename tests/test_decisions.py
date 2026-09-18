@@ -120,6 +120,33 @@ class PrivacyTests(unittest.TestCase):
     def test_fingerprint_changes(self):
         a=request(); before=request_fingerprint(a);a.messages.append({'role':'tool','content':'new'})
         self.assertNotEqual(before,request_fingerprint(a))
+    def test_stats_no_messages(self):
+        stats={}
+        state=build_state(request(messages=[]),12000,stats)
+        self.assertEqual(state['observations'],[])
+        self.assertEqual(stats['observation_count'],0)
+        self.assertEqual(stats['observations_available'],0)
+        self.assertEqual(stats['observations_dropped'],0)
+        self.assertEqual(stats['observations_clipped'],0)
+        self.assertFalse(stats['task_anchored'])
+        self.assertEqual(stats['truncation_reason'],'no_messages')
+    def test_stats_long_tool_result_small_budget(self):
+        stats={}
+        req=request(messages=[{'role':'user','content':'Repair solution.py from README.md'},
+                              {'role':'tool','content':'FAILED test_cycle\n'+'x'*5000}])
+        build_state(req,600,stats)
+        self.assertGreaterEqual(stats['observations_clipped'],1)
+        self.assertTrue(stats['task_anchored'])
+        self.assertEqual(stats['truncation_reason'],'budget')
+    def test_stats_normal_short_conversation(self):
+        stats={}
+        req=request(messages=[{'role':'user','content':'Inspect the prepared artifact.'},
+                              {'role':'tool','content':'ok'}])
+        build_state(req,12000,stats)
+        self.assertEqual(stats['observations_dropped'],0)
+        self.assertEqual(stats['observations_clipped'],0)
+        self.assertEqual(stats['truncation_reason'],'none')
+        self.assertTrue(stats['task_anchored'])
 
 
 class DecisionTests(unittest.IsolatedAsyncioTestCase):

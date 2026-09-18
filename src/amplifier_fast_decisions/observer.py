@@ -23,6 +23,7 @@ from uuid import uuid4
 from .candidates import collect_candidates
 from .contracts import digest, field_value
 from .observatory import ensure_viewer, open_page, read_state, viewer_is_alive
+from . import provenance
 from .router import RoleRouter
 from .runtime import get_runtime, session_identity
 from .shadow import ShadowJob, ShadowOutcome
@@ -247,6 +248,22 @@ async def mount(coordinator, config: dict):
             "fallback", {"reason_code": "hook_cannot_own_active"}
         )
     registrations = []
+
+    # HC00 ("freeze source"): record which source actually ran, once per
+    # session, as early as possible -- even in mode "off", since a baseline
+    # profile still needs a receipt proving which source produced it. A
+    # failure here must never prevent the rest of mount from proceeding.
+    try:
+        await runtime.service.emit(
+            "source",
+            provenance.source_event_data(
+                mode=runtime.service.policy.mode, module="hooks-fast-decisions"
+            ),
+        )
+    except asyncio.CancelledError:
+        raise
+    except Exception:
+        pass
 
     # Report the shared runtime's effective policy, including when an active
     # orchestrator created it before this observer mounted.

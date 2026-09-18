@@ -45,7 +45,7 @@ def automatic_tools(request: Any) -> bool:
     return selection is None or selection == "auto"
 
 
-def build_state(request: Any, max_chars: int = 12000) -> dict[str, Any]:
+def build_state(request: Any, max_chars: int = 12000, stats: dict[str, Any] | None = None) -> dict[str, Any]:
     messages = field_value(request, "messages", []) or []
     # Keep the latest task even after many tool turns. Budget the task and
     # newest evidence before older observations; dropping whole messages can
@@ -72,6 +72,7 @@ def build_state(request: Any, max_chars: int = 12000) -> dict[str, Any]:
     if len(canonical(state)) > max_chars:
         raise ValueError("State budget cannot hold the routing instructions")
     selected = {}
+    clipped: set[int] = set()
 
     def include(index: int, limit: int) -> None:
         item = available[index]
@@ -88,6 +89,8 @@ def build_state(request: Any, max_chars: int = 12000) -> dict[str, Any]:
                 high = middle - 1
         if low:
             selected[index] = {**item, "text": text[:low] + ("…" if low < len(text) else "")}
+            if low < len(text):
+                clipped.add(index)
         else:
             selected.pop(index, None)
         state["observations"] = [selected[i] for i in sorted(selected)]
@@ -100,4 +103,23 @@ def build_state(request: Any, max_chars: int = 12000) -> dict[str, Any]:
     for index in sorted(available, reverse=True):
         if index != task_index:
             include(index, max_chars)
+    if stats is not None:
+        # observations_available counts every message the window/task-anchor
+        # step considered as a candidate -- including ones later excluded by
+        # role or empty text -- so "dropped" reflects the whole funnel, not
+        # just budget-driven exclusion from an already-filtered set.
+        considered = len(indices)
+        included = len(selected)
+        reason = "no_messages"
+        if considered:
+            reason = "budget" if (considered - included or clipped) else "none"
+        stats.update({
+            "observation_count": included,
+            "observations_available": considered,
+            "observations_dropped": considered - included,
+            "observations_clipped": len(clipped),
+            "task_anchored": task_index is not None and task_index in selected,
+            "state_chars": len(canonical(state)),
+            "truncation_reason": reason,
+        })
     return state

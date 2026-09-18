@@ -12,6 +12,7 @@ from uuid import uuid4
 
 from .contracts import Candidate, TurnState, field_value, digest
 from .runtime import Runtime, get_runtime
+from . import provenance
 
 __amplifier_module_type__ = "orchestrator"
 
@@ -284,6 +285,19 @@ async def mount(coordinator, config: dict):
     action_response(Candidate("compat_check", "Schema check", "fast_workspace", {"operation": "list", "path": "."}), "compat_check")
     # The orchestrator owns decision policy; win regardless of module mount order.
     runtime, _ = get_runtime(coordinator, config, owner=True)
+    # HC00 ("freeze source"): the same receipt hooks-fast-decisions emits,
+    # from the orchestrator side too -- best-effort, never fatal to mount.
+    try:
+        await runtime.service.emit(
+            "source",
+            provenance.source_event_data(
+                mode=runtime.service.policy.mode, module="loop-fast-decisions"
+            ),
+        )
+    except asyncio.CancelledError:
+        raise
+    except Exception:
+        pass
     try:
         orchestrator = HybridOrchestrator(config, coordinator, runtime)
         await coordinator.mount("orchestrator", orchestrator)
