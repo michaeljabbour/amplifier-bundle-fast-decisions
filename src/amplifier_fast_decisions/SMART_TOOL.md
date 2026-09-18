@@ -96,3 +96,13 @@ Successful selections also return `confidence_kind: not_reported` and
 `option_set_hash`, an order-sensitive digest of the local model's presented options
 and ID bindings. The digest records neither actual execution nor correctness, and
 is not a hash of the complete request.
+
+## Operational evidence
+
+Use `diagnose` to inspect installation, effective session configuration, local model
+and authenticated viewer health. Use `measure --session PARENT_ID` for execution
+counts including children. Use `compare --input runs.json` for paired baseline/enabled
+runs with explicit outcome checks. These capabilities invoke no model.
+`diagnose --offline` also disables loopback health probes. Each command's `--help`
+describes its arguments; JSON statuses, coverage and eligibility determine what
+its results establish. A successful command exit alone does not prove improvement.

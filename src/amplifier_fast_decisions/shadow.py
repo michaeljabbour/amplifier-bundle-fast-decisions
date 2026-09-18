@@ -134,6 +134,8 @@ class ShadowWorker:
                 self._queue.task_done()
 
     async def _score(self, job: ShadowJob) -> None:
+        if self._service.policy.mode == "off":
+            return
         # Same privacy gate DecisionService.choose applies on the active path:
         # an external backend is never called for shadow scoring without the
         # explicit opt-in. This runs before any backend method is touched, so

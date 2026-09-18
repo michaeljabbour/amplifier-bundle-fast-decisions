@@ -27,6 +27,7 @@ SAFE_FIELDS = {
     "backend",
     "model",
     "provider",
+    "provider_call_id",
     "destination",
     "route",
     "proposed_route",

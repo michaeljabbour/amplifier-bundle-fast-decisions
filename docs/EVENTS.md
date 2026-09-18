@@ -102,3 +102,12 @@ same turn. All three are in `privacy.SAFE_FIELDS`.
 **The model-role router's `actual_model_role` is read from the tool's own return value, not a top-level hook field.** `tool:post`'s real payload (`loop-streaming:6348-6357`) carries the tool's dumped `ToolResult` under `result`; `tool-delegate` places its routing summary at `result.output.provider_routing.model_role`, never at a top-level `data["provider_routing"]`. Reading the wrong location always returned `None` for `actual`, so every observed `role_agreement` reported `"mismatch"` regardless of what the delegate actually resolved to. `router.on_delegate_post` now reads the nested field via `field_value`, which duck-types across a plain dict or an attribute-bearing object.
 
 **The router is never silent, even when disabled.** `role_router: false` (the unconfigured library default; the shipped `behaviors/fast-decisions.yaml` sets `role_router: true`) previously made `on_delegate_pre` return with no event at all for a `delegate` call -- indistinguishable from a crash or a missed registration. It now emits `role_proposed` with `reason_code: role_router_disabled` (no job enqueued, no probe, no turn behaviour change) so "no telemetry" never has to be interpreted as "the router isn't wired up".
+
+## Correlated execution receipts
+
+`slow_start` and `slow_end` now include a unique `provider_call_id` per invocation.
+`slow_end.status` distinguishes success, error and cancellation; stream usage stays
+unknown unless measured. `routed:fast` includes the prepared `tool_call_id`.
+`turn_end` records status and execution wall time, never task-quality success.
+The instrumented `off` mode records ordinary execution without active or background
+shadow inference. See [OPERATIONS.md](OPERATIONS.md) for aggregation and completeness.
