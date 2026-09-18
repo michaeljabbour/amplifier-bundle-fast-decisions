@@ -6,6 +6,7 @@ It never patches a class, a global provider dictionary or amplifier-core.
 """
 from __future__ import annotations
 import asyncio
+from pathlib import Path
 import re
 import time
 from typing import Any
@@ -440,6 +441,42 @@ class ObservedTool:
                 turn.revision += 1
 
 
+def _import_upstream_loop(cache_root: "Path | None" = None):
+    """Import the upstream StreamingOrchestrator, falling back to Amplifier's module cache.
+
+    Amplifier activates modules by inserting their checkout on sys.path at activation time; when this
+    hybrid orchestrator replaces loop-streaming, the upstream module is never activated and may not be
+    an installed distribution (observed after `amplifier update` moved the cache: module validation
+    failed with ImportError). Locate the newest ``amplifier-module-loop-streaming-*`` checkout under
+    ``~/.amplifier/cache`` and import from there. Fails loud when nothing is found.
+    """
+    try:
+        from amplifier_module_loop_streaming import StreamingOrchestrator  # type: ignore
+        return StreamingOrchestrator
+    except ImportError as exc:
+        import glob as _glob
+        import os as _os
+        import sys as _sys
+        root = cache_root or (Path.home() / ".amplifier" / "cache")
+        candidates = [
+            d for d in _glob.glob(str(root / "amplifier-module-loop-streaming-*"))
+            if _os.path.exists(_os.path.join(d, "amplifier_module_loop_streaming", "__init__.py"))
+        ]
+        candidates.sort(key=lambda d: _os.path.getmtime(d), reverse=True)
+        for d in candidates:
+            if d not in _sys.path:
+                _sys.path.insert(0, d)
+            try:
+                from amplifier_module_loop_streaming import StreamingOrchestrator  # type: ignore
+                return StreamingOrchestrator
+            except ImportError:
+                _sys.path.remove(d)
+        raise RuntimeError(
+            "Upstream loop-streaming module is not importable and no checkout was found under "
+            f"{root}: install the amplifier extra in the SAME environment as Amplifier"
+        ) from exc
+
+
 class HybridOrchestrator:
     def __init__(self, config: dict[str, Any], coordinator: Any, runtime: Runtime,
                  *, upstream: Any = None, response_factory=action_response):
@@ -448,10 +485,7 @@ class HybridOrchestrator:
         self.runtime = runtime
         self.response_factory = response_factory
         if upstream is None:
-            try:
-                from amplifier_module_loop_streaming import StreamingOrchestrator
-            except ImportError as exc:
-                raise RuntimeError("Install the amplifier extra in the SAME environment as Amplifier") from exc
+            StreamingOrchestrator = _import_upstream_loop()
             # Upstream configuration is explicit; no accidental forwarding of Jev settings.
             upstream = StreamingOrchestrator(dict(config.get("upstream", {})))
         self.upstream = upstream

@@ -463,3 +463,32 @@ class PerPhaseRoutingTests(unittest.TestCase):
             validate_effort_routing({"implement": "turbo"})
         with self.assertRaises(ValueError):
             validate_effort_routing({"verify": "low"})
+
+
+class UpstreamLoopImportTests(unittest.TestCase):
+    def test_falls_back_to_module_cache_checkout(self):
+        import sys, tempfile, textwrap
+        from pathlib import Path
+        from amplifier_fast_decisions import orchestrator
+        saved = sys.modules.pop("amplifier_module_loop_streaming", None)
+        try:
+            with tempfile.TemporaryDirectory() as tmp:
+                cache = Path(tmp)
+                mod = cache / "amplifier-module-loop-streaming-deadbeef" / "amplifier_module_loop_streaming"
+                mod.mkdir(parents=True)
+                (mod / "__init__.py").write_text(textwrap.dedent("""
+                    class StreamingOrchestrator:
+                        def __init__(self, config): self.config = config
+                """))
+                cls = orchestrator._import_upstream_loop(cache_root=cache)
+                self.assertEqual(cls.__name__, "StreamingOrchestrator")
+                sys.modules.pop("amplifier_module_loop_streaming", None)
+                for entry in list(sys.path):
+                    if entry.startswith(tmp):
+                        sys.path.remove(entry)
+            with tempfile.TemporaryDirectory() as empty:
+                with self.assertRaises(RuntimeError):
+                    orchestrator._import_upstream_loop(cache_root=Path(empty))
+        finally:
+            if saved is not None:
+                sys.modules["amplifier_module_loop_streaming"] = saved
