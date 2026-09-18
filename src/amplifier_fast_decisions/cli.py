@@ -14,6 +14,7 @@ import re
 import signal
 import sys
 import threading
+import time
 import webbrowser
 from datetime import UTC, datetime
 from pathlib import Path
@@ -22,6 +23,7 @@ from . import __version__
 from .bench import (
     build_report,
     load_suite,
+    percentile,
     render_markdown,
     replay_events,
     run_suite,
@@ -187,6 +189,51 @@ def bench_replay(args) -> int:
     return 0
 
 
+class _TimingBackend:
+    """Wraps any backend to record per-call wall-clock ``ask()`` latency.
+
+    Bench-suite CLI wiring only -- does not touch bench/suite.py's
+    ``SuiteItemResult`` shape or the suite format. ``run_suite`` calls
+    ``ask()`` once per case (canonical order) plus once per extra
+    permutation, in that fixed order; ``latencies_ms`` is a flat,
+    call-ordered record the caller can slice back into per-case groups of
+    size ``permutations`` (see ``_augment_suite_report``).
+    """
+
+    def __init__(self, inner):
+        self._inner = inner
+        self.name = getattr(inner, "name", "timed")
+        self.external = getattr(inner, "external", False)
+        self.latencies_ms: list[float] = []
+
+    async def ask(self, request):
+        start = time.perf_counter()
+        try:
+            return await self._inner.ask(request)
+        finally:
+            self.latencies_ms.append((time.perf_counter() - start) * 1000.0)
+
+    async def close(self) -> None:
+        await self._inner.close()
+
+
+def _augment_suite_report(
+    report: dict, timed_backend: "_TimingBackend", permutations: int
+) -> dict:
+    """Add per-case decision latency (p50/p95, canonical order only) and an
+    explicit ``agreement_with_expected`` alias to a suite report, in place.
+    Bench-suite CLI wiring only; ``report`` is the plain dict returned by
+    ``build_report``, mutated here rather than in bench/report.py."""
+    k = max(1, permutations)
+    canonical_latencies = timed_backend.latencies_ms[0::k]
+    report["decision"]["decision_latency_ms_p50"] = percentile(canonical_latencies, 50)
+    report["decision"]["decision_latency_ms_p95"] = percentile(canonical_latencies, 95)
+    report["accuracy_proxy"]["agreement_with_expected"] = report["accuracy_proxy"].get(
+        "agreement_rate"
+    )
+    return report
+
+
 def bench_suite(args) -> int:
     suite_path = args.suite_path or args.suite
     try:
@@ -201,12 +248,19 @@ def bench_suite(args) -> int:
         os.getenv("FAST_DECISIONS_LIVE") == "1" and os.getenv("TYPESAFE_API_KEY")
     )
     backend_name = args.backend
+    model_arg = getattr(args, "model", None)
     if live_requested and backend_name == "jev" and both_gates:
         from .backends import JevBackend
 
-        backend = JevBackend()
+        backend = JevBackend(model=model_arg)
         backend_external = True
-        model_name = "jev-latest"
+        model_name = model_arg or "jev-latest"
+    elif backend_name == "ollama":
+        from .local_backend import OllamaBackend
+
+        model_name = model_arg or "qwen3:0.6b"
+        backend = OllamaBackend(model=model_name)
+        backend_external = False
     else:
         if live_requested and not both_gates:
             print(
@@ -217,7 +271,8 @@ def bench_suite(args) -> int:
         backend = DeterministicSuiteBackend()
         backend_external = False
         model_name = "deterministic-suite-backend"
-    result = asyncio.run(run_suite(cases, backend, permutations=args.permutations))
+    timed_backend = _TimingBackend(backend)
+    result = asyncio.run(run_suite(cases, timed_backend, permutations=args.permutations))
     report = build_report(
         "suite",
         result,
@@ -226,6 +281,7 @@ def bench_suite(args) -> int:
         provider="typesafe" if backend_external else "offline",
         backend_external=backend_external,
     )
+    report = _augment_suite_report(report, timed_backend, args.permutations)
     swing = report["accuracy_proxy"]["max_probability_swing"]
     if isinstance(swing, (int, float)) and swing > 0.15:
         print(
@@ -462,7 +518,10 @@ def main(argv=None) -> int:
     suite.add_argument("suite_path", nargs="?", default=None, help="Suite JSONL file")
     suite.add_argument("--suite", default=str(DEFAULT_SUITE))
     suite.add_argument(
-        "--backend", choices=["deterministic", "jev"], default="deterministic"
+        "--backend", choices=["deterministic", "jev", "ollama"], default="deterministic"
+    )
+    suite.add_argument(
+        "--model", default=None, help="Model name, passed to the jev/ollama backend"
     )
     suite.add_argument("--live", action="store_true")
     suite.add_argument("--permutations", type=int, default=4)
@@ -556,7 +615,7 @@ def main(argv=None) -> int:
                 remove_state(state_file)
         return 0
     except (ValueError, OSError) as exc:
-        print("afast: " + str(exc), file=sys.stderr)
+        print("afast: " + (str(exc) or type(exc).__name__), file=sys.stderr)
         return 2
 
 
