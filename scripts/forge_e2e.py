@@ -522,7 +522,8 @@ def worker(root,name):
             public_ok=None
         try:
             suite=subprocess.run([sys.executable,'-m','unittest','discover','-v'],cwd=workspace,capture_output=True,text=True,timeout=45)
-            suite_ok=suite.returncode==0
+            # unittest exits 5 when NO TESTS RAN (Python 3.12+): not applicable, not a failure.
+            suite_ok=None if suite.returncode==5 else suite.returncode==0
         except subprocess.TimeoutExpired:suite_ok=False
     protected = _task_protected(item['task'])
     files = _task_files(item['task'])

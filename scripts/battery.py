@@ -28,6 +28,7 @@ import uuid
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import forge_e2e  # noqa: E402
+import forge_workloads  # noqa: E402
 import campaign  # noqa: E402 -- read-only reuse of its ledger/budget/checkpoint helpers
 
 BATTERY_SCHEMA = 'fast-decisions-battery/v1'
@@ -723,6 +724,50 @@ def _latest_result(experiment_dir, manifest, name):
     return result
 
 
+def cmd_reevaluate(args):
+    """Recompute quality/outcome for every finished run from its workspace (deterministic, no model calls).
+
+    Used after an evaluator/outcome-rule fix; the previous result is kept as result-before-reevaluate.json.
+    """
+    root = Path(args.root).expanduser().resolve()
+    experiment_dir = root/'experiments'/args.experiment
+    manifest = _read_json(experiment_dir/'runs'/'manifest.json')
+    battery_tasks = _load_battery_tasks()
+    changed = []
+    for name, item in manifest['runs'].items():
+        run_dir = _run_dir_for(experiment_dir, name, item['harness'])
+        path = run_dir/'result.json'
+        if not path.exists():
+            continue
+        result = _latest_result(experiment_dir, manifest, name)
+        workspace = run_dir/'workspace'
+        task = battery_tasks.TASKS[item['task']]
+        quality = _evaluate_quality(item['task'], task.kind, workspace, result.get('final_message'))
+        files = forge_workloads.task_files(item['task'])
+        protected = {f: (workspace/f).exists() and (workspace/f).read_text() == files.get(f, '')
+                     for f in forge_workloads.task_protected(item['task'])}
+        suite_ok = None
+        if any(workspace.glob('test*.py')):
+            try:
+                proc = subprocess.run([sys.executable, '-m', 'unittest', 'discover', '-v'], cwd=workspace,
+                                      capture_output=True, text=True, timeout=45)
+                suite_ok = None if proc.returncode == 5 else proc.returncode == 0  # 5 = NO TESTS RAN
+            except subprocess.TimeoutExpired:
+                suite_ok = False
+        outcome = bool(result.get('exit_code') == 0 and not result.get('timed_out') and quality.get('failed') == 0
+                       and suite_ok is not False and all(protected.values()) and not result.get('infrastructure_failure'))
+        if outcome != bool(result.get('outcome_passed')) or quality != result.get('quality'):
+            (run_dir/'result-before-reevaluate.json').write_text(json.dumps(result, indent=2)+'\n')
+            notes = list(result.get('notes') or []) + [f'reevaluated: outcome {result.get("outcome_passed")} -> {outcome}']
+            result = {**result, 'quality': quality, 'protected_files_unchanged': protected, 'workspace_tests_passed': suite_ok,
+                      'outcome_passed': outcome, 'notes': notes}
+            path.write_text(json.dumps(result, indent=2)+'\n')
+            changed.append({'run': name, 'outcome_passed': outcome, 'failed_checks': quality.get('failed')})
+    campaign._ledger_append(root, {'type': 'reevaluated', 'experiment': args.experiment, 'changed': len(changed),
+                                   'reason': getattr(args, 'reason', None)})
+    _print({'experiment': args.experiment, 'changed': changed})
+
+
 def cmd_evaluate(args):
     root = Path(args.root).expanduser().resolve()
     experiment_dir = root/'experiments'/args.experiment
@@ -918,6 +963,12 @@ def main(argv=None):
     p.add_argument('--root', required=True)
     p.add_argument('--experiment', required=True)
     p.set_defaults(func=cmd_run)
+
+    p = sub.add_parser('reevaluate')
+    p.add_argument('--root', required=True)
+    p.add_argument('--experiment', required=True)
+    p.add_argument('--reason')
+    p.set_defaults(func=cmd_reevaluate)
 
     p = sub.add_parser('evaluate')
     p.add_argument('--root', required=True)
