@@ -149,9 +149,10 @@ scoring took 260.8, 74.3, and 81.8 ms respectively. These are three observations
 not a workload p95 or an accuracy guarantee. Their advisory telemetry appeared
 in the shared Observatory without incrementing the bypass counter.
 
-The spec manifest lists only **macOS**, which was exercised. The Python surface
-does not depend on macOS APIs, but Linux/Windows execution and real task use in
-each harness remain validation work. The 500 ms deadline covers scoring/queue
+The manifest supports macOS, Linux, and Windows. CI installs the package and
+runs its deterministic and fixture-backed contracts on all three operating
+systems; actual local-model timings were measured on macOS. Real task use and
+model placement in each host still need workload-specific validation. The 500 ms deadline covers scoring/queue
 wait, not process launch or recorder shutdown. Token scores remain uncalibrated.
 
 ```bash

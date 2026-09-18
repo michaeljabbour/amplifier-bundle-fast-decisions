@@ -6,7 +6,7 @@
   const decisionKey = e => e.session_id + ':' + e.decision_id;
   const isScore = e => ['scored', 'shadow_proposed'].includes(kind(e));
   const stamp = e => Date.parse(e.timestamp) || 0;
-  const fmt = n => Number.isFinite(n) ? (n >= 1000 ? (n / 1000).toFixed(2) + ' s' : Math.round(n) + ' ms') : '—';
+  const fmt = n => Number.isFinite(n) ? (n >= 1000 ? (n / 1000).toFixed(2) + ' s' : (n>0&&n<1?n.toFixed(1):Math.round(n)) + ' ms') : '—';
   const pretty = s => String(s || '').replaceAll('_', ' ');
   const valid = e => e && e.schema_version === '1.0' && typeof e.event_id === 'string' && typeof e.session_id === 'string' && typeof e.event === 'string' && e.event.startsWith('fast_decisions:') && e.data && typeof e.data === 'object' && !Array.isArray(e.data);
   function scriptedKeys(events) {

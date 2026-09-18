@@ -5,15 +5,16 @@
   "version": "0.1.0",
   "description": "Suggests a prepared read or list action using a bounded local model call. Use when a harness has eligible workspace targets and wants a fast advisory choice with explicit abstention.",
   "use_cases": ["Choose among caller-validated workspace read targets", "Measure a local decision scorer independently of an agent harness", "Record advisory decisions alongside parent and child session metadata"],
-  "platforms": ["macos"],
+  "platforms": ["macos", "linux", "windows"],
   "requires": [{"name": "ollama", "purpose": "Runs the local model for select. Without it, manifest, describe and help still work.", "optional": true, "install": "https://docs.ollama.com/"}]
 }
 ---
 
 The library `amplifier_fast_decisions.smart_tool` holds every capability. The
 CLI works from Claude Code, Codex, Amplifier, or another harness with shell
-access. No Amplifier runtime is imported by the portable path. macOS has been
-tested; Linux and Windows remain validation targets, not certified platforms.
+access. No Amplifier runtime is imported by the portable path. The CLI and deterministic/fixture contracts are checked on macOS, Linux, and
+Windows. Real local-model latency has been exercised on macOS; other hardware
+and Ollama installations need their own measurements.
 
 Use this when the caller already has eligible read/list targets. It does not
 decide arbitrary commands, invent tool arguments, perform compaction, or
