@@ -360,8 +360,8 @@ async def replay_events(
         and j.shadow_agreement
     ]
     calibration = m.ece(ece_pairs)
-    mean_conf = m.mean_or_none(
-        [j.scored.get("reported_confidence") for j in decisions if j.scored]
+    mean_conf = m.comparable_confidence_mean(
+        [j.scored for j in decisions if j.scored]
     )
     abstain_count = sum(
         1 for j in decisions if j.scored and j.scored.get("choice") == SLOW

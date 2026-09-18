@@ -24,7 +24,7 @@ class JsonlRecorder:
         directory.mkdir(parents=True, exist_ok=True, mode=0o700)
         safe_id = re.sub(r"[^a-zA-Z0-9_-]", "_", session_id)[:70]
         self.path = directory / f"{safe_id}-{uuid4().hex[:8]}.jsonl"
-        self._queue: queue.Queue[str] = queue.Queue(maxsize=capacity)
+        self._queue: queue.Queue[str | None] = queue.Queue(maxsize=capacity)
         self._stop = threading.Event()
         self._closed = False
         self.dropped = 0
@@ -55,6 +55,8 @@ class JsonlRecorder:
                 except queue.Empty:
                     continue
                 try:
+                    if line is None:
+                        break
                     self._file.write(line)
                 except OSError as exc:
                     self.error = type(exc).__name__
@@ -65,8 +67,16 @@ class JsonlRecorder:
             self._file.close()
 
     def close(self):
-        self._closed = True
-        self._stop.set()
+        # Wake an idle writer immediately; close otherwise waits for the
+        # 100 ms polling timeout on every one-shot portable invocation.
+        # A full queue already wakes the writer, which drains before exit.
+        if not self._closed:
+            self._closed = True
+            try:
+                self._queue.put_nowait(None)
+            except queue.Full:
+                pass
+            self._stop.set()
         self._thread.join(timeout=3)
         if self._thread.is_alive():
             self.error = "RecorderShutdownTimeout"

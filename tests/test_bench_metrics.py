@@ -9,6 +9,7 @@ from amplifier_fast_decisions.bench.metrics import (
     decision_cost_usd,
     ece,
     percentile,
+    comparable_confidence_mean,
 )
 
 
@@ -40,6 +41,18 @@ class MissingUsageTests(unittest.TestCase):
         assert cost is not None
         self.assertAlmostEqual(cost, 0.042)
 
+
+class ConfidenceSummaryTests(unittest.TestCase):
+    def test_only_one_known_backend_model_statistic_can_be_averaged(self):
+        row = {'backend':'fixture', 'model':'v1', 'confidence_kind':'normalized_peak_v1', 'reported_confidence':.8}
+        self.assertAlmostEqual(comparable_confidence_mean([row, {**row, 'reported_confidence':.6}]), .7)
+        for changed in ({'backend':'other'}, {'model':'v2'}, {'confidence_kind':'normalized_entropy_v1'},
+                        {'confidence_kind':'unspecified'}, {'confidence_kind':'typesafe_reported_unspecified'},
+                        {'confidence_kind':None}, {'reported_confidence':True}, {'reported_confidence':float('nan')}):
+            with self.subTest(changed=changed):
+                self.assertIsNone(comparable_confidence_mean([row, {**row, **changed}]))
+        self.assertIsNone(comparable_confidence_mean([{'reported_confidence':.9}]))
+        self.assertIsNone(comparable_confidence_mean([]))
 
 class EceTests(unittest.TestCase):
     def test_ece_known_input(self):

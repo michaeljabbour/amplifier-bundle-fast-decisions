@@ -10,7 +10,9 @@ hosting without RunPod; [pilot evidence](docs/LOCAL-SCORER.md) records the limit
 
 The decision service is also a [portable Smart Tool](docs/SMART-TOOL.md): a
 Python library with its own local model capability, a manifest, and a thin CLI.
-Its deterministic help/manifest/schema commands need no model. Claude Code,
+Its deterministic help/manifest/schema commands need no model.
+The [current architecture review](docs/design/smart-decision-review-2026-09-18.md)
+separates shipped portability from the proposed generic decision engine. Claude Code,
 Codex, Amplifier, or any harness with shell access can call its advisory selection
 capability; native Amplifier interception remains a separate adapter.
 
@@ -258,7 +260,7 @@ Open the resulting HTML in a browser. Review telemetry before sharing: file/tool
 
 **Read this before production use:** [COMPATIBILITY.md](docs/COMPATIBILITY.md).
 
-- This release deliberately uses the upstream `complete()` branch. It hides a provider's optional `.stream` attribute. A provider that streams internally during `complete()` may retain that behavior; a provider relying on the separate `.stream` API will not use that transport here.
+- Active decisions run at the upstream `complete()` boundary. A provider’s optional `.stream` transport is preserved and defers to the original provider; that branch has no active fast path. See [COMPATIBILITY.md](docs/COMPATIBILITY.md).
 - Real Rust-backed sessions, live Jev accuracy/latency, Foundation loading, approval/steering combinations, and your installed provider set must be tested on your machine. They were not exercised in the build sandbox.
 - Only prepared actions are accelerated. Automatic model-role selection, free-form tool argument synthesis, autonomous stopping, distributed telemetry aggregation, and native Rust inference are not implemented.
 - Confidence thresholds are uncalibrated experimental settings, not measured safety guarantees. Permissions remain upstream.

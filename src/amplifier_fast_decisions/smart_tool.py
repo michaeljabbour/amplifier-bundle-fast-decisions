@@ -136,6 +136,8 @@ def describe() -> dict[str, Any]:
                    'status': 'selected or abstain', 'choice': 'offered candidate ID or null',
                    'reason_code': 'machine-readable outcome', 'probabilities': 'uncalibrated token mass',
                    'duration_ms': 'scoring wall time; excludes CLI startup and recording shutdown',
+                   'option_set_hash': 'order-sensitive hash of model-facing options and ID bindings; null if unavailable',
+                   'confidence_kind': 'not_reported for the local token scorer; not empirical calibration',
                    'effect': 'advisory_only; no execution or savings established'},
         'exit_codes': {'0': 'selected or normal model/policy abstention', '1': 'failed capability',
                        '2': 'invalid command line or JSON'},
@@ -189,7 +191,7 @@ def skill(capability: str | None = None) -> str:
             'Only task and optional context content are provided as observations. Candidate targets are data.',
             'Example: amplifier-fast-decisions select --input request.json --timeout-ms 500',
             'Result: one JSON object with ok, status, choice, reason_code, model, probabilities,',
-            'probability_kind, duration_ms, session_id, parent_session_id, decision_id, effect and remediation.',
+            'probability_kind, confidence_kind, option_set_hash, duration_ms, session_id, parent_session_id, decision_id, effect and remediation.',
             'A selected choice is advisory. It grants no permission and executes nothing.',
             'Low scores and model abstention are normal results (exit 0). Invalid/unsupported input,',
             'unavailable/invalid model, or recording failure returns typed abstention with ok=false (exit 1).',
@@ -218,6 +220,8 @@ class Selection:
     duration_ms: float = 0.0
     effect: str = 'advisory_only'
     remediation: str | None = None
+    confidence_kind: str = 'not_reported'
+    option_set_hash: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -302,13 +306,15 @@ async def select(payload: dict[str, Any], *, model: str = 'qwen3:0.6b',
             margin = probability - max((p for k, p in decision.probabilities.items() if k != decision.choice), default=0)
             await emitter.emit('scored', {**common, 'model': decision.model, 'choice': decision.choice,
                 'probabilities': decision.probabilities, 'probability_kind': decision.probability_kind,
+                'confidence_kind': decision.confidence_kind, 'option_set_hash': decision.option_set_hash,
                 'selected_probability': probability, 'margin': margin, 'duration_ms': duration,
                 'latency_kind': 'decision_model_wall_time'}, decision_id=decision_id)
             selected = decision.choice != SLOW and probability >= .90 and margin >= .20
             reason = 'advisory_selected' if selected else ('model_abstained' if decision.choice == SLOW else 'selection_threshold')
             result = Selection(True, 'selected' if selected else 'abstain', reason, session, parent, decision_id,
                 choice=decision.choice if selected else None, model=decision.model,
-                probabilities=dict(decision.probabilities), duration_ms=duration)
+                probabilities=dict(decision.probabilities), duration_ms=duration,
+                confidence_kind=decision.confidence_kind, option_set_hash=decision.option_set_hash)
         except asyncio.CancelledError:
             await emitter.emit('cancelled', {**common, 'reason_code': 'caller_cancelled'}, decision_id=decision_id)
             raise
@@ -325,7 +331,7 @@ async def select(payload: dict[str, Any], *, model: str = 'qwen3:0.6b',
         if _backend is None:
             await backend.close()
         if recorder is not None:
-            recorder.close()
+            await asyncio.to_thread(recorder.close)
     if recorder is not None and (recorder.error or recorder.dropped):
         return Selection(False, 'abstain', 'telemetry_unavailable', session, parent, decision_id,
                          duration_ms=duration, remediation='Check events storage and retry after recording is healthy.')

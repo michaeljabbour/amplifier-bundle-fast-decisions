@@ -231,6 +231,8 @@ class DecisionService:
             "probability_kind": decision.probability_kind,
             "selected_probability": p,
             "reported_confidence": decision.reported_confidence,
+            "confidence_kind": decision.confidence_kind,
+            "option_set_hash": decision.option_set_hash,
             "margin": margin,
             "duration_ms": duration,
             "model": decision.model,

@@ -5,7 +5,9 @@ from pathlib import Path
 import subprocess
 import sys
 import tempfile
+import threading
 import unittest
+from unittest.mock import patch
 
 from amplifier_fast_decisions.contracts import Decision, DecisionResult
 from amplifier_fast_decisions.local_backend import PROBABILITY_KIND
@@ -27,7 +29,8 @@ class FakeBackend:
         if self.error:
             raise self.error
         decision = Decision(max(self.probabilities, key=self.probabilities.get), self.probabilities,
-                            model='qwen3:0.6b', probability_kind=PROBABILITY_KIND)
+                            model='qwen3:0.6b', probability_kind=PROBABILITY_KIND,
+                            confidence_kind='not_reported', option_set_hash='a' * 64)
         return DecisionResult(action=decision)
 
 
@@ -48,8 +51,11 @@ class SmartToolTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(result.choice, 'readme')
             self.assertEqual(result.effect, 'advisory_only')
             self.assertEqual(backend.calls, 1)
+            self.assertEqual(result.option_set_hash, 'a' * 64)
+            self.assertEqual(result.confidence_kind, 'not_reported')
             raw = ''.join(p.read_text() for p in Path(events).glob('*.jsonl'))
             records = [json.loads(line) for line in raw.splitlines()]
+            self.assertEqual(records[1]['data']['option_set_hash'], result.option_set_hash)
             self.assertEqual([e['event'] for e in records], ['fast_decisions:requested', 'fast_decisions:scored', 'fast_decisions:health'])
             self.assertTrue(all(e['session_id'] == 'codex-child' and e['parent_session_id'] == 'codex-parent' for e in records))
             self.assertTrue(all(e['synthetic'] for e in records))
@@ -116,6 +122,24 @@ class SmartToolTests(unittest.IsolatedAsyncioTestCase):
             self.assertFalse(result.ok)
             self.assertEqual(result.reason_code, 'telemetry_unavailable')
             self.assertEqual(backend.calls, 0)
+
+    async def test_recorder_shutdown_does_not_block_event_loop(self):
+        from amplifier_fast_decisions.telemetry import JsonlRecorder
+        release = threading.Event()
+        blocked_loop = []
+        original_close = JsonlRecorder.close
+        def close(recorder):
+            if not release.wait(1):
+                blocked_loop.append(True)
+            original_close(recorder)
+        async def heartbeat():
+            await asyncio.sleep(.02)
+            release.set()
+        with tempfile.TemporaryDirectory() as events, patch.object(JsonlRecorder, 'close', close):
+            result, _ = await asyncio.gather(
+                select(request(), events_dir=events, _backend=FakeBackend()), heartbeat())
+            self.assertTrue(result.ok)
+            self.assertFalse(blocked_loop)
 
     def test_deterministic_surface(self):
         self.assertEqual(manifest()['version'], '0.1.0')
