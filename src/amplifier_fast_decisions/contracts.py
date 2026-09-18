@@ -43,6 +43,7 @@ EVENT_NAMES = tuple(
         "observatory",
         "source",
         "effort_routed",
+        "model_routed",
     )
 )
 
@@ -84,6 +85,64 @@ def validate_effort_routing(effort_routing: Any) -> None:
             isinstance(value, bool) or not isinstance(value, int) or value < 1
         ):
             raise ValueError(f"effort_routing.{key} must be a positive integer")
+
+
+# HC04 ("opt-in model routing with escalation"): the effort strings a host
+# provider accepts on Policy.model_routing["start_effort"]. Reuses
+# ALLOWED_EFFORTS above -- same vocabulary as effort_routing.
+MODEL_ROUTING_KEYS = frozenset(
+    {
+        "start_model",
+        "start_effort",
+        "max_requests_before_escalation",
+        "escalate_on_test_failure",
+        "escalate_on_provider_error",
+        "override_explicit_model",
+    }
+)
+
+
+def validate_model_routing(model_routing: Any) -> None:
+    """Fail loud on a malformed ``model_routing`` policy at mount time.
+
+    ``None`` is the only default-off shape -- routing stays fully opt-in.
+    Unlike ``effort_routing``, an empty dict is NOT treated as off: if a
+    dict is supplied at all, ``start_model`` is required, because a model
+    pin with no starting model is meaningless. Never silently ignores a
+    bad value.
+    """
+    if model_routing is None:
+        return
+    if not isinstance(model_routing, dict):
+        raise ValueError("model_routing must be a dict")
+    unknown = set(model_routing) - MODEL_ROUTING_KEYS
+    if unknown:
+        raise ValueError(f"model_routing has unknown keys: {sorted(unknown)}")
+    start_model = model_routing.get("start_model")
+    if not isinstance(start_model, str) or not start_model:
+        raise ValueError("model_routing.start_model must be a non-empty string")
+    start_effort = model_routing.get("start_effort")
+    if start_effort is not None and start_effort not in ALLOWED_EFFORTS:
+        raise ValueError(
+            f"model_routing.start_effort must be one of {sorted(ALLOWED_EFFORTS)}"
+        )
+    max_requests = model_routing.get("max_requests_before_escalation")
+    if max_requests is not None and (
+        isinstance(max_requests, bool)
+        or not isinstance(max_requests, int)
+        or max_requests < 1
+    ):
+        raise ValueError(
+            "model_routing.max_requests_before_escalation must be a positive integer"
+        )
+    for key in (
+        "escalate_on_test_failure",
+        "escalate_on_provider_error",
+        "override_explicit_model",
+    ):
+        value = model_routing.get(key)
+        if value is not None and not isinstance(value, bool):
+            raise ValueError(f"model_routing.{key} must be a bool")
 
 
 def canonical(value: Any) -> str:
@@ -351,6 +410,11 @@ class Policy:
     # off -- RoutedProvider never reads request.reasoning_effort and never
     # emits fast_decisions:effort_routed. See effort.py and docs/ARCHITECTURE.md.
     effort_routing: dict[str, Any] | None = None
+    # HC04 ("opt-in model routing with escalation", opt-in): None means fully
+    # off -- RoutedProvider never reads/writes request.model or
+    # request.reasoning_effort for this feature and never emits
+    # fast_decisions:model_routed. See orchestrator.py and docs/ARCHITECTURE.md.
+    model_routing: dict[str, Any] | None = None
     version: str = "policy-v1"
 
     def __post_init__(self) -> None:
@@ -373,6 +437,7 @@ class Policy:
         if not 1 <= self.shadow_snapshot_budget_ms <= 5000:
             raise ValueError("shadow_snapshot_budget_ms must be between 1 and 5000")
         validate_effort_routing(self.effort_routing)
+        validate_model_routing(self.model_routing)
 
     @classmethod
     def from_config(cls, config: dict[str, Any]) -> Policy:
@@ -415,6 +480,19 @@ class TurnState:
     explore_requests: int = 0
     effort_routed_requests: int = 0
     provider_errors_seen: int = 0
+    # HC04 ("opt-in model routing with escalation"): per-turn counters/flags.
+    # Reset with the rest of TurnState at turn start. slow_requests_seen
+    # counts every slow request seen while model_routing is enabled (not
+    # gated on whether routing actually applied); model_routed_requests
+    # counts only requests where start_model was actually set;
+    # test_failure_seen is set by ObservedTool.execute observing a failing
+    # test-tool result; escalated/escalation_reason latch permanently once
+    # tripped (never reset mid-turn).
+    slow_requests_seen: int = 0
+    model_routed_requests: int = 0
+    test_failure_seen: bool = False
+    escalated: bool = False
+    escalation_reason: str | None = None
 
 
 def candidate_read_identity(

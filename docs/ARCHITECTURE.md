@@ -121,6 +121,76 @@ read `request.reasoning_effort` before falling back to their own
 provider-level config default, so a lowered `explore` effort applies to
 that one request only.
 
+## Model routing with escalation (HC04, opt-in)
+
+`Policy.model_routing` (default `None`) lets a host start a turn on a
+cheaper/faster `start_model` (and optionally a starting
+`start_effort`), entirely inside `RoutedProvider.complete` -- the same
+seam HC03 (`effort_routing`, above) owns -- and escalate to the host's
+normal provider-configured default the moment risk appears. When it is
+`None`, this feature is inert: no attribute is read from or written to
+the request, `kwargs` is not touched, and no `model_routed` event is
+emitted.
+
+**What is routed.** For each slow (non-fast-path) request, while
+`turn.escalated` is `False`: an explicit host-set `request.model` is
+always respected (`reason_code: host_pinned`) unless
+`model_routing["override_explicit_model"]` is `true`. Otherwise
+`request.model` is set to `start_model`, and (verified against the
+installed Anthropic provider, which reads the effective model from
+`kwargs.get("model", self.default_model)` and never from
+`request.model`) `kwargs["model"]` is set too, so the routed model is
+the one actually served, not just a label on the request object the
+real provider ignores. If `start_effort` is configured, it is applied
+to `request.reasoning_effort` only when nothing has already set it
+this request -- neither this same call's HC03 `effort_routing` nor a
+host pin -- so HC04 never clobbers a decision HC03 or the host already
+made.
+
+**Escalation triggers (any one flips `turn.escalated` permanently for
+the rest of the turn):**
+
+- `max_requests_before_escalation`: this turn's slow-request count
+  (`turn.slow_requests_seen`, incremented once per slow request while
+  model_routing is enabled) exceeds the configured value
+  (`escalated_max_requests`).
+- `escalate_on_test_failure`: `ObservedTool.execute` observed a
+  *successful* execution (no exception raised) of a test-shaped tool
+  (`bash`, `python_check`, `run_tests`, or any tool whose name contains
+  `"test"`) whose own result text matches a failure signature (`FAILED
+  (`, `FAIL:`, a Python traceback header, an `Error:` line, or an `N
+  failed` count) -- `turn.test_failure_seen` latches, and the *next*
+  slow request escalates (`escalated_test_failure`).
+- `escalate_on_provider_error`: the upstream provider call raised (the
+  existing `except Exception` branch already incrementing
+  `turn.provider_errors_seen`) -- escalates immediately for the
+  *following* request (`escalated_provider_error`); the failed request
+  itself already got its `model_routed` event before the exception.
+
+Once escalated, `request.model`/`kwargs["model"]` and
+`request.reasoning_effort` are left untouched by this feature -- the
+provider's own configured default takes over, exactly as if
+`model_routing` had never been set.
+
+**Never bypasses approvals or the loop.** Only `request.model`,
+`kwargs["model"]`, and (conditionally) `request.reasoning_effort` are
+ever touched; tool approvals, `stream()`, and every other policy
+dimension are untouched. `Policy.__post_init__` validates
+`model_routing` at construction (i.e. at mount, via `Policy.from_config`):
+unlike `effort_routing`, an empty dict is *not* a valid off-state --
+`start_model` is required whenever a dict is supplied at all, because a
+model pin with no starting model is meaningless. `TurnState` tracks
+`slow_requests_seen`, `model_routed_requests`, `test_failure_seen`,
+`escalated`, and `escalation_reason` per turn, reset alongside the rest
+of `TurnState` at turn start.
+
+Receipts: the `fast_decisions:model_routed` event proves what this
+feature *requested* (`requested_model`, `requested_effort`,
+`reason_code`, `escalated`); the native `llm:request` receipt on the
+host side shows what the provider actually served, since `kwargs["model"]`
+(not just `request.model`) carries the override into the real
+`complete()` call.
+
 ## Deadlines, budgets and failures
 
 ## Deadlines, budgets and failures

@@ -30,6 +30,7 @@ Session identity is read from the coordinator/session if exposed. A generated fa
 | `observatory` | The auto-observatory's once-per-session `session:start` bootstrap; `action` is `reused` / `started` / `skipped` / `failed`, plus `reason` and (when relevant) `port` -- never the token-bearing URL, which never enters event data |
 | `source` | Once per session, at mount, in every mode including `off`: which source actually ran. `source_kind` is `installed-cache` / `worktree` / `site-packages` / `unknown`; `source_git_sha` (40-hex or `null`) and `source_tree_sha256` (a SHA-256 over every `*.py` file's relative path and bytes, skipping `__pycache__`) identify the exact code; `source_py_files`, `package_version`, `python`, `mode`, and `module` (`hooks-fast-decisions` or `loop-fast-decisions`) round it out. Never a filesystem path -- see `provenance.describe_source` and docs/PRIVACY.md |
 | `effort_routed` | HC03 (opt-in, off unless `Policy.effort_routing` is configured): emitted once per slow (`RoutedProvider.complete`) request, before the upstream provider call; carries `phase` (`orient` / `explore` / `implement`), `requested_effort` (the string set on `request.reasoning_effort`, or `null` when left unchanged), `default_effort` (always `"provider_default"` -- the policy never claims to know the provider's actual default), `reason_code` (`phase_policy` / `default_effort` / `host_pinned` / `escalated_max_explore` / `escalated_after_error`), `explore_requests` (this turn's explore-phase request count so far), `provider_call_id`, and `mode` |
+| `model_routed` | HC04 (opt-in, off unless `Policy.model_routing` is configured): emitted once per slow (`RoutedProvider.complete`) request, before the upstream provider call; carries `phase`, `requested_model` (the string set on `request.model`/`kwargs["model"]`, or `null` when left unchanged), `requested_effort` (the starting effort applied, or `null`), `reason_code` (`start_model` / `host_pinned` / `escalated_max_requests` / `escalated_test_failure` / `escalated_provider_error`), `escalated` (this turn's latch, once tripped it stays tripped), `escalation_reason` (`max_requests` / `test_failure` / `provider_error` / `null`), `model_routed_requests` (this turn's count of requests where `start_model` was actually applied), `provider_call_id`, and `mode` |
 
 Fast tool IDs match the synthesized core ToolCall ID when the argument fingerprint still matches. If upstream modifies a call, or for ordinary slow-path calls, the tool facade may allocate an `observed_*` correlation ID instead. The native hook bridge can carry the original native ID. Do not assume these are identical in every path.
 
@@ -136,3 +137,18 @@ unknown unless measured. `routed:fast` includes the prepared `tool_call_id`.
 `turn_end` records status and execution wall time, never task-quality success.
 The instrumented `off` mode records ordinary execution without active or background
 shadow inference. See [OPERATIONS.md](OPERATIONS.md) for aggregation and completeness.
+
+**HC04 (opt-in model routing with escalation) never bypasses approvals or the upstream tool-call loop.**
+`Policy.model_routing` (default `None`) lets a host start a turn's generative
+requests pinned to a cheaper/faster `start_model` (and optionally a starting
+`request.reasoning_effort`), then escalate to the host's normal provider
+default the moment risk signals appear: too many slow requests in the turn,
+an observed test-tool failure, or an upstream provider exception. Once
+`turn.escalated` is set it never resets mid-turn -- every subsequent slow
+request in that turn is left untouched (`reason_code`
+`escalated_max_requests` / `escalated_test_failure` / `escalated_provider_error`).
+An explicit host-set `request.model` is always respected
+(`reason_code: host_pinned`) unless `model_routing["override_explicit_model"]`
+is `true`. `model_routed` is the only new event surface; it never changes
+tool approvals, never touches `stream()`, and never overrides an
+already-applied HC03 `effort_routed` result on the same request.

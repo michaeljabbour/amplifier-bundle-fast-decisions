@@ -144,6 +144,18 @@ SAFE_FIELDS = {
     "default_effort",
     "explore_requests",
     "effort_routing_enabled",
+    # HC04 ("opt-in model routing with escalation", opt-in): the model
+    # actually requested (or null when left unchanged/host-pinned), the
+    # per-turn escalation latch and its reason, the per-turn routed-request
+    # counter, and whether the feature is configured at all -- never raw
+    # messages, tool arguments or model output. phase, requested_effort,
+    # reason_code, provider_call_id, mode (already listed above) are reused
+    # verbatim.
+    "requested_model",
+    "escalated",
+    "escalation_reason",
+    "model_routed_requests",
+    "model_routing_enabled",
 }
 
 

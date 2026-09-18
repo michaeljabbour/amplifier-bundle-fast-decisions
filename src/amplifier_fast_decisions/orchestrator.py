@@ -6,6 +6,7 @@ It never patches a class, a global provider dictionary or amplifier-core.
 """
 from __future__ import annotations
 import asyncio
+import re
 import time
 from typing import Any
 from uuid import uuid4
@@ -37,6 +38,44 @@ def action_response(candidate: Candidate, tool_call_id: str):
 def usage_fields(response: Any) -> dict:
     usage = field_value(response, "usage", {}) or {}
     return {k: field_value(usage, k) for k in ("input_tokens", "output_tokens", "total_tokens")}
+
+
+# HC04 ("opt-in model routing with escalation"): test-failure detection.
+# Conservative and text-pattern based -- never raises, never inspects
+# arguments, only the already-observed tool result text (capped at 20k
+# chars before matching). See docs/ARCHITECTURE.md.
+_TEST_TOOL_NAMES = frozenset({"bash", "python_check", "run_tests"})
+_TEST_FAILURE_PATTERNS = (
+    re.compile(r"FAILED \("),
+    re.compile(r"FAIL:"),
+    re.compile(r"Traceback \(most recent call last\)"),
+    re.compile(r"(?m)^Error:"),
+    re.compile(r"\b\d+\s+failed\b"),
+)
+
+
+def _is_test_tool(tool_key: str) -> bool:
+    return tool_key in _TEST_TOOL_NAMES or "test" in tool_key
+
+
+def _tool_result_text(result: Any) -> str:
+    """Best-effort, defensive stringification of a tool result, capped at 20k chars.
+
+    Never raises: an object with none of the common output fields falls
+    back to ``str(result)``, and any exception there yields an empty string.
+    """
+    for attr in ("output", "result", "stdout", "content"):
+        value = field_value(result, attr, None)
+        if isinstance(value, str):
+            return value[:20000]
+    try:
+        return str(result)[:20000]
+    except Exception:
+        return ""
+
+
+def _test_failure_observed(text: str) -> bool:
+    return any(pattern.search(text) for pattern in _TEST_FAILURE_PATTERNS)
 
 
 class RoutedProvider:
@@ -132,6 +171,8 @@ docs/UPSTREAM_CONTRACT.md.
         # -- no attribute touched, no event emitted -- when the policy has
         # no effort_routing configured. See effort.py and docs/EVENTS.md.
         effort_routing = service.policy.effort_routing
+        effort_applied_this_request = False
+        phase = None
         if effort_routing:
             phase = effort.classify_phase(request)
             explore_requests = (
@@ -153,12 +194,75 @@ docs/UPSTREAM_CONTRACT.md.
                 else:
                     setattr(request, "reasoning_effort", applied_effort)
                 turn.effort_routed_requests += 1
+                effort_applied_this_request = True
             await service.emit("effort_routed", {
                 "phase": phase, "requested_effort": applied_effort,
                 "default_effort": "provider_default", "reason_code": reason_code,
                 "explore_requests": turn.explore_requests,
                 "provider_call_id": provider_call_id, "mode": service.policy.mode,
             }, decision_id)
+        # HC04 ("opt-in model routing with escalation", opt-in): entirely
+        # skipped -- no attribute touched, no event emitted -- when the
+        # policy has no model_routing configured. See docs/ARCHITECTURE.md.
+        model_routing = service.policy.model_routing
+        if model_routing:
+            start_model = model_routing["start_model"]
+            start_effort = model_routing.get("start_effort")
+            max_requests = model_routing.get("max_requests_before_escalation")
+            override_explicit = model_routing.get("override_explicit_model", False)
+            escalate_on_test_failure = model_routing.get("escalate_on_test_failure", False)
+
+            turn.slow_requests_seen += 1
+            if not turn.escalated:
+                if escalate_on_test_failure and turn.test_failure_seen:
+                    turn.escalated, turn.escalation_reason = True, "test_failure"
+                elif max_requests is not None and turn.slow_requests_seen > max_requests:
+                    turn.escalated, turn.escalation_reason = True, "max_requests"
+
+            routing_phase = phase if phase is not None else effort.classify_phase(request)
+            requested_model = None
+            requested_effort = None
+            if turn.escalated:
+                reason_code = f"escalated_{turn.escalation_reason}"
+            else:
+                explicit_model = field_value(request, "model", None)
+                if explicit_model and not override_explicit:
+                    reason_code = "host_pinned"
+                else:
+                    requested_model = start_model
+                    if isinstance(request, dict):
+                        request["model"] = start_model
+                    else:
+                        setattr(request, "model", start_model)
+                    # The verified installed Anthropic provider reads the
+                    # per-request model from kwargs (`kwargs.get("model", ...)`),
+                    # never from request.model -- see docs/ARCHITECTURE.md.
+                    # Setting request.model alone would be a receipt that
+                    # lies about what was actually served.
+                    kwargs["model"] = start_model
+                    if (
+                        start_effort is not None
+                        and not effort_applied_this_request
+                        and field_value(request, "reasoning_effort", None) is None
+                    ):
+                        requested_effort = start_effort
+                        if isinstance(request, dict):
+                            request["reasoning_effort"] = start_effort
+                        else:
+                            setattr(request, "reasoning_effort", start_effort)
+                    turn.model_routed_requests += 1
+                    reason_code = "start_model"
+            await service.emit("model_routed", {
+                "phase": routing_phase, "requested_model": requested_model,
+                "requested_effort": requested_effort, "reason_code": reason_code,
+                "escalated": turn.escalated, "escalation_reason": turn.escalation_reason,
+                "model_routed_requests": turn.model_routed_requests,
+                "provider_call_id": provider_call_id, "mode": service.policy.mode,
+            }, decision_id)
+            # Reflect any routing-applied model in the slow_start/slow_end
+            # receipts below -- otherwise they'd keep showing the
+            # pre-routing value even though a different model was requested.
+            model = field_value(request, "model") or model
         await service.emit("slow_start", {"provider": self._provider_key, "model": model,
             "provider_call_id": provider_call_id,
             "route": "slow", "destination": self._provider_key, "status": "running",
@@ -175,6 +279,8 @@ docs/UPSTREAM_CONTRACT.md.
             raise
         except Exception as exc:
             turn.provider_errors_seen += 1
+            if model_routing and not turn.escalated and model_routing.get("escalate_on_provider_error"):
+                turn.escalated, turn.escalation_reason = True, "provider_error"
             await service.emit("slow_end", {"provider": self._provider_key, "model": model,
                 "provider_call_id": provider_call_id,
                 "status": "error", "exception_type": type(exc).__name__,
@@ -313,6 +419,19 @@ class ObservedTool:
                 identity = self._completed_read_identity(input)
                 if identity is not None:
                     turn.completed_reads[identity[0]] = identity[1]
+            # HC04 ("opt-in model routing with escalation"): observe a
+            # successful test-tool execution's own result text for a
+            # failure signature. Only tracked once per turn (subsequent
+            # detections are redundant) and only while model_routing is
+            # configured -- inert otherwise, matching every other HC04 seam.
+            if (
+                turn
+                and not turn.test_failure_seen
+                and service.policy.model_routing
+                and _is_test_tool(self._tool_key)
+            ):
+                if _test_failure_observed(_tool_result_text(result)):
+                    turn.test_failure_seen = True
             await service.emit("tool_end", {**fields, "status": "ok" if success is not False else "error",
                 "success": success, "duration_ms": (time.perf_counter() - start) * 1000}, decision_id)
             return result
@@ -352,7 +471,8 @@ class HybridOrchestrator:
                 "backend": service.backend.name, "engine": "upstream-loop-streaming",
                 "policy_version": service.policy.version,
                 "allow_external_state": service.policy.allow_external_state,
-                "effort_routing_enabled": bool(service.policy.effort_routing)})
+                "effort_routing_enabled": bool(service.policy.effort_routing),
+                "model_routing_enabled": bool(service.policy.model_routing)})
             # Provider keys and defaults are unchanged. Upstream pins and selections apply.
             workspace_tool = tools.get("fast_workspace")
             wrapped_tools = {
