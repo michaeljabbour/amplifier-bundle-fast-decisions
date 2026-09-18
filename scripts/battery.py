@@ -483,6 +483,175 @@ def _normalize_worker_result(base, native):
                 'infrastructure_failure': bool(native.get('infrastructure_failure')), 'notes': []}
 
 
+# --------------------------------------------------------------------------
+# exec_time_ms: harness-specific execution-time derivation (excludes startup
+# where a native signal is available), used to annotate every result
+# --------------------------------------------------------------------------
+
+def _parse_iso(ts):
+    """Parse an ISO-8601 string (or epoch number) into an aware datetime, or None."""
+    if ts is None or ts == '':
+        return None
+    if isinstance(ts, (int, float)):
+        return datetime.fromtimestamp(ts, tz=timezone.utc)
+    try:
+        return datetime.fromisoformat(str(ts).replace('Z', '+00:00'))
+    except ValueError:
+        return None
+
+
+def _resolve_session_id(result, run_dir):
+    """Session id for an amplifier-harness run: result['session_id'], else
+    worker-result.json in run_dir, else the first receipts.jsonl line's session_id."""
+    sid = (result or {}).get('session_id')
+    if sid:
+        return sid
+    run_dir = Path(run_dir)
+    worker_result = run_dir/'worker-result.json'
+    if worker_result.exists():
+        try:
+            data = json.loads(worker_result.read_text())
+        except (OSError, ValueError):
+            data = None
+        if data and data.get('session_id'):
+            return data['session_id']
+    receipts = run_dir/'receipts.jsonl'
+    if receipts.exists():
+        try:
+            lines = [line for line in receipts.read_text().splitlines() if line.strip()]
+        except OSError:
+            lines = []
+        if lines:
+            try:
+                first = json.loads(lines[0])
+            except ValueError:
+                first = {}
+            if first.get('session_id'):
+                return first['session_id']
+    return None
+
+
+def _amplifier_events_path(run_dir, session_id):
+    """~/.amplifier/projects/<slug>/sessions/<sid>/events.jsonl, slug computed
+    exactly as forge_e2e.worker computes it from the run's workspace path."""
+    workspace = Path(run_dir)/'workspace'
+    slug = str(workspace.resolve()).replace('\\', '-').replace('/', '-').replace(':', '')
+    return Path.home()/'.amplifier/projects'/slug/'sessions'/session_id/'events.jsonl'
+
+
+def _amplifier_exec_metrics(result, run_dir):
+    """(exec_time_ms, provider_requests) from the session's native events.jsonl:
+    first llm:request ts -> last llm:response ts. (None, None) when undeterminable."""
+    session_id = _resolve_session_id(result, run_dir)
+    if not session_id:
+        return None, None
+    events_path = _amplifier_events_path(run_dir, session_id)
+    if not events_path.exists():
+        return None, None
+    try:
+        lines = events_path.read_text().splitlines()
+    except OSError:
+        return None, None
+    first_request, last_response, request_count = None, None, 0
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            ev = json.loads(line)
+        except ValueError:
+            continue
+        etype = ev.get('type') or ev.get('event')
+        ts = _parse_iso(ev.get('ts'))
+        if etype == 'llm:request':
+            request_count += 1
+            if first_request is None and ts is not None:
+                first_request = ts
+        elif etype == 'llm:response' and ts is not None:
+            last_response = ts
+    requests = request_count or None
+    if first_request is None or last_response is None:
+        return None, requests
+    ms = (last_response-first_request).total_seconds()*1000
+    return (ms if ms >= 0 else None), requests
+
+
+def _opencode_exec_time_ms(stdout_text):
+    """First step_start timestamp (ms epoch) -> last step_finish timestamp, from
+    opencode's --format json JSONL stdout. None when either marker is missing."""
+    if not stdout_text:
+        return None
+    first_start, last_finish = None, None
+    for line in stdout_text.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            ev = json.loads(line)
+        except ValueError:
+            continue
+        ts = ev.get('timestamp')
+        if not isinstance(ts, (int, float)):
+            continue
+        if ev.get('type') == 'step_start' and first_start is None:
+            first_start = ts
+        elif ev.get('type') == 'step_finish':
+            last_finish = ts
+    if first_start is None or last_finish is None:
+        return None
+    ms = last_finish-first_start
+    return ms if ms >= 0 else None
+
+
+def compute_exec_time(result, run_dir, stdout_text=None):
+    """Pure(ish) helper: derive (exec_time_ms, exec_time_source) for one result.
+
+    Amplifier harnesses: native events.jsonl (first llm:request -> last
+    llm:response), source 'native_events_first_request_to_last_response'.
+    claude: harness_duration_ms, source 'harness_duration_ms'.
+    opencode: harness event timestamps (from stdout_text, or run_dir/'harness-
+    stdout.txt' when stdout_text is not given), source 'harness_event_timestamps'.
+    Everything else (including any harness lacking a usable native signal)
+    falls back to wall_time_ms, source 'wall_includes_startup'.
+    """
+    result = result or {}
+    run_dir = Path(run_dir)
+    harness = result.get('harness')
+    if harness in AMPLIFIER_HARNESSES:
+        ms, _requests = _amplifier_exec_metrics(result, run_dir)
+        if ms is not None:
+            return ms, 'native_events_first_request_to_last_response'
+    elif harness == 'claude':
+        duration = result.get('harness_duration_ms')
+        if duration is not None:
+            return duration, 'harness_duration_ms'
+    elif harness == 'opencode':
+        text = stdout_text
+        if text is None:
+            stdout_path = run_dir/'harness-stdout.txt'
+            if stdout_path.exists():
+                try:
+                    text = stdout_path.read_text()
+                except OSError:
+                    text = None
+        ms = _opencode_exec_time_ms(text)
+        if ms is not None:
+            return ms, 'harness_event_timestamps'
+    return result.get('wall_time_ms'), 'wall_includes_startup'
+
+
+def _with_exec_time(result, run_dir, stdout_text=None):
+    """Annotate a result dict with exec_time_ms/exec_time_source (and
+    provider_requests, when derivable) without mutating the input."""
+    ms, source = compute_exec_time(result, run_dir, stdout_text)
+    out = {**result, 'exec_time_ms': ms, 'exec_time_source': source}
+    if result.get('harness') in AMPLIFIER_HARNESSES:
+        _ms, requests = _amplifier_exec_metrics(result, run_dir)
+        if requests is not None:
+            out['provider_requests'] = requests
+    return out
+
+
 def _dispatch(item, name, experiment_dir, manifest, proposal, launcher=None, waiter=None, closer=None,
               forge_module=None):
     battery_tasks = _load_battery_tasks()
@@ -498,6 +667,7 @@ def _dispatch(item, name, experiment_dir, manifest, proposal, launcher=None, wai
         waiter = waiter or forge_e2e.wait_for_result
         closer = closer or forge_e2e.close_worker_terminal
         amp_root = experiment_dir/'runs'/'amplifier'
+        amp_run_dir = amp_root/name
         wait_seconds = deadline+180
         try:
             if (amp_root/name/'result.json').exists():
@@ -516,27 +686,29 @@ def _dispatch(item, name, experiment_dir, manifest, proposal, launcher=None, wai
                 except Exception:  # noqa: BLE001
                     pass
         except Exception as exc:  # noqa: BLE001 -- launch never started a worker
-            return {**base, 'model': None, 'started_at': _now(), 'ended_at': _now(),
+            return _with_exec_time({**base, 'model': None, 'started_at': _now(), 'ended_at': _now(),
                     'wall_time_ms': None, 'harness_duration_ms': None, 'exit_code': None,
                     'timed_out': None, 'cost_usd': None, 'cost_source': 'unknown', 'cost_billable': None,
                     'tokens': None, 'num_turns': None, 'final_message': None, 'quality': None,
                     'protected_files_unchanged': None, 'outcome_passed': False,
-                    'infrastructure_failure': True, 'notes': [f'launch_failed:{str(exc)[:300]}']}
+                    'infrastructure_failure': True, 'notes': [f'launch_failed:{str(exc)[:300]}']}, amp_run_dir)
         native = _read_json(amp_root/name/'result.json') if ok and (amp_root/name/'result.json').exists() else None
         if native is None:
-            return {**base, 'model': None, 'started_at': _now(), 'ended_at': _now(),
+            return _with_exec_time({**base, 'model': None, 'started_at': _now(), 'ended_at': _now(),
                     'wall_time_ms': None, 'harness_duration_ms': None, 'exit_code': None,
                     'timed_out': None, 'cost_usd': None, 'cost_source': 'unknown', 'cost_billable': None,
                     'tokens': None, 'num_turns': None, 'final_message': None, 'quality': None,
                     'protected_files_unchanged': None, 'outcome_passed': False,
-                    'infrastructure_failure': True, 'notes': ['no_result_json']}
+                    'infrastructure_failure': True, 'notes': ['no_result_json']}, amp_run_dir)
         if 'cost_source' in native and 'native' not in native:
-            # Already normalized by an earlier runner (adopted): return as-is.
-            return {**native, 'notes': list(native.get('notes') or []) + list(base.get('notes') or [])}
+            # Already normalized by an earlier runner (adopted): return as-is, but still
+            # (re)derive exec_time_ms so a pre-existing normalized result gets annotated too.
+            merged = {**native, 'notes': list(native.get('notes') or []) + list(base.get('notes') or [])}
+            return _with_exec_time(merged, amp_run_dir)
         raw_copy = amp_root/name/'worker-result.json'
         if not raw_copy.exists():
             raw_copy.write_text(json.dumps(native, indent=2)+'\n')  # keep the worker's native evidence
-        return _normalize_worker_result(base, native)
+        return _with_exec_time(_normalize_worker_result(base, native), amp_run_dir)
 
     # External harnesses (claude/codex/opencode)
     run_dir = experiment_dir/'runs'/name
@@ -546,8 +718,15 @@ def _dispatch(item, name, experiment_dir, manifest, proposal, launcher=None, wai
     outcome = _run_external(harness, run_dir, workspace, prompt, deadline, model, forge_module,
                              proposal.get('claude_max_budget_usd') or 3.0)
     if outcome.get('infrastructure_failure'):
-        return {**base, 'model': model, **{k: v for k, v in outcome.items() if k != 'stdout'}}
+        return _with_exec_time({**base, 'model': model, **{k: v for k, v in outcome.items() if k != 'stdout'}},
+                                run_dir)
     stdout = outcome.pop('stdout', '')
+    # Persist raw harness stdout so exec-time can be (re)derived later without a live run
+    # (needed for opencode's step_start/step_finish timestamps; harmless for the others).
+    try:
+        (run_dir/'harness-stdout.txt').write_text(stdout)
+    except OSError:
+        pass
     if harness == 'claude':
         parsed = _parse_claude(stdout) or {}
     elif harness == 'codex':
@@ -566,7 +745,7 @@ def _dispatch(item, name, experiment_dir, manifest, proposal, launcher=None, wai
     if public_ok is not None:
         outcome_passed = outcome_passed and public_ok
 
-    return {**base, 'model': parsed.get('model') or model, 'started_at': outcome.get('started_at'),
+    result = {**base, 'model': parsed.get('model') or model, 'started_at': outcome.get('started_at'),
             'ended_at': outcome.get('ended_at'), 'wall_time_ms': outcome.get('wall_time_ms'),
             'harness_duration_ms': parsed.get('harness_duration_ms'), 'exit_code': outcome.get('exit_code'),
             'timed_out': outcome.get('timed_out'), 'cost_usd': parsed.get('cost_usd'),
@@ -576,6 +755,7 @@ def _dispatch(item, name, experiment_dir, manifest, proposal, launcher=None, wai
             'quality': quality, 'protected_files_unchanged': unchanged, 'public_tests_passed': public_ok,
             'outcome_passed': outcome_passed, 'infrastructure_failure': False,
             'forge_session_id': outcome.get('forge_session_id'), 'notes': []}
+    return _with_exec_time(result, run_dir, stdout)
 
 
 def cmd_run(args, launcher=None, waiter=None, closer=None, forge_module=None):
@@ -674,6 +854,22 @@ def cmd_run(args, launcher=None, waiter=None, closer=None, forge_module=None):
 # --------------------------------------------------------------------------
 
 def _penalized_ms(result, deadline_ms):
+    """Penalized time for one result: exec_time_ms when present (deadline
+    otherwise/when not passed), falling back to wall_time_ms for results that
+    predate exec_time_ms."""
+    if result is None:
+        return deadline_ms
+    if not result.get('outcome_passed'):
+        return deadline_ms
+    ms = result.get('exec_time_ms')
+    if ms is None:
+        ms = result.get('wall_time_ms')
+    return ms if ms is not None else deadline_ms
+
+
+def _penalized_wall_ms(result, deadline_ms):
+    """The original (pre-exec_time_ms) penalized-time definition: wall_time_ms
+    only. Kept alongside _penalized_ms so evaluate can report both."""
     if result is None:
         return deadline_ms
     return result.get('wall_time_ms') if result.get('outcome_passed') and result.get('wall_time_ms') is not None else deadline_ms
@@ -724,6 +920,145 @@ def _latest_result(experiment_dir, manifest, name):
     return result
 
 
+def _load_experiment_assigned(experiment_dir):
+    """(manifest, assigned) for one experiment: assigned maps (task, harness)
+    to its latest-attempt {'name', 'result'}, same rule cmd_evaluate uses."""
+    manifest = _read_json(experiment_dir/'runs'/'manifest.json')
+    groups = {}
+    for name, item in manifest['runs'].items():
+        groups.setdefault((item['task'], item['harness']), []).append((name, item.get('attempt', 1)))
+    assigned = {}
+    for key, members in groups.items():
+        members.sort(key=lambda m: m[1])
+        name = members[-1][0]
+        assigned[key] = {'name': name, 'result': _latest_result(experiment_dir, manifest, name)}
+    return manifest, assigned
+
+
+_CROSS_CAMPAIGN_HARNESSES = ('claude', 'codex', 'opencode', 'amplifier-plain', 'amplifier-fd')
+
+
+def _cross_campaign_comparison(candidate_tasks, candidate_assigned, deadline_ms, baseline_root, baseline_experiment):
+    """Compare the candidate experiment's amplifier-fd exec time against every
+    harness present in ANOTHER campaign's experiment (baseline_root/baseline_experiment),
+    restricted to the tasks the two experiments have in common. Returns a dict with a
+    per-baseline-harness geomean ratio/wins/sign-test, a per-task table, and a per-task
+    speed rank of the candidate among all passing harnesses (candidate's own + baseline's).
+    """
+    baseline_experiment_dir = Path(baseline_root)/'experiments'/baseline_experiment
+    baseline_manifest, baseline_assigned = _load_experiment_assigned(baseline_experiment_dir)
+    baseline_deadline_ms = baseline_manifest.get('deadline_seconds', 600)*1000
+    baseline_tasks = sorted({k[0] for k in baseline_assigned})
+    common_tasks = sorted(set(candidate_tasks) & set(baseline_tasks))
+    baseline_harnesses = sorted({k[1] for k in baseline_assigned} & set(_CROSS_CAMPAIGN_HARNESSES))
+
+    def candidate_result(task):
+        return candidate_assigned.get((task, 'amplifier-fd'), {}).get('result')
+
+    per_task_rank = {}
+    for task in common_tasks:
+        entries = []
+        cr = candidate_result(task)
+        if cr and cr.get('outcome_passed'):
+            entries.append(('amplifier-fd(candidate)', _penalized_ms(cr, deadline_ms)))
+        for h in baseline_harnesses:
+            br = baseline_assigned.get((task, h), {}).get('result')
+            if br and br.get('outcome_passed'):
+                entries.append((h, _penalized_ms(br, baseline_deadline_ms)))
+        entries.sort(key=lambda pair: pair[1])
+        rank = next((i+1 for i, (label, _ms) in enumerate(entries) if label == 'amplifier-fd(candidate)'), None)
+        per_task_rank[task] = {'rank': rank, 'field_size': len(entries)}
+
+    baselines = {}
+    for h in baseline_harnesses:
+        ratios, diffs = [], []
+        wins = losses = 0
+        candidate_successes = baseline_successes = 0
+        per_task_table = {}
+        for task in common_tasks:
+            cr = candidate_result(task)
+            br = baseline_assigned.get((task, h), {}).get('result')
+            c_ms = _penalized_ms(cr, deadline_ms)
+            b_ms = _penalized_ms(br, baseline_deadline_ms)
+            c_passed = bool(cr and cr.get('outcome_passed'))
+            b_passed = bool(br and br.get('outcome_passed'))
+            if c_passed:
+                candidate_successes += 1
+            if b_passed:
+                baseline_successes += 1
+            per_task_table[task] = {
+                'task': task, 'family': ((cr or {}).get('family') or (br or {}).get('family')),
+                'candidate_exec_s': (c_ms/1000.0) if (c_ms is not None and c_passed) else None,
+                'candidate_passed': c_passed,
+                f'{h}_exec_s': (b_ms/1000.0) if (b_ms is not None and b_passed) else None,
+                f'{h}_passed': b_passed,
+            }
+            if c_passed and b_passed and b_ms:
+                ratios.append(c_ms/b_ms)
+                diffs.append(c_ms-b_ms)
+                if c_ms < b_ms:
+                    wins += 1
+                elif c_ms > b_ms:
+                    losses += 1
+        sign = _sign_test(diffs)
+        baselines[h] = {
+            'geomean_ratio': _geomean(ratios), 'wins': wins, 'losses': losses,
+            'sign_test_p_value': sign['p_value'], 'n_common_pass_pairs': len(ratios),
+            'candidate_successes': candidate_successes, 'baseline_successes': baseline_successes,
+            'n_common_tasks': len(common_tasks), 'per_task': per_task_table,
+        }
+
+    return {
+        'baseline_root': str(baseline_root), 'baseline_experiment': baseline_experiment,
+        'common_tasks': common_tasks, 'baselines': baselines, 'rank': per_task_rank,
+        'evidence_limits': [
+            'single_repetition_per_task_per_harness', 'non_contemporaneous_runs_across_campaigns',
+            'external_harness_exec_time_may_still_include_its_own_startup',
+            'models_not_necessarily_matched_across_campaigns_or_harnesses',
+        ],
+    }
+
+
+def cmd_backfill_exec(args):
+    """Fill exec_time_ms/exec_time_source (and provider_requests, when derivable)
+    for every existing result.json in an experiment, in place. Idempotent: a
+    second run over already-backfilled results reports zero updates. Never
+    invokes a harness; reads only what's already on disk (result.json,
+    worker-result.json, receipts.jsonl, harness-stdout.txt, native events.jsonl)."""
+    root = Path(args.root).expanduser().resolve()
+    experiment_dir = root/'experiments'/args.experiment
+    manifest = _read_json(experiment_dir/'runs'/'manifest.json')
+    updated = []
+    for name, item in manifest['runs'].items():
+        run_dir = _run_dir_for(experiment_dir, name, item['harness'])
+        path = run_dir/'result.json'
+        if not path.exists():
+            continue
+        result = _read_json(path)
+        stdout_text = None
+        stdout_path = run_dir/'harness-stdout.txt'
+        if stdout_path.exists():
+            try:
+                stdout_text = stdout_path.read_text()
+            except OSError:
+                stdout_text = None
+        ms, source = compute_exec_time(result, run_dir, stdout_text)
+        changed = result.get('exec_time_ms') != ms or result.get('exec_time_source') != source
+        new_result = {**result, 'exec_time_ms': ms, 'exec_time_source': source}
+        if new_result.get('harness') in AMPLIFIER_HARNESSES:
+            _ms, requests = _amplifier_exec_metrics(new_result, run_dir)
+            if requests is not None and result.get('provider_requests') != requests:
+                new_result['provider_requests'] = requests
+                changed = True
+        if changed:
+            _dump(path, new_result)
+            updated.append(name)
+    campaign._ledger_append(root, {'type': 'exec_time_backfilled', 'experiment': args.experiment,
+                                    'updated': len(updated)})
+    _print({'experiment': args.experiment, 'updated': updated})
+    return {'experiment': args.experiment, 'updated': updated}
+
+
 def cmd_reevaluate(args):
     """Recompute quality/outcome for every finished run from its workspace (deterministic, no model calls).
 
@@ -771,19 +1106,9 @@ def cmd_reevaluate(args):
 def cmd_evaluate(args):
     root = Path(args.root).expanduser().resolve()
     experiment_dir = root/'experiments'/args.experiment
-    manifest = _read_json(experiment_dir/'runs'/'manifest.json')
+    manifest, assigned = _load_experiment_assigned(experiment_dir)
     proposal = _read_json(experiment_dir/'proposal.json')
     deadline_ms = manifest.get('deadline_seconds', 600)*1000
-
-    # Assigned (latest-attempt) result per (task, harness).
-    groups = {}
-    for name, item in manifest['runs'].items():
-        groups.setdefault((item['task'], item['harness']), []).append((name, item.get('attempt', 1)))
-    assigned = {}
-    for key, members in groups.items():
-        members.sort(key=lambda m: m[1])
-        name = members[-1][0]
-        assigned[key] = {'name': name, 'result': _latest_result(experiment_dir, manifest, name)}
 
     tasks = sorted({k[0] for k in assigned})
     harnesses = sorted({k[1] for k in assigned})
@@ -795,10 +1120,13 @@ def cmd_evaluate(args):
         successes = sum(1 for r in results if r and r.get('outcome_passed'))
         deadline_failures = sum(1 for r in results if r and r.get('timed_out'))
         penalized = [_penalized_ms(r, deadline_ms) for r in results]
+        penalized_wall = [_penalized_wall_ms(r, deadline_ms) for r in results]
         costs_known = [r.get('cost_usd') for r in results if r and r.get('cost_usd') is not None]
         unknown_cost_count = sum(1 for r in results if r is None or r.get('cost_usd') is None)
         sorted_pen = sorted(penalized)
         median_pen = sorted_pen[len(sorted_pen)//2] if sorted_pen else None
+        sorted_wall = sorted(penalized_wall)
+        median_wall = sorted_wall[len(sorted_wall)//2] if sorted_wall else None
         tokens_total = None
         token_sums = {}
         for r in results:
@@ -809,6 +1137,11 @@ def cmd_evaluate(args):
         per_harness[harness] = {
             'n': n, 'success_rate': (successes/n) if n else None, 'deadline_failures': deadline_failures,
             'mean_penalized_ms': (sum(penalized)/n) if n else None, 'median_penalized_ms': median_pen,
+            # exec_time_ms-aware (same values as mean/median_penalized_ms above; named
+            # explicitly so consumers don't have to know the penalized default changed).
+            'mean_exec_ms': (sum(penalized)/n) if n else None, 'median_exec_ms': median_pen,
+            # Pre-exec_time_ms behavior (wall_time_ms only), kept for comparability.
+            'mean_wall_ms': (sum(penalized_wall)/n) if n else None, 'median_wall_ms': median_wall,
             'mean_cost_known_usd': (sum(costs_known)/len(costs_known)) if costs_known else None,
             'unknown_cost_count': unknown_cost_count,
             'cost_per_success_usd': (sum(costs_known)/successes) if costs_known and successes else None,
@@ -883,9 +1216,16 @@ def cmd_evaluate(args):
     def _slice(names):
         return {t: per_task[t] for t in names if t in per_task}
 
+    baseline_root = getattr(args, 'baseline_root', None)
+    baseline_experiment = getattr(args, 'baseline_experiment', None)
+    cross = None
+    if baseline_root and baseline_experiment:
+        cross = _cross_campaign_comparison(tasks, assigned, deadline_ms,
+                                            Path(baseline_root).expanduser().resolve(), baseline_experiment)
+
     comparison = {
         'per_harness': per_harness, 'per_task': per_task, 'per_family': family_table,
-        'amplifier_fd_vs_plain': paired,
+        'amplifier_fd_vs_plain': paired, 'cross': cross,
         'dev': _slice(dev_tasks), 'holdout': _slice(holdout_tasks),
         'evidence_limits': [f'n_tasks={len(tasks)}', 'single_repetition_per_task_per_harness',
                             'models_not_necessarily_matched_across_harnesses'],
@@ -900,7 +1240,8 @@ def _write_report(experiment_dir, comparison, proposal):
     lines = ['# Battery report', '', f"Experiment: {proposal.get('experiment_id')}", '', '## Per-harness summary', '']
     for harness, row in comparison['per_harness'].items():
         lines.append(f"- {harness}: n={row['n']} success_rate={row['success_rate']} "
-                     f"mean_penalized_ms={row['mean_penalized_ms']} unknown_cost_count={row['unknown_cost_count']}")
+                     f"mean_exec_ms={row['mean_exec_ms']} mean_wall_ms={row['mean_wall_ms']} "
+                     f"unknown_cost_count={row['unknown_cost_count']}")
     lines += ['', '## amplifier-fd vs amplifier-plain', '']
     if comparison['amplifier_fd_vs_plain']:
         p = comparison['amplifier_fd_vs_plain']
@@ -908,8 +1249,24 @@ def _write_report(experiment_dir, comparison, proposal):
                      f"ties={p['ties']} sign_test_p_value={p['sign_test_p_value']} cost_ratio={p['cost_ratio']}")
     else:
         lines.append('not evaluated (both amplifier harnesses required)')
-    lines += ['', '## Per-task', '', '```json', json.dumps(comparison['per_task'], indent=2), '```', '',
-              '## Evidence limits', ''] + [f'- {e}' for e in comparison['evidence_limits']]
+    lines += ['', '## Per-task', '', '```json', json.dumps(comparison['per_task'], indent=2), '```', '']
+    cross = comparison.get('cross')
+    if cross:
+        lines += ['## Cross-campaign comparison', '',
+                  f"Baseline: {cross['baseline_root']} experiment={cross['baseline_experiment']}",
+                  f"Common tasks: {len(cross['common_tasks'])}", '']
+        for h, row in cross['baselines'].items():
+            lines.append(f"- amplifier-fd vs {h}: geomean_ratio={row['geomean_ratio']} wins={row['wins']} "
+                         f"losses={row['losses']} sign_test_p_value={row['sign_test_p_value']} "
+                         f"n_common_pass_pairs={row['n_common_pass_pairs']} "
+                         f"candidate_successes={row['candidate_successes']}/{row['n_common_tasks']} "
+                         f"baseline_successes={row['baseline_successes']}/{row['n_common_tasks']}")
+        lines += ['', '### Per-task rank (candidate speed rank among passing harnesses)', '',
+                  '```json', json.dumps(cross['rank'], indent=2), '```', '',
+                  '### Per-task exec times', '',
+                  '```json', json.dumps({h: row['per_task'] for h, row in cross['baselines'].items()}, indent=2),
+                  '```', '', '### Cross-campaign evidence limits', ''] + [f'- {e}' for e in cross['evidence_limits']]
+    lines += ['', '## Evidence limits', ''] + [f'- {e}' for e in comparison['evidence_limits']]
     (experiment_dir/'REPORT.md').write_text('\n'.join(lines)+'\n')
 
 
@@ -973,7 +1330,14 @@ def main(argv=None):
     p = sub.add_parser('evaluate')
     p.add_argument('--root', required=True)
     p.add_argument('--experiment', required=True)
+    p.add_argument('--baseline-root')
+    p.add_argument('--baseline-experiment')
     p.set_defaults(func=cmd_evaluate)
+
+    p = sub.add_parser('backfill-exec')
+    p.add_argument('--root', required=True)
+    p.add_argument('--experiment', required=True)
+    p.set_defaults(func=cmd_backfill_exec)
 
     p = sub.add_parser('status')
     p.add_argument('--root', required=True)

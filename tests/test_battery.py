@@ -607,3 +607,230 @@ class CodexConfigModelTests(unittest.TestCase):
             cfg.write_text('model = "gpt-6-astra"\nmodel_reasoning_effort = "high"\n')
             self.assertEqual(battery._codex_configured_model(cfg), 'gpt-6-astra')
             self.assertIsNone(battery._codex_configured_model(Path(tmp)/'missing.toml'))
+
+
+# --------------------------------------------------------------------------
+# compute_exec_time (pure helper) -- one case per harness-specific source,
+# plus the universal wall-time fallback
+# --------------------------------------------------------------------------
+
+class ComputeExecTimeTests(unittest.TestCase):
+    def test_amplifier_uses_native_events_first_request_to_last_response(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            fake_home = Path(tmp)/'home'
+            run_dir = Path(tmp)/'run'
+            workspace = run_dir/'workspace'
+            workspace.mkdir(parents=True)
+            (run_dir/'worker-result.json').write_text(json.dumps({'session_id': 'sess-1'}))
+            slug = str(workspace.resolve()).replace('\\', '-').replace('/', '-').replace(':', '')
+            sessions_dir = fake_home/'.amplifier/projects'/slug/'sessions'/'sess-1'
+            sessions_dir.mkdir(parents=True)
+            events = [
+                {'type': 'llm:request', 'ts': '2026-01-01T00:00:00+00:00'},
+                {'type': 'other'},
+                {'type': 'llm:response', 'ts': '2026-01-01T00:00:01+00:00'},
+                {'type': 'llm:request', 'ts': '2026-01-01T00:00:02+00:00'},
+                {'type': 'llm:response', 'ts': '2026-01-01T00:00:05+00:00'},
+            ]
+            (sessions_dir/'events.jsonl').write_text('\n'.join(json.dumps(e) for e in events)+'\n')
+            result = {'harness': 'amplifier-fd', 'wall_time_ms': 99999.0}
+            with patch('battery.Path.home', return_value=fake_home):
+                ms, source = battery.compute_exec_time(result, run_dir)
+                annotated = battery._with_exec_time(result, run_dir)
+            self.assertEqual(source, 'native_events_first_request_to_last_response')
+            self.assertAlmostEqual(ms, 5000.0)
+            self.assertEqual(annotated['provider_requests'], 2)
+
+    def test_amplifier_falls_back_to_wall_without_native_events(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            run_dir = Path(tmp)/'run'
+            (run_dir/'workspace').mkdir(parents=True)
+            result = {'harness': 'amplifier-plain', 'wall_time_ms': 4200.0}
+            with patch('battery.Path.home', return_value=Path(tmp)/'nohome'):
+                ms, source = battery.compute_exec_time(result, run_dir)
+            self.assertEqual(ms, 4200.0)
+            self.assertEqual(source, 'wall_includes_startup')
+
+    def test_claude_uses_harness_duration_ms(self):
+        result = {'harness': 'claude', 'harness_duration_ms': 12345, 'wall_time_ms': 99999.0}
+        ms, source = battery.compute_exec_time(result, Path('/nonexistent-run-dir'))
+        self.assertEqual(ms, 12345)
+        self.assertEqual(source, 'harness_duration_ms')
+
+    def test_opencode_uses_step_event_timestamps(self):
+        stdout = '\n'.join([
+            json.dumps({'type': 'step_start', 'timestamp': 1000}),
+            json.dumps({'type': 'text', 'part': {'text': 'x'}}),
+            json.dumps({'type': 'step_finish', 'timestamp': 3500}),
+        ])
+        result = {'harness': 'opencode', 'wall_time_ms': 99999.0}
+        ms, source = battery.compute_exec_time(result, Path('/nonexistent-run-dir'), stdout_text=stdout)
+        self.assertEqual(ms, 2500)
+        self.assertEqual(source, 'harness_event_timestamps')
+
+    def test_opencode_reads_saved_harness_stdout_when_not_passed_inline(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            run_dir = Path(tmp)/'run'
+            run_dir.mkdir(parents=True)
+            stdout = '\n'.join([
+                json.dumps({'type': 'step_start', 'timestamp': 5000}),
+                json.dumps({'type': 'step_finish', 'timestamp': 5750}),
+            ])
+            (run_dir/'harness-stdout.txt').write_text(stdout)
+            result = {'harness': 'opencode', 'wall_time_ms': 99999.0}
+            ms, source = battery.compute_exec_time(result, run_dir)
+            self.assertEqual(ms, 750)
+            self.assertEqual(source, 'harness_event_timestamps')
+
+    def test_opencode_falls_back_to_wall_without_any_stdout(self):
+        result = {'harness': 'opencode', 'wall_time_ms': 3210.0}
+        ms, source = battery.compute_exec_time(result, Path('/nonexistent-run-dir'))
+        self.assertEqual(ms, 3210.0)
+        self.assertEqual(source, 'wall_includes_startup')
+
+    def test_codex_has_no_native_timestamps_and_falls_back_to_wall(self):
+        result = {'harness': 'codex', 'wall_time_ms': 7777.0}
+        ms, source = battery.compute_exec_time(result, Path('/nonexistent-run-dir'))
+        self.assertEqual(ms, 7777.0)
+        self.assertEqual(source, 'wall_includes_startup')
+
+
+# --------------------------------------------------------------------------
+# backfill-exec: fills exec_time_ms/exec_time_source on existing results,
+# in place, idempotently
+# --------------------------------------------------------------------------
+
+class BackfillExecTests(unittest.TestCase):
+    def test_backfill_is_idempotent_and_uses_harness_duration_ms_for_claude(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)/'campaign'
+            experiment_dir = root/'experiments'/'e1'
+            runs_root = experiment_dir/'runs'
+            runs_root.mkdir(parents=True)
+            root.mkdir(parents=True, exist_ok=True)
+            name = 'e1-add_one-claude-a1'
+            run_dir = runs_root/name
+            run_dir.mkdir(parents=True)
+            (run_dir/'result.json').write_text(json.dumps({
+                'name': name, 'task': 'add_one', 'harness': 'claude', 'family': 'arith',
+                'outcome_passed': True, 'wall_time_ms': 9000.0, 'harness_duration_ms': 5000,
+                'cost_usd': 0.1, 'timed_out': False,
+            }))
+            manifest = {'run_order': [name],
+                        'runs': {name: {'name': name, 'task': 'add_one', 'harness': 'claude', 'attempt': 1}},
+                        'deadline_seconds': 600}
+            (runs_root/'manifest.json').write_text(json.dumps(manifest))
+
+            first = battery.cmd_backfill_exec(SimpleNamespace(root=str(root), experiment='e1'))
+            self.assertEqual(first['updated'], [name])
+            result = json.loads((run_dir/'result.json').read_text())
+            self.assertEqual(result['exec_time_ms'], 5000)
+            self.assertEqual(result['exec_time_source'], 'harness_duration_ms')
+            # untouched fields survive backfill
+            self.assertEqual(result['cost_usd'], 0.1)
+
+            second = battery.cmd_backfill_exec(SimpleNamespace(root=str(root), experiment='e1'))
+            self.assertEqual(second['updated'], [])
+            self.assertEqual(json.loads((run_dir/'result.json').read_text()), result)
+
+    def test_backfill_opencode_from_saved_harness_stdout(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)/'campaign'
+            experiment_dir = root/'experiments'/'e1'
+            runs_root = experiment_dir/'runs'
+            runs_root.mkdir(parents=True)
+            root.mkdir(parents=True, exist_ok=True)
+            name = 'e1-add_one-opencode-a1'
+            run_dir = runs_root/name
+            run_dir.mkdir(parents=True)
+            (run_dir/'result.json').write_text(json.dumps({
+                'name': name, 'task': 'add_one', 'harness': 'opencode', 'family': 'arith',
+                'outcome_passed': True, 'wall_time_ms': 9000.0, 'timed_out': False,
+            }))
+            stdout = '\n'.join([json.dumps({'type': 'step_start', 'timestamp': 100}),
+                                 json.dumps({'type': 'step_finish', 'timestamp': 1600})])
+            (run_dir/'harness-stdout.txt').write_text(stdout)
+            manifest = {'run_order': [name],
+                        'runs': {name: {'name': name, 'task': 'add_one', 'harness': 'opencode', 'attempt': 1}},
+                        'deadline_seconds': 600}
+            (runs_root/'manifest.json').write_text(json.dumps(manifest))
+
+            battery.cmd_backfill_exec(SimpleNamespace(root=str(root), experiment='e1'))
+            result = json.loads((run_dir/'result.json').read_text())
+            self.assertEqual(result['exec_time_ms'], 1500)
+            self.assertEqual(result['exec_time_source'], 'harness_event_timestamps')
+
+
+# --------------------------------------------------------------------------
+# evaluate --baseline-root / --baseline-experiment: cross-campaign comparison
+# --------------------------------------------------------------------------
+
+def _write_fixture_experiment(experiment_dir, harness_results):
+    """harness_results: {(task, harness): {result-dict fields}} -> a minimal
+    hand-built experiment tree cmd_evaluate/_load_experiment_assigned can read."""
+    runs_root = experiment_dir/'runs'
+    runs_root.mkdir(parents=True, exist_ok=True)
+    run_order, runs = [], {}
+    for (task, harness), fields in harness_results.items():
+        name = f'{task}-{harness}-a1'
+        run_dir = runs_root/'amplifier'/name if harness.startswith('amplifier') else runs_root/name
+        run_dir.mkdir(parents=True, exist_ok=True)
+        (run_dir/'result.json').write_text(json.dumps({
+            'name': name, 'task': task, 'harness': harness, 'family': 'arith', 'attempt': 1, **fields}))
+        run_order.append(name)
+        runs[name] = {'name': name, 'task': task, 'harness': harness, 'attempt': 1}
+    (runs_root/'manifest.json').write_text(json.dumps({'run_order': run_order, 'runs': runs,
+                                                         'deadline_seconds': 600}))
+    (experiment_dir/'proposal.json').write_text(json.dumps({'experiment_id': experiment_dir.name,
+                                                             'dev_tasks': [], 'holdout_tasks': []}))
+
+
+class CrossCampaignEvaluateTests(unittest.TestCase):
+    def test_evaluate_with_baseline_root_hand_computed(self):
+        with tempfile.TemporaryDirectory() as tmp, _patched_battery_tasks():
+            base = Path(tmp)
+            candidate_root = base/'campaign_candidate'
+            baseline_root = base/'campaign_baseline'
+            cand_dir = candidate_root/'experiments'/'cand1'
+            base_dir = baseline_root/'experiments'/'base1'
+
+            _write_fixture_experiment(cand_dir, {
+                ('add_one', 'amplifier-fd'): {'outcome_passed': True, 'exec_time_ms': 2000.0,
+                                               'wall_time_ms': 2000.0},
+                ('double', 'amplifier-fd'): {'outcome_passed': True, 'exec_time_ms': 5000.0,
+                                              'wall_time_ms': 5000.0},
+            })
+            _write_fixture_experiment(base_dir, {
+                ('add_one', 'claude'): {'outcome_passed': True, 'exec_time_ms': 4000.0, 'wall_time_ms': 4000.0},
+                ('double', 'claude'): {'outcome_passed': True, 'exec_time_ms': 3000.0, 'wall_time_ms': 3000.0},
+            })
+
+            comparison = battery.cmd_evaluate(SimpleNamespace(
+                root=str(candidate_root), experiment='cand1',
+                baseline_root=str(baseline_root), baseline_experiment='base1'))
+
+            cross = comparison['cross']
+            self.assertIsNotNone(cross)
+            self.assertEqual(cross['common_tasks'], ['add_one', 'double'])
+            claude_row = cross['baselines']['claude']
+            self.assertEqual(claude_row['wins'], 1)
+            self.assertEqual(claude_row['losses'], 1)
+            # hand-computed: geomean((2000/4000), (5000/3000))
+            self.assertAlmostEqual(claude_row['geomean_ratio'], (2000/4000*5000/3000)**0.5)
+            # hand-computed exact two-sided sign test, n=2, k=min(1,1)=1: 2*(C(2,0)+C(2,1))/4 = 1.0 (clamped)
+            self.assertAlmostEqual(claude_row['sign_test_p_value'], 1.0)
+            self.assertEqual(claude_row['candidate_successes'], 2)
+            self.assertEqual(claude_row['baseline_successes'], 2)
+            self.assertEqual(cross['rank']['add_one']['rank'], 1)  # candidate (2000ms) faster than claude (4000ms)
+            self.assertEqual(cross['rank']['double']['rank'], 2)  # claude (3000ms) faster than candidate (5000ms)
+
+    def test_evaluate_without_baseline_root_still_works(self):
+        with tempfile.TemporaryDirectory() as tmp, _patched_battery_tasks():
+            candidate_root = Path(tmp)/'campaign_candidate'
+            cand_dir = candidate_root/'experiments'/'cand1'
+            _write_fixture_experiment(cand_dir, {
+                ('add_one', 'amplifier-fd'): {'outcome_passed': True, 'exec_time_ms': 2000.0,
+                                               'wall_time_ms': 2000.0},
+            })
+            comparison = battery.cmd_evaluate(SimpleNamespace(root=str(candidate_root), experiment='cand1'))
+            self.assertIsNone(comparison['cross'])
