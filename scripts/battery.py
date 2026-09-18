@@ -107,6 +107,45 @@ def _run_dir_for(experiment_dir, name, harness):
     return runs_root/name
 
 
+def _freeze_candidate_source(candidate_source, experiment_dir, candidate_sha=None):
+    '''Freeze a live git worktree candidate source for the lifetime of one
+    experiment.
+
+    A `--candidate-source` that is a live worktree can be edited mid-run
+    (forge_e2e.py's tree_sha256 check then refuses the launch with "Source
+    changed during the experiment"). Instead of racing the edit, snapshot
+    the source into a detached git worktree at `experiment_dir/'source'`
+    (or `candidate_sha` if given, else HEAD) and use that snapshot as the
+    side's `source_root` -- the bits an experiment runs against can never
+    change underneath it again.
+
+    Non-git candidate sources (plain directories) are returned unchanged;
+    only a real git worktree is snapshotted.
+
+    Returns `(resolved_source_root, snapshot_info | None)`. Idempotent: a
+    snapshot that already exists (re-prepare of the same experiment) is
+    reused rather than recreated.
+    '''
+    candidate_source = Path(candidate_source).expanduser().resolve()
+    if not (candidate_source/'.git').exists():
+        return str(candidate_source), None
+    snapshot = experiment_dir/'source'
+    if not snapshot.exists():
+        rev = candidate_sha or 'HEAD'
+        subprocess.run(
+            ['git', '-C', str(candidate_source), 'worktree', 'add', '--detach', str(snapshot), rev],
+            check=True, capture_output=True, text=True,
+        )
+    snapshot_info = {
+        'original_source_root': str(candidate_source),
+        'snapshot_source_root': str(snapshot),
+        'requested_sha': candidate_sha,
+        'git_sha': forge_e2e.git_sha(snapshot),
+        'tree_sha256': forge_e2e.tree_sha256(snapshot/'src'/'amplifier_fast_decisions'),
+    }
+    return str(snapshot), snapshot_info
+
+
 # --------------------------------------------------------------------------
 # prepare
 # --------------------------------------------------------------------------
@@ -135,6 +174,19 @@ def cmd_prepare(args):
         key, _, value = kv.partition('=')
         fd_overrides[key] = _coerce(value)
 
+    # --fd-backend/--allow-external-state translate into decision overrides
+    # for the amplifier-fd side. External state is opt-in only (docs/PRIVACY.md):
+    # jev is a real network call and always requires the explicit flag.
+    fd_backend = getattr(args, 'fd_backend', None)
+    allow_external_state = bool(getattr(args, 'allow_external_state', False))
+    if fd_backend == 'jev' and not allow_external_state:
+        return _fail(4, '--fd-backend jev requires --allow-external-state '
+                         '(external state is opt-in, never default-on; see docs/PRIVACY.md)')
+    if fd_backend:
+        fd_overrides['backend'] = fd_backend
+    if allow_external_state:
+        fd_overrides['allow_external_state'] = True
+
     deadline_seconds = args.deadline_seconds or 600
     experiment_dir.mkdir(parents=True)
     runs_root = experiment_dir/'runs'
@@ -159,11 +211,13 @@ def cmd_prepare(args):
     }
 
     amplifier_runs = [r for r in schedule if r['harness'] in AMPLIFIER_HARNESSES]
+    candidate_source_snapshot = None
     if amplifier_runs:
         if not args.baseline_source or not args.candidate_source:
             return _fail(4, 'amplifier harnesses require --baseline-source and --candidate-source')
         baseline_source = str(Path(args.baseline_source).expanduser().resolve())
-        candidate_source = str(Path(args.candidate_source).expanduser().resolve())
+        candidate_source, candidate_source_snapshot = _freeze_candidate_source(
+            args.candidate_source, experiment_dir, candidate_sha=getattr(args, 'candidate_sha', None))
         sides = {
             'amplifier-plain': {'source_root': baseline_source, 'mode': 'off'},
             'amplifier-fd': {'source_root': candidate_source, 'mode': 'active',
@@ -213,6 +267,7 @@ def cmd_prepare(args):
         'holdout_tasks': sorted(t for t in task_names if t in holdout_tasks),
         'frozen_run_schedule': schedule,
         'baseline_source': baseline_source, 'candidate_source': candidate_source,
+        'candidate_source_snapshot': candidate_source_snapshot,
         'preregistered_at_utc': _now(), 'status': 'prepared',
     }
     _dump(experiment_dir/'proposal.json', proposal)
@@ -1314,6 +1369,11 @@ def main(argv=None):
     p.add_argument('--claude-max-budget-usd', type=float)
     p.add_argument('--baseline-source')
     p.add_argument('--candidate-source')
+    p.add_argument('--candidate-sha', help='Freeze the candidate snapshot at this git rev instead of HEAD')
+    p.add_argument('--fd-backend', choices=['ollama', 'jev'],
+                    help='Decision backend override for the amplifier-fd side')
+    p.add_argument('--allow-external-state', action='store_true',
+                    help='Required alongside --fd-backend jev (opt-in external state; see docs/PRIVACY.md)')
     p.set_defaults(func=cmd_prepare)
 
     p = sub.add_parser('run')

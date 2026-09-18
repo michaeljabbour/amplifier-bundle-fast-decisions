@@ -14,6 +14,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 import re
+import subprocess
 import sys
 import tempfile
 from types import ModuleType, SimpleNamespace
@@ -271,12 +272,31 @@ class EvaluateMathTests(unittest.TestCase):
 # --------------------------------------------------------------------------
 
 def _prepare_args(root, experiment, tasks='all', harnesses='claude,codex,opencode,amplifier-plain,amplifier-fd',
-                   seed=7, baseline_source=None, candidate_source=None, deadline_seconds=60):
+                   seed=7, baseline_source=None, candidate_source=None, deadline_seconds=60,
+                   fd_backend=None, allow_external_state=False, candidate_sha=None):
     return SimpleNamespace(
         root=str(root), experiment=experiment, harnesses=harnesses, tasks=tasks, seed=seed,
         fd_override=None, deadline_seconds=deadline_seconds, claude_model='claude-x', codex_model='gpt-6-astra',
         opencode_model='runpod/zai-org/GLM-5.3-Flash', claude_max_budget_usd=3.0,
-        baseline_source=baseline_source, candidate_source=candidate_source)
+        baseline_source=baseline_source, candidate_source=candidate_source,
+        fd_backend=fd_backend, allow_external_state=allow_external_state, candidate_sha=candidate_sha)
+
+
+def _init_git_repo(path):
+    '''Minimal committed git repo, used as a --candidate-source worktree
+    stand-in. Returns the HEAD sha.'''
+    path.mkdir(parents=True, exist_ok=True)
+    (path/'modules').mkdir(exist_ok=True)
+    (path/'src'/'amplifier_fast_decisions').mkdir(parents=True, exist_ok=True)
+    (path/'src'/'amplifier_fast_decisions'/'__init__.py').write_text('__version__ = "0.0.0"\n')
+    run = lambda *args: subprocess.run(['git', '-C', str(path), *args], check=True,
+                                        capture_output=True, text=True)
+    run('init', '-q')
+    run('config', 'user.email', 'test@example.com')
+    run('config', 'user.name', 'Test')
+    run('add', '-A')
+    run('commit', '-q', '-m', 'initial')
+    return run('rev-parse', 'HEAD').stdout.strip()
 
 
 class PrepareTests(unittest.TestCase):
@@ -330,6 +350,108 @@ class PrepareTests(unittest.TestCase):
             with self.assertRaises(SystemExit) as ctx:
                 battery.cmd_prepare(args)
             self.assertEqual(ctx.exception.code, 4)
+
+    def test_candidate_git_worktree_is_frozen_into_a_detached_snapshot(self):
+        with tempfile.TemporaryDirectory() as tmp, _patched_battery_tasks():
+            base = Path(tmp)
+            baseline = base/'baseline'; baseline.mkdir()
+            candidate = base/'candidate'
+            head_sha = _init_git_repo(candidate)
+            root = base/'campaign'
+            args = _prepare_args(root, 'e3', harnesses='amplifier-fd', tasks='dev',
+                                  baseline_source=str(baseline), candidate_source=str(candidate))
+            manifest = battery.cmd_prepare(args)
+            self.assertTrue(manifest['run_order'])
+
+            experiment_dir = root.resolve()/'experiments'/'e3'
+            snapshot = experiment_dir/'source'
+            self.assertTrue(snapshot.is_dir())
+            snapshot_head = subprocess.run(
+                ['git', '-C', str(snapshot), 'rev-parse', 'HEAD'],
+                check=True, capture_output=True, text=True).stdout.strip()
+            self.assertEqual(snapshot_head, head_sha)
+
+            amp_manifest = json.loads((experiment_dir/'runs'/'amplifier'/'manifest.json').read_text())
+            self.assertEqual(amp_manifest['sides']['amplifier-fd']['source_root'], str(snapshot))
+            self.assertEqual(amp_manifest['sides']['amplifier-fd']['source_git_sha'], head_sha)
+            # Baseline (a plain, non-git dir here) is never snapshotted.
+            self.assertEqual(amp_manifest['sides']['amplifier-plain']['source_root'], str(baseline.resolve()))
+
+            proposal = json.loads((experiment_dir/'proposal.json').read_text())
+            self.assertEqual(proposal['candidate_source'], str(snapshot))
+            self.assertEqual(proposal['candidate_source_snapshot']['git_sha'], head_sha)
+            self.assertEqual(proposal['candidate_source_snapshot']['original_source_root'],
+                              str(candidate.resolve()))
+
+            # Editing the live worktree after prepare must not change the
+            # frozen snapshot's committed content.
+            (candidate/'src'/'amplifier_fast_decisions'/'__init__.py').write_text('__version__ = "9.9.9"\n')
+            still_head = subprocess.run(
+                ['git', '-C', str(snapshot), 'rev-parse', 'HEAD'],
+                check=True, capture_output=True, text=True).stdout.strip()
+            self.assertEqual(still_head, head_sha)
+            self.assertNotEqual(
+                (snapshot/'src'/'amplifier_fast_decisions'/'__init__.py').read_text(),
+                (candidate/'src'/'amplifier_fast_decisions'/'__init__.py').read_text(),
+            )
+
+    def test_non_git_candidate_source_is_used_unchanged(self):
+        with tempfile.TemporaryDirectory() as tmp, _patched_battery_tasks():
+            base = Path(tmp)
+            baseline = base/'baseline'; baseline.mkdir()
+            candidate = base/'candidate'; candidate.mkdir()
+            root = base/'campaign'
+            args = _prepare_args(root, 'e4', harnesses='amplifier-fd', tasks='dev',
+                                  baseline_source=str(baseline), candidate_source=str(candidate))
+            battery.cmd_prepare(args)
+            experiment_dir = root/'experiments'/'e4'
+            self.assertFalse((experiment_dir/'source').exists())
+            proposal = json.loads((experiment_dir/'proposal.json').read_text())
+            self.assertEqual(proposal['candidate_source'], str(candidate.resolve()))
+            self.assertIsNone(proposal['candidate_source_snapshot'])
+
+    def test_fd_backend_jev_requires_allow_external_state(self):
+        with tempfile.TemporaryDirectory() as tmp, _patched_battery_tasks():
+            base = Path(tmp)
+            baseline = base/'baseline'; baseline.mkdir()
+            candidate = base/'candidate'; candidate.mkdir()
+            root = base/'campaign'
+            args = _prepare_args(root, 'e5', harnesses='amplifier-fd', tasks='dev',
+                                  baseline_source=str(baseline), candidate_source=str(candidate),
+                                  fd_backend='jev', allow_external_state=False)
+            with self.assertRaises(SystemExit) as ctx:
+                battery.cmd_prepare(args)
+            self.assertEqual(ctx.exception.code, 4)
+            # Refused before any experiment state is created.
+            self.assertFalse((root/'experiments'/'e5').exists())
+
+    def test_fd_backend_jev_with_allow_external_state_sets_decision_overrides(self):
+        with tempfile.TemporaryDirectory() as tmp, _patched_battery_tasks():
+            base = Path(tmp)
+            baseline = base/'baseline'; baseline.mkdir()
+            candidate = base/'candidate'; candidate.mkdir()
+            root = base/'campaign'
+            args = _prepare_args(root, 'e6', harnesses='amplifier-fd', tasks='dev',
+                                  baseline_source=str(baseline), candidate_source=str(candidate),
+                                  fd_backend='jev', allow_external_state=True)
+            battery.cmd_prepare(args)
+            experiment_dir = root/'experiments'/'e6'
+            amp_manifest = json.loads((experiment_dir/'runs'/'amplifier'/'manifest.json').read_text())
+            fd_side = amp_manifest['sides']['amplifier-fd']
+            self.assertEqual(fd_side['decision_overrides']['backend'], 'jev')
+            self.assertTrue(fd_side['decision_overrides']['allow_external_state'])
+
+    def test_fd_backend_ollama_does_not_require_allow_external_state(self):
+        with tempfile.TemporaryDirectory() as tmp, _patched_battery_tasks():
+            base = Path(tmp)
+            baseline = base/'baseline'; baseline.mkdir()
+            candidate = base/'candidate'; candidate.mkdir()
+            root = base/'campaign'
+            args = _prepare_args(root, 'e7', harnesses='amplifier-fd', tasks='dev',
+                                  baseline_source=str(baseline), candidate_source=str(candidate),
+                                  fd_backend='ollama')
+            manifest = battery.cmd_prepare(args)
+            self.assertTrue(manifest['run_order'])
 
 
 # --------------------------------------------------------------------------
