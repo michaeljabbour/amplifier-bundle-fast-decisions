@@ -591,6 +591,9 @@ def launch_run(root, name, forge_module=None):
         import forge as forge_module
     host_python = manifest.get('host_python', str(HOST_PYTHON))
     cmd=shlex.join([str(host_python),str(Path(__file__).resolve()),'worker',str(root),name])
+    # The Forge daemon's shell does not carry the user's API keys; source ~/.amplifier/keys.env (0600) into the
+    # worker's environment so external decision backends (e.g. TYPESAFE_API_KEY) work. Values never appear in logs.
+    cmd='set -a; . ~/.amplifier/keys.env 2>/dev/null; set +a; '+cmd
     for attempt in (1, 2):
         try:
             result=forge_module.call('run_command',{'command':'/bin/zsh','args':['-lc',cmd],
