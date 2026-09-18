@@ -196,19 +196,20 @@ def decide_effort(
     ``explore_requests`` is the 1-indexed count of explore-phase requests
     in this turn INCLUDING the current one (the caller increments before
     calling, for a ``phase == explore`` request only). It is only
-    consulted when ``phase == explore``.
+    consulted when ``phase == explore``. Any phase (orient/explore/implement)
+    may be mapped to an effort level in ``effort_routing``; phases without a
+    mapping keep the provider default.
     """
-    if phase != PHASE_EXPLORE:
+    effort = effort_routing.get(phase)
+    if not effort:
         return None, REASON_DEFAULT_EFFORT
     if host_pinned:
         return None, REASON_HOST_PINNED
     escalate_after = effort_routing.get("escalate_after_provider_errors")
     if escalate_after is not None and provider_errors_seen >= escalate_after:
         return None, REASON_ESCALATED_AFTER_ERROR
-    max_explore = effort_routing.get("max_explore_requests")
-    if max_explore is not None and explore_requests > max_explore:
-        return None, REASON_ESCALATED_MAX_EXPLORE
-    effort = effort_routing.get("explore")
-    if not effort:
-        return None, REASON_DEFAULT_EFFORT
+    if phase == PHASE_EXPLORE:
+        max_explore = effort_routing.get("max_explore_requests")
+        if max_explore is not None and explore_requests > max_explore:
+            return None, REASON_ESCALATED_MAX_EXPLORE
     return effort, REASON_PHASE_POLICY

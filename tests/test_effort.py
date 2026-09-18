@@ -445,3 +445,21 @@ class LiveLoopShapeTests(unittest.TestCase):
 
     def test_first_request_of_turn_is_orient(self):
         self.assertEqual(effort.classify_phase(NS(messages=[self._user("<reminder/>"), self._user("task")])), effort.PHASE_ORIENT)
+
+
+
+class PerPhaseRoutingTests(unittest.TestCase):
+    def test_implement_and_orient_phases_can_be_routed(self):
+        routing = {"orient": "medium", "explore": "low", "implement": "high", "escalate_after_provider_errors": 1}
+        self.assertEqual(effort.decide_effort("implement", routing, explore_requests=0, provider_errors_seen=0, host_pinned=False), ("high", effort.REASON_PHASE_POLICY))
+        self.assertEqual(effort.decide_effort("orient", routing, explore_requests=0, provider_errors_seen=0, host_pinned=False), ("medium", effort.REASON_PHASE_POLICY))
+        self.assertEqual(effort.decide_effort("implement", routing, explore_requests=0, provider_errors_seen=1, host_pinned=False), (None, effort.REASON_ESCALATED_AFTER_ERROR))
+        self.assertEqual(effort.decide_effort("implement", {"explore": "low"}, explore_requests=0, provider_errors_seen=0, host_pinned=False), (None, effort.REASON_DEFAULT_EFFORT))
+
+    def test_validation_rejects_unknown_keys_and_bad_levels(self):
+        from amplifier_fast_decisions.contracts import validate_effort_routing
+        validate_effort_routing({"orient": "medium", "implement": "high"})
+        with self.assertRaises(ValueError):
+            validate_effort_routing({"implement": "turbo"})
+        with self.assertRaises(ValueError):
+            validate_effort_routing({"verify": "low"})

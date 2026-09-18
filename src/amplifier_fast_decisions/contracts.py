@@ -63,11 +63,21 @@ def validate_effort_routing(effort_routing: Any) -> None:
         return
     if not isinstance(effort_routing, dict):
         raise ValueError("effort_routing must be a dict")
-    explore = effort_routing.get("explore")
-    if explore is not None and explore not in ALLOWED_EFFORTS:
-        raise ValueError(
-            f"effort_routing.explore must be one of {sorted(ALLOWED_EFFORTS)}"
-        )
+    for phase in ("orient", "explore", "implement"):
+        effort = effort_routing.get(phase)
+        if effort is not None and effort not in ALLOWED_EFFORTS:
+            raise ValueError(
+                f"effort_routing.{phase} must be one of {sorted(ALLOWED_EFFORTS)}"
+            )
+    unknown = set(effort_routing) - {
+        "orient",
+        "explore",
+        "implement",
+        "max_explore_requests",
+        "escalate_after_provider_errors",
+    }
+    if unknown:
+        raise ValueError(f"effort_routing has unknown keys: {sorted(unknown)}")
     for key in ("max_explore_requests", "escalate_after_provider_errors"):
         value = effort_routing.get(key)
         if value is not None and (
