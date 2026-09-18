@@ -16,6 +16,7 @@ from .contracts import (
     Policy,
     TurnState,
     canonical,
+    candidate_read_identity,
     classify_domain,
     compute_candidate_order_hash,
 )
@@ -124,13 +125,25 @@ class DecisionService:
                     self.coordinator, self.policy.max_questions
                 )
                 mounted = tool_names(request)
-                candidates = [
+                pre_suppress = [
                     c
                     for c in candidates
                     if c.tool in mounted and c.fingerprint not in turn.used
                 ]
+                # HC02a: drop fast_workspace read/list candidates already
+                # recorded in the turn's completed-read ledger (unchanged
+                # revision). Counted, never silently invisible.
+                suppressed_count = 0
                 eligible = []
-                for c in candidates:
+                for c in pre_suppress:
+                    if self.policy.suppress_completed_reads:
+                        identity = candidate_read_identity(c, tools)
+                        if (
+                            identity is not None
+                            and turn.completed_reads.get(identity[0]) == identity[1]
+                        ):
+                            suppressed_count += 1
+                            continue
                     if await self._eligible(c, tools):
                         eligible.append(c)
                 candidates = eligible[: self.policy.max_candidates]
@@ -161,14 +174,25 @@ class DecisionService:
         for code in (*candidate_reasons, *question_reasons):
             await self.emit("fallback", {**common, "reason_code": code}, decision_id)
         if not candidates:
-            return await slow("no_eligible_candidates")
+            # Cheap path preserved: a route that becomes slow purely because
+            # every remaining candidate was already read this turn (unchanged
+            # revision) gets its own reason code, still with no backend call.
+            reason = (
+                "already_read_unchanged"
+                if suppressed_count and suppressed_count == len(pre_suppress)
+                else "no_eligible_candidates"
+            )
+            return await slow(
+                reason, candidates_suppressed_already_read=suppressed_count
+            )
         order_hash = compute_candidate_order_hash(candidates)
         # Decided once, here, at the point the candidate set is built --
         # reused verbatim in scored/routed/fallback (via `common`) and by
         # the shadow scorer / role router (their own candidate sets).
         domain = classify_domain(candidates)
         common["domain"] = domain
-        state = build_state(request, self.policy.max_state_chars)
+        state_stats: dict[str, Any] = {}
+        state = build_state(request, self.policy.max_state_chars, state_stats)
         state_chars = len(canonical(state))
         await self.emit(
             "requested",
@@ -179,9 +203,18 @@ class DecisionService:
                 "candidate_count": len(candidates),
                 "question_count": len(questions),
                 "candidate_order_hash": order_hash,
+                "candidates_suppressed_already_read": suppressed_count,
                 "candidates": [
                     {"id": c.id, "label": c.label, "tool": c.tool} for c in candidates
                 ],
+                # HC01: what build_state actually included, so state loss
+                # can never hide behind a fast timing statistic alone.
+                "observation_count": state_stats.get("observation_count"),
+                "observations_available": state_stats.get("observations_available"),
+                "observations_dropped": state_stats.get("observations_dropped"),
+                "observations_clipped": state_stats.get("observations_clipped"),
+                "task_anchored": state_stats.get("task_anchored"),
+                "truncation_reason": state_stats.get("truncation_reason"),
             },
             decision_id,
         )

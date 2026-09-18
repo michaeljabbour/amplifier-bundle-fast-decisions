@@ -61,6 +61,33 @@ class WorkspaceTool:
         st = path.stat()
         return digest([st.st_dev, st.st_ino, st.st_size, st.st_mtime_ns])
 
+    def read_identity(self, path: str, operation: str) -> tuple[str, str] | None:
+        """``(normalized absolute path, current revision)`` for a read/list
+        target inside the workspace, or ``None`` if it cannot be resolved.
+
+        Accepts a path already relative to the workspace root (candidates
+        always pass one), or an absolute path that resolves inside the root
+        (the native ``read_file`` tool may pass one). Used by HC02a's
+        completed-read ledger (contracts.candidate_read_identity and
+        orchestrator.ObservedTool) so ledger keys and candidate identity
+        share this one revision function.
+        """
+        try:
+            candidate_path = Path(path)
+            if candidate_path.is_absolute():
+                try:
+                    relative = str(candidate_path.relative_to(self.root))
+                except ValueError:
+                    return None
+            else:
+                relative = path
+            resolved = self._path(relative, file=operation == "read")
+            if operation == "list" and not resolved.is_dir():
+                return None
+            return str(resolved), self._revision(resolved)
+        except (OSError, ValueError, TypeError):
+            return None
+
     def candidate_for_path(self, relative: str, index: int) -> Candidate | None:
         try:
             path = self._path(relative, file=True)

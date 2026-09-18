@@ -10,8 +10,16 @@ import time
 from typing import Any
 from uuid import uuid4
 
-from .contracts import Candidate, TurnState, field_value, digest
+from .contracts import (
+    Candidate,
+    TurnState,
+    field_value,
+    digest,
+    candidate_read_identity,
+)
+from . import effort
 from .runtime import Runtime, get_runtime
+from . import provenance
 
 __amplifier_module_type__ = "orchestrator"
 
@@ -96,6 +104,13 @@ docs/UPSTREAM_CONTRACT.md.
                 turn.used.add(candidate.fingerprint)
                 turn.fast_streak += 1
                 turn.fast_total += 1
+                # HC02a: a fast submission is a completed read too -- record
+                # it so a second proposal of the same unchanged file is
+                # suppressed on the next decision in this turn.
+                if service.policy.suppress_completed_reads:
+                    identity = candidate_read_identity(candidate, self._tools)
+                    if identity is not None:
+                        turn.completed_reads[identity[0]] = identity[1]
                 await service.emit("routed", {"mode": service.policy.mode,
                     "backend": service.backend.name, "policy_version": service.policy.version,
                     "route": "fast", "destination": candidate.tool,
@@ -113,6 +128,37 @@ docs/UPSTREAM_CONTRACT.md.
         model = field_value(request, "model") or "provider-default"
         decision_id = service.last_decision_id
         provider_call_id = "provider_" + uuid4().hex
+        # HC03 ("phase-specific effort routing", opt-in): entirely skipped
+        # -- no attribute touched, no event emitted -- when the policy has
+        # no effort_routing configured. See effort.py and docs/EVENTS.md.
+        effort_routing = service.policy.effort_routing
+        if effort_routing:
+            phase = effort.classify_phase(request)
+            explore_requests = (
+                turn.explore_requests + 1 if phase == effort.PHASE_EXPLORE else turn.explore_requests
+            )
+            host_pinned = field_value(request, "reasoning_effort", None) is not None
+            applied_effort, reason_code = effort.decide_effort(
+                phase,
+                effort_routing,
+                explore_requests=explore_requests,
+                provider_errors_seen=turn.provider_errors_seen,
+                host_pinned=host_pinned,
+            )
+            if phase == effort.PHASE_EXPLORE:
+                turn.explore_requests = explore_requests
+            if applied_effort is not None:
+                if isinstance(request, dict):
+                    request["reasoning_effort"] = applied_effort
+                else:
+                    setattr(request, "reasoning_effort", applied_effort)
+                turn.effort_routed_requests += 1
+            await service.emit("effort_routed", {
+                "phase": phase, "requested_effort": applied_effort,
+                "default_effort": "provider_default", "reason_code": reason_code,
+                "explore_requests": turn.explore_requests,
+                "provider_call_id": provider_call_id, "mode": service.policy.mode,
+            }, decision_id)
         await service.emit("slow_start", {"provider": self._provider_key, "model": model,
             "provider_call_id": provider_call_id,
             "route": "slow", "destination": self._provider_key, "status": "running",
@@ -128,6 +174,7 @@ docs/UPSTREAM_CONTRACT.md.
                 "transport_measured": "provider-complete"}, decision_id)
             raise
         except Exception as exc:
+            turn.provider_errors_seen += 1
             await service.emit("slow_end", {"provider": self._provider_key, "model": model,
                 "provider_call_id": provider_call_id,
                 "status": "error", "exception_type": type(exc).__name__,
@@ -178,11 +225,56 @@ docs/UPSTREAM_CONTRACT.md.
 
 class ObservedTool:
     """Measure actual execute(), not merely a tool:pre hook which may be denied."""
-    def __init__(self, tool: Any, runtime: Runtime, tool_key: str):
+    def __init__(
+        self, tool: Any, runtime: Runtime, tool_key: str, *, workspace: Any = None
+    ):
         self._tool, self._runtime, self._tool_key = tool, runtime, tool_key
+        # HC02a: the raw fast_workspace tool (never wrapped, never executed
+        # from here) used only to normalize a native read_file's file_path
+        # into the same (path, revision) identity space as candidates.
+        self._workspace = workspace
 
     def __getattr__(self, name):
         return getattr(self._tool, name)
+
+    def _completed_read_identity(self, input: dict[str, Any]) -> tuple[str, str] | None:
+        """HC02a: ``(normalized path, revision)`` for a successful read/list
+        this tool call just performed, or ``None`` when this tool/shape is
+        not part of the ledger (or the path cannot be normalized).
+
+        Covers ``fast_workspace`` read/list (via its own ``read_identity``)
+        and the native ``read_file`` tool's ``file_path`` (resolved against
+        the fast_workspace tool's configured root, if one is mounted).
+        """
+        if not isinstance(input, dict):
+            return None
+        if self._tool_key == "fast_workspace":
+            operation = input.get("operation")
+            path = input.get("path")
+            identity_fn = getattr(self._tool, "read_identity", None)
+        elif self._tool_key == "read_file":
+            operation, path = "read", input.get("file_path")
+            identity_fn = (
+                getattr(self._workspace, "read_identity", None)
+                if self._workspace
+                else None
+            )
+        else:
+            return None
+        if (
+            not callable(identity_fn)
+            or not isinstance(path, str)
+            or operation not in ("read", "list")
+        ):
+            return None
+        try:
+            result = identity_fn(path, operation)
+        except Exception:
+            return None
+        if not isinstance(result, tuple) or len(result) != 2:
+            return None
+        key, revision = result
+        return str(key), str(revision)
 
     async def execute(self, input: dict[str, Any], **kwargs):
         service = self._runtime.service
@@ -213,6 +305,14 @@ class ObservedTool:
             raise
         else:
             success = field_value(result, "success", None)
+            if (
+                turn
+                and success is not False
+                and service.policy.suppress_completed_reads
+            ):
+                identity = self._completed_read_identity(input)
+                if identity is not None:
+                    turn.completed_reads[identity[0]] = identity[1]
             await service.emit("tool_end", {**fields, "status": "ok" if success is not False else "error",
                 "success": success, "duration_ms": (time.perf_counter() - start) * 1000}, decision_id)
             return result
@@ -251,9 +351,14 @@ class HybridOrchestrator:
             await service.emit("turn_start", {"mode": service.policy.mode,
                 "backend": service.backend.name, "engine": "upstream-loop-streaming",
                 "policy_version": service.policy.version,
-                "allow_external_state": service.policy.allow_external_state})
+                "allow_external_state": service.policy.allow_external_state,
+                "effort_routing_enabled": bool(service.policy.effort_routing)})
             # Provider keys and defaults are unchanged. Upstream pins and selections apply.
-            wrapped_tools = {key: ObservedTool(tool, self.runtime, key) for key, tool in tools.items()}
+            workspace_tool = tools.get("fast_workspace")
+            wrapped_tools = {
+                key: ObservedTool(tool, self.runtime, key, workspace=workspace_tool)
+                for key, tool in tools.items()
+            }
             wrapped_providers = {key: RoutedProvider(provider, self.runtime, tools,
                 self.response_factory, key) for key, provider in providers.items()}
             kwargs.setdefault("coordinator", self.coordinator)
@@ -284,6 +389,19 @@ async def mount(coordinator, config: dict):
     action_response(Candidate("compat_check", "Schema check", "fast_workspace", {"operation": "list", "path": "."}), "compat_check")
     # The orchestrator owns decision policy; win regardless of module mount order.
     runtime, _ = get_runtime(coordinator, config, owner=True)
+    # HC00 ("freeze source"): the same receipt hooks-fast-decisions emits,
+    # from the orchestrator side too -- best-effort, never fatal to mount.
+    try:
+        await runtime.service.emit(
+            "source",
+            provenance.source_event_data(
+                mode=runtime.service.policy.mode, module="loop-fast-decisions"
+            ),
+        )
+    except asyncio.CancelledError:
+        raise
+    except Exception:
+        pass
     try:
         orchestrator = HybridOrchestrator(config, coordinator, runtime)
         await coordinator.mount("orchestrator", orchestrator)

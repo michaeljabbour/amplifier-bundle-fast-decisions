@@ -66,6 +66,63 @@ The model-role router (P4) is a second, independent consumer of the same shadow 
 
 Non-workspace tools additionally need `fast_decisions.validate_candidate`. The bundled workspace tool validates containment, excluded names, permitted operations, file revisions and size. File and conversation state are rechecked after inference. Neither eligibility nor confidence is an approval token.
 
+### Completed-read ledger (HC02a)
+
+Each turn carries a small ledger (`TurnState.completed_reads`, normalized path -> revision) of what has already been read this turn. It is fed from two places: a fast-submitted `fast_workspace` read/list candidate (`orchestrator.RoutedProvider.complete`), and any *successful* `fast_workspace` or native `read_file` execution actually reached (`orchestrator.ObservedTool.execute`) -- including provider-selected reads the model made on its own, not just fast-routed ones. A denied or failed call is never recorded: `ObservedTool` only records after `execute()` returns without raising and `success is not False`, and a denied call never reaches `execute()` at all.
+
+Identity is `(normalized path, revision)`, computed once by `workspace.WorkspaceTool.read_identity` and reused everywhere -- candidate construction, eligibility, and ledger recording all call the same function, so a changed file (new revision) is eligible again immediately. The ledger is strictly per-turn: it lives on `TurnState` and is discarded with the rest of that state when the turn ends, exactly like `used`.
+
+At candidate-eligibility time (`DecisionService.choose`), a `fast_workspace` read/list candidate whose identity is already in the ledger is dropped and counted (`candidates_suppressed_already_read`), never sent to the backend for scoring. When every surviving candidate is suppressed this way, the route goes slow with `reason_code: already_read_unchanged` -- still with no backend call, the same cheap path as `no_eligible_candidates`. Gated by the `suppress_completed_reads` policy flag (default `True`); when `False` the ledger is neither fed nor consulted and behavior is unchanged from before HC02a.
+
+## Phase-specific effort routing (HC03, opt-in)
+
+`Policy.effort_routing` (default `None`) lets a host lower generative
+effort during exploration on the SAME model/provider pin, entirely inside
+`RoutedProvider.complete` -- the one seam this module owns before the
+upstream provider call. When it is `None`/empty, this feature is inert:
+no attribute is read from or written to the request and no
+`effort_routed` event is emitted.
+
+`effort.classify_phase(request)` reads `request.messages` and classifies
+only the CURRENT turn (messages after the last `user` message):
+
+- `orient` -- no assistant message yet in the turn (its first request).
+- `explore` -- an assistant message exists, no write-like tool call has
+  occurred yet this turn, and the most recent assistant message's tool
+  calls (if any) are all read-like (`read_file`, `fast_workspace`, `glob`,
+  `grep`, `list_dir`, `ls`, `search`, `todo`). Any tool name outside that
+  allowlist is treated as write-like -- deliberately conservative.
+- `implement` -- a write-like tool call has occurred anywhere in the turn.
+  This also covers "verify" requests (e.g. running tests via `bash`),
+  which are write-like and therefore receive the same default-effort
+  treatment as any other implementation step.
+
+When the current request classifies as `explore`, `effort.decide_effort`
+applies `effort_routing["explore"]` to `request.reasoning_effort` unless:
+the host already pinned an explicit `request.reasoning_effort`
+(`reason_code: host_pinned`, always wins), this turn has already seen
+`effort_routing["escalate_after_provider_errors"]` upstream provider
+exceptions (`escalated_after_error`), or this turn's explore-phase request
+count has exceeded `effort_routing["max_explore_requests"]`
+(`escalated_max_explore`). The model pin, tool approvals, and every other
+policy dimension are untouched -- only `request.reasoning_effort` is ever
+set, via `setattr` (or item assignment for a dict-shaped request), never
+`request.model`.
+
+`TurnState` tracks `explore_requests`, `effort_routed_requests`, and
+`provider_errors_seen` per turn, reset alongside the rest of `TurnState` at
+turn start. `Policy.__post_init__` validates `effort_routing` at
+construction (i.e. at mount, via `Policy.from_config`): an unrecognized
+`explore` effort string or a non-positive `max_explore_requests` /
+`escalate_after_provider_errors` raises `ValueError` immediately -- never
+silently ignored. Receipts (the native `llm:request` event on the host
+side) carry the requested effort; the upstream Anthropic/OpenAI providers
+read `request.reasoning_effort` before falling back to their own
+provider-level config default, so a lowered `explore` effort applies to
+that one request only.
+
+## Deadlines, budgets and failures
+
 ## Deadlines, budgets and failures
 
 A single cooperative asynchronous deadline covers candidate collection, inference and revalidation. Synchronous callbacks, local file-system operations or native hooks that block the event loop can exceed the wall-clock budget; this is not a hard real-time scheduler. Backend HTTP retries are disabled. A backend failure opens a five-second cooldown. Invalid labels, malformed probabilities, an abstention, stale state, missing key, unknown alternatives, no eligible candidate or a timeout return to the original generative provider.

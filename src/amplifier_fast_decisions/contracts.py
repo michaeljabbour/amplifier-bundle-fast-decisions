@@ -41,8 +41,39 @@ EVENT_NAMES = tuple(
         "role_proposed",
         "role_agreement",
         "observatory",
+        "source",
+        "effort_routed",
     )
 )
+
+# HC03 ("phase-specific effort routing"): the effort strings a host provider
+# accepts on a per-request override (`request.reasoning_effort`). Kept here,
+# not in effort.py, so Policy validation (below) has no dependency on that
+# module -- effort.py imports FROM contracts, never the reverse.
+ALLOWED_EFFORTS = frozenset({"low", "medium", "high", "xhigh", "max"})
+
+
+def validate_effort_routing(effort_routing: Any) -> None:
+    """Fail loud on a malformed ``effort_routing`` policy at mount time.
+
+    ``None`` or an empty dict is the default-off shape and always valid --
+    routing stays fully opt-in. Never silently ignores a bad value.
+    """
+    if not effort_routing:
+        return
+    if not isinstance(effort_routing, dict):
+        raise ValueError("effort_routing must be a dict")
+    explore = effort_routing.get("explore")
+    if explore is not None and explore not in ALLOWED_EFFORTS:
+        raise ValueError(
+            f"effort_routing.explore must be one of {sorted(ALLOWED_EFFORTS)}"
+        )
+    for key in ("max_explore_requests", "escalate_after_provider_errors"):
+        value = effort_routing.get(key)
+        if value is not None and (
+            isinstance(value, bool) or not isinstance(value, int) or value < 1
+        ):
+            raise ValueError(f"effort_routing.{key} must be a positive integer")
 
 
 def canonical(value: Any) -> str:
@@ -301,6 +332,15 @@ class Policy:
     # never an exception into the hook chain. See docs/design/redesign-2026-09-17.md P3.
     shadow_max_messages: int = 12
     shadow_snapshot_budget_ms: int = 25
+    # HC02a ("revision-aware completed-read suppression"): drop fast_workspace
+    # read/list candidates whose (path, revision) the turn's completed-read
+    # ledger already shows as read this turn. Default True so the candidate
+    # profile exercises it; the baseline never runs the decision loop at all.
+    suppress_completed_reads: bool = True
+    # HC03 ("phase-specific effort routing", opt-in): None/empty means fully
+    # off -- RoutedProvider never reads request.reasoning_effort and never
+    # emits fast_decisions:effort_routed. See effort.py and docs/ARCHITECTURE.md.
+    effort_routing: dict[str, Any] | None = None
     version: str = "policy-v1"
 
     def __post_init__(self) -> None:
@@ -322,6 +362,7 @@ class Policy:
             raise ValueError("shadow_max_messages must be between 1 and 200")
         if not 1 <= self.shadow_snapshot_budget_ms <= 5000:
             raise ValueError("shadow_snapshot_budget_ms must be between 1 and 5000")
+        validate_effort_routing(self.effort_routing)
 
     @classmethod
     def from_config(cls, config: dict[str, Any]) -> Policy:
@@ -349,3 +390,53 @@ class TurnState:
     decision_count: int = 0
     revision: int = 0
     tool_decisions: dict[str, dict[str, Any]] = field(default_factory=dict)
+    # HC02a: per-turn completed-read ledger, normalized path -> revision.
+    # Fed by both fast submissions (orchestrator.RoutedProvider.complete) and
+    # successful native/provider-selected reads (orchestrator.ObservedTool.execute).
+    # Reset with the rest of TurnState at turn start; never records a denied
+    # or failed call.
+    completed_reads: dict[str, str] = field(default_factory=dict)
+    # HC03 ("phase-specific effort routing"): per-turn counters. Reset with
+    # the rest of TurnState at turn start. explore_requests counts every
+    # explore-phase slow request seen this turn (1-indexed as consulted by
+    # decide_effort); effort_routed_requests counts only those where effort
+    # was actually lowered; provider_errors_seen counts upstream provider
+    # exceptions (never CancelledError) observed this turn.
+    explore_requests: int = 0
+    effort_routed_requests: int = 0
+    provider_errors_seen: int = 0
+
+
+def candidate_read_identity(
+    candidate: Candidate, tools: dict[str, Any]
+) -> tuple[str, str] | None:
+    """``(normalized path, current revision)`` for a ``fast_workspace``
+    read/list candidate, else ``None``.
+
+    Recomputes the *live* revision through the tool's own ``read_identity``
+    (mirrors ``_eligible``'s live recheck via ``validate_candidate``) so the
+    completed-read ledger and candidate eligibility share one identity space
+    with workspace.py's own revision function. Never raises: a tool without
+    ``read_identity``, a malformed argument shape, or a resolution error all
+    return ``None`` (candidate is simply not suppression-eligible).
+    """
+    if candidate.tool != "fast_workspace":
+        return None
+    args = candidate.arguments
+    if set(args) != {"operation", "path"} or args.get("operation") not in (
+        "read",
+        "list",
+    ):
+        return None
+    tool = tools.get("fast_workspace")
+    identity_fn = getattr(tool, "read_identity", None)
+    if not callable(identity_fn):
+        return None
+    try:
+        result = identity_fn(args["path"], args["operation"])
+    except Exception:
+        return None
+    if not isinstance(result, tuple) or len(result) != 2:
+        return None
+    path, rev = result
+    return str(path), str(rev)
