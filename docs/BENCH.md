@@ -201,3 +201,44 @@ CLI startup, target execution and full-task quality are outside this benchmark.
 The runner records raw distributions, option fingerprints, probability shifts and
 both argmax and policy order stability. Model revision remains null unless verified
 separately; the model name alone does not pin its weights.
+
+## Campaign runner
+
+`scripts/campaign.py` drives `scripts/forge_e2e.py` as a resumable,
+budget-enforced hill-climbing campaign over a frozen candidate source tree,
+instead of the installed bundle cache. It is a separate tool from `afast
+bench`: campaign runs are real, paid Amplifier coding sessions through
+Forge, not offline replay.
+
+```bash
+python3 scripts/campaign.py init --root <dir> --proposal proposal.json \
+  --baseline-source <path> --candidate-worktree <path> --installed-cache <path> \
+  --history-index <path> --host-python <path> --events-dir <path> \
+  [--evidence-root <path> ...]
+python3 scripts/campaign.py budget reserve --root <dir> --usd <n> --purpose <text>
+python3 scripts/campaign.py budget settle --root <dir> --reservation <id> [--actual-usd <n> | --unknown]
+python3 scripts/campaign.py budget observe-supervisor --root <dir> --session-dir <path>
+python3 scripts/campaign.py budget status --root <dir>
+python3 scripts/campaign.py preregister --root <dir> --experiment <id> --backlog <id> \
+  --hypothesis <text> --mechanism <text> --one-change <text> \
+  --candidate-worktree <path> --candidate-sha <sha> --tasks a,b --reps <n> \
+  --tier screen|pilot --seed <n> [--decision-override key=value ...] [--falsification <text>]
+python3 scripts/campaign.py run --root <dir> --experiment <id>
+python3 scripts/campaign.py evaluate --root <dir> --experiment <id>
+python3 scripts/campaign.py checkpoint --root <dir> [--bottleneck <text>] [--next <id>]
+python3 scripts/campaign.py status --root <dir>
+```
+
+Every experiment is preregistered before it runs: the candidate source is
+snapshotted with `git worktree add --detach`, the evaluator
+(`scripts/forge_workloads.py`) is hashed and checked against the frozen
+protocol on every preregister and evaluate call, and the paired
+baseline/candidate run schedule is frozen and deterministic for a given
+seed. `run` is resumable -- it skips completed runs, adopts a still-alive
+worker from a prior session, and retries an infrastructure failure (not a
+real task failure) exactly once. Spend is tracked in an append-only
+`ledger.jsonl`; `run` refuses to launch once the estimated campaign budget
+would be exceeded (exit code 3) or a precondition fails (exit code 4, e.g.
+evaluator drift, or a `preregister`/`init` re-entry). `checkpoint` writes
+`checkpoint.json`, `reports/LATEST.md`, and `handoff/CONTINUE.md` so a new
+session can resume cold from the campaign root alone.
