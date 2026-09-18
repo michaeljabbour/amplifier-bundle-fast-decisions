@@ -596,3 +596,14 @@ class ForgeE2ELegacyStillWorksTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class CodexConfigModelTests(unittest.TestCase):
+    def test_codex_configured_model_from_toml(self):
+        import tempfile
+        from pathlib import Path
+        with tempfile.TemporaryDirectory() as tmp:
+            cfg = Path(tmp)/'config.toml'
+            cfg.write_text('model = "gpt-6-astra"\nmodel_reasoning_effort = "high"\n')
+            self.assertEqual(battery._codex_configured_model(cfg), 'gpt-6-astra')
+            self.assertIsNone(battery._codex_configured_model(Path(tmp)/'missing.toml'))

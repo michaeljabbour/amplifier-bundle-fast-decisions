@@ -17,6 +17,7 @@ import argparse
 from datetime import datetime, timezone
 import hashlib
 import json
+import re
 import math
 from pathlib import Path
 import random
@@ -241,7 +242,7 @@ def _command_template(harness, model, args):
 # --------------------------------------------------------------------------
 
 def _claude_argv(prompt, model, max_budget_usd):
-    argv = ['claude', '-p', prompt, '--output-format', 'json', '--bare',
+    argv = ['claude', '-p', prompt, '--output-format', 'json', '--safe-mode',
             '--permission-mode', 'acceptEdits', '--max-budget-usd', str(max_budget_usd)]
     if model:
         argv += ['--model', model]
@@ -266,7 +267,7 @@ def _opencode_argv(prompt, model):
 # --------------------------------------------------------------------------
 
 def _parse_claude(stdout):
-    """Parse claude's --output-format json --bare stdout: the LAST line that
+    """Parse claude's --output-format json --safe-mode stdout: the LAST line that
     parses as a dict with type=="result" is the summary line."""
     best = None
     for line in stdout.splitlines():
@@ -295,7 +296,21 @@ _CODEX_TOKEN_KEYS = ('input_tokens', 'cached_input_tokens', 'cache_write_input_t
                      'output_tokens', 'reasoning_output_tokens')
 
 
+def _codex_configured_model(config_path=None):
+    """Model pinned in ~/.codex/config.toml (`model = "..."`), or None."""
+    path = Path(config_path) if config_path else Path.home()/'.codex'/'config.toml'
+    try:
+        for line in path.read_text().splitlines():
+            m = re.match(r'\s*model\s*=\s*"([^"]+)"', line)
+            if m:
+                return m.group(1)
+    except OSError:
+        return None
+    return None
+
+
 def _parse_codex(stdout, last_message_path, model=None):
+    model = model or _codex_configured_model()
     """Parse codex --json JSONL stdout: sum usage across all turn.completed events."""
     tokens = {k: 0 for k in _CODEX_TOKEN_KEYS}
     seen_usage = False
@@ -448,6 +463,25 @@ def _run_external(harness, run_dir, workspace, prompt, deadline, model, forge_mo
             'infrastructure_failure': False}
 
 
+def _normalize_worker_result(base, native):
+    """Map a forge_e2e worker result.json onto the unified battery schema."""
+    if native.get('harness') is None and native.get('side'):
+        base = {**base, 'harness': 'amplifier-fd' if native['side'] in ('candidate', 'fast') else 'amplifier-plain'}
+    if True:
+        usage = (native.get('native') or {}).get('usage') or {}
+        cost = usage.get('cost_usd')
+        model = native.get('model') or next((e['model'] for e in native.get('effort_receipts', []) if e.get('model')), None)
+        return {**base, 'model': model, 'started_at': native.get('started_at'), 'ended_at': native.get('ended_at'),
+                'wall_time_ms': native.get('wall_time_ms'), 'harness_duration_ms': None,
+                'exit_code': native.get('exit_code'), 'timed_out': native.get('timed_out'),
+                'cost_usd': cost, 'cost_source': 'harness_reported' if cost is not None else 'unknown',
+                'cost_billable': cost is not None, 'tokens': usage or None, 'num_turns': None,
+                'final_message': native.get('final_message'), 'quality': native.get('quality'),
+                'protected_files_unchanged': native.get('protected_files_unchanged'),
+                'outcome_passed': bool(native.get('outcome_passed')),
+                'infrastructure_failure': bool(native.get('infrastructure_failure')), 'notes': []}
+
+
 def _dispatch(item, name, experiment_dir, manifest, proposal, launcher=None, waiter=None, closer=None,
               forge_module=None):
     battery_tasks = _load_battery_tasks()
@@ -465,12 +499,21 @@ def _dispatch(item, name, experiment_dir, manifest, proposal, launcher=None, wai
         amp_root = experiment_dir/'runs'/'amplifier'
         wait_seconds = deadline+180
         try:
-            launcher(amp_root, name)
-            ok = waiter(amp_root, name, wait_seconds)
-            try:
-                closer(amp_root, name)
-            except Exception:  # noqa: BLE001
-                pass
+            if (amp_root/name/'result.json').exists():
+                # The worker already finished (runner restarted after a crash): adopt, never relaunch.
+                ok = True
+                base['notes'] = ['adopted_existing_worker_result']
+            elif (amp_root/name/'running.json').exists():
+                # A worker launched by a previous runner is still going: wait for it, never duplicate it.
+                base['notes'] = ['adopted_live_worker']
+                ok = waiter(amp_root, name, wait_seconds)
+            else:
+                launcher(amp_root, name)
+                ok = waiter(amp_root, name, wait_seconds)
+                try:
+                    closer(amp_root, name)
+                except Exception:  # noqa: BLE001
+                    pass
         except Exception as exc:  # noqa: BLE001 -- launch never started a worker
             return {**base, 'model': None, 'started_at': _now(), 'ended_at': _now(),
                     'wall_time_ms': None, 'harness_duration_ms': None, 'exit_code': None,
@@ -486,18 +529,13 @@ def _dispatch(item, name, experiment_dir, manifest, proposal, launcher=None, wai
                     'tokens': None, 'num_turns': None, 'final_message': None, 'quality': None,
                     'protected_files_unchanged': None, 'outcome_passed': False,
                     'infrastructure_failure': True, 'notes': ['no_result_json']}
-        usage = (native.get('native') or {}).get('usage') or {}
-        cost = usage.get('cost_usd')
-        model = native.get('model') or next((e['model'] for e in native.get('effort_receipts', []) if e.get('model')), None)
-        return {**base, 'model': model, 'started_at': native.get('started_at'), 'ended_at': native.get('ended_at'),
-                'wall_time_ms': native.get('wall_time_ms'), 'harness_duration_ms': None,
-                'exit_code': native.get('exit_code'), 'timed_out': native.get('timed_out'),
-                'cost_usd': cost, 'cost_source': 'harness_reported' if cost is not None else 'unknown',
-                'cost_billable': cost is not None, 'tokens': usage or None, 'num_turns': None,
-                'final_message': native.get('final_message'), 'quality': native.get('quality'),
-                'protected_files_unchanged': native.get('protected_files_unchanged'),
-                'outcome_passed': bool(native.get('outcome_passed')),
-                'infrastructure_failure': bool(native.get('infrastructure_failure')), 'notes': []}
+        if 'cost_source' in native and 'native' not in native:
+            # Already normalized by an earlier runner (adopted): return as-is.
+            return {**native, 'notes': list(native.get('notes') or []) + list(base.get('notes') or [])}
+        raw_copy = amp_root/name/'worker-result.json'
+        if not raw_copy.exists():
+            raw_copy.write_text(json.dumps(native, indent=2)+'\n')  # keep the worker's native evidence
+        return _normalize_worker_result(base, native)
 
     # External harnesses (claude/codex/opencode)
     run_dir = experiment_dir/'runs'/name
@@ -671,7 +709,18 @@ def _latest_result(experiment_dir, manifest, name):
     item = manifest['runs'][name]
     run_dir = _run_dir_for(experiment_dir, name, item['harness'])
     path = run_dir/'result.json'
-    return _read_json(path) if path.exists() else None
+    if not path.exists():
+        return None
+    result = _read_json(path)
+    if 'cost_source' not in result and 'native' in result:
+        # A worker result adopted by a restarted runner without normalization: map it on the fly.
+        battery_tasks = _load_battery_tasks()
+        task = battery_tasks.TASKS.get(item['task'])
+        base = {'name': name, 'task': item['task'], 'family': getattr(task, 'family', None),
+                'split': getattr(task, 'split', None), 'kind': getattr(task, 'kind', None),
+                'harness': item['harness'], 'attempt': item.get('attempt', 1), 'notes': ['normalized_at_evaluate']}
+        result = _normalize_worker_result(base, result)
+    return result
 
 
 def cmd_evaluate(args):
