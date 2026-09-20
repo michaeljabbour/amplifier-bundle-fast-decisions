@@ -1099,6 +1099,103 @@ class MechanismGateTests(unittest.TestCase):
             self.assertIn('not evaluated (no amplifier-fd runs)', report)
 
 
+class DecisionLatencyTests(unittest.TestCase):
+    """Evidence-gap fix: DESIGN-BRIDGE.md rule (b) needs a receipts-derived judge
+    decision-latency p50/p95 to gate promoting an external judge backend. Real
+    `fast_decisions:scored` receipts carry `duration_ms` (see docs/EVENTS.md /
+    campaign receipts) -- these tests use synthetic receipts shaped the same way.
+    """
+
+    def test_p50_p95_computed_from_scored_receipt_duration_ms(self):
+        with tempfile.TemporaryDirectory() as tmp, _patched_battery_tasks():
+            root = Path(tmp)/'campaign'
+            loop_config = {'backend': 'ollama', 'model': 'qwen3:0.6b'}
+            # 10 scored receipts, duration_ms 10..100 in steps of 10 -> p50=60 (nearest-rank
+            # at ceil(0.50*10)=5th smallest -> index 4 -> 50... use exact values below instead
+            # of hand-deriving, and assert against the module's own _percentile for parity.
+            durations = [10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0, 90.0, 100.0]
+            events = [{'event': 'fast_decisions:scored',
+                       'data': {'backend': 'ollama', 'duration_ms': d, 'latency_kind': 'decision_model_wall_time'}}
+                      for d in durations]
+            _one_amplifier_fd_experiment(root, 'lat1', loop_config, events)
+            comparison = battery.cmd_evaluate(SimpleNamespace(root=str(root), experiment='lat1'))
+            mechanism = comparison['mechanism']
+            expected_p50 = battery._percentile(sorted(durations), 50)
+            expected_p95 = battery._percentile(sorted(durations), 95)
+            self.assertEqual(mechanism['decision_latency_ms_p50'], expected_p50)
+            self.assertEqual(mechanism['decision_latency_ms_p95'], expected_p95)
+            self.assertEqual(mechanism['decision_latency_budget_ms'], 500)
+            self.assertTrue(mechanism['latency_within_budget'])
+            self.assertIsNone(mechanism['decision_latency_reason'])
+            self.assertEqual(mechanism['decision_latency_ms_by_backend']['ollama']['n'], 10)
+            report = (root/'experiments'/'lat1'/'REPORT.md').read_text()
+            self.assertIn('decision_latency_ms_p50=', report)
+            self.assertIn('latency_within_budget=True', report)
+
+    def test_latency_over_budget_sets_within_budget_false(self):
+        with tempfile.TemporaryDirectory() as tmp, _patched_battery_tasks():
+            root = Path(tmp)/'campaign'
+            loop_config = {'backend': 'jev', 'model': 'jev-remote'}
+            events = [{'event': 'fast_decisions:scored', 'data': {'backend': 'jev', 'duration_ms': 900.0}}
+                      for _ in range(5)]
+            _one_amplifier_fd_experiment(root, 'lat2', loop_config, events)
+            comparison = battery.cmd_evaluate(SimpleNamespace(root=str(root), experiment='lat2'))
+            mechanism = comparison['mechanism']
+            self.assertEqual(mechanism['decision_latency_ms_p95'], 900.0)
+            self.assertFalse(mechanism['latency_within_budget'])
+
+    def test_per_backend_breakdown_keeps_backends_separate(self):
+        with tempfile.TemporaryDirectory() as tmp, _patched_battery_tasks():
+            root = Path(tmp)/'campaign'
+            loop_config = {'backend': 'ollama'}
+            events = [
+                {'event': 'fast_decisions:scored', 'data': {'backend': 'ollama', 'duration_ms': 40.0}},
+                {'event': 'fast_decisions:scored', 'data': {'backend': 'ollama', 'duration_ms': 60.0}},
+                {'event': 'fast_decisions:scored', 'data': {'backend': 'jev', 'duration_ms': 800.0}},
+            ]
+            _one_amplifier_fd_experiment(root, 'lat3', loop_config, events)
+            comparison = battery.cmd_evaluate(SimpleNamespace(root=str(root), experiment='lat3'))
+            by_backend = comparison['mechanism']['decision_latency_ms_by_backend']
+            self.assertEqual(by_backend['ollama']['n'], 2)
+            self.assertEqual(by_backend['jev']['n'], 1)
+            self.assertEqual(by_backend['jev']['p95'], 800.0)
+
+    def test_no_latency_field_in_any_receipt_yields_null_not_invented(self):
+        """No scored/fallback receipt carries duration_ms -- must report null with a
+        reason, never fabricate a number."""
+        with tempfile.TemporaryDirectory() as tmp, _patched_battery_tasks():
+            root = Path(tmp)/'campaign'
+            loop_config = {'backend': 'ollama'}
+            events = [
+                {'event': 'fast_decisions:scored', 'data': {'backend': 'ollama'}},
+                {'event': 'fast_decisions:routed', 'data': {'backend': 'ollama', 'route': 'fast'}},
+            ]
+            _one_amplifier_fd_experiment(root, 'lat4', loop_config, events)
+            comparison = battery.cmd_evaluate(SimpleNamespace(root=str(root), experiment='lat4'))
+            mechanism = comparison['mechanism']
+            self.assertIsNone(mechanism['decision_latency_ms_p95'])
+            self.assertIsNone(mechanism['decision_latency_ms_p50'])
+            self.assertIsNone(mechanism['latency_within_budget'])
+            self.assertIsNotNone(mechanism['decision_latency_reason'])
+            report = (root/'experiments'/'lat4'/'REPORT.md').read_text()
+            self.assertIn('decision_latency_ms_p95=None', report)
+            self.assertIn('decision_latency:', report)
+
+    def test_fallback_receipt_latency_is_picked_up_if_present(self):
+        """Generic-by-kind check: a fallback receipt carrying duration_ms (not seen
+        in real receipts as of this writing, but not hardcoded away either) must
+        still be counted."""
+        with tempfile.TemporaryDirectory() as tmp, _patched_battery_tasks():
+            root = Path(tmp)/'campaign'
+            loop_config = {'backend': 'jev'}
+            events = [{'event': 'fast_decisions:fallback', 'data': {'backend': 'jev', 'duration_ms': 250.0}}]
+            _one_amplifier_fd_experiment(root, 'lat5', loop_config, events)
+            comparison = battery.cmd_evaluate(SimpleNamespace(root=str(root), experiment='lat5'))
+            mechanism = comparison['mechanism']
+            self.assertEqual(mechanism['decision_latency_ms_p95'], 250.0)
+            self.assertEqual(mechanism['decision_latency_ms_by_backend']['jev']['n'], 1)
+
+
 class SeriesLabelTests(unittest.TestCase):
     def test_label_carries_backend_and_routing_flags(self):
         with tempfile.TemporaryDirectory() as tmp, _patched_battery_tasks():

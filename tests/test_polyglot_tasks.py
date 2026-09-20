@@ -253,6 +253,61 @@ class TestPythonEvaluate(FakeTreeTestCase):
             shutil.rmtree(ws, ignore_errors=True)
 
 
+class TestInterpreterWithPytestProbe(unittest.TestCase):
+    """Defect: the Python evaluator used `sys.executable` unconditionally, so any
+    caller whose own interpreter lacks pytest (e.g. the Amplifier host venv) scored
+    every Python exercise `no_tests_collected` regardless of candidate correctness.
+    `_interpreter_with_pytest` must discover an interpreter that can actually
+    `import pytest`, trying `sys.executable` first and falling through candidates.
+    """
+
+    def setUp(self):
+        pt._interpreter_with_pytest.cache_clear()
+        self.addCleanup(pt._interpreter_with_pytest.cache_clear)
+
+    def _fake_run(self, ok_for):
+        def _run(argv, capture_output=True, timeout=10):
+            interp = argv[0]
+            proc = mock.Mock()
+            proc.returncode = 0 if interp in ok_for else 1
+            return proc
+
+        return _run
+
+    def test_falls_through_to_second_candidate_when_first_lacks_pytest(self):
+        with (
+            mock.patch.object(pt.sys, "executable", "/fake/no-pytest/python"),
+            mock.patch.object(pt.shutil, "which", side_effect=lambda name: "/fake/has-pytest/python3" if name == "python3" else None),
+            mock.patch.object(pt.subprocess, "run", side_effect=self._fake_run(ok_for={"/fake/has-pytest/python3"})),
+        ):
+            interp = pt._interpreter_with_pytest()
+        self.assertEqual(interp, "/fake/has-pytest/python3")
+
+    def test_none_when_no_candidate_has_pytest(self):
+        with (
+            mock.patch.object(pt.sys, "executable", "/fake/no-pytest/python"),
+            mock.patch.object(pt.shutil, "which", side_effect=lambda name: "/fake/also-no-pytest/python3" if name == "python3" else None),
+            mock.patch.object(pt.subprocess, "run", side_effect=self._fake_run(ok_for=set())),
+        ):
+            interp = pt._interpreter_with_pytest()
+        self.assertIsNone(interp)
+
+    def test_python_run_labels_toolchain_missing_pytest_when_no_interpreter_qualifies(self):
+        with mock.patch.object(pt, "_interpreter_with_pytest", return_value=None):
+            result = pt._python_run(Path(tempfile.mkdtemp()), ["add_numbers_test.py"])
+        self.assertEqual(result["failure_labels"], ["toolchain_missing:pytest"])
+        self.assertNotIn("no_tests_collected", result["failure_labels"])
+
+    def test_parse_pytest_output_distinguishes_module_not_found_from_no_tests_collected(self):
+        module_not_found = "ModuleNotFoundError: No module named 'pytest'\n"
+        result = pt._parse_pytest_output(module_not_found)
+        self.assertEqual(result["failure_labels"], ["toolchain_missing:pytest"])
+
+        genuinely_empty = "no tests ran in 0.01s\n"
+        result = pt._parse_pytest_output(genuinely_empty)
+        self.assertEqual(result["failure_labels"], ["no_tests_collected"])
+
+
 class TestEvaluatorCopySafety(FakeTreeTestCase):
     """Defect A: shutil.copytree(workspace, tmp_exercise) must never crash on
     non-regular files under .git (e.g. a Watchman/fsmonitor unix socket), and

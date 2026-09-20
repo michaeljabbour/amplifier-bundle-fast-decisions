@@ -48,9 +48,8 @@ is explicitly set by the operator; external state is never default-on
 
 **Evidence required:** `results.json["cells"]["judge-jev+effort"].verdict ==
 "confirmed"`; its `gate_passed == true`; a p95 decision-latency figure under
-500 ms (not currently emitted by `build_cell_result` -- this is a known gap,
-recorded in evidence limits until a receipts-derived latency percentile is
-added to `battery.py`'s mechanism report).
+500 ms (`comparison.json["mechanism"]["decision_latency_ms_p95"]`, emitted by
+`battery.py`'s mechanism report).
 
 **Current default:** `ollama`. `jev` is opt-in and unconfirmed.
 

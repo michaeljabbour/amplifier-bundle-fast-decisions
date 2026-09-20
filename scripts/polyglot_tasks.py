@@ -33,6 +33,7 @@ from __future__ import annotations
 import json
 import os
 import random
+import functools
 import re
 import shutil
 import subprocess
@@ -126,7 +127,16 @@ def _timeout_result() -> dict:
 # ---------------------------------------------------------------------------
 
 
+_MODULE_NOT_FOUND_PYTEST_RE = re.compile(r"No module named ['\"]?pytest['\"]?")
+
+
 def _parse_pytest_output(text: str) -> dict:
+    # The interpreter probe (`_interpreter_with_pytest`) should guarantee pytest is
+    # importable before we ever get here, but if the probe raced with an environment
+    # change (or was bypassed), a bare "no tests collected" would be a mislabel --
+    # distinguish "pytest isn't actually importable" from a genuine empty collection.
+    if _MODULE_NOT_FOUND_PYTEST_RE.search(text):
+        return {"checks": 1, "passed": 0, "failed": 1, "failure_labels": ["toolchain_missing:pytest"]}
     m_passed = re.search(r"(\d+) passed", text)
     m_failed = re.search(r"(\d+) failed", text)
     m_error = re.search(r"(\d+) error", text)
@@ -140,10 +150,48 @@ def _parse_pytest_output(text: str) -> dict:
     return {"checks": checks, "passed": passed, "failed": failed, "failure_labels": labels}
 
 
+@functools.lru_cache(maxsize=1)
+def _interpreter_with_pytest() -> str | None:
+    """First of (sys.executable, python3, python on PATH) that can `import pytest`, or None.
+
+    Evaluators are frequently invoked from a host interpreter that has no
+    pytest installed at all (e.g. the Amplifier CLI's own uv tool venv) --
+    using `sys.executable` unconditionally there scores every Python
+    exercise `no_tests_collected` regardless of the candidate's actual
+    code, which is a false negative, not a real result. Mirrors the
+    discovery order of forge_e2e.py's `_interpreter_with_pytest` (plus a
+    `python` fallback for hosts without a `python3` symlink) so both
+    in-process evaluation paths agree on which interpreter is authoritative.
+
+    Never imports pytest into this process -- each candidate is probed in
+    its own subprocess. Cached per process (the answer can't change
+    mid-run); tests that need to re-probe should call
+    `_interpreter_with_pytest.cache_clear()` first.
+    """
+    candidates: list[str] = []
+    if sys.executable:
+        candidates.append(sys.executable)
+    for name in ("python3", "python"):
+        found = shutil.which(name)
+        if found and found not in candidates:
+            candidates.append(found)
+    for interp in candidates:
+        try:
+            proc = subprocess.run([interp, "-c", "import pytest"], capture_output=True, timeout=10)
+        except (OSError, subprocess.TimeoutExpired):
+            continue
+        if proc.returncode == 0:
+            return interp
+    return None
+
+
 def _python_run(exercise_root: Path, test_files: list[str]) -> dict:
+    interp = _interpreter_with_pytest()
+    if interp is None:
+        return _toolchain_missing("pytest")
     try:
         proc = subprocess.run(
-            [sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider", *test_files],
+            [interp, "-m", "pytest", "-q", "-p", "no:cacheprovider", *test_files],
             cwd=str(exercise_root),
             capture_output=True,
             text=True,
@@ -151,7 +199,7 @@ def _python_run(exercise_root: Path, test_files: list[str]) -> dict:
             env={**os.environ, "PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1"},
         )
     except FileNotFoundError:
-        return _toolchain_missing("python3")
+        return _toolchain_missing("pytest")
     except subprocess.TimeoutExpired:
         return _timeout_result()
     return _parse_pytest_output(proc.stdout + "\n" + proc.stderr)

@@ -1151,12 +1151,37 @@ def _profile_loop_config(run_dir):
     return orchestrator.get('config') or {}
 
 
+def _percentile(values_sorted, pct):
+    """Nearest-rank percentile over an already-sorted ascending list of numbers.
+    `pct` in [0, 100]. None on an empty list. Stdlib-only (no numpy/statistics
+    dependency); nearest-rank is adequate for the receipt-count sample sizes a
+    single battery experiment produces."""
+    if not values_sorted:
+        return None
+    n = len(values_sorted)
+    idx = min(n - 1, max(0, math.ceil(pct / 100 * n) - 1))
+    return values_sorted[idx]
+
+
+# Receipt event kinds that can carry a judge decision-latency figure. As of
+# this writing only `fast_decisions:scored` receipts carry `duration_ms`
+# (`latency_kind: "decision_model_wall_time"`) -- confirmed against real
+# receipts.jsonl files from a completed campaign run. `fallback` receipts are
+# checked too (per docs/EVENTS.md a fallback can in principle report how long
+# the judge was given before giving up) but carried no latency field in the
+# receipts inspected; if a future fallback receipt adds one, it's picked up
+# automatically since the check is generic (any event of these kinds with a
+# numeric `duration_ms`), not hardcoded to 'scored' alone.
+_LATENCY_EVENT_KINDS = ('scored', 'fallback')
+
+
 def _run_mechanism_counts(run_dir):
     """Raw fast_decisions:* receipt counts for one amplifier-fd run: scored by
     backend, fallback count, routed by route (fast/slow), effort_routed by
     (phase, requested_effort), model_routed requested models and escalations by
-    reason -- plus the run's own configured backend/model_routing (from
-    profile.md). None when the run has no receipts.jsonl (nothing to report)."""
+    reason, judge decision-latency (ms) observed per backend -- plus the run's
+    own configured backend/model_routing (from profile.md). None when the run
+    has no receipts.jsonl (nothing to report)."""
     events = _receipt_events(run_dir)
     if not events:
         return None
@@ -1166,9 +1191,15 @@ def _run_mechanism_counts(run_dir):
     effort_routed_by_phase_effort = Counter()
     model_routed_requested = Counter()
     model_routed_escalations = Counter()
+    latencies_ms_by_backend = {}
     for e in events:
         kind = (e.get('event') or '').removeprefix('fast_decisions:')
         d = e.get('data') or {}
+        if kind in _LATENCY_EVENT_KINDS:
+            latency = d.get('duration_ms')
+            if isinstance(latency, (int, float)) and not isinstance(latency, bool):
+                backend = d.get('backend') or 'unknown'
+                latencies_ms_by_backend.setdefault(backend, []).append(float(latency))
         if kind == 'scored':
             scored_by_backend[d.get('backend')] += 1
         elif kind == 'fallback':
@@ -1190,6 +1221,7 @@ def _run_mechanism_counts(run_dir):
         'model_routed_escalations_by_reason': dict(model_routed_escalations),
         'configured_backend': loop_config.get('backend'),
         'model_routing': loop_config.get('model_routing'),
+        'latencies_ms_by_backend': latencies_ms_by_backend,
     }
 
 
@@ -1220,6 +1252,7 @@ def _mechanism_report(experiment_dir, manifest):
     model_routed_escalations = Counter()
     configured_backend = None
     model_routing = None
+    latencies_ms_by_backend = {}
     for c in per_run:
         scored_by_backend.update(c['scored_by_backend'])
         fallback_count += c['fallback_count']
@@ -1229,6 +1262,37 @@ def _mechanism_report(experiment_dir, manifest):
         model_routed_escalations.update(c['model_routed_escalations_by_reason'])
         configured_backend = configured_backend or c['configured_backend']
         model_routing = model_routing or c['model_routing']
+        for backend, values in c['latencies_ms_by_backend'].items():
+            latencies_ms_by_backend.setdefault(backend, []).extend(values)
+
+    # Judge decision latency (ms), per backend and overall, from whichever
+    # scored/fallback receipts carried a `duration_ms` figure (see
+    # `_LATENCY_EVENT_KINDS`). DESIGN-BRIDGE.md rule (b) gates promoting an
+    # external judge backend on p95 < decision_latency_budget_ms -- this is
+    # the receipts-derived figure that closes that evidence gap. None (with a
+    # reason) when nothing in this experiment's receipts carried a latency
+    # figure at all -- never a fabricated number.
+    decision_latency_ms_by_backend = {}
+    all_latencies_ms = []
+    for backend, values in latencies_ms_by_backend.items():
+        values_sorted = sorted(values)
+        decision_latency_ms_by_backend[backend] = {
+            'n': len(values_sorted),
+            'p50': _percentile(values_sorted, 50),
+            'p95': _percentile(values_sorted, 95),
+        }
+        all_latencies_ms.extend(values)
+    all_latencies_ms.sort()
+    decision_latency_ms_p50 = _percentile(all_latencies_ms, 50)
+    decision_latency_ms_p95 = _percentile(all_latencies_ms, 95)
+    decision_latency_budget_ms = 500
+    if decision_latency_ms_p95 is None:
+        latency_within_budget = None
+        decision_latency_reason = ('no scored or fallback receipt in this experiment carried a '
+                                    'latency field (duration_ms) -- cannot compute p95')
+    else:
+        latency_within_budget = decision_latency_ms_p95 <= decision_latency_budget_ms
+        decision_latency_reason = None
 
     engaged = True
     reasons = []
@@ -1257,6 +1321,12 @@ def _mechanism_report(experiment_dir, manifest):
         'effort_routed_by_phase_effort': dict(effort_routed),
         'model_routed_requested_models': dict(model_routed_requested),
         'model_routed_escalations_by_reason': dict(model_routed_escalations),
+        'decision_latency_ms_by_backend': decision_latency_ms_by_backend,
+        'decision_latency_ms_p50': decision_latency_ms_p50,
+        'decision_latency_ms_p95': decision_latency_ms_p95,
+        'decision_latency_budget_ms': decision_latency_budget_ms,
+        'latency_within_budget': latency_within_budget,
+        'decision_latency_reason': decision_latency_reason,
         'mechanism_engaged': engaged, 'mechanism_reason': '; '.join(reasons) if reasons else None,
     }
 
@@ -1645,6 +1715,13 @@ def _write_report(experiment_dir, comparison, proposal):
                      f"model_routing_configured={mechanism['model_routing_configured']} "
                      f"model_routed_requested_models={mechanism['model_routed_requested_models']} "
                      f"model_routed_escalations_by_reason={mechanism['model_routed_escalations_by_reason']}")
+        lines.append(f"decision_latency_ms_p50={mechanism['decision_latency_ms_p50']} "
+                     f"decision_latency_ms_p95={mechanism['decision_latency_ms_p95']} "
+                     f"decision_latency_budget_ms={mechanism['decision_latency_budget_ms']} "
+                     f"latency_within_budget={mechanism['latency_within_budget']} "
+                     f"decision_latency_ms_by_backend={mechanism['decision_latency_ms_by_backend']}")
+        if mechanism['decision_latency_ms_p95'] is None:
+            lines.append(f"decision_latency: {mechanism['decision_latency_reason']}")
     else:
         lines.append('not evaluated (no amplifier-fd runs)')
     lines += ['', '## Per-task', '', '```json', json.dumps(comparison['per_task'], indent=2), '```', '']
