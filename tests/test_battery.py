@@ -1045,6 +1045,37 @@ class MechanismGateTests(unittest.TestCase):
             self.assertEqual(mechanism['model_routed_requested_models'], {'claude-cheap-1': 1, None: 1})
             self.assertEqual(mechanism['model_routed_escalations_by_reason'], {'max_requests': 1})
 
+    def test_unavailable_backend_with_scores_sets_mechanism_engaged_false(self):
+        """Spec section 6a: a judge-off cell (backend='unavailable') that somehow
+        scored anyway is a defect in the other direction -- the judge was supposed
+        to be off and was not."""
+        with tempfile.TemporaryDirectory() as tmp, _patched_battery_tasks():
+            root = Path(tmp)/'campaign'
+            loop_config = {'backend': 'unavailable'}
+            events = [{'event': 'fast_decisions:scored', 'data': {'backend': 'unavailable'}}]
+            _one_amplifier_fd_experiment(root, 'u1', loop_config, events)
+            comparison = battery.cmd_evaluate(SimpleNamespace(root=str(root), experiment='u1'))
+            mechanism = comparison['mechanism']
+            self.assertFalse(mechanism['mechanism_engaged'])
+            self.assertIn("judge configured 'unavailable' (off) but scored=1", mechanism['mechanism_reason'])
+
+    def test_unavailable_backend_with_no_scores_sets_mechanism_engaged_true(self):
+        """Spec section 6a: a deliberate judge-off cell (backend='unavailable') that
+        never scored anything is engaged (the off-switch verified, not just tolerated).
+        effort-only cells rely on this to run at all."""
+        with tempfile.TemporaryDirectory() as tmp, _patched_battery_tasks():
+            root = Path(tmp)/'campaign'
+            loop_config = {'backend': 'unavailable', 'effort_routing': {'implement': 'high'}}
+            events = [{'event': 'fast_decisions:effort_routed',
+                       'data': {'phase': 'implement', 'requested_effort': 'high'}}]
+            _one_amplifier_fd_experiment(root, 'u2', loop_config, events)
+            comparison = battery.cmd_evaluate(SimpleNamespace(root=str(root), experiment='u2'))
+            mechanism = comparison['mechanism']
+            self.assertTrue(mechanism['mechanism_engaged'])
+            self.assertIsNone(mechanism['mechanism_reason'])
+            self.assertEqual(mechanism['scored_by_backend'], {})
+            self.assertEqual(mechanism['effort_routed_by_phase_effort'], {'implement:high': 1})
+
     def test_no_amplifier_fd_runs_means_mechanism_is_none(self):
         with tempfile.TemporaryDirectory() as tmp, _patched_battery_tasks():
             root = Path(tmp)/'campaign'

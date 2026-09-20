@@ -1,0 +1,117 @@
+schema: fast-decisions-evals/cells/v1
+
+# Decision (2026-09-20), see STUDY-DESIGN.md "Decisions":
+# 1. Contemporaneous anchor is now ONE `plain` (or `plain-sonnet`) experiment
+#    PER REPETITION BATCH, shared by every fd cell of that batch -- not an
+#    `amplifier-plain` harness embedded in each fd cell's own experiment.
+#    A cell that needs a shared anchor names it in `anchor_cell`; run.py
+#    compares that cell's experiment against `anchor_cell`'s experiment for
+#    the SAME (suite, split, rep) via `battery.py evaluate --baseline-root
+#    --baseline-experiment` (an existing battery.py capability -- no new
+#    measurement logic). `externals` is the one exception: it keeps its own
+#    embedded `amplifier-plain` harness because Q3 is a five-harness,
+#    single-interleaved-schedule comparison, not a batch-anchor comparison.
+# 4. The "incumbent" Amplifier default (today's shipped fast-decisions
+#    profile) is `judge-local+effort-incumbent` (explore:low only). The
+#    all-phase `judge-local+effort` champion candidate, and both model-routing
+#    cells, are CANDIDATES under evaluation -- not assumed defaults.
+
+defaults:
+  amplifier_model: claude-fable-5-1
+  judge_model: qwen3:0.6b
+  claude_permission_mode: bypassPermissions     # R2: never acceptEdits, either suite
+  claude_max_budget_usd: 3.0
+  external_models:
+    claude: null            # null = the harness's configured default; recorded either way
+    codex: null
+    opencode: null
+
+effort_profiles:
+  all_phase: { orient: medium, explore: low, implement: high }
+  explore_only: { explore: low }
+
+model_routing_profiles:
+  sonnet_start:
+    start_model: claude-sonnet-5
+    max_requests_before_escalation: 6
+    escalate_on_test_failure: true
+    escalate_on_provider_error: true
+
+cells:
+  plain:
+    label_suffix: "plain [model=claude-fable-5-1]"
+    harnesses: [amplifier-plain]
+    amplifier_model: claude-fable-5-1
+    fd: null
+    role: "reference series / drift check / shared batch anchor"
+    mechanism_gate: { no_fd_receipts: true }
+
+  plain-sonnet:
+    label_suffix: "plain [model=claude-sonnet-5]"
+    harnesses: [amplifier-plain]
+    amplifier_model: claude-sonnet-5
+    fd: null
+    role: "mandatory control for judge-local+effort+route; batch anchor for the routing pair"
+    mechanism_gate: { no_fd_receipts: true }
+
+  judge-local:
+    harnesses: [amplifier-fd]
+    fd: { backend: ollama, model: qwen3:0.6b }
+    role: "judge alone"
+    anchor_cell: plain
+    mechanism_gate: { scored_backend: ollama, min_scored: 1, max_fallback_fraction: 0.5 }
+
+  effort-only:
+    harnesses: [amplifier-fd]
+    fd: { backend: unavailable, effort_profile: all_phase }
+    role: "effort routing alone (judge off)"
+    anchor_cell: plain
+    mechanism_gate: { max_scored: 0, require_effort_phases: ["implement:high"] }
+
+  judge-local+effort-incumbent:
+    harnesses: [amplifier-fd]
+    fd: { backend: ollama, model: qwen3:0.6b, effort_profile: explore_only }
+    role: "incumbent Amplifier default (today's shipped fast-decisions config) -- reference series, not evaluated as a candidate"
+    anchor_cell: plain
+    mechanism_gate: { scored_backend: ollama, min_scored: 1, require_effort_phases: ["explore:low"] }
+
+  judge-local+effort:
+    harnesses: [amplifier-fd]
+    fd: { backend: ollama, model: qwen3:0.6b, effort_profile: all_phase }
+    role: "champion candidate -- all-phase effort routing under test (not assumed as Amplifier's default)"
+    champion: true
+    anchor_cell: plain
+    mechanism_gate: { scored_backend: ollama, min_scored: 1, require_effort_phases: ["implement:high"] }
+
+  judge-jev+effort:
+    harnesses: [amplifier-fd]
+    fd: { backend: jev, allow_external_state: true, effort_profile: all_phase }
+    role: "judge swap (external; opt-in state)"
+    anchor_cell: plain
+    mechanism_gate: { scored_backend: jev, min_scored: 1, require_effort_phases: ["implement:high"] }
+
+  judge-local+effort+route:
+    harnesses: [amplifier-fd]
+    fd: { backend: ollama, model: qwen3:0.6b, effort_profile: all_phase,
+          model_routing_profile: sonnet_start }
+    role: "model routing (a candidate, not a default)"
+    anchor_cell: plain-sonnet
+    requires_cells: [plain-sonnet]          # refuse to run without its control
+    mechanism_gate:
+      model_routed_model: claude-sonnet-5
+      min_model_routed: 1
+      flag_if_zero_escalations: confounded_with_plain_sonnet
+
+  externals:
+    harnesses: [claude, codex, opencode, amplifier-plain, amplifier-fd]
+    fd: { backend: ollama, model: qwen3:0.6b, effort_profile: all_phase }   # = champion
+    role: "Q3 cross-harness comparison"
+    mechanism_gate: { scored_backend: ollama, min_scored: 1 }
+
+budget:
+  per_launch_usd: 12.0
+  estimated_total_usd: 400.0
+  max_benchmark_worker_launches: 600
+  max_infrastructure_retries_per_run: 1
+  max_parallel_timed_runs: 1        # never raise this: timed runs must not share resources
+  wall_hours: 24

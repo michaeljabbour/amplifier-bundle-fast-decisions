@@ -1,0 +1,29 @@
+schema: fast-decisions-evals/suites/v1
+
+suites:
+  s1:
+    label: "S1 synthetic battery (20 tasks, 4 families)"
+    task_source: battery           # battery.py --task-source battery
+    deadline_seconds: 600
+    splits:
+      dev:     { tasks_flag: dev,     expected_task_count: 12 }
+      holdout: { tasks_flag: holdout, expected_task_count: 8 }
+    required_toolchains: [python3]
+
+  s2:
+    label: "S2 aider polyglot slice (40 tasks: python/rust/go/cpp)"
+    task_source: polyglot          # battery.py --task-source polyglot
+    deadline_seconds: 900
+    polyglot:
+      root_env: AFAST_POLYGLOT_ROOT      # or --polyglot-root on the CLI
+      pinned_corpus_sha: "7e0611e"       # prefix-matched against polyglot-manifest.json .sha
+      languages: [python, rust, go, cpp]
+      slice: 40
+      seed: 20260919                     # fixed: changing it changes the split
+    splits:
+      dev:     { split_flag: dev,     expected_task_count: 24 }
+      holdout: { split_flag: holdout, expected_task_count: 16 }
+    required_toolchains: [python3, cargo, go, cmake]
+    excluded_languages:
+      java: "corpus ships no junit-platform-console-standalone jar; polyglot_tasks.load() skips java"
+      javascript: "grading needs `npx --no-install jest` with node_modules present; corpus is not vendored offline"

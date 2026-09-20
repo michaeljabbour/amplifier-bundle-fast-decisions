@@ -12,3 +12,8 @@ dist/
 playwright-report/
 .DS_Store
 .ruff_cache/
+
+# fast-decisions eval run output (full prompts/responses, absolute host paths,
+# workspace contents, session traces -- never commit; already covered by
+# .amplifier/ above, listed explicitly per evals/README.md)
+.amplifier/evaluation/
