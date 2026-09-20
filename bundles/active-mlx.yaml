@@ -1,0 +1,42 @@
+# Mirrors bundles/active.yaml with the Apple MLX local judge host instead of
+# Ollama. Screen-validate MLX the same way before relying on these numbers --
+# the ~0.55x figure above active.yaml was measured on the Ollama host and is
+# not assumed to transfer.
+#
+bundle:
+  name: fast-decisions-active-mlx
+  version: 0.1.0
+  description: >-
+    Root fast-decisions bundle plus the decision orchestrator in active mode,
+    judged by a local mlx_lm.server (Apple Silicon only) instead of Ollama:
+    a bounded fast path may substitute a prepared read-only action for an LLM
+    turn. Opt-in only.
+
+includes:
+  - bundle: fast-decisions:bundle.md
+
+session:
+  orchestrator:
+    module: loop-fast-decisions
+    source: git+https://github.com/michaeljabbour/amplifier-bundle-fast-decisions@main#subdirectory=modules/loop-fast-decisions
+    config:
+      mode: active
+      backend: mlx
+      model: mlx-community/Qwen3-0.6B-4bit
+      mlx_url: http://127.0.0.1:8080
+      timeout_ms: 500
+      allow_external_state: false
+      min_probability: 0.90
+      min_margin: 0.20
+      max_fast_streak: 3
+      max_fast_per_turn: 12
+      max_candidates: 12
+      max_state_chars: 12000
+      allowed_tools: [fast_workspace]
+      effort_routing:
+        explore: low
+        max_explore_requests: 6
+        escalate_after_provider_errors: 1
+      upstream:
+        max_iterations: 100
+        extended_thinking: true

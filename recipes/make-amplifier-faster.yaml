@@ -4,6 +4,9 @@
 # secrets (TYPESAFE_API_KEY is reported present/absent only).
 #
 # CHANGELOG
+#   v1.1.0 (2026-09-20): review-machine stage picks the local judge host
+#     (Apple MLX on Apple Silicon, Ollama elsewhere) before the plan is
+#     drafted; local-judge and bundle-rung branch on that choice.
 #   v1.0.0 (2026-09-20): Initial recipe -- preflight, gate, local judge, rung, verify, report.
 schema_version: 2
 
@@ -14,18 +17,67 @@ dependencies:
       - "foundation:zen-architect"
 
 name: "make-amplifier-faster"
-description: "Install the fast-decisions active configuration (local ollama judge plus the active bundle rung) behind one approval gate, then verify it from receipts."
-version: "1.0.0"
+description: "Install the fast-decisions active configuration (local judge -- MLX on Apple Silicon, Ollama otherwise -- plus the active bundle rung) behind one approval gate, then verify it from receipts."
+version: "1.1.0"
 tags: ["fast-decisions", "install", "performance"]
 
 context:
-  model: "qwen3:0.6b"
+  ollama_model: "qwen3:0.6b"
   ollama_url: "http://127.0.0.1:11434"
+  mlx_model: "mlx-community/Qwen3-0.6B-4bit"
+  mlx_url: "http://127.0.0.1:8080"
   bundle_source: "git+https://github.com/michaeljabbour/amplifier-bundle-fast-decisions@main#subdirectory=bundles/active.yaml"
+  mlx_bundle_source: "git+https://github.com/michaeljabbour/amplifier-bundle-fast-decisions@main#subdirectory=bundles/active-mlx.yaml"
   events_dir: "$HOME/.amplifier/fast-decisions/events"
   warm_budget_s: "2.0"
 
 stages:
+  - name: "review-machine"
+    description: "Read-only machine-capability review. Decides which local judge host this install targets."
+    steps:
+      - id: "detect"
+        type: "bash"
+        timeout: 30
+        output: "machine"
+        parse_json: true
+        command: |
+          set -uo pipefail
+          os=$(uname -s)
+          arch=$(uname -m)
+          apple_silicon=false
+          if [ "$os" = "Darwin" ] && [ "$arch" = "arm64" ]; then
+            case "$(sysctl -n machdep.cpu.brand_string 2>/dev/null)" in *Apple*) apple_silicon=true;; esac
+          fi
+          mem_bytes=0
+          if [ "$os" = "Darwin" ]; then
+            mem_bytes=$(sysctl -n hw.memsize 2>/dev/null || echo 0)
+          elif [ -r /proc/meminfo ]; then
+            mem_kb=$(awk '/MemTotal/{print $2}' /proc/meminfo 2>/dev/null || echo 0)
+            mem_bytes=$((mem_kb * 1024))
+          fi
+          mem_gb=$(awk -v b="$mem_bytes" 'BEGIN{printf "%.1f", b/1073741824}')
+          pyver=$(python3 --version 2>/dev/null | tr -d '"\\' || echo unknown)
+          oll_installed=false; command -v ollama >/dev/null 2>&1 && oll_installed=true
+          oll_serving=false
+          curl -fsS --max-time 2 "{{ollama_url}}/api/tags" >/dev/null 2>&1 && oll_serving=true
+          mlx_importable=false
+          python3 -c 'import mlx_lm' >/dev/null 2>&1 && mlx_importable=true
+          mlx_on_path=false; command -v mlx_lm.server >/dev/null 2>&1 && mlx_on_path=true
+          mlx_serving=false
+          curl -fsS --max-time 2 "{{mlx_url}}/health" >/dev/null 2>&1 && mlx_serving=true
+          lmstudio_serving=false
+          curl -fsS --max-time 2 "http://127.0.0.1:1234/v1/models" >/dev/null 2>&1 && lmstudio_serving=true
+          if [ "$apple_silicon" = "true" ]; then
+            chosen_host=mlx
+            reason="Apple Silicon detected ($(sysctl -n machdep.cpu.brand_string 2>/dev/null)); MLX runs the judge model natively on the GPU with no extra runtime to keep resident, Ollama is the fallback."
+          else
+            chosen_host=ollama
+            reason="Not Apple Silicon ($os/$arch); MLX requires Apple Silicon, so Ollama is used."
+          fi
+          printf '{"os":"%s","arch":"%s","apple_silicon":"%s","memory_gb":"%s","python_version":"%s","ollama_installed":"%s","ollama_serving":"%s","mlx_importable":"%s","mlx_on_path":"%s","mlx_serving":"%s","lmstudio_serving":"%s","chosen_host":"%s","reason":"%s"}\n' \
+            "$os" "$arch" "$apple_silicon" "$mem_gb" "$pyver" "$oll_installed" "$oll_serving" \
+            "$mlx_importable" "$mlx_on_path" "$mlx_serving" "$lmstudio_serving" "$chosen_host" "$reason"
+
   - name: "preflight"
     description: "Read-only. Changes nothing; produces the plan the gate approves."
     steps:
@@ -36,17 +88,13 @@ stages:
         parse_json: true
         command: |
           set -uo pipefail
-          os=$(uname -s)
           amp=$(amplifier --version 2>/dev/null | head -1 | tr -d '"\\' || echo unknown)
-          oll=false; command -v ollama >/dev/null 2>&1 && oll=true
-          srv=false; tags=""
-          if tags=$(curl -fsS --max-time 3 "{{ollama_url}}/api/tags" 2>/dev/null); then srv=true; fi
-          mdl=false; case "$tags" in *"{{model}}"*) mdl=true;; esac
           bl=$(amplifier bundle list 2>/dev/null | grep -i "fast-decisions" | tr -d '"\\' | tr '\n' ';')
           act=false; case "$bl" in *active*) act=true;; esac
-          key=absent; [ -n "${TYPESAFE_API_KEY:-}" ] && key=present
-          printf '{"os":"%s","amplifier":"%s","ollama":"%s","serving":"%s","model_present":"%s","bundles":"%s","active_rung":"%s","typesafe_key":"%s"}\n' \
-            "$os" "$amp" "$oll" "$srv" "$mdl" "$bl" "$act" "$key"
+          have_typesafe_key=absent
+          if [ -n "${TYPESAFE_API_KEY:-}" ]; then have_typesafe_key=present; fi
+          printf '{"amplifier":"%s","bundles":"%s","active_rung":"%s","typesafe_key":"%s"}\n' \
+            "$amp" "$bl" "$act" "$have_typesafe_key"
 
       - id: "write-plan"
         agent: "foundation:zen-architect"
@@ -54,20 +102,29 @@ stages:
         output: "plan"
         prompt: |
           Write a short plain-language install plan for a non-expert. Facts (do not invent others):
-          {{probe}}
+          Machine review: {{machine}}
+          Amplifier/bundle state: {{probe}}
 
-          The plan will install, only where missing: ollama (macOS: `brew install ollama`; Linux: the
-          official install script), the local judge model `{{model}}` (~600 MB of disk), and the Amplifier
-          bundle rung `{{bundle_source}}`. Any existing fast-decisions shadow behavior is kept; the active
-          rung supersedes it at composition. If the rung is already installed the recipe runs
-          `amplifier update` to refresh instead of re-adding.
+          The chosen local judge host is {{machine.chosen_host}}, because: {{machine.reason}}
+
+          If chosen host is "mlx": the plan will install, only where missing, the mlx-lm Python
+          package (`uv tool install mlx-lm`) and start `mlx_lm.server` in the background on
+          127.0.0.1:8080 serving the model `{{mlx_model}}` (~400 MB-1 GB of disk depending on
+          quantization). If chosen host is "ollama": the plan will install, only where missing,
+          ollama (macOS: `brew install ollama`; Linux: the official install script) and the local
+          judge model `{{ollama_model}}` (~600 MB of disk).
+
+          Either way the plan also installs the Amplifier bundle rung matching the chosen host
+          ({{bundle_source}} for ollama, {{mlx_bundle_source}} for mlx). Any existing fast-decisions
+          shadow behavior is kept; the active rung supersedes it at composition. If the rung is
+          already installed the recipe runs `amplifier update` to refresh instead of re-adding.
 
           State explicitly: judging happens locally on this machine and nothing is sent anywhere (the
           external Jev judge stays opt-in); the TYPESAFE_API_KEY line reports presence only, never a value.
           End with the exact revert commands: `amplifier bundle remove fast-decisions-active` and,
-          optionally, `ollama rm {{model}}`.
+          optionally, `ollama rm {{ollama_model}}` or `uv tool uninstall mlx-lm` (whichever host was chosen).
 
-          6-12 lines. No markdown headings, no preamble.
+          6-14 lines. No markdown headings, no preamble.
     approval:
       required: true
       default: "deny"
@@ -78,10 +135,11 @@ stages:
         Nothing has changed yet. Approve to install; deny to stop here.
 
   - name: "local-judge"
-    description: "Install and warm the local decision model. Fails loud rather than half-installing."
+    description: "Install and warm the chosen local decision model. Fails loud rather than half-installing."
     steps:
       - id: "install-ollama"
         type: "bash"
+        condition: "{{machine.chosen_host}} == 'ollama'"
         timeout: 900
         output: "ollama_install"
         command: |
@@ -96,6 +154,7 @@ stages:
 
       - id: "start-server"
         type: "bash"
+        condition: "{{machine.chosen_host}} == 'ollama'"
         timeout: 120
         output: "ollama_server"
         command: |
@@ -111,20 +170,22 @@ stages:
 
       - id: "pull-model"
         type: "bash"
+        condition: "{{machine.chosen_host}} == 'ollama'"
         timeout: 1800
         output: "model_pull"
         command: |
           set -uo pipefail
-          if curl -fsS --max-time 5 "{{ollama_url}}/api/tags" 2>/dev/null | grep -q "{{model}}"; then echo "skip: {{model}} already pulled"; exit 0; fi
-          echo "+ ollama pull {{model}}   (~600 MB)"; ollama pull "{{model}}"
+          if curl -fsS --max-time 5 "{{ollama_url}}/api/tags" 2>/dev/null | grep -q "{{ollama_model}}"; then echo "skip: {{ollama_model}} already pulled"; exit 0; fi
+          echo "+ ollama pull {{ollama_model}}   (~600 MB)"; ollama pull "{{ollama_model}}"
 
       - id: "warm-model"
         type: "bash"
+        condition: "{{machine.chosen_host}} == 'ollama'"
         timeout: 600
         output: "warm"
         command: |
           set -uo pipefail
-          P='{"model":"{{model}}","prompt":"ok","stream":false,"options":{"num_predict":1}}'
+          P='{"model":"{{ollama_model}}","prompt":"ok","stream":false,"options":{"num_predict":1}}'
           echo "+ POST {{ollama_url}}/api/generate  (load, untimed)"
           curl -fsS --max-time 300 -o /dev/null -X POST "{{ollama_url}}/api/generate" -H 'Content-Type: application/json' -d "$P" \
             || { echo "ERROR: {{ollama_url}} unreachable or model failed to load" >&2; exit 1; }
@@ -135,8 +196,58 @@ stages:
           awk -v t="$t" -v b="{{warm_budget_s}}" 'BEGIN{ if (t+0 > b+0) exit 1 }' \
             || { echo "ERROR: warm latency ${t}s exceeds the {{warm_budget_s}}s budget -- stopping before any bundle change" >&2; exit 1; }
 
+      - id: "install-mlx"
+        type: "bash"
+        condition: "{{machine.chosen_host}} == 'mlx'"
+        timeout: 900
+        output: "mlx_install"
+        command: |
+          set -uo pipefail
+          if python3 -c 'import mlx_lm' >/dev/null 2>&1 || command -v mlx_lm.server >/dev/null 2>&1; then
+            echo "skip: mlx-lm already importable/on PATH"; exit 0
+          fi
+          command -v uv >/dev/null 2>&1 || { echo "ERROR: uv is required (https://docs.astral.sh/uv/getting-started/installation/)" >&2; exit 1; }
+          echo "+ uv tool install mlx-lm"; uv tool install mlx-lm
+
+      - id: "start-mlx-server"
+        type: "bash"
+        condition: "{{machine.chosen_host}} == 'mlx'"
+        timeout: 120
+        output: "mlx_server"
+        command: |
+          set -uo pipefail
+          if curl -fsS --max-time 2 "{{mlx_url}}/health" >/dev/null 2>&1; then echo "skip: server already serving {{mlx_url}}"; exit 0; fi
+          server_bin=mlx_lm.server
+          command -v "$server_bin" >/dev/null 2>&1 || server_bin="$(uv tool dir)/mlx-lm/bin/mlx_lm.server"
+          echo "+ $server_bin --model {{mlx_model}}  (background, log: /tmp/mlx-fast-decisions.log)"
+          nohup "$server_bin" --model "{{mlx_model}}" --host 127.0.0.1 --port 8080 \
+            >/tmp/mlx-fast-decisions.log 2>&1 &
+          for i in $(seq 1 60); do
+            sleep 1
+            curl -fsS --max-time 2 "{{mlx_url}}/health" >/dev/null 2>&1 && { echo "server reachable after ${i}s"; exit 0; }
+          done
+          echo "ERROR: {{mlx_url}} unreachable after 60s -- see /tmp/mlx-fast-decisions.log" >&2; exit 1
+
+      - id: "warm-mlx-model"
+        type: "bash"
+        condition: "{{machine.chosen_host}} == 'mlx'"
+        timeout: 600
+        output: "mlx_warm"
+        command: |
+          set -uo pipefail
+          P='{"model":"{{mlx_model}}","prompt":"ok","max_tokens":1,"temperature":0}'
+          echo "+ POST {{mlx_url}}/v1/completions  (load, untimed)"
+          curl -fsS --max-time 300 -o /dev/null -X POST "{{mlx_url}}/v1/completions" -H 'Content-Type: application/json' -d "$P" \
+            || { echo "ERROR: {{mlx_url}} unreachable or model failed to load" >&2; exit 1; }
+          echo "+ POST {{mlx_url}}/v1/completions  (warm, timed)"
+          t=$(curl -fsS --max-time 60 -o /dev/null -w '%{time_total}' -X POST "{{mlx_url}}/v1/completions" -H 'Content-Type: application/json' -d "$P") \
+            || { echo "ERROR: warm call failed" >&2; exit 1; }
+          echo "warm latency ${t}s (budget {{warm_budget_s}}s)"
+          awk -v t="$t" -v b="{{warm_budget_s}}" 'BEGIN{ if (t+0 > b+0) exit 1 }' \
+            || { echo "ERROR: warm latency ${t}s exceeds the {{warm_budget_s}}s budget -- stopping before any bundle change" >&2; exit 1; }
+
   - name: "bundle-rung"
-    description: "Add the active rung, or refresh it if already cached."
+    description: "Add the active rung matching the chosen judge host, or refresh it if already cached."
     steps:
       - id: "add-rung"
         type: "bash"
@@ -144,12 +255,17 @@ stages:
         output: "rung"
         command: |
           set -uo pipefail
+          if [ "{{machine.chosen_host}}" = "mlx" ]; then
+            source="{{mlx_bundle_source}}"
+          else
+            source="{{bundle_source}}"
+          fi
           if amplifier bundle list 2>/dev/null | grep -qi "fast-decisions-active"; then
             echo "active rung already installed -- refreshing"
             echo "+ amplifier update"; amplifier update
           else
-            echo "+ amplifier bundle add {{bundle_source}}"
-            amplifier bundle add "{{bundle_source}}"
+            echo "+ amplifier bundle add $source"
+            amplifier bundle add "$source"
           fi
 
   - name: "verify"
@@ -165,6 +281,7 @@ stages:
         command: |
           set -uo pipefail
           EV="{{events_dir}}"
+          EXPECT="{{machine.chosen_host}}"
           T=$(mktemp -d) || exit 1
           printf '# Demo\n\nA temporary directory used to verify fast-decisions.\n' > "$T/README.md"
           : > "$T/.mark"; sleep 1
@@ -178,7 +295,7 @@ stages:
               found=true; blob=$(cat $files 2>/dev/null)
               case "$blob" in *fast_decisions:source*) srcev=true;; *) note="no fast_decisions:source event in the new receipts";; esac
               case "$blob" in *'"active"'*) mode=active;; *) mode="not-active-in-receipts";; esac
-              case "$blob" in *ollama*) backend=ollama;; *) backend="not-ollama-in-receipts";; esac
+              case "$blob" in *"$EXPECT"*) backend="$EXPECT";; *) backend="not-$EXPECT-in-receipts";; esac
               lat=$(printf '%s' "$blob" | grep -o '"latency_ms"[: ]*[0-9.]*' | tail -1 | grep -o '[0-9.]*$')
             else
               note="COULD NOT CHECK: no receipt files written under $EV after the run"
@@ -186,8 +303,8 @@ stages:
           else
             note="COULD NOT CHECK: events dir $EV does not exist"
           fi
-          printf '{"run_exit":"%s","receipts_found":"%s","source_event":"%s","mode":"%s","backend":"%s","latency_ms":"%s","note":"%s","tmpdir":"%s"}\n' \
-            "$rc" "$found" "$srcev" "$mode" "$backend" "$lat" "$note" "$T"
+          printf '{"run_exit":"%s","receipts_found":"%s","source_event":"%s","mode":"%s","backend":"%s","expected_backend":"%s","latency_ms":"%s","note":"%s","tmpdir":"%s"}\n' \
+            "$rc" "$found" "$srcev" "$mode" "$backend" "$EXPECT" "$lat" "$note" "$T"
 
   - name: "report"
     description: "Plain-language summary of what changed, how to watch it, how to undo it."
@@ -200,16 +317,22 @@ stages:
           Report to the user what just happened. Evidence only -- never claim a check passed that the
           data below does not show. If `note` names a check that could not be performed, say so plainly.
 
+          Machine review: {{machine}}
           Before: {{probe}}
-          Local judge: {{ollama_install}} / {{ollama_server}} / {{model_pull}} / {{warm}}
+          Local judge (ollama path): {{ollama_install}} / {{ollama_server}} / {{model_pull}} / {{warm}}
+          Local judge (mlx path): {{mlx_install}} / {{mlx_server}} / {{mlx_warm}}
           Bundle rung: {{rung}}
           Verification (exit {{verify_code}}): {{evidence}}
 
           Cover, in this order and in under 20 lines:
-          1. What changed on this machine (skip anything that reported "skip:").
-          2. Whether the verification found a fast_decisions receipt with mode active and backend ollama --
-             quoting the observed mode, backend and latency_ms -- or exactly which check could not be run.
-          3. How to watch it: `afast serve` (the observatory) if installed, otherwise the receipts under
+          1. Which judge host was chosen ({{machine.chosen_host}}) and why ({{machine.reason}}).
+          2. What changed on this machine (skip anything that reported "skip:", and skip the other
+             host's steps entirely -- they did not run).
+          3. Whether the verification found a fast_decisions receipt with mode active and backend
+             {{machine.chosen_host}} -- quoting the observed mode, backend and latency_ms -- or exactly
+             which check could not be run.
+          4. How to watch it: `afast serve` (the observatory) if installed, otherwise the receipts under
              {{events_dir}}.
-          4. Revert: `amplifier bundle remove fast-decisions-active`, and optionally `ollama rm {{model}}`.
+          5. Revert: `amplifier bundle remove fast-decisions-active`, and optionally `ollama rm
+             {{ollama_model}}` or `uv tool uninstall mlx-lm` (whichever host was chosen).
           Plain sentences, no markdown headings.

@@ -102,6 +102,18 @@ proposals never authorize or execute a tool.
 For the live native approval smoke, run
 `PYTHONPATH=src python3 scripts/smoke_local_kernel.py` in the Amplifier environment.
 
+## Host-agnostic scoring
+
+The token-mass scoring in `score_tokens` (label normalization, abstention
+residual, invalid-probability rejection) is shared verbatim by every local
+one-token classifier host: `OllamaBackend` and `MlxBackend` both build their
+prompt and label set from the same `_build_label_prompt` helper and both
+adapt their host's response into the same `[{"token": ..., "logprob": ...}]`
+shape before scoring, so switching hosts (`--backend ollama` vs
+`--backend mlx`) changes only wire format and process, never the scoring
+semantics, thresholds, or `DecisionResult` contract. See
+[MODEL-SETUP.md's Apple MLX section](MODEL-SETUP.md#apple-mlx-host) for setup.
+
 ## Score semantics and limits
 
 One `/api/generate` call requests one non-thinking token and its top-token

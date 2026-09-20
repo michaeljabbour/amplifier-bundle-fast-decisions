@@ -11,10 +11,13 @@ from __future__ import annotations
 
 import asyncio
 import unittest
+from types import SimpleNamespace
+from unittest import mock
 
 from amplifier_fast_decisions.backends import ScriptedBackend
 from amplifier_fast_decisions.bench import SuiteCase, build_report, run_suite
-from amplifier_fast_decisions.cli import _augment_suite_report, _TimingBackend
+from amplifier_fast_decisions import cli as cli_module
+from amplifier_fast_decisions.cli import _augment_suite_report, _TimingBackend, bench_suite
 from amplifier_fast_decisions.contracts import Candidate
 
 
@@ -94,6 +97,50 @@ class SuiteAgreementAndLatencyTests(unittest.TestCase):
         )
         report = _augment_suite_report(report, timed, permutations)
         self.assertIsNotNone(report["decision"]["decision_latency_ms_p50"])
+
+
+class BackendSelectionTests(unittest.TestCase):
+    """``bench suite --backend``: mlx dispatches to MlxBackend, never to a
+    real network -- MlxBackend itself is monkeypatched to a stub that never
+    opens a socket, so this only checks the CLI wiring, not live scoring."""
+
+    def _args(self, **overrides):
+        base = dict(
+            suite_path="suite.jsonl", suite=None, domain=None, live=False,
+            backend="mlx", model=None, permutations=1,
+            out=None, md=None, json=True,
+        )
+        base.update(overrides)
+        return SimpleNamespace(**base)
+
+    def test_backend_mlx_selects_mlx_backend_with_default_model(self):
+        inner = ScriptedBackend(script=[{"choice": "c1", "delay_ms": 0}])
+        cases = [
+            SuiteCase(id="a", domain="tool-choice", state={},
+                      candidates=(Candidate("c1", "Candidate one", "fast_workspace", {}),),
+                      expected_choice="c1", label_source="human")
+        ]
+        with mock.patch("amplifier_fast_decisions.local_backend.MlxBackend", return_value=inner) as mlx_cls, \
+             mock.patch.object(cli_module, "load_suite", return_value=cases):
+            rc = bench_suite(self._args())
+        self.assertEqual(rc, 0)
+        mlx_cls.assert_called_once()
+        _, kwargs = mlx_cls.call_args
+        from amplifier_fast_decisions.local_backend import MLX_DEFAULT_MODEL
+        self.assertEqual(kwargs["model"], MLX_DEFAULT_MODEL)
+
+    def test_backend_mlx_honors_explicit_model(self):
+        inner = ScriptedBackend(script=[{"choice": "c1", "delay_ms": 0}])
+        cases = [
+            SuiteCase(id="a", domain="tool-choice", state={},
+                      candidates=(Candidate("c1", "Candidate one", "fast_workspace", {}),),
+                      expected_choice="c1", label_source="human")
+        ]
+        with mock.patch("amplifier_fast_decisions.local_backend.MlxBackend", return_value=inner) as mlx_cls, \
+             mock.patch.object(cli_module, "load_suite", return_value=cases):
+            bench_suite(self._args(model="mlx-community/Qwen3-1.7B-4bit"))
+        _, kwargs = mlx_cls.call_args
+        self.assertEqual(kwargs["model"], "mlx-community/Qwen3-1.7B-4bit")
 
 
 if __name__ == "__main__":

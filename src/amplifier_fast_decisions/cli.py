@@ -15,6 +15,8 @@ import signal
 import sys
 import threading
 import time
+import urllib.error
+import urllib.request
 import webbrowser
 from datetime import UTC, datetime
 from pathlib import Path
@@ -37,6 +39,33 @@ from .server import STATIC, EventIndex, ViewerServer
 DEFAULT_EVENTS = Path.home() / ".amplifier" / "fast-decisions" / "events"
 DEFAULT_SUITE = Path(__file__).resolve().parents[2] / "suites" / "v1.jsonl"
 DEFAULT_STATE_FILE = Path.home() / ".amplifier" / "fast-decisions" / "serve.json"
+
+
+DEFAULT_MLX_URL = "http://127.0.0.1:8080"
+
+
+def _mlx_server_check() -> dict:
+    """Read-only GET /health probe against a locally running mlx_lm.server.
+
+    Never required (Apple Silicon + mlx-lm is one of two supported local
+    judge hosts, alongside Ollama); an unreachable/absent server is reported
+    ``ok: False`` with a short reason, never raised.
+    """
+    url = os.getenv("FAST_DECISIONS_MLX_URL", DEFAULT_MLX_URL)
+    try:
+        req = urllib.request.Request(f"{url}/health", method="GET")
+        with urllib.request.urlopen(req, timeout=1) as response:
+            ok = response.status == 200
+    except (urllib.error.URLError, TimeoutError, OSError):
+        ok = False
+    except Exception:  # noqa: BLE001 -- a probe must never raise
+        ok = False
+    return {
+        "check": "mlx_server",
+        "ok": ok,
+        "value": url,
+        "note": "GET /health on the configured mlx_lm.server; not required unless using --backend mlx",
+    }
 
 
 def doctor(require_amplifier: bool = False) -> int:
@@ -111,6 +140,7 @@ def doctor(require_amplifier: bool = False) -> int:
             "note": "Value is never displayed",
         }
     )
+    checks.append(_mlx_server_check())
     entries = {
         e.name for e in importlib.metadata.entry_points(group="amplifier.modules")
     }
@@ -260,6 +290,12 @@ def bench_suite(args) -> int:
 
         model_name = model_arg or "qwen3:0.6b"
         backend = OllamaBackend(model=model_name)
+        backend_external = False
+    elif backend_name == "mlx":
+        from .local_backend import MLX_DEFAULT_MODEL, MlxBackend
+
+        model_name = model_arg or MLX_DEFAULT_MODEL
+        backend = MlxBackend(model=model_name)
         backend_external = False
     else:
         if live_requested and not both_gates:
@@ -518,10 +554,10 @@ def main(argv=None) -> int:
     suite.add_argument("suite_path", nargs="?", default=None, help="Suite JSONL file")
     suite.add_argument("--suite", default=str(DEFAULT_SUITE))
     suite.add_argument(
-        "--backend", choices=["deterministic", "jev", "ollama"], default="deterministic"
+        "--backend", choices=["deterministic", "jev", "ollama", "mlx"], default="deterministic"
     )
     suite.add_argument(
-        "--model", default=None, help="Model name, passed to the jev/ollama backend"
+        "--model", default=None, help="Model name, passed to the jev/ollama/mlx backend"
     )
     suite.add_argument("--live", action="store_true")
     suite.add_argument("--permutations", type=int, default=4)

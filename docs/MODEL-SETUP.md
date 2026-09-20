@@ -151,6 +151,70 @@ It currently uses the default local port 11434 and has no `--ollama-url` flag.
 Compare complete, equivalent tasks with and without acceleration before claiming
 time or money saved; a short decision call alone does not prove either.
 
+## Apple MLX host
+
+On Apple Silicon, `mlx_lm.server` is a second local judge host, an alternative
+to Ollama, not a replacement for it -- pick one. It runs the same bounded,
+loopback-only, one-token classifier contract as the Ollama adapter (same
+`DecisionResult` shape, same abstention semantics, same 1-12 prepared
+`fast_workspace` read/list candidates); only the wire format and host differ.
+Intel Macs and Rosetta Python are not supported: MLX requires an actual
+Apple Silicon (arm64) process, not just Apple hardware.
+
+Detect Apple Silicon before choosing this path:
+
+```bash
+[ "$(uname -m)" = "arm64" ] && case "$(sysctl -n machdep.cpu.brand_string)" in *Apple*) echo "Apple Silicon";; esac
+```
+
+Install `mlx-lm` (a separate optional dependency, not the `local` extra used
+for Ollama) and start its OpenAI-compatible server. `--chat-template-args`
+disables Qwen3's `<think>` blocks -- the adapter scores a single non-thinking
+token, exactly like the Ollama path, and a thinking preamble would consume
+the one generated token on something other than a label:
+
+```bash
+uv tool install mlx-lm
+mlx_lm.server --model mlx-community/Qwen3-0.6B-4bit --host 127.0.0.1 --port 8080 \
+  --chat-template-args '{"enable_thinking": false}'
+curl -fsS http://127.0.0.1:8080/health
+```
+
+Default port `8080`. Recommended weights: `mlx-community/Qwen3-0.6B-4bit`
+(matching the Ollama-side default model size), or `mlx-community/Qwen3-1.7B-4bit`
+if 0.6B's acceptance coverage is too low for a workload. `-8bit` and `-bf16`
+variants trade memory for potential quality; benchmark before switching.
+Unlike Ollama's `keep_alive` eviction, mlx-lm keeps the model resident for the
+server process's entire lifetime -- there is no idle-eviction timer to rewarm
+against.
+
+Configure the bundle to use it:
+
+```bash
+"$AFAST_HOST_PYTHON" -m amplifier_fast_decisions configure \
+  --bundle-root "$AFAST_REPO" --workspace "$AFAST_PILOT/workspace" \
+  --mode shadow --backend mlx --model mlx-community/Qwen3-0.6B-4bit \
+  --timeout-ms 500 --local-sources --output "$AFAST_PILOT/shadow-mlx.md"
+```
+
+`mlx_lm.server`'s exact `logprobs` request shape has varied across released
+versions: some accept an integer count (`{"logprobs": N}`), others the
+OpenAI-style pair (`{"logprobs": true, "top_logprobs": N}`). The adapter tries
+both and caches whichever the running server accepts; re-verify against your
+installed version rather than assuming either shape is guaranteed going
+forward.
+
+Compare the two hosts on the same suite before choosing one for a workload:
+
+```bash
+afast bench suite --live --backend ollama --model qwen3:0.6b
+afast bench suite --live --backend mlx --model mlx-community/Qwen3-0.6B-4bit
+```
+
+`afast doctor` reports an `mlx_server` check (`GET /health` against
+`FAST_DECISIONS_MLX_URL`, default `http://127.0.0.1:8080`) alongside its other
+checks; absence is not an error unless you intend to use `--backend mlx`.
+
 ## Hosting without RunPod
 
 No RunPod account or deployment is required. Use an existing private workstation,
