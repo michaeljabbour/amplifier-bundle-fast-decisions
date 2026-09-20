@@ -60,6 +60,27 @@ tool-selection, pruning, or provider pipeline. End-to-end Claude/Codex task
 acceptance must be checked in those hosts; shell/library compatibility alone is
 not evidence that their models chose to use it.
 
+### Verified harnesses (2026-09-20)
+
+The published package (`git+https://github.com/michaeljabbour/amplifier-bundle-fast-decisions@main`,
+commit `56799fb`) was installed with `uv tool install` exactly as a user would,
+then driven one at a time through each harness below, launched via Forge, with
+an identical prompt asking the harness to run `manifest` then the deterministic
+`describe` capability and echo the result. This confirms callable Smart Tool
+access -- the harness runs the CLI through its own shell/bash tool -- which is
+distinct from Amplifier's native active-bundle provider-boundary integration
+described elsewhere on this page.
+
+| Harness | Invoked tool? | Manifest name/version echoed? | Capability JSON valid? | Exit code |
+|---|---|---|---|---|
+| Claude Code | Yes | `amplifier-fast-decisions` / `0.1.0` | Yes | 0 |
+| Codex | Yes | `amplifier-fast-decisions` / `0.1.0` | Yes | 0 |
+| OpenCode | Yes | `amplifier-fast-decisions` / `0.1.0` | Yes | 0 |
+| Amplifier (`amplifier run --mode single`) | Yes | `amplifier-fast-decisions` / `0.1.0` | Yes | 0 |
+
+Full commands, raw outputs, and per-harness notes (model-availability retries,
+Forge terminal polling) are in the harness-smoke evidence directory.
+
 ## A bounded call
 
 Start Ollama, pull `qwen3:0.6b`, and warm it as described in
