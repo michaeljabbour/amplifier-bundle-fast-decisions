@@ -335,7 +335,10 @@ def verify_prompts(tasks, resolve_task, get_task_prompt, amplifier_prompts, exte
 
     tasks: list[str] task names from proposal.json["tasks"].
     resolve_task(name) -> task object, or None if unresolvable.
-    get_task_prompt(task) -> str or None (caller falls back to task.prompt).
+    get_task_prompt(name) -> str or None (caller falls back to task.prompt).
+        Takes the task *name*, not the resolved object -- forge_workloads.task_prompt
+        (and battery.py, its only other caller) key on the name; battery_tasks.Task is a
+        frozen dataclass with a dict field, so it is unhashable and cannot be a dict key.
     amplifier_prompts: {task_name: {harness_name: stored_prompt_str_or_None}} --
         from each amplifier run's runs/amplifier/manifest.json 'prompt' field.
     external_harnesses: {task_name: [harness_name, ...]} -- external runs for that
@@ -353,7 +356,7 @@ def verify_prompts(tasks, resolve_task, get_task_prompt, amplifier_prompts, exte
             ok = False
             report[name] = {"ok": False, "reason": "unresolvable task"}
             continue
-        expected = get_task_prompt(task) or getattr(task, "prompt", None)
+        expected = get_task_prompt(name) or getattr(task, "prompt", None)
         if not expected:
             ok = False
             report[name] = {"ok": False, "reason": "empty/unresolvable prompt"}

@@ -12,13 +12,16 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
-from types import SimpleNamespace
+from types import ModuleType, SimpleNamespace
+from unittest.mock import patch
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "evals"))
 sys.path.insert(0, str(REPO_ROOT / "scripts"))
 
 import run
+import battery_tasks
+import forge_workloads
 
 
 def _load_test_cells():
@@ -262,7 +265,7 @@ class VerifyPromptsTests(unittest.TestCase):
     def test_passes_on_matched_hashes(self):
         result = run.verify_prompts(
             tasks=["t1"], resolve_task=lambda n: SimpleNamespace(prompt="hello"),
-            get_task_prompt=lambda t: t.prompt,
+            get_task_prompt=lambda n: "hello",
             amplifier_prompts={"t1": {"amplifier-plain": "hello", "amplifier-fd": "hello"}},
             external_harnesses={"t1": ["claude"]},
         )
@@ -273,7 +276,7 @@ class VerifyPromptsTests(unittest.TestCase):
     def test_fails_on_mismatched_amplifier_prompt(self):
         result = run.verify_prompts(
             tasks=["t1"], resolve_task=lambda n: SimpleNamespace(prompt="hello"),
-            get_task_prompt=lambda t: t.prompt,
+            get_task_prompt=lambda n: "hello",
             amplifier_prompts={"t1": {"amplifier-fd": "goodbye"}},
             external_harnesses={},
         )
@@ -1107,6 +1110,51 @@ class EndToEndResultsArtifactsTests(unittest.TestCase):
         finally:
             run.invoke_tool = orig_invoke
             run.run_verification = orig_verify
+
+
+
+def _real_task(name, prompt):
+    """A real battery_tasks.Task (frozen dataclass, `files` is a dict field --
+    unhashable, which is exactly what crashed forge_workloads.task_prompt when
+    it was handed the resolved object instead of the task name)."""
+    return battery_tasks.Task(
+        name=name, family="fam", split="dev", kind="code", prompt=prompt,
+        files={"README.md": "x"}, protected=("README.md",),
+        expected_answer=None, evaluate=lambda ws: {"checks": 0, "passed": 0, "failed": 0, "failure_labels": []},
+    )
+
+
+class VerifyPromptsForExperimentTests(unittest.TestCase):
+    """Regression coverage for the get_prompt/get_task_prompt crash: passing the
+    *resolved* battery_tasks.Task (unhashable, dict `files` field) into
+    forge_workloads.task_prompt instead of the task name raised
+    `TypeError: cannot use 'battery_tasks.Task' as a dict key`. Both the
+    battery_tasks.TASKS path (S1) and the registered-extra-source / polyglot
+    path (S2) go through the same forge_workloads.task_prompt(name) contract.
+    """
+
+    def test_verify_prompts_for_experiment_with_real_battery_task(self):
+        task = _real_task("fake_task_1", "Do the fake thing.")
+        fake_mod = ModuleType("battery_tasks")
+        fake_mod.TASKS = {"fake_task_1": task}
+        with tempfile.TemporaryDirectory() as tmp, patch.dict(sys.modules, {"battery_tasks": fake_mod}):
+            proposal = {"tasks": ["fake_task_1"], "frozen_run_schedule": []}
+            result = run.verify_prompts_for_experiment(Path(tmp), proposal)
+        self.assertTrue(result["ok"])
+        self.assertTrue(result["tasks"]["fake_task_1"]["ok"])
+        self.assertIn("expected_sha", result["tasks"]["fake_task_1"])
+
+    def test_verify_prompts_for_experiment_with_registered_polyglot_task(self):
+        """S2: a task resolved via forge_workloads' extra-source registry
+        (the same mechanism polyglot_tasks.load populates) rather than
+        battery_tasks.TASKS."""
+        task = _real_task("polyglot/python/hello", "Solve the polyglot exercise.")
+        with tempfile.TemporaryDirectory() as tmp, patch.dict(forge_workloads._extra_tasks, {"polyglot/python/hello": task}):
+            proposal = {"tasks": ["polyglot/python/hello"], "frozen_run_schedule": []}
+            result = run.verify_prompts_for_experiment(Path(tmp), proposal)
+        self.assertTrue(result["ok"])
+        self.assertTrue(result["tasks"]["polyglot/python/hello"]["ok"])
+        self.assertIn("expected_sha", result["tasks"]["polyglot/python/hello"])
 
 
 if __name__ == "__main__":
