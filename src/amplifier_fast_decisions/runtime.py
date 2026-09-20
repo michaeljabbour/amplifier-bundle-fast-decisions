@@ -13,6 +13,21 @@ from .shadow import ShadowJob, ShadowOutcome, ShadowWorker
 from .telemetry import Emitter, JsonlRecorder
 
 
+def _env_backend_default() -> str | None:
+    """Environment-level backend default, consulted only when a profile
+    omits ``backend`` (profile config always wins). ``FAST_DECISIONS_JUDGE``
+    selects the judge family (``local``/``hosted``/``jev``/``deterministic``);
+    ``local`` is disambiguated by ``FAST_DECISIONS_LOCAL_HOST``
+    (``ollama`` (default) or ``mlx``). See .env.example.
+    """
+    judge = os.getenv("FAST_DECISIONS_JUDGE")
+    if not judge:
+        return None
+    if judge == "local":
+        return os.getenv("FAST_DECISIONS_LOCAL_HOST", "ollama")
+    return judge
+
+
 def session_identity(coordinator: Any) -> tuple[str, str | None]:
     session = getattr(coordinator, "session", None)
     session_id = getattr(coordinator, "session_id", None) or getattr(session, "session_id", None)
@@ -117,11 +132,11 @@ def get_runtime(coordinator: Any, config: dict[str, Any], *, owner: bool = False
         Path.home() / ".amplifier" / "fast-decisions" / "events")
     recorder = JsonlRecorder(events_dir, session_id)
     emitter = Emitter(session_id, parent_session_id=parent, hooks=coordinator.hooks, recorder=recorder)
-    backend_name = config.get("backend", "jev")
-    if backend_name not in {"jev", "unavailable", "deterministic", "ollama", "mlx", "gateway"}:
+    backend_name = config.get("backend") or _env_backend_default() or "jev"
+    if backend_name not in {"jev", "unavailable", "deterministic", "ollama", "mlx", "hosted", "gateway"}:
         recorder.close()
         raise ValueError(
-            "Backend must be jev, deterministic, ollama, mlx, gateway, or unavailable"
+            "Backend must be jev, deterministic, ollama, mlx, hosted (alias gateway), or unavailable"
         )
     if backend_name == "jev":
         backend = JevBackend(model=config.get("model"), timeout_ms=policy.timeout_ms)
@@ -129,22 +144,26 @@ def get_runtime(coordinator: Any, config: dict[str, Any], *, owner: bool = False
         from .local_backend import MlxBackend, mlx_base_url
 
         backend = MlxBackend(
-            model=config.get("model") or "mlx-community/Qwen3-0.6B-4bit",
+            model=config.get("model") or os.getenv("FAST_DECISIONS_LOCAL_MODEL") or "mlx-community/Qwen3-0.6B-4bit",
             url=config.get("mlx_url") or mlx_base_url(),
             timeout_ms=policy.timeout_ms,
         )
-    elif backend_name == "gateway":
-        from .local_backend import GATEWAY_DEFAULT_KEY_ENV, GatewayBackend
+    elif backend_name in ("hosted", "gateway"):  # "gateway" is a legacy alias
+        from .local_backend import HOSTED_DEFAULT_TOKEN_ENV, HostedBackend
 
-        model = config.get("model")
+        model = config.get("model") or os.getenv("FAST_DECISIONS_HOSTED_MODEL")
         if not model:
             recorder.close()
-            raise ValueError("Gateway backend requires a model in config")
-        key_env = config.get("gateway_key_env") or GATEWAY_DEFAULT_KEY_ENV
+            raise ValueError("Hosted backend requires a model in config")
+        key_env = (
+            config.get("hosted_token_env")
+            or config.get("gateway_key_env")  # legacy alias
+            or HOSTED_DEFAULT_TOKEN_ENV
+        )
         try:
-            backend = GatewayBackend(
+            backend = HostedBackend(
                 model=model,
-                url=config.get("gateway_url"),
+                url=config.get("hosted_url") or config.get("gateway_url"),  # "gateway_url" is a legacy alias
                 timeout_ms=policy.timeout_ms,
                 api_key=os.getenv(key_env),
             )
@@ -156,7 +175,7 @@ def get_runtime(coordinator: Any, config: dict[str, Any], *, owner: bool = False
 
         try:
             backend = OllamaBackend(
-                model=config.get("model", "qwen3:0.6b"),
+                model=config.get("model") or os.getenv("FAST_DECISIONS_LOCAL_MODEL") or "qwen3:0.6b",
                 url=config.get("ollama_url", "http://127.0.0.1:11434"),
                 timeout_ms=policy.timeout_ms,
             )

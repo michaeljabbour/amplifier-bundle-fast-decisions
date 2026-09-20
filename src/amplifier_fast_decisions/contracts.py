@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+import os
 import re
 from collections.abc import Sequence
 from dataclasses import dataclass, field
@@ -479,6 +480,12 @@ class Policy:
         values = {k: v for k, v in config.items() if k in names}
         if "allowed_tools" in values:
             values["allowed_tools"] = tuple(values["allowed_tools"])
+        if "allow_external_state" not in values:
+            # Environment-level default, consulted only when a profile omits
+            # the field (profile config always wins). See .env.example.
+            env_value = os.getenv("FAST_DECISIONS_ALLOW_EXTERNAL_STATE")
+            if env_value is not None:
+                values["allow_external_state"] = env_value.strip().lower() in ("1", "true", "yes", "on")
         return cls(**values)
 
 

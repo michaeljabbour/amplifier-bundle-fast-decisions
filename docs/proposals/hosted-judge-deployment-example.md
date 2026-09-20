@@ -1,6 +1,6 @@
-# Proposal: host the fast-decisions judge on the team RunPod gateway
+# Example: deploying a hosted judge (RunPod + vLLM + LiteLLM)
 
-*Status: draft for the gateway owner (2026-09-20). Nothing here is deployed; all mutations are the owner's call.*
+*Status: a worked example for a team deploying its own hosted judge (2026-09-20). Nothing here is deployed by this repository; all mutations are the deploying team's call.*
 
 ## What we need
 A hosted "decision judge": one chat completion per agent step, `max_tokens: 1`, `temperature: 0`,

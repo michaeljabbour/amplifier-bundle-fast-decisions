@@ -1,9 +1,10 @@
 # Portable Fast Decisions Smart Tool
 
-The portable surface is a Python library plus CLI that Claude Code, Codex,
-Amplifier, and other harnesses can call. It asks the real local model to select
-among caller-supplied read/list candidates and returns a typed suggestion or
-abstention. It does not require Amplifier to be running.
+The portable surface is a Python library plus CLI that any coding-agent
+harness (Claude Code, Codex, OpenCode, Amplifier, ...) can call. It asks the
+real local model to select among caller-supplied read/list candidates and
+returns a typed suggestion or abstention. It does not require Amplifier or
+any other specific harness to be running.
 
 This implements the library/CLI Smart Tool boundary now. Automatic interception
 remains harness-specific: the Amplifier active bundle can substitute a prepared

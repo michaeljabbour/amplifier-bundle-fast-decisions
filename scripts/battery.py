@@ -270,7 +270,7 @@ def cmd_prepare(args):
     # jev is a real network call and always requires the explicit flag.
     fd_backend = getattr(args, 'fd_backend', None)
     allow_external_state = bool(getattr(args, 'allow_external_state', False))
-    if fd_backend in ('jev', 'gateway') and not allow_external_state:
+    if fd_backend in ('jev', 'hosted', 'gateway') and not allow_external_state:
         return _fail(4, f'--fd-backend {fd_backend} requires --allow-external-state '
                          '(external state is opt-in, never default-on; see docs/PRIVACY.md)')
     if fd_backend:
@@ -1902,10 +1902,10 @@ def main(argv=None):
     p.add_argument('--baseline-source')
     p.add_argument('--candidate-source')
     p.add_argument('--candidate-sha', help='Freeze the candidate snapshot at this git rev instead of HEAD')
-    p.add_argument('--fd-backend', choices=['ollama', 'jev', 'gateway'],
-                    help='Decision backend override for the amplifier-fd side')
+    p.add_argument('--fd-backend', choices=['ollama', 'jev', 'hosted', 'gateway'],
+                    help="Decision backend override for the amplifier-fd side ('gateway' is a legacy alias for 'hosted')")
     p.add_argument('--allow-external-state', action='store_true',
-                    help='Required alongside --fd-backend jev/gateway (opt-in external state; see docs/PRIVACY.md)')
+                    help='Required alongside --fd-backend jev/hosted (opt-in external state; see docs/PRIVACY.md)')
     p.add_argument('--amplifier-model', default=None,
                     help="Generative model for BOTH amplifier sides (plain and fd), so a paired "
                          "comparison never silently compares two different models. "

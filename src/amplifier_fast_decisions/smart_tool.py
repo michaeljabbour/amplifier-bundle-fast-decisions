@@ -1,4 +1,5 @@
-"""Portable, advisory workspace-action scoring. No Amplifier host is required.
+"""Portable, advisory workspace-action scoring. No specific coding-agent
+harness (Claude Code, Codex, OpenCode, Amplifier, ...) is required.
 
 The caller supplies bounded task/context data and eligible read/list targets.
 This module consults the existing local model, returns a typed selection or

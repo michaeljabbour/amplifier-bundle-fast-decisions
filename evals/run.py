@@ -214,10 +214,10 @@ def cell_to_argv(cell_id, cells_doc, suites_doc, suite_id, split, rep, *, out_ro
             if not fd.get("allow_external_state"):
                 raise EvalsError(2, f"cell {cell_id!r}: fd backend 'jev' requires allow_external_state: true")
             argv += ["--fd-backend", "jev", "--allow-external-state"]
-        elif backend == "gateway":
+        elif backend in ("hosted", "gateway"):  # "gateway" is a legacy alias for "hosted"
             if not fd.get("allow_external_state"):
-                raise EvalsError(2, f"cell {cell_id!r}: fd backend 'gateway' requires allow_external_state: true")
-            argv += ["--fd-backend", "gateway", "--allow-external-state"]
+                raise EvalsError(2, f"cell {cell_id!r}: fd backend {backend!r} requires allow_external_state: true")
+            argv += ["--fd-backend", backend, "--allow-external-state"]
         elif backend == "unavailable":
             argv += ["--fd-override", "backend=unavailable"]
         elif backend is not None:

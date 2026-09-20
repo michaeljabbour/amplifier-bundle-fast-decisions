@@ -6,19 +6,52 @@ No Jev key? Start with **Ollama + `qwen3:0.6b` (Q4_K_M)**. Our small development
 benchmark measured 23.9 ms warm p95 on an M5 Max; this is an experimental
 one-token classifier, not a Jev replica or a general latency/accuracy guarantee.
 The [simple setup and tuning guide](docs/MODEL-SETUP.md) covers local use and
-hosting without RunPod; [pilot evidence](docs/LOCAL-SCORER.md) records the limits.
+hosted judges; [pilot evidence](docs/LOCAL-SCORER.md) records the limits.
 
 The decision service is also a [portable Smart Tool](docs/SMART-TOOL.md): a
 Python library with its own local model capability, a manifest, and a thin CLI.
 Its deterministic help/manifest/schema commands need no model.
 The [current architecture review](docs/design/smart-decision-review-2026-09-18.md)
 separates shipped portability from the proposed generic decision engine. Claude Code,
-Codex, Amplifier, or any harness with shell access can call its advisory selection
+Codex, OpenCode, Amplifier, or any harness with shell access can call its advisory selection
 capability; native Amplifier interception remains a separate adapter.
 
 **A fast judgment is not a permission grant. A proposed action is not an executed action.**
 
 The orchestrator composes `StreamingOrchestrator`; it does not replace the Rust kernel or duplicate its tool-execution loop. At each eligible `Provider.complete()` boundary, the decision service may return a prepared tool-call envelope instead of calling the generative provider. The upstream loop handles that envelope normally. This is an executable integration candidate, not a claim of production certification.
+
+## Status
+
+Experimental v0.1.0. Benchmark evidence lives in
+[docs/BATTERY-2026-09-18.md](docs/BATTERY-2026-09-18.md) and the `evals/`
+directory (cell definitions, mechanism gates, and study design); no result
+here is a production SLA.
+
+## Configuration
+
+Three judge backends, chosen by `backend` (config) or `FAST_DECISIONS_JUDGE`
+(env; profile config always wins):
+
+| Judge | What it is | Data leaving this machine |
+|---|---|---|
+| **Local** | Ollama (default) or Apple MLX (`mlx_lm.server`, Apple Silicon only) | None -- loopback only |
+| **Hosted** | Any OpenAI-compatible endpoint you control that returns `top_logprobs` | The bounded decision state (task snapshot, candidates, questions), gated by `allow_external_state` |
+| **Jev** | [typesafe.ai](https://typesafe.ai)'s hosted judge (external service) | Same bounded decision state, gated by `allow_external_state` |
+
+Copy [`.env.example`](.env.example) to `.env` and adjust; see
+[docs/MODEL-SETUP.md](docs/MODEL-SETUP.md) for full setup and
+[docs/PRIVACY.md](docs/PRIVACY.md) for the complete data-path accounting per
+backend.
+
+**Install, per harness:**
+
+```bash
+# Amplifier (this repo's primary integration)
+amplifier bundle add "git+https://github.com/michaeljabbour/amplifier-bundle-fast-decisions@main#subdirectory=bundles/active.yaml"
+
+# Any other coding-agent harness (Claude Code, Codex, OpenCode, ...)
+uvx --from git+https://github.com/michaeljabbour/amplifier-bundle-fast-decisions amplifier-fast-decisions --help
+```
 
 ## Install
 
@@ -67,7 +100,7 @@ The `afast` CLI (local decision observatory + doctor) installs as a tool:
 uv tool install "git+https://github.com/michaeljabbour/amplifier-bundle-fast-decisions@main"
 ```
 
-## Use a real local model without Jev or RunPod
+## Use a real local model without Jev
 
 Use **`qwen3:0.6b` with Ollama** for the current prepared read/list pilot. Keep
 your existing generative provider for reasoning and the final answer. A local
@@ -97,7 +130,7 @@ fast submissions after checking the shadow output. Installing the app behavior
 alone still uses the scripted shadow scorer; it does not select Qwen.
 
 The guide covers [configuration and tuning](docs/MODEL-SETUP.md#configuration-and-tuning),
-[hosting without RunPod](docs/MODEL-SETUP.md#hosting-without-runpod), and common
+[running the local judge remotely](docs/MODEL-SETUP.md#running-the-local-judge-on-a-remote-host), and common
 setup failures. Leave the selection score at 0.90 and margin at 0.20 initially;
 these are uncalibrated token thresholds. More accepted actions are useful only
 if correctness and complete-task latency also improve.

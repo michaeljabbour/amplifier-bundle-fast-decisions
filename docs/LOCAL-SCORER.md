@@ -130,24 +130,25 @@ judgments are not implemented. HTTP requires a literal loopback origin with
 proxies/redirects disabled. Queue wait counts toward the deadline. The model
 cannot generate arguments or permissions; revalidation and native approval apply.
 
-## RunPod and lower-bit models
+## Hosted GPU judges and lower-bit models
 
-Local latency already meets the target; quality is the next constraint. No
-RunPod deployment was created. Quantization reduces storage and can help
-inference, but does not teach reliable task classification. Microsoft's native
-1.58-bit BitNet model needs a separate model/runtime evaluation. Abliterating
-refusal behavior has no demonstrated benefit for this routing task.
+Local latency already meets the target; quality is the next constraint.
+Quantization reduces storage and can help inference, but does not teach
+reliable task classification. Microsoft's native 1.58-bit BitNet model needs a
+separate model/runtime evaluation. Abliterating refusal behavior has no
+demonstrated benefit for this routing task.
 
-If a better classifier needs a GPU service, benchmark one modest GPU in a nearby
-region. Use an always-warm load-balancing endpoint or dedicated pod, max one
+If a better classifier needs a GPU service, use the **hosted** backend
+(see [Hosted judge](MODEL-SETUP.md#hosted-judge)) against a modest GPU in a
+nearby region: an always-warm load-balancing endpoint or dedicated pod, max one
 worker, authentication and a teardown deadline. A planning allowance around
 $1/hour and $5 for the first trial is reasonable; obtain an actual region and
 instance quote before provisioning. Measure client p50/p95/p99 including network,
-varied inputs and concurrency. Cold requests must fall back explicitly. Remote
-serving needs a separate authenticated adapter; this backend is loopback-only.
+varied inputs and concurrency. Cold requests must fall back explicitly. The
+local backends (Ollama, MLX) remain loopback-only; the hosted backend is the
+supported path for a remote judge, and always requires the explicit
+`--allow-external-state` opt-in.
 
 Sources: [Ollama API](https://docs.ollama.com/api/generate),
 [Qwen model](https://ollama.com/library/qwen3:0.6b),
-[BitNet](https://huggingface.co/microsoft/bitnet-b1.58-2B-4T),
-[RunPod endpoint configuration](https://docs.runpod.io/serverless/endpoints/endpoint-configurations),
-[RunPod pricing](https://www.runpod.io/pricing).
+[BitNet](https://huggingface.co/microsoft/bitnet-b1.58-2B-4T).

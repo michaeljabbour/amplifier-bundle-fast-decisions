@@ -17,7 +17,7 @@ Decisions run against a local, deterministic scorer or a local model host;
 no state leaves the process unless you explicitly opt in.
 
 External backends -- a paid judge service, or a hosted OpenAI-compatible
-gateway (`--backend gateway`) -- are opt-in only, gated by an explicit
+endpoint (`--backend hosted`, alias `gateway`) -- are opt-in only, gated by an explicit
 `allow_external_state` flag, and documented in [docs/PRIVACY.md](docs/PRIVACY.md),
 which is the authoritative accounting of what data can leave the machine and
 under which conditions.
