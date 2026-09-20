@@ -1,3 +1,6 @@
+# Screen-validated 2026-09-20 (20-task and polyglot batteries, 1 repetition):
+# ~0.55x plain Amplifier working time at equal quality. Confirmed-repetition
+# results update this file via evals/apply_recommendation.py.
 bundle:
   name: fast-decisions-active
   version: 0.1.0
@@ -15,9 +18,10 @@ session:
     source: git+https://github.com/michaeljabbour/amplifier-bundle-fast-decisions@main#subdirectory=modules/loop-fast-decisions
     config:
       mode: active
-      backend: jev
-      allow_external_state: true
-      timeout_ms: 750
+      backend: ollama
+      model: qwen3:0.6b
+      timeout_ms: 500
+      allow_external_state: false
       min_probability: 0.90
       min_margin: 0.20
       max_fast_streak: 3
@@ -25,6 +29,10 @@ session:
       max_candidates: 12
       max_state_chars: 12000
       allowed_tools: [fast_workspace]
+      effort_routing:
+        explore: low
+        max_explore_requests: 6
+        escalate_after_provider_errors: 1
       upstream:
         max_iterations: 100
         extended_thinking: true

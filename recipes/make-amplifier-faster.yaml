@@ -1,0 +1,215 @@
+# make-amplifier-faster.yaml -- "make my amplifier faster", safely and reversibly.
+# Every machine-changing step sits BEHIND the approval gate in stage 1. Each one
+# prints the command before running it, skips work already done, and prints no
+# secrets (TYPESAFE_API_KEY is reported present/absent only).
+#
+# CHANGELOG
+#   v1.0.0 (2026-09-20): Initial recipe -- preflight, gate, local judge, rung, verify, report.
+schema_version: 2
+
+dependencies:
+  - source: "git+https://github.com/microsoft/amplifier-foundation@v2.1.2"
+    kind: bundle
+    required_agents:
+      - "foundation:zen-architect"
+
+name: "make-amplifier-faster"
+description: "Install the fast-decisions active configuration (local ollama judge plus the active bundle rung) behind one approval gate, then verify it from receipts."
+version: "1.0.0"
+tags: ["fast-decisions", "install", "performance"]
+
+context:
+  model: "qwen3:0.6b"
+  ollama_url: "http://127.0.0.1:11434"
+  bundle_source: "git+https://github.com/michaeljabbour/amplifier-bundle-fast-decisions@main#subdirectory=bundles/active.yaml"
+  events_dir: "$HOME/.amplifier/fast-decisions/events"
+  warm_budget_s: "2.0"
+
+stages:
+  - name: "preflight"
+    description: "Read-only. Changes nothing; produces the plan the gate approves."
+    steps:
+      - id: "probe"
+        type: "bash"
+        timeout: 180
+        output: "probe"
+        parse_json: true
+        command: |
+          set -uo pipefail
+          os=$(uname -s)
+          amp=$(amplifier --version 2>/dev/null | head -1 | tr -d '"\\' || echo unknown)
+          oll=false; command -v ollama >/dev/null 2>&1 && oll=true
+          srv=false; tags=""
+          if tags=$(curl -fsS --max-time 3 "{{ollama_url}}/api/tags" 2>/dev/null); then srv=true; fi
+          mdl=false; case "$tags" in *"{{model}}"*) mdl=true;; esac
+          bl=$(amplifier bundle list 2>/dev/null | grep -i "fast-decisions" | tr -d '"\\' | tr '\n' ';')
+          act=false; case "$bl" in *active*) act=true;; esac
+          key=absent; [ -n "${TYPESAFE_API_KEY:-}" ] && key=present
+          printf '{"os":"%s","amplifier":"%s","ollama":"%s","serving":"%s","model_present":"%s","bundles":"%s","active_rung":"%s","typesafe_key":"%s"}\n' \
+            "$os" "$amp" "$oll" "$srv" "$mdl" "$bl" "$act" "$key"
+
+      - id: "write-plan"
+        agent: "foundation:zen-architect"
+        timeout: 300
+        output: "plan"
+        prompt: |
+          Write a short plain-language install plan for a non-expert. Facts (do not invent others):
+          {{probe}}
+
+          The plan will install, only where missing: ollama (macOS: `brew install ollama`; Linux: the
+          official install script), the local judge model `{{model}}` (~600 MB of disk), and the Amplifier
+          bundle rung `{{bundle_source}}`. Any existing fast-decisions shadow behavior is kept; the active
+          rung supersedes it at composition. If the rung is already installed the recipe runs
+          `amplifier update` to refresh instead of re-adding.
+
+          State explicitly: judging happens locally on this machine and nothing is sent anywhere (the
+          external Jev judge stays opt-in); the TYPESAFE_API_KEY line reports presence only, never a value.
+          End with the exact revert commands: `amplifier bundle remove fast-decisions-active` and,
+          optionally, `ollama rm {{model}}`.
+
+          6-12 lines. No markdown headings, no preamble.
+    approval:
+      required: true
+      default: "deny"
+      timeout: 3600
+      prompt: |
+        {{plan}}
+
+        Nothing has changed yet. Approve to install; deny to stop here.
+
+  - name: "local-judge"
+    description: "Install and warm the local decision model. Fails loud rather than half-installing."
+    steps:
+      - id: "install-ollama"
+        type: "bash"
+        timeout: 900
+        output: "ollama_install"
+        command: |
+          set -uo pipefail
+          if command -v ollama >/dev/null 2>&1; then echo "skip: ollama already at $(command -v ollama)"; exit 0; fi
+          if [ "$(uname -s)" = "Darwin" ]; then
+            command -v brew >/dev/null 2>&1 || { echo "ERROR: no Homebrew. Install from https://ollama.com/download, then re-run." >&2; exit 1; }
+            echo "+ brew install ollama"; brew install ollama
+          else
+            echo "+ curl -fsSL https://ollama.com/install.sh | sh"; curl -fsSL https://ollama.com/install.sh | sh
+          fi
+
+      - id: "start-server"
+        type: "bash"
+        timeout: 120
+        output: "ollama_server"
+        command: |
+          set -uo pipefail
+          if curl -fsS --max-time 2 "{{ollama_url}}/api/tags" >/dev/null 2>&1; then echo "skip: server already serving {{ollama_url}}"; exit 0; fi
+          echo "+ ollama serve  (background, log: /tmp/ollama-fast-decisions.log)"
+          nohup ollama serve >/tmp/ollama-fast-decisions.log 2>&1 &
+          for i in $(seq 1 30); do
+            sleep 1
+            curl -fsS --max-time 2 "{{ollama_url}}/api/tags" >/dev/null 2>&1 && { echo "server reachable after ${i}s"; exit 0; }
+          done
+          echo "ERROR: {{ollama_url}} unreachable after 30s -- see /tmp/ollama-fast-decisions.log" >&2; exit 1
+
+      - id: "pull-model"
+        type: "bash"
+        timeout: 1800
+        output: "model_pull"
+        command: |
+          set -uo pipefail
+          if curl -fsS --max-time 5 "{{ollama_url}}/api/tags" 2>/dev/null | grep -q "{{model}}"; then echo "skip: {{model}} already pulled"; exit 0; fi
+          echo "+ ollama pull {{model}}   (~600 MB)"; ollama pull "{{model}}"
+
+      - id: "warm-model"
+        type: "bash"
+        timeout: 600
+        output: "warm"
+        command: |
+          set -uo pipefail
+          P='{"model":"{{model}}","prompt":"ok","stream":false,"options":{"num_predict":1}}'
+          echo "+ POST {{ollama_url}}/api/generate  (load, untimed)"
+          curl -fsS --max-time 300 -o /dev/null -X POST "{{ollama_url}}/api/generate" -H 'Content-Type: application/json' -d "$P" \
+            || { echo "ERROR: {{ollama_url}} unreachable or model failed to load" >&2; exit 1; }
+          echo "+ POST {{ollama_url}}/api/generate  (warm, timed)"
+          t=$(curl -fsS --max-time 60 -o /dev/null -w '%{time_total}' -X POST "{{ollama_url}}/api/generate" -H 'Content-Type: application/json' -d "$P") \
+            || { echo "ERROR: warm call failed" >&2; exit 1; }
+          echo "warm latency ${t}s (budget {{warm_budget_s}}s)"
+          awk -v t="$t" -v b="{{warm_budget_s}}" 'BEGIN{ if (t+0 > b+0) exit 1 }' \
+            || { echo "ERROR: warm latency ${t}s exceeds the {{warm_budget_s}}s budget -- stopping before any bundle change" >&2; exit 1; }
+
+  - name: "bundle-rung"
+    description: "Add the active rung, or refresh it if already cached."
+    steps:
+      - id: "add-rung"
+        type: "bash"
+        timeout: 900
+        output: "rung"
+        command: |
+          set -uo pipefail
+          if amplifier bundle list 2>/dev/null | grep -qi "fast-decisions-active"; then
+            echo "active rung already installed -- refreshing"
+            echo "+ amplifier update"; amplifier update
+          else
+            echo "+ amplifier bundle add {{bundle_source}}"
+            amplifier bundle add "{{bundle_source}}"
+          fi
+
+  - name: "verify"
+    description: "Prove it from receipts, or say exactly which check could not be run."
+    steps:
+      - id: "check-receipts"
+        type: "bash"
+        timeout: 900
+        output: "evidence"
+        parse_json: true
+        on_error: "continue"
+        output_exit_code: "verify_code"
+        command: |
+          set -uo pipefail
+          EV="{{events_dir}}"
+          T=$(mktemp -d) || exit 1
+          printf '# Demo\n\nA temporary directory used to verify fast-decisions.\n' > "$T/README.md"
+          : > "$T/.mark"; sleep 1
+          echo "+ amplifier run --mode single \"Read README.md ...\"  (cwd: $T)"
+          ( cd "$T" && amplifier run --mode single "Read README.md if present and reply with one line summarizing this directory" ) >"$T/run.log" 2>&1
+          rc=$?
+          found=false; srcev=false; mode=unknown; backend=unknown; lat=""; note=""
+          if [ -d "$EV" ]; then
+            files=$(find "$EV" -type f -newer "$T/.mark" 2>/dev/null)
+            if [ -n "$files" ]; then
+              found=true; blob=$(cat $files 2>/dev/null)
+              case "$blob" in *fast_decisions:source*) srcev=true;; *) note="no fast_decisions:source event in the new receipts";; esac
+              case "$blob" in *'"active"'*) mode=active;; *) mode="not-active-in-receipts";; esac
+              case "$blob" in *ollama*) backend=ollama;; *) backend="not-ollama-in-receipts";; esac
+              lat=$(printf '%s' "$blob" | grep -o '"latency_ms"[: ]*[0-9.]*' | tail -1 | grep -o '[0-9.]*$')
+            else
+              note="COULD NOT CHECK: no receipt files written under $EV after the run"
+            fi
+          else
+            note="COULD NOT CHECK: events dir $EV does not exist"
+          fi
+          printf '{"run_exit":"%s","receipts_found":"%s","source_event":"%s","mode":"%s","backend":"%s","latency_ms":"%s","note":"%s","tmpdir":"%s"}\n' \
+            "$rc" "$found" "$srcev" "$mode" "$backend" "$lat" "$note" "$T"
+
+  - name: "report"
+    description: "Plain-language summary of what changed, how to watch it, how to undo it."
+    steps:
+      - id: "write-report"
+        agent: "foundation:zen-architect"
+        timeout: 300
+        output: "final_output"
+        prompt: |
+          Report to the user what just happened. Evidence only -- never claim a check passed that the
+          data below does not show. If `note` names a check that could not be performed, say so plainly.
+
+          Before: {{probe}}
+          Local judge: {{ollama_install}} / {{ollama_server}} / {{model_pull}} / {{warm}}
+          Bundle rung: {{rung}}
+          Verification (exit {{verify_code}}): {{evidence}}
+
+          Cover, in this order and in under 20 lines:
+          1. What changed on this machine (skip anything that reported "skip:").
+          2. Whether the verification found a fast_decisions receipt with mode active and backend ollama --
+             quoting the observed mode, backend and latency_ms -- or exactly which check could not be run.
+          3. How to watch it: `afast serve` (the observatory) if installed, otherwise the receipts under
+             {{events_dir}}.
+          4. Revert: `amplifier bundle remove fast-decisions-active`, and optionally `ollama rm {{model}}`.
+          Plain sentences, no markdown headings.

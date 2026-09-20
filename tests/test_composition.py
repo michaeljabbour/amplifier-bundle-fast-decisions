@@ -66,6 +66,24 @@ def _iter_module_sources(data: dict):
         yield context.get("module"), context["source"]
 
 
+class MakeFasterContextTests(unittest.TestCase):
+    """The 'make my amplifier faster' trigger context file must exist and be
+    referenced from behaviors/fast-decisions.yaml so a shadow-installed user
+    (behavior-only, no bundles/active.yaml) still gets the trigger."""
+
+    def test_context_file_exists(self):
+        path = ROOT / "context" / "make-faster.md"
+        self.assertTrue(path.is_file(), path)
+        text = path.read_text(encoding="utf-8")
+        self.assertIn("make my amplifier faster", text.lower())
+        self.assertIn("make-amplifier-faster.yaml", text)
+
+    def test_behavior_references_context_file(self):
+        data = _load_frontmatter(ROOT / "behaviors" / "fast-decisions.yaml")
+        includes = (data.get("context") or {}).get("include") or []
+        self.assertIn("fast-decisions:context/make-faster.md", includes)
+
+
 class YamlSourceTests(unittest.TestCase):
     """Always-on checks against the raw YAML; no amplifier_foundation needed."""
 
@@ -108,6 +126,30 @@ class YamlSourceTests(unittest.TestCase):
         self.assertTrue(
             checked_any, "Expected to find at least one fast-decisions module source"
         )
+
+
+class ActiveBundleOfflineTests(unittest.TestCase):
+    """Offline (no amplifier_foundation) checks on bundles/active.yaml's raw
+    YAML -- runs even when BundleLoadTests below is skipped for lack of
+    network access to resolve the foundation include."""
+
+    def test_active_yaml_parses_and_carries_incumbent_config(self):
+        data = _load_frontmatter(ROOT / "bundles" / "active.yaml")
+        self.assertEqual(data["bundle"]["name"], "fast-decisions-active")
+        orchestrator = data["session"]["orchestrator"]
+        self.assertEqual(orchestrator["module"], "loop-fast-decisions")
+        config = orchestrator["config"]
+        self.assertEqual(config["mode"], "active")
+        self.assertEqual(config["backend"], "ollama")
+        self.assertEqual(config["model"], "qwen3:0.6b")
+        self.assertEqual(config["timeout_ms"], 500)
+        self.assertIs(config["allow_external_state"], False)
+        self.assertEqual(
+            config["effort_routing"],
+            {"explore": "low", "max_explore_requests": 6, "escalate_after_provider_errors": 1},
+        )
+        self.assertNotIn("model_routing", config)
+        self.assertEqual(data["includes"], [{"bundle": "fast-decisions:bundle.md"}])
 
 
 def _amplifier_foundation_importable() -> bool:
@@ -221,12 +263,24 @@ class BundleLoadTests(unittest.TestCase):
         self.assertIn("tool-fast-workspace", tool_modules)
 
     def test_active_bundle(self):
+        # Screen-validated 2026-09-20 incumbent config: ollama/qwen3:0.6b,
+        # allow_external_state False (no TypeSafe key required to install).
         self._assert_decision_bundle(
             "bundles/active.yaml",
             expected_name="fast-decisions-active",
             expected_mode="active",
-            expected_allow_external=True,
+            expected_allow_external=False,
         )
+        bundle = self._load("bundles/active.yaml")
+        config = bundle.to_mount_plan()["session"]["orchestrator"]["config"]
+        self.assertEqual(config["backend"], "ollama")
+        self.assertEqual(config["model"], "qwen3:0.6b")
+        self.assertEqual(config["timeout_ms"], 500)
+        self.assertEqual(
+            config["effort_routing"],
+            {"explore": "low", "max_explore_requests": 6, "escalate_after_provider_errors": 1},
+        )
+        self.assertNotIn("model_routing", config)
 
 
 def _configure(tmp_path: Path, mode: str, output_name: str) -> Path:
