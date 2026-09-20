@@ -495,6 +495,106 @@ class CliAndMarkdownTests(BuildFixturesMixin):
             self.assertAlmostEqual(report['overview']['FD']['median_working_time_s'], 12.0)
 
 
+class AggregateRepsTests(unittest.TestCase):
+    """3 synthetic repetitions of one cell (harness 'amplifier-fd'), same
+    campaign root, 2 tasks. rep1/rep2 pass task 'a' (exec 10s/12s), rep3
+    fails it (majority pass=True, median exec=11s from the 2 passing reps).
+    task 'b': rep1 fails, rep2/rep3 pass (10s/14s) -- majority pass=True,
+    median exec=12s. Consistency: task 'a' has mixed pass/fail (not
+    identical), task 'b' also mixed -- consistency=0.0.
+    """
+
+    def _write_rep(self, root, exp, rows):
+        runs_root = root / 'experiments' / exp / 'runs'
+        manifest_runs = {}
+        for name, task, passed, exec_ms, cost in rows:
+            manifest_runs[name] = {'task': task, 'harness': 'amplifier-fd', 'attempt': 1}
+            _write_json(runs_root / 'amplifier' / name / 'result.json', _base_result(
+                task=task, family='repair', harness='amplifier-fd', model='m',
+                wall_time_ms=exec_ms, exec_time_ms=exec_ms, cost_usd=cost,
+                cost_billable=True if cost is not None else None,
+                cost_source='harness_reported' if cost is not None else 'unknown',
+                outcome_passed=passed,
+            ))
+        _write_json(runs_root / 'manifest.json', {
+            'schema': 'fast-decisions-battery/v1', 'run_order': list(manifest_runs),
+            'runs': manifest_runs, 'deadline_seconds': 600, 'prompt': 'do the task',
+        })
+
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._tmp.cleanup)
+        self.root = Path(self._tmp.name) / 'campaign'
+        self._write_rep(self.root, 'EXP-r1', [
+            ('EXP-r1-a-amplifier-fd-a1', 'a', True, 10000.0, 1.0),
+            ('EXP-r1-b-amplifier-fd-a1', 'b', False, 9000.0, 1.0),
+        ])
+        self._write_rep(self.root, 'EXP-r2', [
+            ('EXP-r2-a-amplifier-fd-a1', 'a', True, 12000.0, 1.2),
+            ('EXP-r2-b-amplifier-fd-a1', 'b', True, 10000.0, 0.9),
+        ])
+        self._write_rep(self.root, 'EXP-r3', [
+            ('EXP-r3-a-amplifier-fd-a1', 'a', False, 20000.0, 2.0),
+            ('EXP-r3-b-amplifier-fd-a1', 'b', True, 14000.0, 1.1),
+        ])
+
+    def _spec(self):
+        return f'FD={self.root}:EXP-r1,EXP-r2,EXP-r3:amplifier-fd'
+
+    def test_parse_aggregate_spec(self):
+        label, root, experiments, harness = br.parse_aggregate_spec(self._spec())
+        self.assertEqual(label, 'FD')
+        self.assertEqual(experiments, ['EXP-r1', 'EXP-r2', 'EXP-r3'])
+        self.assertEqual(harness, 'amplifier-fd')
+
+    def test_parse_aggregate_spec_invalid(self):
+        with self.assertRaises(ValueError):
+            br.parse_aggregate_spec('no-equals-here')
+        with self.assertRaises(ValueError):
+            br.parse_aggregate_spec('L=root:')
+
+    def test_aggregate_median_exec_and_majority_pass(self):
+        series, reps_summary = br.aggregate_reps('FD', self.root, ['EXP-r1', 'EXP-r2', 'EXP-r3'],
+                                                   'amplifier-fd', exclude_startup=True)
+        a = series['tasks']['a']['result']
+        self.assertTrue(a['outcome_passed'])  # 2 of 3 passed
+        self.assertAlmostEqual(a['exec_time_ms'], 11000.0)  # median of the 2 passing reps: 10s,12s
+        b = series['tasks']['b']['result']
+        self.assertTrue(b['outcome_passed'])  # 2 of 3 passed
+        self.assertAlmostEqual(b['exec_time_ms'], 12000.0)  # median of the 2 passing reps: 10s,14s
+
+    def test_reps_summary_per_task_and_consistency(self):
+        _, reps_summary = br.aggregate_reps('FD', self.root, ['EXP-r1', 'EXP-r2', 'EXP-r3'],
+                                             'amplifier-fd', exclude_startup=True)
+        self.assertEqual(reps_summary['n_reps'], 3)
+        self.assertEqual(len(reps_summary['tasks']['a']['per_rep']), 3)
+        self.assertAlmostEqual(reps_summary['tasks']['a']['pass_rate'], 2 / 3)
+        self.assertAlmostEqual(reps_summary['tasks']['a']['median_exec_s'], 11.0)
+        # neither task has an identical pass/fail outcome across all 3 reps
+        self.assertAlmostEqual(reps_summary['consistency'], 0.0)
+
+    def test_aggregate_series_feeds_existing_compute_functions(self):
+        _, report = br.build_report([], exclude_startup=True, aggregate_specs=[self._spec()])
+        overview = report['overview']['FD']
+        self.assertEqual(overview['tasks_attempted'], 2)
+        self.assertEqual(overview['passed'], 2)
+        self.assertIn('FD', report['reps_summary'])
+        self.assertEqual(report['reps_summary']['FD']['n_reps'], 3)
+        # mechanism is 'n/a' for an aggregated series -- no single run_dir backs
+        # a median-across-reps pseudo-result, so no receipts.jsonl is found.
+        self.assertEqual(report['mechanism']['FD'], 'n/a')
+
+    def test_aggregate_reps_cli_end_to_end(self):
+        with tempfile.TemporaryDirectory() as out_tmp:
+            out_dir = Path(out_tmp) / 'out'
+            rc = br.main(['--out', str(out_dir), '--aggregate-reps', self._spec()])
+            self.assertEqual(rc, 0)
+            report = json.loads((out_dir / 'report.json').read_text(encoding='utf-8'))
+            self.assertIn('FD', report['reps_summary'])
+            md = (out_dir / 'report.md').read_text(encoding='utf-8')
+            self.assertIn('Cross-repetition aggregation', md)
+
+
 class StatsHelperTests(unittest.TestCase):
     def test_iqr_even_and_odd(self):
         self.assertAlmostEqual(br._iqr([10.0, 20.0]), 10.0)

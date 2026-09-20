@@ -66,8 +66,15 @@ Layout inside a run directory:
     experiments/<cell>-<suite>-<split>-r<N>/
       proposal.json  comparison.json  REPORT.md  runs/...
   report/report.md report.json        cross-cell comparison
-  RESULTS.md                          the readable summary + evidence limits
+  results.json                        verdict per cell (see evals/DESIGN-BRIDGE.md)
+  RESULTS.md                          the readable verdict table + Q3/Q4 + evidence limits
+  DESIGN-RECOMMENDATION.md            results.json -> evals/DESIGN-BRIDGE.md rules, for human ratification
 ```
+
+Read `evals/DESIGN-BRIDGE.md` for how `results.json` turns into a recommended
+change to `behaviors/fast-decisions.yaml` -- the decision rule, the evidence
+required, and the current default, per knob (`mode`, judge backend,
+`effort_routing`, `model_routing`, external state).
 
 ---
 
@@ -199,5 +206,6 @@ failed claim rather than a partial one.
 | `run.py` exits 4 before any launch | a precondition failed (prompt hash, corpus sha, permission mode, forge doctor, toolchain) | fix the precondition; nothing was spent |
 | `run.py` exits 3 | budget or launch cap refused | raise the cap deliberately, or finish in a later session with `--resume` |
 | `run.py` exits 5 | runs finished but a mechanism gate failed | the cell's numbers exist and are excluded from claims; read the mechanism section, fix the config, re-run **that cell** |
+| `run.py` exits 6 | `--resume` finished its loop but a run is still incomplete (no `result.json`, no live worker) | `--resume` again once the missing runs have a chance to finish or restart |
 | a cell's numbers look too good | check the gate first, then the transcripts | a mechanism that never engaged produces plain-Amplifier numbers under a fancy label |
 | the evaluator was wrong | re-score, never re-run | `--report-only` re-derives outcomes from preserved workspaces at zero cost |

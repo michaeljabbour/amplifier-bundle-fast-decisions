@@ -124,6 +124,30 @@ def parse_series_spec(spec):
     return label, root, experiment, harness
 
 
+def parse_aggregate_spec(spec):
+    """'label=campaign_root:exp1,exp2,...:harness' -> (label, root, [experiments], harness).
+
+    Same shape as parse_series_spec but the middle field is a comma-joined list
+    of experiment names -- one per repetition of the same cell -- all sharing
+    one campaign root and one harness. Uses rsplit(':', 2) for the same reason
+    parse_series_spec does (a root may itself contain colons).
+    """
+    if '=' not in spec:
+        raise ValueError(f'invalid --aggregate-reps (expected label=root:exp1,exp2,...:harness): {spec!r}')
+    label, rest = spec.split('=', 1)
+    parts = rest.rsplit(':', 2)
+    if len(parts) != 3 or not all(p.strip() for p in parts):
+        raise ValueError(f'invalid --aggregate-reps (expected label=root:exp1,exp2,...:harness): {spec!r}')
+    root, exps_str, harness = (p.strip() for p in parts)
+    experiments = [e.strip() for e in exps_str.split(',') if e.strip()]
+    if not experiments:
+        raise ValueError(f'invalid --aggregate-reps (no experiments listed): {spec!r}')
+    label = label.strip()
+    if not label:
+        raise ValueError(f'invalid --aggregate-reps (empty label): {spec!r}')
+    return label, root, experiments, harness
+
+
 def parse_family_map(pairs):
     mapping = {}
     for kv in pairs or []:
@@ -457,7 +481,124 @@ def _fmt_p(p):
     return 'n/a' if p is None else f'{p:.4g}'
 
 
-def build_report(series_specs, title=None, task_filter=None, family_map_pairs=None, exclude_startup=True):
+# --------------------------------------------------------------------------
+# --aggregate-reps: combine several repetitions of the same cell into one
+# series by per-task median exec/cost + majority-vote pass, plus a
+# reps_summary receipt of per-rep dispersion and cross-rep consistency.
+# --------------------------------------------------------------------------
+
+
+def _rep_exec_s(result, exclude_startup):
+    ms = _time_ms(result, exclude_startup)
+    return ms / 1000.0 if ms is not None else None
+
+
+# A sentinel run_dir for aggregated per-task pseudo-results: no single run
+# directory backs a median-across-reps value, so mechanism receipts (which are
+# read from a specific run_dir's receipts.jsonl/measurements.json) are not
+# available for an aggregated series -- compute_mechanism reports 'n/a' for it
+# via this path simply never existing.
+_NO_RUN_DIR = Path('/nonexistent-aggregate-run-dir')
+
+
+def aggregate_reps(label, root, experiments, harness, exclude_startup, task_filter_re=None):
+    """Load `harness` from each of `experiments` (each one repetition of the
+    same cell, same campaign root) and combine them into a single series whose
+    per-task 'result' is: exec_time_ms/wall_time_ms = median exec time (s) *
+    1000 across the reps where that task passed, cost_usd = median cost across
+    reps with a known cost, outcome_passed = majority vote across reps (a tie
+    counts as not-passed -- conservative), family/cost_source/cost_billable
+    taken from the first rep that reports them.
+
+    Returns (series, reps_summary) where series has the same shape load_series
+    produces (so every existing compute_* function accepts it unmodified), and
+    reps_summary is {'n_reps', 'consistency', 'tasks': {task: {...}}}.
+    """
+    component_series = [
+        load_series(f'{label}#rep{i + 1}', root, exp, harness, task_filter_re)
+        for i, exp in enumerate(experiments)
+    ]
+
+    all_tasks = set()
+    for s in component_series:
+        all_tasks |= set(s['tasks'])
+
+    agg_tasks = {}
+    reps_summary_tasks = {}
+    identical_count = 0
+    for task in sorted(all_tasks):
+        per_rep = []
+        exec_vals = []
+        cost_vals = []
+        pass_flags = []
+        family = None
+        cost_source = None
+        cost_billable = None
+        for i, s in enumerate(component_series):
+            info = s['tasks'].get(task)
+            result = info['result'] if info else None
+            passed = bool(result and result.get('outcome_passed'))
+            exec_s = _rep_exec_s(result, exclude_startup) if passed else None
+            cost = result.get('cost_usd') if result else None
+            per_rep.append({
+                'rep': i + 1, 'experiment': experiments[i], 'pass': passed,
+                'exec_s': exec_s, 'cost_usd': cost,
+            })
+            pass_flags.append(passed)
+            if exec_s is not None:
+                exec_vals.append(exec_s)
+            if cost is not None:
+                cost_vals.append(cost)
+            if result:
+                if family is None and result.get('family'):
+                    family = result['family']
+                if cost_source is None and result.get('cost_source'):
+                    cost_source = result['cost_source']
+                if cost_billable is None and result.get('cost_billable') is not None:
+                    cost_billable = result['cost_billable']
+
+        n_total = len(pass_flags)
+        n_pass = sum(1 for p in pass_flags if p)
+        majority_pass = (n_pass * 2) > n_total  # ties (incl. n_total==0) count as not-passed
+        pass_rate = (n_pass / n_total) if n_total else None
+        identical = len(set(pass_flags)) <= 1
+        if identical:
+            identical_count += 1
+
+        median_exec = _median(exec_vals)
+        median_cost = _median(cost_vals)
+        dispersion = _iqr(exec_vals)
+
+        agg_result = {
+            'outcome_passed': majority_pass,
+            'exec_time_ms': (median_exec * 1000.0) if median_exec is not None else None,
+            'wall_time_ms': (median_exec * 1000.0) if median_exec is not None else None,
+            'cost_usd': median_cost,
+            'cost_source': cost_source,
+            'cost_billable': cost_billable,
+            'family': family,
+        }
+        agg_tasks[task] = {
+            'name': task, 'result': agg_result, 'run_dir': _NO_RUN_DIR,
+            'attempts': 1, 'max_attempt': 1,
+        }
+        reps_summary_tasks[task] = {
+            'per_rep': per_rep, 'pass_rate': pass_rate, 'majority_pass': majority_pass,
+            'median_exec_s': median_exec, 'dispersion_iqr_s': dispersion,
+        }
+
+    consistency = (identical_count / len(all_tasks)) if all_tasks else None
+    series = {
+        'label': label, 'root': str(Path(root).expanduser().resolve()),
+        'experiment': '+'.join(experiments), 'harness': harness,
+        'experiment_dir': None, 'tasks': agg_tasks,
+    }
+    reps_summary = {'n_reps': len(experiments), 'consistency': consistency, 'tasks': reps_summary_tasks}
+    return series, reps_summary
+
+
+def build_report(series_specs, title=None, task_filter=None, family_map_pairs=None, exclude_startup=True,
+                  aggregate_specs=None):
     task_filter_re = re.compile(task_filter) if task_filter else None
     family_map = parse_family_map(family_map_pairs)
 
@@ -465,6 +606,13 @@ def build_report(series_specs, title=None, task_filter=None, family_map_pairs=No
     for spec in series_specs:
         label, root, experiment, harness = parse_series_spec(spec)
         all_series.append(load_series(label, root, experiment, harness, task_filter_re))
+
+    reps_summaries = {}
+    for spec in (aggregate_specs or []):
+        label, root, experiments, harness = parse_aggregate_spec(spec)
+        series, reps_summary = aggregate_reps(label, root, experiments, harness, exclude_startup, task_filter_re)
+        all_series.append(series)
+        reps_summaries[label] = reps_summary
 
     report = {
         'title': title or 'Benchmark report',
@@ -477,6 +625,7 @@ def build_report(series_specs, title=None, task_filter=None, family_map_pairs=No
         'mechanism': {s['label']: compute_mechanism(s) for s in all_series},
         'quality': {s['label']: compute_quality(s) for s in all_series},
         'evidence_limits': compute_evidence_limits(all_series),
+        'reps_summary': reps_summaries,
     }
     return render_markdown(report), report
 
@@ -574,7 +723,18 @@ def render_markdown(report):
         lines.append('Failed tasks: ' + (', '.join(q['failed_tasks']) if q['failed_tasks'] else 'none'))
         lines.append('')
 
-    lines.append('## 6. Evidence limits')
+    if report.get('reps_summary'):
+        lines.append('## 6. Cross-repetition aggregation')
+        lines.append('')
+        for label, summary in report['reps_summary'].items():
+            lines.append(f"### {label} (n_reps={summary['n_reps']})")
+            lines.append('')
+            lines.append(f"- Consistency (share of tasks with identical pass/fail across reps): "
+                         f"{_fmt(summary['consistency'])}")
+            lines.append('')
+        lines.append('')
+
+    lines.append('## 7. Evidence limits')
     lines.append('')
     el = report['evidence_limits']
     lines.append(f"- {el['repetition']}")
@@ -596,8 +756,11 @@ def render_markdown(report):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('--out', required=True, help='Output directory for report.md/report.json')
-    parser.add_argument('--series', action='append', required=True,
+    parser.add_argument('--series', action='append',
                          help='label=campaign_root:experiment:harness (repeatable, one per column/row)')
+    parser.add_argument('--aggregate-reps', action='append',
+                         help='label=campaign_root:exp1,exp2,...:harness -- combine several repetitions of '
+                              'the same cell into one median/majority-vote series (repeatable)')
     parser.add_argument('--title', help='Report title')
     parser.add_argument('--task-filter', help='Regex filter applied to task names (keep only matches)')
     parser.add_argument('--family-map', action='append',
@@ -605,10 +768,13 @@ def main(argv=None):
     parser.add_argument('--exclude-startup', action=argparse.BooleanOptionalAction, default=True,
                          help='Use exec_time_ms, falling back to wall_time_ms (default: on).')
     args = parser.parse_args(argv)
+    if not args.series and not args.aggregate_reps:
+        parser.error('at least one --series or --aggregate-reps is required')
 
     markdown, report = build_report(
-        args.series, title=args.title, task_filter=args.task_filter,
+        args.series or [], title=args.title, task_filter=args.task_filter,
         family_map_pairs=args.family_map, exclude_startup=args.exclude_startup,
+        aggregate_specs=args.aggregate_reps,
     )
 
     out_dir = Path(args.out).expanduser()

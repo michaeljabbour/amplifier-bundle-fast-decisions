@@ -1,5 +1,12 @@
 schema: fast-decisions-evals/suites/v1
 
+# Decision (2026-09-20b), see STUDY-DESIGN.md section 12: reps default to 3 on
+# --split dev (selection) and 5 on --split holdout (confirmation), for both s1
+# and s2. --reps on the CLI always overrides this.
+reps_defaults:
+  dev: 3
+  holdout: 5
+
 suites:
   s1:
     label: "S1 synthetic battery (20 tasks, 4 families)"

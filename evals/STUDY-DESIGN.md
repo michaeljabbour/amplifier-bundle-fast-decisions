@@ -436,3 +436,84 @@ Resolved open questions from the architect, applied in `cells.yaml`/`suites.yaml
    evaluation. `judge-local+effort` (`all_phase`: orient/explore/implement)
    is the champion **candidate**. Both model-routing cells
    (`judge-local+effort+route`, `plain-sonnet`) are candidates, not defaults.
+
+---
+
+## 13. Decisions (2026-09-20b) -- results verdict layer, cross-rep aggregation, design bridge
+
+Resolved as part of completing `evals/run.py` end to end and adding
+`evals/DESIGN-BRIDGE.md`. Applied in `battery_report.py`, `evals/run.py`,
+`evals/cells.yaml`, `evals/suites.yaml`.
+
+1. **Cross-repetition aggregation lives in `battery_report.py`, not `run.py`.**
+   `--aggregate-reps "<label>=<root>:<exp1>,<exp2>,...:<harness>"` loads the
+   same task set across the listed experiments and combines them into one
+   series: per task, median exec time / median cost across reps where the
+   task passed, and pass = majority vote (a tie counts as not-passed). Feeds
+   `report.json["reps_summary"]`: per-task per-rep pass/exec, median,
+   dispersion (IQR), and per-series consistency (share of tasks with an
+   identical pass/fail outcome across every rep). This is a report-time
+   convenience for humans reading `report.md`; it does **not** replace the
+   verdict layer below, which operates on `battery.py`'s own per-rep
+   `comparison.json` cross-campaign data, not on `battery_report.py`'s
+   aggregated series.
+
+2. **A results -> verdict layer in `evals/run.py`, superseding the simpler
+   `RESULTS.md` described in `SPEC-for-builder.md` section 8.** After the
+   report step, `run.py` writes `<out>/results.json` and `<out>/RESULTS.md`:
+   per candidate cell (every cell with an `anchor_cell`), a verdict row with
+   passed/total, an exec-time geometric-mean ratio with a bootstrap 95% CI
+   (stdlib `random.Random`, fixed seed, 2000 resamples of per-task log-ratios,
+   median-aggregated across reps first per section 5's rule), the exact
+   sign-test p (reusing `battery._sign_test`, not re-derived), cost ratio
+   (billable only, unknowns annotated), quality delta, mechanism gate result,
+   and a verdict in `{confirmed, screen, gate-failed, quality-regressed,
+   no-effect}` per section 8's bar, now made explicit and code-implemented
+   (see `evals/run.py::classify_verdict`). A Q3 table (the champion cell vs
+   every external harness in the `externals` cell) and a Q4 section (rows
+   whose split is `holdout`) are included when present. This is new
+   computation in `run.py` beyond section 0's original "no new runner logic"
+   constraint -- justified because every input number is still read from
+   `battery.py`'s own `comparison.json` (the cross-campaign anchor comparison
+   or the same-experiment paired comparison), and the bootstrap/verdict code
+   is itself pure and unit-tested, not a new *measurement*.
+
+3. **A results -> design-bridge recommendation.** `evals/DESIGN-BRIDGE.md`
+   states, per bundle knob (`mode`, judge backend default, `effort_routing`
+   default, `model_routing` default, external-state policy), the decision
+   rule, the evidence required, and the current default. `run.py` writes
+   `<out>/DESIGN-RECOMMENDATION.md` by applying those rules to one
+   `results.json`, marked "for human ratification" -- it recommends, it does
+   not flip any config.
+
+4. **The routing cell gets an optional `secondary_anchor`.**
+   `judge-local+effort+route` now also declares `secondary_anchor: plain` in
+   `cells.yaml`. `run.py` performs one extra, read-only `battery.py evaluate
+   --baseline-experiment <plain's same-batch experiment>` call per rep (no new
+   paid launch: `evaluate` is a pure recompute from already-collected result
+   files), then re-runs the primary `evaluate` against `anchor_cell`
+   (`plain-sonnet`) so the persisted `comparison.json` on disk is left exactly
+   as the primary flow set it. This lets the recommendation distinguish
+   "beats plain-sonnet" (routing pays; recommend `on`) from "beats plain but
+   not plain-sonnet" (the gain is just the cheaper model; recommend pinning
+   it, not routing) -- the literal case `SPEC-for-builder.md` section 14
+   calls out.
+
+5. **Reps defaults, made explicit and declarative.** `evals/suites.yaml` gets
+   a top-level `reps_defaults: {dev: 3, holdout: 5}` (applies to both S1 and
+   S2). `--reps` on the CLI always overrides it. `run.py`'s `--reps` CLI
+   default changes from a hardcoded `1` to `None`, resolved against
+   `reps_defaults` at invocation time. Rationale: cost is not the constraint
+   here, study quality is (section 8's bar already requires >= 3 reps for any
+   claim; holdout confirmation gets 5 for a tighter CI given it is the
+   one-shot, never-tuned-on pass).
+
+6. **Exit 3 and exit 6, made concrete.** Exit 3 (budget/launch-cap refused,
+   propagated from `battery.py`) now also writes a **partial** manifest and
+   gates file before returning, with placeholder entries for cells not yet
+   reached, specifically so `--resume` has something to read; the reason
+   string is normalized to `budget_refused: <detail>`. Exit 6 (new): on
+   `--resume`, after the run step, every planned experiment is scanned
+   (`scan_incomplete_runs`) for a run with no `result.json` and no live
+   `running.json` worker (checked via `os.kill(pid, 0)`); if any remain, `run.py`
+   exits 6 with the list rather than reporting success on an incomplete batch.

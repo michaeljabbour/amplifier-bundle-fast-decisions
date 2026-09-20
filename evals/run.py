@@ -13,7 +13,10 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 import os
+import random
+import statistics
 import subprocess
 import sys
 from datetime import datetime, timezone
@@ -106,6 +109,9 @@ def validate_cell_dependencies(cell_ids, cells_doc):
         anchor = cell.get("anchor_cell")
         if anchor and anchor not in requested:
             raise EvalsError(2, f"cell {cid!r} has anchor_cell {anchor!r}, which is not in the requested set")
+        secondary = cell.get("secondary_anchor")
+        if secondary and secondary not in requested:
+            raise EvalsError(2, f"cell {cid!r} has secondary_anchor {secondary!r}, which is not in the requested set")
 
 
 def validate_external_state_consent(cell_ids, cells_doc, allow_external_state):
@@ -461,6 +467,62 @@ def resume_detection(experiment_dir, requested_argv):
 
 
 # ---------------------------------------------------------------------------
+# scan_incomplete_runs (exit 6, Task #3 amendment): a --resume batch that
+# still has a planned run with no result.json and no live worker is not
+# actually finished, even though every cell/rep loop iteration "completed"
+# (battery.py run adopts and returns once nothing more can be launched right
+# now -- e.g. a worker crashed outside battery.py's own retry path).
+# ---------------------------------------------------------------------------
+
+
+def _pid_alive(pid):
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True  # exists, just not ours to signal
+    except OSError:
+        return False
+    return True
+
+
+def scan_incomplete_runs(campaign_root, experiment_names, pid_alive=_pid_alive):
+    """For each experiment, read its runs/manifest.json run_order; a run is
+    incomplete when it has no result.json AND (no running.json, or
+    running.json names a pid that is not alive). Returns {experiment:
+    [run_name, ...]} for experiments with at least one incomplete run."""
+    incomplete = {}
+    for exp in experiment_names:
+        exp_dir = Path(campaign_root) / "experiments" / exp
+        manifest_path = exp_dir / "runs" / "manifest.json"
+        if not manifest_path.exists():
+            continue
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        missing = []
+        for name in manifest.get("run_order", []):
+            item = manifest["runs"][name]
+            harness = item.get("harness")
+            run_dir = (exp_dir / "runs" / "amplifier" / name if harness in ("amplifier-plain", "amplifier-fd")
+                       else exp_dir / "runs" / name)
+            if (run_dir / "result.json").exists():
+                continue
+            running_path = run_dir / "running.json"
+            if running_path.exists():
+                try:
+                    running = json.loads(running_path.read_text(encoding="utf-8"))
+                except (OSError, ValueError):
+                    running = {}
+                pid = running.get("pid")
+                if pid and pid_alive(pid):
+                    continue  # still running -- not incomplete
+            missing.append(name)
+        if missing:
+            incomplete[exp] = missing
+    return incomplete
+
+
+# ---------------------------------------------------------------------------
 # cost_estimate (section 7 --dry-run, section 12 #7)
 # ---------------------------------------------------------------------------
 
@@ -749,6 +811,418 @@ def run_verification(experiment_dir, proposal, cell, suite, split, candidate_sha
 
 
 # ---------------------------------------------------------------------------
+# Task #2/#4 amendment (2026-09-20b, see STUDY-DESIGN.md section 12 and
+# SPEC-for-builder.md section 14): a results-verdict layer and a results ->
+# design-bridge recommendation. Every number here is read from a
+# `comparison.json` dict that `battery.py evaluate` already produced (the
+# cross-campaign anchor comparison, or the same-experiment paired comparison
+# for `externals`); the only genuinely new computation is the bootstrap
+# confidence interval and the verdict classification, both pure and tested
+# below. See evals/DESIGN-BRIDGE.md for the decision rules this feeds.
+# ---------------------------------------------------------------------------
+
+BOOTSTRAP_RESAMPLES = 2000
+BOOTSTRAP_SEED = 20260919
+MIN_REPS_FOR_CLAIM = 3
+MIN_PAIRED_TASKS_FOR_CLAIM = 8
+NO_EFFECT_BAND = 0.03  # ratio within [0.97, 1.03] with enough evidence => "no-effect"
+
+
+def aggregate_task_pairs(comparisons, anchor_harness="amplifier-plain", candidate_harness="amplifier-fd"):
+    """Regroup already-computed per-task numbers from a list of one cell's
+    per-rep `comparison.json` dicts into {task: {candidate_exec_s: [...per rep],
+    candidate_passed: [...], anchor_exec_s: [...], anchor_passed: [...]}}.
+
+    Prefers `comparison['cross']['baselines'][anchor_harness]['per_task']`
+    (the cross-campaign anchor comparison battery.py already computed via
+    `--baseline-root`/`--baseline-experiment`); falls back to the
+    same-experiment `comparison['per_task']` table (used by `externals`, which
+    embeds its own amplifier-plain harness instead of using an anchor_cell).
+    No new derivation happens here -- only regrouping numbers that already
+    exist in the dicts battery.py wrote.
+    """
+    by_task = {}
+
+    def _slot(task):
+        return by_task.setdefault(task, {"candidate_exec_s": [], "candidate_passed": [],
+                                          "anchor_exec_s": [], "anchor_passed": []})
+
+    for comp in comparisons or []:
+        if comp is None:
+            continue
+        cross = comp.get("cross")
+        if cross:
+            baseline = (cross.get("baselines") or {}).get(anchor_harness)
+            rows = (baseline or {}).get("per_task") or {}
+            for task, row in rows.items():
+                slot = _slot(task)
+                slot["candidate_exec_s"].append(row.get("candidate_exec_s"))
+                slot["candidate_passed"].append(bool(row.get("candidate_passed")))
+                slot["anchor_exec_s"].append(row.get(f"{anchor_harness}_exec_s"))
+                slot["anchor_passed"].append(bool(row.get(f"{anchor_harness}_passed")))
+        else:
+            for task, row in (comp.get("per_task") or {}).items():
+                c = row.get(candidate_harness)
+                a = row.get(anchor_harness)
+                if c is None or a is None:
+                    continue
+                slot = _slot(task)
+                c_ms, a_ms = c.get("penalized_ms"), a.get("penalized_ms")
+                slot["candidate_exec_s"].append((c_ms / 1000.0) if c_ms is not None else None)
+                slot["candidate_passed"].append(bool(c.get("outcome_passed")))
+                slot["anchor_exec_s"].append((a_ms / 1000.0) if a_ms is not None else None)
+                slot["anchor_passed"].append(bool(a.get("outcome_passed")))
+    return by_task
+
+
+def _majority_pass(flags):
+    n = len(flags)
+    return (sum(1 for f in flags if f) * 2) > n if n else False
+
+
+def per_task_log_ratios(task_pairs):
+    """Median-across-reps exec time per task (only reps where both sides
+    passed), then the natural-log candidate/anchor ratio. STUDY-DESIGN.md
+    section 5: 'Per-task time is aggregated across reps by median before the
+    paired comparison.'"""
+    log_ratios = {}
+    for task, series in task_pairs.items():
+        pairs = [
+            (c, a) for c, a, cp, ap in
+            zip(series["candidate_exec_s"], series["anchor_exec_s"],
+                series["candidate_passed"], series["anchor_passed"])
+            if cp and ap and c is not None and a is not None and c > 0 and a > 0
+        ]
+        if not pairs:
+            continue
+        c_med = statistics.median(p[0] for p in pairs)
+        a_med = statistics.median(p[1] for p in pairs)
+        if c_med > 0 and a_med > 0:
+            log_ratios[task] = math.log(c_med / a_med)
+    return log_ratios
+
+
+def quality_counts(task_pairs):
+    """Majority-vote pass per task across reps, for candidate and anchor
+    separately, over every task with any recorded data. Feeds the
+    non-inferiority check (STUDY-DESIGN.md section 8)."""
+    candidate_successes = 0
+    anchor_successes = 0
+    paired_task_count = 0
+    for series in task_pairs.values():
+        paired_task_count += 1
+        if _majority_pass(series["candidate_passed"]):
+            candidate_successes += 1
+        if _majority_pass(series["anchor_passed"]):
+            anchor_successes += 1
+    return candidate_successes, anchor_successes, paired_task_count
+
+
+def bootstrap_ci_log_ratio(log_ratios, n_resamples=BOOTSTRAP_RESAMPLES, seed=BOOTSTRAP_SEED):
+    """95% bootstrap CI on the geometric-mean ratio: resample per-task
+    log-ratios with replacement, `n_resamples` times, stdlib `random.Random`
+    with a fixed seed for reproducibility. Returns (point, ci_low, ci_high) as
+    plain ratios (exp of the mean log-ratio), or (None, None, None) if empty."""
+    values = list(log_ratios.values())
+    n = len(values)
+    if n == 0:
+        return None, None, None
+    point = math.exp(sum(values) / n)
+    rng = random.Random(seed)
+    means = []
+    for _ in range(n_resamples):
+        means.append(sum(values[rng.randrange(n)] for _ in range(n)) / n)
+    means.sort()
+    lo_idx = int(0.025 * n_resamples)
+    hi_idx = min(n_resamples - 1, int(0.975 * n_resamples))
+    return point, math.exp(means[lo_idx]), math.exp(means[hi_idx])
+
+
+def sign_test_p_from_log_ratios(log_ratios):
+    """Exact two-sided sign test over the aggregated per-task log-ratios,
+    reusing `battery._sign_test` (already implemented, already unit-tested in
+    battery.py's own suite) rather than re-deriving it here."""
+    import battery  # local import: this module stays importable without scripts/ on sys.path for unrelated tests
+    return battery._sign_test(list(log_ratios.values()))["p_value"]
+
+
+def cost_ratio_from_cell_comparisons(candidate_comparisons, anchor_comparisons,
+                                      candidate_harness="amplifier-fd", anchor_harness="amplifier-plain"):
+    """Median-across-reps `mean_cost_known_usd` for each side, read straight
+    from `comparison['per_harness']` (already computed by battery.py evaluate).
+    Returns (ratio_or_None, unknown_cost_count)."""
+    def _costs(comparisons, harness):
+        vals, unknown = [], 0
+        for comp in comparisons or []:
+            if comp is None:
+                continue
+            row = (comp.get("per_harness") or {}).get(harness) or {}
+            if row.get("mean_cost_known_usd") is not None:
+                vals.append(row["mean_cost_known_usd"])
+            unknown += row.get("unknown_cost_count", 0) or 0
+        return vals, unknown
+
+    c_vals, c_unknown = _costs(candidate_comparisons, candidate_harness)
+    a_vals, a_unknown = _costs(anchor_comparisons, anchor_harness)
+    c_med = statistics.median(c_vals) if c_vals else None
+    a_med = statistics.median(a_vals) if a_vals else None
+    ratio = (c_med / a_med) if (c_med is not None and a_med) else None
+    return ratio, c_unknown + a_unknown
+
+
+def classify_verdict(*, reps, split, gate_passed, quality_non_inferior, ratio_point,
+                      ratio_ci_low, ratio_ci_high, sign_p, paired_task_count, cost_ratio):
+    """STUDY-DESIGN.md section 8 decision rules applied to one cell's
+    aggregated-across-reps numbers. Never recomputes a statistic -- every
+    input here was already produced by battery.py or the pure helpers above."""
+    if not gate_passed:
+        return "gate-failed"
+    if not quality_non_inferior:
+        return "quality-regressed"
+    enough_evidence = (reps >= MIN_REPS_FOR_CLAIM and paired_task_count >= MIN_PAIRED_TASKS_FOR_CLAIM
+                        and split == "holdout")
+    speedup_confirmed_by_ci = (ratio_ci_high is not None and ratio_ci_high < 1.0)
+    sign_significant = (sign_p is not None and sign_p <= 0.05)
+    cost_ok = (cost_ratio is None) or (cost_ratio <= 1.00)
+    if enough_evidence and speedup_confirmed_by_ci and sign_significant and cost_ok:
+        return "confirmed"
+    if (ratio_point is not None and (1.0 - NO_EFFECT_BAND) <= ratio_point <= (1.0 + NO_EFFECT_BAND)
+            and reps >= MIN_REPS_FOR_CLAIM and paired_task_count >= MIN_PAIRED_TASKS_FOR_CLAIM):
+        return "no-effect"
+    return "screen"
+
+
+def build_cell_result(cell_id, anchor_id, comparisons, anchor_comparisons, gate_passed, split, reps,
+                       candidate_harness="amplifier-fd", anchor_harness="amplifier-plain"):
+    """Assemble one cell's verdict row for results.json/RESULTS.md."""
+    task_pairs = aggregate_task_pairs(comparisons, anchor_harness, candidate_harness)
+    log_ratios = per_task_log_ratios(task_pairs)
+    ratio_point, ci_low, ci_high = bootstrap_ci_log_ratio(log_ratios)
+    p_value = sign_test_p_from_log_ratios(log_ratios) if log_ratios else None
+    candidate_successes, anchor_successes, paired_task_count = quality_counts(task_pairs)
+    quality_non_inferior = candidate_successes >= (anchor_successes - 1)
+    cost_ratio, unknown_cost_count = cost_ratio_from_cell_comparisons(
+        comparisons, anchor_comparisons, candidate_harness, anchor_harness)
+    verdict = classify_verdict(
+        reps=reps, split=split, gate_passed=gate_passed, quality_non_inferior=quality_non_inferior,
+        ratio_point=ratio_point, ratio_ci_low=ci_low, ratio_ci_high=ci_high,
+        sign_p=p_value, paired_task_count=paired_task_count, cost_ratio=cost_ratio,
+    )
+    return {
+        "cell": cell_id, "anchor": anchor_id, "reps": reps, "split": split, "gate_passed": gate_passed,
+        "paired_task_count": paired_task_count,
+        "exec_time_ratio": {"geomean": ratio_point, "ci95_low": ci_low, "ci95_high": ci_high,
+                             "sign_test_p": p_value},
+        "cost_ratio": cost_ratio, "unknown_cost_count": unknown_cost_count,
+        "quality": {"candidate_successes": candidate_successes, "anchor_successes": anchor_successes,
+                    "non_inferior": quality_non_inferior},
+        "verdict": verdict,
+    }
+
+
+def q3_comparison(champion_comparisons, externals_comparisons, champion_harness="amplifier-fd"):
+    """Q3: the champion cell's own aggregated exec times against every
+    external harness present in the `externals` cell's per-task table
+    (STUDY-DESIGN.md section 1, Q3)."""
+    champ_by_task = {}
+    for comp in champion_comparisons or []:
+        if comp is None:
+            continue
+        cross = comp.get("cross")
+        if cross:
+            baselines = cross.get("baselines") or {}
+            rows = next(iter(baselines.values()), {}).get("per_task", {}) if baselines else {}
+            for task, row in rows.items():
+                if row.get("candidate_passed") and row.get("candidate_exec_s") is not None:
+                    champ_by_task.setdefault(task, []).append(row["candidate_exec_s"])
+        else:
+            for task, row in (comp.get("per_task") or {}).items():
+                c = row.get(champion_harness)
+                if c and c.get("outcome_passed") and c.get("penalized_ms") is not None:
+                    champ_by_task.setdefault(task, []).append(c["penalized_ms"] / 1000.0)
+    champ_median = {t: statistics.median(v) for t, v in champ_by_task.items()}
+
+    ext_harnesses = set()
+    for comp in externals_comparisons or []:
+        if comp:
+            ext_harnesses |= set((comp.get("per_harness") or {}).keys())
+    ext_harnesses -= {"amplifier-plain", "amplifier-fd"}
+
+    results = {}
+    for h in sorted(ext_harnesses):
+        ext_by_task = {}
+        for comp in externals_comparisons or []:
+            if not comp:
+                continue
+            for task, row in (comp.get("per_task") or {}).items():
+                e = row.get(h)
+                if e and e.get("outcome_passed") and e.get("penalized_ms") is not None:
+                    ext_by_task.setdefault(task, []).append(e["penalized_ms"] / 1000.0)
+        ext_median = {t: statistics.median(v) for t, v in ext_by_task.items()}
+        common = sorted(set(champ_median) & set(ext_median))
+        log_ratios = {t: math.log(champ_median[t] / ext_median[t]) for t in common
+                      if champ_median[t] > 0 and ext_median[t] > 0}
+        point, lo, hi = bootstrap_ci_log_ratio(log_ratios)
+        p_value = sign_test_p_from_log_ratios(log_ratios) if log_ratios else None
+        results[h] = {"ratio": point, "ci95_low": lo, "ci95_high": hi,
+                      "sign_test_p": p_value, "n_paired": len(log_ratios)}
+    return results
+
+
+def _fmt_ratio(ratio):
+    if not ratio or ratio.get("geomean") is None:
+        return "n/a"
+    lo, hi = ratio.get("ci95_low"), ratio.get("ci95_high")
+    if lo is None or hi is None:
+        return f"{ratio['geomean']:.2f}"
+    return f"{ratio['geomean']:.2f} [{lo:.2f}, {hi:.2f}]"
+
+
+def _fmt_p_value(p):
+    return "n/a" if p is None else f"{p:.4g}"
+
+
+def render_results_markdown(results):
+    """RESULTS.md: the verdict table plus Q3/Q4 sections and evidence limits,
+    every figure read straight from `results` (see build_cell_result/q3_comparison)."""
+    lines = [f"# Results -- {results['suite']} {results['split']} (reps={results['reps']})", "",
+             "## Verdict table (vs anchor)", "",
+             ("| Cell | Anchor | Passed/Total | Ratio (95% CI) | sign-test p | Cost ratio | "
+              "Quality delta | Gate | Verdict |"),
+             "|---|---|---|---|---|---|---|---|---|"]
+    for row in results["cells"]:
+        q = row["quality"]
+        ratio_str = _fmt_ratio(row["exec_time_ratio"])
+        cost_str = "unknown" if row["cost_ratio"] is None else f"{row['cost_ratio']:.2f}"
+        if row["unknown_cost_count"]:
+            cost_str += f" ({row['unknown_cost_count']} unknown)"
+        delta = q["candidate_successes"] - q["anchor_successes"]
+        gate_str = "green" if row["gate_passed"] else "RED"
+        lines.append(
+            f"| {row['cell']} | {row['anchor']} | {q['candidate_successes']}/{row['paired_task_count']} | "
+            f"{ratio_str} | {_fmt_p_value(row['exec_time_ratio']['sign_test_p'])} | {cost_str} | "
+            f"{delta:+d} | {gate_str} | **{row['verdict']}** |"
+        )
+        if row.get("vs_plain"):
+            vp = row["vs_plain"]
+            lines.append(f"  - {row['cell']} vs `{vp['anchor']}` (secondary): "
+                         f"ratio={_fmt_ratio(vp['exec_time_ratio'])}")
+    lines.append("")
+
+    if results.get("q3"):
+        lines.append("## Q3 -- champion vs external harnesses")
+        lines.append("")
+        lines.append("| Harness | Ratio (95% CI) | sign-test p | n paired |")
+        lines.append("|---|---|---|---|")
+        for h, row in results["q3"].items():
+            ratio_str = ("n/a" if row["ratio"] is None
+                         else f"{row['ratio']:.2f} [{row['ci95_low']:.2f}, {row['ci95_high']:.2f}]")
+            lines.append(f"| {h} | {ratio_str} | {_fmt_p_value(row['sign_test_p'])} | {row['n_paired']} |")
+        lines.append("")
+
+    q4_rows = [r for r in results["cells"] if r["split"] == "holdout"]
+    if q4_rows:
+        lines.append("## Q4 -- holdout confirmation")
+        lines.append("")
+        for r in q4_rows:
+            lines.append(f"- {r['cell']}: verdict={r['verdict']}")
+        lines.append("")
+
+    lines.append("## Evidence limits")
+    lines.append("")
+    for el in results.get("evidence_limits", []):
+        lines.append(f"- {el}")
+    lines.append("")
+    return "\n".join(lines) + "\n"
+
+
+def design_recommendation_text(results, cells_doc):
+    """Fills evals/DESIGN-BRIDGE.md's decision rules from one results.json.
+    Every figure quoted is read straight from `results` (traceable to
+    battery.py's own comparison.json fields via build_cell_result/q3_comparison
+    above) -- this function only applies the DESIGN-BRIDGE.md decision rules,
+    it never invents a number. Marked 'for human ratification': it recommends,
+    it does not flip any config on its own."""
+    by_cell = {r["cell"]: r for r in results.get("cells", [])}
+    lines = ["# Design recommendation (for human ratification)", "",
+             (f"Generated from results for {results.get('suite')} {results.get('split')} "
+              f"(reps={results.get('reps')}). See evals/DESIGN-BRIDGE.md for the rules applied here."),
+             ""]
+
+    # (a) mode: shadow vs active
+    champion = by_cell.get("judge-local+effort")
+    if champion and champion["verdict"] == "confirmed" and results.get("split") == "holdout":
+        r = champion["exec_time_ratio"]
+        delta = champion["quality"]["candidate_successes"] - champion["quality"]["anchor_successes"]
+        lines.append(
+            f"- **mode**: recommend `active` -- judge-local+effort confirmed on holdout "
+            f"(ratio={r['geomean']:.2f}, CI=[{r['ci95_low']:.2f}, {r['ci95_high']:.2f}], "
+            f"quality delta={delta:+d})."
+        )
+    else:
+        v = champion["verdict"] if champion else "not run"
+        lines.append(f"- **mode**: keep `shadow` -- judge-local+effort verdict is {v!r}, "
+                     "not confirmed on holdout with quality non-inferior.")
+
+    # (b) judge backend default
+    jev = by_cell.get("judge-jev+effort")
+    if jev and jev["verdict"] == "confirmed" and jev.get("gate_passed"):
+        lines.append("- **judge backend default**: recommend `jev` (opt-in, requires "
+                     "allow_external_state) -- confirmed and mechanism-gated scored on `jev`.")
+    else:
+        v = jev["verdict"] if jev else "not run"
+        lines.append(f"- **judge backend default**: keep `ollama` -- jev verdict is {v!r}, not confirmed.")
+
+    # (c) effort_routing default map
+    if champion and champion["verdict"] in ("confirmed", "screen") and champion["quality"]["non_inferior"]:
+        lines.append("- **effort_routing default**: recommend all-phase (orient/explore/implement) -- "
+                     "no quality regression observed for judge-local+effort.")
+    else:
+        lines.append("- **effort_routing default**: keep the incumbent explore-only profile -- "
+                     "all-phase did not clear the bar without a quality regression.")
+
+    # (d) model_routing default
+    routing = by_cell.get("judge-local+effort+route")
+    if routing:
+        primary = routing["exec_time_ratio"]
+        cost_ok = (routing.get("cost_ratio") is None) or (routing.get("cost_ratio") <= 1.0)
+        beats_plain_sonnet = bool(
+            primary.get("geomean") is not None and primary["geomean"] < 1.0
+            and primary.get("sign_test_p") is not None and primary["sign_test_p"] <= 0.05
+            and cost_ok
+        )
+        vs_plain = routing.get("vs_plain")
+        beats_plain_only = (
+            not beats_plain_sonnet and vs_plain is not None
+            and vs_plain["exec_time_ratio"].get("geomean") is not None
+            and vs_plain["exec_time_ratio"]["geomean"] < 1.0
+        )
+        if beats_plain_sonnet:
+            lines.append("- **model_routing default**: recommend `on` -- the routing cell beats its "
+                         "plain-sonnet control (the confounding control, R5), with a passed mechanism gate.")
+        elif beats_plain_only:
+            lines.append("- **model_routing default**: recommend `off` -- pin the cheaper model "
+                         "(sonnet) directly rather than routing; the routing cell beats plain but does "
+                         "not beat its plain-sonnet control, so the gain is explained by the cheaper "
+                         "model alone, not by routing.")
+        else:
+            lines.append("- **model_routing default**: recommend `off` -- no demonstrated gain over "
+                         "either plain or plain-sonnet; routing adds complexity without a payoff.")
+    else:
+        lines.append("- **model_routing default**: keep `off` -- routing cell not run this pass.")
+
+    lines.append("")
+    lines.append("- **external state (privacy)**: remains opt-in regardless of any result above "
+                 "(docs/PRIVACY.md).")
+    lines.append("")
+    lines.append("## Evidence limits")
+    for el in results.get("evidence_limits", []):
+        lines.append(f"- {el}")
+    lines.append("")
+    return "\n".join(lines) + "\n"
+
+
+# ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
 
@@ -757,7 +1231,9 @@ def build_arg_parser():
     p.add_argument("--suite", choices=["s1", "s2"])
     p.add_argument("--split", choices=["dev", "holdout"])
     p.add_argument("--cells")
-    p.add_argument("--reps", type=int, default=1)
+    p.add_argument("--reps", type=int, default=None,
+                    help="default: 5 on --split holdout, else 3 (Decision 2026-09-20b, "
+                         "STUDY-DESIGN.md section 12)")
     p.add_argument("--out", required=True)
     p.add_argument("--baseline-source")
     p.add_argument("--candidate-source", default=str(REPO_ROOT))
@@ -918,7 +1394,9 @@ def main(argv=None):
             if not args.candidate_sha:
                 raise EvalsError(2, "--candidate-sha is required unless --resume/--report-only")
             suite_id, split = args.suite, args.split
-            reps = args.reps
+            reps_defaults = suites_doc.get("reps_defaults", {})
+            default_reps = reps_defaults.get(split, 5 if split == "holdout" else 3)
+            reps = args.reps if args.reps is not None else default_reps
             cell_ids = resolve_cell_ids(args.cells, cells_doc)
             candidate_sha = args.candidate_sha
             baseline_source = args.baseline_source
@@ -955,40 +1433,80 @@ def main(argv=None):
 
         cells_report = []
         gates_report = {}
+        comparisons_by_cell = {}
         any_gate_failed = False
         candidate_snapshot = {"source": candidate_source, "requested_sha": candidate_sha}
         baseline_report = {"source": baseline_source}
+
+        def _write_partial_state(reason):
+            """Exit-3 (budget/launch-cap refused) partial state: write whatever
+            manifest/gates exist so far, with placeholder entries for cells not
+            yet reached, so --resume can pick up the whole batch later."""
+            done_ids = {c["id"] for c in cells_report}
+            partial_cells_report = list(cells_report)
+            for rcid in cell_ids:
+                if rcid in done_ids:
+                    continue
+                partial_cells_report.append({
+                    "id": rcid, "experiments": [], "seeds": [],
+                    "gate": {"passed": False, "flags": []}, "excluded_from_claims": True,
+                })
+            tool_shas = compute_tool_shas()
+            manifest = build_manifest(
+                argv=(argv or sys.argv[1:]), suite_id=suite_id, split=split, reps=reps,
+                suite_doc=suites_doc["suites"][suite_id], candidate=candidate_snapshot,
+                baseline=baseline_report, cells_report=partial_cells_report,
+                budget_report=cells_doc.get("budget", {}), tool_shas=tool_shas,
+            )
+            _write_json(out_dir / "manifest.json", manifest)
+            _write_json(out_dir / "gates.json", gates_report)
+            payload = {"out": str(out_dir), "cells": cell_ids, "exit": 3, "reason": f"budget_refused: {reason}"}
+            _print_result(payload)
 
         for cid in cell_ids:
             cell = cells_doc["cells"][cid]
             experiments = []
             seeds = []
             cell_gate = {"passed": True, "flags": []}
+            comparisons_by_cell[cid] = []
             for rep in range(1, reps + 1):
                 seeds.append(args.base_seed + rep)
-                if args.report_only:
-                    campaign_root = out_dir / "campaign"
-                    exp = experiment_name(cid, suite_id, split, rep)
-                    invoke_tool("battery", ["reevaluate", "--root", str(campaign_root), "--experiment", exp,
-                                            "--reason", "report-only rescore"])
-                    evaluate_argv = ["evaluate", "--root", str(campaign_root), "--experiment", exp]
-                    anchor = cell.get("anchor_cell")
-                    if anchor:
-                        anchor_exp = experiment_name(anchor, suite_id, split, rep)
-                        evaluate_argv += ["--baseline-root", str(campaign_root), "--baseline-experiment", anchor_exp]
-                    comparison = invoke_tool("battery", evaluate_argv)
-                    gate = gate_eval(cell["mechanism_gate"], comparison.get("mechanism"))
-                    result = {"experiment": exp, "gate": gate, "comparison": comparison}
-                else:
-                    result = run_one_experiment(
-                        cell_id=cid, cells_doc=cells_doc, suites_doc=suites_doc, suite_id=suite_id,
-                        split=split, rep=rep, out_dir=out_dir, base_seed=args.base_seed,
-                        baseline_source=baseline_source, candidate_source=candidate_source,
-                        candidate_sha=candidate_sha, polyglot_root=args.polyglot_root,
-                        installed_cache=args.installed_cache, host_python=args.host_python,
-                        events_dir=args.events_dir, backfill_exec=args.backfill_exec,
-                    )
+                try:
+                    if args.report_only:
+                        campaign_root = out_dir / "campaign"
+                        exp = experiment_name(cid, suite_id, split, rep)
+                        invoke_tool("battery", ["reevaluate", "--root", str(campaign_root), "--experiment", exp,
+                                                "--reason", "report-only rescore"])
+                        evaluate_argv = ["evaluate", "--root", str(campaign_root), "--experiment", exp]
+                        anchor = cell.get("anchor_cell")
+                        if anchor:
+                            anchor_exp = experiment_name(anchor, suite_id, split, rep)
+                            evaluate_argv += ["--baseline-root", str(campaign_root),
+                                              "--baseline-experiment", anchor_exp]
+                        comparison = invoke_tool("battery", evaluate_argv)
+                        gate = gate_eval(cell["mechanism_gate"], comparison.get("mechanism"))
+                        result = {"experiment": exp, "gate": gate, "comparison": comparison}
+                    else:
+                        result = run_one_experiment(
+                            cell_id=cid, cells_doc=cells_doc, suites_doc=suites_doc, suite_id=suite_id,
+                            split=split, rep=rep, out_dir=out_dir, base_seed=args.base_seed,
+                            baseline_source=baseline_source, candidate_source=candidate_source,
+                            candidate_sha=candidate_sha, polyglot_root=args.polyglot_root,
+                            installed_cache=args.installed_cache, host_python=args.host_python,
+                            events_dir=args.events_dir, backfill_exec=args.backfill_exec,
+                        )
+                except EvalsError as e:
+                    if e.code == 3:
+                        gates_report[cid] = cell_gate
+                        cells_report.append({
+                            "id": cid, "experiments": experiments, "seeds": seeds,
+                            "gate": cell_gate, "excluded_from_claims": True,
+                        })
+                        _write_partial_state(e.reason)
+                        return 3
+                    raise
                 experiments.append(result["experiment"])
+                comparisons_by_cell[cid].append(result.get("comparison"))
                 if not result["gate"]["passed"]:
                     cell_gate["passed"] = False
                     any_gate_failed = True
@@ -1000,6 +1518,43 @@ def main(argv=None):
             })
 
         _write_json(out_dir / "gates.json", gates_report)
+
+        # Task #4 amendment: an optional secondary anchor per cell (e.g. the
+        # routing cell also compared against plain `plain`, not only its
+        # `anchor_cell` `plain-sonnet`) -- a read-only extra `battery.py
+        # evaluate` call (no new paid launches, no new measurement logic: pure
+        # recompute from already-collected result files). The primary
+        # evaluate (against anchor_cell) is re-run afterwards so the persisted
+        # comparison.json on disk is left exactly as the primary flow set it.
+        secondary_comparisons_by_cell = {}
+        if not args.dry_run:
+            campaign_root = out_dir / "campaign"
+            for cid in cell_ids:
+                cell = cells_doc["cells"][cid]
+                secondary_anchor = cell.get("secondary_anchor")
+                if not secondary_anchor:
+                    continue
+                secondary_comparisons_by_cell[cid] = []
+                for rep in range(1, reps + 1):
+                    exp = experiment_name(cid, suite_id, split, rep)
+                    secondary_exp = experiment_name(secondary_anchor, suite_id, split, rep)
+                    try:
+                        secondary_comparisons_by_cell[cid].append(invoke_tool("battery", [
+                            "evaluate", "--root", str(campaign_root), "--experiment", exp,
+                            "--baseline-root", str(campaign_root), "--baseline-experiment", secondary_exp,
+                        ]))
+                    except EvalsError:
+                        secondary_comparisons_by_cell[cid].append(None)
+                    primary_anchor = cell.get("anchor_cell")
+                    if primary_anchor:
+                        primary_anchor_exp = experiment_name(primary_anchor, suite_id, split, rep)
+                        try:
+                            invoke_tool("battery", [
+                                "evaluate", "--root", str(campaign_root), "--experiment", exp,
+                                "--baseline-root", str(campaign_root), "--baseline-experiment", primary_anchor_exp,
+                            ])
+                        except EvalsError:
+                            pass
 
         # section 8: report -- one series per (cell, rep, harness), one battery_report.py call
         series_args = []
@@ -1030,6 +1585,76 @@ def main(argv=None):
         validate_manifest_shape(manifest)
         _write_json(out_dir / "manifest.json", manifest)
         _write_json(out_dir / "cells.resolved.json", cells_report)
+
+        # Task #2/#4: the results -> verdict -> design-recommendation layer.
+        cell_results = []
+        for cid in cell_ids:
+            cell = cells_doc["cells"][cid]
+            anchor = cell.get("anchor_cell")
+            if not anchor:
+                continue  # 'plain'/'plain-sonnet' are anchors, not candidates; 'externals' is Q3-only
+            gate_passed = gates_report.get(cid, {}).get("passed", False)
+            row = build_cell_result(
+                cid, anchor, comparisons_by_cell.get(cid, []), comparisons_by_cell.get(anchor, []),
+                gate_passed, split, reps,
+            )
+            secondary_anchor = cell.get("secondary_anchor")
+            if secondary_anchor:
+                secondary_comparisons = [c for c in secondary_comparisons_by_cell.get(cid, []) if c]
+                if secondary_comparisons:
+                    secondary_row = build_cell_result(
+                        cid, secondary_anchor, secondary_comparisons,
+                        comparisons_by_cell.get(secondary_anchor, []), gate_passed, split, reps,
+                    )
+                    row["vs_plain"] = {"anchor": secondary_anchor,
+                                        "exec_time_ratio": secondary_row["exec_time_ratio"],
+                                        "cost_ratio": secondary_row["cost_ratio"],
+                                        "quality": secondary_row["quality"]}
+            cell_results.append(row)
+
+        q3 = None
+        if "externals" in cell_ids:
+            champion_id = next((c for c, d in cells_doc["cells"].items() if d.get("champion")), None)
+            if champion_id and comparisons_by_cell.get(champion_id):
+                q3 = q3_comparison(comparisons_by_cell[champion_id], comparisons_by_cell.get("externals", []))
+
+        evidence_limits = set()
+        for comps in comparisons_by_cell.values():
+            for comp in comps:
+                if not comp:
+                    continue
+                for el in (comp.get("evidence_limits") or []):
+                    evidence_limits.add(el)
+                cross = comp.get("cross")
+                if cross:
+                    for el in (cross.get("evidence_limits") or []):
+                        evidence_limits.add(el)
+        evidence_limits.add(f"bootstrap_ci: {BOOTSTRAP_RESAMPLES} resamples, seed={BOOTSTRAP_SEED}")
+        evidence_limits.add(f"confirmed requires >= {MIN_REPS_FOR_CLAIM} reps, "
+                            f">= {MIN_PAIRED_TASKS_FOR_CLAIM} paired passing tasks, and split=holdout")
+
+        results = {
+            "schema": "fast-decisions-evals/results/v1",
+            "suite": suite_id, "split": split, "reps": reps,
+            "cells": cell_results, "q3": q3,
+            "evidence_limits": sorted(evidence_limits),
+        }
+        _write_json(out_dir / "results.json", results)
+        (out_dir / "RESULTS.md").write_text(render_results_markdown(results), encoding="utf-8")
+        (out_dir / "DESIGN-RECOMMENDATION.md").write_text(
+            design_recommendation_text(results, cells_doc), encoding="utf-8")
+
+        # Exit 6: on --resume, any planned experiment still missing a result.json
+        # with no live worker means the batch did not actually finish.
+        if args.resume and not args.report_only:
+            campaign_root = out_dir / "campaign"
+            all_experiments = [e for c in cells_report for e in c["experiments"]]
+            incomplete = scan_incomplete_runs(campaign_root, all_experiments)
+            if incomplete:
+                payload = {"out": str(out_dir), "cells": cell_ids, "exit": 6,
+                           "reason": f"runs incomplete after resume: {incomplete}"}
+                _print_result(payload)
+                return 6
 
         exit_code = 5 if any_gate_failed else 0
         payload = {"out": str(out_dir), "cells": cell_ids, "exit": exit_code,

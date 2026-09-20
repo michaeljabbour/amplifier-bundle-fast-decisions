@@ -96,6 +96,11 @@ cells:
           model_routing_profile: sonnet_start }
     role: "model routing (a candidate, not a default)"
     anchor_cell: plain-sonnet
+    # Decision (2026-09-20b): read-only extra comparison against plain
+    # fable-5-1 (not just the mandatory plain-sonnet control) so the
+    # results/design-bridge layer can tell "beats plain but not plain-sonnet"
+    # (pin the cheaper model) apart from "beats plain-sonnet" (routing pays).
+    secondary_anchor: plain
     requires_cells: [plain-sonnet]          # refuse to run without its control
     mechanism_gate:
       model_routed_model: claude-sonnet-5

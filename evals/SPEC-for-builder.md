@@ -558,3 +558,40 @@ against this spec with the following resolved-open-question amendments (see
   qwen3:0.6b, effort_profile: explore_only}`, `anchor_cell: plain`,
   representing Amplifier's already-shipped default (reference series, not a
   candidate).
+
+---
+
+## 15. Decision (2026-09-20b) -- results verdict layer, cross-rep aggregation, design bridge
+
+This section amends sections 8 and 10 above. See `STUDY-DESIGN.md` section 13
+for the full rationale.
+
+- **Section 8 (Report) is superseded** by a richer `<out>/results.json` +
+  `<out>/RESULTS.md`: per candidate cell, a verdict row (`confirmed` /
+  `screen` / `gate-failed` / `quality-regressed` / `no-effect`) with a
+  bootstrap-CI exec-time ratio, exact sign-test p, cost ratio, quality delta,
+  and gate status; plus a Q3 table and a Q4 section when applicable. Every
+  number traces to a `battery.py evaluate` `comparison.json` (the cell's own
+  cross-campaign comparison against its `anchor_cell`, or the same-experiment
+  paired comparison for `externals`); the bootstrap CI and verdict
+  classification are pure, unit-tested functions in `evals/run.py`
+  (`bootstrap_ci_log_ratio`, `classify_verdict`, `build_cell_result`).
+- **New:** `<out>/DESIGN-RECOMMENDATION.md`, generated from `results.json` by
+  `evals/run.py::design_recommendation_text` against the rules in
+  `evals/DESIGN-BRIDGE.md`. Marked "for human ratification".
+- **New cell field `secondary_anchor`** (only `judge-local+effort+route` uses
+  it, set to `plain`): an optional second, read-only cross-comparison used
+  only to populate `results.json`'s `vs_plain` field, never the cell's
+  primary evaluate/gate/label flow.
+- **`evals/suites.yaml` gains `reps_defaults: {dev: 3, holdout: 5}`.**
+  `run.py`'s `--reps` CLI default changes from `1` to `None`, resolved
+  against `reps_defaults` (or a 3/5 fallback) when not explicitly passed.
+- **Section 10 (Exit codes) amendment:**
+  - exit 3 now also writes a partial `<out>/manifest.json` and
+    `<out>/gates.json` (placeholder entries for cells not yet reached) before
+    returning, with `reason` normalized to `budget_refused: <detail>`, so
+    `--resume` has state to read.
+  - exit 6 (new): on `--resume`, after the run step, `scan_incomplete_runs`
+    checks every planned experiment for a run with no `result.json` and no
+    live `running.json` worker; any remaining incompleteness exits 6 with the
+    list, `{"reason": "runs incomplete after resume: {...}"}`.
