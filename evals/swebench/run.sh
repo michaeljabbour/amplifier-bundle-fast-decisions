@@ -121,6 +121,32 @@ RUN_ID="$(date -u +%Y%m%dT%H%M%SZ)-s3"
 OUTPUT_DIR="$RESULTS_ROOT/$RUN_ID"
 mkdir -p "$OUTPUT_DIR"
 
+# ---- 3b. UV_CONSTRAINT for the host-side `amplifier` bundle install ------
+# amplifier_evaluation's Grader/AIUser/Extractor bundles compose
+# amplifier-foundation, whose module activator runs `uv pip install -e
+# <cache>/amplifier-<hash> --no-sources --overrides <tmp>` for the cloned
+# microsoft/amplifier entry bundle on the HOST. That package depends on
+# `amplifier-app-cli @ git+...@main`, and amplifier-app-cli@main in turn
+# declares a *direct* URL dependency on amplifier-foundation pinned to a
+# specific commit. uv's resolver rejects a URL dependency that only appears
+# one level down (transitively) unless it is ALSO expressed as a direct
+# requirement or constraint for the overall install command -- see
+# README.md "Host bootstrap: uv constraints for the amplifier bundle
+# install" for the full root-cause writeup. Supplying that exact pin via
+# UV_CONSTRAINT (which uv honors for every `uv pip install` it runs,
+# including this one run as a subprocess by the activator) satisfies uv's
+# rule without changing what actually gets installed.
+#
+# If amplifier-app-cli's pin of amplifier-foundation moves to a new commit,
+# the harness will fail again with the same uv error naming the new sha --
+# update AMPLIFIER_FOUNDATION_PIN below to match.
+AMPLIFIER_FOUNDATION_PIN="2c0063a187181173dfe2438ce031079e8723f894"
+UV_CONSTRAINT_FILE="$(mktemp -t s3-uv-constraints.XXXXXX)"
+printf 'amplifier-foundation @ git+https://github.com/microsoft/amplifier-foundation@%s\n' \
+    "$AMPLIFIER_FOUNDATION_PIN" > "$UV_CONSTRAINT_FILE"
+export UV_CONSTRAINT="$UV_CONSTRAINT_FILE"
+log "UV_CONSTRAINT=$UV_CONSTRAINT (pins amplifier-foundation@$AMPLIFIER_FOUNDATION_PIN for the host-side amplifier bundle install)"
+
 log "running harness over ${#PAIRS[@]} pair-flags (max_parallel=$MAX_PARALLEL, trials_per_pair=$TRIALS_PER_PAIR), output=$OUTPUT_DIR"
 cd "$HERE"
 python3 -m amplifier_evaluation run \

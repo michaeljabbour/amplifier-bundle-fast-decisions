@@ -106,7 +106,74 @@ module sources.
 FD_SHA=<full sha> ANTHROPIC_API_KEY=... ./run.sh --run
 ```
 
+## Host bootstrap: uv constraints for the `amplifier` bundle install
+
+`./run.sh --run` invokes `python -m amplifier_evaluation run`, which composes
+the Grader/AIUser/Extractor Foundation sessions (`amplifier_evaluation/{grader,
+ai_user,extractor}.py`, `DEFAULT_FOUNDATION_SOURCE`). Composing those bundles
+calls `amplifier_foundation`'s module activator, which -- on the HOST, before
+any DTU/agent launches -- clones and `uv pip install -e`'s the
+`microsoft/amplifier` entry-bundle repo into the isolated evaluation venv
+(`~/.amplifier/evaluation/venv`).
+
+That `amplifier` package depends on `amplifier-app-cli @ git+...@main`. The
+activator's own override builder
+(`amplifier_foundation/modules/activator.py::_build_git_dep_overrides`) reads
+only the ONE pyproject.toml being installed (`amplifier`'s), so it correctly
+overrides that *direct* git dependency with whatever `amplifier-app-cli`
+version is already installed in the venv -- but it never looks inside
+`amplifier-app-cli`'s own pyproject.toml. As of `amplifier-app-cli@main`
+(commit `b507233`, PR #356 "fix(deps): adopt fork-safe Foundation session
+handoff"), that file declares:
+
+```
+amplifier-foundation @ git+https://github.com/microsoft/amplifier-foundation@2c0063a187181173dfe2438ce031079e8723f894
+```
+
+as a *direct* URL dependency (previously only reachable via
+`[tool.uv.sources]`, which the activator's `--no-sources` flag would have
+ignored). `uv`'s resolver refuses to resolve a URL dependency that appears
+only one level down (transitively, via `amplifier-app-cli`) unless it is
+*also* expressed as a direct requirement or constraint for the overall
+install command:
+
+```
+Failed to resolve dependencies for `amplifier-app-cli` (v0.1.1)
+ -> Package `amplifier-foundation` was included as a URL dependency.
+    URL dependencies must be expressed as direct requirements
+    or constraints. Consider adding `amplifier-foundation @
+    git+https://github.com/microsoft/amplifier-foundation@2c0063a...`
+    to your dependencies or constraints file.
+```
+
+**Fix (`run.sh`, step 3b):** before invoking the harness, `run.sh` writes a
+one-line `uv` constraints file pinning
+`amplifier-foundation@2c0063a187181173dfe2438ce031079e8723f894` (the exact
+commit `amplifier-app-cli@main` itself pins -- this does not change what
+gets installed) and exports `UV_CONSTRAINT` pointing at it. `uv` honors
+`UV_CONSTRAINT` for every `uv pip install` invocation it makes, including the
+one the activator runs as a subprocess during bundle composition, since env
+vars propagate to subprocesses. This satisfies uv's "must be a direct
+requirement or constraint" rule without touching
+`amplifier_foundation`/`amplifier-app-cli` upstream or the tool env.
+
+**If this breaks again:** `amplifier-app-cli`'s pin of `amplifier-foundation`
+moved to a new commit. The harness will fail with the same uv error, naming
+the new required sha -- update `AMPLIFIER_FOUNDATION_PIN` in `run.sh` step 3b
+to match.
+
+**Verifying the fix in isolation** (no full harness run required):
+
+```bash
+V=~/.amplifier/evaluation/venv/bin/python3
+echo "amplifier-foundation @ git+https://github.com/microsoft/amplifier-foundation@2c0063a187181173dfe2438ce031079e8723f894" \
+    > /tmp/uv-constraints.txt
+UV_CONSTRAINT=/tmp/uv-constraints.txt uv pip install -e <cache>/amplifier-<hash> \
+    --python "$V" --no-sources --dry-run
+```
+
 ## Why the `bundles/active.yaml` / `behaviors/<file>` deviation
+
 
 Both `amplifier-fd-incumbent/install.yaml` and
 `amplifier-fd-candidate/install.yaml` compose an explicit, self-contained
