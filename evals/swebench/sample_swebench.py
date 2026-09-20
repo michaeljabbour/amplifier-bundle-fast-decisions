@@ -236,16 +236,35 @@ def _meta_yaml(task_name: str, index: int, total: int) -> str:
     )
 
 
-def _profile_yaml(task_name: str, index: int) -> str:
+def _profile_yaml(task_name: str, repo_url: str, base_commit: str) -> str:
+    """Render profile.yaml with the instance's GitHub repo URL and base
+    commit baked in as LITERAL values in the `provision.setup_cmds` clone/
+    checkout lines -- not as `${SWE_REPO_N}` / `${SWE_COMMIT_N}` launch-var
+    placeholders.
+
+    Earlier versions emitted `${SWE_REPO_N}`/`${SWE_COMMIT_N}` expecting
+    run.sh to supply them via `--launch-var` (the pattern
+    amplifier-bundle-evaluation's example 04 sampler uses). run.sh never
+    grew that wiring, so every DTU provisioned with a profile still
+    containing the unsubstituted placeholder failed identically:
+    `git clone ${SWE_REPO_1} /workspace/repo` -> "repository does not
+    exist" (all 90 S3 trials, in ~10s, before the agent ever ran). Baking
+    the concrete values in at generation time removes the extra moving
+    part entirely: nothing needs to build or thread a per-task
+    `--launch-var` map through the harness, and there is nothing left to
+    forget to wire up. See swebench_stage.check_preflight's
+    `task-profile-placeholders` check, which fails loudly if a `${...}`
+    placeholder ever reappears in a generated profile.yaml.
+    """
     return (
         f"name: eval-{task_name}\n"
         f"description: >\n"
         f"  Ubuntu 24.04 with uv + git. Clones the SWE-bench Verified instance\n"
-        f"  repo into /workspace/repo at its buggy base commit, selected per run\n"
-        f"  via the ${{SWE_REPO_{index}}} and ${{SWE_COMMIT_{index}}} launch\n"
-        f"  variables (set by run.sh from the sampled instance). The problem\n"
-        f"  statement is staged into /workspace by the harness seeding stage.\n"
-        f"  The agent installs foundation (+ fast-decisions, for the two\n"
+        f"  repo into /workspace/repo at its buggy base commit -- the repo URL\n"
+        f"  and commit are resolved to literal values below at task-generation\n"
+        f"  time (see sample_swebench.py), not via launch-time variables. The\n"
+        f"  problem statement is staged into /workspace by the harness seeding\n"
+        f"  stage. The agent installs foundation (+ fast-decisions, for the two\n"
         f"  amplifier-fd-* agents) from GitHub (see the agent's install.yaml).\n"
         f"\n"
         f"base:\n"
@@ -262,8 +281,8 @@ def _profile_yaml(task_name: str, index: int) -> str:
         f"    - apt-get update && apt-get install -y --no-install-recommends git curl ca-certificates tmux python3 python3-pip && rm -rf /var/lib/apt/lists/*\n"
         f"    - curl -LsSf https://astral.sh/uv/install.sh | sh\n"
         f"    - mkdir -p /workspace\n"
-        f"    - git clone ${{SWE_REPO_{index}}} /workspace/repo\n"
-        f"    - git -C /workspace/repo checkout ${{SWE_COMMIT_{index}}}\n"
+        f"    - git clone {repo_url} /workspace/repo\n"
+        f"    - git -C /workspace/repo checkout {base_commit}\n"
         f"\n"
         f"readiness:\n"
         f"  - name: uv-installed\n"
@@ -363,7 +382,10 @@ def build_task_dir(
 
     (td / "task.yaml").write_text(_TASK_YAML_TEMPLATE, encoding="utf-8")
     (td / "meta.yaml").write_text(_meta_yaml(task_name, index, total), encoding="utf-8")
-    (td / "profile.yaml").write_text(_profile_yaml(task_name, index), encoding="utf-8")
+    repo_url = f"https://github.com/{instance.repo}.git"
+    (td / "profile.yaml").write_text(
+        _profile_yaml(task_name, repo_url, instance.base_commit), encoding="utf-8"
+    )
     (td / "grader.yaml").write_text(_grader_yaml(task_name), encoding="utf-8")
 
     record = asdict(instance)

@@ -18,6 +18,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -298,6 +299,44 @@ def _default_run_cmd(argv: list[str]) -> subprocess.CompletedProcess[str]:
     )  # pragma: no cover
 
 
+# ---------------------------------------------------------------------------
+# Unresolved `${...}` placeholder detection in generated task profiles.
+#
+# Root cause of the S3 provisioning failure (all 90 trials, ~10s,
+# "fatal: repository '/workspace/repo' does not exist"): sample_swebench.py
+# used to emit `${SWE_REPO_N}` / `${SWE_COMMIT_N}` launch-var placeholders
+# in profile.yaml's `provision.setup_cmds`, expecting run.sh to resolve them
+# via `--launch-var` the way amplifier-bundle-evaluation's example 04
+# sampler does. run.sh never grew that wiring, so the DTU CLI received the
+# literal string `${SWE_REPO_1}` as a clone URL. sample_swebench.py now
+# bakes the concrete repo URL and base commit into profile.yaml at
+# generation time instead (see its `_profile_yaml`), so a well-formed
+# generated task profile should never contain a `${...}` placeholder again.
+# This check is the regression guard for that invariant.
+_PLACEHOLDER_RE = re.compile(r"\$\{[^}]*\}")
+
+
+def find_unresolved_placeholders(tasks_dir: Path) -> dict[str, list[str]]:
+    """Scan every `<tasks_dir>/*/profile.yaml` for `${...}` placeholders.
+
+    Returns `{profile_path: [placeholder, ...]}` for any profile that still
+    contains one -- an empty dict means every generated profile is fully
+    resolved (no launch-time substitution left to forget). Returns `{}`
+    (not a failure) if `tasks_dir` does not exist or has no task dirs yet
+    -- task generation is a separate, idempotent step (see run.sh); this
+    check only judges profiles that already exist on disk.
+    """
+    missing: dict[str, list[str]] = {}
+    if not tasks_dir.is_dir():
+        return missing
+    for profile_path in sorted(tasks_dir.glob("*/profile.yaml")):
+        text = profile_path.read_text(encoding="utf-8")
+        placeholders = _PLACEHOLDER_RE.findall(text)
+        if placeholders:
+            missing[str(profile_path)] = placeholders
+    return missing
+
+
 def check_preflight(
     *,
     which: Callable[[str], str | None] = shutil.which,
@@ -305,6 +344,7 @@ def check_preflight(
     env: dict[str, str] | None = None,
     candidate_config_path: Path | None = None,
     pinned_ids_path: Path | None = None,
+    tasks_dir: Path | None = None,
 ) -> dict[str, Any]:
     """Pure(ish) preflight check: every side effect (PATH lookup, subprocess,
     env read, file read) is passed in, so tests substitute fakes for all of
@@ -376,6 +416,23 @@ def check_preflight(
         except CandidateConfigError as exc:
             record("candidate-config", False, str(exc))
 
+    if tasks_dir is not None:
+        unresolved = find_unresolved_placeholders(tasks_dir)
+        if unresolved:
+            detail = "; ".join(
+                f"{path}: {', '.join(placeholders)}"
+                for path, placeholders in sorted(unresolved.items())
+            )
+            record("task-profile-placeholders", False, detail)
+        else:
+            record(
+                "task-profile-placeholders",
+                True,
+                "no generated task dirs yet"
+                if not tasks_dir.is_dir()
+                else "no unresolved ${...} placeholders in generated profiles",
+            )
+
     return report
 
 
@@ -446,6 +503,7 @@ def _cmd_check(args: argparse.Namespace) -> int:
         env=dict(os.environ),
         candidate_config_path=Path(args.config) if args.config else None,
         pinned_ids_path=Path(args.pinned_ids) if args.pinned_ids else None,
+        tasks_dir=Path(args.tasks_dir) if args.tasks_dir else None,
     )
     print(json.dumps(report, indent=2))
     return 0 if report["ok"] else 1
@@ -481,6 +539,11 @@ def main(argv: list[str] | None = None) -> int:
     check = sub.add_parser("check", help="print a JSON preflight report")
     check.add_argument("--config", default=str(HERE / "candidate.config.json"))
     check.add_argument("--pinned-ids", default=str(HERE / "PINNED_INSTANCE_IDS"))
+    check.add_argument(
+        "--tasks-dir",
+        default=str(HERE / "tasks"),
+        help="scan <tasks-dir>/*/profile.yaml for unresolved ${...} placeholders",
+    )
     check.set_defaults(func=_cmd_check)
 
     args = parser.parse_args(argv)

@@ -54,7 +54,8 @@ if [ -f "$HOME/.amplifier/keys.env" ]; then set -a; . "$HOME/.amplifier/keys.env
 log "preflight checks"
 python3 "$HERE/swebench_stage.py" check \
     --config "$HERE/candidate.config.json" \
-    --pinned-ids "$HERE/PINNED_INSTANCE_IDS"
+    --pinned-ids "$HERE/PINNED_INSTANCE_IDS" \
+    --tasks-dir "$HERE/tasks"
 PREFLIGHT_EXIT=$?
 
 if [ "$MODE" = "check" ]; then
