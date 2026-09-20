@@ -4,6 +4,20 @@
 # secrets (TYPESAFE_API_KEY is reported present/absent only).
 #
 # CHANGELOG
+#   v1.2.0 (2026-09-20): BREAKING CHANGE -- Ollama is now the default judge host
+#     on EVERY machine, including Apple Silicon.
+#     * ROOT CAUSE: v1.1.0 chose MLX on Apple Silicon from first principles
+#       (native GPU, no extra runtime resident) and never measured it.
+#     * EVIDENCE (2026-09-20, this Apple Silicon machine, same decision suites):
+#       MLX (mlx-lm 0.31.3, Qwen3-0.6B-4bit, chat endpoint) ~110-140 ms per
+#       decision with LOWER agreement; Ollama ~25 ms with HIGHER agreement.
+#     * CHANGE: default chosen_host is ollama everywhere. Apple Silicon still
+#       reports mlx_available: true plus an mlx_note naming the experimental
+#       rung (bundles/active-mlx.yaml) and the exact opt-in. New optional input
+#       prefer_host (auto|ollama|mlx, default auto) forces the choice;
+#       prefer_host=mlx on a non-Apple-Silicon machine fails loud in preflight.
+#     * RESULT: the recommended path is the faster, more-agreeing host. The MLX
+#       install path is unchanged and still reachable, now by explicit opt-in.
 #   v1.1.0 (2026-09-20): review-machine stage picks the local judge host
 #     (Apple MLX on Apple Silicon, Ollama elsewhere) before the plan is
 #     drafted; local-judge and bundle-rung branch on that choice.
@@ -17,11 +31,14 @@ dependencies:
       - "foundation:zen-architect"
 
 name: "make-amplifier-faster"
-description: "Install the fast-decisions active configuration (local judge -- MLX on Apple Silicon, Ollama otherwise -- plus the active bundle rung) behind one approval gate, then verify it from receipts."
-version: "1.1.0"
+description: "Install the fast-decisions active configuration (local judge -- Ollama by default on every machine, MLX only by explicit opt-in -- plus the active bundle rung) behind one approval gate, then verify it from receipts."
+version: "1.2.0"
 tags: ["fast-decisions", "install", "performance"]
 
 context:
+  # auto (default) -> ollama on every machine. ollama -> force ollama.
+  # mlx -> force the experimental MLX host; Apple Silicon only, fails loud otherwise.
+  prefer_host: "auto"
   ollama_model: "qwen3:0.6b"
   ollama_url: "http://127.0.0.1:11434"
   mlx_model: "mlx-community/Qwen3-0.6B-4bit"
@@ -33,7 +50,7 @@ context:
 
 stages:
   - name: "review-machine"
-    description: "Read-only machine-capability review. Decides which local judge host this install targets."
+    description: "Read-only machine-capability review. Decides which local judge host this install targets (Ollama by default; MLX only when prefer_host=mlx on Apple Silicon)."
     steps:
       - id: "detect"
         type: "bash"
@@ -67,20 +84,61 @@ stages:
           curl -fsS --max-time 2 "{{mlx_url}}/health" >/dev/null 2>&1 && mlx_serving=true
           lmstudio_serving=false
           curl -fsS --max-time 2 "http://127.0.0.1:1234/v1/models" >/dev/null 2>&1 && lmstudio_serving=true
+          prefer="{{prefer_host}}"
+          mlx_available=false
+          mlx_note=''
+          prefer_error=''
           if [ "$apple_silicon" = "true" ]; then
-            chosen_host=mlx
-            reason="Apple Silicon detected ($(sysctl -n machdep.cpu.brand_string 2>/dev/null)); MLX runs the judge model natively on the GPU with no extra runtime to keep resident, Ollama is the fallback."
-          else
-            chosen_host=ollama
-            reason="Not Apple Silicon ($os/$arch); MLX requires Apple Silicon, so Ollama is used."
+            mlx_available=true
+            mlx_note='MLX is supported as an experimental host (the bundles/active-mlx.yaml rung) and is being benchmarked, but it is not recommended yet. To opt in anyway, re-run this recipe with context prefer_host: mlx'
           fi
-          printf '{"os":"%s","arch":"%s","apple_silicon":"%s","memory_gb":"%s","python_version":"%s","ollama_installed":"%s","ollama_serving":"%s","mlx_importable":"%s","mlx_on_path":"%s","mlx_serving":"%s","lmstudio_serving":"%s","chosen_host":"%s","reason":"%s"}\n' \
+          evidence='Measured 2026-09-20 on this Apple Silicon machine, same decision suites: MLX (mlx-lm 0.31.3, Qwen3-0.6B-4bit, chat endpoint) ~110-140 ms per decision with lower agreement; Ollama ~25 ms per decision with higher agreement.'
+          case "$prefer" in
+            mlx)
+              if [ "$apple_silicon" = "true" ]; then
+                chosen_host=mlx
+                reason="prefer_host=mlx was requested on Apple Silicon, so the experimental MLX host is used. $evidence You are opting into the slower, lower-agreement host."
+              else
+                chosen_host=ollama
+                prefer_error="prefer_host=mlx was requested, but this machine is $os/$arch, not Apple Silicon -- MLX requires Apple Silicon. Re-run with prefer_host: auto (the default) or prefer_host: ollama."
+                reason='prefer_host=mlx is not available on this machine.'
+              fi
+              ;;
+            ollama)
+              chosen_host=ollama
+              reason="prefer_host=ollama was requested explicitly. $evidence"
+              ;;
+            auto|'')
+              chosen_host=ollama
+              reason="Ollama is the default judge host on every machine, including Apple Silicon. $evidence MLX is therefore NOT the recommended host yet."
+              ;;
+            *)
+              chosen_host=ollama
+              prefer_error="prefer_host must be one of auto, ollama or mlx -- got: $prefer"
+              reason='prefer_host value not recognized; refusing to guess.'
+              ;;
+          esac
+          printf '{"os":"%s","arch":"%s","apple_silicon":"%s","memory_gb":"%s","python_version":"%s","ollama_installed":"%s","ollama_serving":"%s","mlx_importable":"%s","mlx_on_path":"%s","mlx_serving":"%s","lmstudio_serving":"%s","prefer_host":"%s","mlx_available":"%s","mlx_note":"%s","prefer_error":"%s","chosen_host":"%s","reason":"%s"}\n' \
             "$os" "$arch" "$apple_silicon" "$mem_gb" "$pyver" "$oll_installed" "$oll_serving" \
-            "$mlx_importable" "$mlx_on_path" "$mlx_serving" "$lmstudio_serving" "$chosen_host" "$reason"
+            "$mlx_importable" "$mlx_on_path" "$mlx_serving" "$lmstudio_serving" \
+            "$prefer" "$mlx_available" "$mlx_note" "$prefer_error" "$chosen_host" "$reason"
 
   - name: "preflight"
-    description: "Read-only. Changes nothing; produces the plan the gate approves."
+    description: "Read-only. Changes nothing; produces the plan the gate approves. Refuses an impossible prefer_host before anything else runs."
     steps:
+      - id: "guard-prefer-host"
+        type: "bash"
+        timeout: 30
+        output: "host_guard"
+        command: |
+          set -uo pipefail
+          err="{{machine.prefer_error}}"
+          if [ -n "$err" ]; then
+            echo "ERROR: $err" >&2
+            exit 1
+          fi
+          echo "prefer_host={{machine.prefer_host}} -> chosen_host={{machine.chosen_host}}"
+
       - id: "probe"
         type: "bash"
         timeout: 180
@@ -107,6 +165,17 @@ stages:
 
           The chosen local judge host is {{machine.chosen_host}}, because: {{machine.reason}}
 
+          State that reason in the plan, including the dated measurement it rests on:
+          measured 2026-09-20 on this Apple Silicon machine, on the same decision suites,
+          MLX (mlx-lm 0.31.3, Qwen3-0.6B-4bit, chat endpoint) took ~110-140 ms per decision
+          with lower agreement, while Ollama took ~25 ms with higher agreement -- so Ollama
+          is the default host on every machine and MLX is NOT recommended yet.
+          MLX available on this machine: {{machine.mlx_available}}. {{machine.mlx_note}}
+          If MLX is available and was not chosen, give the exact opt-in in one line:
+          re-run this recipe with context prefer_host: mlx (and note it is experimental
+          and currently slower). If MLX was chosen, say plainly that it was chosen only
+          because prefer_host: mlx was requested.
+
           If chosen host is "mlx": the plan will install, only where missing, the mlx-lm Python
           package (`uv tool install mlx-lm`) and start `mlx_lm.server` in the background on
           127.0.0.1:8080 serving the model `{{mlx_model}}` (~400 MB-1 GB of disk depending on
@@ -131,6 +200,15 @@ stages:
       timeout: 3600
       prompt: |
         {{plan}}
+
+        Chosen local judge host: {{machine.chosen_host}} (prefer_host={{machine.prefer_host}})
+        Why: {{machine.reason}}
+        Evidence, 2026-09-20, same decision suites on this Apple Silicon machine:
+        MLX (mlx-lm 0.31.3, Qwen3-0.6B-4bit, chat endpoint) ~110-140 ms per decision with
+        lower agreement; Ollama ~25 ms per decision with higher agreement. MLX is therefore
+        not the recommended host yet.
+        MLX available here: {{machine.mlx_available}}. {{machine.mlx_note}}
+        To use MLX anyway: deny this gate and re-run with context prefer_host: mlx
 
         Nothing has changed yet. Approve to install; deny to stop here.
 
@@ -325,7 +403,13 @@ stages:
           Verification (exit {{verify_code}}): {{evidence}}
 
           Cover, in this order and in under 20 lines:
-          1. Which judge host was chosen ({{machine.chosen_host}}) and why ({{machine.reason}}).
+          1. Which judge host was chosen ({{machine.chosen_host}}) and why ({{machine.reason}}) --
+             including the dated measurement: 2026-09-20, same decision suites, MLX
+             (mlx-lm 0.31.3, Qwen3-0.6B-4bit, chat endpoint) ~110-140 ms per decision with
+             lower agreement vs Ollama ~25 ms with higher agreement. If MLX was available
+             ({{machine.mlx_available}}) but not chosen, add one line: it is experimental
+             (bundles/active-mlx.yaml), still being benchmarked, and can be opted into by
+             re-running this recipe with context prefer_host: mlx.
           2. What changed on this machine (skip anything that reported "skip:", and skip the other
              host's steps entirely -- they did not run).
           3. Whether the verification found a fast_decisions receipt with mode active and backend

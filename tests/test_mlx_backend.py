@@ -150,8 +150,8 @@ class MlxOriginValidationTests(unittest.TestCase):
 
 
 class MlxBackendScoringTests(unittest.TestCase):
-    def test_scores_via_int_logprobs_shape_on_first_try(self):
-        handler = _make_handler(accepts_form="int")
+    def test_scores_via_bool_logprobs_shape_on_first_try(self):
+        handler = _make_handler(accepts_form="bool")
         with _running_server(handler) as base_url:
             backend = MlxBackend(model="mlx-test", url=base_url, timeout_ms=2000)
             result = asyncio.run(backend.ask(_request()))
@@ -161,26 +161,26 @@ class MlxBackendScoringTests(unittest.TestCase):
         self.assertEqual(result.model, "mlx-test")
         self.assertEqual(result.input_tokens, 40)
         self.assertEqual(result.output_tokens, 1)
-        self.assertEqual(backend._logprobs_form, "int")
+        self.assertEqual(backend._logprobs_form, "bool")
         # Exactly one POST -- the server accepted the first shape tried.
         self.assertEqual(len(handler.request_bodies), 1)
-        self.assertFalse(isinstance(handler.request_bodies[0]["logprobs"], bool))
+        self.assertTrue(isinstance(handler.request_bodies[0]["logprobs"], bool))
 
-    def test_falls_back_to_bool_shape_when_int_rejected_and_caches_it(self):
-        handler = _make_handler(accepts_form="bool")
+    def test_falls_back_to_int_shape_when_bool_rejected_and_caches_it(self):
+        handler = _make_handler(accepts_form="int")
         with _running_server(handler) as base_url:
             backend = MlxBackend(model="mlx-test", url=base_url, timeout_ms=2000)
             result = asyncio.run(backend.ask(_request()))
             self.assertEqual(result.action.choice, "read")
-            self.assertEqual(backend._logprobs_form, "bool")
-            # First call: int rejected (400), then bool succeeded -- 2 requests.
+            self.assertEqual(backend._logprobs_form, "int")
+            # First call: bool rejected (400), then int succeeded -- 2 requests.
             self.assertEqual(len(handler.request_bodies), 2)
-            self.assertFalse(isinstance(handler.request_bodies[0]["logprobs"], bool))
-            self.assertTrue(isinstance(handler.request_bodies[1]["logprobs"], bool))
+            self.assertTrue(isinstance(handler.request_bodies[0]["logprobs"], bool))
+            self.assertFalse(isinstance(handler.request_bodies[1]["logprobs"], bool))
             # Second call: the working shape is cached, so exactly one more request.
             asyncio.run(backend.ask(_request()))
             self.assertEqual(len(handler.request_bodies), 3)
-            self.assertTrue(isinstance(handler.request_bodies[2]["logprobs"], bool))
+            self.assertFalse(isinstance(handler.request_bodies[2]["logprobs"], bool))
 
     def test_both_shapes_rejected_raises_backend_unavailable(self):
         handler = _make_handler(accepts_form="neither")
@@ -248,16 +248,19 @@ class MlxBackendScoringTests(unittest.TestCase):
         }]}
         self.assertEqual(score_tokens(ollama_style, labels), score_tokens(mlx_style, labels))
 
-    def test_request_body_folds_system_into_a_single_prompt(self):
+    def test_request_body_uses_chat_messages_with_system_and_user(self):
+        # Chat endpoint so the model's chat template applies; a raw completion prompt never yielded a
+        # label token from Qwen3 (every decision abstained, verified live on mlx-lm 0.31.3).
         backend = MlxBackend(model="mlx-test", url="http://127.0.0.1:8080")
         body, labels = backend.request_body(_request())
         self.assertEqual(body["model"], "mlx-test")
         self.assertEqual(body["max_tokens"], 1)
         self.assertEqual(body["temperature"], 0)
-        self.assertIn("routing classifier", body["prompt"])
-        self.assertIn("README.md", body["prompt"])
+        self.assertEqual([m["role"] for m in body["messages"]], ["system", "user"])
+        self.assertIn("routing classifier", body["messages"][0]["content"])
+        self.assertIn("README.md", body["messages"][1]["content"])
         self.assertEqual(labels, {"A": "read"})
-        self.assertNotIn("system", body)
+        self.assertNotIn("prompt", body)
 
 
 class MlxWarmupTests(unittest.TestCase):
@@ -267,7 +270,7 @@ class MlxWarmupTests(unittest.TestCase):
             backend = MlxBackend(model="mlx-test", url=base_url, timeout_ms=2000)
             asyncio.run(backend.warmup())
         self.assertIn("/health", handler.request_paths)
-        self.assertIn("/v1/completions", handler.request_paths)
+        self.assertIn("/v1/chat/completions", handler.request_paths)
 
     def test_warmup_raises_backend_unavailable_when_health_fails(self):
         handler = _make_handler(accepts_form="int", health_status=503)
@@ -311,3 +314,30 @@ class MlxDoctorCheckTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ContentShapeTests(unittest.TestCase):
+    def test_openai_content_list_shape_is_parsed(self):
+        from amplifier_fast_decisions.local_backend import _mlx_top_logprobs
+        payload = {"choices": [{"index": 0, "logprobs": {"content": [{"id": 1, "token": " A", "logprob": -0.1,
+                    "top_logprobs": [{"id": 1, "token": " A", "logprob": -0.1}, {"id": 2, "token": " B", "logprob": -2.3}]}]}}]}
+        top = _mlx_top_logprobs(payload)
+        self.assertEqual([t["token"] for t in top], [" A", " B"])
+
+
+class MassToleranceTests(unittest.TestCase):
+    def test_small_fp16_overshoot_is_renormalised_not_rejected(self):
+        import math
+        from amplifier_fast_decisions.local_backend import score_tokens
+        # exp sums to ~1.03 -- typical of quantized log-softmax rounding
+        top = [{"token": "A", "logprob": math.log(0.80)}, {"token": "B", "logprob": math.log(0.23)}]
+        probs = score_tokens({"logprobs": [{"top_logprobs": top}]}, {"A": "read", "B": "list"})
+        self.assertAlmostEqual(probs["read"] + probs["list"], 1.0, places=6)
+        self.assertGreater(probs["read"], probs["list"])
+        self.assertEqual(probs["reason"], 0.0)  # abstain mass after renormalisation
+
+    def test_raw_logits_are_still_rejected(self):
+        from amplifier_fast_decisions.backends import BackendUnavailable
+        from amplifier_fast_decisions.local_backend import score_tokens
+        with self.assertRaises(BackendUnavailable):
+            score_tokens({"logprobs": [{"top_logprobs": [{"token": "A", "logprob": -0.01}, {"token": "B", "logprob": -0.02}]}]}, {"A": "read", "B": "list"})

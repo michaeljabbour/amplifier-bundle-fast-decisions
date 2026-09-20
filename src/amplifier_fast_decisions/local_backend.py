@@ -6,7 +6,7 @@ than renormalized into inflated action confidence. No arguments are generated.
 
 Two local hosts share the same label-prompt construction and token-mass
 scoring below: ``OllamaBackend`` (Ollama's ``/api/generate``) and
-``MlxBackend`` (mlx-lm's OpenAI-compatible ``/v1/completions``, for Apple
+``MlxBackend`` (mlx-lm's OpenAI-compatible ``/v1/chat/completions``, for Apple
 Silicon). Both are loopback-only, single-token, non-thinking classifiers with
 the same abstention semantics -- only the wire format differs.
 """
@@ -73,8 +73,14 @@ def score_tokens(payload: dict, labels: dict[str, str]) -> dict[str, float]:
         # Exact single-letter tokens only; whitespace/longer tokens abstain.
         if token in labels:
             probabilities[labels[token]] += mass
-    if total_mass > 1.0001:
+    # fp16/quantized log-softmax (mlx-lm 4-bit, verified live) can sum up to ~10-20% above one after exp() (live sums 0.99-1.1 seen);
+    # renormalise small overshoots, and only reject what cannot be a probability distribution (raw logits).
+    if total_mass > 1.25:
         raise BackendUnavailable("Token probability mass exceeds one")
+    if total_mass > 1.0:
+        for key in probabilities:
+            probabilities[key] /= total_mass
+        total_mass = 1.0
     probabilities[SLOW] = max(0.0, 1.0 - sum(probabilities.values()))
     return probabilities
 
@@ -238,6 +244,13 @@ def _mlx_top_logprobs(payload: dict) -> list:
     logprobs = choices[0].get("logprobs")
     if not isinstance(logprobs, dict):
         raise BackendUnavailable("mlx completion omitted logprobs")
+    # Two response shapes have shipped: SERVER.md's ``{"top_logprobs": [[...]]}`` and, since mlx-lm 0.31,
+    # the OpenAI chat-style ``{"content": [{"token", "logprob", "top_logprobs": [...]}]}`` (verified live).
+    content = logprobs.get("content")
+    if isinstance(content, list) and len(content) == 1 and isinstance(content[0], dict):
+        inner = content[0].get("top_logprobs")
+        if isinstance(inner, list) and inner:
+            return inner
     top = logprobs.get("top_logprobs")
     if not isinstance(top, list) or len(top) != 1 or not isinstance(top[0], list) or not top[0]:
         raise BackendUnavailable("mlx completion omitted per-token top_logprobs")
@@ -254,7 +267,8 @@ class MlxBackend:
     The server's ``logprobs`` request field has shipped in two shapes across
     mlx-lm versions: an integer count (``{"logprobs": N}``) and an
     OpenAI-style pair (``{"logprobs": true, "top_logprobs": N}``). Both are
-    tried; whichever the running server accepts is cached for later calls.
+    tried (bool first: mlx-lm 0.31.3 rejects the integer form by closing the
+    connection); whichever the running server accepts is cached for later calls.
     """
 
     name = "mlx"
@@ -275,22 +289,25 @@ class MlxBackend:
 
     def _prepare_request(self, request: DecisionRequest) -> tuple[dict, dict[str, str], str]:
         prompt, labels, option_set_hash = _build_label_prompt(request, format_tag="mlx-options-v1")
-        # /v1/completions is a raw-prompt endpoint (no separate system field);
-        # fold the system instructions in ahead of the rendered options.
-        full_prompt = SYSTEM + "\n\n" + prompt
-        body = {"model": self.model, "prompt": full_prompt, "max_tokens": 1, "temperature": 0}
+        # Use the chat endpoint so the model's chat template applies (the Ollama backend does the same via
+        # its chat API): with a raw /v1/completions prompt, Qwen3's first token was never a label and every
+        # decision abstained (verified live, mlx-lm 0.31.3). Thinking is disabled server-side via
+        # --chat-template-args '{"enable_thinking": false}'.
+        body = {"model": self.model, "max_tokens": 1, "temperature": 0,
+                "messages": [{"role": "system", "content": SYSTEM}, {"role": "user", "content": prompt}]}
         return body, labels, option_set_hash
 
     @staticmethod
     def _logprobs_variant(form: str) -> dict:
+        # mlx-lm caps the requested top-k at 10 (a larger value makes the server drop the connection).
         if form == "int":
-            return {"logprobs": 20}
-        return {"logprobs": True, "top_logprobs": 20}
+            return {"logprobs": 10}
+        return {"logprobs": True, "top_logprobs": 10}
 
     async def _post_completion(self, body: dict, form: str) -> dict:
         full_body = {**body, **self._logprobs_variant(form)}
         req = urllib.request.Request(
-            f"{self.base_url}/v1/completions",
+            f"{self.base_url}/v1/chat/completions",
             data=json.dumps(full_body).encode("utf-8"),
             method="POST", headers={"Content-Type": "application/json"},
         )
@@ -302,7 +319,7 @@ class MlxBackend:
     async def ask(self, request: DecisionRequest) -> DecisionResult:
         body, labels, option_set_hash = self._prepare_request(request)
         async with self._lock:
-            forms = [self._logprobs_form] if self._logprobs_form else ["int", "bool"]
+            forms = [self._logprobs_form] if self._logprobs_form else ["bool", "int"]  # 0.31+ accepts only bool; int closes the connection
             payload = None
             top = None
             last_exc: BackendUnavailable | None = None
@@ -346,7 +363,7 @@ class MlxBackend:
             raise BackendUnavailable("mlx server /health check failed")
         body = {"model": self.model, "prompt": "ok", "max_tokens": 1, "temperature": 0}
         req = urllib.request.Request(
-            f"{self.base_url}/v1/completions",
+            f"{self.base_url}/v1/chat/completions",
             data=json.dumps(body).encode("utf-8"),
             method="POST", headers={"Content-Type": "application/json"},
         )
