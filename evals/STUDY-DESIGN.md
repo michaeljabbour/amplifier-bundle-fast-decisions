@@ -517,3 +517,96 @@ Resolved as part of completing `evals/run.py` end to end and adding
    (`scan_incomplete_runs`) for a run with no `result.json` and no live
    `running.json` worker (checked via `os.kill(pid, 0)`); if any remain, `run.py`
    exits 6 with the list rather than reporting success on an incomplete batch.
+
+---
+
+## 14. Judge head-to-head (2026-09-20c)
+
+`Policy.model_routing.escalation_judge` and `Policy.effort_routing.phase_judge`
+(HC05, `orchestrator._ask_judge_choice` -- see `docs/ARCHITECTURE.md`) let the
+CONFIGURED judge backend, not just deterministic rules, make a decision. This
+section adds the cells needed to compare the two judges -- local `ollama
+qwen3:0.6b` vs `jev` (typesafe.ai) -- across every mechanism arm where the
+judge participates, and specifically on the ONE decision that actually
+carries speed: whether to escalate off the cheap model.
+
+**The factorial.** `judge ∈ {local, jev}` × `arm ∈ {read-shortcut only,
++effort incumbent, +effort all-phase, +effort all-phase phase-judged,
++route rules-escalation, +route judge-escalation}`. Each `arm` for `judge=jev`
+is a twin of its `judge=local` cell, identical in every axis except the
+backend (and, for the two `+route*` pairs, `allow_external_state: true`,
+required for `jev`):
+
+| local cell | jev twin | arm |
+|---|---|---|
+| `judge-local` | `judge-jev` | read-shortcut alone |
+| `judge-local+effort-incumbent` | `judge-jev+effort-incumbent` | today's shipped default (explore:low) |
+| `judge-local+effort` | `judge-jev+effort` | all-phase effort routing (already existed) |
+| `judge-local+effort-phasejudged` | `judge-jev+effort-phasejudged` | all-phase, judge classifies the phase |
+| `judge-local+effort+route` | `judge-jev+effort+route` | model routing, rules escalation |
+| `judge-local+effort+route-judged` | `judge-jev+effort+route-judged` | model routing, JUDGE escalation |
+
+**The paired comparison rule.** Each `judge=jev` cell is read against its
+`judge=local` twin on the SAME tasks/reps (both cells run in the same
+repetition batch, same seeds, same task order -- section 12 Decision 1): a
+time ratio (geometric mean, with the bootstrap 95% CI already computed by
+`evals/run.py`'s verdict layer) and its CI, a quality delta (non-inferiority,
+section 8's definition), the mechanism gate (`mechanism_engaged` for both,
+`judged_engaged` for the two judged cells -- see below), and decision latency
+p95 from `comparison.json["mechanism"]["decision_latency_ms_p95"]`,
+per-backend via `decision_latency_ms_by_backend`. This is a plain re-use of
+`battery.py evaluate`'s existing anchor-comparison machinery pointed at a
+NEW baseline (the twin cell's same-batch experiment, not just the shared
+`plain`/`plain-sonnet` anchor) -- no new measurement logic, matching section
+12 Decision 1's `--baseline-root`/`--baseline-experiment` pattern.
+
+**The decisive pair.** `judge-local+effort+route-judged` vs
+`judge-jev+effort+route-judged` is what actually answers "which judge should
+decide escalation": both hand the escalate-or-not call (the mechanism that
+determines whether a turn stays cheap or moves to sonnet-5, i.e. the one
+thing in this whole benchmark that visibly trades speed for capability) to
+the judge, via `model_routing.escalation_judge: "judge"`
+(`model_routing_profiles.sonnet_start_judged` in `cells.yaml`). Each also
+carries a `secondary_anchor` at its own RULES-escalation twin
+(`judge-local+effort+route` / `judge-jev+effort+route` respectively), so a
+report can show, per judge, whether letting it decide escalation beat that
+same judge's own deterministic-rules configuration -- not just whether it
+beat `plain-sonnet`.
+
+**Mechanism gate: `require_judged`.** A cell with `escalation_judge: "judge"`
+or `effort_routing.phase_judge: true` declares `mechanism_gate: {..., 
+require_judged: true}`. `scripts/battery.py`'s `_mechanism_report` now
+computes `judged_engaged` (`true`/`false`/`null`) and `judged_reason`: `null`
+when the cell's own config configures neither mechanism (not applicable);
+`false` when the configured judge mechanism produced zero
+`escalation_judged`/`phase_judged` receipts, OR when any of those receipts
+were answered by a backend OTHER than the cell's `configured_backend` (the
+same class of defect R4 already guards for `scored`/`model_routed` -- a
+judged cell whose judge silently never fired, or fired against the wrong
+backend, must not be credited); `true` otherwise. This is the DATA half of
+the gate. **The wiring of `require_judged` into `evals/run.py::gate_eval` is
+NOT yet done** -- `run.py` was out of scope for this change; `gate_eval`
+should read `mechanism.get("judged_engaged")` the same way it already reads
+`mechanism.get("mechanism_engaged")`, once that file is in scope.
+
+**The decision rule (fed to `DESIGN-BRIDGE.md` rule (d2)).** Jev becomes the
+default judge for `escalation_judge`/`phase_judge` ONLY if, across the arms
+where the judge's OWN decision determines behavior (`+route-judged`,
+`+effort*-phasejudged`), the jev cell wins-or-ties on time against its local
+twin, quality is non-inferior, its mechanism gate (including
+`judged_engaged`) is green on every rep, AND `jev`'s decision-latency p95 is
+under 500 ms (the same bar `DESIGN-BRIDGE.md` rule (b) already sets for the
+read-shortcut judge) -- a judge slow enough to erode the time it was meant to
+buy is not a win merely because its answer was "better". Otherwise `local`
+(`ollama qwen3:0.6b`) remains the default for both HC05 knobs, independent of
+whatever rule (b) concludes for the read-shortcut judge alone -- the two are
+evaluated separately because a judge that reads well for a cheap read/list
+choice is not automatically the right judge for a decision that changes
+which model serves the rest of the turn.
+
+**Budget.** `cells.yaml`'s `budget.estimated_total_usd` is raised to `1500`
+and `max_benchmark_worker_launches` to `2000` to cover the 8 new cells (7 new
+`judge-jev*`/`*-judged`/`*-phasejudged` cells plus their batch-anchor
+overhead) across S1 and S2, dev and holdout, at the existing 3/5-rep
+schedule (section 13 Decision 5) -- cost is not the constraint here, study
+quality is.

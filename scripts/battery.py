@@ -1172,7 +1172,11 @@ def _percentile(values_sorted, pct):
 # receipts inspected; if a future fallback receipt adds one, it's picked up
 # automatically since the check is generic (any event of these kinds with a
 # numeric `duration_ms`), not hardcoded to 'scored' alone.
-_LATENCY_EVENT_KINDS = ('scored', 'fallback')
+# HC05 ("judge-driven escalation and phase classification"): both
+# `escalation_judged` and `phase_judged` receipts carry a `duration_ms` and
+# `backend` field from the same `_ask_judge_choice` call site, so they are
+# picked up by the generic per-kind loop below exactly like `scored`.
+_LATENCY_EVENT_KINDS = ('scored', 'fallback', 'escalation_judged', 'phase_judged')
 
 
 def _run_mechanism_counts(run_dir):
@@ -1192,6 +1196,13 @@ def _run_mechanism_counts(run_dir):
     model_routed_requested = Counter()
     model_routed_escalations = Counter()
     latencies_ms_by_backend = {}
+    # HC05: which backend actually answered each judge ask, and (for
+    # escalation) what it decided / (for phase) whether it agreed with the
+    # deterministic classifier -- see docs/ARCHITECTURE.md's HC05 section.
+    escalation_judged_by_backend = Counter()
+    escalation_judged_by_decided = Counter()
+    phase_judged_by_backend = Counter()
+    phase_judged_agreement = Counter()
     for e in events:
         kind = (e.get('event') or '').removeprefix('fast_decisions:')
         d = e.get('data') or {}
@@ -1212,6 +1223,13 @@ def _run_mechanism_counts(run_dir):
             model_routed_requested[d.get('requested_model')] += 1
             if d.get('escalated'):
                 model_routed_escalations[d.get('escalation_reason')] += 1
+        elif kind == 'escalation_judged':
+            escalation_judged_by_backend[d.get('backend')] += 1
+            escalation_judged_by_decided[d.get('decided')] += 1
+        elif kind == 'phase_judged':
+            phase_judged_by_backend[d.get('backend')] += 1
+            agreed = d.get('agreed_with_rules')
+            phase_judged_agreement['agreed' if agreed is True else 'disagreed' if agreed is False else 'abstained'] += 1
     loop_config = _profile_loop_config(run_dir)
     return {
         'scored_by_backend': dict(scored_by_backend), 'fallback_count': fallback_count,
@@ -1219,8 +1237,13 @@ def _run_mechanism_counts(run_dir):
         'effort_routed_by_phase_effort': {f'{p}:{eff}': n for (p, eff), n in effort_routed_by_phase_effort.items()},
         'model_routed_requested_models': dict(model_routed_requested),
         'model_routed_escalations_by_reason': dict(model_routed_escalations),
+        'escalation_judged_by_backend': dict(escalation_judged_by_backend),
+        'escalation_judged_by_decided': dict(escalation_judged_by_decided),
+        'phase_judged_by_backend': dict(phase_judged_by_backend),
+        'phase_judged_agreement': dict(phase_judged_agreement),
         'configured_backend': loop_config.get('backend'),
         'model_routing': loop_config.get('model_routing'),
+        'effort_routing': loop_config.get('effort_routing'),
         'latencies_ms_by_backend': latencies_ms_by_backend,
     }
 
@@ -1250,8 +1273,13 @@ def _mechanism_report(experiment_dir, manifest):
     effort_routed = Counter()
     model_routed_requested = Counter()
     model_routed_escalations = Counter()
+    escalation_judged_by_backend = Counter()
+    escalation_judged_by_decided = Counter()
+    phase_judged_by_backend = Counter()
+    phase_judged_agreement = Counter()
     configured_backend = None
     model_routing = None
+    effort_routing = None
     latencies_ms_by_backend = {}
     for c in per_run:
         scored_by_backend.update(c['scored_by_backend'])
@@ -1260,8 +1288,13 @@ def _mechanism_report(experiment_dir, manifest):
         effort_routed.update(c['effort_routed_by_phase_effort'])
         model_routed_requested.update(c['model_routed_requested_models'])
         model_routed_escalations.update(c['model_routed_escalations_by_reason'])
+        escalation_judged_by_backend.update(c['escalation_judged_by_backend'])
+        escalation_judged_by_decided.update(c['escalation_judged_by_decided'])
+        phase_judged_by_backend.update(c['phase_judged_by_backend'])
+        phase_judged_agreement.update(c['phase_judged_agreement'])
         configured_backend = configured_backend or c['configured_backend']
         model_routing = model_routing or c['model_routing']
+        effort_routing = effort_routing or c['effort_routing']
         for backend, values in c['latencies_ms_by_backend'].items():
             latencies_ms_by_backend.setdefault(backend, []).extend(values)
 
@@ -1313,6 +1346,46 @@ def _mechanism_report(experiment_dir, manifest):
         reasons.append(f"model routing configured (start_model={model_routing.get('start_model')!r}) "
                         "but 0 model_routed receipts")
 
+    # HC05 ("judge-driven escalation and phase classification", opt-in):
+    # `judged_engaged` is `None` (not applicable) unless the run's own
+    # config actually turned on `escalation_judge: "judge"` and/or
+    # `effort_routing.phase_judge`. When one is configured, engagement
+    # requires at least one matching receipt, AND every one of those
+    # receipts to have been answered by the CONFIGURED backend -- catching
+    # both "the judge mechanism never fired" and "it fired against the
+    # wrong backend" (the exact class of defect R4 already guards for the
+    # base scored/model_routed mechanisms). Feeds a future
+    # `mechanism_gate: {require_judged: true}` check.
+    escalation_judge_configured = bool(model_routing and model_routing.get('escalation_judge') == 'judge')
+    phase_judge_configured = bool(effort_routing and effort_routing.get('phase_judge'))
+    judged_reasons = []
+    if escalation_judge_configured or phase_judge_configured:
+        judged_engaged = True
+        if escalation_judge_configured:
+            total = sum(escalation_judged_by_backend.values())
+            on_configured = escalation_judged_by_backend.get(configured_backend, 0)
+            if total == 0:
+                judged_engaged = False
+                judged_reasons.append('escalation_judge configured but 0 escalation_judged receipts')
+            elif on_configured != total:
+                judged_engaged = False
+                judged_reasons.append(
+                    f'escalation_judged receipts came from a different backend than configured '
+                    f'{configured_backend!r}: {dict(escalation_judged_by_backend)}')
+        if phase_judge_configured:
+            total = sum(phase_judged_by_backend.values())
+            on_configured = phase_judged_by_backend.get(configured_backend, 0)
+            if total == 0:
+                judged_engaged = False
+                judged_reasons.append('phase_judge configured but 0 phase_judged receipts')
+            elif on_configured != total:
+                judged_engaged = False
+                judged_reasons.append(
+                    f'phase_judged receipts came from a different backend than configured '
+                    f'{configured_backend!r}: {dict(phase_judged_by_backend)}')
+    else:
+        judged_engaged = None
+
     return {
         'runs_evaluated': len(per_run), 'configured_backend': configured_backend,
         'model_routing_configured': bool(model_routing), 'model_routing_start_model': (model_routing or {}).get('start_model'),
@@ -1328,6 +1401,12 @@ def _mechanism_report(experiment_dir, manifest):
         'latency_within_budget': latency_within_budget,
         'decision_latency_reason': decision_latency_reason,
         'mechanism_engaged': engaged, 'mechanism_reason': '; '.join(reasons) if reasons else None,
+        'escalation_judged_by_backend': dict(escalation_judged_by_backend),
+        'escalation_judged_by_decided': dict(escalation_judged_by_decided),
+        'phase_judged_by_backend': dict(phase_judged_by_backend),
+        'phase_judged_agreement': dict(phase_judged_agreement),
+        'judged_engaged': judged_engaged,
+        'judged_reason': '; '.join(judged_reasons) if judged_reasons else None,
     }
 
 

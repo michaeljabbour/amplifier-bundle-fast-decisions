@@ -44,6 +44,8 @@ EVENT_NAMES = tuple(
         "source",
         "effort_routed",
         "model_routed",
+        "escalation_judged",
+        "phase_judged",
     )
 )
 
@@ -76,6 +78,11 @@ def validate_effort_routing(effort_routing: Any) -> None:
         "implement",
         "max_explore_requests",
         "escalate_after_provider_errors",
+        # HC05 ("judge-driven phase classification", opt-in): ask the
+        # configured DecisionBackend to classify the phase instead of the
+        # deterministic classify_phase(). See orchestrator.py and
+        # docs/ARCHITECTURE.md.
+        "phase_judge",
     }
     if unknown:
         raise ValueError(f"effort_routing has unknown keys: {sorted(unknown)}")
@@ -85,6 +92,9 @@ def validate_effort_routing(effort_routing: Any) -> None:
             isinstance(value, bool) or not isinstance(value, int) or value < 1
         ):
             raise ValueError(f"effort_routing.{key} must be a positive integer")
+    phase_judge = effort_routing.get("phase_judge")
+    if phase_judge is not None and not isinstance(phase_judge, bool):
+        raise ValueError("effort_routing.phase_judge must be a bool")
 
 
 # HC04 ("opt-in model routing with escalation"): the effort strings a host
@@ -98,8 +108,18 @@ MODEL_ROUTING_KEYS = frozenset(
         "escalate_on_test_failure",
         "escalate_on_provider_error",
         "override_explicit_model",
+        # HC05 ("judge-driven escalation", opt-in): "rules" (default,
+        # current behavior) asks nothing extra; "judge" asks the configured
+        # DecisionBackend a single Choice question before every slow request
+        # past the first, while not yet escalated. Deterministic triggers
+        # above remain a floor and still escalate regardless of the judge's
+        # answer. See orchestrator.py and docs/ARCHITECTURE.md.
+        "escalation_judge",
+        "escalate_min_probability",
     }
 )
+
+ESCALATION_JUDGE_MODES = frozenset({"rules", "judge"})
 
 
 def validate_model_routing(model_routing: Any) -> None:
@@ -143,6 +163,20 @@ def validate_model_routing(model_routing: Any) -> None:
         value = model_routing.get(key)
         if value is not None and not isinstance(value, bool):
             raise ValueError(f"model_routing.{key} must be a bool")
+    escalation_judge = model_routing.get("escalation_judge")
+    if escalation_judge is not None and escalation_judge not in ESCALATION_JUDGE_MODES:
+        raise ValueError(
+            f"model_routing.escalation_judge must be one of {sorted(ESCALATION_JUDGE_MODES)}"
+        )
+    escalate_min_probability = model_routing.get("escalate_min_probability")
+    if escalate_min_probability is not None and (
+        isinstance(escalate_min_probability, bool)
+        or not isinstance(escalate_min_probability, (int, float))
+        or not 0 <= escalate_min_probability <= 1
+    ):
+        raise ValueError(
+            "model_routing.escalate_min_probability must be a number between 0 and 1"
+        )
 
 
 def canonical(value: Any) -> str:
@@ -493,6 +527,18 @@ class TurnState:
     test_failure_seen: bool = False
     escalated: bool = False
     escalation_reason: str | None = None
+    # HC05 ("judge-driven escalation and phase classification", opt-in):
+    # per-turn judge context and counters. tool_names_used/last_tool_result_text
+    # are fed by ObservedTool.execute, but ONLY while a judge mechanism is
+    # actually configured (escalation_judge: "judge" or phase_judge: true) --
+    # inert otherwise, matching every other HC0x seam. escalation_judgements
+    # counts every time the escalation judge was actually asked (not gated on
+    # its answer); escalations_by_judge counts only the judge-caused
+    # escalations (a deterministic trigger firing first does not count here).
+    tool_names_used: set[str] = field(default_factory=set)
+    last_tool_result_text: str = ""
+    escalation_judgements: int = 0
+    escalations_by_judge: int = 0
 
 
 def candidate_read_identity(

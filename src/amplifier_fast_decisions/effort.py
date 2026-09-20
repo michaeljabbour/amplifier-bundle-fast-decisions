@@ -38,6 +38,17 @@ PHASE_ORIENT = "orient"
 PHASE_EXPLORE = "explore"
 PHASE_IMPLEMENT = "implement"
 
+# HC05 ("judge-driven phase classification", opt-in): the criteria a judge
+# Choice question uses when asked to classify the phase itself, instead of
+# (or alongside, for agreement comparison) the deterministic classify_phase()
+# below. Reused verbatim by orchestrator.py so the wording lives in one
+# place. Order matches PHASE_ORIENT/PHASE_EXPLORE/PHASE_IMPLEMENT above.
+PHASE_CRITERIA = {
+    PHASE_ORIENT: "This is the turn's first request; no exploration or implementation has happened yet.",
+    PHASE_EXPLORE: "Only read-like tool calls have happened so far this turn; still investigating, nothing written yet.",
+    PHASE_IMPLEMENT: "A write-like tool call has occurred, or verification/tests are running -- the turn is executing changes.",
+}
+
 REASON_PHASE_POLICY = "phase_policy"
 REASON_DEFAULT_EFFORT = "default_effort"
 REASON_HOST_PINNED = "host_pinned"

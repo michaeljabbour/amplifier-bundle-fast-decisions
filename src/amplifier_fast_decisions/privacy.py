@@ -156,6 +156,16 @@ SAFE_FIELDS = {
     "escalation_reason",
     "model_routed_requests",
     "model_routing_enabled",
+    # HC05 ("judge-driven escalation and phase classification", opt-in):
+    # the judge's raw choice label, its selected-alternative probability,
+    # the decision actually made from it, and this turn's slow-request
+    # counter at judgement time -- never the compact state text sent to
+    # the judge. `backend`, `phase`, `duration_ms`, `mode`, `choice`
+    # (already listed above) are reused verbatim.
+    "probability",
+    "decided",
+    "slow_requests_seen",
+    "agreed_with_rules",
 }
 
 

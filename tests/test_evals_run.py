@@ -59,6 +59,38 @@ class CellToArgvTests(unittest.TestCase):
         self.assertEqual(argv[argv.index("--fd-backend") + 1], "jev")
         self.assertIn("--allow-external-state", argv)
 
+    def test_every_judge_jev_cell_requires_allow_external_state(self):
+        """HC05 (2026-09-20c): every jev twin added for the judge head-to-head
+        emits --fd-backend jev + --allow-external-state together, same as
+        the original judge-jev+effort cell."""
+        jev_cells = [cid for cid, cell in self.cells["cells"].items()
+                     if (cell.get("fd") or {}).get("backend") == "jev"]
+        self.assertGreaterEqual(len(jev_cells), 5)  # judge-jev, +effort, +effort-incumbent, +route, +route-judged, +phasejudged
+        for cid in jev_cells:
+            argv = run.cell_to_argv(cid, self.cells, self.suites, "s1", "dev", 1, **COMMON)
+            self.assertIn("--fd-backend", argv, cid)
+            self.assertEqual(argv[argv.index("--fd-backend") + 1], "jev", cid)
+            self.assertIn("--allow-external-state", argv, cid)
+
+    def test_escalation_judge_profile_is_single_argv_element(self):
+        argv = run.cell_to_argv("judge-local+effort+route-judged", self.cells, self.suites,
+                                 "s1", "dev", 1, **COMMON)
+        overrides = [argv[i + 1] for i, a in enumerate(argv) if a == "--fd-override"]
+        routing = [o for o in overrides if o.startswith("model_routing=")]
+        self.assertEqual(len(routing), 1)
+        payload = json.loads(routing[0].split("=", 1)[1])
+        self.assertEqual(payload["escalation_judge"], "judge")
+        self.assertEqual(payload["escalate_min_probability"], 0.7)
+
+    def test_phase_judge_profile_is_single_argv_element(self):
+        argv = run.cell_to_argv("judge-local+effort-phasejudged", self.cells, self.suites,
+                                 "s1", "dev", 1, **COMMON)
+        overrides = [argv[i + 1] for i, a in enumerate(argv) if a == "--fd-override"]
+        effort = [o for o in overrides if o.startswith("effort_routing=")]
+        self.assertEqual(len(effort), 1)
+        payload = json.loads(effort[0].split("=", 1)[1])
+        self.assertTrue(payload["phase_judge"])
+
     def test_compact_json_effort_routing_is_single_argv_element(self):
         argv = run.cell_to_argv("judge-local+effort", self.cells, self.suites, "s1", "dev", 1, **COMMON)
         overrides = [argv[i + 1] for i, a in enumerate(argv) if a == "--fd-override"]
@@ -74,6 +106,50 @@ class CellToArgvTests(unittest.TestCase):
         self.assertEqual(len(routing), 1)
         payload = json.loads(routing[0].split("=", 1)[1])
         self.assertEqual(payload["start_model"], "claude-sonnet-5")
+
+    def test_every_new_head_to_head_cell_declares_an_anchor(self):
+        """HC05 (2026-09-20c): every cell added for the judge head-to-head
+        declares anchor_cell (cross-cell comparison is always ratio-to-own-
+        anchor, never raw time -- STUDY-DESIGN.md section 4)."""
+        new_cells = (
+            "judge-jev", "judge-jev+effort-incumbent",
+            "judge-local+effort-phasejudged", "judge-jev+effort-phasejudged",
+            "judge-jev+effort+route",
+            "judge-local+effort+route-judged", "judge-jev+effort+route-judged",
+        )
+        for cid in new_cells:
+            self.assertIn(cid, self.cells["cells"])
+            self.assertTrue(self.cells["cells"][cid].get("anchor_cell"), cid)
+
+    def test_phasejudged_cells_declare_secondary_anchor_at_non_judged_twin(self):
+        self.assertEqual(
+            self.cells["cells"]["judge-local+effort-phasejudged"]["secondary_anchor"],
+            "judge-local+effort",
+        )
+        self.assertEqual(
+            self.cells["cells"]["judge-jev+effort-phasejudged"]["secondary_anchor"],
+            "judge-jev+effort",
+        )
+
+    def test_route_judged_cells_declare_secondary_anchor_at_rules_twin(self):
+        self.assertEqual(
+            self.cells["cells"]["judge-local+effort+route-judged"]["secondary_anchor"],
+            "judge-local+effort+route",
+        )
+        self.assertEqual(
+            self.cells["cells"]["judge-jev+effort+route-judged"]["secondary_anchor"],
+            "judge-jev+effort+route",
+        )
+
+    def test_route_judged_cells_declare_require_judged_gate(self):
+        for cid in ("judge-local+effort+route-judged", "judge-jev+effort+route-judged",
+                    "judge-local+effort-phasejudged", "judge-jev+effort-phasejudged"):
+            self.assertTrue(self.cells["cells"][cid]["mechanism_gate"].get("require_judged"), cid)
+
+    def test_new_cells_pass_dependency_validation_together(self):
+        # anchor_cell / secondary_anchor / requires_cells all reference cells
+        # that must also be requested -- exercise the whole new set at once.
+        run.validate_cell_dependencies(list(self.cells["cells"].keys()), self.cells)
 
     def test_every_cell_gets_explicit_bypass_permissions(self):
         for cid in self.cells["cells"]:

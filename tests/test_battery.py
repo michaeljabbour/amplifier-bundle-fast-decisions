@@ -1076,6 +1076,115 @@ class MechanismGateTests(unittest.TestCase):
             self.assertEqual(mechanism['scored_by_backend'], {})
             self.assertEqual(mechanism['effort_routed_by_phase_effort'], {'implement:high': 1})
 
+    def test_judged_engaged_none_when_neither_judge_mechanism_configured(self):
+        """HC05: a cell that configures neither escalation_judge nor
+        phase_judge reports judged_engaged=None (not applicable) -- this
+        MUST NOT be confused with judged_engaged=False (configured but
+        never fired)."""
+        with tempfile.TemporaryDirectory() as tmp, _patched_battery_tasks():
+            root = Path(tmp)/'campaign'
+            loop_config = {'backend': 'ollama', 'model_routing': {'start_model': 'claude-cheap-1'}}
+            events = [{'event': 'fast_decisions:scored', 'data': {'backend': 'ollama'}},
+                      {'event': 'fast_decisions:model_routed',
+                       'data': {'requested_model': 'claude-cheap-1', 'escalated': False}}]
+            _one_amplifier_fd_experiment(root, 'nj1', loop_config, events)
+            comparison = battery.cmd_evaluate(SimpleNamespace(root=str(root), experiment='nj1'))
+            mechanism = comparison['mechanism']
+            self.assertIsNone(mechanism['judged_engaged'])
+            self.assertIsNone(mechanism['judged_reason'])
+
+    def test_judged_engaged_false_when_escalation_judge_configured_but_never_fired(self):
+        with tempfile.TemporaryDirectory() as tmp, _patched_battery_tasks():
+            root = Path(tmp)/'campaign'
+            loop_config = {'backend': 'ollama',
+                            'model_routing': {'start_model': 'claude-sonnet-5', 'escalation_judge': 'judge'}}
+            events = [{'event': 'fast_decisions:scored', 'data': {'backend': 'ollama'}},
+                      {'event': 'fast_decisions:model_routed',
+                       'data': {'requested_model': 'claude-sonnet-5', 'escalated': False}}]
+            _one_amplifier_fd_experiment(root, 'ej1', loop_config, events)
+            comparison = battery.cmd_evaluate(SimpleNamespace(root=str(root), experiment='ej1'))
+            mechanism = comparison['mechanism']
+            self.assertFalse(mechanism['judged_engaged'])
+            self.assertIn('escalation_judge configured but 0 escalation_judged receipts', mechanism['judged_reason'])
+
+    def test_judged_engaged_false_when_escalation_judged_from_wrong_backend(self):
+        """The exact defect class R4 already guards for scored/model_routed:
+        a judged receipt that came from a DIFFERENT backend than the cell's
+        own configured_backend must not be credited."""
+        with tempfile.TemporaryDirectory() as tmp, _patched_battery_tasks():
+            root = Path(tmp)/'campaign'
+            loop_config = {'backend': 'ollama',
+                            'model_routing': {'start_model': 'claude-sonnet-5', 'escalation_judge': 'judge'}}
+            events = [{'event': 'fast_decisions:scored', 'data': {'backend': 'ollama'}},
+                      {'event': 'fast_decisions:escalation_judged',
+                       'data': {'backend': 'jev', 'choice': 'escalate', 'decided': 'escalate'}}]
+            _one_amplifier_fd_experiment(root, 'ej2', loop_config, events)
+            comparison = battery.cmd_evaluate(SimpleNamespace(root=str(root), experiment='ej2'))
+            mechanism = comparison['mechanism']
+            self.assertFalse(mechanism['judged_engaged'])
+            self.assertIn('different backend than configured', mechanism['judged_reason'])
+            self.assertEqual(mechanism['escalation_judged_by_backend'], {'jev': 1})
+
+    def test_judged_engaged_true_when_escalation_judge_fired_on_configured_backend(self):
+        with tempfile.TemporaryDirectory() as tmp, _patched_battery_tasks():
+            root = Path(tmp)/'campaign'
+            loop_config = {'backend': 'ollama',
+                            'model_routing': {'start_model': 'claude-sonnet-5', 'escalation_judge': 'judge'}}
+            events = [{'event': 'fast_decisions:scored', 'data': {'backend': 'ollama'}},
+                      {'event': 'fast_decisions:escalation_judged',
+                       'data': {'backend': 'ollama', 'choice': 'continue_cheap', 'decided': 'continue'}}]
+            _one_amplifier_fd_experiment(root, 'ej3', loop_config, events)
+            comparison = battery.cmd_evaluate(SimpleNamespace(root=str(root), experiment='ej3'))
+            mechanism = comparison['mechanism']
+            self.assertTrue(mechanism['judged_engaged'])
+            self.assertIsNone(mechanism['judged_reason'])
+            self.assertEqual(mechanism['escalation_judged_by_backend'], {'ollama': 1})
+            self.assertEqual(mechanism['escalation_judged_by_decided'], {'continue': 1})
+
+    def test_judged_engaged_false_when_phase_judge_configured_but_never_fired(self):
+        with tempfile.TemporaryDirectory() as tmp, _patched_battery_tasks():
+            root = Path(tmp)/'campaign'
+            loop_config = {'backend': 'ollama', 'effort_routing': {'implement': 'high', 'phase_judge': True}}
+            events = [{'event': 'fast_decisions:effort_routed', 'data': {'phase': 'implement', 'requested_effort': 'high'}}]
+            _one_amplifier_fd_experiment(root, 'pj1', loop_config, events)
+            comparison = battery.cmd_evaluate(SimpleNamespace(root=str(root), experiment='pj1'))
+            mechanism = comparison['mechanism']
+            self.assertFalse(mechanism['judged_engaged'])
+            self.assertIn('phase_judge configured but 0 phase_judged receipts', mechanism['judged_reason'])
+
+    def test_judged_engaged_true_when_phase_judge_fired_with_agreement_counts(self):
+        with tempfile.TemporaryDirectory() as tmp, _patched_battery_tasks():
+            root = Path(tmp)/'campaign'
+            loop_config = {'backend': 'ollama', 'effort_routing': {'implement': 'high', 'phase_judge': True}}
+            events = [
+                {'event': 'fast_decisions:phase_judged',
+                 'data': {'backend': 'ollama', 'choice': 'implement', 'agreed_with_rules': True}},
+                {'event': 'fast_decisions:phase_judged',
+                 'data': {'backend': 'ollama', 'choice': 'explore', 'agreed_with_rules': False}},
+            ]
+            _one_amplifier_fd_experiment(root, 'pj2', loop_config, events)
+            comparison = battery.cmd_evaluate(SimpleNamespace(root=str(root), experiment='pj2'))
+            mechanism = comparison['mechanism']
+            self.assertTrue(mechanism['judged_engaged'])
+            self.assertEqual(mechanism['phase_judged_by_backend'], {'ollama': 2})
+            self.assertEqual(mechanism['phase_judged_agreement'], {'agreed': 1, 'disagreed': 1})
+
+    def test_judge_decision_latency_included_in_p95(self):
+        """escalation_judged/phase_judged carry duration_ms/backend from the
+        same _ask_judge_choice call site, so they feed the generic latency
+        aggregation exactly like scored/fallback (_LATENCY_EVENT_KINDS)."""
+        with tempfile.TemporaryDirectory() as tmp, _patched_battery_tasks():
+            root = Path(tmp)/'campaign'
+            loop_config = {'backend': 'jev',
+                            'model_routing': {'start_model': 'claude-sonnet-5', 'escalation_judge': 'judge'}}
+            events = [{'event': 'fast_decisions:scored', 'data': {'backend': 'jev', 'duration_ms': 10.0}},
+                      {'event': 'fast_decisions:escalation_judged',
+                       'data': {'backend': 'jev', 'choice': 'escalate', 'decided': 'escalate', 'duration_ms': 20.0}}]
+            _one_amplifier_fd_experiment(root, 'lat1', loop_config, events)
+            comparison = battery.cmd_evaluate(SimpleNamespace(root=str(root), experiment='lat1'))
+            mechanism = comparison['mechanism']
+            self.assertEqual(mechanism['decision_latency_ms_by_backend']['jev']['n'], 2)
+
     def test_no_amplifier_fd_runs_means_mechanism_is_none(self):
         with tempfile.TemporaryDirectory() as tmp, _patched_battery_tasks():
             root = Path(tmp)/'campaign'

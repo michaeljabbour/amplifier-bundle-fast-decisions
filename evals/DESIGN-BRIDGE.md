@@ -100,6 +100,43 @@ assumed defaults (STUDY-DESIGN.md section 12, Decision 4).
 
 ---
 
+## (d2) `escalation_judge` / `phase_judge` default (`rules` / `false` vs `judge` / `true`)
+
+**Decision rule:** default stays `rules` (for `model_routing.escalation_judge`)
+and `false` (for `effort_routing.phase_judge`) -- the deterministic HC03/HC04
+behavior, unchanged -- unless the JEV twin of the relevant judged cell wins
+the head-to-head defined in `STUDY-DESIGN.md` section 14: for escalation,
+`judge-jev+effort+route-judged` must win-or-tie on time against its own
+RULES-escalation twin `judge-jev+effort+route` (`secondary_anchor`) with
+quality non-inferior, `mechanism_gate.judged_engaged == true` on every rep,
+and jev decision-latency p95 under 500 ms; for phase classification,
+`judge-jev+effort-phasejudged` must clear the same bar against its own
+twin `judge-jev+effort`. Each knob is decided independently -- a win on one
+does not imply a win on the other, and neither implies anything about rule
+(b)'s read-shortcut judge default. If jev does not clear the bar, `local`
+(`ollama qwen3:0.6b`) is evaluated the same way against ITS OWN rules twin
+before either `escalation_judge: "judge"` or `phase_judge: true` can default
+`on` for `ollama` either -- a judge mechanism is promoted only when it beats
+the deterministic rules it would replace, independent of which backend runs
+it.
+
+**Evidence required:** `results.json["cells"]["judge-jev+effort+route-judged"]`
+(and/or `"judge-local+effort+route-judged"`) with `verdict == "confirmed"`,
+`gate_passed == true` (which must reflect `judged_engaged`, once
+`evals/run.py::gate_eval` is extended to read it -- see STUDY-DESIGN.md
+section 14's open item), `exec_time_ratio.geomean <= 1.0` measured against
+the RULES twin (not `plain-sonnet`), quality non-inferior, and (for the jev
+variant) `comparison.json["mechanism"]["decision_latency_ms_p95"] < 500`.
+Symmetric evidence from `results.json["cells"]["judge-jev+effort-phasejudged"]`
+/ `"judge-local+effort-phasejudged"]` for `phase_judge`.
+
+**Current default:** `rules` / `false`. Both are opt-in candidates, evaluated
+independently of rule (b)'s read-shortcut judge default and of rule (d)'s
+`model_routing` on/off default -- `model_routing` must already be `on` (rule
+(d)) before `escalation_judge` has anything to escalate.
+
+---
+
 ## (e) External state (privacy)
 
 **Decision rule:** external state (the `jev` judge backend) remains opt-in
@@ -118,7 +155,12 @@ decision.
 
 `evals/run.py::design_recommendation_text(results, cells_doc)` applies rules
 (a)-(e) above to one `results.json`, quoting the exact numbers that triggered
-each recommendation and the evidence limits that qualify them. It is written
+each recommendation and the evidence limits that qualify them. **Rule (d2)
+is written above but not yet wired into `design_recommendation_text` or
+`evals/run.py::gate_eval`** (both out of scope for the change that added
+(d2) -- see STUDY-DESIGN.md section 14); until then, (d2) is checked by hand
+against `results.json` and `comparison.json["mechanism"]["judged_engaged"]`.
+It is written
 to `<out>/DESIGN-RECOMMENDATION.md` at the end of every `run.py` invocation
 that produces `results.json` (i.e. every invocation except `--dry-run`). It
 never edits `behaviors/fast-decisions.yaml` itself -- "for human ratification"

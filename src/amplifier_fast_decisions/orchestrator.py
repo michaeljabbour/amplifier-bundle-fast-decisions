@@ -14,7 +14,10 @@ from uuid import uuid4
 
 from .contracts import (
     Candidate,
+    DecisionRequest,
+    Question,
     TurnState,
+    canonical,
     field_value,
     digest,
     candidate_read_identity,
@@ -77,6 +80,121 @@ def _tool_result_text(result: Any) -> str:
 
 def _test_failure_observed(text: str) -> bool:
     return any(pattern.search(text) for pattern in _TEST_FAILURE_PATTERNS)
+
+
+# HC05 ("judge-driven escalation and phase classification", opt-in): ask the
+# configured DecisionBackend ONE Choice question, via the identical
+# DecisionRequest/DecisionResult contract the read-shortcut
+# (DecisionService.choose) uses -- so it inherits `Policy.timeout_ms` and the
+# same `backend.external and not allow_external_state` gate the read-shortcut
+# enforces (Jev refuses without consent), and produces a normal receipt.
+# Bypasses DecisionService.choose entirely: there is no prepared action here,
+# only a judgment question, so `candidates=()` and the backend's own
+# next_action answer (degenerate to SLOW-only in that shape) is never built
+# or consulted. See docs/ARCHITECTURE.md.
+_JUDGE_STATE_TASK_PROMPT_CHARS = 300
+_JUDGE_STATE_TOOL_RESULT_CHARS = 600
+
+
+def _judge_context_needed(policy: Any) -> bool:
+    """Whether ObservedTool.execute must track tool names/last result text
+    this turn -- only while a judge mechanism is actually configured.
+    Inert otherwise, matching every other HC0x seam."""
+    model_routing = policy.model_routing
+    effort_routing = policy.effort_routing
+    return bool(
+        (model_routing and model_routing.get("escalation_judge") == "judge")
+        or (effort_routing and effort_routing.get("phase_judge"))
+    )
+
+
+def _first_user_text(request: Any) -> str:
+    """Best-effort text of the FIRST user message in the request, or ``""``.
+    Never raises: a malformed message shape is simply skipped."""
+    try:
+        messages = list(field_value(request, "messages") or [])
+    except Exception:
+        return ""
+    for message in messages:
+        if field_value(message, "role") != "user":
+            continue
+        content = field_value(message, "content")
+        if isinstance(content, str):
+            return content
+        if isinstance(content, list):
+            parts = [
+                text
+                for block in content
+                if isinstance(text := field_value(block, "text"), str)
+            ]
+            return "".join(parts)
+        return ""
+    return ""
+
+
+def _judge_state(
+    request: Any, turn: TurnState, phase: str, max_state_chars: int
+) -> dict[str, Any]:
+    """Compact, bounded, JSON-able state for a judge Choice question: task
+    prompt head, phase, this turn's slow-request count, tool names used so
+    far, a capped excerpt of the last tool result, and the two HC04 failure
+    signals. Trimmed further (last_tool_result_excerpt, then
+    task_prompt_head) if the canonical serialization would still exceed
+    ``max_state_chars``. Never raises."""
+    state: dict[str, Any] = {
+        "task_prompt_head": _first_user_text(request)[:_JUDGE_STATE_TASK_PROMPT_CHARS],
+        "phase": phase,
+        "slow_requests_seen": turn.slow_requests_seen,
+        "tool_names_used": sorted(turn.tool_names_used),
+        "last_tool_result_excerpt": turn.last_tool_result_text[:_JUDGE_STATE_TOOL_RESULT_CHARS],
+        "test_failure_seen": turn.test_failure_seen,
+        "provider_errors_seen": turn.provider_errors_seen,
+    }
+    if len(canonical(state)) <= max_state_chars:
+        return state
+    state = {**state, "last_tool_result_excerpt": ""}
+    if len(canonical(state)) <= max_state_chars:
+        return state
+    return {**state, "task_prompt_head": ""}
+
+
+async def _ask_judge_choice(
+    service: Any,
+    *,
+    question_name: str,
+    instructions: str,
+    criteria: dict[str, str],
+    state: dict[str, Any],
+) -> tuple[str | None, float | None, float]:
+    """Ask ONE Choice question via ``service.backend``, honoring the same
+    ``backend.external and not policy.allow_external_state`` gate
+    ``DecisionService.choose`` enforces (service.py ~line 110). Returns
+    ``(choice, probability, duration_ms)``: ``choice`` is ``None`` on any
+    policy-block/abstain/timeout/backend-error -- the caller always falls
+    back to its deterministic rules in that case. Never raises
+    (``CancelledError`` propagates).
+    """
+    if service.backend.external and not service.policy.allow_external_state:
+        return None, None, 0.0
+    question = Question(
+        name=question_name, type="choice", instructions=instructions, criteria=criteria
+    )
+    decision_request = DecisionRequest(state=state, candidates=(), questions=(question,))
+    start = time.perf_counter()
+    deadline = asyncio.get_running_loop().time() + service.policy.timeout_ms / 1000
+    try:
+        async with asyncio.timeout_at(deadline):
+            result = await service.backend.ask(decision_request)
+    except asyncio.CancelledError:
+        raise
+    except Exception:
+        return None, None, (time.perf_counter() - start) * 1000
+    duration_ms = (time.perf_counter() - start) * 1000
+    answer = result.answers.get(question_name)
+    if answer is None or not answer.probabilities:
+        return None, None, duration_ms
+    choice = max(answer.probabilities, key=answer.probabilities.get)
+    return choice, answer.probabilities[choice], duration_ms
 
 
 class RoutedProvider:
@@ -176,6 +294,27 @@ docs/UPSTREAM_CONTRACT.md.
         phase = None
         if effort_routing:
             phase = effort.classify_phase(request)
+            # HC05 ("judge-driven phase classification", opt-in): ask the
+            # judge to classify the phase instead of trusting the
+            # deterministic classifier alone. An abstain/blocked/error
+            # answer leaves `phase` as the deterministic classification.
+            if effort_routing.get("phase_judge"):
+                judge_state = _judge_state(request, turn, phase, service.policy.max_state_chars)
+                judged_choice, judged_probability, judged_duration_ms = await _ask_judge_choice(
+                    service,
+                    question_name="phase_classification",
+                    instructions="Classify the current turn's phase for effort routing.",
+                    criteria=dict(effort.PHASE_CRITERIA),
+                    state=judge_state,
+                )
+                agreed_with_rules = judged_choice == phase if judged_choice is not None else None
+                await service.emit("phase_judged", {
+                    "backend": service.backend.name, "choice": judged_choice,
+                    "probability": judged_probability, "agreed_with_rules": agreed_with_rules,
+                    "duration_ms": judged_duration_ms,
+                }, decision_id)
+                if judged_choice is not None:
+                    phase = judged_choice
             explore_requests = (
                 turn.explore_requests + 1 if phase == effort.PHASE_EXPLORE else turn.explore_requests
             )
@@ -213,14 +352,62 @@ docs/UPSTREAM_CONTRACT.md.
             override_explicit = model_routing.get("override_explicit_model", False)
             escalate_on_test_failure = model_routing.get("escalate_on_test_failure", False)
 
+            escalation_judge_mode = model_routing.get("escalation_judge", "rules")
+            escalate_min_probability = model_routing.get("escalate_min_probability", 0.7)
+
             turn.slow_requests_seen += 1
+            routing_phase = phase if phase is not None else effort.classify_phase(request)
             if not turn.escalated:
                 if escalate_on_test_failure and turn.test_failure_seen:
                     turn.escalated, turn.escalation_reason = True, "test_failure"
                 elif max_requests is not None and turn.slow_requests_seen > max_requests:
                     turn.escalated, turn.escalation_reason = True, "max_requests"
+                elif escalation_judge_mode == "judge" and turn.slow_requests_seen > 1:
+                    # HC05 ("judge-driven escalation", opt-in): the
+                    # deterministic triggers above are a floor -- they still
+                    # escalate regardless of the judge. Only asked once
+                    # neither has already fired this request, and only past
+                    # the turn's first slow request.
+                    judge_state = _judge_state(
+                        request, turn, routing_phase, service.policy.max_state_chars
+                    )
+                    judged_choice, judged_probability, judged_duration_ms = await _ask_judge_choice(
+                        service,
+                        question_name="escalation_judge",
+                        instructions=(
+                            "Decide whether to keep using the cheaper model or "
+                            "escalate to the stronger model now."
+                        ),
+                        criteria={
+                            "continue_cheap": "The cheaper model is making progress; keep going.",
+                            "escalate": (
+                                "The task is beyond the cheaper model, or the plan has "
+                                "derailed; switch to the stronger model now."
+                            ),
+                        },
+                        state=judge_state,
+                    )
+                    turn.escalation_judgements += 1
+                    if judged_choice is None:
+                        judge_decided = "fallback_rules"
+                    elif (
+                        judged_choice == "escalate"
+                        and judged_probability is not None
+                        and judged_probability >= escalate_min_probability
+                    ):
+                        judge_decided = "escalate"
+                        turn.escalated, turn.escalation_reason = True, "judge"
+                        turn.escalations_by_judge += 1
+                    else:
+                        judge_decided = "continue"
+                    await service.emit("escalation_judged", {
+                        "backend": service.backend.name, "choice": judged_choice,
+                        "probability": judged_probability, "decided": judge_decided,
+                        "duration_ms": judged_duration_ms, "phase": routing_phase,
+                        "slow_requests_seen": turn.slow_requests_seen,
+                        "mode": service.policy.mode,
+                    }, decision_id)
 
-            routing_phase = phase if phase is not None else effort.classify_phase(request)
             requested_model = None
             requested_effort = None
             if turn.escalated:
@@ -433,6 +620,14 @@ class ObservedTool:
             ):
                 if _test_failure_observed(_tool_result_text(result)):
                     turn.test_failure_seen = True
+            # HC05 ("judge-driven escalation and phase classification"):
+            # feed the judge's compact state -- tool names used so far this
+            # turn, and the last tool result's own text -- but ONLY while a
+            # judge mechanism is actually configured. Inert otherwise,
+            # matching every other HC0x seam.
+            if turn and _judge_context_needed(service.policy):
+                turn.tool_names_used.add(self._tool_key)
+                turn.last_tool_result_text = _tool_result_text(result)
             await service.emit("tool_end", {**fields, "status": "ok" if success is not False else "error",
                 "success": success, "duration_ms": (time.perf_counter() - start) * 1000}, decision_id)
             return result
