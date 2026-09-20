@@ -22,3 +22,8 @@ directly in response to this phrase -- the recipe owns benchmarking,
 evidence, and any approval gate before touching the user's installed
 bundles. This context file only recognizes the trigger phrase and hands off;
 it is not itself a substitute for running the recipe.
+
+The recipe accepts an optional `profile` context input (`incumbent`, the
+default, or `routing`) that picks the installed rung -- `bundles/active.yaml`
+or the screen-validated `bundles/active-routing.yaml` -- but only the recipe
+should ever set it; do not add it yourself unless the user asked for routing.

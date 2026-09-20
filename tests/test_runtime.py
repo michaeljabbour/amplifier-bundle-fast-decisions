@@ -8,12 +8,13 @@ offline half: Runtime.close() draining and cancelling its shadow worker.
 from __future__ import annotations
 import asyncio
 import tempfile
+import threading
 import unittest
 
 from amplifier_fast_decisions.backends import JevBackend, ScriptedBackend, UnavailableBackend
 from amplifier_fast_decisions.contracts import Policy
 from amplifier_fast_decisions.demo import DemoCoordinator
-from amplifier_fast_decisions.runtime import get_runtime
+from amplifier_fast_decisions.runtime import _schedule_backend_warmup, get_runtime
 from amplifier_fast_decisions.shadow import ShadowJob
 
 
@@ -134,6 +135,88 @@ class BackendSelectionTests(unittest.IsolatedAsyncioTestCase):
         with tempfile.TemporaryDirectory() as tmp:
             with self.assertRaises(ValueError):
                 get_runtime(coordinator, {"backend": "scripted", "events_dir": tmp})
+
+
+class BackendWarmupSchedulingTests(unittest.IsolatedAsyncioTestCase):
+    """_schedule_backend_warmup (called from get_runtime right after a
+    backend is constructed): mount-time warmup that never blocks the mount
+    and never lets a failing warmup escape. Ollama's warmup absorbs the
+    model reload, Jev's opens the TLS connection, Mlx/Laya/Hosted hit their
+    health endpoints -- all of that is paid here instead of on the first
+    real decision.
+    """
+
+    async def test_warmup_runs_via_create_task_when_loop_is_running(self):
+        ran = asyncio.Event()
+
+        class FakeBackend:
+            name = "fake"
+
+            async def warmup(self):
+                ran.set()
+
+        _schedule_backend_warmup(FakeBackend())
+        await asyncio.wait_for(ran.wait(), timeout=1)
+
+    async def test_raising_warmup_is_swallowed_not_propagated(self):
+        failed = asyncio.Event()
+
+        class FakeBackend:
+            name = "fake"
+
+            async def warmup(self):
+                failed.set()
+                raise RuntimeError("boom")
+
+        # Must not raise synchronously from the scheduling call itself.
+        _schedule_backend_warmup(FakeBackend())
+        # ...and the background task's failure must not surface anywhere
+        # that would crash the event loop or this test.
+        await asyncio.wait_for(failed.wait(), timeout=1)
+        await asyncio.sleep(0)  # let the task's except-block finish
+
+    async def test_backend_without_warmup_is_skipped(self):
+        class FakeBackend:
+            name = "fake"
+
+        # No `warmup` attribute at all -- must be a no-op, not an error.
+        _schedule_backend_warmup(FakeBackend())
+
+    async def test_non_coroutine_warmup_attribute_is_skipped(self):
+        class FakeBackend:
+            name = "fake"
+            warmup = "not-a-callable-coroutine-fn"
+
+        _schedule_backend_warmup(FakeBackend())
+
+
+class BackendWarmupNoRunningLoopTests(unittest.TestCase):
+    """Outside a running loop (e.g. constructed synchronously), warmup must
+    still run -- in a daemon thread via asyncio.run -- rather than being
+    silently dropped."""
+
+    def test_warmup_runs_in_daemon_thread_when_no_loop_is_running(self):
+        ran = threading.Event()
+
+        class FakeBackend:
+            name = "fake"
+
+            async def warmup(self):
+                ran.set()
+
+        _schedule_backend_warmup(FakeBackend())
+        self.assertTrue(ran.wait(timeout=2))
+
+    def test_raising_warmup_in_thread_path_does_not_raise_here(self):
+        class FakeBackend:
+            name = "fake"
+
+            async def warmup(self):
+                raise RuntimeError("boom")
+
+        # Must return immediately without raising; the failure happens on
+        # the background daemon thread and is swallowed there.
+        _schedule_backend_warmup(FakeBackend())
 
 
 if __name__ == "__main__":

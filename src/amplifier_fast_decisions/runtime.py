@@ -1,7 +1,9 @@
 """One decision service per session; no global provider mutations."""
 from __future__ import annotations
 import asyncio
+import logging
 import os
+import threading
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
@@ -11,6 +13,44 @@ from .contracts import SERVICE_CAPABILITY, RUNTIME_CAPABILITY, EVENT_NAMES, Poli
 from .service import DecisionService
 from .shadow import ShadowJob, ShadowOutcome, ShadowWorker
 from .telemetry import Emitter, JsonlRecorder
+
+_logger = logging.getLogger(__name__)
+
+
+def _schedule_backend_warmup(backend: Any) -> None:
+    """Best-effort, non-blocking warmup at mount time.
+
+    Ollama's warmup absorbs the model reload, Jev's opens the TLS
+    connection, Mlx/Laya/Hosted hit their health endpoints -- all costly
+    on the first real decision if paid there instead of here. Deterministic/
+    unavailable/scripted backends have no ``warmup`` coroutine and are
+    skipped naturally by the ``iscoroutinefunction`` check below.
+
+    Never raises and never blocks the mount: any failure is swallowed and
+    logged at debug. The first real decision simply pays the handshake
+    cost itself, same as if warmup had never run.
+    """
+    warmup = getattr(backend, "warmup", None)
+    if warmup is None or not asyncio.iscoroutinefunction(warmup):
+        return
+
+    async def _run() -> None:
+        try:
+            await warmup()
+        except Exception:
+            _logger.debug(
+                "backend warmup failed for %s", getattr(backend, "name", backend), exc_info=True
+            )
+
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        loop = None
+
+    if loop is not None:
+        loop.create_task(_run())
+    else:
+        threading.Thread(target=lambda: asyncio.run(_run()), daemon=True).start()
 
 
 def _env_backend_default() -> str | None:
@@ -203,6 +243,7 @@ def get_runtime(coordinator: Any, config: dict[str, Any], *, owner: bool = False
         backend = ScriptedBackend()
     else:
         backend = UnavailableBackend()
+    _schedule_backend_warmup(backend)
     service = DecisionService(policy, backend, emitter, coordinator, config.get("candidates"))
     runtime = Runtime(service, recorder, shadow_capacity=config.get("shadow_capacity", 64),
                        shadow_drain_ms=config.get("shadow_drain_ms", 2000))

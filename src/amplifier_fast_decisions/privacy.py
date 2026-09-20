@@ -66,6 +66,8 @@ SAFE_FIELDS = {
     "engine",
     "transport",
     "transport_measured",
+    "connect_ms",
+    "reused_connection",
     "event_source",
     "native_event",
     "latency_kind",

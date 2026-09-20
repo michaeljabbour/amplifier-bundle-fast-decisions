@@ -72,6 +72,16 @@ and must not be compared across backends. No raw target path is logged. Hashes a
 identifiers, not encryption or anonymization. They do not fingerprint the shared
 state, system prompt, contributed questions, model revision, or complete request.
 
+Jev's stdlib (urllib-fallback) transport reuses one persistent keep-alive
+connection per backend instance instead of opening a new TCP+TLS connection
+per decision. `scored` records from that transport carry `connect_ms` (0.0
+when an existing connection was reused, the measured handshake time when a
+new one had to be opened) and `reused_connection` (whether this decision's
+request ran on a connection already open from a prior decision). The SDK
+transport sets `reused_connection` from whether its own client instance was
+already constructed, but leaves `connect_ms` unset -- the SDK does not expose
+a per-call connection/handshake timing hook.
+
 `probability_kind`, `reported_confidence`, and `confidence_kind` are separate fields.
 Ollama reports token mass with abstention residual and `confidence_kind: not_reported`.
 Jev confidence remains `typesafe_reported_unspecified`: this adapter does not know

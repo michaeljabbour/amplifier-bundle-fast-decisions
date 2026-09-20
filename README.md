@@ -27,6 +27,26 @@ Experimental v0.1.0. Benchmark evidence lives in
 directory (cell definitions, mechanism gates, and study design); no result
 here is a production SLA.
 
+## Try the fastest configuration
+
+Screen-validated (one repetition, 2026-09-20): 40/40 aider-polyglot exercises
+at 26 s median working time (plain Amplifier 100 s; Claude Code 28 s / 35 of
+40; Codex 35 s / 37 of 40), 20/20 on the synthetic battery. A plain-on-sonnet
+control scored 39/40 at 128 s, so the gain is attributable to routing and
+escalation, not the cheaper model alone. **Confirmation running** --
+repetition-confirmed results update `bundles/active-routing.yaml` via
+`evals/apply_recommendation.py`. Requires a provider that also serves
+`claude-sonnet-5` alongside the pinned judge model.
+
+```bash
+amplifier bundle add "git+https://github.com/michaeljabbour/amplifier-bundle-fast-decisions@main#subdirectory=bundles/active-routing.yaml"
+```
+
+The incumbent judge-only rung (`bundles/active.yaml`, ~0.55x plain Amplifier
+working time at equal quality) stays the default of the
+[`make-amplifier-faster` recipe](recipes/make-amplifier-faster.yaml); pass
+`profile: routing` to install this rung through the recipe instead.
+
 ## Configuration
 
 Four judge backends, chosen by `backend` (config) or `FAST_DECISIONS_JUDGE`

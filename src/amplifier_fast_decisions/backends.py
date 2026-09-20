@@ -9,11 +9,13 @@ batching, not proof of shared GPU work, lower latency, or answer invariance.
 from __future__ import annotations
 
 import asyncio
+import http.client
 import json
 import os
-import urllib.error
-import urllib.request
+import threading
+import time
 from typing import Any
+from urllib.parse import urlsplit
 
 from .contracts import (
     SLOW,
@@ -31,6 +33,14 @@ from .contracts import (
 # without needing the SDK absent from the environment). Never set True in
 # normal operation.
 _FORCE_URLLIB = False
+
+# Connection-level failures on a REUSED keep-alive socket -- the far end may
+# have quietly closed it between decisions. These are the only cases the
+# stdlib transport reconnects and retries once for; the same errors on a
+# freshly opened connection are a real, live failure (slow/unreachable host)
+# and are reported immediately instead, so a retry never doubles the wait on
+# a connection that was never proven stale.
+_RETRYABLE_CONN_ERRORS = (http.client.HTTPException, OSError)
 
 
 class BackendUnavailable(RuntimeError):
@@ -209,6 +219,21 @@ class JevBackend:
         # (not a DecisionResult field, which has a fixed, versioned shape);
         # the service layer can log it if useful.
         self.last_transport: str | None = None
+        # Same pattern as ``last_transport``: plain, best-effort attributes
+        # describing the most recent call's connection cost, not a
+        # DecisionResult field. ``last_connect_ms`` is 0.0 when a cached
+        # connection was reused, the measured TCP+TLS handshake time when a
+        # new one had to be opened, and None when the transport (currently
+        # the SDK path) does not expose this measurement.
+        self.last_connect_ms: float | None = None
+        self.last_reused_connection: bool = False
+        # Stdlib (urllib-fallback) transport's persistent keep-alive socket.
+        # Guarded by ``_conn_lock`` because ``asyncio.to_thread`` runs the
+        # blocking send/receive in a worker thread while this backend
+        # instance may be invoked concurrently for different decisions.
+        self._conn: http.client.HTTPConnection | None = None
+        self._conn_target: tuple[bool, str, int] | None = None
+        self._conn_lock = threading.Lock()
 
     def _get_client(self):
         if self._client is None:
@@ -238,6 +263,10 @@ class JevBackend:
 
     async def _ask_sdk(self, request: DecisionRequest) -> DecisionResult:
         questions, option_set_hash = _build_questions(request)
+        # Captured before ``_get_client()`` may construct-and-cache a new
+        # client, so this reflects whether *this* call reused an
+        # already-authenticated, already-constructed client instance.
+        had_client = self._client is not None
         result = await self._get_client().system_one(
             state=request.state,
             questions=questions,
@@ -245,10 +274,19 @@ class JevBackend:
             timeout=self.timeout_ms / 1000,
         )
         self.last_transport = "sdk"
+        self.last_reused_connection = had_client
+        # The SDK does not expose a per-call connection/handshake timing
+        # hook, so this is left unknown rather than guessed. Whether
+        # ``AsyncTypeSafeClient`` itself keeps the underlying HTTP
+        # connection alive across calls is a property of the installed
+        # ``typesafe_sdk`` package, not of this adapter -- see
+        # docs/MODEL-SETUP.md for what is and is not verified here.
+        self.last_connect_ms = None
         return _result_from_payload(result, self.model, request, option_set_hash)
 
     async def _ask_urllib(self, request: DecisionRequest) -> DecisionResult:
-        """No-install fallback: a plain ``urllib.request`` POST run off the
+        """No-install fallback: a plain ``http.client`` POST over a
+        persistent, per-backend-instance keep-alive connection, run off the
         event loop via ``asyncio.to_thread``, used only when the optional
         ``typesafe_sdk`` package is not installed in the host environment.
         Produces the exact same normalized ``DecisionResult`` shape as the
@@ -264,20 +302,158 @@ class JevBackend:
             "questions": questions,
         }
         base_url = os.getenv("TYPESAFE_BASE_URL", "https://api.typesafe.ai").rstrip("/")
-        url = f"{base_url}/v1/systemone"
-        req = urllib.request.Request(
-            url,
-            data=json.dumps(body).encode("utf-8"),
-            method="POST",
-            headers={
-                "Authorization": f"Bearer {api_key}",
-                "Content-Type": "application/json",
-            },
-        )
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+        }
         timeout_s = self.timeout_ms / 1000
-        payload = await asyncio.to_thread(_urllib_post, req, timeout_s)
+        payload = await asyncio.to_thread(
+            self._post_keepalive,
+            base_url,
+            "/v1/systemone",
+            headers,
+            json.dumps(body).encode("utf-8"),
+            timeout_s,
+        )
         self.last_transport = "urllib"
         return _result_from_payload(payload, model, request, option_set_hash)
+
+    def _new_connection(
+        self, is_https: bool, host: str, port: int, timeout_s: float
+    ) -> http.client.HTTPConnection:
+        cls = http.client.HTTPSConnection if is_https else http.client.HTTPConnection
+        return cls(host, port, timeout=timeout_s)
+
+    def _close_connection_locked(self) -> None:
+        """Caller must hold ``_conn_lock``."""
+        if self._conn is not None:
+            try:
+                self._conn.close()
+            except Exception:  # noqa: BLE001, S110 -- best-effort socket teardown
+                pass
+            self._conn = None
+            self._conn_target = None
+
+    def _send_and_read(
+        self, conn: http.client.HTTPConnection, path: str, headers: dict[str, str], body: bytes
+    ) -> dict[str, Any]:
+        conn.request("POST", path, body=body, headers=headers)
+        response = conn.getresponse()
+        raw = response.read()  # always drain, so the connection stays reusable
+        if response.status in (401, 403):
+            raise BackendUnavailable("typesafe authentication failed")
+        if response.status >= 400:
+            raise BackendUnavailable(f"typesafe request failed: HTTP {response.status}")
+        try:
+            return json.loads(raw.decode("utf-8"))
+        except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+            raise BackendUnavailable("typesafe response was not valid JSON") from exc
+
+    def _post_keepalive(
+        self, base_url: str, path: str, headers: dict[str, str], body: bytes, timeout_s: float
+    ) -> dict[str, Any]:
+        """Blocking POST + JSON parse, run in a worker thread by
+        ``JevBackend._ask_urllib`` (and ``warmup``). Reuses ``self._conn``
+        when it is already open to the same (scheme, host, port); opens
+        (and times) a new connection otherwise. Every failure mode becomes
+        ``BackendUnavailable`` with a short, key-free reason -- never the
+        raw exception, which could otherwise carry request internals into
+        logs."""
+        parts = urlsplit(base_url)
+        is_https = parts.scheme != "http"
+        host = parts.hostname
+        if not host:
+            raise BackendUnavailable(f"TYPESAFE_BASE_URL has no host: {base_url!r}")
+        port = parts.port or (443 if is_https else 80)
+        target = (is_https, host, port)
+
+        def _open_new() -> tuple[http.client.HTTPConnection, float]:
+            start = time.monotonic()
+            try:
+                new_conn = self._new_connection(is_https, host, port, timeout_s)
+                new_conn.connect()
+            except (OSError, http.client.HTTPException) as exc:
+                raise BackendUnavailable(f"typesafe request failed: {exc}") from exc
+            return new_conn, (time.monotonic() - start) * 1000
+
+        with self._conn_lock:
+            reused = self._conn is not None and self._conn_target == target
+            if not reused:
+                self._close_connection_locked()
+                conn, connect_ms = _open_new()
+                self._conn = conn
+                self._conn_target = target
+            else:
+                conn = self._conn
+                assert conn is not None  # `reused` implies self._conn is set
+                connect_ms = 0.0
+                # A reused socket keeps whatever timeout it was opened
+                # with; refresh it to this call's own budget so a slower
+                # decision still fails within its own deadline rather than
+                # inheriting an earlier, possibly shorter or longer one.
+                if conn.sock is not None:
+                    conn.sock.settimeout(timeout_s)
+
+            try:
+                payload = self._send_and_read(conn, path, headers, body)
+            except BackendUnavailable:
+                raise
+            except _RETRYABLE_CONN_ERRORS as exc:
+                if not reused:
+                    # A freshly opened connection failing is a live,
+                    # real-time failure (unreachable/slow host) -- retrying
+                    # would silently double the wait against the decision
+                    # budget with no evidence a retry would help.
+                    self._close_connection_locked()
+                    raise BackendUnavailable(f"typesafe request failed: {exc}") from exc
+                # The reused keep-alive connection was stale (the far end
+                # closed it between decisions): reconnect once and retry
+                # the request once, exactly once, on a fresh connection.
+                self._close_connection_locked()
+                conn, connect_ms = _open_new()
+                self._conn = conn
+                self._conn_target = target
+                reused = False
+                payload = self._send_and_read(conn, path, headers, body)
+
+            self.last_connect_ms = connect_ms
+            self.last_reused_connection = reused
+            return payload
+
+    async def warmup(self) -> None:
+        """Open the connection ahead of the first real decision, so it
+        doesn't pay TCP+TLS handshake cost. Best-effort, mirroring the local
+        backends' ``warmup()`` (see ``local_backend.py``): any failure here
+        is swallowed, since an unreachable or slow Jev endpoint must not
+        block the decision it warms for -- the first real ``ask()`` will
+        simply pay the handshake itself, exactly as it did before warmup
+        existed."""
+        try:
+            if self._client is not None or _sdk_available():
+                # Constructs and caches the client if not already built.
+                # Whether the underlying ``typesafe_sdk`` client itself
+                # opens a connection eagerly at construction, or lazily on
+                # first call, is a property of that package -- unverified
+                # here (see docs/MODEL-SETUP.md).
+                self._get_client()
+                return
+            api_key = os.getenv("TYPESAFE_API_KEY")
+            if not api_key:
+                return
+            base_url = os.getenv("TYPESAFE_BASE_URL", "https://api.typesafe.ai").rstrip("/")
+            headers = {
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+            }
+            body = json.dumps(
+                {"state": {}, "model": self.model or "jev-latest", "questions": {}}
+            ).encode("utf-8")
+            timeout_s = self.timeout_ms / 1000
+            await asyncio.to_thread(
+                self._post_keepalive, base_url, "/v1/systemone", headers, body, timeout_s
+            )
+        except Exception:  # noqa: BLE001 -- warm-up is best effort
+            return
 
     async def ask_many(self, request: DecisionRequest) -> DecisionResult:
         """HC08: ``ask()`` already submits every question in
@@ -289,27 +465,8 @@ class JevBackend:
         if self._client is not None:
             await self._client.aclose()
             self._client = None
-
-
-def _urllib_post(req: urllib.request.Request, timeout_s: float) -> dict[str, Any]:
-    """Blocking POST + JSON parse, run in a worker thread by
-    ``JevBackend._ask_urllib``. Every failure mode becomes
-    ``BackendUnavailable`` with a short, key-free reason -- never the raw
-    exception, which could otherwise carry request internals into logs."""
-    try:
-        with urllib.request.urlopen(req, timeout=timeout_s) as response:
-            raw = response.read()
-    except urllib.error.HTTPError as exc:
-        exc.close()  # release the response socket before raising
-        if exc.code in (401, 403):
-            raise BackendUnavailable("typesafe authentication failed") from exc
-        raise BackendUnavailable(f"typesafe request failed: HTTP {exc.code}") from exc
-    except (urllib.error.URLError, TimeoutError, OSError) as exc:
-        raise BackendUnavailable(f"typesafe request failed: {exc}") from exc
-    try:
-        return json.loads(raw.decode("utf-8"))
-    except (json.JSONDecodeError, UnicodeDecodeError) as exc:
-        raise BackendUnavailable("typesafe response was not valid JSON") from exc
+        with self._conn_lock:
+            self._close_connection_locked()
 
 
 class UnavailableBackend:

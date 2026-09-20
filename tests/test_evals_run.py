@@ -1024,6 +1024,124 @@ class ExitCodeThreeAndSixTests(unittest.TestCase):
             run.resume_detection = orig_resume
             run.scan_incomplete_runs = orig_scan
 
+    def test_budget_headroom_only_failure_downgrades_to_exit_3_and_stays_resumable(self):
+        """Regression for the driver stopping dead after the first experiment:
+        a check_budget_headroom failure (a resource constraint, expected to
+        trigger mid-matrix as reps consume the ledger, scoped to one rep) must
+        take the same exit-3 partial-manifest/resumable path as battery.py
+        run's own launch-cap/budget pause -- not the generic EvalsError(4)
+        that aborts the entire requested cell x rep matrix with no manifest
+        at all for the 12+ other cells never attempted."""
+        def fake_invoke(tool, targv):
+            if tool == "campaign" and targv[0] == "init":
+                root = Path(targv[targv.index("--root") + 1])
+                root.mkdir(parents=True, exist_ok=True)
+                (root / "protocol.json").write_text("{}")
+                return {"initialized": str(root)}
+            if tool == "campaign" and targv[:2] == ["budget", "status"]:
+                return {"remaining": 1.0}
+            if tool == "battery" and targv[0] == "prepare":
+                flags = {}
+                it = iter(targv[1:])
+                for a in it:
+                    if a.startswith("--"):
+                        flags[a] = next(it, True)
+                exp_dir = Path(flags["--root"]) / "experiments" / flags["--experiment"]
+                exp_dir.mkdir(parents=True, exist_ok=True)
+                (exp_dir / "proposal.json").write_text(json.dumps({
+                    "tasks": ["t1"], "claude_permission_mode": "bypassPermissions",
+                    "commands": {}, "task_source": None, "candidate_source_snapshot": None,
+                    "frozen_run_schedule": [{"name": "r1", "task": "t1", "harness": "amplifier-plain"}],
+                }))
+                return {"prepared": str(exp_dir)}
+            raise AssertionError(f"unexpected invoke_tool call past prepare: {tool} {targv}")
+
+        def fake_verification(experiment_dir, proposal, cell, suite, split, candidate_sha,
+                               defaults, required_toolchains, host_python, forge_py,
+                               budget_status=None, num_runs=0, per_launch_usd=0.0,
+                               which=None, doctor_runner=None):
+            passed_check = {"passed": True, "reason": None}
+            checks = {
+                "permission_mode": passed_check, "command_templates": passed_check,
+                "task_count": passed_check, "corpus_sha": passed_check,
+                "frozen_candidate": passed_check, "workspace_identity": passed_check,
+                "toolchains": passed_check, "forge_doctor": passed_check,
+                "budget_headroom": {"passed": False,
+                                     "reason": "remaining budget $1.00 < estimated $12.00 for 1 runs"},
+                "prompt_identity": passed_check,
+            }
+            return False, {"checks": checks}, {"ok": True, "tasks": {}}
+
+        orig_invoke = run.invoke_tool
+        orig_verify = run.run_verification
+        run.invoke_tool = fake_invoke
+        run.run_verification = fake_verification
+        try:
+            with tempfile.TemporaryDirectory() as tmp:
+                out = str(Path(tmp) / "out")
+                rc = run.main([
+                    "--suite", "s1", "--split", "dev", "--cells", "plain,judge-local+effort",
+                    "--reps", "1", "--out", out, "--baseline-source", "/b",
+                    "--candidate-source", "/c", "--candidate-sha", "deadbeef",
+                    "--installed-cache", "/ic", "--history-index", "/hi", "--events-dir", "/ev",
+                ])
+                self.assertEqual(rc, 3)
+                manifest = json.loads((Path(out) / "manifest.json").read_text())
+                cells_by_id = {c["id"]: c for c in manifest["cells"]}
+                # the failing cell's own rep is recorded, excluded from claims,
+                # not silently dropped
+                self.assertTrue(cells_by_id["plain"]["excluded_from_claims"])
+                # the second requested cell was never reached -- still gets a
+                # placeholder entry so --resume knows to pick it back up later,
+                # instead of vanishing with no record it was ever requested
+                self.assertIn("judge-local+effort", cells_by_id)
+                self.assertTrue(cells_by_id["judge-local+effort"]["excluded_from_claims"])
+                self.assertFalse((Path(out) / "results.json").exists())
+        finally:
+            run.invoke_tool = orig_invoke
+            run.run_verification = orig_verify
+
+
+class InvokeToolReasonExtractionTests(unittest.TestCase):
+    """Regression for `battery ['prepare', '--root'] failed: None`: battery.py's
+    own failure envelope varies by call site (`_fail()` prints {'error': ...},
+    battery.py run's launch-cap/budget pause prints {'reason': ...}) and
+    invoke_tool must surface either -- reading only 'reason' silently
+    discarded the real diagnostic text whenever the subprocess used the
+    {'error': ...} convention (a real, non-empty payload, so the None from a
+    missing 'reason' key was never replaced by the stderr fallback either)."""
+
+    def _run_with_fake_subprocess(self, stdout, stderr, returncode):
+        proc = SimpleNamespace(stdout=stdout, stderr=stderr, returncode=returncode)
+        with patch.object(run.subprocess, "run", return_value=proc):
+            with self.assertRaises(run.EvalsError) as ctx:
+                run.invoke_tool("battery", ["prepare", "--root", "/tmp/x"])
+        return ctx.exception
+
+    def test_error_key_payload_surfaces_the_real_reason(self):
+        stdout = json.dumps({"error": "Experiment plain-s1-dev-r2 already exists"})
+        exc = self._run_with_fake_subprocess(stdout, stderr="", returncode=4)
+        self.assertIn("Experiment plain-s1-dev-r2 already exists", exc.reason)
+        self.assertNotIn("None", exc.reason)
+        self.assertEqual(exc.code, 4)
+
+    def test_reason_key_payload_still_works(self):
+        stdout = json.dumps({"reason": "budget", "paused": True})
+        exc = self._run_with_fake_subprocess(stdout, stderr="", returncode=3)
+        self.assertIn("budget", exc.reason)
+        self.assertEqual(exc.code, 3)
+
+    def test_unparseable_stdout_falls_back_to_stderr(self):
+        exc = self._run_with_fake_subprocess(
+            stdout="not json", stderr="Traceback: boom", returncode=1)
+        self.assertIn("boom", exc.reason)
+
+    def test_exit_key_in_payload_still_sets_the_raised_code(self):
+        stdout = json.dumps({"error": "no tasks selected", "exit": 4})
+        exc = self._run_with_fake_subprocess(stdout, stderr="", returncode=1)
+        self.assertEqual(exc.code, 4)
+        self.assertIn("no tasks selected", exc.reason)
+
 
 class EndToEndResultsArtifactsTests(unittest.TestCase):
     """Drives the same two-cell sequence as EndToEndTwoCellTests, but with a
@@ -1155,6 +1273,98 @@ class VerifyPromptsForExperimentTests(unittest.TestCase):
         self.assertTrue(result["ok"])
         self.assertTrue(result["tasks"]["polyglot/python/hello"]["ok"])
         self.assertIn("expected_sha", result["tasks"]["polyglot/python/hello"])
+
+
+class InitOrAdoptCampaignBudgetMappingTests(unittest.TestCase):
+    """cells.yaml's `budget` block must reach campaign.py's `init` as
+    `budgets.<key>` -- the exact dotted keys campaign.py's `_get(proposal,
+    'budgets.<key>', default)` reads (scripts/campaign.py ~lines 379-398).
+    Before this fix, run.py only wrote `fast_decisions_budget`, so every
+    formal run silently inherited campaign.py's tiny built-in defaults
+    (estimated_total_usd=150.0, max_benchmark_worker_launches=60) instead
+    of the cell's real budget.
+    """
+
+    def test_proposal_budgets_carry_cells_yaml_values(self):
+        calls = []
+
+        def fake_invoke(tool, targv):
+            calls.append((tool, targv))
+            return {}
+
+        orig_invoke = run.invoke_tool
+        run.invoke_tool = fake_invoke
+        try:
+            with tempfile.TemporaryDirectory() as tmp:
+                cells_doc = {
+                    "budget": {
+                        "per_launch_usd": 12.0,
+                        "estimated_total_usd": 1500.0,
+                        "max_benchmark_worker_launches": 2000,
+                        "max_infrastructure_retries_per_run": 1,
+                        "max_parallel_timed_runs": 1,
+                        "wall_hours": 24,
+                    }
+                }
+                run.init_or_adopt_campaign(
+                    tmp, cells_doc,
+                    baseline_source="/baseline", candidate_source="/candidate",
+                    installed_cache="/cache", history_index="/hist",
+                    host_python=sys.executable, events_dir="/events",
+                )
+                proposal = json.loads((Path(tmp) / "campaign-proposal.json").read_text())
+        finally:
+            run.invoke_tool = orig_invoke
+
+        self.assertEqual(len(calls), 1)
+        self.assertEqual(calls[0][0], "campaign")
+
+        budgets = proposal["budgets"]
+        self.assertEqual(budgets["estimated_total_usd"], 1500.0)
+        self.assertEqual(budgets["max_benchmark_worker_launches"], 2000)
+        self.assertEqual(budgets["per_launch_usd"], 12.0)
+        self.assertEqual(budgets["max_infrastructure_retries_per_run"], 1)
+        self.assertEqual(budgets["max_parallel_timed_runs"], 1)
+        self.assertEqual(budgets["wall_hours"], 24)
+        # provenance field retained, unchanged
+        self.assertEqual(proposal["fast_decisions_budget"], cells_doc["budget"])
+
+        # campaign.py's own `_get` -- the exact reader this fix targets --
+        # must resolve the real values, not its built-in defaults.
+        import campaign
+
+        self.assertEqual(campaign._get(proposal, "budgets.estimated_total_usd", 150.0), 1500.0)
+        self.assertEqual(campaign._get(proposal, "budgets.max_benchmark_worker_launches", 60), 2000)
+        self.assertEqual(campaign._get(proposal, "budgets.per_launch_usd", 12.0), 12.0)
+
+    def test_missing_budget_keys_fall_back_to_campaign_defaults(self):
+        """A cell with only a partial budget block (or none) must not write
+        bogus keys -- campaign.py's own defaults apply for anything absent."""
+        calls = []
+
+        def fake_invoke(tool, targv):
+            calls.append((tool, targv))
+            return {}
+
+        orig_invoke = run.invoke_tool
+        run.invoke_tool = fake_invoke
+        try:
+            with tempfile.TemporaryDirectory() as tmp:
+                run.init_or_adopt_campaign(
+                    tmp, {},
+                    baseline_source="/baseline", candidate_source="/candidate",
+                    installed_cache="/cache", history_index="/hist",
+                    host_python=sys.executable, events_dir="/events",
+                )
+                proposal = json.loads((Path(tmp) / "campaign-proposal.json").read_text())
+        finally:
+            run.invoke_tool = orig_invoke
+
+        self.assertEqual(proposal["budgets"], {})
+
+        import campaign
+
+        self.assertEqual(campaign._get(proposal, "budgets.estimated_total_usd", 150.0), 150.0)
 
 
 if __name__ == "__main__":

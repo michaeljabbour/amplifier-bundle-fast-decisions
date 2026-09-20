@@ -1,0 +1,13 @@
+# LiteLLM model_list entry for the hosted tiny-Qwen (0.6B) judge.
+# Add this entry to your team's existing LiteLLM config; do not run this
+# file standalone. No fallbacks configured -- clients that miss this model
+# fail open to their local judge (see rollback.md).
+model_list:
+  - model_name: fast-decisions-judge
+    litellm_params:
+      model: openai/Qwen/Qwen3-0.6B
+      api_base: os.environ/JUDGE_API_BASE
+      api_key: os.environ/JUDGE_API_KEY
+      drop_params: false
+      timeout: 2
+      num_retries: 0

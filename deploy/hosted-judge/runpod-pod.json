@@ -1,0 +1,52 @@
+{
+  "_comment": "RunPod pod-create payload for the hosted tiny-Qwen (0.6B) judge. TO-PIN: imageName -- pin an exact vLLM/worker-vllm tag before deploying; do not use a floating tag.",
+  "cloudType": "SECURE",
+  "gpuTypeId": "TO-PIN: e.g. NVIDIA RTX A5000 (24 GB class)",
+  "gpuCount": 1,
+  "name": "fast-decisions-judge",
+  "imageName": "TO-PIN: runpod/worker-v1-vllm:<pin> OR vllm/vllm-openai:v0.x.y",
+  "dockerArgs": "",
+  "ports": "8000/http",
+  "volumeInGb": 20,
+  "containerDiskInGb": 20,
+  "env": [
+    {
+      "key": "MODEL_NAME",
+      "value": "Qwen/Qwen3-0.6B"
+    },
+    {
+      "key": "MAX_MODEL_LEN",
+      "value": "4096"
+    },
+    {
+      "key": "MAX_LOGPROBS",
+      "value": "10"
+    },
+    {
+      "key": "ENABLE_PREFIX_CACHING",
+      "value": "true"
+    },
+    {
+      "key": "DTYPE",
+      "value": "bfloat16"
+    },
+    {
+      "key": "GPU_MEMORY_UTILIZATION",
+      "value": "0.60"
+    },
+    {
+      "key": "MAX_NUM_SEQS",
+      "value": "64"
+    },
+    {
+      "key": "DISABLE_LOG_REQUESTS",
+      "value": "true"
+    },
+    {
+      "key": "VLLM_API_KEY",
+      "value": "TO-SET: from a secret, never committed"
+    }
+  ],
+  "_liveness": "GET /health every 30s, plus one 1-token canary request every 60s (see accept.sh).",
+  "_rollout": "Stage as fast-decisions-judge-staging first; promote to fast-decisions-judge only after accept.sh passes."
+}

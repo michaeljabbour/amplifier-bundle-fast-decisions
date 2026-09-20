@@ -323,6 +323,12 @@ The above hosts (Ollama, MLX) keep the judge model on the same machine as your
 harness, so no snapshot state leaves it. A **hosted** judge instead runs on any
 OpenAI-compatible endpoint that returns `top_logprobs` -- shared infrastructure
 you control -- reached over HTTPS with an API key. This is a real network call, so it always requires explicit opt-in:
+
+For a gateway owner deploying this once for a whole team, see
+[deploy/hosted-judge/](../deploy/hosted-judge/README.md): a RunPod + vLLM +
+LiteLLM package for the same tiny 0.6B judge every teammate's local Ollama
+already runs, plus an acceptance script and rollback -- nothing there is
+deployed by this repository.
 `--backend hosted --allow-external-state` (`battery.py prepare
 --fd-backend hosted --allow-external-state`; the bundle's own
 `allow_external_state: true` config for direct runtime use; `gateway` is
@@ -379,6 +385,34 @@ absorbed into the abstention residual like any other unrecognized token
 existing provider rather than acting on a leaked thinking token. (Verified
 live against a LiteLLM+vLLM deployment: first token "We"/"Thinking", never a
 label, absent `chat_template_kwargs`.)
+
+## Jev: connection reuse and warmup
+
+The `jev` backend (`amplifier_fast_decisions.backends.JevBackend`) has two
+transports. When the optional `typesafe_sdk` package (the `jev` extra) is
+installed, it is used; otherwise a stdlib `http.client` fallback runs.
+
+**Stdlib transport.** Each `JevBackend` instance now keeps one persistent
+keep-alive connection to `TYPESAFE_BASE_URL` instead of opening a new
+TCP+TLS connection for every decision -- on this measurement setup, a fresh
+connection cost ~227 ms (connect+TLS) on top of ~218 ms request time, versus
+~213 ms total for a request on an already-open connection. If the server
+has silently closed a stale keep-alive connection between decisions, the
+backend reconnects once and retries the request once on the fresh
+connection; the same failure on a connection that was never proven open
+(e.g. the very first decision, or a genuinely unreachable host) is reported
+immediately instead, so a retry never doubles the wait against the decision
+budget. Call `await backend.warmup()` (best-effort; swallows any failure)
+before the first real decision to pay this handshake ahead of time.
+
+**SDK transport.** `JevBackend` already constructs `AsyncTypeSafeClient`
+once, lazily, and reuses that same instance across every `ask()` call.
+Whether `typesafe_sdk` itself keeps the underlying HTTP connection alive
+across calls on that cached client is a property of the installed SDK
+package, not of this adapter, and is **not verified here** -- the `jev`
+extra is not installed in the environment this change was developed and
+tested in, so no claim is made about the SDK's own connection behavior
+beyond the fact that the client object itself is reused.
 
 ## Use it as a Smart Tool
 

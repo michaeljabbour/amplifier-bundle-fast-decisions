@@ -1,6 +1,12 @@
 # Screen-validated 2026-09-20 (20-task and polyglot batteries, 1 repetition):
 # ~0.55x plain Amplifier working time at equal quality. Confirmed-repetition
 # results update this file via evals/apply_recommendation.py.
+#
+# A second rung, bundles/active-routing.yaml, adds phase-specific effort
+# routing plus opt-in model routing/escalation on top of this same judge
+# (screen-validated 2026-09-20, one repetition: 26 s median working time vs
+# 100 s here, on 40/40 aider-polyglot exercises). It requires a provider
+# that serves claude-sonnet-5 alongside the pinned judge model.
 bundle:
   name: fast-decisions-active
   version: 0.1.0
