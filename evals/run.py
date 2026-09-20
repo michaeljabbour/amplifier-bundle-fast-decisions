@@ -642,7 +642,19 @@ def invoke_tool(tool, argv):
         except ValueError:
             payload = None
     if proc.returncode != 0:
-        reason = (payload or {}).get("reason") if payload else (proc.stderr or "").strip()[-2000:]
+        if payload:
+            # battery.py's failure envelope varies by call site: most
+            # subcommands go through its `_fail()` helper, which prints
+            # {'error': reason, ...}; a few (e.g. the launch-cap/budget pause
+            # in `battery.py run`) print {'reason': ..., ...} directly. Try
+            # both -- reading only 'reason' meant a `_fail()`-shaped payload
+            # (a real, non-empty dict) still tripped the truthy `if payload`
+            # branch below, and `.get("reason")` silently returned None,
+            # discarding the actual diagnostic text battery.py had already
+            # produced (surfacing as a bare "failed: None").
+            reason = payload.get("reason") or payload.get("error") or json.dumps(payload)
+        else:
+            reason = (proc.stderr or "").strip()[-2000:]
         code = (payload or {}).get("exit", proc.returncode)
         raise EvalsError(code if isinstance(code, int) else proc.returncode,
                           f"{tool} {argv[:2]} failed: {reason}")
@@ -1309,9 +1321,29 @@ def init_or_adopt_campaign(out_dir, cells_doc, *, baseline_source, candidate_sou
     if (campaign_root / "protocol.json").exists():
         return {"adopted": True}
     proposal_path = Path(out_dir) / "campaign-proposal.json"
+    cells_budget = cells_doc.get("budget", {})
+    # campaign.py `init` reads budgets.<key> via `_get(proposal, 'budgets.<key>', default)`
+    # (scripts/campaign.py ~lines 379-398). Map every key it looks up so cells.yaml's
+    # budget actually reaches the campaign instead of silently falling back to its
+    # tiny built-in defaults (estimated_total_usd=150.0, max_benchmark_worker_launches=60, ...).
+    budgets = {}
+    for key in (
+        "per_launch_usd",
+        "floor_usd",
+        "max_candidates",
+        "max_benchmark_worker_launches",
+        "max_infrastructure_retries_per_run",
+        "max_parallel_timed_runs",
+        "wall_hours",
+        "estimated_total_usd",
+    ):
+        if key in cells_budget:
+            budgets[key] = cells_budget[key]
     _write_json(proposal_path, {
         "campaign_name": "fast-decisions-evals",
-        "fast_decisions_budget": cells_doc.get("budget", {}),
+        # retained for provenance/debugging -- not read by campaign.py
+        "fast_decisions_budget": cells_budget,
+        "budgets": budgets,
     })
     invoke_tool("campaign", [
         "init", "--root", str(campaign_root), "--proposal", str(proposal_path),
@@ -1369,6 +1401,24 @@ def run_one_experiment(*, cell_id, cells_doc, suites_doc, suite_id, split, rep, 
     _write_json(Path(out_dir) / "preflight.json", preflight)
     _write_json(Path(out_dir) / "prompt-verification.json", prompt_verification)
     if not ok:
+        failing = [name for name, c in preflight["checks"].items() if not c.get("passed", True)]
+        if failing == ["budget_headroom"]:
+            # Budget exhaustion is a resource constraint, not a config defect:
+            # it is expected to eventually trigger mid-matrix as reps consume
+            # the ledger, and it is scoped to this one rep, not the whole
+            # requested cell x rep matrix. Route it through the same exit-3
+            # "budget refused" path as battery.py run's own launch-cap/budget
+            # pause (see _write_partial_state in main()) so the batch writes
+            # a partial manifest/gates for everything already completed and
+            # remains resumable via --resume, instead of raising EvalsError(4)
+            # here: main()'s per-rep loop only special-cases code 3 for that
+            # partial-state + resumable handling; any other code re-raises to
+            # the outer handler and silently abandons every other planned
+            # cell/rep with no manifest at all (see docstring above: "raises
+            # EvalsError(4) pre-launch" is for genuine precondition defects
+            # like schema/tool-sha drift, which legitimately affect every
+            # cell and must halt everything for investigation).
+            raise EvalsError(3, f"{exp}: {preflight['checks']['budget_headroom']['reason']}")
         raise EvalsError(4, f"{exp}: precondition failed: {preflight}")
 
     if backfill_exec:
