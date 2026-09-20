@@ -400,10 +400,23 @@ class SampleSweBenchTest(unittest.TestCase):
                 self.assertEqual(instance_record["instance_id"], instances[i - 1].instance_id)
                 self.assertEqual(instance_record["fail_to_pass_count"], 1)
                 self.assertEqual(instance_record["pass_to_pass_count"], 2)
-                # profile.yaml references this task's own launch-variable index
+                # profile.yaml has the concrete repo URL and base commit
+                # baked in as literal values -- no ${...} launch-var
+                # placeholder left for run.sh/the DTU CLI to resolve later
+                # (this is exactly the substitution the S3 harness never
+                # performed, causing "repository does not exist" at
+                # provisioning for all 90 trials).
                 profile_text = (d / "profile.yaml").read_text()
-                self.assertIn(f"${{SWE_REPO_{i}}}", profile_text)
-                self.assertIn(f"${{SWE_COMMIT_{i}}}", profile_text)
+                instance = instances[i - 1]
+                self.assertIn(
+                    f"git clone https://github.com/{instance.repo}.git /workspace/repo",
+                    profile_text,
+                )
+                self.assertIn(
+                    f"git -C /workspace/repo checkout {instance.base_commit}",
+                    profile_text,
+                )
+                self.assertNotIn("${", profile_text)
                 grader_text = (d / "grader.yaml").read_text()
                 self.assertIn("--dataset verified", grader_text)
                 self.assertIn(f"{d.name}/grader-data/instance.json", grader_text)
@@ -413,6 +426,115 @@ class SampleSweBenchTest(unittest.TestCase):
         self.assertEqual(sample_swebench._count_tests("not json"), 0)
         self.assertEqual(sample_swebench._count_tests(json.dumps(["a", "b"])), 2)
         self.assertEqual(sample_swebench._count_tests(json.dumps({"not": "a list"})), 0)
+
+    def test_profile_yaml_renders_concrete_values_with_no_unresolved_placeholders(self):
+        """Regression test for the S3 provisioning failure: all 90 trials
+        failed in ~10s at `git clone ${SWE_REPO_1} /workspace/repo` because
+        the ${SWE_REPO_N}/${SWE_COMMIT_N} launch-var placeholders were
+        never substituted (run.sh never built the --launch-var flags for
+        them). _profile_yaml now takes the concrete repo URL and base
+        commit directly and bakes them into the clone/checkout lines --
+        assert no ${...} placeholder survives rendering and the exact
+        clone/checkout commands carry the real values.
+        """
+        rendered = sample_swebench._profile_yaml(
+            "swebench-7",
+            "https://github.com/django/django.git",
+            "abc123def456",
+        )
+        self.assertNotIn("${", rendered)
+        self.assertIn(
+            "git clone https://github.com/django/django.git /workspace/repo",
+            rendered,
+        )
+        self.assertIn(
+            "git -C /workspace/repo checkout abc123def456",
+            rendered,
+        )
+
+
+class UnresolvedPlaceholderTest(unittest.TestCase):
+    """swebench_stage.find_unresolved_placeholders / check_preflight's
+    tasks_dir wiring -- the guard against this exact class of regression
+    reappearing (a generated profile.yaml still carrying a ${...}
+    launch-var placeholder that nothing will ever substitute).
+    """
+
+    def test_empty_dict_when_tasks_dir_absent(self):
+        missing = swebench_stage.find_unresolved_placeholders(Path("/no/such/dir"))
+        self.assertEqual(missing, {})
+
+    def test_empty_dict_when_all_profiles_fully_resolved(self):
+        instances = [
+            sample_swebench.SWEBenchInstance(
+                instance_id="astropy__astropy-1000",
+                repo="astropy/astropy",
+                base_commit="deadbeef0000",
+                patch="",
+                test_patch="",
+                problem_statement="fake",
+                hints_text="",
+                created_at="2024-01-01T00:00:00Z",
+                version="5.0",
+                fail_to_pass="[]",
+                pass_to_pass="[]",
+            )
+        ]
+        with tempfile.TemporaryDirectory() as tmp:
+            out_dir = Path(tmp) / "tasks"
+            sample_swebench.build_all_task_dirs(out_dir, instances)
+            missing = swebench_stage.find_unresolved_placeholders(out_dir)
+            self.assertEqual(missing, {})
+
+    def test_detects_unresolved_placeholder_in_a_generated_profile(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            tasks_dir = Path(tmp) / "tasks"
+            task_dir = tasks_dir / "swebench-1"
+            task_dir.mkdir(parents=True)
+            (task_dir / "profile.yaml").write_text(
+                "provision:\n"
+                "  setup_cmds:\n"
+                "    - git clone ${SWE_REPO_1} /workspace/repo\n"
+                "    - git -C /workspace/repo checkout ${SWE_COMMIT_1}\n"
+            )
+            missing = swebench_stage.find_unresolved_placeholders(tasks_dir)
+            self.assertEqual(len(missing), 1)
+            [(path, placeholders)] = missing.items()
+            self.assertTrue(path.endswith("swebench-1/profile.yaml"))
+            self.assertEqual(
+                sorted(placeholders), ["${SWE_COMMIT_1}", "${SWE_REPO_1}"]
+            )
+
+    def test_check_preflight_fails_loudly_on_unresolved_task_profile_placeholder(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            tasks_dir = Path(tmp) / "tasks"
+            task_dir = tasks_dir / "swebench-1"
+            task_dir.mkdir(parents=True)
+            (task_dir / "profile.yaml").write_text(
+                "provision:\n"
+                "  setup_cmds:\n"
+                "    - git clone ${SWE_REPO_1} /workspace/repo\n"
+            )
+            report = swebench_stage.check_preflight(
+                which=lambda name: f"/usr/bin/{name}",
+                run_cmd=lambda argv: subprocess.CompletedProcess(argv, 0, "", ""),
+                env={"ANTHROPIC_API_KEY": "x"},
+                tasks_dir=tasks_dir,
+            )
+            self.assertFalse(report["ok"])
+            self.assertFalse(report["checks"]["task-profile-placeholders"]["ok"])
+            self.assertIn(
+                "SWE_REPO_1", report["checks"]["task-profile-placeholders"]["detail"]
+            )
+
+    def test_check_preflight_passes_when_tasks_dir_not_yet_generated(self):
+        report = swebench_stage.check_preflight(
+            which=lambda name: f"/usr/bin/{name}",
+            run_cmd=lambda argv: subprocess.CompletedProcess(argv, 0, "", ""),
+            env={"ANTHROPIC_API_KEY": "x"},
+            tasks_dir=Path("/no/such/dir"),
+        )
+        self.assertTrue(report["checks"]["task-profile-placeholders"]["ok"])
 
 
 class SummarizeTest(unittest.TestCase):
