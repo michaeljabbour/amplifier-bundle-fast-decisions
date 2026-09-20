@@ -186,7 +186,7 @@ class GatewayConstructionTests(unittest.TestCase):
     def test_external_flag_is_true(self):
         backend = GatewayBackend(model="some-model", url="http://127.0.0.1:9000")
         self.assertTrue(backend.external)
-        self.assertEqual(backend.name, "gateway")
+        self.assertEqual(backend.name, "hosted")
 
 
 class GatewayAuthHeaderTests(unittest.TestCase):
@@ -341,7 +341,7 @@ class GatewayDoctorCheckTests(unittest.TestCase):
                 GATEWAY_DEFAULT_KEY_ENV: "test-key",
             }):
                 check = cli._gateway_server_check()
-        self.assertEqual(check["check"], "gateway_server")
+        self.assertEqual(check["check"], "hosted_judge")
         self.assertTrue(check["ok"])
         self.assertEqual(check["state"], "reachable")
         self.assertEqual(check["value"], base_url)
@@ -394,7 +394,7 @@ class CellsYamlGatewayCellTests(unittest.TestCase):
         cell = data["cells"]["judge-gateway+effort-incumbent"]
         self.assertEqual(cell["fd"]["backend"], "gateway")
         self.assertTrue(cell["fd"]["allow_external_state"])
-        self.assertEqual(cell["mechanism_gate"]["scored_backend"], "gateway")
+        self.assertEqual(cell["mechanism_gate"]["scored_backend"], "hosted")
 
     def test_gateway_cell_requires_external_state(self):
         cell = self._cells_data()["cells"]["judge-gateway+effort-incumbent"]

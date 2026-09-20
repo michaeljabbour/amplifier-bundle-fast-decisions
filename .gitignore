@@ -9,6 +9,7 @@ dist/
 .amplifier/
 .env
 .env.*
+!.env.example
 playwright-report/
 .DS_Store
 .ruff_cache/

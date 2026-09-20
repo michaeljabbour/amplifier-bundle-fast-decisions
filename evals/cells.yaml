@@ -231,7 +231,7 @@ cells:
     purpose: "hosted judge: same decisions as the local judge without a local model; measures network latency cost"
     anchor_cell: plain
     secondary_anchor: judge-local+effort-incumbent
-    mechanism_gate: { scored_backend: gateway, min_scored: 1, require_effort_phases: ["explore:low"] }
+    mechanism_gate: { scored_backend: hosted, min_scored: 1, require_effort_phases: ["explore:low"] }
 
   externals:
     harnesses: [claude, codex, opencode, amplifier-plain, amplifier-fd]

@@ -11,10 +11,11 @@
 ---
 
 The library `amplifier_fast_decisions.smart_tool` holds every capability. The
-CLI works from Claude Code, Codex, Amplifier, or another harness with shell
-access. No Amplifier runtime is imported by the portable path. The CLI and deterministic/fixture contracts are checked on macOS, Linux, and
-Windows. Real local-model latency has been exercised on macOS; other hardware
-and Ollama installations need their own measurements.
+CLI works from any coding-agent harness (Claude Code, Codex, OpenCode,
+Amplifier, ...) with shell access. No Amplifier runtime is imported by the
+portable path. The CLI and deterministic/fixture contracts are checked on
+macOS, Linux, and Windows. Real local-model latency has been exercised on
+macOS; other hardware and Ollama installations need their own measurements.
 
 Use this when the caller already has eligible read/list targets. It does not
 decide arbitrary commands, invent tool arguments, perform compaction, or
@@ -84,7 +85,7 @@ paths are not logged. Caller-supplied candidate IDs and session IDs are logged:
 use opaque identifiers, not secrets. Provide `session_id`, optional
 `parent_session_id`, and `harness` to preserve caller lineage. These are caller
 assertions, not independently verified session identity. There is no default
-claim that the caller is an active Amplifier session.
+claim that the caller is an active session of any particular harness.
 
 Events use `mode: advisory` and `event_source: portable-smart-tool`. A model
 score proves scoring occurred. It proves neither execution nor a provider call

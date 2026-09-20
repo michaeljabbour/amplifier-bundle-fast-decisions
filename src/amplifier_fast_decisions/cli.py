@@ -68,27 +68,38 @@ def _mlx_server_check() -> dict:
     }
 
 
-def _gateway_server_check() -> dict:
+def _hosted_server_check() -> dict:
     """Read-only GET {base}/models probe against the configured hosted
-    gateway backend (your team's OpenAI-compatible gateway, e.g. a LiteLLM
-    deployment). Never required; state is one of ``reachable``, ``auth_failed``,
-    ``unreachable`` or ``not_configured`` -- the key value itself is never reported, only
+    judge backend (any OpenAI-compatible endpoint that returns
+    ``top_logprobs``, e.g. a LiteLLM/vLLM deployment). Never required;
+    state is one of ``reachable``, ``auth_failed``, ``unreachable`` or
+    ``not_configured`` -- the token value itself is never reported, only
     whether it authenticated.
     """
-    from .local_backend import GATEWAY_DEFAULT_KEY_ENV, GATEWAY_DEFAULT_URL
+    from .local_backend import HOSTED_DEFAULT_TOKEN_ENV, HOSTED_DEFAULT_URL
 
-    url = os.getenv("FAST_DECISIONS_GATEWAY_URL") or GATEWAY_DEFAULT_URL
+    url = (
+        os.getenv("FAST_DECISIONS_HOSTED_URL")
+        or os.getenv("FAST_DECISIONS_GATEWAY_URL")  # legacy alias
+        or HOSTED_DEFAULT_URL
+    )
     if not url:
         return {
-            "check": "gateway_server",
+            "check": "hosted_judge",
             "ok": False,
             "value": None,
             "state": "not_configured",
-            "note": "Set gateway_url (config) or FAST_DECISIONS_GATEWAY_URL (env) to your "
-                    "team's OpenAI-compatible gateway; not required unless using --backend gateway.",
+            "note": "Set hosted_url (config, alias gateway_url) or "
+                    "FAST_DECISIONS_HOSTED_URL (env, alias FAST_DECISIONS_GATEWAY_URL) "
+                    "to your OpenAI-compatible host; not required unless using "
+                    "--backend hosted.",
         }
     url = url.rstrip("/")
-    key_env = os.getenv("FAST_DECISIONS_GATEWAY_KEY_ENV", GATEWAY_DEFAULT_KEY_ENV)
+    key_env = (
+        os.getenv("FAST_DECISIONS_HOSTED_TOKEN_ENV")
+        or os.getenv("FAST_DECISIONS_GATEWAY_KEY_ENV")  # legacy alias
+        or HOSTED_DEFAULT_TOKEN_ENV
+    )
     api_key = os.getenv(key_env)
     state = "unreachable"
     try:
@@ -105,13 +116,18 @@ def _gateway_server_check() -> dict:
     except Exception:  # noqa: BLE001 -- a probe must never raise
         state = "unreachable"
     return {
-        "check": "gateway_server",
+        "check": "hosted_judge",
         "ok": state == "reachable",
         "value": url,
         "state": state,
         "note": f"GET {{base}}/models using ${key_env}; not required unless using "
-                "--backend gateway. The key value is never reported.",
+                "--backend hosted. The token value is never reported.",
     }
+
+
+def _gateway_server_check() -> dict:
+    """Legacy alias for :func:`_hosted_server_check`."""
+    return _hosted_server_check()
 
 
 def doctor(require_amplifier: bool = False) -> int:
@@ -187,7 +203,7 @@ def doctor(require_amplifier: bool = False) -> int:
         }
     )
     checks.append(_mlx_server_check())
-    checks.append(_gateway_server_check())
+    checks.append(_hosted_server_check())
     entries = {
         e.name for e in importlib.metadata.entry_points(group="amplifier.modules")
     }
@@ -324,9 +340,16 @@ def bench_suite(args) -> int:
     both_gates = bool(
         os.getenv("FAST_DECISIONS_LIVE") == "1" and os.getenv("TYPESAFE_API_KEY")
     )
-    gateway_key_env = os.getenv("FAST_DECISIONS_GATEWAY_KEY_ENV") or "LITELLM_INFERENCE_KEY"
-    gateway_api_key = os.getenv(gateway_key_env)
-    gateway_gates = bool(live_requested and gateway_api_key)
+    hosted_token_env = (
+        os.getenv("FAST_DECISIONS_HOSTED_TOKEN_ENV")
+        or os.getenv("FAST_DECISIONS_GATEWAY_KEY_ENV")  # legacy alias
+        or "FAST_DECISIONS_HOSTED_TOKEN"
+    )
+    hosted_api_key = os.getenv(hosted_token_env)
+    hosted_gates = bool(live_requested and hosted_api_key)
+    # Legacy names, same values -- kept for readability at call sites below.
+    gateway_key_env = hosted_token_env
+    gateway_gates = hosted_gates
     backend_name = args.backend
     model_arg = getattr(args, "model", None)
     if live_requested and backend_name == "jev" and both_gates:
@@ -335,13 +358,13 @@ def bench_suite(args) -> int:
         backend = JevBackend(model=model_arg)
         backend_external = True
         model_name = model_arg or "jev-latest"
-    elif backend_name == "gateway" and gateway_gates:
-        from .local_backend import GatewayBackend
+    elif backend_name in ("hosted", "gateway") and hosted_gates:
+        from .local_backend import HostedBackend
 
         if not model_arg:
-            print("afast bench suite: --backend gateway requires --model", file=sys.stderr)
+            print("afast bench suite: --backend hosted requires --model", file=sys.stderr)
             return 2
-        backend = GatewayBackend(model=model_arg, url=getattr(args, "gateway_url", None), api_key=gateway_api_key)
+        backend = HostedBackend(model=model_arg, url=getattr(args, "hosted_url", None), api_key=os.getenv(hosted_token_env))
         backend_external = True
         model_name = model_arg
     elif backend_name == "ollama":
@@ -363,10 +386,10 @@ def bench_suite(args) -> int:
                 "TYPESAFE_API_KEY; running the offline deterministic backend instead.",
                 file=sys.stderr,
             )
-        elif live_requested and backend_name == "gateway" and not gateway_gates:
+        elif live_requested and backend_name in ("hosted", "gateway") and not hosted_gates:
             print(
-                "afast bench suite: --backend gateway requires --live and "
-                f"{gateway_key_env} to be set; running the offline deterministic "
+                "afast bench suite: --backend hosted requires --live and "
+                f"{hosted_token_env} to be set; running the offline deterministic "
                 "backend instead.",
                 file=sys.stderr,
             )
@@ -553,7 +576,11 @@ def configure(args) -> int:
 
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(
-        prog="afast", description="Amplifier Decision Observatory, local and read-only"
+        prog="afast",
+        description=(
+            "Fast Decisions -- bounded local/hosted decision judge and observatory "
+            "for coding-agent harnesses; local and read-only by default"
+        ),
     )
     parser.add_argument("--version", action="version", version=__version__)
     commands = parser.add_subparsers(dest="command", required=True)
@@ -620,17 +647,19 @@ def main(argv=None) -> int:
     suite.add_argument("suite_path", nargs="?", default=None, help="Suite JSONL file")
     suite.add_argument("--suite", default=str(DEFAULT_SUITE))
     suite.add_argument(
-        "--backend", choices=["deterministic", "jev", "ollama", "mlx", "gateway"],
-        default="deterministic"
+        "--backend", choices=["deterministic", "jev", "ollama", "mlx", "hosted", "gateway"],
+        default="deterministic",
+        help="'gateway' is a legacy alias for 'hosted'"
     )
     suite.add_argument(
         "--model", default=None,
-        help="Model name, passed to the jev/ollama/mlx/gateway backend"
+        help="Model name, passed to the jev/ollama/mlx/hosted backend"
     )
     suite.add_argument(
-        "--gateway-url", default=None,
-        help="Override the hosted gateway base URL (else FAST_DECISIONS_GATEWAY_URL "
-             "or your team's configured gateway; required if neither is set)"
+        "--hosted-url", "--gateway-url", dest="hosted_url", default=None,
+        help="Override the hosted judge base URL (else FAST_DECISIONS_HOSTED_URL, "
+             "FAST_DECISIONS_GATEWAY_URL (legacy alias), or your configured host; "
+             "required if none of those are set)"
     )
     suite.add_argument("--live", action="store_true")
     suite.add_argument("--permutations", type=int, default=4)
