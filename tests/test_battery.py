@@ -274,13 +274,15 @@ class EvaluateMathTests(unittest.TestCase):
 
 def _prepare_args(root, experiment, tasks='all', harnesses='claude,codex,opencode,amplifier-plain,amplifier-fd',
                    seed=7, baseline_source=None, candidate_source=None, deadline_seconds=60,
-                   fd_backend=None, allow_external_state=False, candidate_sha=None):
+                   fd_backend=None, allow_external_state=False, candidate_sha=None,
+                   amplifier_model=None, amplifier_effort=None):
     return SimpleNamespace(
         root=str(root), experiment=experiment, harnesses=harnesses, tasks=tasks, seed=seed,
         fd_override=None, deadline_seconds=deadline_seconds, claude_model='claude-x', codex_model='gpt-6-astra',
         opencode_model='runpod/zai-org/GLM-5.3-Flash', claude_max_budget_usd=3.0,
         baseline_source=baseline_source, candidate_source=candidate_source,
-        fd_backend=fd_backend, allow_external_state=allow_external_state, candidate_sha=candidate_sha)
+        fd_backend=fd_backend, allow_external_state=allow_external_state, candidate_sha=candidate_sha,
+        amplifier_model=amplifier_model, amplifier_effort=amplifier_effort)
 
 
 def _init_git_repo(path):
@@ -477,6 +479,64 @@ class PrepareTests(unittest.TestCase):
                                   fd_backend='ollama')
             manifest = battery.cmd_prepare(args)
             self.assertTrue(manifest['run_order'])
+
+
+class AmplifierModelEffortTests(unittest.TestCase):
+    """--amplifier-model/--amplifier-effort must reach BOTH amplifier side
+    profiles/manifests (plain and fd) identically, so amplifier-plain can be
+    run standalone at a pinned model/effort with no fast-decisions involved."""
+
+    def test_default_model_unchanged_when_flags_omitted(self):
+        with tempfile.TemporaryDirectory() as tmp, _patched_battery_tasks():
+            base = Path(tmp)
+            baseline = base/'baseline'; baseline.mkdir()
+            candidate = base/'candidate'; candidate.mkdir()
+            root = base/'campaign'
+            args = _prepare_args(root, 'e9', harnesses='amplifier-plain,amplifier-fd', tasks='dev',
+                                  baseline_source=str(baseline), candidate_source=str(candidate))
+            battery.cmd_prepare(args)
+            experiment_dir = root/'experiments'/'e9'
+            proposal = json.loads((experiment_dir/'proposal.json').read_text())
+            self.assertEqual(proposal['amplifier_model'], 'claude-fable-5-1')
+            self.assertIsNone(proposal['amplifier_effort'])
+            self.assertEqual(proposal['models']['amplifier-plain'], 'claude-fable-5-1')
+            self.assertEqual(proposal['models']['amplifier-fd'], 'claude-fable-5-1')
+            amp_manifest = json.loads((experiment_dir/'runs'/'amplifier'/'manifest.json').read_text())
+            self.assertEqual(amp_manifest['model'], 'claude-fable-5-1')
+            for name, item in amp_manifest['runs'].items():
+                run_dir = battery._run_dir_for(experiment_dir, name, item['side'])
+                profile = json.loads((run_dir/'profile.md').read_text().split('---')[1])
+                self.assertNotIn('providers', profile, name)
+
+    def test_amplifier_model_and_effort_reach_both_side_profiles_and_manifests(self):
+        with tempfile.TemporaryDirectory() as tmp, _patched_battery_tasks():
+            base = Path(tmp)
+            baseline = base/'baseline'; baseline.mkdir()
+            candidate = base/'candidate'; candidate.mkdir()
+            root = base/'campaign'
+            args = _prepare_args(root, 'e10', harnesses='amplifier-plain,amplifier-fd', tasks='dev',
+                                  baseline_source=str(baseline), candidate_source=str(candidate),
+                                  amplifier_model='claude-sonnet-5', amplifier_effort='medium')
+            battery.cmd_prepare(args)
+            experiment_dir = root/'experiments'/'e10'
+            proposal = json.loads((experiment_dir/'proposal.json').read_text())
+            self.assertEqual(proposal['amplifier_model'], 'claude-sonnet-5')
+            self.assertEqual(proposal['amplifier_effort'], 'medium')
+            self.assertEqual(proposal['models']['amplifier-plain'], 'claude-sonnet-5')
+            self.assertEqual(proposal['models']['amplifier-fd'], 'claude-sonnet-5')
+            amp_manifest = json.loads((experiment_dir/'runs'/'amplifier'/'manifest.json').read_text())
+            self.assertEqual(amp_manifest['model'], 'claude-sonnet-5')
+            self.assertEqual(amp_manifest['amplifier_effort'], 'medium')
+            seen_sides = set()
+            for name, item in amp_manifest['runs'].items():
+                run_dir = battery._run_dir_for(experiment_dir, name, item['side'])
+                profile = json.loads((run_dir/'profile.md').read_text().split('---')[1])
+                providers = profile.get('providers')
+                self.assertTrue(providers, name)
+                entry = next(pr for pr in providers if pr['module'] == 'provider-anthropic')
+                self.assertEqual(entry['config']['reasoning_effort'], 'medium', name)
+                seen_sides.add(item['side'])
+            self.assertEqual(seen_sides, {'amplifier-plain', 'amplifier-fd'})
 
 
 # --------------------------------------------------------------------------
@@ -744,6 +804,156 @@ class EvaluateTests(unittest.TestCase):
             self.assertEqual(comparison['per_task']['add_one']['fastest_passing_harness'], 'amplifier-fd')
             self.assertEqual(comparison['per_task']['double']['fastest_passing_harness'], 'amplifier-plain')
             self.assertAlmostEqual(paired['cost_ratio'], (0.10+0.10)/(0.20+0.20))
+
+
+def _write_profile(run_dir, loop_config):
+    """Minimal profile.md matching forge_e2e._build_run's own '---\n<json>\n---\n' shape,
+    with just enough structure for battery._profile_loop_config to read back the
+    orchestrator config (backend/model/model_routing/effort_routing)."""
+    profile = {'session': {'orchestrator': {'module': 'loop-fast-decisions', 'config': loop_config}}}
+    run_dir.mkdir(parents=True, exist_ok=True)
+    (run_dir/'profile.md').write_text('---\n'+json.dumps(profile)+'\n---\n')
+
+
+def _write_receipts(run_dir, events):
+    run_dir.mkdir(parents=True, exist_ok=True)
+    (run_dir/'receipts.jsonl').write_text('\n'.join(json.dumps(e) for e in events)+'\n' if events else '')
+
+
+def _one_amplifier_fd_experiment(root, experiment, loop_config, receipt_events):
+    """A single-run amplifier-fd experiment (proposal/manifest/result/receipts/profile),
+    ready for battery.cmd_evaluate. Returns experiment_dir."""
+    experiment_dir = root/'experiments'/experiment
+    runs_root = experiment_dir/'runs'
+    name = f'{experiment}-add_one-amplifier-fd-a1'
+    run_dir = runs_root/'amplifier'/name
+    run_dir.mkdir(parents=True, exist_ok=True)
+    (run_dir/'result.json').write_text(json.dumps({
+        'name': name, 'task': 'add_one', 'harness': 'amplifier-fd', 'family': 'arith', 'split': 'dev',
+        'outcome_passed': True, 'wall_time_ms': 1000.0, 'cost_usd': 0.10, 'timed_out': False,
+    }))
+    _write_profile(run_dir, loop_config)
+    _write_receipts(run_dir, receipt_events)
+    (runs_root/'manifest.json').write_text(json.dumps({
+        'run_order': [name], 'runs': {name: {'name': name, 'task': 'add_one', 'harness': 'amplifier-fd', 'attempt': 1}},
+        'deadline_seconds': 600}))
+    (experiment_dir/'proposal.json').write_text(json.dumps({
+        'experiment_id': experiment, 'dev_tasks': ['add_one'], 'holdout_tasks': []}))
+    return experiment_dir
+
+
+class MechanismGateTests(unittest.TestCase):
+    """Defect (verified in campaign data): an amplifier-fd run's fast-decisions backend can
+    be requested (e.g. jev) yet never actually score anything (every request fell back) --
+    the paired win/loss comparison is meaningless if the mechanism never engaged. See
+    docs/EVENTS.md for the `fast_decisions:*` receipt vocabulary this reads.
+    """
+
+    def test_external_backend_never_scored_sets_mechanism_engaged_false(self):
+        with tempfile.TemporaryDirectory() as tmp, _patched_battery_tasks():
+            root = Path(tmp)/'campaign'
+            loop_config = {'backend': 'jev', 'model': 'jev-remote'}
+            events = [{'event': 'fast_decisions:fallback',
+                       'data': {'backend': 'jev', 'reason_code': 'external_state_not_enabled'}}
+                      for _ in range(9)]
+            _one_amplifier_fd_experiment(root, 'j1', loop_config, events)
+            comparison = battery.cmd_evaluate(SimpleNamespace(root=str(root), experiment='j1'))
+            mechanism = comparison['mechanism']
+            self.assertFalse(mechanism['mechanism_engaged'])
+            self.assertIn("external backend 'jev' refused/never scored", mechanism['mechanism_reason'])
+            self.assertEqual(mechanism['fallback_count'], 9)
+            self.assertEqual(mechanism['scored_by_backend'], {})
+            report = (root/'experiments'/'j1'/'REPORT.md').read_text()
+            self.assertIn('WARNING: mechanism_engaged=false', report)
+
+    def test_default_backend_scored_sets_mechanism_engaged_true(self):
+        with tempfile.TemporaryDirectory() as tmp, _patched_battery_tasks():
+            root = Path(tmp)/'campaign'
+            loop_config = {'backend': 'ollama', 'model': 'qwen3:0.6b'}
+            events = [
+                {'event': 'fast_decisions:scored', 'data': {'backend': 'ollama'}},
+                {'event': 'fast_decisions:routed', 'data': {'backend': 'ollama', 'route': 'fast'}},
+                {'event': 'fast_decisions:routed', 'data': {'backend': 'ollama', 'route': 'slow'}},
+            ]
+            _one_amplifier_fd_experiment(root, 'ok1', loop_config, events)
+            comparison = battery.cmd_evaluate(SimpleNamespace(root=str(root), experiment='ok1'))
+            mechanism = comparison['mechanism']
+            self.assertTrue(mechanism['mechanism_engaged'])
+            self.assertIsNone(mechanism['mechanism_reason'])
+            self.assertEqual(mechanism['scored_by_backend'], {'ollama': 1})
+            self.assertEqual(mechanism['routed_by_route'], {'fast': 1, 'slow': 1})
+            report = (root/'experiments'/'ok1'/'REPORT.md').read_text()
+            self.assertNotIn('WARNING', report)
+
+    def test_model_routing_configured_but_never_applied_sets_mechanism_engaged_false(self):
+        with tempfile.TemporaryDirectory() as tmp, _patched_battery_tasks():
+            root = Path(tmp)/'campaign'
+            loop_config = {'backend': 'ollama', 'model_routing': {'start_model': 'claude-cheap-1'}}
+            events = [{'event': 'fast_decisions:scored', 'data': {'backend': 'ollama'}}]
+            _one_amplifier_fd_experiment(root, 'mr1', loop_config, events)
+            comparison = battery.cmd_evaluate(SimpleNamespace(root=str(root), experiment='mr1'))
+            mechanism = comparison['mechanism']
+            self.assertFalse(mechanism['mechanism_engaged'])
+            self.assertIn('model routing configured', mechanism['mechanism_reason'])
+            self.assertEqual(mechanism['model_routed_requested_models'], {})
+
+    def test_model_routing_applied_sets_mechanism_engaged_true(self):
+        with tempfile.TemporaryDirectory() as tmp, _patched_battery_tasks():
+            root = Path(tmp)/'campaign'
+            loop_config = {'backend': 'ollama', 'model_routing': {'start_model': 'claude-cheap-1'}}
+            events = [
+                {'event': 'fast_decisions:scored', 'data': {'backend': 'ollama'}},
+                {'event': 'fast_decisions:model_routed',
+                 'data': {'requested_model': 'claude-cheap-1', 'escalated': False, 'phase': 'orient'}},
+                {'event': 'fast_decisions:model_routed',
+                 'data': {'requested_model': None, 'escalated': True, 'escalation_reason': 'max_requests', 'phase': 'implement'}},
+            ]
+            _one_amplifier_fd_experiment(root, 'mr2', loop_config, events)
+            comparison = battery.cmd_evaluate(SimpleNamespace(root=str(root), experiment='mr2'))
+            mechanism = comparison['mechanism']
+            self.assertTrue(mechanism['mechanism_engaged'])
+            self.assertEqual(mechanism['model_routed_requested_models'], {'claude-cheap-1': 1, None: 1})
+            self.assertEqual(mechanism['model_routed_escalations_by_reason'], {'max_requests': 1})
+
+    def test_no_amplifier_fd_runs_means_mechanism_is_none(self):
+        with tempfile.TemporaryDirectory() as tmp, _patched_battery_tasks():
+            root = Path(tmp)/'campaign'
+            experiment_dir = root/'experiments'/'noamp'
+            runs_root = experiment_dir/'runs'
+            run_dir = runs_root/'claude-add_one'
+            run_dir.mkdir(parents=True)
+            (run_dir/'result.json').write_text(json.dumps({
+                'name': 'claude-add_one', 'task': 'add_one', 'harness': 'claude', 'family': 'arith', 'split': 'dev',
+                'outcome_passed': True, 'wall_time_ms': 1000.0, 'cost_usd': 0.10, 'timed_out': False}))
+            (runs_root/'manifest.json').write_text(json.dumps({
+                'run_order': ['claude-add_one'],
+                'runs': {'claude-add_one': {'name': 'claude-add_one', 'task': 'add_one', 'harness': 'claude', 'attempt': 1}},
+                'deadline_seconds': 600}))
+            (experiment_dir/'proposal.json').write_text(json.dumps({
+                'experiment_id': 'noamp', 'dev_tasks': ['add_one'], 'holdout_tasks': []}))
+            comparison = battery.cmd_evaluate(SimpleNamespace(root=str(root), experiment='noamp'))
+            self.assertIsNone(comparison['mechanism'])
+            self.assertIsNone(comparison['amplifier_fd_series_label'])
+            report = (root/'experiments'/'noamp'/'REPORT.md').read_text()
+            self.assertIn('not evaluated (no amplifier-fd runs)', report)
+
+
+class SeriesLabelTests(unittest.TestCase):
+    def test_label_carries_backend_and_routing_flags(self):
+        with tempfile.TemporaryDirectory() as tmp, _patched_battery_tasks():
+            root = Path(tmp)/'campaign'
+            loop_config = {'backend': 'ollama', 'model': 'qwen3:0.6b',
+                           'effort_routing': {'explore': 'low'}, 'model_routing': None}
+            events = [{'event': 'fast_decisions:scored', 'data': {'backend': 'ollama'}}]
+            _one_amplifier_fd_experiment(root, 'lbl1', loop_config, events)
+            comparison = battery.cmd_evaluate(SimpleNamespace(root=str(root), experiment='lbl1'))
+            label = comparison['amplifier_fd_series_label']
+            self.assertNotEqual(label, 'amplifier-fd')
+            self.assertIn('judge=ollama qwen3:0.6b', label)
+            self.assertIn('effort explore->low', label)
+            self.assertIn('model routing: off', label)
+            report = (root/'experiments'/'lbl1'/'REPORT.md').read_text()
+            self.assertIn(label, report)
 
 
 # --------------------------------------------------------------------------

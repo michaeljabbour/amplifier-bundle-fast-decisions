@@ -123,6 +123,51 @@ class SideProfileModeTests(unittest.TestCase):
         self.assertEqual(off['session']['orchestrator']['module'], 'loop-streaming')
         self.assertEqual(off['hooks'][0]['config']['mode'], 'off')
 
+    def test_allow_external_state_override_reaches_the_active_profile(self):
+        """Defect: --allow-external-state (battery.py) -> side['decision_overrides']
+        -> _side_profile must NOT be silently dropped by a hardcoded False. Without
+        the override, the active profile still defaults to False."""
+        import forge_e2e
+        cfg = {'limits': {'max_iterations': 30, 'extended_thinking': True}, 'events_dir': '/tmp/e', 'upstream_loop_source': 'git+x'}
+        side = {'source_root': '/tmp/s', 'mode': 'active',
+                'decision_overrides': {'backend': 'jev', 'allow_external_state': True}}
+        active = forge_e2e._side_profile('n', side, 'scheduler', '/tmp/w', cfg)
+        loop_config = active['session']['orchestrator']['config']
+        self.assertEqual(loop_config['backend'], 'jev')
+        self.assertTrue(loop_config['allow_external_state'])
+        # hooks-fast-decisions config is derived from the same loop_config -- must agree.
+        self.assertTrue(active['hooks'][0]['config']['allow_external_state'])
+
+    def test_allow_external_state_defaults_false_without_override(self):
+        import forge_e2e
+        cfg = {'limits': {'max_iterations': 30, 'extended_thinking': True}, 'events_dir': '/tmp/e', 'upstream_loop_source': 'git+x'}
+        side = {'source_root': '/tmp/s', 'mode': 'active', 'decision_overrides': {}}
+        active = forge_e2e._side_profile('n', side, 'scheduler', '/tmp/w', cfg)
+        self.assertFalse(active['session']['orchestrator']['config']['allow_external_state'])
+
+
+class SideProfileAmplifierEffortTests(unittest.TestCase):
+    """--amplifier-effort (battery.py prepare) must reach the profile's provider
+    config identically on both amplifier sides (plain=off, fd=active)."""
+
+    def test_amplifier_effort_adds_provider_reasoning_effort_on_both_sides(self):
+        import forge_e2e
+        cfg = {'limits': {'max_iterations': 30, 'extended_thinking': True}, 'events_dir': '/tmp/e',
+               'upstream_loop_source': 'git+x', 'amplifier_effort': 'low'}
+        active = forge_e2e._side_profile('n', {'source_root': '/tmp/s', 'mode': 'active'}, 'scheduler', '/tmp/w', cfg)
+        off = forge_e2e._side_profile('n', {'source_root': '/tmp/s', 'mode': 'off'}, 'scheduler', '/tmp/w', cfg)
+        for profile in (active, off):
+            providers = profile.get('providers')
+            self.assertTrue(providers, profile)
+            entry = next(p for p in providers if p['module'] == 'provider-anthropic')
+            self.assertEqual(entry['config']['reasoning_effort'], 'low')
+
+    def test_no_amplifier_effort_means_no_providers_block(self):
+        import forge_e2e
+        cfg = {'limits': {'max_iterations': 30, 'extended_thinking': True}, 'events_dir': '/tmp/e', 'upstream_loop_source': 'git+x'}
+        active = forge_e2e._side_profile('n', {'source_root': '/tmp/s', 'mode': 'active'}, 'scheduler', '/tmp/w', cfg)
+        self.assertNotIn('providers', active)
+
 
 class WorkerPromptVerificationTests(unittest.TestCase):
     """Defect 1: worker() must never silently fall back to the generic legacy

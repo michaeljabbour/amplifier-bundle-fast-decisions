@@ -14,6 +14,7 @@ and `battery_tasks`. Every subcommand prints one JSON line and exits 0 (ok),
 from __future__ import annotations
 
 import argparse
+from collections import Counter
 from datetime import datetime, timezone
 import hashlib
 import json
@@ -247,6 +248,13 @@ def cmd_prepare(args):
         key, _, value = kv.partition('=')
         fd_overrides[key] = _coerce(value)
 
+    # --amplifier-model/--amplifier-effort pin the generative harness model/effort (NOT
+    # the fast-decisions backend's own decision model -- see fd_overrides above) identically
+    # on both amplifier sides, so amplifier-plain can be run standalone as e.g. "Amplifier
+    # plain on claude-sonnet-5 at medium" with no fast-decisions involved.
+    amplifier_model = getattr(args, 'amplifier_model', None) or 'claude-fable-5-1'
+    amplifier_effort = getattr(args, 'amplifier_effort', None)
+
     # --fd-backend/--allow-external-state translate into decision overrides
     # for the amplifier-fd side. External state is opt-in only (docs/PRIVACY.md):
     # jev is a real network call and always requires the explicit flag.
@@ -280,7 +288,7 @@ def cmd_prepare(args):
 
     models = {
         'claude': args.claude_model, 'codex': args.codex_model, 'opencode': args.opencode_model,
-        'amplifier-plain': None, 'amplifier-fd': None,
+        'amplifier-plain': amplifier_model, 'amplifier-fd': amplifier_model,
     }
 
     amplifier_runs = [r for r in schedule if r['harness'] in AMPLIFIER_HARNESSES]
@@ -301,7 +309,7 @@ def cmd_prepare(args):
                       'attempt': 1, 'block': None, 'seed': args.seed,
                       **_amplifier_prompt_and_deadline(r['task'], deadline_seconds)} for r in amplifier_runs],
             'sides': sides,
-            'provider': 'anthropic', 'model': 'claude-fable-5-1',
+            'provider': 'anthropic', 'model': amplifier_model, 'amplifier_effort': amplifier_effort,
             'limits': {'timeout_seconds': deadline_seconds, 'max_iterations': 30, 'extended_thinking': True},
             'events_dir': str(forge_e2e.EVENTS), 'host_python': str(forge_e2e.HOST_PYTHON),
             'forge_py': str(forge_e2e.FORGE), 'prompt': forge_e2e.PROMPT,
@@ -342,6 +350,7 @@ def cmd_prepare(args):
         'harnesses': harnesses, 'models': models, 'commands': commands,
         'deadline_seconds': deadline_seconds, 'prompt_sha256': hashlib.sha256(prompt.encode()).hexdigest(),
         'claude_max_budget_usd': args.claude_max_budget_usd,
+        'amplifier_model': amplifier_model, 'amplifier_effort': amplifier_effort,
         'task_source': polyglot_meta,
         'requested_split': args.tasks if task_source_kind == 'battery' else args.split,
         'tasks': task_names,
@@ -1082,6 +1091,184 @@ def _load_experiment_assigned(experiment_dir):
     return manifest, assigned
 
 
+# --------------------------------------------------------------------------
+# mechanism gate: did fast-decisions actually run, from its own receipts
+# (see docs/EVENTS.md), or did every request silently fall back to the slow
+# path? A paired win/loss comparison is meaningless if the "engaged" side
+# never actually engaged (e.g. --fd-backend jev requested but every request
+# fell back -- the historical defect this gate exists to catch).
+# --------------------------------------------------------------------------
+
+def _receipt_events(run_dir):
+    """Parsed `fast_decisions:*` events from run_dir/'receipts.jsonl' (see
+    docs/EVENTS.md), skipping any line that isn't valid JSON. [] when the
+    file is missing (no receipts -- e.g. an infrastructure failure, or a
+    harness that never wrote a receipts.jsonl)."""
+    path = Path(run_dir)/'receipts.jsonl'
+    if not path.exists():
+        return []
+    events = []
+    for line in path.read_text().splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            events.append(json.loads(line))
+        except ValueError:
+            continue
+    return events
+
+
+def _profile_loop_config(run_dir):
+    """The loop-fast-decisions orchestrator config recorded in run_dir/'profile.md'
+    (written by forge_e2e._build_run as '---\n<json>\n---\n'): backend,
+    model_routing, effort_routing, etc. {} when profile.md is missing, malformed,
+    or has no orchestrator config (e.g. the amplifier-plain side runs loop-streaming,
+    which carries no decision config at all)."""
+    path = Path(run_dir)/'profile.md'
+    if not path.exists():
+        return {}
+    parts = path.read_text().split('---')
+    if len(parts) < 3:
+        return {}
+    try:
+        profile = json.loads(parts[1])
+    except ValueError:
+        return {}
+    orchestrator = (profile.get('session') or {}).get('orchestrator') or {}
+    return orchestrator.get('config') or {}
+
+
+def _run_mechanism_counts(run_dir):
+    """Raw fast_decisions:* receipt counts for one amplifier-fd run: scored by
+    backend, fallback count, routed by route (fast/slow), effort_routed by
+    (phase, requested_effort), model_routed requested models and escalations by
+    reason -- plus the run's own configured backend/model_routing (from
+    profile.md). None when the run has no receipts.jsonl (nothing to report)."""
+    events = _receipt_events(run_dir)
+    if not events:
+        return None
+    scored_by_backend = Counter()
+    fallback_count = 0
+    routed_by_route = Counter()
+    effort_routed_by_phase_effort = Counter()
+    model_routed_requested = Counter()
+    model_routed_escalations = Counter()
+    for e in events:
+        kind = (e.get('event') or '').removeprefix('fast_decisions:')
+        d = e.get('data') or {}
+        if kind == 'scored':
+            scored_by_backend[d.get('backend')] += 1
+        elif kind == 'fallback':
+            fallback_count += 1
+        elif kind == 'routed':
+            routed_by_route[d.get('route')] += 1
+        elif kind == 'effort_routed':
+            effort_routed_by_phase_effort[(d.get('phase'), d.get('requested_effort'))] += 1
+        elif kind == 'model_routed':
+            model_routed_requested[d.get('requested_model')] += 1
+            if d.get('escalated'):
+                model_routed_escalations[d.get('escalation_reason')] += 1
+    loop_config = _profile_loop_config(run_dir)
+    return {
+        'scored_by_backend': dict(scored_by_backend), 'fallback_count': fallback_count,
+        'routed_by_route': dict(routed_by_route),
+        'effort_routed_by_phase_effort': {f'{p}:{eff}': n for (p, eff), n in effort_routed_by_phase_effort.items()},
+        'model_routed_requested_models': dict(model_routed_requested),
+        'model_routed_escalations_by_reason': dict(model_routed_escalations),
+        'configured_backend': loop_config.get('backend'),
+        'model_routing': loop_config.get('model_routing'),
+    }
+
+
+def _mechanism_report(experiment_dir, manifest):
+    """Aggregate fast_decisions:* mechanism receipts across every amplifier-fd
+    run in the experiment, and a mechanism_engaged verdict:
+
+    - If the profile's backend is external (anything but the shipped default
+      'ollama', e.g. 'jev') and either it was never actually scored on that
+      backend, or nothing was ever scored and at least one fallback fired,
+      the mechanism is not engaged (external backend refused/never scored).
+    - If model_routing was configured (a start_model set) but zero
+      model_routed receipts were ever emitted, the mechanism is not engaged
+      (model routing configured but never applied).
+
+    None when the experiment has no amplifier-fd runs.
+    """
+    run_dirs = [_run_dir_for(experiment_dir, name, item['harness'])
+                for name, item in manifest['runs'].items() if item['harness'] == 'amplifier-fd']
+    if not run_dirs:
+        return None
+    per_run = [c for c in (_run_mechanism_counts(rd) for rd in run_dirs) if c is not None]
+    scored_by_backend = Counter()
+    fallback_count = 0
+    routed_by_route = Counter()
+    effort_routed = Counter()
+    model_routed_requested = Counter()
+    model_routed_escalations = Counter()
+    configured_backend = None
+    model_routing = None
+    for c in per_run:
+        scored_by_backend.update(c['scored_by_backend'])
+        fallback_count += c['fallback_count']
+        routed_by_route.update(c['routed_by_route'])
+        effort_routed.update(c['effort_routed_by_phase_effort'])
+        model_routed_requested.update(c['model_routed_requested_models'])
+        model_routed_escalations.update(c['model_routed_escalations_by_reason'])
+        configured_backend = configured_backend or c['configured_backend']
+        model_routing = model_routing or c['model_routing']
+
+    engaged = True
+    reasons = []
+    scored_total = sum(scored_by_backend.values())
+    if configured_backend and configured_backend != 'ollama':
+        scored_on_backend = scored_by_backend.get(configured_backend, 0)
+        if scored_on_backend == 0 or (scored_total == 0 and fallback_count > 0):
+            engaged = False
+            reasons.append(f"external backend {configured_backend!r} refused/never scored "
+                            f"(scored={scored_on_backend} fallback={fallback_count})")
+    if model_routing and model_routing.get('start_model') and sum(model_routed_requested.values()) == 0:
+        engaged = False
+        reasons.append(f"model routing configured (start_model={model_routing.get('start_model')!r}) "
+                        "but 0 model_routed receipts")
+
+    return {
+        'runs_evaluated': len(per_run), 'configured_backend': configured_backend,
+        'model_routing_configured': bool(model_routing), 'model_routing_start_model': (model_routing or {}).get('start_model'),
+        'scored_by_backend': dict(scored_by_backend), 'fallback_count': fallback_count,
+        'routed_by_route': dict(routed_by_route),
+        'effort_routed_by_phase_effort': dict(effort_routed),
+        'model_routed_requested_models': dict(model_routed_requested),
+        'model_routed_escalations_by_reason': dict(model_routed_escalations),
+        'mechanism_engaged': engaged, 'mechanism_reason': '; '.join(reasons) if reasons else None,
+    }
+
+
+def _amplifier_fd_series_label(experiment_dir, manifest):
+    """'amplifier-fd [judge=<backend> <model>; effort <phase>-><effort>, ...; model routing: on/off]'
+    derived from an amplifier-fd run's own recorded profile (see _profile_loop_config) --
+    never a bare 'amplifier-fd'. None when the experiment has no amplifier-fd runs."""
+    run_dirs = [_run_dir_for(experiment_dir, name, item['harness'])
+                for name, item in manifest['runs'].items() if item['harness'] == 'amplifier-fd']
+    if not run_dirs:
+        return None
+    loop_config = {}
+    for rd in run_dirs:
+        loop_config = _profile_loop_config(rd)
+        if loop_config:
+            break
+    backend = loop_config.get('backend') or 'unknown'
+    model = loop_config.get('model')
+    judge = f'{backend} {model}' if model else backend
+    effort_routing = loop_config.get('effort_routing') or {}
+    effort_phases = [f'{phase}->{effort}' for phase, effort in effort_routing.items()
+                      if phase in ('orient', 'explore', 'implement') and effort]
+    effort_label = ', '.join(effort_phases) if effort_phases else 'off'
+    model_routing = loop_config.get('model_routing')
+    routing_label = 'on' if model_routing and model_routing.get('start_model') else 'off'
+    return f'amplifier-fd [judge={judge}; effort {effort_label}; model routing: {routing_label}]'
+
+
 _CROSS_CAMPAIGN_HARNESSES = ('claude', 'codex', 'opencode', 'amplifier-plain', 'amplifier-fd')
 
 
@@ -1403,6 +1590,8 @@ def cmd_evaluate(args):
         'per_harness': per_harness, 'per_task': per_task, 'per_family': family_table,
         'amplifier_fd_vs_plain': paired, 'cross': cross,
         'dev': _slice(dev_tasks), 'holdout': _slice(holdout_tasks),
+        'mechanism': _mechanism_report(experiment_dir, manifest),
+        'amplifier_fd_series_label': _amplifier_fd_series_label(experiment_dir, manifest),
         'evidence_limits': [f'n_tasks={len(tasks)}', 'single_repetition_per_task_per_harness',
                             'models_not_necessarily_matched_across_harnesses'],
     }
@@ -1413,18 +1602,34 @@ def cmd_evaluate(args):
 
 
 def _write_report(experiment_dir, comparison, proposal):
+    fd_label = comparison.get('amplifier_fd_series_label') or 'amplifier-fd'
     lines = ['# Battery report', '', f"Experiment: {proposal.get('experiment_id')}", '', '## Per-harness summary', '']
     for harness, row in comparison['per_harness'].items():
-        lines.append(f"- {harness}: n={row['n']} success_rate={row['success_rate']} "
+        label = fd_label if harness == 'amplifier-fd' else harness
+        lines.append(f"- {label}: n={row['n']} success_rate={row['success_rate']} "
                      f"mean_exec_ms={row['mean_exec_ms']} mean_wall_ms={row['mean_wall_ms']} "
                      f"unknown_cost_count={row['unknown_cost_count']}")
-    lines += ['', '## amplifier-fd vs amplifier-plain', '']
+    lines += ['', f'## {fd_label} vs amplifier-plain', '']
     if comparison['amplifier_fd_vs_plain']:
         p = comparison['amplifier_fd_vs_plain']
         lines.append(f"geomean_ratio={p['geomean_ratio']} wins={p['wins']} losses={p['losses']} "
                      f"ties={p['ties']} sign_test_p_value={p['sign_test_p_value']} cost_ratio={p['cost_ratio']}")
     else:
         lines.append('not evaluated (both amplifier harnesses required)')
+    mechanism = comparison.get('mechanism')
+    lines += ['', '## Mechanism gate', '']
+    if mechanism:
+        if not mechanism['mechanism_engaged']:
+            lines.append(f"WARNING: mechanism_engaged=false -- {mechanism['mechanism_reason']}")
+        lines.append(f"runs_evaluated={mechanism['runs_evaluated']} configured_backend={mechanism['configured_backend']} "
+                     f"scored_by_backend={mechanism['scored_by_backend']} fallback_count={mechanism['fallback_count']} "
+                     f"routed_by_route={mechanism['routed_by_route']}")
+        lines.append(f"effort_routed_by_phase_effort={mechanism['effort_routed_by_phase_effort']} "
+                     f"model_routing_configured={mechanism['model_routing_configured']} "
+                     f"model_routed_requested_models={mechanism['model_routed_requested_models']} "
+                     f"model_routed_escalations_by_reason={mechanism['model_routed_escalations_by_reason']}")
+    else:
+        lines.append('not evaluated (no amplifier-fd runs)')
     lines += ['', '## Per-task', '', '```json', json.dumps(comparison['per_task'], indent=2), '```', '']
     cross = comparison.get('cross')
     if cross:
@@ -1497,6 +1702,13 @@ def main(argv=None):
                     help='Decision backend override for the amplifier-fd side')
     p.add_argument('--allow-external-state', action='store_true',
                     help='Required alongside --fd-backend jev (opt-in external state; see docs/PRIVACY.md)')
+    p.add_argument('--amplifier-model', default=None,
+                    help="Generative model for BOTH amplifier sides (plain and fd), so a paired "
+                         "comparison never silently compares two different models. "
+                         "Default: today's value, claude-fable-5-1.")
+    p.add_argument('--amplifier-effort', default=None,
+                    help='Reasoning effort for BOTH amplifier sides (provider-anthropic '
+                         'reasoning_effort). Default: unset (provider default).')
     p.add_argument('--task-source', choices=['battery', 'polyglot'], default='battery',
                     help='Task set to prepare from: the 20-task battery (default) or the aider-polyglot corpus.')
     p.add_argument('--polyglot-root', help='Path to a polyglot-benchmark checkout (--task-source polyglot).')

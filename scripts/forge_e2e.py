@@ -239,7 +239,15 @@ def _side_profile(name, side, task, workspace, config):
     source_root = Path(side['source_root'])
     decision = {**DEFAULT_DECISION, **side.get('decision_overrides', {})}
     if side['mode'] == 'active':
-        loop_config = {**decision, 'mode': 'active', 'allow_external_state': False, 'events_dir': config['events_dir'], 'upstream': upstream}
+        # allow_external_state must come from `decision` (DEFAULT_DECISION, overridable via
+        # side['decision_overrides']), never a hardcoded False here -- that silently dropped
+        # --allow-external-state/--fd-override allow_external_state=true on every prepare, so
+        # a jev-backed profile always had allow_external_state: false and the service refused
+        # every request (fast_decisions:fallback reason_code external_state_not_enabled; zero
+        # fast_decisions:scored). See docs/EVENTS.md and battery.py's cmd_prepare.
+        loop_config = {**decision, 'mode': 'active',
+                        'allow_external_state': decision.get('allow_external_state', False),
+                        'events_dir': config['events_dir'], 'upstream': upstream}
         loop = {'module': 'loop-fast-decisions', 'source': (source_root/'modules/loop-fast-decisions').as_uri(), 'config': loop_config}
         hook_config = {**loop_config, 'session_label': f'Forge {task} / active', 'observatory': {'enabled': False}}
         hooks = [{'module': 'hooks-fast-decisions', 'source': (source_root/'modules/hooks-fast-decisions').as_uri(), 'config': hook_config}]
@@ -250,10 +258,22 @@ def _side_profile(name, side, task, workspace, config):
     # One fixed bundle name for every benchmark profile: Amplifier records each `--bundle` it loads in
     # ~/.amplifier/registry.json keyed by name, so unique per-run names left 80+ stale 'Local' entries.
     # The worker also removes the entry after the run (see _unregister_benchmark_bundle).
-    return {'bundle': {'name': BENCHMARK_BUNDLE_NAME, 'version': '0.1.0'}, 'includes': [{'bundle': source_root.as_uri()}],
-            'session': {'orchestrator': loop},
-            'tools': [{'module': 'tool-fast-workspace', 'source': (source_root/'modules/tool-fast-workspace').as_uri(), 'config': {'root': str(workspace)}}],
-            'hooks': hooks}
+    profile = {'bundle': {'name': BENCHMARK_BUNDLE_NAME, 'version': '0.1.0'}, 'includes': [{'bundle': source_root.as_uri()}],
+               'session': {'orchestrator': loop},
+               'tools': [{'module': 'tool-fast-workspace', 'source': (source_root/'modules/tool-fast-workspace').as_uri(), 'config': {'root': str(workspace)}}],
+               'hooks': hooks}
+    # --amplifier-effort (battery.py prepare) pins Policy-independent generative reasoning
+    # effort for the harness model itself -- not to be confused with the fast-decisions
+    # backend's own `decision`/`model`. Applied identically on BOTH amplifier sides (plain
+    # and fd) so a paired comparison never silently compares two different effort levels.
+    # `reasoning_effort` is the provider-anthropic canonical config key (see docs/EVENTS.md
+    # and amplifier_module_provider_anthropic); no `source` is given here -- this overrides
+    # the module's config on top of whatever already resolved it (installed package/entry
+    # point, or the transitively-included foundation bundle).
+    amplifier_effort = config.get('amplifier_effort')
+    if amplifier_effort:
+        profile['providers'] = [{'module': 'provider-anthropic', 'config': {'reasoning_effort': amplifier_effort}}]
+    return profile
 
 
 def _build_workspace(run_dir, task):
@@ -319,6 +339,7 @@ def prepare(root, config=None):
               'hardware':platform.platform(),'packages':versions,'provider':config.get('provider', 'anthropic'),
               'model':config.get('model', 'claude-fable-5-1'),'provider_revision':'unknown',
               'decision_model':DEFAULT_DECISION['model'],'decision_model_digest':local_digest,
+              'amplifier_effort':config.get('amplifier_effort'),
               'prompt':prompt,'prompt_sha256':hashlib.sha256(prompt.encode()).hexdigest(),
               'evaluator_sha256':hashlib.sha256(Path(__file__).with_name('forge_workloads.py').read_bytes()).hexdigest(),
               'sides': sides, 'upstream_loop_source': config.get('upstream_loop_source', UPSTREAM_LOOP_SOURCE),
