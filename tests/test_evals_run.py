@@ -171,6 +171,25 @@ class CellToArgvTests(unittest.TestCase):
         self.assertEqual(argv[argv.index("--split") + 1], "holdout")
         self.assertNotIn("--tasks", argv)
 
+    def test_default_cell_emits_amplifier_bundle_foundation(self):
+        argv = run.cell_to_argv("plain", self.cells, self.suites, "s1", "dev", 1, **COMMON)
+        idx = argv.index("--amplifier-bundle")
+        self.assertEqual(argv[idx + 1], "foundation")
+
+    def test_lean_cell_emits_amplifier_bundle_lean(self):
+        argv = run.cell_to_argv("judge-local+effort-incumbent-lean", self.cells, self.suites,
+                                 "s1", "dev", 1, **COMMON)
+        idx = argv.index("--amplifier-bundle")
+        self.assertEqual(argv[idx + 1], "lean")
+
+    def test_lean_cells_declare_the_installed_context_weight_pair(self):
+        self.assertEqual(self.cells["cells"]["judge-local+effort-incumbent-lean"]["anchor_cell"], "plain-lean")
+        self.assertEqual(
+            self.cells["cells"]["judge-local+effort-incumbent-lean"]["secondary_anchor"],
+            "judge-local+effort-incumbent",
+        )
+        self.assertEqual(self.cells["cells"]["plain-lean"]["amplifier_bundle"], "lean")
+
 
 class SeriesLabelTests(unittest.TestCase):
     def setUp(self):
@@ -213,6 +232,30 @@ class SeriesLabelTests(unittest.TestCase):
         with self.assertRaises(run.EvalsError) as ctx:
             run.cross_check_series_label(declared, recorded)
         self.assertEqual(ctx.exception.code, 4)
+
+    def test_label_includes_bundle_axis(self):
+        cell = self.cells["cells"]["judge-local+effort-incumbent-lean"]
+        label = run.series_label("judge-local+effort-incumbent-lean", 1, "amplifier-fd", cell,
+                                  self.cells["defaults"], self.cells["effort_profiles"],
+                                  self.cells["model_routing_profiles"])
+        self.assertIn("bundle=lean", label)
+
+    def test_default_cell_label_shows_bundle_foundation(self):
+        cell = self.cells["cells"]["judge-local+effort"]
+        label = run.series_label("judge-local+effort", 1, "amplifier-fd", cell,
+                                  self.cells["defaults"], self.cells["effort_profiles"],
+                                  self.cells["model_routing_profiles"])
+        self.assertIn("bundle=foundation", label)
+
+    def test_cross_check_ignores_bundle_axis_when_only_recorded_has_it(self):
+        """battery.py's recorded label always carries a bundle axis (derived from the
+        run's own profile.md); the declared label (run.series_label) also carries one.
+        cross_check must still agree on judge/effort/routing when bundle values differ
+        in position (declared has model= before bundle=, recorded has none)."""
+        declared = ("judge-local+effort-incumbent-lean r1 amplifier-fd [judge=ollama qwen3:0.6b; "
+                    "effort explore->low; model routing: off; model=claude-fable-5-1; bundle=lean]")
+        recorded = "amplifier-fd [judge=ollama qwen3:0.6b; effort explore->low; model routing: off; bundle=lean]"
+        self.assertTrue(run.cross_check_series_label(declared, recorded))
 
 
 class VerifyPromptsTests(unittest.TestCase):

@@ -159,6 +159,10 @@ def cell_to_argv(cell_id, cells_doc, suites_doc, suite_id, split, rep, *, out_ro
     seed = base_seed + rep
     amplifier_model = cell.get("amplifier_model") or defaults.get("amplifier_model")
 
+    amplifier_bundle = cell.get("amplifier_bundle") or "foundation"
+    if amplifier_bundle not in ("foundation", "lean"):
+        raise EvalsError(2, f"unknown amplifier_bundle {amplifier_bundle!r} for cell {cell_id!r}")
+
     argv = [
         "--root", str(Path(out_root) / "campaign"),
         "--experiment", exp,
@@ -169,6 +173,7 @@ def cell_to_argv(cell_id, cells_doc, suites_doc, suite_id, split, rep, *, out_ro
         "--candidate-source", str(candidate_source),
         "--candidate-sha", str(candidate_sha),
         "--amplifier-model", str(amplifier_model),
+        "--amplifier-bundle", amplifier_bundle,
         "--claude-permission-mode", "bypassPermissions",
     ]
 
@@ -267,8 +272,9 @@ def series_label(cell_id, rep, harness, cell, defaults, effort_profiles, routing
         judge = "off"
         phases = "off"
         routing = "off"
+    amplifier_bundle = cell.get("amplifier_bundle") or "foundation"
     label = (f"{cell_id} r{rep} {harness} [judge={judge}; effort {phases}; "
-             f"model routing: {routing}; model={amplifier_model}]")
+             f"model routing: {routing}; model={amplifier_model}; bundle={amplifier_bundle}]")
     return validate_series_label(label)
 
 
@@ -297,7 +303,7 @@ def cross_check_series_label(declared_label, recorded_label):
 
     declared_bracket = _bracket(declared_label)
     recorded_bracket = _bracket(recorded_label)
-    stops = ("judge=", "effort ", "model routing:", "model=")
+    stops = ("judge=", "effort ", "model routing:", "model=", "bundle=")
     for prefix in ("judge=", "effort ", "model routing:"):
         d = _axis(declared_bracket, prefix, stops)
         r = _axis(recorded_bracket, prefix, stops)

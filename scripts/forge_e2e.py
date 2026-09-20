@@ -48,6 +48,20 @@ PROMPT = ('Read README.md first, then repair the implementation to satisfy its f
 # The upstream orchestrator the "off" (no fast-decisions routing) side runs.
 UPSTREAM_LOOP_SOURCE = 'git+https://github.com/microsoft/amplifier-module-loop-streaming@20aac7a9eb26034d230357f6aa6805f27c86df52'
 
+# --amplifier-bundle lean (battery.py prepare): the minimal explicit module set
+# used INSTEAD OF including the fast-decisions bundle root (which transitively
+# pulls in the full foundation bundle -- ~50k tokens of agents/context/behaviors).
+# Sources mirror foundation's own declarations verbatim (see docs/COMPATIBILITY.md
+# and AGENTS.md): foundation's bundle.md for tool-filesystem/tool-bash,
+# foundation's behaviors/todo-reminder.yaml for tool-todo, and the installed
+# amplifier-module-provider-anthropic package's own git remote for provider-anthropic.
+LEAN_MODULE_SOURCES = {
+    'tool-filesystem': 'git+https://github.com/microsoft/amplifier-module-tool-filesystem@main',
+    'tool-bash': 'git+https://github.com/microsoft/amplifier-module-tool-bash@main',
+    'tool-todo': 'git+https://github.com/microsoft/amplifier-module-tool-todo@main',
+    'provider-anthropic': 'git+https://github.com/microsoft/amplifier-module-provider-anthropic@main',
+}
+
 # The decision policy the "active" side runs with, absent overrides.
 DEFAULT_DECISION = {
     'backend': 'ollama', 'model': 'qwen3:0.6b', 'timeout_ms': 500,
@@ -258,21 +272,60 @@ def _side_profile(name, side, task, workspace, config):
     # One fixed bundle name for every benchmark profile: Amplifier records each `--bundle` it loads in
     # ~/.amplifier/registry.json keyed by name, so unique per-run names left 80+ stale 'Local' entries.
     # The worker also removes the entry after the run (see _unregister_benchmark_bundle).
-    profile = {'bundle': {'name': BENCHMARK_BUNDLE_NAME, 'version': '0.1.0'}, 'includes': [{'bundle': source_root.as_uri()}],
-               'session': {'orchestrator': loop},
-               'tools': [{'module': 'tool-fast-workspace', 'source': (source_root/'modules/tool-fast-workspace').as_uri(), 'config': {'root': str(workspace)}}],
-               'hooks': hooks}
-    # --amplifier-effort (battery.py prepare) pins Policy-independent generative reasoning
-    # effort for the harness model itself -- not to be confused with the fast-decisions
-    # backend's own `decision`/`model`. Applied identically on BOTH amplifier sides (plain
-    # and fd) so a paired comparison never silently compares two different effort levels.
-    # `reasoning_effort` is the provider-anthropic canonical config key (see docs/EVENTS.md
-    # and amplifier_module_provider_anthropic); no `source` is given here -- this overrides
-    # the module's config on top of whatever already resolved it (installed package/entry
-    # point, or the transitively-included foundation bundle).
+    fast_workspace_tool = {'module': 'tool-fast-workspace', 'source': (source_root/'modules/tool-fast-workspace').as_uri(),
+                            'config': {'root': str(workspace)}}
+
+    # --amplifier-bundle {foundation,lean} (battery.py prepare): 'foundation' (default,
+    # unchanged behavior) includes the fast-decisions bundle root, which transitively
+    # pulls in the full foundation bundle (agents/context/behaviors, ~50k tokens of
+    # composed system instruction). 'lean' isolates that installed-context weight by
+    # composing an explicit minimal root instead: no bundle include at all, just the
+    # baseline tools (tool-filesystem, tool-bash, tool-todo), provider-anthropic, and
+    # the fast-decisions hook/tool this profile already builds above. Orchestrator
+    # selection (loop/loop-streaming above) is unaffected either way -- it never came
+    # from foundation's include chain.
+    amplifier_bundle = config.get('amplifier_bundle') or 'foundation'
+    if amplifier_bundle not in ('foundation', 'lean'):
+        raise ValueError(f"amplifier_bundle must be 'foundation' or 'lean', got {amplifier_bundle!r}")
+
+    provider_config = {}
     amplifier_effort = config.get('amplifier_effort')
     if amplifier_effort:
-        profile['providers'] = [{'module': 'provider-anthropic', 'config': {'reasoning_effort': amplifier_effort}}]
+        # --amplifier-effort (battery.py prepare) pins Policy-independent generative reasoning
+        # effort for the harness model itself -- not to be confused with the fast-decisions
+        # backend's own `decision`/`model`. Applied identically on BOTH amplifier sides (plain
+        # and fd) so a paired comparison never silently compares two different effort levels.
+        # `reasoning_effort` is the provider-anthropic canonical config key (see docs/EVENTS.md
+        # and amplifier_module_provider_anthropic).
+        provider_config['reasoning_effort'] = amplifier_effort
+
+    if amplifier_bundle == 'lean':
+        includes = []
+        tools = [
+            {'module': 'tool-filesystem', 'source': LEAN_MODULE_SOURCES['tool-filesystem']},
+            {'module': 'tool-bash', 'source': LEAN_MODULE_SOURCES['tool-bash']},
+            {'module': 'tool-todo', 'source': LEAN_MODULE_SOURCES['tool-todo']},
+            fast_workspace_tool,
+        ]
+        # No transitively-included foundation here, so provider-anthropic needs its own
+        # explicit source -- unlike the foundation-bundle case below, entry-point/foundation
+        # resolution is not available to fall back on.
+        providers = [{'module': 'provider-anthropic', 'source': LEAN_MODULE_SOURCES['provider-anthropic'],
+                      'config': provider_config}]
+    else:
+        includes = [{'bundle': source_root.as_uri()}]
+        tools = [fast_workspace_tool]
+        # No `source` here -- this overrides the module's config on top of whatever already
+        # resolved it (installed package/entry point, or the transitively-included foundation
+        # bundle). Omitted entirely when there's nothing to override (unchanged behavior).
+        providers = [{'module': 'provider-anthropic', 'config': provider_config}] if provider_config else None
+
+    profile = {'bundle': {'name': BENCHMARK_BUNDLE_NAME, 'version': '0.1.0'}, 'includes': includes,
+               'session': {'orchestrator': loop},
+               'tools': tools,
+               'hooks': hooks}
+    if providers:
+        profile['providers'] = providers
     return profile
 
 
@@ -340,6 +393,7 @@ def prepare(root, config=None):
               'model':config.get('model', 'claude-fable-5-1'),'provider_revision':'unknown',
               'decision_model':DEFAULT_DECISION['model'],'decision_model_digest':local_digest,
               'amplifier_effort':config.get('amplifier_effort'),
+              'amplifier_bundle':config.get('amplifier_bundle', 'foundation'),
               'prompt':prompt,'prompt_sha256':hashlib.sha256(prompt.encode()).hexdigest(),
               'evaluator_sha256':hashlib.sha256(Path(__file__).with_name('forge_workloads.py').read_bytes()).hexdigest(),
               'sides': sides, 'upstream_loop_source': config.get('upstream_loop_source', UPSTREAM_LOOP_SOURCE),
@@ -365,7 +419,9 @@ def add_run(root, run_spec):
     """Append one more run to an already-prepared root (used for retries)."""
     manifest = json.loads((root/'manifest.json').read_text())
     config = {'events_dir': manifest['events_dir'], 'upstream_loop_source': manifest['upstream_loop_source'],
-              'limits': manifest['limits'], 'prompt': manifest.get('prompt', PROMPT)}
+              'limits': manifest['limits'], 'prompt': manifest.get('prompt', PROMPT),
+              'amplifier_effort': manifest.get('amplifier_effort'),
+              'amplifier_bundle': manifest.get('amplifier_bundle', 'foundation')}
     manifest['runs'][run_spec['name']] = _build_run(root, run_spec, config, manifest['sides'])
     manifest['run_order'].append(run_spec['name'])
     task, rep = run_spec['task'], run_spec.get('rep', 1)

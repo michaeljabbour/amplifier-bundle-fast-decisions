@@ -169,6 +169,64 @@ class SideProfileAmplifierEffortTests(unittest.TestCase):
         self.assertNotIn('providers', active)
 
 
+class SideProfileAmplifierBundleTests(unittest.TestCase):
+    """--amplifier-bundle {foundation,lean} (battery.py prepare) isolates the
+    installed-context weight hypothesis: 'lean' must compose an explicit
+    minimal root instead of including the fast-decisions bundle (which
+    transitively pulls in the full foundation bundle)."""
+
+    def _cfg(self, **extra):
+        return {'limits': {'max_iterations': 30, 'extended_thinking': True},
+                'events_dir': '/tmp/e', 'upstream_loop_source': 'git+x', **extra}
+
+    def test_default_is_foundation_and_unchanged(self):
+        import forge_e2e
+        cfg = self._cfg()
+        active = forge_e2e._side_profile('n', {'source_root': '/tmp/s', 'mode': 'active'}, 'scheduler', '/tmp/w', cfg)
+        self.assertEqual(active['includes'], [{'bundle': 'file:///tmp/s'}])
+        tool_modules = {t['module'] for t in active['tools']}
+        self.assertEqual(tool_modules, {'tool-fast-workspace'})
+        self.assertNotIn('providers', active)
+
+    def test_lean_drops_bundle_include(self):
+        import forge_e2e
+        cfg = self._cfg(amplifier_bundle='lean')
+        active = forge_e2e._side_profile('n', {'source_root': '/tmp/s', 'mode': 'active'}, 'scheduler', '/tmp/w', cfg)
+        self.assertEqual(active['includes'], [])
+        off = forge_e2e._side_profile('n', {'source_root': '/tmp/s', 'mode': 'off'}, 'scheduler', '/tmp/w', cfg)
+        self.assertEqual(off['includes'], [])
+
+    def test_lean_composes_explicit_baseline_tools_and_provider(self):
+        import forge_e2e
+        cfg = self._cfg(amplifier_bundle='lean')
+        active = forge_e2e._side_profile('n', {'source_root': '/tmp/s', 'mode': 'active'}, 'scheduler', '/tmp/w', cfg)
+        tool_modules = {t['module'] for t in active['tools']}
+        self.assertEqual(tool_modules, {'tool-filesystem', 'tool-bash', 'tool-todo', 'tool-fast-workspace'})
+        for t in active['tools']:
+            if t['module'] != 'tool-fast-workspace':
+                self.assertIn('source', t, t)
+        providers = active.get('providers')
+        self.assertTrue(providers, active)
+        entry = next(p for p in providers if p['module'] == 'provider-anthropic')
+        self.assertIn('source', entry)
+
+    def test_lean_and_amplifier_effort_combine_on_one_provider_entry(self):
+        import forge_e2e
+        cfg = self._cfg(amplifier_bundle='lean', amplifier_effort='low')
+        active = forge_e2e._side_profile('n', {'source_root': '/tmp/s', 'mode': 'active'}, 'scheduler', '/tmp/w', cfg)
+        providers = active['providers']
+        self.assertEqual(len(providers), 1)
+        self.assertEqual(providers[0]['module'], 'provider-anthropic')
+        self.assertEqual(providers[0]['config']['reasoning_effort'], 'low')
+        self.assertIn('source', providers[0])
+
+    def test_unknown_amplifier_bundle_raises(self):
+        import forge_e2e
+        cfg = self._cfg(amplifier_bundle='bogus')
+        with self.assertRaises(ValueError):
+            forge_e2e._side_profile('n', {'source_root': '/tmp/s', 'mode': 'active'}, 'scheduler', '/tmp/w', cfg)
+
+
 class WorkerPromptVerificationTests(unittest.TestCase):
     """Defect 1: worker() must never silently fall back to the generic legacy
     prompt for a battery task, and must refuse to launch amplifier at all when

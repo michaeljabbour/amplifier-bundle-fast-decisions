@@ -275,14 +275,14 @@ class EvaluateMathTests(unittest.TestCase):
 def _prepare_args(root, experiment, tasks='all', harnesses='claude,codex,opencode,amplifier-plain,amplifier-fd',
                    seed=7, baseline_source=None, candidate_source=None, deadline_seconds=60,
                    fd_backend=None, allow_external_state=False, candidate_sha=None,
-                   amplifier_model=None, amplifier_effort=None):
+                   amplifier_model=None, amplifier_effort=None, amplifier_bundle=None):
     return SimpleNamespace(
         root=str(root), experiment=experiment, harnesses=harnesses, tasks=tasks, seed=seed,
         fd_override=None, deadline_seconds=deadline_seconds, claude_model='claude-x', codex_model='gpt-6-astra',
         opencode_model='runpod/zai-org/GLM-5.3-Flash', claude_max_budget_usd=3.0,
         baseline_source=baseline_source, candidate_source=candidate_source,
         fd_backend=fd_backend, allow_external_state=allow_external_state, candidate_sha=candidate_sha,
-        amplifier_model=amplifier_model, amplifier_effort=amplifier_effort)
+        amplifier_model=amplifier_model, amplifier_effort=amplifier_effort, amplifier_bundle=amplifier_bundle)
 
 
 def _init_git_repo(path):
@@ -535,6 +535,60 @@ class AmplifierModelEffortTests(unittest.TestCase):
                 self.assertTrue(providers, name)
                 entry = next(pr for pr in providers if pr['module'] == 'provider-anthropic')
                 self.assertEqual(entry['config']['reasoning_effort'], 'medium', name)
+                seen_sides.add(item['side'])
+            self.assertEqual(seen_sides, {'amplifier-plain', 'amplifier-fd'})
+
+
+class AmplifierBundleTests(unittest.TestCase):
+    """--amplifier-bundle {foundation,lean}: isolates the installed-context
+    weight hypothesis. Must reach proposal.json, both manifests, and both
+    side profiles (plain and fd) identically."""
+
+    def test_default_is_foundation_unchanged(self):
+        with tempfile.TemporaryDirectory() as tmp, _patched_battery_tasks():
+            base = Path(tmp)
+            baseline = base/'baseline'; baseline.mkdir()
+            candidate = base/'candidate'; candidate.mkdir()
+            root = base/'campaign'
+            args = _prepare_args(root, 'eb1', harnesses='amplifier-plain,amplifier-fd', tasks='dev',
+                                  baseline_source=str(baseline), candidate_source=str(candidate))
+            battery.cmd_prepare(args)
+            experiment_dir = root/'experiments'/'eb1'
+            proposal = json.loads((experiment_dir/'proposal.json').read_text())
+            self.assertEqual(proposal['amplifier_bundle'], 'foundation')
+            amp_manifest = json.loads((experiment_dir/'runs'/'amplifier'/'manifest.json').read_text())
+            self.assertEqual(amp_manifest['amplifier_bundle'], 'foundation')
+            for name, item in amp_manifest['runs'].items():
+                run_dir = battery._run_dir_for(experiment_dir, name, item['side'])
+                profile = json.loads((run_dir/'profile.md').read_text().split('---')[1])
+                self.assertTrue(profile['includes'], name)
+
+    def test_lean_reaches_proposal_manifests_and_both_side_profiles(self):
+        with tempfile.TemporaryDirectory() as tmp, _patched_battery_tasks():
+            base = Path(tmp)
+            baseline = base/'baseline'; baseline.mkdir()
+            candidate = base/'candidate'; candidate.mkdir()
+            root = base/'campaign'
+            args = _prepare_args(root, 'eb2', harnesses='amplifier-plain,amplifier-fd', tasks='dev',
+                                  baseline_source=str(baseline), candidate_source=str(candidate),
+                                  amplifier_bundle='lean')
+            battery.cmd_prepare(args)
+            experiment_dir = root/'experiments'/'eb2'
+            proposal = json.loads((experiment_dir/'proposal.json').read_text())
+            self.assertEqual(proposal['amplifier_bundle'], 'lean')
+            amp_manifest = json.loads((experiment_dir/'runs'/'amplifier'/'manifest.json').read_text())
+            self.assertEqual(amp_manifest['amplifier_bundle'], 'lean')
+            seen_sides = set()
+            for name, item in amp_manifest['runs'].items():
+                run_dir = battery._run_dir_for(experiment_dir, name, item['side'])
+                profile = json.loads((run_dir/'profile.md').read_text().split('---')[1])
+                self.assertEqual(profile['includes'], [], name)
+                tool_modules = {t['module'] for t in profile['tools']}
+                self.assertEqual(
+                    tool_modules, {'tool-filesystem', 'tool-bash', 'tool-todo', 'tool-fast-workspace'}, name)
+                providers = profile.get('providers')
+                self.assertTrue(providers, name)
+                self.assertIn('source', next(p for p in providers if p['module'] == 'provider-anthropic'))
                 seen_sides.add(item['side'])
             self.assertEqual(seen_sides, {'amplifier-plain', 'amplifier-fd'})
 

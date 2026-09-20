@@ -111,6 +111,25 @@ cells:
     anchor_cell: plain
     mechanism_gate: { scored_backend: jev, min_scored: 1, require_effort_phases: ["explore:low"] }
 
+  plain-lean:
+    label_suffix: "plain [model=claude-fable-5-1; bundle=lean]"
+    harnesses: [amplifier-plain]
+    amplifier_model: claude-fable-5-1
+    amplifier_bundle: lean
+    fd: null
+    role: "batch anchor for the lean pair -- isolates installed-context weight (no foundation include)"
+    mechanism_gate: { no_fd_receipts: true }
+
+  judge-local+effort-incumbent-lean:
+    harnesses: [amplifier-fd]
+    fd: { backend: ollama, model: qwen3:0.6b, effort_profile: explore_only }
+    amplifier_bundle: lean
+    role: "HC-installed-context-weight -- the incumbent config composed WITHOUT the foundation include"
+    purpose: "isolate installed-context weight: does dropping foundation's ~50k-token composed system prompt speed up the incumbent config?"
+    anchor_cell: plain-lean
+    secondary_anchor: judge-local+effort-incumbent   # the foundation twin: identical fd config, foundation include present
+    mechanism_gate: { scored_backend: ollama, min_scored: 1, require_effort_phases: ["explore:low"] }
+
   judge-local+effort:
     harnesses: [amplifier-fd]
     fd: { backend: ollama, model: qwen3:0.6b, effort_profile: all_phase }

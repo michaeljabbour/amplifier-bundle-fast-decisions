@@ -263,6 +263,7 @@ def cmd_prepare(args):
     # plain on claude-sonnet-5 at medium" with no fast-decisions involved.
     amplifier_model = getattr(args, 'amplifier_model', None) or 'claude-fable-5-1'
     amplifier_effort = getattr(args, 'amplifier_effort', None)
+    amplifier_bundle = getattr(args, 'amplifier_bundle', None) or 'foundation'
 
     # --fd-backend/--allow-external-state translate into decision overrides
     # for the amplifier-fd side. External state is opt-in only (docs/PRIVACY.md):
@@ -319,6 +320,7 @@ def cmd_prepare(args):
                       **_amplifier_prompt_and_deadline(r['task'], deadline_seconds)} for r in amplifier_runs],
             'sides': sides,
             'provider': 'anthropic', 'model': amplifier_model, 'amplifier_effort': amplifier_effort,
+            'amplifier_bundle': amplifier_bundle,
             'limits': {'timeout_seconds': deadline_seconds, 'max_iterations': 30, 'extended_thinking': True},
             'events_dir': str(forge_e2e.EVENTS), 'host_python': str(forge_e2e.HOST_PYTHON),
             'forge_py': str(forge_e2e.FORGE), 'prompt': forge_e2e.PROMPT,
@@ -361,6 +363,7 @@ def cmd_prepare(args):
         'claude_max_budget_usd': args.claude_max_budget_usd,
         'claude_permission_mode': claude_permission_mode,
         'amplifier_model': amplifier_model, 'amplifier_effort': amplifier_effort,
+        'amplifier_bundle': amplifier_bundle,
         'task_source': polyglot_meta,
         'requested_split': args.tasks if task_source_kind == 'battery' else args.split,
         'tasks': task_names,
@@ -380,6 +383,7 @@ def cmd_prepare(args):
         'schema': BATTERY_SCHEMA, 'run_order': [r['name'] for r in schedule],
         'runs': {r['name']: {**r, 'model': models.get(r['harness'])} for r in schedule},
         'deadline_seconds': deadline_seconds, 'prompt': prompt,
+        'amplifier_bundle': amplifier_bundle,
     }
     _dump(runs_root/'manifest.json', manifest)
     _print({'prepared': str(experiment_dir), 'runs': manifest['run_order']})
@@ -1411,8 +1415,27 @@ def _mechanism_report(experiment_dir, manifest):
     }
 
 
+def _profile_amplifier_bundle(run_dir):
+    """'foundation' or 'lean', inferred from a run's own recorded profile.md:
+    an empty 'includes' list means the --amplifier-bundle lean explicit-module
+    root (see forge_e2e._side_profile); a non-empty one means the fast-decisions
+    bundle root was included (the 'foundation' default, unchanged behavior).
+    'foundation' when profile.md is missing/malformed (matches the pre-flag default)."""
+    path = Path(run_dir)/'profile.md'
+    if not path.exists():
+        return 'foundation'
+    parts = path.read_text().split('---')
+    if len(parts) < 3:
+        return 'foundation'
+    try:
+        profile = json.loads(parts[1])
+    except ValueError:
+        return 'foundation'
+    return 'foundation' if profile.get('includes') else 'lean'
+
+
 def _amplifier_fd_series_label(experiment_dir, manifest):
-    """'amplifier-fd [judge=<backend> <model>; effort <phase>-><effort>, ...; model routing: on/off]'
+    """'amplifier-fd [judge=<backend> <model>; effort <phase>-><effort>, ...; model routing: on/off; bundle: foundation/lean]'
     derived from an amplifier-fd run's own recorded profile (see _profile_loop_config) --
     never a bare 'amplifier-fd'. None when the experiment has no amplifier-fd runs."""
     run_dirs = [_run_dir_for(experiment_dir, name, item['harness'])
@@ -1420,8 +1443,10 @@ def _amplifier_fd_series_label(experiment_dir, manifest):
     if not run_dirs:
         return None
     loop_config = {}
+    bundle = 'foundation'
     for rd in run_dirs:
         loop_config = _profile_loop_config(rd)
+        bundle = _profile_amplifier_bundle(rd)
         if loop_config:
             break
     backend = loop_config.get('backend') or 'unknown'
@@ -1433,7 +1458,8 @@ def _amplifier_fd_series_label(experiment_dir, manifest):
     effort_label = ', '.join(effort_phases) if effort_phases else 'off'
     model_routing = loop_config.get('model_routing')
     routing_label = 'on' if model_routing and model_routing.get('start_model') else 'off'
-    return f'amplifier-fd [judge={judge}; effort {effort_label}; model routing: {routing_label}]'
+    return (f'amplifier-fd [judge={judge}; effort {effort_label}; model routing: {routing_label}; '
+            f'bundle={bundle}]')
 
 
 _CROSS_CAMPAIGN_HARNESSES = ('claude', 'codex', 'opencode', 'amplifier-plain', 'amplifier-fd')
@@ -1887,6 +1913,14 @@ def main(argv=None):
     p.add_argument('--amplifier-effort', default=None,
                     help='Reasoning effort for BOTH amplifier sides (provider-anthropic '
                          'reasoning_effort). Default: unset (provider default).')
+    p.add_argument('--amplifier-bundle', choices=['foundation', 'lean'], default='foundation',
+                    help="Installed-context weight for BOTH amplifier sides (plain and fd): "
+                         "'foundation' (default, unchanged behavior) composes the fast-decisions "
+                         "bundle root, which transitively includes the full foundation bundle. "
+                         "'lean' composes an explicit minimal root instead (provider-anthropic, "
+                         "tool-filesystem, tool-bash, tool-todo, plus the fast-decisions "
+                         "hook/tool) -- no foundation include -- to isolate the installed-context "
+                         "weight hypothesis.")
     p.add_argument('--task-source', choices=['battery', 'polyglot'], default='battery',
                     help='Task set to prepare from: the 20-task battery (default) or the aider-polyglot corpus.')
     p.add_argument('--polyglot-root', help='Path to a polyglot-benchmark checkout (--task-source polyglot).')
