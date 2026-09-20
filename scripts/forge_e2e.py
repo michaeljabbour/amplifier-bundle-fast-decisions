@@ -323,7 +323,7 @@ def prepare(root, config=None):
               'evaluator_sha256':hashlib.sha256(Path(__file__).with_name('forge_workloads.py').read_bytes()).hexdigest(),
               'sides': sides, 'upstream_loop_source': config.get('upstream_loop_source', UPSTREAM_LOOP_SOURCE),
               'events_dir': config.get('events_dir', str(EVENTS)), 'host_python': config.get('host_python', str(HOST_PYTHON)),
-              'forge_py': config.get('forge_py', str(FORGE)),
+              'forge_py': config.get('forge_py', str(FORGE)), 'task_source': config.get('task_source'),
               'run_order':[],'runs':{},'limits':config.get('limits', {'max_iterations':30,'extended_thinking':True,'timeout_seconds':480})}
     for run_spec in config['runs']:
         manifest['runs'][run_spec['name']] = _build_run(root, run_spec, config, sides)
@@ -533,8 +533,21 @@ def run_workspace_tests(workspace, timeout=45, targets=None):
     return proc.returncode == 0, 'unittest', summary
 
 
+def _ensure_task_source_registered(manifest):
+    """Register a manifest's `task_source` (if any) with forge_workloads so
+    task_files/task_prompt/task_protected/evaluate can resolve tasks from it
+    in THIS process. Every entry point that resolves a task from a bare
+    manifest read (worker(), and the `evaluate` CLI subcommand) is a fresh
+    process and must call this before touching forge_workloads' task
+    accessors -- see forge_workloads.register_source."""
+    task_source = manifest.get('task_source')
+    if task_source:
+        forge_workloads.register_source(task_source['kind'],
+                                         **{k: v for k, v in task_source.items() if k != 'kind'})
+
+
 def worker(root,name):
-    manifest=json.loads((root/'manifest.json').read_text());run=root/name;workspace=run/'workspace';item=manifest['runs'][name]
+    manifest=json.loads((root/'manifest.json').read_text());_ensure_task_source_registered(manifest);run=root/name;workspace=run/'workspace';item=manifest['runs'][name]
     if hash_files(workspace)!=item['workspace_hash']:raise RuntimeError('Starting workspace changed')
     side = manifest['sides'][item['side']]
     source_root = Path(side['source_root'])
@@ -792,5 +805,7 @@ if __name__=='__main__':
     parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('command',choices=['prepare','worker','evaluate','batch']);parser.add_argument('root',type=Path);parser.add_argument('name',nargs='?');args=parser.parse_args();root=args.root.expanduser().resolve()
     if args.command=='prepare':prepare(root)
     elif args.command=='worker':sys.exit(worker(root,args.name))
-    elif args.command=='evaluate':print(json.dumps(evaluate(json.loads((root/'manifest.json').read_text())['runs'][args.name]['task'],root/args.name/'workspace')))
+    elif args.command=='evaluate':
+        _manifest=json.loads((root/'manifest.json').read_text());_ensure_task_source_registered(_manifest)
+        print(json.dumps(evaluate(_manifest['runs'][args.name]['task'],root/args.name/'workspace')))
     else:batch(root)

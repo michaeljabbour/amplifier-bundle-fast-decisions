@@ -93,6 +93,17 @@ def _load_battery_tasks():
     return battery_tasks
 
 
+def _register_task_source_from_proposal(proposal):
+    """Re-register a prepared experiment's task_source (if any) with
+    forge_workloads, so get_task can resolve polyglot task names in this
+    process too (prepare() already registered it once; run/evaluate/
+    reevaluate are separate invocations, possibly separate processes)."""
+    task_source = (proposal or {}).get('task_source')
+    if task_source:
+        forge_workloads.register_source(task_source['kind'],
+                                         **{k: v for k, v in task_source.items() if k != 'kind'})
+
+
 def _load_forge(forge_py):
     forge_py = Path(forge_py).expanduser()
     sys.path.insert(0, str(forge_py.parent))
@@ -165,24 +176,71 @@ def _freeze_candidate_source(candidate_source, experiment_dir, candidate_sha=Non
 # prepare
 # --------------------------------------------------------------------------
 
+def _resolve_polyglot_tasks(args):
+    """Register the polyglot task source from CLI args and return
+    (task_names, dev_names, holdout_names, corpus_sha, polyglot_root, languages).
+
+    `task_names` is the requested `--split` slice (dev/holdout/all) of a
+    deterministic `--slice`-sized sample seeded by `--seed`. Fails loud (via
+    `_fail`, never raises) when a required polyglot flag is missing.
+    """
+    if not args.polyglot_root:
+        return _fail(4, '--task-source polyglot requires --polyglot-root')
+    if not args.slice:
+        return _fail(4, '--task-source polyglot requires --slice')
+    if not args.split:
+        return _fail(4, '--task-source polyglot requires --split')
+    languages = [l.strip() for l in (args.languages or '').split(',') if l.strip()] or None
+    polyglot_root = str(Path(args.polyglot_root).expanduser().resolve())
+    corpus_sha = None
+    manifest_path = Path(polyglot_root).parent/'polyglot-manifest.json'
+    if manifest_path.exists():
+        try:
+            corpus_sha = _read_json(manifest_path).get('sha')
+        except ValueError:
+            corpus_sha = None
+    tasks = forge_workloads.register_source('polyglot', root=polyglot_root, languages=languages)
+    import polyglot_tasks
+    dev_names, holdout_names = polyglot_tasks.select_slice(tasks, n=args.slice, seed=args.seed, languages=languages)
+    if args.split == 'dev':
+        task_names = dev_names
+    elif args.split == 'holdout':
+        task_names = holdout_names
+    else:
+        task_names = sorted(dev_names+holdout_names)
+    return task_names, dev_names, holdout_names, corpus_sha, polyglot_root, languages
+
+
 def cmd_prepare(args):
     root = Path(args.root).expanduser().resolve()
     experiment_dir = root/'experiments'/args.experiment
     if experiment_dir.exists():
         return _fail(4, f'Experiment {args.experiment} already exists')
 
-    battery_tasks = _load_battery_tasks()
     harnesses = [h.strip() for h in args.harnesses.split(',') if h.strip()]
     for h in harnesses:
         if h not in HARNESSES:
             return _fail(4, f'unknown harness: {h}')
 
-    if args.tasks in ('all', 'dev', 'holdout'):
-        task_names = list(battery_tasks.split(args.tasks))
+    task_source_kind = getattr(args, 'task_source', None) or 'battery'
+    polyglot_meta = None
+    dev_names = holdout_names = None
+    if task_source_kind == 'polyglot':
+        task_names, dev_names, holdout_names, corpus_sha, polyglot_root, languages = _resolve_polyglot_tasks(args)
+        if not task_names:
+            return _fail(4, 'no tasks selected')
+        polyglot_meta = {'kind': 'polyglot', 'root': polyglot_root, 'languages': languages, 'sha': corpus_sha}
+        battery_tasks = None
     else:
-        task_names = [t.strip() for t in args.tasks.split(',') if t.strip()]
-    if not task_names:
-        return _fail(4, 'no tasks selected')
+        battery_tasks = _load_battery_tasks()
+        if args.tasks in ('all', 'dev', 'holdout'):
+            task_names = list(battery_tasks.split(args.tasks))
+        elif args.tasks:
+            task_names = [t.strip() for t in args.tasks.split(',') if t.strip()]
+        else:
+            return _fail(4, '--tasks is required for --task-source battery')
+        if not task_names:
+            return _fail(4, 'no tasks selected')
 
     fd_overrides = {}
     for kv in (args.fd_override or []):
@@ -202,7 +260,7 @@ def cmd_prepare(args):
     if allow_external_state:
         fd_overrides['allow_external_state'] = True
 
-    deadline_seconds = args.deadline_seconds or 600
+    deadline_seconds = args.deadline_seconds or (900 if task_source_kind == 'polyglot' else 600)
     experiment_dir.mkdir(parents=True)
     runs_root = experiment_dir/'runs'
     runs_root.mkdir(parents=True)
@@ -247,6 +305,7 @@ def cmd_prepare(args):
             'limits': {'timeout_seconds': deadline_seconds, 'max_iterations': 30, 'extended_thinking': True},
             'events_dir': str(forge_e2e.EVENTS), 'host_python': str(forge_e2e.HOST_PYTHON),
             'forge_py': str(forge_e2e.FORGE), 'prompt': forge_e2e.PROMPT,
+            'task_source': polyglot_meta,
         }
         forge_e2e.prepare(runs_root/'amplifier', fe_config)
     else:
@@ -268,8 +327,14 @@ def cmd_prepare(args):
         assert len(set(hashes)) == 1, f'Workspace mismatch for task={task}: {hashes}'
 
     prompt = forge_e2e.PROMPT
-    dev_tasks = set(battery_tasks.split('dev'))
-    holdout_tasks = set(battery_tasks.split('holdout'))
+    if task_source_kind == 'polyglot':
+        dev_tasks_final = sorted(t for t in task_names if t in set(dev_names))
+        holdout_tasks_final = sorted(t for t in task_names if t in set(holdout_names))
+    else:
+        dev_tasks = set(battery_tasks.split('dev'))
+        holdout_tasks = set(battery_tasks.split('holdout'))
+        dev_tasks_final = sorted(t for t in task_names if t in dev_tasks)
+        holdout_tasks_final = sorted(t for t in task_names if t in holdout_tasks)
     commands = {h: _command_template(h, models.get(h), args) for h in harnesses}
 
     proposal = {
@@ -277,14 +342,19 @@ def cmd_prepare(args):
         'harnesses': harnesses, 'models': models, 'commands': commands,
         'deadline_seconds': deadline_seconds, 'prompt_sha256': hashlib.sha256(prompt.encode()).hexdigest(),
         'claude_max_budget_usd': args.claude_max_budget_usd,
-        'requested_split': args.tasks, 'tasks': task_names,
-        'dev_tasks': sorted(t for t in task_names if t in dev_tasks),
-        'holdout_tasks': sorted(t for t in task_names if t in holdout_tasks),
+        'task_source': polyglot_meta,
+        'requested_split': args.tasks if task_source_kind == 'battery' else args.split,
+        'tasks': task_names,
+        'dev_tasks': dev_tasks_final,
+        'holdout_tasks': holdout_tasks_final,
         'frozen_run_schedule': schedule,
         'baseline_source': baseline_source, 'candidate_source': candidate_source,
         'candidate_source_snapshot': candidate_source_snapshot,
         'preregistered_at_utc': _now(), 'status': 'prepared',
     }
+    if task_source_kind == 'polyglot':
+        proposal['polyglot_slice'] = args.slice
+        proposal['polyglot_split'] = args.split
     _dump(experiment_dir/'proposal.json', proposal)
 
     manifest = {
@@ -463,22 +533,21 @@ def _parse_opencode(stdout, model=None):
 # --------------------------------------------------------------------------
 
 def _evaluate_quality(task_name, task_kind, workspace, final_message):
-    battery_tasks = _load_battery_tasks()
     if task_kind == 'answer':
+        battery_tasks = _load_battery_tasks()
         try:
             return battery_tasks.check_answer(battery_tasks.TASKS[task_name], final_message)
         except Exception as exc:  # noqa: BLE001 -- evaluator must never crash the runner
             return {'checks': 0, 'passed': 0, 'failed': 1, 'failure_labels': [f'check_answer_error:{exc}']}
-    task = battery_tasks.TASKS[task_name]
     try:
+        task = forge_workloads.get_task(task_name)
         return task.evaluate(workspace)
     except Exception as exc:  # noqa: BLE001
         return {'checks': 0, 'passed': 0, 'failed': 1, 'failure_labels': [f'evaluate_error:{exc}']}
 
 
 def _protected_unchanged(task_name, workspace):
-    battery_tasks = _load_battery_tasks()
-    task = battery_tasks.TASKS[task_name]
+    task = forge_workloads.get_task(task_name)
     files = task.files
     return {f: (Path(workspace)/f).exists() and (Path(workspace)/f).read_text() == files.get(f, '')
             for f in task.protected}
@@ -723,8 +792,7 @@ def _with_exec_time(result, run_dir, stdout_text=None):
 
 def _dispatch(item, name, experiment_dir, manifest, proposal, launcher=None, waiter=None, closer=None,
               forge_module=None):
-    battery_tasks = _load_battery_tasks()
-    task = battery_tasks.TASKS[item['task']]
+    task = forge_workloads.get_task(item['task'])
     prompt = item.get('prompt') or getattr(task, 'prompt', None) or manifest.get('prompt') or forge_e2e.PROMPT
     deadline = item.get('deadline_seconds') or manifest.get('deadline_seconds') or 600
     harness = item['harness']
@@ -833,6 +901,7 @@ def cmd_run(args, launcher=None, waiter=None, closer=None, forge_module=None):
     runs_root = experiment_dir/'runs'
     protocol = campaign._read_json(root/'protocol.json')
     proposal = _read_json(experiment_dir/'proposal.json')
+    _register_task_source_from_proposal(proposal)
     per_launch = proposal.get('per_launch_usd') or protocol['reservation_policy']['per_launch_usd']
 
     i = 0
@@ -987,8 +1056,10 @@ def _latest_result(experiment_dir, manifest, name):
     result = _read_json(path)
     if 'cost_source' not in result and 'native' in result:
         # A worker result adopted by a restarted runner without normalization: map it on the fly.
-        battery_tasks = _load_battery_tasks()
-        task = battery_tasks.TASKS.get(item['task'])
+        try:
+            task = forge_workloads.get_task(item['task'])
+        except KeyError:
+            task = None
         base = {'name': name, 'task': item['task'], 'family': getattr(task, 'family', None),
                 'split': getattr(task, 'split', None), 'kind': getattr(task, 'kind', None),
                 'harness': item['harness'], 'attempt': item.get('attempt', 1), 'notes': ['normalized_at_evaluate']}
@@ -1167,7 +1238,8 @@ def cmd_reevaluate(args):
     root = Path(args.root).expanduser().resolve()
     experiment_dir = root/'experiments'/args.experiment
     manifest = _read_json(experiment_dir/'runs'/'manifest.json')
-    battery_tasks = _load_battery_tasks()
+    proposal = _read_json(experiment_dir/'proposal.json')
+    _register_task_source_from_proposal(proposal)
     amp_manifest_path = experiment_dir/'runs'/'amplifier'/'manifest.json'
     amp_manifest = _read_json(amp_manifest_path) if amp_manifest_path.exists() else None
     changed = []
@@ -1179,7 +1251,7 @@ def cmd_reevaluate(args):
             continue
         result = _latest_result(experiment_dir, manifest, name)
         workspace = run_dir/'workspace'
-        task = battery_tasks.TASKS[item['task']]
+        task = forge_workloads.get_task(item['task'])
         quality = _evaluate_quality(item['task'], task.kind, workspace, result.get('final_message'))
         files = forge_workloads.task_files(item['task'])
         protected = {f: (workspace/f).exists() and (workspace/f).read_text() == files.get(f, '')
@@ -1209,8 +1281,9 @@ def cmd_reevaluate(args):
 def cmd_evaluate(args):
     root = Path(args.root).expanduser().resolve()
     experiment_dir = root/'experiments'/args.experiment
-    manifest, assigned = _load_experiment_assigned(experiment_dir)
     proposal = _read_json(experiment_dir/'proposal.json')
+    _register_task_source_from_proposal(proposal)
+    manifest, assigned = _load_experiment_assigned(experiment_dir)
     deadline_ms = manifest.get('deadline_seconds', 600)*1000
 
     tasks = sorted({k[0] for k in assigned})
@@ -1407,7 +1480,9 @@ def main(argv=None):
     p.add_argument('--root', required=True)
     p.add_argument('--experiment', required=True)
     p.add_argument('--harnesses', required=True)
-    p.add_argument('--tasks', required=True)
+    p.add_argument('--tasks', required=False, default=None,
+                    help='all|dev|holdout|comma-list. Required for --task-source battery (the default); '
+                         'ignored for --task-source polyglot (use --split instead).')
     p.add_argument('--seed', type=int, required=True)
     p.add_argument('--fd-override', action='append')
     p.add_argument('--deadline-seconds', type=int)
@@ -1422,6 +1497,13 @@ def main(argv=None):
                     help='Decision backend override for the amplifier-fd side')
     p.add_argument('--allow-external-state', action='store_true',
                     help='Required alongside --fd-backend jev (opt-in external state; see docs/PRIVACY.md)')
+    p.add_argument('--task-source', choices=['battery', 'polyglot'], default='battery',
+                    help='Task set to prepare from: the 20-task battery (default) or the aider-polyglot corpus.')
+    p.add_argument('--polyglot-root', help='Path to a polyglot-benchmark checkout (--task-source polyglot).')
+    p.add_argument('--languages', help='Comma-separated language filter for --task-source polyglot.')
+    p.add_argument('--slice', type=int, help='Deterministic sample size for --task-source polyglot.')
+    p.add_argument('--split', choices=['dev', 'holdout', 'all'],
+                    help='Which half of the --slice sample to prepare (--task-source polyglot).')
     p.set_defaults(func=cmd_prepare)
 
     p = sub.add_parser('run')
