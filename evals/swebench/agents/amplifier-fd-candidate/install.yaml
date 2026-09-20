@@ -63,6 +63,9 @@ setup_cmds:
           backend: {{FD_BACKEND}}
 {{FD_MODEL_LINE}}
 {{FD_EFFORT_ROUTING_YAML}}
+{{FD_MODEL_ROUTING_YAML}}
+{{FD_DECISION_BATCHING_LINE}}
+{{FD_CONFIDENCE_GATES_YAML}}
           allow_external_state: {{FD_ALLOW_EXTERNAL_STATE}}
           timeout_ms: 750
           min_probability: 0.90

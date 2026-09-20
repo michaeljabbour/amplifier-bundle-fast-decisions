@@ -85,6 +85,104 @@ def _effort_routing_yaml(effort_routing: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+# Exact key set/order the loop-fast-decisions orchestrator's Policy accepts on
+# `model_routing` (HC04 "opt-in model routing with escalation" / HC05
+# "judge-driven escalation") -- copied from MODEL_ROUTING_KEYS + the field
+# order `validate_model_routing()` checks them in, in
+# src/amplifier_fast_decisions/contracts.py. Kept as a literal tuple here
+# (not imported) because this module renders a *template* for an external
+# harness and has no runtime dependency on the orchestrator package.
+_MODEL_ROUTING_KEY_ORDER = (
+    "start_model",
+    "start_effort",
+    "max_requests_before_escalation",
+    "escalate_on_test_failure",
+    "escalate_on_provider_error",
+    "override_explicit_model",
+    "escalation_judge",
+    "escalate_min_probability",
+)
+_MODEL_ROUTING_BOOL_KEYS = frozenset(
+    {"escalate_on_test_failure", "escalate_on_provider_error", "override_explicit_model"}
+)
+_MODEL_ROUTING_STRING_KEYS = frozenset({"start_model", "start_effort", "escalation_judge"})
+
+
+def _model_routing_yaml(model_routing: dict[str, Any] | None) -> str:
+    """Render the optional `model_routing:` block (HC04/HC05) at the same
+    indentation as `effort_routing:` beside it. Renders `""` (no block) when
+    `model_routing` is falsy -- routing stays fully opt-in, matching
+    `Policy.model_routing`'s own `None`-means-off default in contracts.py.
+    """
+    if not model_routing:
+        return ""
+    lines = ["          model_routing:"]
+    for key in _MODEL_ROUTING_KEY_ORDER:
+        if key not in model_routing or model_routing[key] is None:
+            continue
+        value = model_routing[key]
+        if key in _MODEL_ROUTING_BOOL_KEYS:
+            value = str(bool(value)).lower()
+        elif key in _MODEL_ROUTING_STRING_KEYS:
+            value = str(value)
+        lines.append(f"            {key}: {value}")
+    return "\n".join(lines)
+
+
+def _confidence_gates_yaml(confidence_gates: dict[str, Any] | None) -> str:
+    """Render the optional `confidence_gates:` block (HC09 "stake-scaled
+    confidence gates"), same indentation convention as the other optional
+    policy blocks. `""` (no block) when falsy -- matches
+    `Policy.confidence_gates`'s `None`-means-off default.
+    """
+    if not confidence_gates:
+        return ""
+    lines = ["          confidence_gates:"]
+    for key in ("read_shortcut", "phase", "escalation"):
+        if key in confidence_gates and confidence_gates[key] is not None:
+            lines.append(f"            {key}: {confidence_gates[key]}")
+    return "\n".join(lines)
+
+
+def _decision_batching_line(decision_batching: Any) -> str:
+    """Render the optional `decision_batching:` scalar line. `""` (omitted)
+    when unset -- matches `Policy.decision_batching`'s `False` default (an
+    omitted key and an explicit `false` are behaviorally identical, but
+    omission keeps a candidate config that never opted in from acquiring a
+    line it never asked for).
+    """
+    if decision_batching is None:
+        return ""
+    return f"          decision_batching: {str(bool(decision_batching)).lower()}"
+
+
+def _yaml_scalar(value: Any) -> str:
+    """Render `value` as a safe inline YAML scalar for the single-line
+    `candidate:` metadata block appended to data.yaml. Strings go through
+    `json.dumps` (a valid double-quoted YAML scalar) so no value can break
+    the surrounding YAML structure; `None` renders as `null`.
+    """
+    if value is None:
+        return "null"
+    if isinstance(value, bool):
+        return str(value).lower()
+    if isinstance(value, (int, float)):
+        return str(value)
+    return json.dumps(str(value))
+
+
+def _append_candidate_metadata(data_yaml_text: str, config: dict[str, Any]) -> str:
+    """Append a `candidate:` block to a rendered agent's data.yaml recording
+    which S1/S2 cell and confirmation status produced it, so the S3 report
+    can never present a screen-status render as a confirmed one (see
+    render_candidate_install_yaml's `allow_screen` override).
+    """
+    cell_name = _yaml_scalar(config.get("cell_name"))
+    candidate_status = _yaml_scalar(config.get("status"))
+    block = f"candidate:\n  cell_name: {cell_name}\n  candidate_status: {candidate_status}\n"
+    return data_yaml_text.rstrip("\n") + "\n\n" + block
+
+
 def render_candidate_install_yaml(config: dict[str, Any], *, template_text: str) -> str:
     """Render `template_text` (agents/amplifier-fd-candidate/install.yaml's
     contents) against a CONFIRMED candidate config. Pure string
@@ -120,15 +218,29 @@ def render_candidate_install_yaml(config: dict[str, Any], *, template_text: str)
     model = config.get("model")
     allow_external_state = bool(config["allow_external_state"])
     effort_routing = config.get("effort_routing") or {}
+    # model_routing/decision_batching/confidence_gates are all optional and
+    # independent of the required fields above -- a candidate config that
+    # never sets them renders no extra lines at all (see the three render
+    # helpers' own docstrings for the None-means-off default each mirrors
+    # from src/amplifier_fast_decisions/contracts.py's Policy).
+    model_routing = config.get("model_routing") or None
+    decision_batching = config.get("decision_batching")
+    confidence_gates = config.get("confidence_gates") or None
 
     model_line = f"          model: {model}" if model else ""
     effort_yaml = _effort_routing_yaml(effort_routing)
+    model_routing_yaml = _model_routing_yaml(model_routing)
+    decision_batching_line = _decision_batching_line(decision_batching)
+    confidence_gates_yaml = _confidence_gates_yaml(confidence_gates)
     ollama_model = model if backend == "ollama" and model else "qwen3:0.6b"
 
     rendered = (
         template_text.replace("{{FD_BACKEND}}", str(backend))
         .replace("{{FD_MODEL_LINE}}", model_line)
         .replace("{{FD_EFFORT_ROUTING_YAML}}", effort_yaml)
+        .replace("{{FD_MODEL_ROUTING_YAML}}", model_routing_yaml)
+        .replace("{{FD_DECISION_BATCHING_LINE}}", decision_batching_line)
+        .replace("{{FD_CONFIDENCE_GATES_YAML}}", confidence_gates_yaml)
         .replace("{{FD_ALLOW_EXTERNAL_STATE}}", str(allow_external_state).lower())
         .replace("{{FD_OLLAMA_MODEL}}", ollama_model)
     )
@@ -161,9 +273,13 @@ def render_candidate_agent_dir(
     for name in ("meta.yaml", "invocation.md", "data.yaml"):
         src = template_dir / name
         if src.is_file():
-            (out_dir / name).write_text(
-                src.read_text(encoding="utf-8"), encoding="utf-8"
-            )
+            file_text = src.read_text(encoding="utf-8")
+            if name == "data.yaml":
+                # Records which S1/S2 cell + confirmation status produced this
+                # rendered agent so the S3 report can never present a
+                # screen-status render as a confirmed one.
+                file_text = _append_candidate_metadata(file_text, config)
+            (out_dir / name).write_text(file_text, encoding="utf-8")
     return out_dir
 
 

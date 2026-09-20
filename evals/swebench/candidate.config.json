@@ -6,8 +6,11 @@
   "backend": null,
   "model": null,
   "effort_routing": null,
+  "model_routing": null,
+  "decision_batching": null,
+  "confidence_gates": null,
   "allow_external_state": null,
   "confirmed_at": null,
   "confirmed_by": null,
-  "notes": "Placeholder shipped with the S3 stage. Do not hand-edit backend/model/effort_routing without also flipping status to 'confirmed' and filling cell_name/confirmed_at/confirmed_by -- those fields are the audit trail for which S1/S2 result this candidate reflects."
+  "notes": "Placeholder shipped with the S3 stage. Do not hand-edit backend/model/effort_routing without also flipping status to 'confirmed' and filling cell_name/confirmed_at/confirmed_by -- those fields are the audit trail for which S1/S2 result this candidate reflects. model_routing/decision_batching/confidence_gates are OPTIONAL (null = omitted from the rendered bundle YAML entirely, matching Policy's own default-off semantics in src/amplifier_fast_decisions/contracts.py) -- only set them when the confirmed cell's own fd: block does (see evals/cells.yaml model_routing_profiles / decision_batching / confidence_gates)."
 }

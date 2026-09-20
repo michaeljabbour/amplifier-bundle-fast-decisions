@@ -75,6 +75,26 @@ logic, unit-tested in `tests/test_swebench_stage.py`):
    error, not a guess) to render `amplifier-fd-candidate`'s install.yaml
    while `status != "confirmed"`.
 
+**Filling `candidate.config.json` from a cell.** Copy the confirmed cell's
+`fd:` block from `evals/cells.yaml` field-by-field: `backend` -> `backend`,
+`model` -> `model`, `effort_profile: <name>` -> look up
+`effort_profiles.<name>` and copy its dict into `effort_routing`,
+`allow_external_state` -> `allow_external_state` (default `false` if the
+cell omits it), and -- new -- `model_routing_profile: <name>` -> look up
+`model_routing_profiles.<name>` and copy its dict verbatim into the optional
+`model_routing` key (omit/leave `null` if the cell has no
+`model_routing_profile`); `decision_batching`/`confidence_gates` on the
+cell's `fd:` block copy straight across to the same-named optional
+top-level keys. Then set `cell_name` to the cell's own key (e.g.
+`"judge-local+effort+route"`), fill `confirmed_at`/`confirmed_by`, and flip
+`status` to `"confirmed"`. **Screen override:** a cell not yet S1/S2-confirmed
+may still be rendered with `status: "screen"` by setting
+`S3_ALLOW_SCREEN_CANDIDATE=1` in the environment before `--run`/render-candidate
+-- `render_candidate_install_yaml` records `candidate_status: "screen"` (and
+`cell_name`) into the rendered agent's `data.yaml` so no S3 report can present
+a screen-status run as a confirmed one; any other `status` value still
+refuses to render.
+
 `FD_SHA` (a pinned full commit sha of
 `michaeljabbour/amplifier-bundle-fast-decisions`) must also be set in the
 environment before `--run` (not `--check`) -- it is substituted into both

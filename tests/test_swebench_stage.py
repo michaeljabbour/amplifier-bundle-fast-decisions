@@ -150,6 +150,130 @@ class CandidateConfigTest(unittest.TestCase):
         with self.assertRaises(swebench_stage.CandidateConfigError):
             swebench_stage.render_candidate_install_yaml(cfg, template_text=template_text)
 
+    def test_render_includes_model_routing_block_when_present(self):
+        import textwrap
+
+        import yaml
+
+        cfg = {
+            "schema": "fast-decisions-swebench-candidate/v1",
+            "status": "confirmed",
+            "backend": "ollama",
+            "model": "qwen3:0.6b",
+            "effort_routing": {"orient": "medium", "explore": "low", "implement": "high"},
+            "allow_external_state": False,
+            "model_routing": {
+                "start_model": "claude-sonnet-5",
+                "max_requests_before_escalation": 6,
+                "escalate_on_test_failure": True,
+                "escalate_on_provider_error": True,
+            },
+        }
+        template_text = (SWEBENCH_DIR / "agents" / "amplifier-fd-candidate" / "install.yaml").read_text()
+        rendered = swebench_stage.render_candidate_install_yaml(cfg, template_text=template_text)
+        rendered = rendered.replace("{{FD_SHA}}", "cafef00d")
+        self.assertNotIn("{{FD_MODEL_ROUTING_YAML}}", rendered)
+
+        outer = yaml.safe_load(rendered)
+        cmd = next(c for c in outer["setup_cmds"] if "fd-candidate-bundle.yaml" in c)
+        inner = cmd.split("<<EOF\n", 1)[1].rsplit("\nEOF", 1)[0]
+        inner_cfg = yaml.safe_load(textwrap.dedent(inner))["session"]["orchestrator"]["config"]
+        self.assertEqual(
+            inner_cfg["model_routing"],
+            {
+                "start_model": "claude-sonnet-5",
+                "max_requests_before_escalation": 6,
+                "escalate_on_test_failure": True,
+                "escalate_on_provider_error": True,
+            },
+        )
+
+    def test_render_omits_model_routing_block_when_absent(self):
+        import textwrap
+
+        import yaml
+
+        cfg = {
+            "schema": "fast-decisions-swebench-candidate/v1",
+            "status": "confirmed",
+            "backend": "ollama",
+            "model": "qwen3:0.6b",
+            "effort_routing": {"explore": "low"},
+            "allow_external_state": False,
+        }
+        template_text = (SWEBENCH_DIR / "agents" / "amplifier-fd-candidate" / "install.yaml").read_text()
+        rendered = swebench_stage.render_candidate_install_yaml(cfg, template_text=template_text)
+        rendered = rendered.replace("{{FD_SHA}}", "cafef00d")
+        self.assertNotIn("{{FD_MODEL_ROUTING_YAML}}", rendered)
+        self.assertNotIn("model_routing", rendered)
+
+        outer = yaml.safe_load(rendered)
+        cmd = next(c for c in outer["setup_cmds"] if "fd-candidate-bundle.yaml" in c)
+        inner = cmd.split("<<EOF\n", 1)[1].rsplit("\nEOF", 1)[0]
+        inner_cfg = yaml.safe_load(textwrap.dedent(inner))["session"]["orchestrator"]["config"]
+        self.assertNotIn("model_routing", inner_cfg)
+
+    def test_render_screen_status_with_env_override_records_candidate_status(self):
+        import os
+        import tempfile
+
+        cfg_dict = {
+            "schema": "fast-decisions-swebench-candidate/v1",
+            "status": "screen",
+            "cell_name": "judge-local+effort+route",
+            "backend": "ollama",
+            "model": "qwen3:0.6b",
+            "effort_routing": {"orient": "medium", "explore": "low", "implement": "high"},
+            "allow_external_state": False,
+            "model_routing": {
+                "start_model": "claude-sonnet-5",
+                "max_requests_before_escalation": 6,
+                "escalate_on_test_failure": True,
+                "escalate_on_provider_error": True,
+            },
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp = Path(tmp)
+            cfg_path = tmp / "candidate.config.json"
+            cfg_path.write_text(json.dumps(cfg_dict))
+            out_dir = tmp / "rendered-agent"
+            old_env = os.environ.get("S3_ALLOW_SCREEN_CANDIDATE")
+            os.environ["S3_ALLOW_SCREEN_CANDIDATE"] = "1"
+            try:
+                swebench_stage.render_candidate_agent_dir(
+                    cfg_path,
+                    SWEBENCH_DIR / "agents" / "amplifier-fd-candidate",
+                    out_dir,
+                    fd_sha="0123456789abcdef",
+                )
+            finally:
+                if old_env is None:
+                    del os.environ["S3_ALLOW_SCREEN_CANDIDATE"]
+                else:
+                    os.environ["S3_ALLOW_SCREEN_CANDIDATE"] = old_env
+
+            install_text = (out_dir / "install.yaml").read_text()
+            self.assertIn("start_model: claude-sonnet-5", install_text)
+
+            import yaml
+
+            data = yaml.safe_load((out_dir / "data.yaml").read_text())
+            self.assertEqual(data["candidate"]["cell_name"], "judge-local+effort+route")
+            self.assertEqual(data["candidate"]["candidate_status"], "screen")
+
+    def test_render_refuses_screen_status_without_env_override(self):
+        cfg_dict = {
+            "schema": "x",
+            "status": "screen",
+            "backend": "ollama",
+            "model": "qwen3:0.6b",
+            "effort_routing": {"explore": "low"},
+            "allow_external_state": False,
+        }
+        template_text = (SWEBENCH_DIR / "agents" / "amplifier-fd-candidate" / "install.yaml").read_text()
+        with self.assertRaises(swebench_stage.CandidateConfigError):
+            swebench_stage.render_candidate_install_yaml(cfg_dict, template_text=template_text)
+
     def test_render_candidate_agent_dir_writes_a_full_agent(self):
         cfg_dict = {
             "schema": "x",
