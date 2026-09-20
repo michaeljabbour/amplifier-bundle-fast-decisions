@@ -4,6 +4,14 @@
 # secrets (TYPESAFE_API_KEY is reported present/absent only).
 #
 # CHANGELOG
+#   v1.3.0 (2026-09-20): New optional context input `profile` (incumbent|routing,
+#     default incumbent). incumbent installs bundles/active-routing.yaml's sibling,
+#     bundles/active.yaml (judge-only fast path, unchanged). routing installs
+#     bundles/active-routing.yaml (judge + phase-specific effort routing + opt-in
+#     model routing/escalation to claude-sonnet-5), screen-validated 2026-09-20
+#     (one repetition) at 26 s median working time on 40/40 aider-polyglot
+#     exercises vs 100 s plain Amplifier and 128 s for a plain-on-sonnet control.
+#     profile is forced to incumbent when the chosen judge host is mlx.
 #   v1.2.0 (2026-09-20): BREAKING CHANGE -- Ollama is now the default judge host
 #     on EVERY machine, including Apple Silicon.
 #     * ROOT CAUSE: v1.1.0 chose MLX on Apple Silicon from first principles
@@ -31,19 +39,26 @@ dependencies:
       - "foundation:zen-architect"
 
 name: "make-amplifier-faster"
-description: "Install the fast-decisions active configuration (local judge -- Ollama by default on every machine, MLX only by explicit opt-in -- plus the active bundle rung) behind one approval gate, then verify it from receipts."
-version: "1.2.0"
+description: "Install the fast-decisions active configuration (local judge -- Ollama by default on every machine, MLX only by explicit opt-in -- plus the active bundle rung, incumbent or routing profile) behind one approval gate, then verify it from receipts."
+version: "1.3.0"
 tags: ["fast-decisions", "install", "performance"]
 
 context:
   # auto (default) -> ollama on every machine. ollama -> force ollama.
   # mlx -> force the experimental MLX host; Apple Silicon only, fails loud otherwise.
   prefer_host: "auto"
+  # incumbent (default) -> bundles/active.yaml (judge-only fast path).
+  # routing -> bundles/active-routing.yaml (judge + phase-specific effort
+  # routing + opt-in model routing/escalation to claude-sonnet-5). Ignored
+  # when the chosen judge host is mlx (routing is only screen-validated on
+  # the ollama rung so far).
+  profile: "incumbent"
   ollama_model: "qwen3:0.6b"
   ollama_url: "http://127.0.0.1:11434"
   mlx_model: "mlx-community/Qwen3-0.6B-4bit"
   mlx_url: "http://127.0.0.1:8080"
   bundle_source: "git+https://github.com/michaeljabbour/amplifier-bundle-fast-decisions@main#subdirectory=bundles/active.yaml"
+  routing_bundle_source: "git+https://github.com/michaeljabbour/amplifier-bundle-fast-decisions@main#subdirectory=bundles/active-routing.yaml"
   mlx_bundle_source: "git+https://github.com/michaeljabbour/amplifier-bundle-fast-decisions@main#subdirectory=bundles/active-mlx.yaml"
   events_dir: "$HOME/.amplifier/fast-decisions/events"
   warm_budget_s: "2.0"
@@ -184,9 +199,17 @@ stages:
           judge model `{{ollama_model}}` (~600 MB of disk).
 
           Either way the plan also installs the Amplifier bundle rung matching the chosen host
-          ({{bundle_source}} for ollama, {{mlx_bundle_source}} for mlx). Any existing fast-decisions
-          shadow behavior is kept; the active rung supersedes it at composition. If the rung is
-          already installed the recipe runs `amplifier update` to refresh instead of re-adding.
+          and profile ({{bundle_source}} for ollama+incumbent, {{routing_bundle_source}} for
+          ollama+routing, {{mlx_bundle_source}} for mlx -- profile is forced to incumbent on mlx).
+          State which rung this run installs (profile={{profile}}) and its evidence line: the
+          incumbent rung is screen-validated at ~0.55x plain Amplifier working time at equal
+          quality (2026-09-20, 20-task and polyglot batteries, 1 repetition); the routing rung
+          is screen-validated at 26 s median working time on 40/40 aider-polyglot exercises vs
+          100 s for plain Amplifier and 128 s for a plain-on-sonnet control (2026-09-20, one
+          repetition) and requires a provider that serves claude-sonnet-5 alongside the pinned
+          judge model. Any existing fast-decisions shadow behavior is kept; the active rung
+          supersedes it at composition. If the rung is already installed the recipe runs
+          `amplifier update` to refresh instead of re-adding.
 
           State explicitly: judging happens locally on this machine and nothing is sent anywhere (the
           external Jev judge stays opt-in); the TYPESAFE_API_KEY line reports presence only, never a value.
@@ -335,6 +358,8 @@ stages:
           set -uo pipefail
           if [ "{{machine.chosen_host}}" = "mlx" ]; then
             source="{{mlx_bundle_source}}"
+          elif [ "{{profile}}" = "routing" ]; then
+            source="{{routing_bundle_source}}"
           else
             source="{{bundle_source}}"
           fi
@@ -402,6 +427,8 @@ stages:
           Bundle rung: {{rung}}
           Verification (exit {{verify_code}}): {{evidence}}
 
+          Profile requested: {{profile}}
+
           Cover, in this order and in under 20 lines:
           1. Which judge host was chosen ({{machine.chosen_host}}) and why ({{machine.reason}}) --
              including the dated measurement: 2026-09-20, same decision suites, MLX
@@ -410,6 +437,13 @@ stages:
              ({{machine.mlx_available}}) but not chosen, add one line: it is experimental
              (bundles/active-mlx.yaml), still being benchmarked, and can be opted into by
              re-running this recipe with context prefer_host: mlx.
+          1b. Which rung this run installed: profile={{profile}} (forced to incumbent if
+             chosen_host is mlx). incumbent -> bundles/active.yaml, screen-validated at
+             ~0.55x plain Amplifier working time at equal quality. routing ->
+             bundles/active-routing.yaml, screen-validated (one repetition) at 26 s median
+             working time on 40/40 aider-polyglot exercises vs 100 s plain Amplifier and
+             128 s for a plain-on-sonnet control, and requires a provider that serves
+             claude-sonnet-5 alongside the pinned judge model.
           2. What changed on this machine (skip anything that reported "skip:", and skip the other
              host's steps entirely -- they did not run).
           3. Whether the verification found a fast_decisions receipt with mode active and backend

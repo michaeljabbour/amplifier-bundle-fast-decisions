@@ -3,6 +3,13 @@
 *Status: a worked example for a team deploying its own hosted judge (2026-09-20). Nothing here is deployed by this repository; all mutations are the deploying team's call.*
 
 ## What we need
+The target being hosted here is the same tiny **0.6B judge** every teammate's local Ollama
+already runs (`qwen3:0.6b`, ~25 ms/decision, agreement 0.75-0.80 on our decision suites) -- not a
+larger model. The 27B model referenced below (`Qwen/Qwen3.8-27B-FP8`) was used only for the
+read-only gateway probes, to prove the team's existing LiteLLM+vLLM deployment passes
+`logprobs`/`top_logprobs` through correctly before committing to a dedicated 0.6B-sized pod; it is
+not the model this deployment stands up.
+
 A hosted "decision judge": one chat completion per agent step, `max_tokens: 1`, `temperature: 0`,
 `logprobs: true`, `top_logprobs: 10`, ~300 prompt tokens, answer scored from the first token's
 top-k log-probabilities. Hard budget: 500 ms end to end from a developer machine. Today the judge

@@ -37,6 +37,7 @@ COMPOSITION_FILES = [
     ROOT / "behaviors" / "fast-decisions.yaml",
     ROOT / "bundles" / "shadow.yaml",
     ROOT / "bundles" / "active.yaml",
+    ROOT / "bundles" / "active-routing.yaml",
 ]
 
 
@@ -150,6 +151,62 @@ class ActiveBundleOfflineTests(unittest.TestCase):
         )
         self.assertNotIn("model_routing", config)
         self.assertEqual(data["includes"], [{"bundle": "fast-decisions:bundle.md"}])
+
+
+class ActiveRoutingBundleOfflineTests(unittest.TestCase):
+    """Offline (no amplifier_foundation) checks on bundles/active-routing.yaml's
+    raw YAML, plus a Policy.from_config validation pass against contracts.py --
+    both run even when BundleLoadTests below is skipped for lack of network
+    access to resolve the foundation include."""
+
+    def test_active_routing_yaml_parses_and_carries_routing_config(self):
+        data = _load_frontmatter(ROOT / "bundles" / "active-routing.yaml")
+        self.assertEqual(data["bundle"]["name"], "fast-decisions-active-routing")
+        orchestrator = data["session"]["orchestrator"]
+        self.assertEqual(orchestrator["module"], "loop-fast-decisions")
+        config = orchestrator["config"]
+        self.assertEqual(config["mode"], "active")
+        self.assertEqual(config["backend"], "ollama")
+        self.assertEqual(config["model"], "qwen3:0.6b")
+        self.assertEqual(config["timeout_ms"], 500)
+        self.assertIs(config["allow_external_state"], False)
+        self.assertEqual(
+            config["effort_routing"],
+            {
+                "orient": "medium",
+                "explore": "low",
+                "implement": "high",
+                "max_explore_requests": 6,
+                "escalate_after_provider_errors": 1,
+            },
+        )
+        self.assertEqual(
+            config["model_routing"],
+            {
+                "start_model": "claude-sonnet-5",
+                "max_requests_before_escalation": 6,
+                "escalate_on_test_failure": True,
+                "escalate_on_provider_error": True,
+            },
+        )
+        self.assertEqual(data["includes"], [{"bundle": "fast-decisions:bundle.md"}])
+
+    def test_active_routing_config_validates_against_policy(self):
+        """The orchestrator config must be a valid Policy -- this catches a
+        typo'd or unsupported key at test time instead of at mount time."""
+        from amplifier_fast_decisions.contracts import Policy
+
+        data = _load_frontmatter(ROOT / "bundles" / "active-routing.yaml")
+        config = data["session"]["orchestrator"]["config"]
+        # Policy.from_config only accepts fields it knows about (plus
+        # upstream/allowed_tools handling done by the orchestrator itself);
+        # drop the keys that belong to the orchestrator wrapper, not Policy.
+        policy_config = {k: v for k, v in config.items() if k != "upstream"}
+        policy = Policy.from_config(policy_config)
+        self.assertEqual(policy.mode, "active")
+        self.assertEqual(policy.effort_routing["orient"], "medium")
+        self.assertEqual(policy.effort_routing["implement"], "high")
+        self.assertEqual(policy.model_routing["start_model"], "claude-sonnet-5")
 
 
 def _amplifier_foundation_importable() -> bool:
