@@ -1,0 +1,10 @@
+name: amplifier-fd-candidate
+description: >
+  Variant "fd-candidate": amplifier-foundation @ main plus the fast-decisions
+  orchestrator in ACTIVE mode, configured from `evals/swebench/candidate.config.json`
+  -- the S1/S2 CONFIRMED result (STUDY-DESIGN.md section 8's decision rule),
+  filled in after S1/S2 conclude. Until that file's `status` is `confirmed`,
+  this agent's install.yaml is a TEMPLATE (placeholders `{{FD_SHA}}`,
+  `{{FD_BACKEND}}`, etc.) and is not runnable: render it first with
+  `python3 evals/swebench/swebench_stage.py render-candidate` (see README.md).
+  Pins claude-fable-5-1, identical to amplifier-plain and amplifier-fd-incumbent.

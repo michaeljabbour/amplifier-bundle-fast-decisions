@@ -610,3 +610,94 @@ and `max_benchmark_worker_launches` to `2000` to cover the 8 new cells (7 new
 overhead) across S1 and S2, dev and holdout, at the existing 3/5-rep
 schedule (section 13 Decision 5) -- cost is not the constraint here, study
 quality is.
+
+
+---
+
+## 15. S3 -- SWE-bench Verified slice
+
+**What.** A third task suite, alongside S1 and S2 (section 3), built on the
+Amplifier evaluation bundle's own DTU harness (`amplifier-evaluation` /
+`amplifier_evaluation.harness`) rather than this repo's in-process battery
+runner -- SWE-bench Verified needs a real repo checkout, a real Docker-based
+grader (the official `swebench` harness), and a real Amplifier CLI install
+inside a Digital Twin Universe, none of which S1/S2's synthetic/polyglot
+task shape requires. Lives entirely under `evals/swebench/` (see that
+directory's README.md for the full preflight/run/sanity-check protocol; this
+section records the study-design decisions, not the operational detail).
+
+**Slice.** 30 pinned `princeton-nlp/SWE-bench_Verified` (test split)
+instances, sampled with `--seed 42` (reproducible; `sample_swebench.py`
+re-samples deterministically if a pinned id ever fails to resolve against
+the live dataset -- see that script's `select_batch()`). No dev/holdout
+split for S3 at this stage: S1/S2 already carry the dev-vs-holdout
+discipline (section 3 "Split discipline") for choosing and confirming a
+configuration; S3's role is a single confirmatory slice on a held-out
+benchmark family, not a second place configurations get chosen.
+
+**Three variants, not S1/S2's two-arm (fd vs plain) shape:**
+
+| variant | composition | role |
+|---|---|---|
+| `amplifier-plain` | amplifier-foundation @ main, no fast-decisions bundle | baseline |
+| `amplifier-fd-incumbent` | foundation + fast-decisions ACTIVE, configured as `evals/cells.yaml`'s `judge-local+effort-incumbent` (local judge + `explore: low` effort routing only) | today's shipped default -- reference series, not a candidate under evaluation (same framing `cells.yaml` already gives that cell for S1/S2) |
+| `amplifier-fd-candidate` | foundation + fast-decisions ACTIVE, configured from `evals/swebench/candidate.config.json` -- the S1/S2 **confirmed** champion cell (section 8's decision rule) | the configuration actually under evaluation for S3 |
+
+`amplifier-fd-candidate`'s configuration is never hand-picked while building
+the S3 harness: `candidate.config.json` ships as a placeholder
+(`status: "unconfirmed"`, all of `backend`/`model`/`effort_routing`/
+`allow_external_state` null) and `swebench_stage.py::render_candidate_install_yaml`
+refuses to render its agent definition until that file is filled in from a
+`confirmed` S1/S2 result and `status` is flipped to `"confirmed"`. This
+keeps S3 a confirmatory run of a decision already made on S1/S2, not a venue
+for choosing one.
+
+**Grading.** The official SWE-bench Docker harness (`swebench.harness.run_evaluation`),
+via `evals/swebench/grade.py` (copied from the evaluation bundle's example 04
+helper, attribution preserved, default `--dataset` switched to `verified`).
+`resolved` is binary per instance -- every `FAIL_TO_PASS` test passes and
+every `PASS_TO_PASS` test still passes, or it does not -- matching this
+document's own `outcome_passed` philosophy (section 6: "one boolean,
+all-or-nothing") rather than partial credit.
+
+**Result rows.** `evals/swebench/summarize.py` converts one harness run's
+`summary.json` + trial directories into rows using this repo's own battery
+vocabulary (`task`, `harness`, `outcome_passed`, `exec_time_ms`,
+`exec_time_source`, `cost_usd`, `cost_source`) so an S3 row is recognizable
+next to an S1/S2 row. `scripts/battery_report.py` is out of scope for this
+change (it reads a campaign/manifest.json layout this harness does not
+produce) -- `summarize.py` produces a compatible row shape for a future
+bridge, not a drop-in feed into that report today. `exec_time_ms` for S3
+currently equals the trial's whole-lifecycle `elapsed_s` (launch through
+cleanup): the harness's `summary.json` does not separately timestamp
+`running_agent` alone today, only `state.json`'s per-stage `history` does --
+see `summarize.py`'s module docstring for the exact caveat and where a
+future narrower figure would come from. `cost_usd` is `null` with
+`cost_source: "unknown"` unless a `"cost_usd"` figure is recoverable from a
+trial's `ai_user.json` artifact -- most AI User backends do not surface one
+today, matching this document's own "unknowns are counted, never zeroed"
+principle (section 6) rather than estimating from tokens the way S1's codex
+cost figure does (that estimate is codex-specific pricing; nothing
+equivalent exists for an Amplifire-CLI-driven turn here).
+
+**Why serial, not parallel.** SWE-bench tasks take 10-40 minutes each
+(agent turn + the official harness's per-instance Docker test run,
+including a per-instance image pull). S3 runs are dispatched later, one
+batch at a time, from a queue -- never launched directly by whatever agent
+built this stage, and never run concurrently with another S3 batch on the
+same host (shared Docker daemon). `evals/swebench/run.sh` defaults
+`MAX_PARALLEL=1` for this reason; raising it is an explicit operator
+decision made at dispatch time, informed by the host's actual Docker
+capacity, not a default this stage sets for them.
+
+**Decision rule for S3.** S3 does not itself decide whether
+`amplifier-fd-candidate`'s configuration "wins" -- that decision is S1/S2's
+(section 8), already made before `candidate.config.json` is filled in. S3
+answers a narrower question: does the S1/S2-confirmed configuration hold up
+on a held-out, real-world, Docker-graded benchmark family neither S1 nor S2
+can exercise (a live repository, a live test suite, no independent oracle
+written for this study)? A confirmed S1/S2 win that regresses on S3 --
+strictly fewer `swebench-resolved` passes than `amplifier-fd-incumbent` on
+the same 30 instances, or fewer than `amplifier-plain` -- is reported as a
+regression on this specific slice, not silently absorbed into the S1/S2
+confirmed claim.

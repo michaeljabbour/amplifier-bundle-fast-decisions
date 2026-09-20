@@ -1,0 +1,101 @@
+requires:
+  env:
+    - ANTHROPIC_API_KEY
+
+# Variant "fd-incumbent": foundation + fast-decisions ACTIVE (the orchestrator
+# swap), configured to match evals/cells.yaml's `judge-local+effort-incumbent`
+# cell: backend=ollama, model=qwen3:0.6b, effort_routing={explore: low}.
+#
+# DEVIATION FROM THE LITERAL "#subdirectory=behaviors/<file>" INSTRUCTION,
+# flagged here rather than silently applied (see the ISSUE_HANDLING gate
+# discipline this repo follows): `behaviors/fast-decisions.yaml` composes
+# ONLY the `hooks-fast-decisions` hook + `tool-fast-workspace` tool. That
+# hook can never own an "active" policy -- `observer.py::mount` explicitly
+# downgrades `mode: active` to `mode: shadow` and emits a
+# `hook_cannot_own_active` fallback event whenever no orchestrator is
+# mounted (src/amplifier_fast_decisions/observer.py:232-249). Installing
+# only `behaviors/fast-decisions.yaml` would silently produce a no-op for
+# this variant (shadow-only measurement, byte-identical behavior to
+# amplifier-plain), defeating the purpose of an "active" S3 arm. The
+# orchestrator swap that actually substitutes fast-path actions lives in
+# `bundles/active.yaml` (`session.orchestrator: {module: loop-fast-decisions,
+# ...}`). This install.yaml therefore composes the equivalent of
+# `bundles/active.yaml` explicitly (module sources pinned to the same
+# {{FD_SHA}} that would apply to `behaviors/<file>`), with backend/model/
+# effort_routing overridden to the incumbent cell's values instead of
+# `bundles/active.yaml`'s own defaults (backend=jev, no effort routing).
+# {{FD_SHA}} must be substituted (a full commit sha of
+# michaeljabbour/amplifier-bundle-fast-decisions) before this file is used;
+# see README.md "Preflight".
+setup_cmds:
+  - export PATH="/root/.local/bin:$PATH"; uv tool install git+https://github.com/microsoft/amplifier
+  - |
+    mkdir -p /root/.amplifier
+    cat > /root/.amplifier/settings.yaml <<EOF
+    config:
+      providers:
+        - module: provider-anthropic
+          source: git+https://github.com/microsoft/amplifier-module-provider-anthropic@main
+          config:
+            api_key: ${ANTHROPIC_API_KEY}
+            default_model: claude-fable-5-1
+            enable_1m_context: 'true'
+            enable_prompt_caching: 'true'
+            priority: 1
+    EOF
+  - export PATH="/root/.local/bin:$PATH"; amplifier bundle add git+https://github.com/microsoft/amplifier-foundation@main --app
+  - |
+    cat > /root/fd-incumbent-bundle.yaml <<EOF
+    bundle:
+      name: fast-decisions-fd-incumbent
+      version: 0.1.0
+      description: >-
+        S3 fd-incumbent bundle: fast-decisions orchestrator swap (active),
+        configured as evals/cells.yaml's judge-local+effort-incumbent cell.
+
+    session:
+      orchestrator:
+        module: loop-fast-decisions
+        source: git+https://github.com/michaeljabbour/amplifier-bundle-fast-decisions@{{FD_SHA}}#subdirectory=modules/loop-fast-decisions
+        config:
+          mode: active
+          backend: ollama
+          model: qwen3:0.6b
+          effort_routing:
+            explore: low
+          allow_external_state: false
+          timeout_ms: 750
+          min_probability: 0.90
+          min_margin: 0.20
+          max_fast_streak: 3
+          max_fast_per_turn: 12
+          max_candidates: 12
+          max_state_chars: 12000
+          allowed_tools: [fast_workspace]
+          upstream:
+            max_iterations: 100
+            extended_thinking: true
+
+    hooks:
+      - module: hooks-fast-decisions
+        source: git+https://github.com/michaeljabbour/amplifier-bundle-fast-decisions@{{FD_SHA}}#subdirectory=modules/hooks-fast-decisions
+        config:
+          mode: shadow
+          backend: ollama
+          allow_external_state: false
+          observatory:
+            enabled: false
+
+    tools:
+      - module: tool-fast-workspace
+        source: git+https://github.com/michaeljabbour/amplifier-bundle-fast-decisions@{{FD_SHA}}#subdirectory=modules/tool-fast-workspace
+        config:
+          root: .
+          max_bytes: 32768
+    EOF
+  - export PATH="/root/.local/bin:$PATH"; curl -fsSL https://ollama.com/install.sh | sh
+  - (ollama serve > /tmp/ollama.log 2>&1 &) ; sleep 3; ollama pull qwen3:0.6b
+  - 'curl --fail --silent --show-error http://127.0.0.1:11434/api/generate -H "Content-Type: application/json" -d "{\"model\":\"qwen3:0.6b\",\"stream\":false,\"keep_alive\":\"30m\",\"options\":{\"num_ctx\":4096}}"'
+  - export PATH="/root/.local/bin:$PATH"; amplifier bundle add /root/fd-incumbent-bundle.yaml --app
+  - export PATH="/root/.local/bin:$PATH"; amplifier --version
+  - export PATH="/root/.local/bin:$PATH"; amplifier bundle list | tee /tmp/bundle-list.txt
