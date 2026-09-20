@@ -690,6 +690,16 @@ def worker(root,name):
     return 0 if result['outcome_passed'] else 1
 
 
+def forge_self_heal(manifest):
+    """Run `forge.py doctor` (fixes spawn-helper exec bits, restarts the daemon). Returns True when it reports healthy."""
+    forge_py = Path(manifest.get('forge_py', str(FORGE))).expanduser()
+    try:
+        proc = subprocess.run([sys.executable, str(forge_py), 'doctor'], capture_output=True, text=True, timeout=120)
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+    return 'healthy' in (proc.stdout + proc.stderr)
+
+
 def launch_run(root, name, forge_module=None):
     """Hand one run's worker command to Forge; return its observation dict.
 
@@ -719,6 +729,10 @@ def launch_run(root, name, forge_module=None):
                 # Forge refuses new terminals once exited ones pile up. Reap only OUR exited worker
                 # terminals (never live or unowned sessions) and retry once; otherwise fail loud.
                 if 'Maximum sessions' in text and attempt == 1 and reap_exited_worker_terminals(forge_module, root):
+                    continue
+                # A skills-cache refresh resets the exec bit on Forge's node-pty spawn-helper binaries
+                # ("posix_spawnp failed"); `forge doctor` repairs it. Self-heal once, then fail loud.
+                if 'posix_spawnp' in text and attempt == 1 and forge_self_heal(manifest):
                     continue
                 raise RuntimeError('forge launch failed: '+text) from None
             if result.get('timeout') is not True:

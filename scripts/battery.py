@@ -917,6 +917,7 @@ def _dispatch(item, name, experiment_dir, manifest, proposal, launcher=None, wai
 
 
 def cmd_run(args, launcher=None, waiter=None, closer=None, forge_module=None):
+    forge_e2e.forge_self_heal({'forge_py': str(forge_e2e.FORGE)})  # cheap; repairs spawn-helper exec bits before any launch
     root = Path(args.root).expanduser().resolve()
     experiment_dir = root/'experiments'/args.experiment
     runs_root = experiment_dir/'runs'
