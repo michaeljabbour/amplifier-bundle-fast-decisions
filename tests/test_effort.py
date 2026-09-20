@@ -465,30 +465,81 @@ class PerPhaseRoutingTests(unittest.TestCase):
             validate_effort_routing({"verify": "low"})
 
 
+class _OnlyUnderPrefixFinder:
+    """Meta path finder that forces ``amplifier_module_loop_streaming`` to be
+    resolvable ONLY from directories under a given prefix (our temp cache
+    dirs), regardless of whether a real distribution is installed elsewhere
+    on sys.path.
+
+    This makes ``_import_upstream_loop``'s fallback-to-cache branch
+    exercisable deterministically in every environment: locally (upstream not
+    installed, where the plain import already fails on its own) and in the
+    `upstream` / `upstream-main` CI jobs (where amplifier_module_loop_streaming
+    IS pip installed from git @main, so the plain import would otherwise
+    succeed immediately and never reach the cache-search fallback this test
+    means to prove).
+    """
+
+    TARGET = "amplifier_module_loop_streaming"
+
+    def __init__(self, allowed_prefix: str):
+        self.allowed_prefix = allowed_prefix
+
+    def find_spec(self, fullname, path=None, target=None):
+        if fullname != self.TARGET:
+            return None  # defer to normal resolution for anything else
+        import importlib.machinery
+        import sys
+
+        candidate_paths = [p for p in sys.path if p.startswith(self.allowed_prefix)]
+        spec = importlib.machinery.PathFinder.find_spec(fullname, candidate_paths)
+        if spec is None:
+            # Raising here (rather than returning None) prevents the import
+            # machinery from falling through to an installed distribution.
+            raise ImportError(f"{fullname} blocked outside {self.allowed_prefix} (test-forced)")
+        return spec
+
+
 class UpstreamLoopImportTests(unittest.TestCase):
     def test_falls_back_to_module_cache_checkout(self):
-        import sys, tempfile, textwrap
+        import sys
+        import tempfile
+        import textwrap
         from pathlib import Path
+
         from amplifier_fast_decisions import orchestrator
+
         saved = sys.modules.pop("amplifier_module_loop_streaming", None)
-        try:
-            with tempfile.TemporaryDirectory() as tmp:
+        with tempfile.TemporaryDirectory() as tmp:
+            finder = _OnlyUnderPrefixFinder(tmp)
+            sys.meta_path.insert(0, finder)
+            try:
                 cache = Path(tmp)
                 mod = cache / "amplifier-module-loop-streaming-deadbeef" / "amplifier_module_loop_streaming"
                 mod.mkdir(parents=True)
-                (mod / "__init__.py").write_text(textwrap.dedent("""
+                (mod / "__init__.py").write_text(
+                    textwrap.dedent(
+                        """
                     class StreamingOrchestrator:
                         def __init__(self, config): self.config = config
-                """))
+                """
+                    )
+                )
                 cls = orchestrator._import_upstream_loop(cache_root=cache)
                 self.assertEqual(cls.__name__, "StreamingOrchestrator")
+                self.assertTrue(
+                    getattr(cls, "__module__", "").startswith("amplifier_module_loop_streaming"),
+                    "expected the cache checkout's class, not an installed distribution",
+                )
                 sys.modules.pop("amplifier_module_loop_streaming", None)
                 for entry in list(sys.path):
                     if entry.startswith(tmp):
                         sys.path.remove(entry)
-            with tempfile.TemporaryDirectory() as empty:
-                with self.assertRaises(RuntimeError):
-                    orchestrator._import_upstream_loop(cache_root=Path(empty))
-        finally:
-            if saved is not None:
-                sys.modules["amplifier_module_loop_streaming"] = saved
+                with tempfile.TemporaryDirectory() as empty:
+                    with self.assertRaises(RuntimeError):
+                        orchestrator._import_upstream_loop(cache_root=Path(empty))
+            finally:
+                sys.meta_path.remove(finder)
+                sys.modules.pop("amplifier_module_loop_streaming", None)
+                if saved is not None:
+                    sys.modules["amplifier_module_loop_streaming"] = saved
