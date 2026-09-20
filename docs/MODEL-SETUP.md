@@ -254,6 +254,66 @@ evaluation. No cloud resource was provisioned for this guide.
 | Scores exist but no fast execution | Shadow mode only proposes. In active mode, inspect abstention, thresholds, budgets, and native approval outcomes. |
 | The normal provider retries or fails | Diagnose the generative provider separately; the local scorer does not replace its authentication, network access, or final-answer generation. |
 
+## Hosted judge (team gateway)
+
+The above hosts (Ollama, MLX) keep the judge model on the same machine as
+Amplifier, so no snapshot state leaves it. A **hosted gateway** instead runs
+the judge on shared infrastructure the team controls (for example a
+RunPod-backed OpenAI-compatible endpoint), reached over HTTPS with an API
+key. This is a real network call, so it always requires explicit opt-in:
+`--backend gateway --allow-external-state` (`battery.py prepare
+--fd-backend gateway --allow-external-state`; the bundle's own
+`allow_external_state: true` config for direct runtime use). It is gated by
+the same `allow_external_state` consent check as the `jev` backend in
+`DecisionService.choose` -- omit the flag and the route silently falls back
+to the existing provider (`external_state_not_enabled`).
+
+**What leaves the machine:** the same bounded decision state every backend
+sees -- the compact task snapshot (`state`), the prepared candidate
+descriptions, and (if contributed) judgment questions -- never raw file
+contents beyond the prepared excerpt already built for the local backends,
+and never anything from outside the `fast_workspace` boundary. See
+[Privacy](PRIVACY.md) for the full data-path accounting.
+
+**Configuration**
+
+| Setting | Default | Notes |
+|---|---|---|
+| `gateway_url` (config) / `FAST_DECISIONS_GATEWAY_URL` (env) | `https://llm.amplifier.run/v1` | Must be `https://` unless the host is literal loopback (`127.0.0.1`/`::1`), which may use `http://` for local gateway development. No credentials, query string or fragment in the URL -- the key travels only in the `Authorization` header. |
+| `model` (config) | none -- **required** | Unlike the local backends, there is no default judge model for a hosted gateway; a missing `model` is a startup error, not a silent fallback. |
+| `gateway_key_env` (config) | `LITELLM_INFERENCE_KEY` | Names the environment variable holding the API key. The key value itself is never a config field, never logged, and never appears in receipts, profiles or the doctor check -- only the outbound `Authorization: Bearer <key>` header carries it, for that one request. |
+
+**Doctor:** `afast doctor` reports a `gateway_server` check (`GET
+{base}/models` using the configured key) alongside its other checks, with
+state `reachable`, `auth_failed`, or `unreachable` -- never the key itself.
+Absence is not an error unless you intend to use `--backend gateway`.
+
+**Comparing against the local judge:** run the same suite through both
+backends and compare:
+
+```bash
+afast bench suite --live --backend ollama --model qwen3:0.6b
+afast bench suite --live --backend gateway --model <hosted-model-id> \
+  --gateway-url https://llm.amplifier.run/v1
+```
+
+(`--gateway-url` is optional; it overrides `FAST_DECISIONS_GATEWAY_URL` and
+the built-in default.) This isolates the question a hosted judge actually
+answers: does it reach the same decisions as the local judge, and at what
+added network latency cost? It does not by itself establish accuracy,
+reliability, or a cost advantage over Ollama/MLX -- benchmark before
+switching a workload over, exactly as with any other backend change.
+
+A hosted server cannot be assumed to honor a server-side "disable thinking"
+flag the way a self-hosted mlx-lm process can (`--chat-template-args
+'{"enable_thinking": false}'`), so the gateway backend's system prompt
+explicitly forbids a `<think>` preamble. If the model emits one anyway, the
+adapter does not need to detect it specially: a `<think>`-style token simply
+fails to match any recognized action label, and its probability mass is
+absorbed into the abstention residual like any other unrecognized token
+(see `score_tokens` in `local_backend.py`) -- the decision routes to the
+existing provider rather than acting on a leaked thinking token.
+
 ## Use it as a Smart Tool
 
 The [portable Smart Tool](SMART-TOOL.md) packages the same local model capability

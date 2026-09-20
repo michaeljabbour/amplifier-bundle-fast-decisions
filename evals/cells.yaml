@@ -224,6 +224,15 @@ cells:
       flag_if_zero_escalations: confounded_with_plain_sonnet
       require_judged: true
 
+  judge-gateway+effort-incumbent:
+    harnesses: [amplifier-fd]
+    fd: { backend: gateway, allow_external_state: true, model: "TBD-by-gateway-owner", effort_profile: explore_only }
+    role: "hosted judge (team gateway), incumbent effort profile -- reference series, not yet a candidate (model TBD until the gateway owner hosts one)"
+    purpose: "hosted judge: same decisions as the local judge without a local model; measures network latency cost"
+    anchor_cell: plain
+    secondary_anchor: judge-local+effort-incumbent
+    mechanism_gate: { scored_backend: gateway, min_scored: 1, require_effort_phases: ["explore:low"] }
+
   externals:
     harnesses: [claude, codex, opencode, amplifier-plain, amplifier-fd]
     fd: { backend: ollama, model: qwen3:0.6b, effort_profile: all_phase }   # = champion

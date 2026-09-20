@@ -68,6 +68,42 @@ def _mlx_server_check() -> dict:
     }
 
 
+def _gateway_server_check() -> dict:
+    """Read-only GET {base}/models probe against the configured hosted
+    gateway backend (a RunPod-hosted OpenAI-compatible endpoint, or any
+    other). Never required; state is one of ``reachable``, ``auth_failed``
+    or ``unreachable`` -- the key value itself is never reported, only
+    whether it authenticated.
+    """
+    from .local_backend import GATEWAY_DEFAULT_KEY_ENV, GATEWAY_DEFAULT_URL
+
+    url = os.getenv("FAST_DECISIONS_GATEWAY_URL", GATEWAY_DEFAULT_URL).rstrip("/")
+    key_env = os.getenv("FAST_DECISIONS_GATEWAY_KEY_ENV", GATEWAY_DEFAULT_KEY_ENV)
+    api_key = os.getenv(key_env)
+    state = "unreachable"
+    try:
+        req = urllib.request.Request(f"{url}/models", method="GET")
+        if api_key:
+            req.add_header("Authorization", f"Bearer {api_key}")
+        with urllib.request.urlopen(req, timeout=2) as response:
+            state = "reachable" if response.status == 200 else "unreachable"
+    except urllib.error.HTTPError as exc:
+        state = "auth_failed" if exc.code in (401, 403) else "unreachable"
+        exc.close()
+    except (urllib.error.URLError, TimeoutError, OSError):
+        state = "unreachable"
+    except Exception:  # noqa: BLE001 -- a probe must never raise
+        state = "unreachable"
+    return {
+        "check": "gateway_server",
+        "ok": state == "reachable",
+        "value": url,
+        "state": state,
+        "note": f"GET {{base}}/models using ${key_env}; not required unless using "
+                "--backend gateway. The key value is never reported.",
+    }
+
+
 def doctor(require_amplifier: bool = False) -> int:
     checks: list[dict] = []
     checks.append(
@@ -141,6 +177,7 @@ def doctor(require_amplifier: bool = False) -> int:
         }
     )
     checks.append(_mlx_server_check())
+    checks.append(_gateway_server_check())
     entries = {
         e.name for e in importlib.metadata.entry_points(group="amplifier.modules")
     }
@@ -277,6 +314,9 @@ def bench_suite(args) -> int:
     both_gates = bool(
         os.getenv("FAST_DECISIONS_LIVE") == "1" and os.getenv("TYPESAFE_API_KEY")
     )
+    gateway_key_env = os.getenv("FAST_DECISIONS_GATEWAY_KEY_ENV") or "LITELLM_INFERENCE_KEY"
+    gateway_api_key = os.getenv(gateway_key_env)
+    gateway_gates = bool(live_requested and gateway_api_key)
     backend_name = args.backend
     model_arg = getattr(args, "model", None)
     if live_requested and backend_name == "jev" and both_gates:
@@ -285,6 +325,15 @@ def bench_suite(args) -> int:
         backend = JevBackend(model=model_arg)
         backend_external = True
         model_name = model_arg or "jev-latest"
+    elif backend_name == "gateway" and gateway_gates:
+        from .local_backend import GatewayBackend
+
+        if not model_arg:
+            print("afast bench suite: --backend gateway requires --model", file=sys.stderr)
+            return 2
+        backend = GatewayBackend(model=model_arg, url=getattr(args, "gateway_url", None), api_key=gateway_api_key)
+        backend_external = True
+        model_name = model_arg
     elif backend_name == "ollama":
         from .local_backend import OllamaBackend
 
@@ -298,10 +347,17 @@ def bench_suite(args) -> int:
         backend = MlxBackend(model=model_name)
         backend_external = False
     else:
-        if live_requested and not both_gates:
+        if live_requested and backend_name == "jev" and not both_gates:
             print(
                 "afast bench suite: --live requires both FAST_DECISIONS_LIVE=1 and "
                 "TYPESAFE_API_KEY; running the offline deterministic backend instead.",
+                file=sys.stderr,
+            )
+        elif live_requested and backend_name == "gateway" and not gateway_gates:
+            print(
+                "afast bench suite: --backend gateway requires --live and "
+                f"{gateway_key_env} to be set; running the offline deterministic "
+                "backend instead.",
                 file=sys.stderr,
             )
         backend = DeterministicSuiteBackend()
@@ -554,10 +610,17 @@ def main(argv=None) -> int:
     suite.add_argument("suite_path", nargs="?", default=None, help="Suite JSONL file")
     suite.add_argument("--suite", default=str(DEFAULT_SUITE))
     suite.add_argument(
-        "--backend", choices=["deterministic", "jev", "ollama", "mlx"], default="deterministic"
+        "--backend", choices=["deterministic", "jev", "ollama", "mlx", "gateway"],
+        default="deterministic"
     )
     suite.add_argument(
-        "--model", default=None, help="Model name, passed to the jev/ollama/mlx backend"
+        "--model", default=None,
+        help="Model name, passed to the jev/ollama/mlx/gateway backend"
+    )
+    suite.add_argument(
+        "--gateway-url", default=None,
+        help="Override the hosted gateway base URL (else FAST_DECISIONS_GATEWAY_URL "
+             "or the built-in default)"
     )
     suite.add_argument("--live", action="store_true")
     suite.add_argument("--permutations", type=int, default=4)

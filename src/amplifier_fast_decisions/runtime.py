@@ -118,10 +118,10 @@ def get_runtime(coordinator: Any, config: dict[str, Any], *, owner: bool = False
     recorder = JsonlRecorder(events_dir, session_id)
     emitter = Emitter(session_id, parent_session_id=parent, hooks=coordinator.hooks, recorder=recorder)
     backend_name = config.get("backend", "jev")
-    if backend_name not in {"jev", "unavailable", "deterministic", "ollama", "mlx"}:
+    if backend_name not in {"jev", "unavailable", "deterministic", "ollama", "mlx", "gateway"}:
         recorder.close()
         raise ValueError(
-            "Backend must be jev, deterministic, ollama, mlx, or unavailable"
+            "Backend must be jev, deterministic, ollama, mlx, gateway, or unavailable"
         )
     if backend_name == "jev":
         backend = JevBackend(model=config.get("model"), timeout_ms=policy.timeout_ms)
@@ -133,6 +133,24 @@ def get_runtime(coordinator: Any, config: dict[str, Any], *, owner: bool = False
             url=config.get("mlx_url") or mlx_base_url(),
             timeout_ms=policy.timeout_ms,
         )
+    elif backend_name == "gateway":
+        from .local_backend import GATEWAY_DEFAULT_KEY_ENV, GatewayBackend
+
+        model = config.get("model")
+        if not model:
+            recorder.close()
+            raise ValueError("Gateway backend requires a model in config")
+        key_env = config.get("gateway_key_env") or GATEWAY_DEFAULT_KEY_ENV
+        try:
+            backend = GatewayBackend(
+                model=model,
+                url=config.get("gateway_url"),
+                timeout_ms=policy.timeout_ms,
+                api_key=os.getenv(key_env),
+            )
+        except Exception:
+            recorder.close()
+            raise
     elif backend_name == "ollama":
         from .local_backend import OllamaBackend
 
