@@ -47,6 +47,9 @@ EVENT_NAMES = tuple(
         "model_routed",
         "escalation_judged",
         "phase_judged",
+        # HC08 ("one call per decision point", opt-in): summary receipt for
+        # a batched ask_many() call. See orchestrator.py and docs/EVENTS.md.
+        "decided_batch",
     )
 )
 
@@ -178,6 +181,33 @@ def validate_model_routing(model_routing: Any) -> None:
         raise ValueError(
             "model_routing.escalate_min_probability must be a number between 0 and 1"
         )
+
+
+# HC09 ("stake-scaled confidence gates", opt-in): the three judged decision
+# points a confidence gate can be configured for. "read_shortcut" is the
+# fast-path action choice (DecisionService.choose); "phase" and
+# "escalation" are HC05's two judge mechanisms. See effective_gate() below
+# and docs/ARCHITECTURE.md.
+CONFIDENCE_GATE_KINDS = frozenset({"read_shortcut", "phase", "escalation"})
+
+
+def validate_confidence_gates(confidence_gates: Any) -> None:
+    """Fail loud on a malformed ``confidence_gates`` policy at mount time.
+
+    ``None`` is the default-off shape: every kind falls back to its
+    pre-HC09 legacy source (see ``effective_gate``). Never silently
+    ignores a bad value.
+    """
+    if confidence_gates is None:
+        return
+    if not isinstance(confidence_gates, dict):
+        raise ValueError("confidence_gates must be a dict")
+    unknown = set(confidence_gates) - CONFIDENCE_GATE_KINDS
+    if unknown:
+        raise ValueError(f"confidence_gates has unknown keys: {sorted(unknown)}")
+    for key, value in confidence_gates.items():
+        if isinstance(value, bool) or not isinstance(value, (int, float)) or not 0 < value <= 1:
+            raise ValueError(f"confidence_gates.{key} must be a number in (0, 1]")
 
 
 def canonical(value: Any) -> str:
@@ -450,6 +480,21 @@ class Policy:
     # request.reasoning_effort for this feature and never emits
     # fast_decisions:model_routed. See orchestrator.py and docs/ARCHITECTURE.md.
     model_routing: dict[str, Any] | None = None
+    # HC08 ("one call per decision point", opt-in): when True, the
+    # orchestrator combines the HC05 phase-judge and escalation-judge asks
+    # into ONE ask_many() backend call whenever both are due for the same
+    # request, instead of two separate ask() calls. Default False -- the
+    # sequential path (unchanged) is used identically to before HC08.
+    # See orchestrator.py and docs/ARCHITECTURE.md.
+    decision_batching: bool = False
+    # HC09 ("stake-scaled confidence gates", opt-in): per-judged-decision
+    # probability floor below which the judge's answer is NOT acted on
+    # ("do not act": read_shortcut lets the model run, phase keeps the
+    # deterministic classification, escalation stays on rules). None
+    # (default) means every kind falls back to its pre-HC09 legacy source
+    # -- see effective_gate(). A configured kind here always overrides its
+    # legacy alias (min_probability / escalate_min_probability).
+    confidence_gates: dict[str, float] | None = None
     version: str = "policy-v1"
 
     def __post_init__(self) -> None:
@@ -473,6 +518,9 @@ class Policy:
             raise ValueError("shadow_snapshot_budget_ms must be between 1 and 5000")
         validate_effort_routing(self.effort_routing)
         validate_model_routing(self.model_routing)
+        if not isinstance(self.decision_batching, bool):
+            raise ValueError("decision_batching must be a bool")
+        validate_confidence_gates(self.confidence_gates)
 
     @classmethod
     def from_config(cls, config: dict[str, Any]) -> Policy:
@@ -489,11 +537,43 @@ class Policy:
         return cls(**values)
 
 
+def effective_gate(policy: Policy, kind: str) -> float:
+    """Stake-scaled confidence gate for one judged decision point (HC09).
+
+    ``kind`` is one of ``"read_shortcut"``, ``"phase"``, ``"escalation"``.
+    ``Policy.confidence_gates`` (default ``None``, fully opt-in) overrides
+    the legacy per-mechanism default for exactly the kinds it names; any
+    kind it omits -- or the policy omitting ``confidence_gates`` entirely
+    -- falls back to the pre-HC09 behavior byte-for-byte: ``min_probability``
+    for ``read_shortcut`` (DecisionService.choose's existing threshold),
+    ``model_routing.escalate_min_probability`` (default 0.7) for
+    ``escalation``, and ``0.0`` for ``phase`` -- phase classification never
+    had a probability floor before HC09, so any non-abstain judge answer
+    still applies by default.
+    """
+    if kind not in CONFIDENCE_GATE_KINDS:
+        raise ValueError(f"Unknown confidence gate kind: {kind!r}")
+    gates = policy.confidence_gates or {}
+    if kind in gates:
+        return gates[kind]
+    if kind == "read_shortcut":
+        return policy.min_probability
+    if kind == "escalation":
+        return (policy.model_routing or {}).get("escalate_min_probability", 0.7)
+    return 0.0  # kind == "phase"
+
+
 class DecisionBackend(Protocol):
     name: str
     external: bool
 
     async def ask(self, request: DecisionRequest) -> DecisionResult: ...
+    # HC08 ("one call per decision point", opt-in): ask every question in
+    # one DecisionRequest in a single logical call. A backend need not
+    # implement this itself -- backends.ask_many() provides a default
+    # (concurrent single-question asks, merged) for any backend lacking
+    # one of its own. See backends.py.
+    async def ask_many(self, request: DecisionRequest) -> DecisionResult: ...
     async def close(self) -> None: ...
 
 
@@ -546,6 +626,11 @@ class TurnState:
     last_tool_result_text: str = ""
     escalation_judgements: int = 0
     escalations_by_judge: int = 0
+    # HC08 ("one call per decision point", opt-in): counts every time a
+    # batched ask_many() call failed (exception/timeout, never a policy
+    # block or abstain) and this request fell back to the sequential
+    # per-question path instead.
+    batch_fallbacks: int = 0
 
 
 def candidate_read_identity(

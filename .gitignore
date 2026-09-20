@@ -26,3 +26,6 @@ playwright-report/
 Claude outputs/
 skills-lock.json
 results/
+evals/swebench/tasks/
+evals/swebench/results/
+uv.lock

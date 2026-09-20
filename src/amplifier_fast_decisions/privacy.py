@@ -166,6 +166,19 @@ SAFE_FIELDS = {
     "decided",
     "slow_requests_seen",
     "agreed_with_rules",
+    # HC08 ("one call per decision point", opt-in): the batched question
+    # names and count for a `decided_batch` receipt -- never their
+    # instructions/criteria text or the state sent to the backend.
+    # `backend`, `duration_ms`, `mode` (already listed above) are reused
+    # verbatim.
+    "question_ids",
+    "n_questions",
+    # HC09 ("stake-scaled confidence gates", opt-in): the numeric
+    # threshold applied to a judged decision and whether the judge's
+    # answer cleared it -- never a raw probability distribution beyond
+    # what HC05 already exposes via `probability`.
+    "gate",
+    "passed_gate",
 }
 
 

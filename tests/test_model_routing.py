@@ -130,6 +130,13 @@ class ModelRoutingValidationTests(unittest.TestCase):
             }
         )
 
+    def test_decision_batching_default_false_does_not_affect_model_routing(self):
+        """HC08's new key defaults to False and has no bearing on
+        model_routing's own validation or defaults."""
+        policy = Policy(model_routing={"start_model": "m"})
+        self.assertFalse(policy.decision_batching)
+        self.assertIsNone(policy.confidence_gates)
+
 
 class ModelRoutingDisabledTests(unittest.IsolatedAsyncioTestCase):
     async def test_disabled_leaves_request_untouched_and_emits_no_event(self):

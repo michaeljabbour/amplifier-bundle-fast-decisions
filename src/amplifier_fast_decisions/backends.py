@@ -37,6 +37,54 @@ class BackendUnavailable(RuntimeError):
     pass
 
 
+async def ask_many(backend: Any, request: DecisionRequest) -> DecisionResult:
+    """HC08 ("one call per decision point"): ask every question in
+    ``request.questions`` and merge their answers into one DecisionResult.
+
+    Uses the backend's own ``ask_many`` when it defines one (JevBackend and
+    ScriptedBackend both override it below, since their own ``ask()``
+    already answers every contributed question in ONE call); otherwise
+    runs one single-question ``ask()`` per question concurrently and
+    merges the answers. This is the default mixin behavior, so any backend
+    with no ``ask_many`` of its own (ollama/mlx/hosted/laya) works
+    unchanged -- they get batching semantics at this call site without a
+    single line changed in their own module.
+    """
+    custom = getattr(backend, "ask_many", None)
+    if callable(custom):
+        return await custom(request)
+    return await _gathered_ask_many(backend, request)
+
+
+async def _gathered_ask_many(backend: Any, request: DecisionRequest) -> DecisionResult:
+    if not request.questions:
+        return await backend.ask(request)
+
+    async def _ask_one(question):
+        single = DecisionRequest(
+            state=request.state,
+            candidates=request.candidates,
+            questions=(question,),
+            candidate_order_hash=request.candidate_order_hash,
+        )
+        return await backend.ask(single)
+
+    results = await asyncio.gather(*(_ask_one(q) for q in request.questions))
+    answers: dict[str, Answer] = {}
+    for question, result in zip(request.questions, results):
+        if question.name in result.answers:
+            answers[question.name] = result.answers[question.name]
+    first = results[0]
+    return DecisionResult(
+        action=first.action,
+        answers=answers,
+        model=first.model,
+        input_tokens=first.input_tokens,
+        output_tokens=first.output_tokens,
+        synthetic=first.synthetic,
+    )
+
+
 def _sdk_available() -> bool:
     """Whether the ``typesafe_sdk`` package is importable right now.
 
@@ -231,6 +279,12 @@ class JevBackend:
         self.last_transport = "urllib"
         return _result_from_payload(payload, model, request, option_set_hash)
 
+    async def ask_many(self, request: DecisionRequest) -> DecisionResult:
+        """HC08: ``ask()`` already submits every question in
+        ``request.questions`` in ONE ``system_one`` call -- no separate
+        combining needed."""
+        return await self.ask(request)
+
     async def close(self) -> None:
         if self._client is not None:
             await self._client.aclose()
@@ -280,6 +334,11 @@ class ScriptedBackend:
         self.delay_ms = delay_ms
         self.calls = 0
         self.requests: list[DecisionRequest] = []
+
+    async def ask_many(self, request: DecisionRequest) -> DecisionResult:
+        """HC08: ``ask()`` already answers every question in
+        ``request.questions`` in ONE call -- no separate combining needed."""
+        return await self.ask(request)
 
     async def ask(self, request: DecisionRequest) -> DecisionResult:
         self.requests.append(request)

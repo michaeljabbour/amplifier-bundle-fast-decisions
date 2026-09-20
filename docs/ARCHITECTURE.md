@@ -266,6 +266,86 @@ validates `model_routing.escalation_judge` (`"rules"` / `"judge"`),
 `effort_routing.phase_judge` (a bool) at construction, alongside the
 existing HC03/HC04 validation.
 
+## One call per decision point (HC08, opt-in)
+
+`Policy.decision_batching` (default `False`) lets `RoutedProvider.complete`
+combine HC05's two judge-driven asks -- the phase judge
+(`effort_routing.phase_judge`) and the escalation judge
+(`model_routing.escalation_judge == "judge"`) -- into ONE `ask_many()`
+backend call instead of two separate `ask()` calls, whenever BOTH are due
+for the same request. `_escalation_judge_due` mirrors the escalation
+elif-chain (deterministic triggers first, then the judge) without
+mutating turn state, so it is the single source of truth for "is the
+escalation judge due" consulted both by the batching pre-check and the
+unbatched sequential path -- the two paths cannot silently diverge in
+when they ask.
+
+**Stake:** whether a decision point is worth batching scales with how
+much state/latency it would otherwise cost to ask twice. Batching is a
+no-op (falls through to the identical pre-HC08 sequential path) whenever
+fewer than two judge mechanisms are configured, or only one is due on
+this particular request (e.g. the escalation judge is never due before
+the turn's first slow request).
+
+**The backend interface.** `DecisionBackend.ask_many(request)` asks every
+`Question` in one `DecisionRequest` in a single logical call.
+`backends.ask_many(backend, request)` is the call site every consumer
+uses: if the backend defines its own `ask_many` (Jev, and the in-repo
+`ScriptedBackend` test double -- both already answer every question in
+`request.questions` in ONE wire call via their own `ask()`), that is
+called directly. Otherwise a generic mixin runs one single-question
+`ask()` per question concurrently (`asyncio.gather`) and merges the
+answers into one `DecisionResult`. This means ollama/mlx/hosted/laya
+backends get HC08's batching capability at the call site with zero
+changes to their own modules -- they simply never define `ask_many`.
+
+**Fallback.** If the combined call raises (backend error, timeout) the
+request falls back to the exact pre-HC08 sequential path for that
+request -- both judges are asked separately, exactly as if batching were
+off -- and `TurnState.batch_fallbacks` is incremented. A policy-blocked
+call (`backend.external and not allow_external_state`) is NOT a fallback:
+it returns every question as an abstain, identically to what the
+sequential path's own `_ask_judge_choice` would already do for the same
+gate, so the two paths agree even when blocked.
+
+**Receipts.** `fast_decisions:decided_batch` is emitted once per batched
+call, carrying `backend`, `question_ids`, `n_questions`, `duration_ms`,
+and `mode`. `phase_judged`/`escalation_judged` are still emitted exactly
+as before (same shape, same thresholds) whether the answer came from a
+batched or sequential ask -- batching changes how many backend calls are
+made, never what is asked or how the answer is applied.
+
+## Stake-scaled confidence gates (HC09, opt-in)
+
+`Policy.confidence_gates` (default `None`) is a per-judged-decision
+probability floor for the three points a `DecisionBackend` judgment can
+gate: `read_shortcut` (the fast-path action choice in
+`DecisionService.choose`), `phase`, and `escalation` (HC05's two judge
+mechanisms). Below the gate, the judged decision is deliberately a
+"do-nothing" middle band: `read_shortcut` lets the model run instead of
+submitting the prepared action (the existing `selection_threshold` slow
+route), `phase` keeps the deterministic classification, and `escalation`
+stays on the deterministic rules.
+
+**Legacy aliases, byte-identical by default.** `contracts.effective_gate(policy,
+kind)` is the single resolver every call site uses. A kind explicitly
+present in `confidence_gates` always wins. A kind absent from it -- or
+the whole policy omitting `confidence_gates` -- falls back to its
+pre-HC09 source unchanged: `Policy.min_probability` for `read_shortcut`
+(the same threshold `DecisionService.choose` already enforced),
+`model_routing.escalate_min_probability` (default `0.7`) for
+`escalation`, and `0.0` for `phase` (phase classification had no
+probability floor before HC09, so any non-abstain answer still applies).
+This is why every pre-HC09 test in this repo passes unchanged: nothing
+about the defaults moved, only a name got attached to the concept and an
+override path got added.
+
+**Receipts.** `gate` and `passed_gate` are added to `scored` (the
+read-shortcut decision), `phase_judged`, and `escalation_judged`, so a
+report can see the exact threshold a judged decision was measured against
+and whether it cleared it -- not just infer it from a comparison against
+policy config after the fact.
+
 ## Deadlines, budgets and failures
 
 ## Deadlines, budgets and failures
