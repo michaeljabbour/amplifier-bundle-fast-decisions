@@ -9,10 +9,12 @@ from __future__ import annotations
 
 import json
 import shutil
+import socket
 import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 
@@ -249,6 +251,94 @@ class TestPythonEvaluate(FakeTreeTestCase):
             self.assertGreater(result["failed"], 0)
         finally:
             shutil.rmtree(ws, ignore_errors=True)
+
+
+class TestEvaluatorCopySafety(FakeTreeTestCase):
+    """Defect A: shutil.copytree(workspace, tmp_exercise) must never crash on
+    non-regular files under .git (e.g. a Watchman/fsmonitor unix socket), and
+    any copy failure must degrade to a failure_labels result, never an
+    unhandled/leaked exception string with paths in it.
+
+    Defect B: the temp copy must be named after the exercise slug (not a
+    generic "exercise" name), since CMake/Cargo/Go derive target/package
+    names from the containing directory name.
+    """
+
+    def test_git_socket_in_workspace_does_not_crash_evaluate(self):
+        tasks = pt.load(self.root, languages=["python"])
+        t = tasks["poly_python_add-numbers"]
+        ws = _materialize(t.files, {"add_numbers.py": _PY_EXAMPLE})
+        sock = None
+        try:
+            git_dir = ws / ".git"
+            git_dir.mkdir()
+            sock_path = git_dir / "fsmonitor--daemon.ipc"
+            sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            sock.bind(str(sock_path))
+            result = t.evaluate(ws)
+            self.assertEqual(result["failed"], 0, result)
+            self.assertEqual(result["checks"], 3)
+            self.assertNotIn("evaluator_copy_error", result["failure_labels"])
+        finally:
+            if sock is not None:
+                sock.close()
+            shutil.rmtree(ws, ignore_errors=True)
+
+    def test_copytree_oserror_becomes_evaluator_copy_error_label(self):
+        tasks = pt.load(self.root, languages=["python"])
+        t = tasks["poly_python_add-numbers"]
+        ws = _materialize(t.files, {"add_numbers.py": _PY_EXAMPLE})
+        try:
+            with mock.patch.object(pt.shutil, "copytree", side_effect=OSError("Operation not supported")):
+                result = t.evaluate(ws)
+            self.assertEqual(result["failure_labels"], ["evaluator_copy_error"])
+            self.assertEqual(result["failed"], 1)
+            self.assertEqual(result["checks"], 1)
+        finally:
+            shutil.rmtree(ws, ignore_errors=True)
+
+    def test_temp_copy_directory_named_after_exercise_slug(self):
+        captured = {}
+        real_runner = pt._python_run
+
+        def _spy(exercise_root, test_files):
+            captured["name"] = exercise_root.name
+            return real_runner(exercise_root, test_files)
+
+        with mock.patch.dict(pt._RUNNERS, {"python": _spy}):
+            tasks = pt.load(self.root, languages=["python"])
+            t = tasks["poly_python_add-numbers"]
+            ws = _materialize(t.files, {"add_numbers.py": _PY_EXAMPLE})
+            try:
+                result = t.evaluate(ws)
+            finally:
+                shutil.rmtree(ws, ignore_errors=True)
+        self.assertEqual(captured["name"], "add-numbers")
+        self.assertEqual(result["failed"], 0, result)
+
+    def test_copy_ignores_dot_git_and_build_output_dirs(self):
+        captured = {}
+        real_runner = pt._python_run
+
+        def _spy(exercise_root, test_files):
+            captured["copied"] = sorted(p.name for p in exercise_root.iterdir())
+            return real_runner(exercise_root, test_files)
+
+        with mock.patch.dict(pt._RUNNERS, {"python": _spy}):
+            tasks = pt.load(self.root, languages=["python"])
+            t = tasks["poly_python_add-numbers"]
+            ws = _materialize(t.files, {"add_numbers.py": _PY_EXAMPLE})
+            try:
+                (ws / ".git").mkdir()
+                (ws / ".git" / "HEAD").write_text("ref: refs/heads/main\n")
+                (ws / "__pycache__").mkdir()
+                (ws / "__pycache__" / "add_numbers.cpython-312.pyc").write_bytes(b"\x00")
+                result = t.evaluate(ws)
+            finally:
+                shutil.rmtree(ws, ignore_errors=True)
+        self.assertNotIn(".git", captured["copied"])
+        self.assertNotIn("__pycache__", captured["copied"])
+        self.assertEqual(result["failed"], 0, result)
 
 
 class TestPureHelpers(unittest.TestCase):

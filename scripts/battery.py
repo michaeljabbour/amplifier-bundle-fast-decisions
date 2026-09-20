@@ -224,6 +224,15 @@ def cmd_prepare(args):
             return _fail(4, f'unknown harness: {h}')
 
     task_source_kind = getattr(args, 'task_source', None) or 'battery'
+    # Claude Code refuses to run build/test commands under --permission-mode
+    # acceptEdits ("build command was not approved"), while codex/opencode/
+    # amplifier can always run them. acceptEdits stays the default for the
+    # 20-task battery (unchanged behavior); polyglot tasks need real build/test
+    # execution to be evaluated at all, so they default to bypassPermissions
+    # unless the caller explicitly overrides --claude-permission-mode.
+    claude_permission_mode = getattr(args, 'claude_permission_mode', None)
+    if claude_permission_mode is None:
+        claude_permission_mode = 'bypassPermissions' if task_source_kind == 'polyglot' else 'acceptEdits'
     polyglot_meta = None
     dev_names = holdout_names = None
     if task_source_kind == 'polyglot':
@@ -343,13 +352,14 @@ def cmd_prepare(args):
         holdout_tasks = set(battery_tasks.split('holdout'))
         dev_tasks_final = sorted(t for t in task_names if t in dev_tasks)
         holdout_tasks_final = sorted(t for t in task_names if t in holdout_tasks)
-    commands = {h: _command_template(h, models.get(h), args) for h in harnesses}
+    commands = {h: _command_template(h, models.get(h), args, claude_permission_mode) for h in harnesses}
 
     proposal = {
         'schema_version': BATTERY_SCHEMA, 'experiment_id': args.experiment, 'seed': args.seed,
         'harnesses': harnesses, 'models': models, 'commands': commands,
         'deadline_seconds': deadline_seconds, 'prompt_sha256': hashlib.sha256(prompt.encode()).hexdigest(),
         'claude_max_budget_usd': args.claude_max_budget_usd,
+        'claude_permission_mode': claude_permission_mode,
         'amplifier_model': amplifier_model, 'amplifier_effort': amplifier_effort,
         'task_source': polyglot_meta,
         'requested_split': args.tasks if task_source_kind == 'battery' else args.split,
@@ -376,10 +386,10 @@ def cmd_prepare(args):
     return manifest
 
 
-def _command_template(harness, model, args):
+def _command_template(harness, model, args, claude_permission_mode='acceptEdits'):
     """Command template recorded in proposal.json, prompt redacted to a placeholder."""
     if harness == 'claude':
-        return _claude_argv('<PROMPT>', model, args.claude_max_budget_usd or 3.0)
+        return _claude_argv('<PROMPT>', model, args.claude_max_budget_usd or 3.0, claude_permission_mode)
     if harness == 'codex':
         return _codex_argv('<WORKSPACE>', '<PROMPT>', model, '<RUN_DIR>/last-message.md')
     if harness == 'opencode':
@@ -391,9 +401,9 @@ def _command_template(harness, model, args):
 # per-harness argv builders (shared by templates above and dispatch below)
 # --------------------------------------------------------------------------
 
-def _claude_argv(prompt, model, max_budget_usd):
+def _claude_argv(prompt, model, max_budget_usd, permission_mode='acceptEdits'):
     argv = ['claude', '-p', prompt, '--output-format', 'json', '--safe-mode',
-            '--permission-mode', 'acceptEdits', '--max-budget-usd', str(max_budget_usd)]
+            '--permission-mode', permission_mode, '--max-budget-usd', str(max_budget_usd)]
     if model:
         argv += ['--model', model]
     return argv
@@ -572,9 +582,10 @@ def _run_public_tests(workspace):
     return passed
 
 
-def _run_external(harness, run_dir, workspace, prompt, deadline, model, forge_module, claude_max_budget_usd):
+def _run_external(harness, run_dir, workspace, prompt, deadline, model, forge_module, claude_max_budget_usd,
+                   claude_permission_mode='acceptEdits'):
     if harness == 'claude':
-        argv = _claude_argv(prompt, model, claude_max_budget_usd)
+        argv = _claude_argv(prompt, model, claude_max_budget_usd, claude_permission_mode)
     elif harness == 'codex':
         argv = _codex_argv(workspace, prompt, model, run_dir/'last-message.md')
     else:
@@ -862,7 +873,8 @@ def _dispatch(item, name, experiment_dir, manifest, proposal, launcher=None, wai
     forge_module = forge_module or _load_forge(manifest.get('forge_py', str(forge_e2e.FORGE)))
     model = (proposal.get('models') or {}).get(harness)
     outcome = _run_external(harness, run_dir, workspace, prompt, deadline, model, forge_module,
-                             proposal.get('claude_max_budget_usd') or 3.0)
+                             proposal.get('claude_max_budget_usd') or 3.0,
+                             proposal.get('claude_permission_mode') or 'acceptEdits')
     if outcome.get('infrastructure_failure'):
         return _with_exec_time({**base, 'model': model, **{k: v for k, v in outcome.items() if k != 'stdout'}},
                                 run_dir)
@@ -1695,6 +1707,10 @@ def main(argv=None):
     p.add_argument('--codex-model')
     p.add_argument('--opencode-model')
     p.add_argument('--claude-max-budget-usd', type=float)
+    p.add_argument('--claude-permission-mode', choices=['acceptEdits', 'bypassPermissions'], default=None,
+                    help='Claude Code --permission-mode. Default: acceptEdits for --task-source battery '
+                         '(unchanged), bypassPermissions for --task-source polyglot (build/test commands '
+                         'are denied under acceptEdits). Explicit value always wins.')
     p.add_argument('--baseline-source')
     p.add_argument('--candidate-source')
     p.add_argument('--candidate-sha', help='Freeze the candidate snapshot at this git rev instead of HEAD')

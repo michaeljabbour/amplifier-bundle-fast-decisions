@@ -385,8 +385,15 @@ def _check_protected(workspace: Path, test_files: list[str], protected_originals
     return labels
 
 
+# Never copy VCS metadata or build/dependency output into the evaluator's temp
+# copy: `.git` can contain non-regular files (e.g. a Watchman/fsmonitor unix
+# socket) that `shutil.copytree` cannot copy, and the others are pure waste.
+_COPY_IGNORE = shutil.ignore_patterns(".git", "__pycache__", "node_modules", "target", "build")
+
+
 def _make_polyglot_evaluate(
     lang: str,
+    slug: str,
     test_files: list[str],
     protected_originals: dict[str, str],
 ) -> Callable[[Path], dict]:
@@ -400,9 +407,16 @@ def _make_polyglot_evaluate(
         else:
             tmp_root = Path(tempfile.mkdtemp(prefix="polyglot_eval_"))
             try:
-                tmp_exercise = tmp_root / "exercise"
-                shutil.copytree(workspace, tmp_exercise)
-                result = runner(tmp_exercise, test_files)
+                # Some toolchains (CMake/Cargo/Go) derive the exercise/package
+                # name from the containing directory name, so the temp copy
+                # must be named after the exercise slug, not a generic name.
+                tmp_exercise = tmp_root / slug
+                try:
+                    shutil.copytree(workspace, tmp_exercise, ignore=_COPY_IGNORE)
+                except OSError:
+                    result = {"checks": 1, "passed": 0, "failed": 1, "failure_labels": ["evaluator_copy_error"]}
+                else:
+                    result = runner(tmp_exercise, test_files)
             except Exception as e:  # pragma: no cover - defensive, never crash
                 result = {"checks": 1, "passed": 0, "failed": 1, "failure_labels": [f"harness_error:{e}"]}
             finally:
@@ -486,7 +500,7 @@ def _build_task(lang: str, ex_dir: Path) -> bt.Task | None:
         return None
 
     protected_originals = {p: files[p] for p in test_files}
-    evaluate = _make_polyglot_evaluate(lang, test_files, protected_originals)
+    evaluate = _make_polyglot_evaluate(lang, ex_dir.name, test_files, protected_originals)
 
     return bt.Task(
         name=f"poly_{lang}_{ex_dir.name}",

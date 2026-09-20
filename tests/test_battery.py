@@ -540,6 +540,136 @@ class AmplifierModelEffortTests(unittest.TestCase):
 
 
 # --------------------------------------------------------------------------
+# Defect C: claude --permission-mode wiring
+# --------------------------------------------------------------------------
+
+_POLY_PY_INSTRUCTIONS = "Implement `add(a, b)` returning the sum of `a` and `b`.\n"
+_POLY_PY_EXAMPLE = "def add(a, b):\n    return a + b\n"
+_POLY_PY_STUB = "def add(a, b):\n    pass\n"
+_POLY_PY_TEST = (
+    "import unittest\nfrom add_numbers import add\n\n\n"
+    "class AddNumbersTest(unittest.TestCase):\n"
+    "    def test_positive(self):\n        self.assertEqual(add(2, 3), 5)\n"
+)
+_POLY_PY_CONFIG = {
+    "files": {
+        "solution": ["add_numbers.py"],
+        "test": ["add_numbers_test.py"],
+        "example": [".meta/example.py"],
+    }
+}
+
+
+def _build_fake_polyglot_corpus(root):
+    """Minimal one-exercise polyglot-benchmark-shaped corpus (python only),
+    just enough for battery.py's --task-source polyglot plumbing to load and
+    schedule one real task -- no network, no other languages."""
+    ex = root / 'python' / 'exercises' / 'practice' / 'add-numbers'
+    (ex / '.docs').mkdir(parents=True, exist_ok=True)
+    (ex / '.docs' / 'instructions.md').write_text(_POLY_PY_INSTRUCTIONS)
+    (ex / '.meta').mkdir(parents=True, exist_ok=True)
+    (ex / '.meta' / 'config.json').write_text(json.dumps(_POLY_PY_CONFIG))
+    (ex / '.meta' / 'example.py').write_text(_POLY_PY_EXAMPLE)
+    (ex / 'add_numbers.py').write_text(_POLY_PY_STUB)
+    (ex / 'add_numbers_test.py').write_text(_POLY_PY_TEST)
+
+
+def _prepare_polyglot_args(root, experiment, polyglot_root, harnesses='claude',
+                            claude_permission_mode=None):
+    return SimpleNamespace(
+        root=str(root), experiment=experiment, harnesses=harnesses, tasks=None, seed=1,
+        fd_override=None, deadline_seconds=None, claude_model='claude-x', codex_model=None,
+        opencode_model=None, claude_max_budget_usd=3.0,
+        baseline_source=None, candidate_source=None,
+        fd_backend=None, allow_external_state=False, candidate_sha=None,
+        amplifier_model=None, amplifier_effort=None,
+        task_source='polyglot', polyglot_root=str(polyglot_root), languages='python',
+        slice=1, split='all', claude_permission_mode=claude_permission_mode,
+    )
+
+
+class ClaudePermissionModeTests(unittest.TestCase):
+    """Defect C: Claude Code refuses build/test commands under the default
+    --permission-mode acceptEdits. --claude-permission-mode threads the choice
+    into the claude argv builder and proposal.json; battery task-source keeps
+    the unchanged acceptEdits default, polyglot defaults to bypassPermissions."""
+
+    def test_claude_argv_uses_requested_permission_mode(self):
+        argv = battery._claude_argv('hi', 'claude-x', 3.0, 'bypassPermissions')
+        self.assertIn('--permission-mode', argv)
+        self.assertEqual(argv[argv.index('--permission-mode') + 1], 'bypassPermissions')
+
+    def test_claude_argv_default_is_acceptEdits(self):
+        argv = battery._claude_argv('hi', 'claude-x', 3.0)
+        self.assertEqual(argv[argv.index('--permission-mode') + 1], 'acceptEdits')
+
+    def test_battery_task_source_defaults_to_acceptEdits_in_proposal_and_commands(self):
+        with tempfile.TemporaryDirectory() as tmp, _patched_battery_tasks():
+            base = Path(tmp)
+            baseline = base/'baseline'; candidate = base/'candidate'
+            baseline.mkdir(); candidate.mkdir()
+            root = base/'campaign'
+            args = _prepare_args(root, 'cpm1', harnesses='claude', tasks='dev',
+                                  baseline_source=str(baseline), candidate_source=str(candidate))
+            battery.cmd_prepare(args)
+            proposal = json.loads((root/'experiments'/'cpm1'/'proposal.json').read_text())
+            self.assertEqual(proposal['claude_permission_mode'], 'acceptEdits')
+            claude_cmd = proposal['commands']['claude']
+            self.assertEqual(claude_cmd[claude_cmd.index('--permission-mode') + 1], 'acceptEdits')
+
+    def test_battery_task_source_explicit_override_wins(self):
+        with tempfile.TemporaryDirectory() as tmp, _patched_battery_tasks():
+            base = Path(tmp)
+            baseline = base/'baseline'; candidate = base/'candidate'
+            baseline.mkdir(); candidate.mkdir()
+            root = base/'campaign'
+            args = _prepare_args(root, 'cpm2', harnesses='claude', tasks='dev',
+                                  baseline_source=str(baseline), candidate_source=str(candidate))
+            args.claude_permission_mode = 'bypassPermissions'
+            battery.cmd_prepare(args)
+            proposal = json.loads((root/'experiments'/'cpm2'/'proposal.json').read_text())
+            self.assertEqual(proposal['claude_permission_mode'], 'bypassPermissions')
+            claude_cmd = proposal['commands']['claude']
+            self.assertEqual(claude_cmd[claude_cmd.index('--permission-mode') + 1], 'bypassPermissions')
+
+    def test_polyglot_task_source_defaults_to_bypassPermissions(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            corpus = base/'polyglot-benchmark'
+            _build_fake_polyglot_corpus(corpus)
+            root = base/'campaign'
+            args = _prepare_polyglot_args(root, 'poly1', corpus)
+            battery.cmd_prepare(args)
+            proposal = json.loads((root/'experiments'/'poly1'/'proposal.json').read_text())
+            self.assertEqual(proposal['claude_permission_mode'], 'bypassPermissions')
+            claude_cmd = proposal['commands']['claude']
+            self.assertEqual(claude_cmd[claude_cmd.index('--permission-mode') + 1], 'bypassPermissions')
+
+    def test_polyglot_task_source_explicit_override_wins(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            corpus = base/'polyglot-benchmark'
+            _build_fake_polyglot_corpus(corpus)
+            root = base/'campaign'
+            args = _prepare_polyglot_args(root, 'poly2', corpus, claude_permission_mode='acceptEdits')
+            battery.cmd_prepare(args)
+            proposal = json.loads((root/'experiments'/'poly2'/'proposal.json').read_text())
+            self.assertEqual(proposal['claude_permission_mode'], 'acceptEdits')
+
+    def test_run_external_passes_proposal_permission_mode_to_claude_argv(self):
+        with patch('battery._claude_argv', wraps=battery._claude_argv) as spy:
+            fake_forge = SimpleNamespace(call=lambda *a, **k: {
+                'output': '{"type": "result", "result": "ok"}', 'exitCode': 0,
+            })
+            with tempfile.TemporaryDirectory() as tmp:
+                run_dir = Path(tmp)/'run'; run_dir.mkdir()
+                (run_dir/'workspace').mkdir()
+                battery._run_external('claude', run_dir, run_dir/'workspace', 'do it', 60, 'claude-x',
+                                       fake_forge, 3.0, 'bypassPermissions')
+            spy.assert_called_once_with('do it', 'claude-x', 3.0, 'bypassPermissions')
+
+
+# --------------------------------------------------------------------------
 # run
 # --------------------------------------------------------------------------
 
@@ -959,6 +1089,65 @@ class SeriesLabelTests(unittest.TestCase):
 # --------------------------------------------------------------------------
 # reevaluate: prompt_matches re-scoring (Re-scoring requirement, no re-runs)
 # --------------------------------------------------------------------------
+
+class PolyglotReevaluateTests(unittest.TestCase):
+    """Confirms `reevaluate` re-runs the (fixed) polyglot language evaluator
+    against a preserved workspace by resolving the task through the
+    registered polyglot task source recorded in proposal.json -- so the
+    ~20 finished POLY-BASE runs can be re-scored without re-running the
+    harness."""
+
+    def test_reevaluate_reruns_polyglot_evaluator_on_preserved_workspace(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            corpus = base/'polyglot-benchmark'
+            _build_fake_polyglot_corpus(corpus)
+
+            root = base/'campaign'
+            experiment_dir = root/'experiments'/'e1'
+            runs_root = experiment_dir/'runs'
+            run_name = 'e1-poly_python_add-numbers-claude-a1'
+            run_dir = runs_root/run_name
+            workspace = run_dir/'workspace'
+            workspace.mkdir(parents=True)
+            # Agent's final workspace state: the reference solution (a correct
+            # fix) plus the shipped (protected) test file, unmodified.
+            (workspace/'add_numbers.py').write_text(_POLY_PY_EXAMPLE)
+            (workspace/'add_numbers_test.py').write_text(_POLY_PY_TEST)
+
+            # A prior (wrong) scoring -- e.g. from Defect A's harness_error --
+            # incorrectly marked this correct solution as failed.
+            (run_dir/'result.json').write_text(json.dumps({
+                'name': run_name, 'task': 'poly_python_add-numbers', 'harness': 'claude', 'attempt': 1,
+                'exit_code': 0, 'timed_out': False, 'infrastructure_failure': False,
+                'outcome_passed': False,
+                'quality': {'checks': 1, 'passed': 0, 'failed': 1, 'failure_labels': ['harness_error:boom']},
+            }))
+            runs_root.mkdir(parents=True, exist_ok=True)
+            (runs_root/'manifest.json').write_text(json.dumps({
+                'run_order': [run_name],
+                'runs': {run_name: {'name': run_name, 'task': 'poly_python_add-numbers',
+                                     'harness': 'claude', 'attempt': 1}},
+                'deadline_seconds': 120,
+            }))
+            (experiment_dir/'proposal.json').write_text(json.dumps({
+                'experiment_id': 'e1',
+                'task_source': {'kind': 'polyglot', 'root': str(corpus), 'languages': ['python']},
+            }))
+
+            result = battery.cmd_reevaluate(SimpleNamespace(root=str(root), experiment='e1', reason='defect-a-fix'))
+
+            self.assertEqual(len(result['changed']), 1, result)
+            changed = result['changed'][0]
+            self.assertEqual(changed['run'], run_name)
+            self.assertTrue(changed['outcome_passed'])
+            self.assertEqual(changed['failed_checks'], 0)
+
+            new_result = json.loads((run_dir/'result.json').read_text())
+            self.assertTrue(new_result['outcome_passed'])
+            self.assertEqual(new_result['quality']['failed'], 0)
+            self.assertTrue((run_dir/'result-before-reevaluate.json').exists())
+
 
 class ReevaluatePromptMatchesTests(unittest.TestCase):
     def _base_experiment(self, tmp, name='amplifier-fd', prompt=None, prompt_sha256=None):
