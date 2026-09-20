@@ -111,6 +111,15 @@ cells:
     anchor_cell: plain
     mechanism_gate: { scored_backend: jev, min_scored: 1, require_effort_phases: ["explore:low"] }
 
+  judge-laya+effort-incumbent:
+    harnesses: [amplifier-fd]
+    fd: { backend: laya, effort_profile: explore_only }
+    role: "Laya twin of the incumbent -- typed-decision classifier instead of a single-token LLM judge"
+    purpose: "judge-vs-judge: today's shipped explore-only effort profile, judged by Laya (open-source typed-decision classifier) instead of the local single-token LLM"
+    anchor_cell: plain
+    secondary_anchor: judge-local+effort-incumbent
+    mechanism_gate: { scored_backend: laya, min_scored: 1, require_effort_phases: ["explore:low"] }
+
   plain-lean:
     label_suffix: "plain [model=claude-fable-5-1; bundle=lean]"
     harnesses: [amplifier-plain]
@@ -217,6 +226,41 @@ cells:
     purpose: "escalation-judge decisive pair: the same escalate-or-not call, decided by jev instead of the local judge"
     anchor_cell: plain-sonnet
     secondary_anchor: judge-jev+effort+route     # the rules twin: identical routing profile, escalation_judge off, jev backend
+    requires_cells: [plain-sonnet]
+    mechanism_gate:
+      model_routed_model: claude-sonnet-5
+      min_model_routed: 1
+      flag_if_zero_escalations: confounded_with_plain_sonnet
+      require_judged: true
+
+  # HC08 ("one call per decision point") x HC05 head-to-head: otherwise
+  # identical to the *-judged pair above, with decision_batching: true --
+  # does combining the phase-judge and escalation-judge asks into ONE
+  # ask_many() call change the escalation decision, or just how many
+  # backend calls it took to reach it?
+  judge-jev+effort+route-judged-batched:
+    harnesses: [amplifier-fd]
+    fd: { backend: jev, allow_external_state: true, effort_profile: all_phase,
+          model_routing_profile: sonnet_start_judged, decision_batching: true }
+    role: "HC08 batching (jev) -- one ask_many() call per decision point instead of two separate asks"
+    purpose: "does batching the phase-judge and escalation-judge questions into one call change decisions, only overhead?"
+    anchor_cell: plain-sonnet
+    secondary_anchor: judge-jev+effort+route-judged   # the unbatched twin: identical config, decision_batching off
+    requires_cells: [plain-sonnet]
+    mechanism_gate:
+      model_routed_model: claude-sonnet-5
+      min_model_routed: 1
+      flag_if_zero_escalations: confounded_with_plain_sonnet
+      require_judged: true
+
+  judge-local+effort+route-judged-batched:
+    harnesses: [amplifier-fd]
+    fd: { backend: ollama, model: qwen3:0.6b, effort_profile: all_phase,
+          model_routing_profile: sonnet_start_judged, decision_batching: true }
+    role: "HC08 batching (local) -- one ask_many() call per decision point instead of two separate asks"
+    purpose: "local-backend twin of judge-jev+effort+route-judged-batched: does batching change decisions on the local judge?"
+    anchor_cell: plain-sonnet
+    secondary_anchor: judge-local+effort+route-judged   # the unbatched twin: identical config, decision_batching off
     requires_cells: [plain-sonnet]
     mechanism_gate:
       model_routed_model: claude-sonnet-5

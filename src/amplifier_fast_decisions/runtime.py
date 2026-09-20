@@ -18,7 +18,7 @@ def _env_backend_default() -> str | None:
     omits ``backend`` (profile config always wins). ``FAST_DECISIONS_JUDGE``
     selects the judge family (``local``/``hosted``/``jev``/``deterministic``);
     ``local`` is disambiguated by ``FAST_DECISIONS_LOCAL_HOST``
-    (``ollama`` (default) or ``mlx``). See .env.example.
+    (``ollama`` (default), ``mlx``, or ``laya``). See .env.example.
     """
     judge = os.getenv("FAST_DECISIONS_JUDGE")
     if not judge:
@@ -133,10 +133,10 @@ def get_runtime(coordinator: Any, config: dict[str, Any], *, owner: bool = False
     recorder = JsonlRecorder(events_dir, session_id)
     emitter = Emitter(session_id, parent_session_id=parent, hooks=coordinator.hooks, recorder=recorder)
     backend_name = config.get("backend") or _env_backend_default() or "jev"
-    if backend_name not in {"jev", "unavailable", "deterministic", "ollama", "mlx", "hosted", "gateway"}:
+    if backend_name not in {"jev", "unavailable", "deterministic", "ollama", "mlx", "hosted", "gateway", "laya"}:
         recorder.close()
         raise ValueError(
-            "Backend must be jev, deterministic, ollama, mlx, hosted (alias gateway), or unavailable"
+            "Backend must be jev, deterministic, ollama, mlx, hosted (alias gateway), laya, or unavailable"
         )
     if backend_name == "jev":
         backend = JevBackend(model=config.get("model"), timeout_ms=policy.timeout_ms)
@@ -148,6 +148,18 @@ def get_runtime(coordinator: Any, config: dict[str, Any], *, owner: bool = False
             url=config.get("mlx_url") or mlx_base_url(),
             timeout_ms=policy.timeout_ms,
         )
+    elif backend_name == "laya":
+        from .local_backend import LayaBackend
+
+        try:
+            backend = LayaBackend(
+                url=config.get("laya_url"),
+                timeout_ms=policy.timeout_ms,
+                token_env=config.get("laya_token_env"),
+            )
+        except Exception:
+            recorder.close()
+            raise
     elif backend_name in ("hosted", "gateway"):  # "gateway" is a legacy alias
         from .local_backend import HOSTED_DEFAULT_TOKEN_ENV, HostedBackend
 

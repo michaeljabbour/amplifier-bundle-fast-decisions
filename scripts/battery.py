@@ -1902,7 +1902,7 @@ def main(argv=None):
     p.add_argument('--baseline-source')
     p.add_argument('--candidate-source')
     p.add_argument('--candidate-sha', help='Freeze the candidate snapshot at this git rev instead of HEAD')
-    p.add_argument('--fd-backend', choices=['ollama', 'jev', 'hosted', 'gateway'],
+    p.add_argument('--fd-backend', choices=['ollama', 'jev', 'hosted', 'gateway', 'laya'],
                     help="Decision backend override for the amplifier-fd side ('gateway' is a legacy alias for 'hosted')")
     p.add_argument('--allow-external-state', action='store_true',
                     help='Required alongside --fd-backend jev/hosted (opt-in external state; see docs/PRIVACY.md)')

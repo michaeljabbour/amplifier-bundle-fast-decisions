@@ -1,5 +1,6 @@
 """Tests for cli.py's bench-suite wiring: backend selection, per-case
-latency, and the ``agreement_with_expected`` alias.
+latency, the ``agreement_with_expected`` alias, the suite runner's
+per-case error/timeout robustness, and the warmup-before-timing call.
 
 Stdlib only, hermetic -- ``ScriptedBackend`` never makes a network call.
 Exercises ``cli._TimingBackend`` and ``cli._augment_suite_report`` directly
@@ -14,7 +15,7 @@ import unittest
 from types import SimpleNamespace
 from unittest import mock
 
-from amplifier_fast_decisions.backends import ScriptedBackend
+from amplifier_fast_decisions.backends import BackendUnavailable, ScriptedBackend
 from amplifier_fast_decisions.bench import SuiteCase, build_report, run_suite
 from amplifier_fast_decisions import cli as cli_module
 from amplifier_fast_decisions.cli import _augment_suite_report, _TimingBackend, bench_suite
@@ -141,6 +142,169 @@ class BackendSelectionTests(unittest.TestCase):
             bench_suite(self._args(model="mlx-community/Qwen3-1.7B-4bit"))
         _, kwargs = mlx_cls.call_args
         self.assertEqual(kwargs["model"], "mlx-community/Qwen3-1.7B-4bit")
+
+
+class SuiteRunnerRobustnessTests(unittest.TestCase):
+    """A per-case backend failure (a cold-reloading server, a timeout) must
+    be counted and skipped, never abort the whole suite -- see
+    bench/suite.py's ``run_suite``/``SuiteResult.errors``."""
+
+    def test_one_erroring_case_is_counted_not_fatal(self):
+        # Case "a" errors (BackendUnavailable); case "b" scores normally.
+        inner = ScriptedBackend(
+            script=[{"error": True, "delay_ms": 0}, {"choice": "c1", "delay_ms": 0}]
+        )
+        cases = [_case("a", "c1"), _case("b", "c1")]
+        result = asyncio.run(run_suite(cases, inner, permutations=1))
+        self.assertEqual(result.errors, 1)
+        # Only the surviving case produced an item.
+        self.assertEqual(len(result.items), 1)
+        self.assertEqual(result.items[0].case.id, "b")
+
+    def test_timeout_error_is_also_counted_not_fatal(self):
+        class _TimesOutOnce:
+            name = "flaky"
+            external = False
+
+            def __init__(self):
+                self.calls = 0
+
+            async def ask(self, request):
+                self.calls += 1
+                if self.calls == 1:
+                    raise TimeoutError("cold reload")
+                return await ScriptedBackend(script=[{"choice": "c1", "delay_ms": 0}]).ask(request)
+
+            async def close(self):
+                return None
+
+        backend = _TimesOutOnce()
+        cases = [_case("a", "c1"), _case("b", "c1")]
+        result = asyncio.run(run_suite(cases, backend, permutations=1))
+        self.assertEqual(result.errors, 1)
+        self.assertEqual(len(result.items), 1)
+
+    def test_errors_reported_in_augmented_report(self):
+        inner = ScriptedBackend(
+            script=[{"error": True, "delay_ms": 0}, {"choice": "c1", "delay_ms": 0}]
+        )
+        timed = _TimingBackend(inner)
+        cases = [_case("a", "c1"), _case("b", "c1")]
+        result = asyncio.run(run_suite(cases, timed, permutations=1))
+        report = build_report(
+            "suite", result, session_id="suite-errors", model="scripted-demo-not-jev",
+            provider="offline", backend_external=False,
+        )
+        report = _augment_suite_report(report, timed, 1, errors=result.errors)
+        self.assertEqual(report["accuracy_proxy"]["errors"], 1)
+        self.assertGreater(report["accuracy_proxy"]["error_rate"], 0)
+
+    def test_no_errors_defaults_to_zero_rate(self):
+        inner = ScriptedBackend(script=[{"choice": "c1", "delay_ms": 0}])
+        timed = _TimingBackend(inner)
+        cases = [_case("a", "c1")]
+        result = asyncio.run(run_suite(cases, timed, permutations=1))
+        report = build_report(
+            "suite", result, session_id="suite-no-errors", model="scripted-demo-not-jev",
+            provider="offline", backend_external=False,
+        )
+        report = _augment_suite_report(report, timed, 1)
+        self.assertEqual(report["accuracy_proxy"]["errors"], 0)
+        self.assertEqual(report["accuracy_proxy"]["error_rate"], 0.0)
+
+
+class BenchSuiteWarmupTests(unittest.TestCase):
+    """``bench_suite`` calls a selected backend's ``warmup()`` (if present)
+    once before the timed suite loop, and never fails the run if warmup
+    itself raises."""
+
+    def _args(self, **overrides):
+        base = dict(
+            suite_path="suite.jsonl", suite=None, domain=None, live=False,
+            backend="mlx", model=None, permutations=1,
+            out=None, md=None, json=True,
+        )
+        base.update(overrides)
+        return SimpleNamespace(**base)
+
+    def test_warmup_called_before_suite_runs(self):
+        inner = ScriptedBackend(script=[{"choice": "c1", "delay_ms": 0}])
+        inner.warmup_called = False
+
+        async def warmup():
+            inner.warmup_called = True
+
+        inner.warmup = warmup
+        cases = [
+            SuiteCase(id="a", domain="tool-choice", state={},
+                      candidates=(Candidate("c1", "Candidate one", "fast_workspace", {}),),
+                      expected_choice="c1", label_source="human")
+        ]
+        with mock.patch("amplifier_fast_decisions.local_backend.MlxBackend", return_value=inner),              mock.patch.object(cli_module, "load_suite", return_value=cases):
+            rc = bench_suite(self._args())
+        self.assertEqual(rc, 0)
+        self.assertTrue(inner.warmup_called)
+
+    def test_warmup_failure_does_not_abort_the_run(self):
+        inner = ScriptedBackend(script=[{"choice": "c1", "delay_ms": 0}])
+
+        async def failing_warmup():
+            raise BackendUnavailable("server not up yet")
+
+        inner.warmup = failing_warmup
+        cases = [
+            SuiteCase(id="a", domain="tool-choice", state={},
+                      candidates=(Candidate("c1", "Candidate one", "fast_workspace", {}),),
+                      expected_choice="c1", label_source="human")
+        ]
+        with mock.patch("amplifier_fast_decisions.local_backend.MlxBackend", return_value=inner),              mock.patch.object(cli_module, "load_suite", return_value=cases):
+            rc = bench_suite(self._args())
+        self.assertEqual(rc, 0)
+
+
+class LayaBackendSelectionTests(unittest.TestCase):
+    """``bench suite --backend laya [--laya-url]``: CLI wiring only --
+    ``LayaBackend`` itself is monkeypatched to a stub that never opens a
+    socket."""
+
+    def _args(self, **overrides):
+        base = dict(
+            suite_path="suite.jsonl", suite=None, domain=None, live=False,
+            backend="laya", model=None, permutations=1,
+            out=None, md=None, json=True, laya_url=None,
+        )
+        base.update(overrides)
+        return SimpleNamespace(**base)
+
+    def test_backend_laya_selects_laya_backend(self):
+        inner = ScriptedBackend(script=[{"choice": "c1", "delay_ms": 0}])
+        inner.external = False
+        cases = [
+            SuiteCase(id="a", domain="tool-choice", state={},
+                      candidates=(Candidate("c1", "Candidate one", "fast_workspace", {}),),
+                      expected_choice="c1", label_source="human")
+        ]
+        with mock.patch(
+            "amplifier_fast_decisions.local_backend.LayaBackend", return_value=inner
+        ) as laya_cls, mock.patch.object(cli_module, "load_suite", return_value=cases):
+            rc = bench_suite(self._args())
+        self.assertEqual(rc, 0)
+        laya_cls.assert_called_once()
+
+    def test_backend_laya_honors_laya_url(self):
+        inner = ScriptedBackend(script=[{"choice": "c1", "delay_ms": 0}])
+        inner.external = False
+        cases = [
+            SuiteCase(id="a", domain="tool-choice", state={},
+                      candidates=(Candidate("c1", "Candidate one", "fast_workspace", {}),),
+                      expected_choice="c1", label_source="human")
+        ]
+        with mock.patch(
+            "amplifier_fast_decisions.local_backend.LayaBackend", return_value=inner
+        ) as laya_cls, mock.patch.object(cli_module, "load_suite", return_value=cases):
+            bench_suite(self._args(laya_url="http://127.0.0.1:9090"))
+        _, kwargs = laya_cls.call_args
+        self.assertEqual(kwargs["url"], "http://127.0.0.1:9090")
 
 
 if __name__ == "__main__":

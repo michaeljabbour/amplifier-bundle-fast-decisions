@@ -17,6 +17,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from ..backends import BackendUnavailable
 from ..contracts import SLOW, Candidate, Decision, DecisionRequest, DecisionResult
 
 
@@ -156,6 +157,11 @@ class SuiteResult:
     order_agreement_stability: float | None
     max_probability_swing: float | None
     permutations: int
+    # Per-case ``TimeoutError``/``BackendUnavailable`` outcomes (canonical or
+    # permutation calls) counted as abstentions rather than aborting the
+    # whole suite -- e.g. a backend cold-reloading mid-run. Never includes
+    # cases that scored normally.
+    errors: int = 0
 
 
 def _permuted_candidates(
@@ -177,16 +183,29 @@ async def run_suite(
     """Score every case under ``permutations`` candidate orderings (k=1
     disables the permutation test). Canonical (k=0, as-declared order)
     results feed accuracy/calibration; k>=1 orderings feed only the
-    stability/swing diagnostic."""
+    stability/swing diagnostic.
+
+    A per-case ``TimeoutError`` or ``BackendUnavailable`` (e.g. a backend
+    cold-reloading mid-run) is counted in ``SuiteResult.errors`` and treated
+    as an abstention for that call -- it never aborts the rest of the
+    suite. A canonical-call error drops the case entirely (no ground truth
+    to score against); a permutation-call error only drops that one
+    ordering from the stability/swing diagnostic.
+    """
     k = max(1, permutations)
     items: list[SuiteItemResult] = []
     stable_count = 0
     swings: list[float] = []
+    errors = 0
     for case in cases:
         state = dict(case.state)
         state["_case_id"] = case.id
         canonical_request = DecisionRequest(state=state, candidates=case.candidates)
-        canonical_result = await backend.ask(canonical_request)
+        try:
+            canonical_result = await backend.ask(canonical_request)
+        except (TimeoutError, BackendUnavailable):
+            errors += 1
+            continue
         canonical_action = canonical_result.action
         canonical_p = canonical_action.probabilities[canonical_action.choice]
         item = SuiteItemResult(
@@ -201,7 +220,11 @@ async def run_suite(
         chosen_probs = [canonical_p]
         for perm_index in range(1, k):
             ordered = _permuted_candidates(case.candidates, case.id, perm_index)
-            result = await backend.ask(DecisionRequest(state=state, candidates=ordered))
+            try:
+                result = await backend.ask(DecisionRequest(state=state, candidates=ordered))
+            except (TimeoutError, BackendUnavailable):
+                errors += 1
+                continue
             choices.append(result.action.choice)
             # Probability of *this run's own* chosen option, for the swing
             # metric ("max - min probability of the chosen option across k").
@@ -221,4 +244,5 @@ async def run_suite(
         order_agreement_stability=order_agreement_stability,
         max_probability_swing=max_probability_swing,
         permutations=k,
+        errors=errors,
     )

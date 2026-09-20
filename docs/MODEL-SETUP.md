@@ -215,6 +215,68 @@ afast bench suite --live --backend mlx --model mlx-community/Qwen3-0.6B-4bit
 `FAST_DECISIONS_MLX_URL`, default `http://127.0.0.1:8080`) alongside its other
 checks; absence is not an error unless you intend to use `--backend mlx`.
 
+## Laya (local classifier)
+
+[Laya](https://github.com/mizorewww/laya-mlx) is an open-source **typed-decision
+classifier** -- not a single-token LLM judge. It answers `choice`/`score`/`noul`
+questions directly (with per-label probabilities), rather than scoring the
+logprobs of a generated token. `laya_server.py` (this package) wraps it in a
+local HTTP decide endpoint; `LayaBackend` is its client. Apache-2.0 licensed.
+The MLX port (`laya-mlx`) is Apple-Silicon-only; the upstream `laya` package
+(PyTorch) runs on CUDA or CPU elsewhere.
+
+Install it in its own virtual environment (kept separate from your harness's
+Python so its pinned dependencies never collide):
+
+```bash
+uv venv ~/.amplifier/fast-decisions/laya-venv
+uv pip install --python ~/.amplifier/fast-decisions/laya-venv/bin/python \
+  "laya-mlx @ git+https://github.com/mizorewww/laya-mlx@main"
+```
+
+Start the decide server (defaults shown; `--dtype`/`--model` are optional):
+
+```bash
+~/.amplifier/fast-decisions/laya-venv/bin/python -m amplifier_fast_decisions.laya_server \
+  --host 127.0.0.1 --port 8090 --model aac6fef/laya-mlx --dtype float16
+curl -fsS http://127.0.0.1:8090/health
+```
+
+The server loads and warms the model once at startup (compile cost is paid
+there, not on your first request) and answers `POST /v1/decide` with the
+same batched `{state, questions}` shape every backend here already speaks.
+Optionally require a bearer token by starting with `--token-env
+FAST_DECISIONS_LAYA_TOKEN` and exporting that variable.
+
+Configure the bundle/profile to use it:
+
+```bash
+"$AFAST_HOST_PYTHON" -m amplifier_fast_decisions configure \
+  --bundle-root "$AFAST_REPO" --workspace "$AFAST_PILOT/workspace" \
+  --mode shadow --backend laya --local-sources --output "$AFAST_PILOT/shadow-laya.md"
+```
+
+Or set it via environment for `afast`/battery-style invocations:
+
+```bash
+export FAST_DECISIONS_JUDGE=local
+export FAST_DECISIONS_LOCAL_HOST=laya
+export FAST_DECISIONS_LAYA_URL=http://127.0.0.1:8090
+```
+
+Compare it against the other local hosts on the same suite before choosing
+one for a workload:
+
+```bash
+afast bench suite --live --backend ollama --model qwen3:0.6b
+afast bench suite --live --backend laya
+```
+
+`afast doctor` reports a `laya_judge` check (`GET /health` against
+`FAST_DECISIONS_LAYA_URL`, default `http://127.0.0.1:8090`) alongside its
+other checks; absence is not an error unless you intend to use `--backend
+laya`.
+
 ## Running the local judge on a remote host
 
 Use an existing private workstation, server, or rented Linux host and run

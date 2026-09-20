@@ -29,12 +29,13 @@ here is a production SLA.
 
 ## Configuration
 
-Three judge backends, chosen by `backend` (config) or `FAST_DECISIONS_JUDGE`
+Four judge backends, chosen by `backend` (config) or `FAST_DECISIONS_JUDGE`
 (env; profile config always wins):
 
 | Judge | What it is | Data leaving this machine |
 |---|---|---|
 | **Local** | Ollama (default) or Apple MLX (`mlx_lm.server`, Apple Silicon only) | None -- loopback only |
+| **Laya** | A local typed-decision classifier server (`laya_server.py`; `laya-mlx` on Apple Silicon, upstream `laya` elsewhere) | None by default (loopback); external only if pointed at a non-loopback URL, then gated by `allow_external_state` |
 | **Hosted** | Any OpenAI-compatible endpoint you control that returns `top_logprobs` | The bounded decision state (task snapshot, candidates, questions), gated by `allow_external_state` |
 | **Jev** | [typesafe.ai](https://typesafe.ai)'s hosted judge (external service) | Same bounded decision state, gated by `allow_external_state` |
 
