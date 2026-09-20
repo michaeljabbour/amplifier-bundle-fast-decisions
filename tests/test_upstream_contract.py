@@ -4,7 +4,8 @@ amplifier_module_loop_streaming, not against a description of it.
 Skipped (not failed) when amplifier_core or loop-streaming are not importable.
 Run this file with the real Amplifier CLI's interpreter:
 
-    /Users/michaeljabbour/.local/share/uv/tools/amplifier/bin/python3 \
+    python3 tests/_hostpy.py  # prints the resolved interpreter path, or why none was found
+    $(python3 tests/_hostpy.py | head -1) \
         -m unittest tests.test_upstream_contract -v
 """
 from __future__ import annotations

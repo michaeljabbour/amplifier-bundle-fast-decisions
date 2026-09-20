@@ -50,6 +50,12 @@ hooks:
         open_browser: always
         port: 8765
 
+context:
+  include:
+    # "make my amplifier faster" / "speed up amplifier" trigger: hands off to
+    # the make-amplifier-faster recipe instead of installing anything directly.
+    - fast-decisions:context/make-faster.md
+
 tools:
   - module: tool-fast-workspace
     source: git+https://github.com/michaeljabbour/amplifier-bundle-fast-decisions@main#subdirectory=modules/tool-fast-workspace

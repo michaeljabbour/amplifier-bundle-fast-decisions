@@ -146,7 +146,89 @@ def scheduler_oracle(jobs, capacity):
     return {'waves': waves, 'elapsed': elapsed, 'critical_path': max(scores.values(), default=0)}
 
 
+# --------------------------------------------------------------------------
+# Task source registry: makes tasks from an additional source (e.g. the
+# aider-polyglot adapter in scripts/polyglot_tasks.py) resolvable by name
+# alongside battery_tasks.TASKS, via a single `get_task`/`all_tasks` contract
+# point. A registered source is process-local (module-level cache); a fresh
+# process (e.g. a subprocess worker) must call `register_source` again --
+# see forge_e2e.py's `_ensure_task_source_registered`, which does this from
+# a manifest's persisted `task_source` field.
+# --------------------------------------------------------------------------
+
+_extra_tasks = {}
+
+
+def register_source(kind, **opts):
+    """Register an additional task source, making its tasks resolvable by
+    name via `get_task`/`all_tasks` (and therefore via `task_files`,
+    `task_prompt`, `task_protected`, and `evaluate` below).
+
+    kind='polyglot': opts must include `root` (a polyglot-benchmark checkout
+    directory) and may include `languages` (list[str]); any other keys
+    (e.g. `sha`) are accepted and ignored -- they exist for manifest
+    round-tripping, not for `load()`. Re-registering the same root simply
+    reloads (idempotent in effect, not free -- call once per process).
+
+    Returns the dict of tasks that were loaded.
+    """
+    if kind == 'polyglot':
+        import polyglot_tasks
+        tasks = polyglot_tasks.load(opts['root'], languages=opts.get('languages'))
+        _extra_tasks.update(tasks)
+        return tasks
+    raise ValueError(f'unknown task source kind: {kind}')
+
+
+def get_task(name):
+    """Resolve `name` to its Task object: a registered extra source first
+    (see `register_source`), then `battery_tasks.TASKS`. Raises KeyError for
+    an unknown name. Legacy SPECS-trio tasks have no Task object -- callers
+    that must also handle those check `name in SPECS` themselves (see
+    `task_files`/`task_prompt`/`task_protected`/`evaluate` below)."""
+    if name in _extra_tasks:
+        return _extra_tasks[name]
+    import battery_tasks
+    if name in battery_tasks.TASKS:
+        return battery_tasks.TASKS[name]
+    raise KeyError(f'unknown task: {name}')
+
+
+def all_tasks():
+    """Every task known to this process: battery_tasks.TASKS plus any
+    registered extra source, merged (extra sources win on name collision,
+    though none is expected since polyglot names are namespaced)."""
+    import battery_tasks
+    merged = dict(battery_tasks.TASKS)
+    merged.update(_extra_tasks)
+    return merged
+
+
+def task_files(task):
+    """Starter workspace files for `task`: relative path -> text."""
+    if task in SPECS:
+        return {'README.md': SPECS[task], 'solution.py': STARTERS[task], 'test_public.py': PUBLIC[task]}
+    return dict(get_task(task).files)
+
+
+def task_prompt(task):
+    """The exact user prompt for `task`, or None for legacy tasks with no
+    fixed prompt (README.md + test_public.py stand alone)."""
+    if task in SPECS:
+        return None
+    return get_task(task).prompt
+
+
+def task_protected(task):
+    """Files the agent must not modify for `task`."""
+    if task in SPECS:
+        return ('README.md', 'test_public.py')
+    return tuple(get_task(task).protected)
+
+
 def evaluate(task, workspace):
+    if task not in SPECS:
+        return get_task(task).evaluate(Path(workspace))
     spec = importlib.util.spec_from_file_location('candidate_solution', Path(workspace)/'solution.py')
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)

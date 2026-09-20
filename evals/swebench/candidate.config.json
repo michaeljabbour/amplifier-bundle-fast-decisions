@@ -1,0 +1,13 @@
+{
+  "schema": "fast-decisions-swebench-candidate/v1",
+  "status": "unconfirmed",
+  "source": "TBD: fill from the S1/S2 CONFIRMED champion cell in evals/cells.yaml (STUDY-DESIGN.md section 8's decision rule). Candidate values here MUST NOT be guessed while writing the S3 harness -- render_candidate_install_yaml() in swebench_stage.py refuses to render while status is not 'confirmed'.",
+  "cell_name": null,
+  "backend": null,
+  "model": null,
+  "effort_routing": null,
+  "allow_external_state": null,
+  "confirmed_at": null,
+  "confirmed_by": null,
+  "notes": "Placeholder shipped with the S3 stage. Do not hand-edit backend/model/effort_routing without also flipping status to 'confirmed' and filling cell_name/confirmed_at/confirmed_by -- those fields are the audit trail for which S1/S2 result this candidate reflects."
+}

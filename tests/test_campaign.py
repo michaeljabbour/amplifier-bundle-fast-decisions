@@ -467,3 +467,14 @@ class LaunchFailureTests(unittest.TestCase):
             self.assertEqual(len(zero), 1)
             self.assertTrue(any(n.endswith('baseline-a2') for n in calls), calls)
             self.assertTrue((runs_root/[n for n in calls if n.endswith('baseline-a2')][0]/'result.json').exists())
+
+
+class SupervisorOffsetTests(unittest.TestCase):
+    def test_supervisor_offset_is_subtracted(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root, _ = _init_campaign(Path(tmp), {})
+            campaign._ledger_append(root, {'type': 'supervisor_offset', 'usd': 40.0})
+            campaign._ledger_append(root, {'type': 'supervisor_observation', 'usd': 55.0})
+            totals = campaign._budget_totals(root)
+            self.assertAlmostEqual(totals['supervisor_usd'], 15.0)
+            self.assertAlmostEqual(totals['supervisor_offset'], 40.0)

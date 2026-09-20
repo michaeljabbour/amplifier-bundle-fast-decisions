@@ -1,0 +1,9 @@
+name: amplifier-plain
+description: >
+  Variant "plain": stock amplifier-foundation @ main, installed from GitHub,
+  with NO fast-decisions bundle composed. The baseline arm of the S3
+  SWE-bench Verified slice (STUDY-DESIGN.md section 15). Pins a single model
+  (claude-fable-5-1) directly via the provider's default_model so all three
+  S3 variants (amplifier-plain, amplifier-fd-incumbent, amplifier-fd-candidate)
+  differ only by which fast-decisions bundle (if any) is composed, not by
+  model.

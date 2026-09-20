@@ -1,0 +1,32 @@
+requires:
+  env:
+    - ANTHROPIC_API_KEY
+
+# Variant "plain": stock amplifier-foundation @ main, no fast-decisions
+# bundle. Pins claude-fable-5-1 directly via the provider's default_model
+# (the S3 model pin) so this variant and the two amplifier-fd-* variants
+# differ only by composed bundle, not by model. ANTHROPIC_API_KEY is never
+# written into this file: it reaches the DTU as an environment variable via
+# `passthrough.services` (the harness's `compose_launch_profile` adds this
+# automatically from `requires.env` above) and is expanded here only as the
+# shell variable reference `${ANTHROPIC_API_KEY}`, resolved inside the DTU at
+# setup_cmds run time -- never resolved or echoed by this file.
+setup_cmds:
+  - export PATH="/root/.local/bin:$PATH"; uv tool install git+https://github.com/microsoft/amplifier
+  - |
+    mkdir -p /root/.amplifier
+    cat > /root/.amplifier/settings.yaml <<EOF
+    config:
+      providers:
+        - module: provider-anthropic
+          source: git+https://github.com/microsoft/amplifier-module-provider-anthropic@main
+          config:
+            api_key: ${ANTHROPIC_API_KEY}
+            default_model: claude-fable-5-1
+            enable_1m_context: 'true'
+            enable_prompt_caching: 'true'
+            priority: 1
+    EOF
+  - export PATH="/root/.local/bin:$PATH"; amplifier bundle add git+https://github.com/microsoft/amplifier-foundation@main --app
+  - export PATH="/root/.local/bin:$PATH"; amplifier --version
+  - export PATH="/root/.local/bin:$PATH"; amplifier bundle list | tee /tmp/bundle-list.txt

@@ -156,23 +156,32 @@ def _budget_totals(root):
     settled_benchmark = 0.0
     unknown_spend = 0.0
     supervisor_usd = 0.0
+    supervisor_offset = 0.0
+    settlements = {}
     for e in entries:
         kind = e.get('type')
+        if kind == 'supervisor_offset':
+            # session-cumulative supervisor observations already charged to an earlier campaign
+            supervisor_offset += e.get('usd', 0.0)
+            continue
         if kind == 'reservation':
             reservations[e['id']] = e.get('usd', 0.0)
         elif kind == 'settlement':
-            rid = e.get('reservation')
-            settled_ids.add(rid)
-            if e.get('unknown'):
-                unknown_spend += reservations.get(rid, 0.0)
-            else:
-                settled_benchmark += e.get('actual_usd') or 0.0
+            # Last settlement per reservation wins (a later correction supersedes an earlier unknown/estimate).
+            settlements[e.get('reservation')] = e
         elif kind == 'supervisor_observation':
             supervisor_usd = e.get('usd', supervisor_usd)
+    for rid, e in settlements.items():
+        settled_ids.add(rid)
+        if e.get('unknown'):
+            unknown_spend += reservations.get(rid, 0.0)
+        else:
+            settled_benchmark += e.get('actual_usd') or 0.0
     active_reservations = sum(usd for rid, usd in reservations.items() if rid not in settled_ids)
     return {
         'settled_benchmark': settled_benchmark, 'unknown_spend': unknown_spend,
-        'supervisor_usd': supervisor_usd, 'active_reservations': active_reservations,
+        'supervisor_usd': max(0.0, supervisor_usd - supervisor_offset), 'active_reservations': active_reservations,
+        'supervisor_offset': supervisor_offset,
     }
 
 

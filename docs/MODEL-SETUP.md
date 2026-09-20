@@ -151,6 +151,70 @@ It currently uses the default local port 11434 and has no `--ollama-url` flag.
 Compare complete, equivalent tasks with and without acceleration before claiming
 time or money saved; a short decision call alone does not prove either.
 
+## Apple MLX host
+
+On Apple Silicon, `mlx_lm.server` is a second local judge host, an alternative
+to Ollama, not a replacement for it -- pick one. It runs the same bounded,
+loopback-only, one-token classifier contract as the Ollama adapter (same
+`DecisionResult` shape, same abstention semantics, same 1-12 prepared
+`fast_workspace` read/list candidates); only the wire format and host differ.
+Intel Macs and Rosetta Python are not supported: MLX requires an actual
+Apple Silicon (arm64) process, not just Apple hardware.
+
+Detect Apple Silicon before choosing this path:
+
+```bash
+[ "$(uname -m)" = "arm64" ] && case "$(sysctl -n machdep.cpu.brand_string)" in *Apple*) echo "Apple Silicon";; esac
+```
+
+Install `mlx-lm` (a separate optional dependency, not the `local` extra used
+for Ollama) and start its OpenAI-compatible server. `--chat-template-args`
+disables Qwen3's `<think>` blocks -- the adapter scores a single non-thinking
+token, exactly like the Ollama path, and a thinking preamble would consume
+the one generated token on something other than a label:
+
+```bash
+uv tool install mlx-lm
+mlx_lm.server --model mlx-community/Qwen3-0.6B-4bit --host 127.0.0.1 --port 8080 \
+  --chat-template-args '{"enable_thinking": false}'
+curl -fsS http://127.0.0.1:8080/health
+```
+
+Default port `8080`. Recommended weights: `mlx-community/Qwen3-0.6B-4bit`
+(matching the Ollama-side default model size), or `mlx-community/Qwen3-1.7B-4bit`
+if 0.6B's acceptance coverage is too low for a workload. `-8bit` and `-bf16`
+variants trade memory for potential quality; benchmark before switching.
+Unlike Ollama's `keep_alive` eviction, mlx-lm keeps the model resident for the
+server process's entire lifetime -- there is no idle-eviction timer to rewarm
+against.
+
+Configure the bundle to use it:
+
+```bash
+"$AFAST_HOST_PYTHON" -m amplifier_fast_decisions configure \
+  --bundle-root "$AFAST_REPO" --workspace "$AFAST_PILOT/workspace" \
+  --mode shadow --backend mlx --model mlx-community/Qwen3-0.6B-4bit \
+  --timeout-ms 500 --local-sources --output "$AFAST_PILOT/shadow-mlx.md"
+```
+
+`mlx_lm.server`'s exact `logprobs` request shape has varied across released
+versions: some accept an integer count (`{"logprobs": N}`), others the
+OpenAI-style pair (`{"logprobs": true, "top_logprobs": N}`). The adapter tries
+both and caches whichever the running server accepts; re-verify against your
+installed version rather than assuming either shape is guaranteed going
+forward.
+
+Compare the two hosts on the same suite before choosing one for a workload:
+
+```bash
+afast bench suite --live --backend ollama --model qwen3:0.6b
+afast bench suite --live --backend mlx --model mlx-community/Qwen3-0.6B-4bit
+```
+
+`afast doctor` reports an `mlx_server` check (`GET /health` against
+`FAST_DECISIONS_MLX_URL`, default `http://127.0.0.1:8080`) alongside its other
+checks; absence is not an error unless you intend to use `--backend mlx`.
+
 ## Hosting without RunPod
 
 No RunPod account or deployment is required. Use an existing private workstation,
@@ -189,6 +253,66 @@ evaluation. No cloud resource was provisioned for this guide.
 | Backend unavailable / no probabilities | Check Ollama's version and native log-probability support, exact model name, HTTP availability, and `httpx` in the actual Amplifier Python environment. |
 | Scores exist but no fast execution | Shadow mode only proposes. In active mode, inspect abstention, thresholds, budgets, and native approval outcomes. |
 | The normal provider retries or fails | Diagnose the generative provider separately; the local scorer does not replace its authentication, network access, or final-answer generation. |
+
+## Hosted judge (team gateway)
+
+The above hosts (Ollama, MLX) keep the judge model on the same machine as
+Amplifier, so no snapshot state leaves it. A **hosted gateway** instead runs
+the judge on shared infrastructure your team controls -- your team's
+OpenAI-compatible gateway (e.g. a LiteLLM deployment) -- reached over HTTPS
+with an API key. This is a real network call, so it always requires explicit opt-in:
+`--backend gateway --allow-external-state` (`battery.py prepare
+--fd-backend gateway --allow-external-state`; the bundle's own
+`allow_external_state: true` config for direct runtime use). It is gated by
+the same `allow_external_state` consent check as the `jev` backend in
+`DecisionService.choose` -- omit the flag and the route silently falls back
+to the existing provider (`external_state_not_enabled`).
+
+**What leaves the machine:** the same bounded decision state every backend
+sees -- the compact task snapshot (`state`), the prepared candidate
+descriptions, and (if contributed) judgment questions -- never raw file
+contents beyond the prepared excerpt already built for the local backends,
+and never anything from outside the `fast_workspace` boundary. See
+[Privacy](PRIVACY.md) for the full data-path accounting.
+
+**Configuration**
+
+| Setting | Default | Notes |
+|---|---|---|
+| `gateway_url` (config) / `FAST_DECISIONS_GATEWAY_URL` (env) | none -- **required** | No public default: point this at your team's OpenAI-compatible gateway, e.g. `https://llm.example.internal/v1`. Must be `https://` unless the host is literal loopback (`127.0.0.1`/`::1`), which may use `http://` for local gateway development. No credentials, query string or fragment in the URL -- the key travels only in the `Authorization` header. |
+| `model` (config) | none -- **required** | Unlike the local backends, there is no default judge model for a hosted gateway; a missing `model` is a startup error, not a silent fallback. |
+| `gateway_key_env` (config) | `LITELLM_INFERENCE_KEY` | Names the environment variable holding the API key. The key value itself is never a config field, never logged, and never appears in receipts, profiles or the doctor check -- only the outbound `Authorization: Bearer <key>` header carries it, for that one request. |
+
+**Doctor:** `afast doctor` reports a `gateway_server` check (`GET
+{base}/models` using the configured key) alongside its other checks, with
+state `reachable`, `auth_failed`, or `unreachable` -- never the key itself.
+Absence is not an error unless you intend to use `--backend gateway`.
+
+**Comparing against the local judge:** run the same suite through both
+backends and compare:
+
+```bash
+afast bench suite --live --backend ollama --model qwen3:0.6b
+afast bench suite --live --backend gateway --model <hosted-model-id> \
+  --gateway-url https://llm.example.internal/v1
+```
+
+(`--gateway-url` overrides `FAST_DECISIONS_GATEWAY_URL`; one of the two is
+required -- there is no built-in default.) This isolates the question a hosted judge actually
+answers: does it reach the same decisions as the local judge, and at what
+added network latency cost? It does not by itself establish accuracy,
+reliability, or a cost advantage over Ollama/MLX -- benchmark before
+switching a workload over, exactly as with any other backend change.
+
+A hosted server cannot be assumed to honor a server-side "disable thinking"
+flag the way a self-hosted mlx-lm process can (`--chat-template-args
+'{"enable_thinking": false}'`), so the gateway backend's system prompt
+explicitly forbids a `<think>` preamble. If the model emits one anyway, the
+adapter does not need to detect it specially: a `<think>`-style token simply
+fails to match any recognized action label, and its probability mass is
+absorbed into the abstention residual like any other unrecognized token
+(see `score_tokens` in `local_backend.py`) -- the decision routes to the
+existing provider rather than acting on a leaked thinking token.
 
 ## Use it as a Smart Tool
 

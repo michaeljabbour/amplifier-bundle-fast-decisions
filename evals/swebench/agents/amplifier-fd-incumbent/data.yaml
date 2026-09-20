@@ -1,0 +1,16 @@
+session_data:
+  base_path: /root/.amplifier/projects/-workspace/sessions/{session_id}
+  files:
+    - transcript.jsonl
+    - metadata.json
+    - events.jsonl
+
+workspace:
+  path: /workspace
+  deliverables:
+    - problem_statement.md
+  capture_diff:
+    repo: /workspace/repo
+    save_as: model_patch.diff
+  do_not_pull:
+    - repo

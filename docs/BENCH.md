@@ -7,7 +7,7 @@ you explicitly opt a live backend in.
 
 ```
 afast bench replay <events-dir-or-jsonl> [--session ID] [--out report.jsonl] [--md report.md] [--json]
-afast bench suite  [<suite.jsonl>] [--backend deterministic|jev] [--live]
+afast bench suite  [<suite.jsonl>] [--backend deterministic|jev|ollama] [--model NAME] [--live]
                    [--permutations K] [--domain tool-choice|read-target|model-role] [--out ...] [--md ...] [--json]
 ```
 
@@ -63,10 +63,26 @@ a backend:
   `FAST_DECISIONS_LIVE=1` and `TYPESAFE_API_KEY` in the environment. Missing
   either falls back to the offline deterministic backend with a warning on
   stderr and exit code 0 -- it never silently fails, and never constructs a
-  Jev client without both gates.
+  Jev client without both gates. `JevBackend` needs no install: if the
+  optional `typesafe_sdk` package is absent it falls back to a stdlib
+  `urllib` transport with the same normalized result shape.
+- `--backend ollama`: the local, loopback-only token scorer
+  (`OllamaBackend`). No live gate needed -- it never leaves the machine.
+  `--model NAME` selects the model for either `jev` or `ollama` (default
+  `jev-latest` / `qwen3:0.6b` respectively).
 - **Refuses to run** (non-zero exit, no report written) if any case in the
   suite declares `"label_source": "model"` -- a model-derived label is never
   ground truth.
+- The report's `decision` block carries `decision_latency_ms_p50`/`_p95`
+  (wall-clock `ask()` latency, canonical ordering only) and
+  `accuracy_proxy.agreement_with_expected` is an explicit alias for
+  `agreement_rate` (fraction of cases where the chosen action equals
+  `expected_choice`).
+
+```bash
+afast bench suite suites/v1.jsonl --backend ollama --model qwen3:0.6b --json
+FAST_DECISIONS_LIVE=1 TYPESAFE_API_KEY=... afast bench suite suites/v1.jsonl --backend jev --live --model jev-latest --json
+```
 
 Every suite case: `{"id", "domain", "state", "candidates", "expected_choice",
 "label_source", "tags"}`. `domain` is one of `tool-choice`, `read-target`,

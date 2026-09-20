@@ -1,0 +1,11 @@
+name: amplifier-fd-incumbent
+description: >
+  Variant "fd-incumbent": amplifier-foundation @ main plus the fast-decisions
+  orchestrator in ACTIVE mode, configured as today's shipped default --
+  `judge-local+effort-incumbent` in evals/cells.yaml: local judge (Ollama
+  `qwen3:0.6b`, backend "ollama") plus effort routing restricted to
+  `explore: low` only (the `explore_only` profile). This is the reference /
+  incumbent series for S3, not the candidate under evaluation -- mirrors
+  cells.yaml's own framing of `judge-local+effort-incumbent` as "incumbent
+  Amplifier default ... reference series, not evaluated as a candidate".
+  Pins claude-fable-5-1, identical to amplifier-plain.

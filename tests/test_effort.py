@@ -445,3 +445,101 @@ class LiveLoopShapeTests(unittest.TestCase):
 
     def test_first_request_of_turn_is_orient(self):
         self.assertEqual(effort.classify_phase(NS(messages=[self._user("<reminder/>"), self._user("task")])), effort.PHASE_ORIENT)
+
+
+
+class PerPhaseRoutingTests(unittest.TestCase):
+    def test_implement_and_orient_phases_can_be_routed(self):
+        routing = {"orient": "medium", "explore": "low", "implement": "high", "escalate_after_provider_errors": 1}
+        self.assertEqual(effort.decide_effort("implement", routing, explore_requests=0, provider_errors_seen=0, host_pinned=False), ("high", effort.REASON_PHASE_POLICY))
+        self.assertEqual(effort.decide_effort("orient", routing, explore_requests=0, provider_errors_seen=0, host_pinned=False), ("medium", effort.REASON_PHASE_POLICY))
+        self.assertEqual(effort.decide_effort("implement", routing, explore_requests=0, provider_errors_seen=1, host_pinned=False), (None, effort.REASON_ESCALATED_AFTER_ERROR))
+        self.assertEqual(effort.decide_effort("implement", {"explore": "low"}, explore_requests=0, provider_errors_seen=0, host_pinned=False), (None, effort.REASON_DEFAULT_EFFORT))
+
+    def test_validation_rejects_unknown_keys_and_bad_levels(self):
+        from amplifier_fast_decisions.contracts import validate_effort_routing
+        validate_effort_routing({"orient": "medium", "implement": "high"})
+        with self.assertRaises(ValueError):
+            validate_effort_routing({"implement": "turbo"})
+        with self.assertRaises(ValueError):
+            validate_effort_routing({"verify": "low"})
+
+
+class _OnlyUnderPrefixFinder:
+    """Meta path finder that forces ``amplifier_module_loop_streaming`` to be
+    resolvable ONLY from directories under a given prefix (our temp cache
+    dirs), regardless of whether a real distribution is installed elsewhere
+    on sys.path.
+
+    This makes ``_import_upstream_loop``'s fallback-to-cache branch
+    exercisable deterministically in every environment: locally (upstream not
+    installed, where the plain import already fails on its own) and in the
+    `upstream` / `upstream-main` CI jobs (where amplifier_module_loop_streaming
+    IS pip installed from git @main, so the plain import would otherwise
+    succeed immediately and never reach the cache-search fallback this test
+    means to prove).
+    """
+
+    TARGET = "amplifier_module_loop_streaming"
+
+    def __init__(self, allowed_prefix: str):
+        self.allowed_prefix = allowed_prefix
+
+    def find_spec(self, fullname, path=None, target=None):
+        if fullname != self.TARGET:
+            return None  # defer to normal resolution for anything else
+        import importlib.machinery
+        import sys
+
+        candidate_paths = [p for p in sys.path if p.startswith(self.allowed_prefix)]
+        spec = importlib.machinery.PathFinder.find_spec(fullname, candidate_paths)
+        if spec is None:
+            # Raising here (rather than returning None) prevents the import
+            # machinery from falling through to an installed distribution.
+            raise ImportError(f"{fullname} blocked outside {self.allowed_prefix} (test-forced)")
+        return spec
+
+
+class UpstreamLoopImportTests(unittest.TestCase):
+    def test_falls_back_to_module_cache_checkout(self):
+        import sys
+        import tempfile
+        import textwrap
+        from pathlib import Path
+
+        from amplifier_fast_decisions import orchestrator
+
+        saved = sys.modules.pop("amplifier_module_loop_streaming", None)
+        with tempfile.TemporaryDirectory() as tmp:
+            finder = _OnlyUnderPrefixFinder(tmp)
+            sys.meta_path.insert(0, finder)
+            try:
+                cache = Path(tmp)
+                mod = cache / "amplifier-module-loop-streaming-deadbeef" / "amplifier_module_loop_streaming"
+                mod.mkdir(parents=True)
+                (mod / "__init__.py").write_text(
+                    textwrap.dedent(
+                        """
+                    class StreamingOrchestrator:
+                        def __init__(self, config): self.config = config
+                """
+                    )
+                )
+                cls = orchestrator._import_upstream_loop(cache_root=cache)
+                self.assertEqual(cls.__name__, "StreamingOrchestrator")
+                self.assertTrue(
+                    getattr(cls, "__module__", "").startswith("amplifier_module_loop_streaming"),
+                    "expected the cache checkout's class, not an installed distribution",
+                )
+                sys.modules.pop("amplifier_module_loop_streaming", None)
+                for entry in list(sys.path):
+                    if entry.startswith(tmp):
+                        sys.path.remove(entry)
+                with tempfile.TemporaryDirectory() as empty:
+                    with self.assertRaises(RuntimeError):
+                        orchestrator._import_upstream_loop(cache_root=Path(empty))
+            finally:
+                sys.meta_path.remove(finder)
+                sys.modules.pop("amplifier_module_loop_streaming", None)
+                if saved is not None:
+                    sys.modules["amplifier_module_loop_streaming"] = saved

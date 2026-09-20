@@ -43,6 +43,9 @@ EVENT_NAMES = tuple(
         "observatory",
         "source",
         "effort_routed",
+        "model_routed",
+        "escalation_judged",
+        "phase_judged",
     )
 )
 
@@ -63,17 +66,117 @@ def validate_effort_routing(effort_routing: Any) -> None:
         return
     if not isinstance(effort_routing, dict):
         raise ValueError("effort_routing must be a dict")
-    explore = effort_routing.get("explore")
-    if explore is not None and explore not in ALLOWED_EFFORTS:
-        raise ValueError(
-            f"effort_routing.explore must be one of {sorted(ALLOWED_EFFORTS)}"
-        )
+    for phase in ("orient", "explore", "implement"):
+        effort = effort_routing.get(phase)
+        if effort is not None and effort not in ALLOWED_EFFORTS:
+            raise ValueError(
+                f"effort_routing.{phase} must be one of {sorted(ALLOWED_EFFORTS)}"
+            )
+    unknown = set(effort_routing) - {
+        "orient",
+        "explore",
+        "implement",
+        "max_explore_requests",
+        "escalate_after_provider_errors",
+        # HC05 ("judge-driven phase classification", opt-in): ask the
+        # configured DecisionBackend to classify the phase instead of the
+        # deterministic classify_phase(). See orchestrator.py and
+        # docs/ARCHITECTURE.md.
+        "phase_judge",
+    }
+    if unknown:
+        raise ValueError(f"effort_routing has unknown keys: {sorted(unknown)}")
     for key in ("max_explore_requests", "escalate_after_provider_errors"):
         value = effort_routing.get(key)
         if value is not None and (
             isinstance(value, bool) or not isinstance(value, int) or value < 1
         ):
             raise ValueError(f"effort_routing.{key} must be a positive integer")
+    phase_judge = effort_routing.get("phase_judge")
+    if phase_judge is not None and not isinstance(phase_judge, bool):
+        raise ValueError("effort_routing.phase_judge must be a bool")
+
+
+# HC04 ("opt-in model routing with escalation"): the effort strings a host
+# provider accepts on Policy.model_routing["start_effort"]. Reuses
+# ALLOWED_EFFORTS above -- same vocabulary as effort_routing.
+MODEL_ROUTING_KEYS = frozenset(
+    {
+        "start_model",
+        "start_effort",
+        "max_requests_before_escalation",
+        "escalate_on_test_failure",
+        "escalate_on_provider_error",
+        "override_explicit_model",
+        # HC05 ("judge-driven escalation", opt-in): "rules" (default,
+        # current behavior) asks nothing extra; "judge" asks the configured
+        # DecisionBackend a single Choice question before every slow request
+        # past the first, while not yet escalated. Deterministic triggers
+        # above remain a floor and still escalate regardless of the judge's
+        # answer. See orchestrator.py and docs/ARCHITECTURE.md.
+        "escalation_judge",
+        "escalate_min_probability",
+    }
+)
+
+ESCALATION_JUDGE_MODES = frozenset({"rules", "judge"})
+
+
+def validate_model_routing(model_routing: Any) -> None:
+    """Fail loud on a malformed ``model_routing`` policy at mount time.
+
+    ``None`` is the only default-off shape -- routing stays fully opt-in.
+    Unlike ``effort_routing``, an empty dict is NOT treated as off: if a
+    dict is supplied at all, ``start_model`` is required, because a model
+    pin with no starting model is meaningless. Never silently ignores a
+    bad value.
+    """
+    if model_routing is None:
+        return
+    if not isinstance(model_routing, dict):
+        raise ValueError("model_routing must be a dict")
+    unknown = set(model_routing) - MODEL_ROUTING_KEYS
+    if unknown:
+        raise ValueError(f"model_routing has unknown keys: {sorted(unknown)}")
+    start_model = model_routing.get("start_model")
+    if not isinstance(start_model, str) or not start_model:
+        raise ValueError("model_routing.start_model must be a non-empty string")
+    start_effort = model_routing.get("start_effort")
+    if start_effort is not None and start_effort not in ALLOWED_EFFORTS:
+        raise ValueError(
+            f"model_routing.start_effort must be one of {sorted(ALLOWED_EFFORTS)}"
+        )
+    max_requests = model_routing.get("max_requests_before_escalation")
+    if max_requests is not None and (
+        isinstance(max_requests, bool)
+        or not isinstance(max_requests, int)
+        or max_requests < 1
+    ):
+        raise ValueError(
+            "model_routing.max_requests_before_escalation must be a positive integer"
+        )
+    for key in (
+        "escalate_on_test_failure",
+        "escalate_on_provider_error",
+        "override_explicit_model",
+    ):
+        value = model_routing.get(key)
+        if value is not None and not isinstance(value, bool):
+            raise ValueError(f"model_routing.{key} must be a bool")
+    escalation_judge = model_routing.get("escalation_judge")
+    if escalation_judge is not None and escalation_judge not in ESCALATION_JUDGE_MODES:
+        raise ValueError(
+            f"model_routing.escalation_judge must be one of {sorted(ESCALATION_JUDGE_MODES)}"
+        )
+    escalate_min_probability = model_routing.get("escalate_min_probability")
+    if escalate_min_probability is not None and (
+        isinstance(escalate_min_probability, bool)
+        or not isinstance(escalate_min_probability, (int, float))
+        or not 0 <= escalate_min_probability <= 1
+    ):
+        raise ValueError(
+            "model_routing.escalate_min_probability must be a number between 0 and 1"
+        )
 
 
 def canonical(value: Any) -> str:
@@ -341,6 +444,11 @@ class Policy:
     # off -- RoutedProvider never reads request.reasoning_effort and never
     # emits fast_decisions:effort_routed. See effort.py and docs/ARCHITECTURE.md.
     effort_routing: dict[str, Any] | None = None
+    # HC04 ("opt-in model routing with escalation", opt-in): None means fully
+    # off -- RoutedProvider never reads/writes request.model or
+    # request.reasoning_effort for this feature and never emits
+    # fast_decisions:model_routed. See orchestrator.py and docs/ARCHITECTURE.md.
+    model_routing: dict[str, Any] | None = None
     version: str = "policy-v1"
 
     def __post_init__(self) -> None:
@@ -363,6 +471,7 @@ class Policy:
         if not 1 <= self.shadow_snapshot_budget_ms <= 5000:
             raise ValueError("shadow_snapshot_budget_ms must be between 1 and 5000")
         validate_effort_routing(self.effort_routing)
+        validate_model_routing(self.model_routing)
 
     @classmethod
     def from_config(cls, config: dict[str, Any]) -> Policy:
@@ -405,6 +514,31 @@ class TurnState:
     explore_requests: int = 0
     effort_routed_requests: int = 0
     provider_errors_seen: int = 0
+    # HC04 ("opt-in model routing with escalation"): per-turn counters/flags.
+    # Reset with the rest of TurnState at turn start. slow_requests_seen
+    # counts every slow request seen while model_routing is enabled (not
+    # gated on whether routing actually applied); model_routed_requests
+    # counts only requests where start_model was actually set;
+    # test_failure_seen is set by ObservedTool.execute observing a failing
+    # test-tool result; escalated/escalation_reason latch permanently once
+    # tripped (never reset mid-turn).
+    slow_requests_seen: int = 0
+    model_routed_requests: int = 0
+    test_failure_seen: bool = False
+    escalated: bool = False
+    escalation_reason: str | None = None
+    # HC05 ("judge-driven escalation and phase classification", opt-in):
+    # per-turn judge context and counters. tool_names_used/last_tool_result_text
+    # are fed by ObservedTool.execute, but ONLY while a judge mechanism is
+    # actually configured (escalation_judge: "judge" or phase_judge: true) --
+    # inert otherwise, matching every other HC0x seam. escalation_judgements
+    # counts every time the escalation judge was actually asked (not gated on
+    # its answer); escalations_by_judge counts only the judge-caused
+    # escalations (a deterministic trigger firing first does not count here).
+    tool_names_used: set[str] = field(default_factory=set)
+    last_tool_result_text: str = ""
+    escalation_judgements: int = 0
+    escalations_by_judge: int = 0
 
 
 def candidate_read_identity(

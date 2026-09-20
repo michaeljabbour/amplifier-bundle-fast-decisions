@@ -44,7 +44,10 @@
         "fast_decisions:role_agreement",
         "fast_decisions:observatory",
         "fast_decisions:source",
-        "fast_decisions:effort_routed"
+        "fast_decisions:effort_routed",
+        "fast_decisions:model_routed",
+        "fast_decisions:escalation_judged",
+        "fast_decisions:phase_judged"
       ]
     },
     "session_id": {

@@ -1,0 +1,248 @@
+schema: fast-decisions-evals/cells/v1
+
+# Decision (2026-09-20), see STUDY-DESIGN.md "Decisions":
+# 1. Contemporaneous anchor is now ONE `plain` (or `plain-sonnet`) experiment
+#    PER REPETITION BATCH, shared by every fd cell of that batch -- not an
+#    `amplifier-plain` harness embedded in each fd cell's own experiment.
+#    A cell that needs a shared anchor names it in `anchor_cell`; run.py
+#    compares that cell's experiment against `anchor_cell`'s experiment for
+#    the SAME (suite, split, rep) via `battery.py evaluate --baseline-root
+#    --baseline-experiment` (an existing battery.py capability -- no new
+#    measurement logic). `externals` is the one exception: it keeps its own
+#    embedded `amplifier-plain` harness because Q3 is a five-harness,
+#    single-interleaved-schedule comparison, not a batch-anchor comparison.
+# 4. The "incumbent" Amplifier default (today's shipped fast-decisions
+#    profile) is `judge-local+effort-incumbent` (explore:low only). The
+#    all-phase `judge-local+effort` champion candidate, and both model-routing
+#    cells, are CANDIDATES under evaluation -- not assumed defaults.
+# 5. Judge head-to-head (2026-09-20c), see STUDY-DESIGN.md section 14: every
+#    local-judge cell that matters for the judge-vs-judge comparison gets a
+#    `jev` twin, identical in every other axis. `escalation_judge: "judge"`
+#    (HC05) hands the mechanism that actually carries speed -- the
+#    escalate-or-not call -- to whichever judge the cell configures, so the
+#    two `+route-judged` cells are the head-to-head's decisive pair.
+
+defaults:
+  amplifier_model: claude-fable-5-1
+  judge_model: qwen3:0.6b
+  claude_permission_mode: bypassPermissions     # R2: never acceptEdits, either suite
+  claude_max_budget_usd: 3.0
+  external_models:
+    claude: null            # null = the harness's configured default; recorded either way
+    codex: null
+    opencode: null
+
+effort_profiles:
+  all_phase: { orient: medium, explore: low, implement: high }
+  explore_only: { explore: low }
+  # HC05 ("judge-driven phase classification"): otherwise identical to
+  # all_phase -- the judge classifies the phase instead of (with fallback
+  # to) the deterministic classifier.
+  all_phase_judged: { orient: medium, explore: low, implement: high, phase_judge: true }
+
+model_routing_profiles:
+  sonnet_start:
+    start_model: claude-sonnet-5
+    max_requests_before_escalation: 6
+    escalate_on_test_failure: true
+    escalate_on_provider_error: true
+  # HC05 ("judge-driven escalation"): otherwise identical to sonnet_start --
+  # the deterministic triggers remain a floor, but past the turn's first
+  # slow request the judge itself may also escalate.
+  sonnet_start_judged:
+    start_model: claude-sonnet-5
+    max_requests_before_escalation: 6
+    escalate_on_test_failure: true
+    escalate_on_provider_error: true
+    escalation_judge: judge
+    escalate_min_probability: 0.7
+
+cells:
+  plain:
+    label_suffix: "plain [model=claude-fable-5-1]"
+    harnesses: [amplifier-plain]
+    amplifier_model: claude-fable-5-1
+    fd: null
+    role: "reference series / drift check / shared batch anchor"
+    mechanism_gate: { no_fd_receipts: true }
+
+  plain-sonnet:
+    label_suffix: "plain [model=claude-sonnet-5]"
+    harnesses: [amplifier-plain]
+    amplifier_model: claude-sonnet-5
+    fd: null
+    role: "mandatory control for judge-local+effort+route; batch anchor for the routing pair"
+    mechanism_gate: { no_fd_receipts: true }
+
+  judge-local:
+    harnesses: [amplifier-fd]
+    fd: { backend: ollama, model: qwen3:0.6b }
+    role: "judge alone"
+    anchor_cell: plain
+    mechanism_gate: { scored_backend: ollama, min_scored: 1, max_fallback_fraction: 0.5 }
+
+  judge-jev:
+    harnesses: [amplifier-fd]
+    fd: { backend: jev, allow_external_state: true }
+    role: "judge alone -- jev twin of judge-local (2026-09-20c head-to-head)"
+    purpose: "judge-vs-judge: isolates the skip-the-model read decision on jev instead of ollama, all else identical to judge-local"
+    anchor_cell: plain
+    mechanism_gate: { scored_backend: jev, min_scored: 1, max_fallback_fraction: 0.5 }
+
+  effort-only:
+    harnesses: [amplifier-fd]
+    fd: { backend: unavailable, effort_profile: all_phase }
+    role: "effort routing alone (judge off)"
+    anchor_cell: plain
+    mechanism_gate: { max_scored: 0, require_effort_phases: ["implement:high"] }
+
+  judge-local+effort-incumbent:
+    harnesses: [amplifier-fd]
+    fd: { backend: ollama, model: qwen3:0.6b, effort_profile: explore_only }
+    role: "incumbent Amplifier default (today's shipped fast-decisions config) -- reference series, not evaluated as a candidate"
+    anchor_cell: plain
+    mechanism_gate: { scored_backend: ollama, min_scored: 1, require_effort_phases: ["explore:low"] }
+
+  judge-jev+effort-incumbent:
+    harnesses: [amplifier-fd]
+    fd: { backend: jev, allow_external_state: true, effort_profile: explore_only }
+    role: "jev twin of the incumbent (2026-09-20c head-to-head) -- reference series, not a candidate"
+    purpose: "judge-vs-judge: today's shipped explore-only effort profile, judged by jev instead of ollama"
+    anchor_cell: plain
+    mechanism_gate: { scored_backend: jev, min_scored: 1, require_effort_phases: ["explore:low"] }
+
+  plain-lean:
+    label_suffix: "plain [model=claude-fable-5-1; bundle=lean]"
+    harnesses: [amplifier-plain]
+    amplifier_model: claude-fable-5-1
+    amplifier_bundle: lean
+    fd: null
+    role: "batch anchor for the lean pair -- isolates installed-context weight (no foundation include)"
+    mechanism_gate: { no_fd_receipts: true }
+
+  judge-local+effort-incumbent-lean:
+    harnesses: [amplifier-fd]
+    fd: { backend: ollama, model: qwen3:0.6b, effort_profile: explore_only }
+    amplifier_bundle: lean
+    role: "HC-installed-context-weight -- the incumbent config composed WITHOUT the foundation include"
+    purpose: "isolate installed-context weight: does dropping foundation's ~50k-token composed system prompt speed up the incumbent config?"
+    anchor_cell: plain-lean
+    secondary_anchor: judge-local+effort-incumbent   # the foundation twin: identical fd config, foundation include present
+    mechanism_gate: { scored_backend: ollama, min_scored: 1, require_effort_phases: ["explore:low"] }
+
+  judge-local+effort:
+    harnesses: [amplifier-fd]
+    fd: { backend: ollama, model: qwen3:0.6b, effort_profile: all_phase }
+    role: "champion candidate -- all-phase effort routing under test (not assumed as Amplifier's default)"
+    champion: true
+    anchor_cell: plain
+    mechanism_gate: { scored_backend: ollama, min_scored: 1, require_effort_phases: ["implement:high"] }
+
+  judge-jev+effort:
+    harnesses: [amplifier-fd]
+    fd: { backend: jev, allow_external_state: true, effort_profile: all_phase }
+    role: "judge swap (external; opt-in state)"
+    anchor_cell: plain
+    mechanism_gate: { scored_backend: jev, min_scored: 1, require_effort_phases: ["implement:high"] }
+
+  judge-local+effort-phasejudged:
+    harnesses: [amplifier-fd]
+    fd: { backend: ollama, model: qwen3:0.6b, effort_profile: all_phase_judged }
+    role: "HC05 phase judge (local) -- does the judge's own phase classification beat the deterministic one?"
+    purpose: "phase-classification judge vs deterministic rules, local backend"
+    anchor_cell: plain
+    secondary_anchor: judge-local+effort   # the non-judged twin: same all-phase profile, rules-classified
+    mechanism_gate: { scored_backend: ollama, min_scored: 1, require_effort_phases: ["implement:high"], require_judged: true }
+
+  judge-jev+effort-phasejudged:
+    harnesses: [amplifier-fd]
+    fd: { backend: jev, allow_external_state: true, effort_profile: all_phase_judged }
+    role: "HC05 phase judge (jev) -- judge-vs-judge twin of judge-local+effort-phasejudged"
+    purpose: "judge-vs-judge: phase-classification judge on jev instead of ollama"
+    anchor_cell: plain
+    secondary_anchor: judge-jev+effort     # the non-judged twin: same all-phase profile, rules-classified, jev backend
+    mechanism_gate: { scored_backend: jev, min_scored: 1, require_effort_phases: ["implement:high"], require_judged: true }
+
+  judge-local+effort+route:
+    harnesses: [amplifier-fd]
+    fd: { backend: ollama, model: qwen3:0.6b, effort_profile: all_phase,
+          model_routing_profile: sonnet_start }
+    role: "model routing (a candidate, not a default)"
+    anchor_cell: plain-sonnet
+    # Decision (2026-09-20b): read-only extra comparison against plain
+    # fable-5-1 (not just the mandatory plain-sonnet control) so the
+    # results/design-bridge layer can tell "beats plain but not plain-sonnet"
+    # (pin the cheaper model) apart from "beats plain-sonnet" (routing pays).
+    secondary_anchor: plain
+    requires_cells: [plain-sonnet]          # refuse to run without its control
+    mechanism_gate:
+      model_routed_model: claude-sonnet-5
+      min_model_routed: 1
+      flag_if_zero_escalations: confounded_with_plain_sonnet
+
+  judge-jev+effort+route:
+    harnesses: [amplifier-fd]
+    fd: { backend: jev, allow_external_state: true, effort_profile: all_phase,
+          model_routing_profile: sonnet_start }
+    role: "model routing, judge-vs-judge twin of judge-local+effort+route (rules escalation, jev judge for the read-shortcut)"
+    purpose: "judge-vs-judge: model routing with the read-shortcut judged by jev instead of ollama; escalation still rules-based"
+    anchor_cell: plain-sonnet
+    secondary_anchor: plain
+    requires_cells: [plain-sonnet]
+    mechanism_gate:
+      model_routed_model: claude-sonnet-5
+      min_model_routed: 1
+      flag_if_zero_escalations: confounded_with_plain_sonnet
+
+  judge-local+effort+route-judged:
+    harnesses: [amplifier-fd]
+    fd: { backend: ollama, model: qwen3:0.6b, effort_profile: all_phase,
+          model_routing_profile: sonnet_start_judged }
+    role: "HC05 escalation judge (local) -- hands the escalate-or-not call to the judge instead of the deterministic rules"
+    purpose: "escalation-judge decisive pair: does letting the local judge decide when to escalate beat the deterministic trigger set?"
+    anchor_cell: plain-sonnet
+    secondary_anchor: judge-local+effort+route   # the rules twin: identical routing profile, escalation_judge off
+    requires_cells: [plain-sonnet]
+    mechanism_gate:
+      model_routed_model: claude-sonnet-5
+      min_model_routed: 1
+      flag_if_zero_escalations: confounded_with_plain_sonnet
+      require_judged: true
+
+  judge-jev+effort+route-judged:
+    harnesses: [amplifier-fd]
+    fd: { backend: jev, allow_external_state: true, effort_profile: all_phase,
+          model_routing_profile: sonnet_start_judged }
+    role: "HC05 escalation judge (jev) -- judge-vs-judge twin of judge-local+effort+route-judged"
+    purpose: "escalation-judge decisive pair: the same escalate-or-not call, decided by jev instead of the local judge"
+    anchor_cell: plain-sonnet
+    secondary_anchor: judge-jev+effort+route     # the rules twin: identical routing profile, escalation_judge off, jev backend
+    requires_cells: [plain-sonnet]
+    mechanism_gate:
+      model_routed_model: claude-sonnet-5
+      min_model_routed: 1
+      flag_if_zero_escalations: confounded_with_plain_sonnet
+      require_judged: true
+
+  judge-gateway+effort-incumbent:
+    harnesses: [amplifier-fd]
+    fd: { backend: gateway, allow_external_state: true, model: "TBD-by-gateway-owner", effort_profile: explore_only }
+    role: "hosted judge (team gateway), incumbent effort profile -- reference series, not yet a candidate (model TBD until the gateway owner hosts one)"
+    purpose: "hosted judge: same decisions as the local judge without a local model; measures network latency cost"
+    anchor_cell: plain
+    secondary_anchor: judge-local+effort-incumbent
+    mechanism_gate: { scored_backend: gateway, min_scored: 1, require_effort_phases: ["explore:low"] }
+
+  externals:
+    harnesses: [claude, codex, opencode, amplifier-plain, amplifier-fd]
+    fd: { backend: ollama, model: qwen3:0.6b, effort_profile: all_phase }   # = champion
+    role: "Q3 cross-harness comparison"
+    mechanism_gate: { scored_backend: ollama, min_scored: 1 }
+
+budget:
+  per_launch_usd: 12.0
+  estimated_total_usd: 1500.0
+  max_benchmark_worker_launches: 2000
+  max_infrastructure_retries_per_run: 1
+  max_parallel_timed_runs: 1        # never raise this: timed runs must not share resources
+  wall_hours: 24

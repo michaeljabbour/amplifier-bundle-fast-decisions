@@ -30,6 +30,9 @@ Session identity is read from the coordinator/session if exposed. A generated fa
 | `observatory` | The auto-observatory's once-per-session `session:start` bootstrap; `action` is `reused` / `started` / `skipped` / `failed`, plus `reason` and (when relevant) `port` -- never the token-bearing URL, which never enters event data |
 | `source` | Once per session, at mount, in every mode including `off`: which source actually ran. `source_kind` is `installed-cache` / `worktree` / `site-packages` / `unknown`; `source_git_sha` (40-hex or `null`) and `source_tree_sha256` (a SHA-256 over every `*.py` file's relative path and bytes, skipping `__pycache__`) identify the exact code; `source_py_files`, `package_version`, `python`, `mode`, and `module` (`hooks-fast-decisions` or `loop-fast-decisions`) round it out. Never a filesystem path -- see `provenance.describe_source` and docs/PRIVACY.md |
 | `effort_routed` | HC03 (opt-in, off unless `Policy.effort_routing` is configured): emitted once per slow (`RoutedProvider.complete`) request, before the upstream provider call; carries `phase` (`orient` / `explore` / `implement`), `requested_effort` (the string set on `request.reasoning_effort`, or `null` when left unchanged), `default_effort` (always `"provider_default"` -- the policy never claims to know the provider's actual default), `reason_code` (`phase_policy` / `default_effort` / `host_pinned` / `escalated_max_explore` / `escalated_after_error`), `explore_requests` (this turn's explore-phase request count so far), `provider_call_id`, and `mode` |
+| `model_routed` | HC04 (opt-in, off unless `Policy.model_routing` is configured): emitted once per slow (`RoutedProvider.complete`) request, before the upstream provider call; carries `phase`, `requested_model` (the string set on `request.model`/`kwargs["model"]`, or `null` when left unchanged), `requested_effort` (the starting effort applied, or `null`), `reason_code` (`start_model` / `host_pinned` / `escalated_max_requests` / `escalated_test_failure` / `escalated_provider_error` / `escalated_judge`), `escalated` (this turn's latch, once tripped it stays tripped), `escalation_reason` (`max_requests` / `test_failure` / `provider_error` / `judge` / `null`), `model_routed_requests` (this turn's count of requests where `start_model` was actually applied), `provider_call_id`, and `mode` |
+| `escalation_judged` | HC05 (opt-in, off unless `Policy.model_routing.escalation_judge == "judge"`): emitted once per slow request past the turn's first, while not yet escalated, immediately before the deterministic `model_routed` decision on the SAME request; carries `backend` (`service.backend.name`), `choice` (`continue_cheap` / `escalate` / `null` on abstain/blocked/error), `probability` (the judge's own probability for `choice`, or `null`), `decided` (`escalate` / `continue` / `fallback_rules`), `duration_ms`, `phase`, `slow_requests_seen`, and `mode`. Never fires when a deterministic trigger (`test_failure` / `max_requests`) already escalated this same request -- those remain a floor regardless of the judge |
+| `phase_judged` | HC05 (opt-in, off unless `Policy.effort_routing.phase_judge` is `true`): emitted once per slow request, immediately after the deterministic `effort.classify_phase(request)` call and before `effort_routed`; carries `backend`, `choice` (one of `orient`/`explore`/`implement`, or `null` on abstain/blocked/error), `probability`, `agreed_with_rules` (`choice == the deterministic phase`, or `null` when `choice` is `null`), and `duration_ms`. A non-null `choice` overrides the phase used for the rest of this request's effort/model routing; `null` leaves the deterministic classification in place |
 
 Fast tool IDs match the synthesized core ToolCall ID when the argument fingerprint still matches. If upstream modifies a call, or for ordinary slow-path calls, the tool facade may allocate an `observed_*` correlation ID instead. The native hook bridge can carry the original native ID. Do not assume these are identical in every path.
 
@@ -128,6 +131,25 @@ untouched (`reason_code: host_pinned`). `Policy.effort_routing` defaults to
 `request.reasoning_effort`. See docs/ARCHITECTURE.md's "Phase-specific
 effort routing (HC03, opt-in)" section.
 
+**HC05 (judge-driven escalation and phase classification) reuses the
+read-shortcut's own contract, never `DecisionService.choose`.** Both
+`escalation_judged` and `phase_judged` are produced by
+`orchestrator._ask_judge_choice`, which builds one `DecisionRequest` with
+`candidates=()` and a single contributed `Question` (type `choice`), then
+calls `service.backend.ask()` directly -- the same `DecisionRequest` /
+`DecisionResult` / `Question` / `Answer` contract the fast-path read
+decision (`DecisionService.choose`) uses, so it inherits `Policy.timeout_ms`
+and the identical `backend.external and not allow_external_state` gate
+(Jev refuses without consent, exactly as for a read candidate). It never
+calls `DecisionService.choose` itself: there is no prepared action to
+submit, only a judgment. State sent to the judge is deliberately tiny and
+bounded (`orchestrator._judge_state`): a 300-char head of the first user
+message, the phase, this turn's slow-request count, tool names used so far,
+a 600-char excerpt of the last tool result, and the two HC04 failure
+signals (`test_failure_seen`, `provider_errors_seen`) -- trimmed further if
+the serialized state would still exceed `Policy.max_state_chars`. Never the
+full conversation, tool arguments, or model output.
+
 ## Correlated execution receipts
 
 `slow_start` and `slow_end` now include a unique `provider_call_id` per invocation.
@@ -136,3 +158,18 @@ unknown unless measured. `routed:fast` includes the prepared `tool_call_id`.
 `turn_end` records status and execution wall time, never task-quality success.
 The instrumented `off` mode records ordinary execution without active or background
 shadow inference. See [OPERATIONS.md](OPERATIONS.md) for aggregation and completeness.
+
+**HC04 (opt-in model routing with escalation) never bypasses approvals or the upstream tool-call loop.**
+`Policy.model_routing` (default `None`) lets a host start a turn's generative
+requests pinned to a cheaper/faster `start_model` (and optionally a starting
+`request.reasoning_effort`), then escalate to the host's normal provider
+default the moment risk signals appear: too many slow requests in the turn,
+an observed test-tool failure, or an upstream provider exception. Once
+`turn.escalated` is set it never resets mid-turn -- every subsequent slow
+request in that turn is left untouched (`reason_code`
+`escalated_max_requests` / `escalated_test_failure` / `escalated_provider_error`).
+An explicit host-set `request.model` is always respected
+(`reason_code: host_pinned`) unless `model_routing["override_explicit_model"]`
+is `true`. `model_routed` is the only new event surface; it never changes
+tool approvals, never touches `stream()`, and never overrides an
+already-applied HC03 `effort_routed` result on the same request.

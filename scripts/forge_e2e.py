@@ -25,17 +25,21 @@ import os
 from pathlib import Path
 import platform
 import shlex
+import shutil
 import subprocess
 import sys
 import time
 import urllib.request
 
+import forge_workloads
 from forge_workloads import SPECS, STARTERS, PUBLIC, evaluate
 
 FORGE = Path.home()/'.agents/skills/amplifier-skill-forge/tools/forge.py'
 CACHE = Path.home()/'.amplifier/cache/amplifier-bundle-fast-decisions-703c3edc7c970204'
 EVENTS = Path.home()/'.amplifier/fast-decisions/events'
 HOST_PYTHON = Path.home()/'.local/share/uv/tools/amplifier/bin/python'
+BENCHMARK_BUNDLE_NAME = 'afast-benchmark-run'
+
 PROMPT = ('Read README.md first, then repair the implementation to satisfy its full contract. '
           'Work directly in this workspace without delegating or using the network. '
           'Modify solution.py and add tests if useful, but do not change README.md or existing test_public.py. '
@@ -43,6 +47,20 @@ PROMPT = ('Read README.md first, then repair the implementation to satisfy its f
 
 # The upstream orchestrator the "off" (no fast-decisions routing) side runs.
 UPSTREAM_LOOP_SOURCE = 'git+https://github.com/microsoft/amplifier-module-loop-streaming@20aac7a9eb26034d230357f6aa6805f27c86df52'
+
+# --amplifier-bundle lean (battery.py prepare): the minimal explicit module set
+# used INSTEAD OF including the fast-decisions bundle root (which transitively
+# pulls in the full foundation bundle -- ~50k tokens of agents/context/behaviors).
+# Sources mirror foundation's own declarations verbatim (see docs/COMPATIBILITY.md
+# and AGENTS.md): foundation's bundle.md for tool-filesystem/tool-bash,
+# foundation's behaviors/todo-reminder.yaml for tool-todo, and the installed
+# amplifier-module-provider-anthropic package's own git remote for provider-anthropic.
+LEAN_MODULE_SOURCES = {
+    'tool-filesystem': 'git+https://github.com/microsoft/amplifier-module-tool-filesystem@main',
+    'tool-bash': 'git+https://github.com/microsoft/amplifier-module-tool-bash@main',
+    'tool-todo': 'git+https://github.com/microsoft/amplifier-module-tool-todo@main',
+    'provider-anthropic': 'git+https://github.com/microsoft/amplifier-module-provider-anthropic@main',
+}
 
 # The decision policy the "active" side runs with, absent overrides.
 DEFAULT_DECISION = {
@@ -108,6 +126,107 @@ def available(name):
     except metadata.PackageNotFoundError:return False
 
 
+def _battery_task(task):
+    """Look up ``task`` in battery_tasks.TASKS, if that module is importable
+    and knows about it. Returns None otherwise (never raises)."""
+    try:
+        import battery_tasks
+    except ImportError:
+        return None
+    return getattr(battery_tasks, 'TASKS', {}).get(task)
+
+
+def _task_files(task):
+    """Initial workspace files for ``task``: {relpath: text}.
+
+    Delegates to ``forge_workloads.task_files`` (the contract point where a
+    task-generalizing sibling module registers new task shapes). Falls back,
+    in order, to: the legacy README/solution/test_public trio (for this
+    module's own SPECS/STARTERS/PUBLIC tasks), then battery_tasks.TASKS
+    directly -- so this module works standalone whether or not
+    forge_workloads has been generalized yet.
+    """
+    fn = getattr(forge_workloads, 'task_files', None)
+    if fn is not None:
+        return fn(task)
+    if task in SPECS:
+        return {'README.md': SPECS[task], 'solution.py': STARTERS[task], 'test_public.py': PUBLIC[task]}
+    entry = _battery_task(task)
+    if entry is not None:
+        return entry.files
+    raise KeyError(task)
+
+
+def _task_prompt(task):
+    """Per-task prompt override, or None to use the run/manifest default."""
+    fn = getattr(forge_workloads, 'task_prompt', None)
+    if fn is not None:
+        return fn(task)
+    if task in SPECS:
+        return None
+    entry = _battery_task(task)
+    return getattr(entry, 'prompt', None) if entry is not None else None
+
+
+def _task_protected(task):
+    """Files the agent must not modify for ``task``."""
+    fn = getattr(forge_workloads, 'task_protected', None)
+    if fn is not None:
+        return fn(task)
+    if task in SPECS:
+        return ('README.md', 'test_public.py')
+    entry = _battery_task(task)
+    return tuple(entry.protected) if entry is not None else ('README.md', 'test_public.py')
+
+
+def _task_kind(task):
+    """'code' (evaluator-checked) or 'answer' (message-checked). Legacy SPECS-only
+    tasks and any task battery_tasks does not know about are 'code'."""
+    try:
+        import battery_tasks
+    except ImportError:
+        return 'code'
+    entry = getattr(battery_tasks, 'TASKS', {}).get(task)
+    return getattr(entry, 'kind', 'code') if entry is not None else 'code'
+
+
+def _extract_final_message(session_dir, workspace):
+    """Best-effort extraction of the assistant's final response text.
+
+    Primary source: the last ``llm:response`` event's ``data.raw.content``
+    ``text``-type blocks (verified against real session events.jsonl files).
+    Falls back to the last line of ``.amplifier-final-answer.txt`` in the
+    workspace, if present. Returns None when neither source is usable.
+    """
+    if session_dir is not None:
+        events_path = Path(session_dir)/'events.jsonl'
+        if events_path.exists():
+            last_text = None
+            for line in events_path.read_text().splitlines():
+                try:
+                    e = json.loads(line)
+                except ValueError:
+                    continue
+                if e.get('event') != 'llm:response':
+                    continue
+                raw = (e.get('data') or {}).get('raw') or {}
+                content = raw.get('content')
+                if not isinstance(content, list):
+                    continue
+                texts = [b.get('text') for b in content
+                         if isinstance(b, dict) and b.get('type') == 'text' and b.get('text')]
+                if texts:
+                    last_text = '\n'.join(texts)
+            if last_text is not None:
+                return last_text
+    marker = Path(workspace)/'.amplifier-final-answer.txt'
+    if marker.exists():
+        lines = marker.read_text().splitlines()
+        if lines:
+            return lines[-1]
+    return None
+
+
 def _default_config():
     tasks = list(SPECS)
     runs = []
@@ -134,7 +253,15 @@ def _side_profile(name, side, task, workspace, config):
     source_root = Path(side['source_root'])
     decision = {**DEFAULT_DECISION, **side.get('decision_overrides', {})}
     if side['mode'] == 'active':
-        loop_config = {**decision, 'mode': 'active', 'allow_external_state': False, 'events_dir': config['events_dir'], 'upstream': upstream}
+        # allow_external_state must come from `decision` (DEFAULT_DECISION, overridable via
+        # side['decision_overrides']), never a hardcoded False here -- that silently dropped
+        # --allow-external-state/--fd-override allow_external_state=true on every prepare, so
+        # a jev-backed profile always had allow_external_state: false and the service refused
+        # every request (fast_decisions:fallback reason_code external_state_not_enabled; zero
+        # fast_decisions:scored). See docs/EVENTS.md and battery.py's cmd_prepare.
+        loop_config = {**decision, 'mode': 'active',
+                        'allow_external_state': decision.get('allow_external_state', False),
+                        'events_dir': config['events_dir'], 'upstream': upstream}
         loop = {'module': 'loop-fast-decisions', 'source': (source_root/'modules/loop-fast-decisions').as_uri(), 'config': loop_config}
         hook_config = {**loop_config, 'session_label': f'Forge {task} / active', 'observatory': {'enabled': False}}
         hooks = [{'module': 'hooks-fast-decisions', 'source': (source_root/'modules/hooks-fast-decisions').as_uri(), 'config': hook_config}]
@@ -142,18 +269,73 @@ def _side_profile(name, side, task, workspace, config):
         loop = {'module': 'loop-streaming', 'source': config.get('upstream_loop_source', UPSTREAM_LOOP_SOURCE), 'config': upstream}
         off_config = {**decision, 'events_dir': config['events_dir'], 'upstream': upstream, 'session_label': f'Forge {task}', 'observatory': {'enabled': False}}
         hooks = [{'module': 'hooks-fast-decisions', 'source': (source_root/'modules/hooks-fast-decisions').as_uri(), 'config': {**off_config, 'mode': 'off'}}]
-    return {'bundle': {'name': f'forge-{name}', 'version': '0.1.0'}, 'includes': [{'bundle': source_root.as_uri()}],
-            'session': {'orchestrator': loop},
-            'tools': [{'module': 'tool-fast-workspace', 'source': (source_root/'modules/tool-fast-workspace').as_uri(), 'config': {'root': str(workspace)}}],
-            'hooks': hooks}
+    # One fixed bundle name for every benchmark profile: Amplifier records each `--bundle` it loads in
+    # ~/.amplifier/registry.json keyed by name, so unique per-run names left 80+ stale 'Local' entries.
+    # The worker also removes the entry after the run (see _unregister_benchmark_bundle).
+    fast_workspace_tool = {'module': 'tool-fast-workspace', 'source': (source_root/'modules/tool-fast-workspace').as_uri(),
+                            'config': {'root': str(workspace)}}
+
+    # --amplifier-bundle {foundation,lean} (battery.py prepare): 'foundation' (default,
+    # unchanged behavior) includes the fast-decisions bundle root, which transitively
+    # pulls in the full foundation bundle (agents/context/behaviors, ~50k tokens of
+    # composed system instruction). 'lean' isolates that installed-context weight by
+    # composing an explicit minimal root instead: no bundle include at all, just the
+    # baseline tools (tool-filesystem, tool-bash, tool-todo), provider-anthropic, and
+    # the fast-decisions hook/tool this profile already builds above. Orchestrator
+    # selection (loop/loop-streaming above) is unaffected either way -- it never came
+    # from foundation's include chain.
+    amplifier_bundle = config.get('amplifier_bundle') or 'foundation'
+    if amplifier_bundle not in ('foundation', 'lean'):
+        raise ValueError(f"amplifier_bundle must be 'foundation' or 'lean', got {amplifier_bundle!r}")
+
+    provider_config = {}
+    amplifier_effort = config.get('amplifier_effort')
+    if amplifier_effort:
+        # --amplifier-effort (battery.py prepare) pins Policy-independent generative reasoning
+        # effort for the harness model itself -- not to be confused with the fast-decisions
+        # backend's own `decision`/`model`. Applied identically on BOTH amplifier sides (plain
+        # and fd) so a paired comparison never silently compares two different effort levels.
+        # `reasoning_effort` is the provider-anthropic canonical config key (see docs/EVENTS.md
+        # and amplifier_module_provider_anthropic).
+        provider_config['reasoning_effort'] = amplifier_effort
+
+    if amplifier_bundle == 'lean':
+        includes = []
+        tools = [
+            {'module': 'tool-filesystem', 'source': LEAN_MODULE_SOURCES['tool-filesystem']},
+            {'module': 'tool-bash', 'source': LEAN_MODULE_SOURCES['tool-bash']},
+            {'module': 'tool-todo', 'source': LEAN_MODULE_SOURCES['tool-todo']},
+            fast_workspace_tool,
+        ]
+        # No transitively-included foundation here, so provider-anthropic needs its own
+        # explicit source -- unlike the foundation-bundle case below, entry-point/foundation
+        # resolution is not available to fall back on.
+        providers = [{'module': 'provider-anthropic', 'source': LEAN_MODULE_SOURCES['provider-anthropic'],
+                      'config': provider_config}]
+    else:
+        includes = [{'bundle': source_root.as_uri()}]
+        tools = [fast_workspace_tool]
+        # No `source` here -- this overrides the module's config on top of whatever already
+        # resolved it (installed package/entry point, or the transitively-included foundation
+        # bundle). Omitted entirely when there's nothing to override (unchanged behavior).
+        providers = [{'module': 'provider-anthropic', 'config': provider_config}] if provider_config else None
+
+    profile = {'bundle': {'name': BENCHMARK_BUNDLE_NAME, 'version': '0.1.0'}, 'includes': includes,
+               'session': {'orchestrator': loop},
+               'tools': tools,
+               'hooks': hooks}
+    if providers:
+        profile['providers'] = providers
+    return profile
 
 
 def _build_workspace(run_dir, task):
     workspace = run_dir/'workspace'
     (workspace/'.amplifier').mkdir(parents=True, exist_ok=True)
-    (workspace/'README.md').write_text(SPECS[task])
-    (workspace/'solution.py').write_text(STARTERS[task])
-    (workspace/'test_public.py').write_text(PUBLIC[task])
+    for relpath, content in _task_files(task).items():
+        target = workspace/relpath
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(content)
     (workspace/'.amplifier/settings.local.yaml').write_text('bundle:\n  app: []\n')
     subprocess.run(['git', 'init', '-q', str(workspace)], check=True)
     return workspace
@@ -163,15 +345,23 @@ def _build_run(root, run_spec, config, sides):
     name = run_spec['name']
     run = root/name
     run.mkdir(parents=True, exist_ok=True)
-    workspace = _build_workspace(run, run_spec['task'])
+    task = run_spec['task']
+    workspace = _build_workspace(run, task)
     side = sides[run_spec['side']]
-    profile = _side_profile(name, side, run_spec['task'], workspace, config)
+    profile = _side_profile(name, side, task, workspace, config)
     (run/'profile.md').write_text('---\n'+json.dumps(profile, indent=2)+'\n---\n')
-    return {
-        'task': run_spec['task'], 'side': run_spec['side'], 'rep': run_spec.get('rep', 1),
+    prompt = run_spec.get('prompt') or _task_prompt(task) or config.get('prompt', PROMPT)
+    item = {
+        'task': task, 'side': run_spec['side'], 'rep': run_spec.get('rep', 1),
         'attempt': run_spec.get('attempt', 1), 'block': run_spec.get('block'), 'seed': run_spec.get('seed'),
         'workspace_hash': hash_files(workspace), 'profile_sha256': hashlib.sha256((run/'profile.md').read_bytes()).hexdigest(),
+        'prompt_sha256': hashlib.sha256(prompt.encode()).hexdigest(),
     }
+    if 'prompt' in run_spec:
+        item['prompt'] = run_spec['prompt']
+    if 'deadline_seconds' in run_spec:
+        item['deadline_seconds'] = run_spec['deadline_seconds']
+    return item
 
 
 def prepare(root, config=None):
@@ -202,11 +392,13 @@ def prepare(root, config=None):
               'hardware':platform.platform(),'packages':versions,'provider':config.get('provider', 'anthropic'),
               'model':config.get('model', 'claude-fable-5-1'),'provider_revision':'unknown',
               'decision_model':DEFAULT_DECISION['model'],'decision_model_digest':local_digest,
+              'amplifier_effort':config.get('amplifier_effort'),
+              'amplifier_bundle':config.get('amplifier_bundle', 'foundation'),
               'prompt':prompt,'prompt_sha256':hashlib.sha256(prompt.encode()).hexdigest(),
               'evaluator_sha256':hashlib.sha256(Path(__file__).with_name('forge_workloads.py').read_bytes()).hexdigest(),
               'sides': sides, 'upstream_loop_source': config.get('upstream_loop_source', UPSTREAM_LOOP_SOURCE),
               'events_dir': config.get('events_dir', str(EVENTS)), 'host_python': config.get('host_python', str(HOST_PYTHON)),
-              'forge_py': config.get('forge_py', str(FORGE)),
+              'forge_py': config.get('forge_py', str(FORGE)), 'task_source': config.get('task_source'),
               'run_order':[],'runs':{},'limits':config.get('limits', {'max_iterations':30,'extended_thinking':True,'timeout_seconds':480})}
     for run_spec in config['runs']:
         manifest['runs'][run_spec['name']] = _build_run(root, run_spec, config, sides)
@@ -227,7 +419,9 @@ def add_run(root, run_spec):
     """Append one more run to an already-prepared root (used for retries)."""
     manifest = json.loads((root/'manifest.json').read_text())
     config = {'events_dir': manifest['events_dir'], 'upstream_loop_source': manifest['upstream_loop_source'],
-              'limits': manifest['limits']}
+              'limits': manifest['limits'], 'prompt': manifest.get('prompt', PROMPT),
+              'amplifier_effort': manifest.get('amplifier_effort'),
+              'amplifier_bundle': manifest.get('amplifier_bundle', 'foundation')}
     manifest['runs'][run_spec['name']] = _build_run(root, run_spec, config, manifest['sides'])
     manifest['run_order'].append(run_spec['name'])
     task, rep = run_spec['task'], run_spec.get('rep', 1)
@@ -325,6 +519,14 @@ def extract_receipts(source_root, events_dir, sid, run, python=None, timeout=120
     return json.loads((run/'measurements.json').read_text())
 
 
+def _unregister_benchmark_bundle(name=None):
+    """Remove the benchmark profile's registry entry that `amplifier run --bundle` just created (best effort)."""
+    try:
+        subprocess.run(['amplifier','bundle','remove',name or BENCHMARK_BUNDLE_NAME],capture_output=True,text=True,timeout=120)
+    except (OSError,subprocess.TimeoutExpired):
+        pass
+
+
 def _mode_observed(run):
     """Distinct decision modes reported by the run's own receipts (turn_start/requested/routed/source events)."""
     receipts = run/'receipts.jsonl'
@@ -341,13 +543,112 @@ def _mode_observed(run):
     return modes
 
 
+def _interpreter_with_pytest():
+    """First of (sys.executable, python3 on PATH) that can `import pytest`, or None.
+
+    Never imports pytest into this process -- each candidate is probed in its
+    own subprocess.
+    """
+    candidates = []
+    if sys.executable:
+        candidates.append(sys.executable)
+    py3 = shutil.which('python3')
+    if py3 and py3 not in candidates:
+        candidates.append(py3)
+    for interp in candidates:
+        try:
+            proc = subprocess.run([interp, '-c', 'import pytest'], capture_output=True, timeout=10)
+        except (OSError, subprocess.TimeoutExpired):
+            continue
+        if proc.returncode == 0:
+            return interp
+    return None
+
+
+def run_workspace_tests(workspace, timeout=45, targets=None):
+    """Run whatever tests exist in `workspace` with the best available runner,
+    always in a fresh subprocess (never imports candidate code in-process).
+
+    Prefers pytest (handles both pytest-style and unittest-style test files);
+    falls back to `unittest discover` only when no interpreter on this host can
+    import pytest. `targets`, if given, restricts the run to those paths/files
+    (e.g. ['test_public.py']); otherwise the whole workspace is discovered.
+
+    Returns (passed, runner, summary):
+      passed: True (all pass), False (a failure/timeout/error), or None (no
+              tests were collected -- not applicable, not a failure).
+      runner: 'pytest' or 'unittest'.
+      summary: tail of combined stdout+stderr, for diagnostics.
+    """
+    workspace = Path(workspace)
+    interp = _interpreter_with_pytest()
+    if interp is not None:
+        argv = [interp, '-m', 'pytest', '-q', '-p', 'no:cacheprovider', *(targets or [])]
+        # Auto-loaded third-party pytest plugins from this host's environment (installed
+        # via setuptools entrypoints, e.g. framework-specific pytest plugins) can crash on
+        # import when the candidate workspace's PYTHONPATH doesn't include their deps --
+        # that is not a test failure, so run pytest in its bare, plugin-autoload-free mode.
+        env = {**os.environ, 'PYTEST_DISABLE_PLUGIN_AUTOLOAD': '1'}
+        try:
+            proc = subprocess.run(argv, cwd=workspace, capture_output=True, text=True, timeout=timeout, env=env)
+        except subprocess.TimeoutExpired:
+            return False, 'pytest', 'pytest timed out'
+        summary = ((getattr(proc, 'stdout', None) or '') + (getattr(proc, 'stderr', None) or ''))[-4000:]
+        if proc.returncode == 0:
+            return True, 'pytest', summary
+        if proc.returncode == 5:  # no tests collected
+            return None, 'pytest', summary
+        return False, 'pytest', summary
+    unittest_argv = [sys.executable, '-m', 'unittest'] + (['-v', *targets] if targets else ['discover', '-v'])
+    try:
+        proc = subprocess.run(unittest_argv, cwd=workspace, capture_output=True, text=True, timeout=timeout)
+    except subprocess.TimeoutExpired:
+        return False, 'unittest', 'unittest timed out'
+    summary = ((getattr(proc, 'stdout', None) or '') + (getattr(proc, 'stderr', None) or ''))[-4000:]
+    if proc.returncode == 5:  # NO TESTS RAN (Python 3.12+)
+        return None, 'unittest', summary
+    return proc.returncode == 0, 'unittest', summary
+
+
+def _ensure_task_source_registered(manifest):
+    """Register a manifest's `task_source` (if any) with forge_workloads so
+    task_files/task_prompt/task_protected/evaluate can resolve tasks from it
+    in THIS process. Every entry point that resolves a task from a bare
+    manifest read (worker(), and the `evaluate` CLI subcommand) is a fresh
+    process and must call this before touching forge_workloads' task
+    accessors -- see forge_workloads.register_source."""
+    task_source = manifest.get('task_source')
+    if task_source:
+        forge_workloads.register_source(task_source['kind'],
+                                         **{k: v for k, v in task_source.items() if k != 'kind'})
+
+
 def worker(root,name):
-    manifest=json.loads((root/'manifest.json').read_text());run=root/name;workspace=run/'workspace';item=manifest['runs'][name]
+    manifest=json.loads((root/'manifest.json').read_text());_ensure_task_source_registered(manifest);run=root/name;workspace=run/'workspace';item=manifest['runs'][name]
     if hash_files(workspace)!=item['workspace_hash']:raise RuntimeError('Starting workspace changed')
     side = manifest['sides'][item['side']]
     source_root = Path(side['source_root'])
     if tree_sha256(source_root/'src'/'amplifier_fast_decisions') != side['source_tree_sha256']:
         raise RuntimeError('Source changed during the experiment')
+    task = item['task']
+    prompt = item.get('prompt')
+    if prompt is None:
+        if task not in SPECS:
+            # A battery task (anything not in the legacy SPECS trio) must never silently
+            # fall back to the generic legacy prompt -- that silently sends the wrong
+            # instructions to the agent (see: amplifier runs getting the README-repair
+            # boilerplate instead of their task-specific prompt).
+            raise SystemExit(f'worker: run {name!r} (task={task!r}) has no prompt recorded; '
+                              'refusing to fall back to the generic legacy prompt for a battery task')
+        prompt = manifest['prompt']
+    expected_prompt_sha256 = item.get('prompt_sha256')
+    if expected_prompt_sha256 is not None:
+        actual_prompt_sha256 = hashlib.sha256(prompt.encode()).hexdigest()
+        if actual_prompt_sha256 != expected_prompt_sha256:
+            raise SystemExit(f'worker: run {name!r} prompt does not match the preregistered '
+                              f'prompt_sha256 (expected {expected_prompt_sha256}, got '
+                              f'{actual_prompt_sha256}); refusing to launch amplifier')
+    deadline_seconds = item.get('deadline_seconds') or manifest['limits']['timeout_seconds']
     warm=urllib.request.Request('http://127.0.0.1:11434/api/generate',data=json.dumps({'model':'qwen3:0.6b','stream':False,'keep_alive':'20m','options':{'num_ctx':4096}}).encode(),headers={'Content-Type':'application/json'})
     with urllib.request.urlopen(warm,timeout=60) as response:json.load(response)
     slug=str(workspace.resolve()).replace('/','-').replace('\\','-').replace(':','')
@@ -355,15 +656,15 @@ def worker(root,name):
     before=set(sessions.iterdir()) if sessions.exists() else set()
     env=dict(os.environ,AFAST_OBSERVATORY='off')
     env['PYTHONPATH'] = str(source_root/'src')
-    command=['amplifier','run','--bundle',(run/'profile.md').as_uri(),'--mode','single','--provider',manifest['provider'],'--model',manifest['model'],'--output-format','json',manifest.get('prompt', PROMPT)]
+    command=['amplifier','run','--bundle',(run/'profile.md').as_uri(),'--mode','single','--provider',manifest['provider'],'--model',manifest['model'],'--output-format','json',prompt]
     started_at=datetime.now(timezone.utc).isoformat();started=time.perf_counter()
     process=subprocess.Popen(command,cwd=workspace,env=env)
     dump(run/'running.json',{'started_at':started_at,'name':name,'controller_pid':os.getpid(),'pid':process.pid,
-                              'attempt':item.get('attempt',1),'deadline_seconds':manifest['limits']['timeout_seconds'],
+                              'attempt':item.get('attempt',1),'deadline_seconds':deadline_seconds,
                               'tty':sys.stdout.isatty()})
     print('FORGE_E2E_STARTED '+name,flush=True)
     timed_out=False
-    try:code=process.wait(timeout=manifest['limits']['timeout_seconds'])
+    try:code=process.wait(timeout=deadline_seconds)
     except subprocess.TimeoutExpired:
         timed_out=True;process.terminate()
         try:code=process.wait(timeout=15)
@@ -382,21 +683,33 @@ def worker(root,name):
     # (purging sys.modules here broke unrelated tests that patch amplifier_fast_decisions.operations).
     events_dir = Path(manifest.get('events_dir', str(EVENTS)))
     measured = extract_receipts(source_root, events_dir, sid, run) if sid else None
-    # Execute the independent evaluator in its own process with a deadline.
-    try:
-        test=subprocess.run([sys.executable,str(Path(__file__).resolve()),'evaluate',str(root),name],capture_output=True,text=True,timeout=45)
-        quality=json.loads(test.stdout)
-    except (ValueError,subprocess.TimeoutExpired):
-        quality={'checks':0,'passed':0,'failed':1,'failure_labels':['evaluator_failed_or_timed_out']}
-    try:
-        public=subprocess.run([sys.executable,'-m','unittest','-v','test_public.py'],cwd=workspace,capture_output=True,text=True,timeout=45)
-        public_ok=public.returncode==0
-    except subprocess.TimeoutExpired:public_ok=False
-    try:
-        suite=subprocess.run([sys.executable,'-m','unittest','discover','-v'],cwd=workspace,capture_output=True,text=True,timeout=45)
-        suite_ok=suite.returncode==0
-    except subprocess.TimeoutExpired:suite_ok=False
-    unchanged={f:(workspace/f).read_text()==text for f,text in {'README.md':SPECS[item['task']],'test_public.py':PUBLIC[item['task']]}.items()}
+    kind = _task_kind(item['task'])
+    if kind == 'answer':
+        final_message = _extract_final_message(found[0] if len(found)==1 else None, workspace)
+        try:
+            import battery_tasks
+            quality = battery_tasks.check_answer(battery_tasks.TASKS[item['task']], final_message)
+        except Exception:
+            quality = {'checks':0,'passed':0,'failed':1,'failure_labels':['check_answer_failed']}
+        public_ok = None
+        suite_ok = None
+        workspace_tests_runner = None
+    else:
+        final_message = None
+        # Execute the independent evaluator in its own process with a deadline.
+        try:
+            test=subprocess.run([sys.executable,str(Path(__file__).resolve()),'evaluate',str(root),name],capture_output=True,text=True,timeout=45)
+            quality=json.loads(test.stdout)
+        except (ValueError,subprocess.TimeoutExpired):
+            quality={'checks':0,'passed':0,'failed':1,'failure_labels':['evaluator_failed_or_timed_out']}
+        if (workspace/'test_public.py').exists():
+            public_ok, _public_runner, _public_summary = run_workspace_tests(workspace, targets=['test_public.py'])
+        else:
+            public_ok=None
+        suite_ok, workspace_tests_runner, _suite_summary = run_workspace_tests(workspace)
+    protected = _task_protected(item['task'])
+    files = _task_files(item['task'])
+    unchanged={f:(workspace/f).exists() and (workspace/f).read_text()==files.get(f,'') for f in protected}
     source_observed = _source_observed(run)
     source_expected = {'git_sha': side['source_git_sha'], 'tree_sha256': side['source_tree_sha256']}
     if source_observed is None:
@@ -408,20 +721,39 @@ def worker(root,name):
     mode_match = None if mode_observed is None else (
         (mode_observed == {'active'}) if side['mode'] == 'active' else mode_observed <= {'off'})
     infrastructure_failure = sid is None or code is None
+    harness = 'amplifier-fd' if side['mode'] == 'active' else 'amplifier-plain'
+    model = next((e['model'] for e in effort if e.get('model')), None)
     result={'name':name,'task':item['task'],'side':item['side'],'session_id':sid,'exit_code':code,'timed_out':timed_out,
             'wall_time_ms':elapsed,'native':native,'measurements':measured,'quality':quality,'public_tests_passed':public_ok,
-            'workspace_tests_passed':suite_ok,'protected_files_unchanged':unchanged,
-            'final_solution_sha256':hashlib.sha256((workspace/'solution.py').read_bytes()).hexdigest(),
-            'attempt': item.get('attempt', 1), 'deadline_seconds': manifest['limits']['timeout_seconds'],
+            'workspace_tests_passed':suite_ok,'workspace_tests_runner':workspace_tests_runner,'protected_files_unchanged':unchanged,
+            'final_solution_sha256':hashlib.sha256((workspace/'solution.py').read_bytes()).hexdigest() if (workspace/'solution.py').exists() else None,
+            'attempt': item.get('attempt', 1), 'deadline_seconds': deadline_seconds,
             'started_at': started_at, 'ended_at': ended_at,
             'source_expected': source_expected, 'source_observed': source_observed, 'source_match': source_match,
             'mode_expected': side['mode'], 'mode_observed': sorted(mode_observed) if mode_observed is not None else None, 'mode_match': mode_match,
             'retry_count': native['provider_retries'] if native else None, 'effort_receipts': effort,
-            'new_session_dirs': len(found), 'infrastructure_failure': infrastructure_failure}
-    result['outcome_passed']=code==0 and not timed_out and quality['failed']==0 and public_ok and suite_ok and all(unchanged.values())
+            'new_session_dirs': len(found), 'infrastructure_failure': infrastructure_failure,
+            'harness': harness, 'model': model, 'final_message': final_message[:4000] if isinstance(final_message, str) else final_message}
+    outcome_passed = code==0 and not timed_out and quality['failed']==0 and all(unchanged.values())
+    if public_ok is not None:
+        outcome_passed = outcome_passed and public_ok
+    if suite_ok is not None:
+        outcome_passed = outcome_passed and suite_ok
+    result['outcome_passed']=outcome_passed
     dump(run/'result.json',result)
+    _unregister_benchmark_bundle()
     print('FORGE_E2E_FINISHED '+json.dumps({'name':name,'outcome':result['outcome_passed'],'wall_ms':round(elapsed),'checks':quality,'session_id':sid}),flush=True)
     return 0 if result['outcome_passed'] else 1
+
+
+def forge_self_heal(manifest):
+    """Run `forge.py doctor` (fixes spawn-helper exec bits, restarts the daemon). Returns True when it reports healthy."""
+    forge_py = Path(manifest.get('forge_py', str(FORGE))).expanduser()
+    try:
+        proc = subprocess.run([sys.executable, str(forge_py), 'doctor'], capture_output=True, text=True, timeout=120)
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+    return 'healthy' in (proc.stdout + proc.stderr)
 
 
 def launch_run(root, name, forge_module=None):
@@ -438,6 +770,9 @@ def launch_run(root, name, forge_module=None):
         import forge as forge_module
     host_python = manifest.get('host_python', str(HOST_PYTHON))
     cmd=shlex.join([str(host_python),str(Path(__file__).resolve()),'worker',str(root),name])
+    # The Forge daemon's shell does not carry the user's API keys; source ~/.amplifier/keys.env (0600) into the
+    # worker's environment so external decision backends (e.g. TYPESAFE_API_KEY) work. Values never appear in logs.
+    cmd='set -a; . ~/.amplifier/keys.env 2>/dev/null; set +a; '+cmd
     for attempt in (1, 2):
         try:
             result=forge_module.call('run_command',{'command':'/bin/zsh','args':['-lc',cmd],
@@ -450,6 +785,10 @@ def launch_run(root, name, forge_module=None):
                 # Forge refuses new terminals once exited ones pile up. Reap only OUR exited worker
                 # terminals (never live or unowned sessions) and retry once; otherwise fail loud.
                 if 'Maximum sessions' in text and attempt == 1 and reap_exited_worker_terminals(forge_module, root):
+                    continue
+                # A skills-cache refresh resets the exec bit on Forge's node-pty spawn-helper binaries
+                # ("posix_spawnp failed"); `forge doctor` repairs it. Self-heal once, then fail loud.
+                if 'posix_spawnp' in text and attempt == 1 and forge_self_heal(manifest):
                     continue
                 raise RuntimeError('forge launch failed: '+text) from None
             if result.get('timeout') is not True:
@@ -557,5 +896,7 @@ if __name__=='__main__':
     parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('command',choices=['prepare','worker','evaluate','batch']);parser.add_argument('root',type=Path);parser.add_argument('name',nargs='?');args=parser.parse_args();root=args.root.expanduser().resolve()
     if args.command=='prepare':prepare(root)
     elif args.command=='worker':sys.exit(worker(root,args.name))
-    elif args.command=='evaluate':print(json.dumps(evaluate(json.loads((root/'manifest.json').read_text())['runs'][args.name]['task'],root/args.name/'workspace')))
+    elif args.command=='evaluate':
+        _manifest=json.loads((root/'manifest.json').read_text());_ensure_task_source_registered(_manifest)
+        print(json.dumps(evaluate(_manifest['runs'][args.name]['task'],root/args.name/'workspace')))
     else:batch(root)

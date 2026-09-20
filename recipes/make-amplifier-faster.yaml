@@ -1,0 +1,422 @@
+# make-amplifier-faster.yaml -- "make my amplifier faster", safely and reversibly.
+# Every machine-changing step sits BEHIND the approval gate in stage 1. Each one
+# prints the command before running it, skips work already done, and prints no
+# secrets (TYPESAFE_API_KEY is reported present/absent only).
+#
+# CHANGELOG
+#   v1.2.0 (2026-09-20): BREAKING CHANGE -- Ollama is now the default judge host
+#     on EVERY machine, including Apple Silicon.
+#     * ROOT CAUSE: v1.1.0 chose MLX on Apple Silicon from first principles
+#       (native GPU, no extra runtime resident) and never measured it.
+#     * EVIDENCE (2026-09-20, this Apple Silicon machine, same decision suites):
+#       MLX (mlx-lm 0.31.3, Qwen3-0.6B-4bit, chat endpoint) ~110-140 ms per
+#       decision with LOWER agreement; Ollama ~25 ms with HIGHER agreement.
+#     * CHANGE: default chosen_host is ollama everywhere. Apple Silicon still
+#       reports mlx_available: true plus an mlx_note naming the experimental
+#       rung (bundles/active-mlx.yaml) and the exact opt-in. New optional input
+#       prefer_host (auto|ollama|mlx, default auto) forces the choice;
+#       prefer_host=mlx on a non-Apple-Silicon machine fails loud in preflight.
+#     * RESULT: the recommended path is the faster, more-agreeing host. The MLX
+#       install path is unchanged and still reachable, now by explicit opt-in.
+#   v1.1.0 (2026-09-20): review-machine stage picks the local judge host
+#     (Apple MLX on Apple Silicon, Ollama elsewhere) before the plan is
+#     drafted; local-judge and bundle-rung branch on that choice.
+#   v1.0.0 (2026-09-20): Initial recipe -- preflight, gate, local judge, rung, verify, report.
+schema_version: 2
+
+dependencies:
+  - source: "git+https://github.com/microsoft/amplifier-foundation@v2.1.2"
+    kind: bundle
+    required_agents:
+      - "foundation:zen-architect"
+
+name: "make-amplifier-faster"
+description: "Install the fast-decisions active configuration (local judge -- Ollama by default on every machine, MLX only by explicit opt-in -- plus the active bundle rung) behind one approval gate, then verify it from receipts."
+version: "1.2.0"
+tags: ["fast-decisions", "install", "performance"]
+
+context:
+  # auto (default) -> ollama on every machine. ollama -> force ollama.
+  # mlx -> force the experimental MLX host; Apple Silicon only, fails loud otherwise.
+  prefer_host: "auto"
+  ollama_model: "qwen3:0.6b"
+  ollama_url: "http://127.0.0.1:11434"
+  mlx_model: "mlx-community/Qwen3-0.6B-4bit"
+  mlx_url: "http://127.0.0.1:8080"
+  bundle_source: "git+https://github.com/michaeljabbour/amplifier-bundle-fast-decisions@main#subdirectory=bundles/active.yaml"
+  mlx_bundle_source: "git+https://github.com/michaeljabbour/amplifier-bundle-fast-decisions@main#subdirectory=bundles/active-mlx.yaml"
+  events_dir: "$HOME/.amplifier/fast-decisions/events"
+  warm_budget_s: "2.0"
+
+stages:
+  - name: "review-machine"
+    description: "Read-only machine-capability review. Decides which local judge host this install targets (Ollama by default; MLX only when prefer_host=mlx on Apple Silicon)."
+    steps:
+      - id: "detect"
+        type: "bash"
+        timeout: 30
+        output: "machine"
+        parse_json: true
+        command: |
+          set -uo pipefail
+          os=$(uname -s)
+          arch=$(uname -m)
+          apple_silicon=false
+          if [ "$os" = "Darwin" ] && [ "$arch" = "arm64" ]; then
+            case "$(sysctl -n machdep.cpu.brand_string 2>/dev/null)" in *Apple*) apple_silicon=true;; esac
+          fi
+          mem_bytes=0
+          if [ "$os" = "Darwin" ]; then
+            mem_bytes=$(sysctl -n hw.memsize 2>/dev/null || echo 0)
+          elif [ -r /proc/meminfo ]; then
+            mem_kb=$(awk '/MemTotal/{print $2}' /proc/meminfo 2>/dev/null || echo 0)
+            mem_bytes=$((mem_kb * 1024))
+          fi
+          mem_gb=$(awk -v b="$mem_bytes" 'BEGIN{printf "%.1f", b/1073741824}')
+          pyver=$(python3 --version 2>/dev/null | tr -d '"\\' || echo unknown)
+          oll_installed=false; command -v ollama >/dev/null 2>&1 && oll_installed=true
+          oll_serving=false
+          curl -fsS --max-time 2 "{{ollama_url}}/api/tags" >/dev/null 2>&1 && oll_serving=true
+          mlx_importable=false
+          python3 -c 'import mlx_lm' >/dev/null 2>&1 && mlx_importable=true
+          mlx_on_path=false; command -v mlx_lm.server >/dev/null 2>&1 && mlx_on_path=true
+          mlx_serving=false
+          curl -fsS --max-time 2 "{{mlx_url}}/health" >/dev/null 2>&1 && mlx_serving=true
+          lmstudio_serving=false
+          curl -fsS --max-time 2 "http://127.0.0.1:1234/v1/models" >/dev/null 2>&1 && lmstudio_serving=true
+          prefer="{{prefer_host}}"
+          mlx_available=false
+          mlx_note=''
+          prefer_error=''
+          if [ "$apple_silicon" = "true" ]; then
+            mlx_available=true
+            mlx_note='MLX is supported as an experimental host (the bundles/active-mlx.yaml rung) and is being benchmarked, but it is not recommended yet. To opt in anyway, re-run this recipe with context prefer_host: mlx'
+          fi
+          evidence='Measured 2026-09-20 on this Apple Silicon machine, same decision suites: MLX (mlx-lm 0.31.3, Qwen3-0.6B-4bit, chat endpoint) ~110-140 ms per decision with lower agreement; Ollama ~25 ms per decision with higher agreement.'
+          case "$prefer" in
+            mlx)
+              if [ "$apple_silicon" = "true" ]; then
+                chosen_host=mlx
+                reason="prefer_host=mlx was requested on Apple Silicon, so the experimental MLX host is used. $evidence You are opting into the slower, lower-agreement host."
+              else
+                chosen_host=ollama
+                prefer_error="prefer_host=mlx was requested, but this machine is $os/$arch, not Apple Silicon -- MLX requires Apple Silicon. Re-run with prefer_host: auto (the default) or prefer_host: ollama."
+                reason='prefer_host=mlx is not available on this machine.'
+              fi
+              ;;
+            ollama)
+              chosen_host=ollama
+              reason="prefer_host=ollama was requested explicitly. $evidence"
+              ;;
+            auto|'')
+              chosen_host=ollama
+              reason="Ollama is the default judge host on every machine, including Apple Silicon. $evidence MLX is therefore NOT the recommended host yet."
+              ;;
+            *)
+              chosen_host=ollama
+              prefer_error="prefer_host must be one of auto, ollama or mlx -- got: $prefer"
+              reason='prefer_host value not recognized; refusing to guess.'
+              ;;
+          esac
+          printf '{"os":"%s","arch":"%s","apple_silicon":"%s","memory_gb":"%s","python_version":"%s","ollama_installed":"%s","ollama_serving":"%s","mlx_importable":"%s","mlx_on_path":"%s","mlx_serving":"%s","lmstudio_serving":"%s","prefer_host":"%s","mlx_available":"%s","mlx_note":"%s","prefer_error":"%s","chosen_host":"%s","reason":"%s"}\n' \
+            "$os" "$arch" "$apple_silicon" "$mem_gb" "$pyver" "$oll_installed" "$oll_serving" \
+            "$mlx_importable" "$mlx_on_path" "$mlx_serving" "$lmstudio_serving" \
+            "$prefer" "$mlx_available" "$mlx_note" "$prefer_error" "$chosen_host" "$reason"
+
+  - name: "preflight"
+    description: "Read-only. Changes nothing; produces the plan the gate approves. Refuses an impossible prefer_host before anything else runs."
+    steps:
+      - id: "guard-prefer-host"
+        type: "bash"
+        timeout: 30
+        output: "host_guard"
+        command: |
+          set -uo pipefail
+          err="{{machine.prefer_error}}"
+          if [ -n "$err" ]; then
+            echo "ERROR: $err" >&2
+            exit 1
+          fi
+          echo "prefer_host={{machine.prefer_host}} -> chosen_host={{machine.chosen_host}}"
+
+      - id: "probe"
+        type: "bash"
+        timeout: 180
+        output: "probe"
+        parse_json: true
+        command: |
+          set -uo pipefail
+          amp=$(amplifier --version 2>/dev/null | head -1 | tr -d '"\\' || echo unknown)
+          bl=$(amplifier bundle list 2>/dev/null | grep -i "fast-decisions" | tr -d '"\\' | tr '\n' ';')
+          act=false; case "$bl" in *active*) act=true;; esac
+          have_typesafe_key=absent
+          if [ -n "${TYPESAFE_API_KEY:-}" ]; then have_typesafe_key=present; fi
+          printf '{"amplifier":"%s","bundles":"%s","active_rung":"%s","typesafe_key":"%s"}\n' \
+            "$amp" "$bl" "$act" "$have_typesafe_key"
+
+      - id: "write-plan"
+        agent: "foundation:zen-architect"
+        timeout: 300
+        output: "plan"
+        prompt: |
+          Write a short plain-language install plan for a non-expert. Facts (do not invent others):
+          Machine review: {{machine}}
+          Amplifier/bundle state: {{probe}}
+
+          The chosen local judge host is {{machine.chosen_host}}, because: {{machine.reason}}
+
+          State that reason in the plan, including the dated measurement it rests on:
+          measured 2026-09-20 on this Apple Silicon machine, on the same decision suites,
+          MLX (mlx-lm 0.31.3, Qwen3-0.6B-4bit, chat endpoint) took ~110-140 ms per decision
+          with lower agreement, while Ollama took ~25 ms with higher agreement -- so Ollama
+          is the default host on every machine and MLX is NOT recommended yet.
+          MLX available on this machine: {{machine.mlx_available}}. {{machine.mlx_note}}
+          If MLX is available and was not chosen, give the exact opt-in in one line:
+          re-run this recipe with context prefer_host: mlx (and note it is experimental
+          and currently slower). If MLX was chosen, say plainly that it was chosen only
+          because prefer_host: mlx was requested.
+
+          If chosen host is "mlx": the plan will install, only where missing, the mlx-lm Python
+          package (`uv tool install mlx-lm`) and start `mlx_lm.server` in the background on
+          127.0.0.1:8080 serving the model `{{mlx_model}}` (~400 MB-1 GB of disk depending on
+          quantization). If chosen host is "ollama": the plan will install, only where missing,
+          ollama (macOS: `brew install ollama`; Linux: the official install script) and the local
+          judge model `{{ollama_model}}` (~600 MB of disk).
+
+          Either way the plan also installs the Amplifier bundle rung matching the chosen host
+          ({{bundle_source}} for ollama, {{mlx_bundle_source}} for mlx). Any existing fast-decisions
+          shadow behavior is kept; the active rung supersedes it at composition. If the rung is
+          already installed the recipe runs `amplifier update` to refresh instead of re-adding.
+
+          State explicitly: judging happens locally on this machine and nothing is sent anywhere (the
+          external Jev judge stays opt-in); the TYPESAFE_API_KEY line reports presence only, never a value.
+          End with the exact revert commands: `amplifier bundle remove fast-decisions-active` and,
+          optionally, `ollama rm {{ollama_model}}` or `uv tool uninstall mlx-lm` (whichever host was chosen).
+
+          6-14 lines. No markdown headings, no preamble.
+    approval:
+      required: true
+      default: "deny"
+      timeout: 3600
+      prompt: |
+        {{plan}}
+
+        Chosen local judge host: {{machine.chosen_host}} (prefer_host={{machine.prefer_host}})
+        Why: {{machine.reason}}
+        Evidence, 2026-09-20, same decision suites on this Apple Silicon machine:
+        MLX (mlx-lm 0.31.3, Qwen3-0.6B-4bit, chat endpoint) ~110-140 ms per decision with
+        lower agreement; Ollama ~25 ms per decision with higher agreement. MLX is therefore
+        not the recommended host yet.
+        MLX available here: {{machine.mlx_available}}. {{machine.mlx_note}}
+        To use MLX anyway: deny this gate and re-run with context prefer_host: mlx
+
+        Nothing has changed yet. Approve to install; deny to stop here.
+
+  - name: "local-judge"
+    description: "Install and warm the chosen local decision model. Fails loud rather than half-installing."
+    steps:
+      - id: "install-ollama"
+        type: "bash"
+        condition: "{{machine.chosen_host}} == 'ollama'"
+        timeout: 900
+        output: "ollama_install"
+        command: |
+          set -uo pipefail
+          if command -v ollama >/dev/null 2>&1; then echo "skip: ollama already at $(command -v ollama)"; exit 0; fi
+          if [ "$(uname -s)" = "Darwin" ]; then
+            command -v brew >/dev/null 2>&1 || { echo "ERROR: no Homebrew. Install from https://ollama.com/download, then re-run." >&2; exit 1; }
+            echo "+ brew install ollama"; brew install ollama
+          else
+            echo "+ curl -fsSL https://ollama.com/install.sh | sh"; curl -fsSL https://ollama.com/install.sh | sh
+          fi
+
+      - id: "start-server"
+        type: "bash"
+        condition: "{{machine.chosen_host}} == 'ollama'"
+        timeout: 120
+        output: "ollama_server"
+        command: |
+          set -uo pipefail
+          if curl -fsS --max-time 2 "{{ollama_url}}/api/tags" >/dev/null 2>&1; then echo "skip: server already serving {{ollama_url}}"; exit 0; fi
+          echo "+ ollama serve  (background, log: /tmp/ollama-fast-decisions.log)"
+          nohup ollama serve >/tmp/ollama-fast-decisions.log 2>&1 &
+          for i in $(seq 1 30); do
+            sleep 1
+            curl -fsS --max-time 2 "{{ollama_url}}/api/tags" >/dev/null 2>&1 && { echo "server reachable after ${i}s"; exit 0; }
+          done
+          echo "ERROR: {{ollama_url}} unreachable after 30s -- see /tmp/ollama-fast-decisions.log" >&2; exit 1
+
+      - id: "pull-model"
+        type: "bash"
+        condition: "{{machine.chosen_host}} == 'ollama'"
+        timeout: 1800
+        output: "model_pull"
+        command: |
+          set -uo pipefail
+          if curl -fsS --max-time 5 "{{ollama_url}}/api/tags" 2>/dev/null | grep -q "{{ollama_model}}"; then echo "skip: {{ollama_model}} already pulled"; exit 0; fi
+          echo "+ ollama pull {{ollama_model}}   (~600 MB)"; ollama pull "{{ollama_model}}"
+
+      - id: "warm-model"
+        type: "bash"
+        condition: "{{machine.chosen_host}} == 'ollama'"
+        timeout: 600
+        output: "warm"
+        command: |
+          set -uo pipefail
+          P='{"model":"{{ollama_model}}","prompt":"ok","stream":false,"options":{"num_predict":1}}'
+          echo "+ POST {{ollama_url}}/api/generate  (load, untimed)"
+          curl -fsS --max-time 300 -o /dev/null -X POST "{{ollama_url}}/api/generate" -H 'Content-Type: application/json' -d "$P" \
+            || { echo "ERROR: {{ollama_url}} unreachable or model failed to load" >&2; exit 1; }
+          echo "+ POST {{ollama_url}}/api/generate  (warm, timed)"
+          t=$(curl -fsS --max-time 60 -o /dev/null -w '%{time_total}' -X POST "{{ollama_url}}/api/generate" -H 'Content-Type: application/json' -d "$P") \
+            || { echo "ERROR: warm call failed" >&2; exit 1; }
+          echo "warm latency ${t}s (budget {{warm_budget_s}}s)"
+          awk -v t="$t" -v b="{{warm_budget_s}}" 'BEGIN{ if (t+0 > b+0) exit 1 }' \
+            || { echo "ERROR: warm latency ${t}s exceeds the {{warm_budget_s}}s budget -- stopping before any bundle change" >&2; exit 1; }
+
+      - id: "install-mlx"
+        type: "bash"
+        condition: "{{machine.chosen_host}} == 'mlx'"
+        timeout: 900
+        output: "mlx_install"
+        command: |
+          set -uo pipefail
+          if python3 -c 'import mlx_lm' >/dev/null 2>&1 || command -v mlx_lm.server >/dev/null 2>&1; then
+            echo "skip: mlx-lm already importable/on PATH"; exit 0
+          fi
+          command -v uv >/dev/null 2>&1 || { echo "ERROR: uv is required (https://docs.astral.sh/uv/getting-started/installation/)" >&2; exit 1; }
+          echo "+ uv tool install mlx-lm"; uv tool install mlx-lm
+
+      - id: "start-mlx-server"
+        type: "bash"
+        condition: "{{machine.chosen_host}} == 'mlx'"
+        timeout: 120
+        output: "mlx_server"
+        command: |
+          set -uo pipefail
+          if curl -fsS --max-time 2 "{{mlx_url}}/health" >/dev/null 2>&1; then echo "skip: server already serving {{mlx_url}}"; exit 0; fi
+          server_bin=mlx_lm.server
+          command -v "$server_bin" >/dev/null 2>&1 || server_bin="$(uv tool dir)/mlx-lm/bin/mlx_lm.server"
+          echo "+ $server_bin --model {{mlx_model}}  (background, log: /tmp/mlx-fast-decisions.log)"
+          nohup "$server_bin" --model "{{mlx_model}}" --host 127.0.0.1 --port 8080 \
+            >/tmp/mlx-fast-decisions.log 2>&1 &
+          for i in $(seq 1 60); do
+            sleep 1
+            curl -fsS --max-time 2 "{{mlx_url}}/health" >/dev/null 2>&1 && { echo "server reachable after ${i}s"; exit 0; }
+          done
+          echo "ERROR: {{mlx_url}} unreachable after 60s -- see /tmp/mlx-fast-decisions.log" >&2; exit 1
+
+      - id: "warm-mlx-model"
+        type: "bash"
+        condition: "{{machine.chosen_host}} == 'mlx'"
+        timeout: 600
+        output: "mlx_warm"
+        command: |
+          set -uo pipefail
+          P='{"model":"{{mlx_model}}","prompt":"ok","max_tokens":1,"temperature":0}'
+          echo "+ POST {{mlx_url}}/v1/completions  (load, untimed)"
+          curl -fsS --max-time 300 -o /dev/null -X POST "{{mlx_url}}/v1/completions" -H 'Content-Type: application/json' -d "$P" \
+            || { echo "ERROR: {{mlx_url}} unreachable or model failed to load" >&2; exit 1; }
+          echo "+ POST {{mlx_url}}/v1/completions  (warm, timed)"
+          t=$(curl -fsS --max-time 60 -o /dev/null -w '%{time_total}' -X POST "{{mlx_url}}/v1/completions" -H 'Content-Type: application/json' -d "$P") \
+            || { echo "ERROR: warm call failed" >&2; exit 1; }
+          echo "warm latency ${t}s (budget {{warm_budget_s}}s)"
+          awk -v t="$t" -v b="{{warm_budget_s}}" 'BEGIN{ if (t+0 > b+0) exit 1 }' \
+            || { echo "ERROR: warm latency ${t}s exceeds the {{warm_budget_s}}s budget -- stopping before any bundle change" >&2; exit 1; }
+
+  - name: "bundle-rung"
+    description: "Add the active rung matching the chosen judge host, or refresh it if already cached."
+    steps:
+      - id: "add-rung"
+        type: "bash"
+        timeout: 900
+        output: "rung"
+        command: |
+          set -uo pipefail
+          if [ "{{machine.chosen_host}}" = "mlx" ]; then
+            source="{{mlx_bundle_source}}"
+          else
+            source="{{bundle_source}}"
+          fi
+          if amplifier bundle list 2>/dev/null | grep -qi "fast-decisions-active"; then
+            echo "active rung already installed -- refreshing"
+            echo "+ amplifier update"; amplifier update
+          else
+            echo "+ amplifier bundle add $source"
+            amplifier bundle add "$source"
+          fi
+
+  - name: "verify"
+    description: "Prove it from receipts, or say exactly which check could not be run."
+    steps:
+      - id: "check-receipts"
+        type: "bash"
+        timeout: 900
+        output: "evidence"
+        parse_json: true
+        on_error: "continue"
+        output_exit_code: "verify_code"
+        command: |
+          set -uo pipefail
+          EV="{{events_dir}}"
+          EXPECT="{{machine.chosen_host}}"
+          T=$(mktemp -d) || exit 1
+          printf '# Demo\n\nA temporary directory used to verify fast-decisions.\n' > "$T/README.md"
+          : > "$T/.mark"; sleep 1
+          echo "+ amplifier run --mode single \"Read README.md ...\"  (cwd: $T)"
+          ( cd "$T" && amplifier run --mode single "Read README.md if present and reply with one line summarizing this directory" ) >"$T/run.log" 2>&1
+          rc=$?
+          found=false; srcev=false; mode=unknown; backend=unknown; lat=""; note=""
+          if [ -d "$EV" ]; then
+            files=$(find "$EV" -type f -newer "$T/.mark" 2>/dev/null)
+            if [ -n "$files" ]; then
+              found=true; blob=$(cat $files 2>/dev/null)
+              case "$blob" in *fast_decisions:source*) srcev=true;; *) note="no fast_decisions:source event in the new receipts";; esac
+              case "$blob" in *'"active"'*) mode=active;; *) mode="not-active-in-receipts";; esac
+              case "$blob" in *"$EXPECT"*) backend="$EXPECT";; *) backend="not-$EXPECT-in-receipts";; esac
+              lat=$(printf '%s' "$blob" | grep -o '"latency_ms"[: ]*[0-9.]*' | tail -1 | grep -o '[0-9.]*$')
+            else
+              note="COULD NOT CHECK: no receipt files written under $EV after the run"
+            fi
+          else
+            note="COULD NOT CHECK: events dir $EV does not exist"
+          fi
+          printf '{"run_exit":"%s","receipts_found":"%s","source_event":"%s","mode":"%s","backend":"%s","expected_backend":"%s","latency_ms":"%s","note":"%s","tmpdir":"%s"}\n' \
+            "$rc" "$found" "$srcev" "$mode" "$backend" "$EXPECT" "$lat" "$note" "$T"
+
+  - name: "report"
+    description: "Plain-language summary of what changed, how to watch it, how to undo it."
+    steps:
+      - id: "write-report"
+        agent: "foundation:zen-architect"
+        timeout: 300
+        output: "final_output"
+        prompt: |
+          Report to the user what just happened. Evidence only -- never claim a check passed that the
+          data below does not show. If `note` names a check that could not be performed, say so plainly.
+
+          Machine review: {{machine}}
+          Before: {{probe}}
+          Local judge (ollama path): {{ollama_install}} / {{ollama_server}} / {{model_pull}} / {{warm}}
+          Local judge (mlx path): {{mlx_install}} / {{mlx_server}} / {{mlx_warm}}
+          Bundle rung: {{rung}}
+          Verification (exit {{verify_code}}): {{evidence}}
+
+          Cover, in this order and in under 20 lines:
+          1. Which judge host was chosen ({{machine.chosen_host}}) and why ({{machine.reason}}) --
+             including the dated measurement: 2026-09-20, same decision suites, MLX
+             (mlx-lm 0.31.3, Qwen3-0.6B-4bit, chat endpoint) ~110-140 ms per decision with
+             lower agreement vs Ollama ~25 ms with higher agreement. If MLX was available
+             ({{machine.mlx_available}}) but not chosen, add one line: it is experimental
+             (bundles/active-mlx.yaml), still being benchmarked, and can be opted into by
+             re-running this recipe with context prefer_host: mlx.
+          2. What changed on this machine (skip anything that reported "skip:", and skip the other
+             host's steps entirely -- they did not run).
+          3. Whether the verification found a fast_decisions receipt with mode active and backend
+             {{machine.chosen_host}} -- quoting the observed mode, backend and latency_ms -- or exactly
+             which check could not be run.
+          4. How to watch it: `afast serve` (the observatory) if installed, otherwise the receipts under
+             {{events_dir}}.
+          5. Revert: `amplifier bundle remove fast-decisions-active`, and optionally `ollama rm
+             {{ollama_model}}` or `uv tool uninstall mlx-lm` (whichever host was chosen).
+          Plain sentences, no markdown headings.

@@ -14,6 +14,9 @@ import re
 import signal
 import sys
 import threading
+import time
+import urllib.error
+import urllib.request
 import webbrowser
 from datetime import UTC, datetime
 from pathlib import Path
@@ -22,6 +25,7 @@ from . import __version__
 from .bench import (
     build_report,
     load_suite,
+    percentile,
     render_markdown,
     replay_events,
     run_suite,
@@ -35,6 +39,79 @@ from .server import STATIC, EventIndex, ViewerServer
 DEFAULT_EVENTS = Path.home() / ".amplifier" / "fast-decisions" / "events"
 DEFAULT_SUITE = Path(__file__).resolve().parents[2] / "suites" / "v1.jsonl"
 DEFAULT_STATE_FILE = Path.home() / ".amplifier" / "fast-decisions" / "serve.json"
+
+
+DEFAULT_MLX_URL = "http://127.0.0.1:8080"
+
+
+def _mlx_server_check() -> dict:
+    """Read-only GET /health probe against a locally running mlx_lm.server.
+
+    Never required (Apple Silicon + mlx-lm is one of two supported local
+    judge hosts, alongside Ollama); an unreachable/absent server is reported
+    ``ok: False`` with a short reason, never raised.
+    """
+    url = os.getenv("FAST_DECISIONS_MLX_URL", DEFAULT_MLX_URL)
+    try:
+        req = urllib.request.Request(f"{url}/health", method="GET")
+        with urllib.request.urlopen(req, timeout=1) as response:
+            ok = response.status == 200
+    except (urllib.error.URLError, TimeoutError, OSError):
+        ok = False
+    except Exception:  # noqa: BLE001 -- a probe must never raise
+        ok = False
+    return {
+        "check": "mlx_server",
+        "ok": ok,
+        "value": url,
+        "note": "GET /health on the configured mlx_lm.server; not required unless using --backend mlx",
+    }
+
+
+def _gateway_server_check() -> dict:
+    """Read-only GET {base}/models probe against the configured hosted
+    gateway backend (your team's OpenAI-compatible gateway, e.g. a LiteLLM
+    deployment). Never required; state is one of ``reachable``, ``auth_failed``,
+    ``unreachable`` or ``not_configured`` -- the key value itself is never reported, only
+    whether it authenticated.
+    """
+    from .local_backend import GATEWAY_DEFAULT_KEY_ENV, GATEWAY_DEFAULT_URL
+
+    url = os.getenv("FAST_DECISIONS_GATEWAY_URL") or GATEWAY_DEFAULT_URL
+    if not url:
+        return {
+            "check": "gateway_server",
+            "ok": False,
+            "value": None,
+            "state": "not_configured",
+            "note": "Set gateway_url (config) or FAST_DECISIONS_GATEWAY_URL (env) to your "
+                    "team's OpenAI-compatible gateway; not required unless using --backend gateway.",
+        }
+    url = url.rstrip("/")
+    key_env = os.getenv("FAST_DECISIONS_GATEWAY_KEY_ENV", GATEWAY_DEFAULT_KEY_ENV)
+    api_key = os.getenv(key_env)
+    state = "unreachable"
+    try:
+        req = urllib.request.Request(f"{url}/models", method="GET")
+        if api_key:
+            req.add_header("Authorization", f"Bearer {api_key}")
+        with urllib.request.urlopen(req, timeout=2) as response:
+            state = "reachable" if response.status == 200 else "unreachable"
+    except urllib.error.HTTPError as exc:
+        state = "auth_failed" if exc.code in (401, 403) else "unreachable"
+        exc.close()
+    except (urllib.error.URLError, TimeoutError, OSError):
+        state = "unreachable"
+    except Exception:  # noqa: BLE001 -- a probe must never raise
+        state = "unreachable"
+    return {
+        "check": "gateway_server",
+        "ok": state == "reachable",
+        "value": url,
+        "state": state,
+        "note": f"GET {{base}}/models using ${key_env}; not required unless using "
+                "--backend gateway. The key value is never reported.",
+    }
 
 
 def doctor(require_amplifier: bool = False) -> int:
@@ -109,6 +186,8 @@ def doctor(require_amplifier: bool = False) -> int:
             "note": "Value is never displayed",
         }
     )
+    checks.append(_mlx_server_check())
+    checks.append(_gateway_server_check())
     entries = {
         e.name for e in importlib.metadata.entry_points(group="amplifier.modules")
     }
@@ -187,6 +266,51 @@ def bench_replay(args) -> int:
     return 0
 
 
+class _TimingBackend:
+    """Wraps any backend to record per-call wall-clock ``ask()`` latency.
+
+    Bench-suite CLI wiring only -- does not touch bench/suite.py's
+    ``SuiteItemResult`` shape or the suite format. ``run_suite`` calls
+    ``ask()`` once per case (canonical order) plus once per extra
+    permutation, in that fixed order; ``latencies_ms`` is a flat,
+    call-ordered record the caller can slice back into per-case groups of
+    size ``permutations`` (see ``_augment_suite_report``).
+    """
+
+    def __init__(self, inner):
+        self._inner = inner
+        self.name = getattr(inner, "name", "timed")
+        self.external = getattr(inner, "external", False)
+        self.latencies_ms: list[float] = []
+
+    async def ask(self, request):
+        start = time.perf_counter()
+        try:
+            return await self._inner.ask(request)
+        finally:
+            self.latencies_ms.append((time.perf_counter() - start) * 1000.0)
+
+    async def close(self) -> None:
+        await self._inner.close()
+
+
+def _augment_suite_report(
+    report: dict, timed_backend: "_TimingBackend", permutations: int
+) -> dict:
+    """Add per-case decision latency (p50/p95, canonical order only) and an
+    explicit ``agreement_with_expected`` alias to a suite report, in place.
+    Bench-suite CLI wiring only; ``report`` is the plain dict returned by
+    ``build_report``, mutated here rather than in bench/report.py."""
+    k = max(1, permutations)
+    canonical_latencies = timed_backend.latencies_ms[0::k]
+    report["decision"]["decision_latency_ms_p50"] = percentile(canonical_latencies, 50)
+    report["decision"]["decision_latency_ms_p95"] = percentile(canonical_latencies, 95)
+    report["accuracy_proxy"]["agreement_with_expected"] = report["accuracy_proxy"].get(
+        "agreement_rate"
+    )
+    return report
+
+
 def bench_suite(args) -> int:
     suite_path = args.suite_path or args.suite
     try:
@@ -200,24 +324,57 @@ def bench_suite(args) -> int:
     both_gates = bool(
         os.getenv("FAST_DECISIONS_LIVE") == "1" and os.getenv("TYPESAFE_API_KEY")
     )
+    gateway_key_env = os.getenv("FAST_DECISIONS_GATEWAY_KEY_ENV") or "LITELLM_INFERENCE_KEY"
+    gateway_api_key = os.getenv(gateway_key_env)
+    gateway_gates = bool(live_requested and gateway_api_key)
     backend_name = args.backend
+    model_arg = getattr(args, "model", None)
     if live_requested and backend_name == "jev" and both_gates:
         from .backends import JevBackend
 
-        backend = JevBackend()
+        backend = JevBackend(model=model_arg)
         backend_external = True
-        model_name = "jev-latest"
+        model_name = model_arg or "jev-latest"
+    elif backend_name == "gateway" and gateway_gates:
+        from .local_backend import GatewayBackend
+
+        if not model_arg:
+            print("afast bench suite: --backend gateway requires --model", file=sys.stderr)
+            return 2
+        backend = GatewayBackend(model=model_arg, url=getattr(args, "gateway_url", None), api_key=gateway_api_key)
+        backend_external = True
+        model_name = model_arg
+    elif backend_name == "ollama":
+        from .local_backend import OllamaBackend
+
+        model_name = model_arg or "qwen3:0.6b"
+        backend = OllamaBackend(model=model_name)
+        backend_external = False
+    elif backend_name == "mlx":
+        from .local_backend import MLX_DEFAULT_MODEL, MlxBackend
+
+        model_name = model_arg or MLX_DEFAULT_MODEL
+        backend = MlxBackend(model=model_name)
+        backend_external = False
     else:
-        if live_requested and not both_gates:
+        if live_requested and backend_name == "jev" and not both_gates:
             print(
                 "afast bench suite: --live requires both FAST_DECISIONS_LIVE=1 and "
                 "TYPESAFE_API_KEY; running the offline deterministic backend instead.",
                 file=sys.stderr,
             )
+        elif live_requested and backend_name == "gateway" and not gateway_gates:
+            print(
+                "afast bench suite: --backend gateway requires --live and "
+                f"{gateway_key_env} to be set; running the offline deterministic "
+                "backend instead.",
+                file=sys.stderr,
+            )
         backend = DeterministicSuiteBackend()
         backend_external = False
         model_name = "deterministic-suite-backend"
-    result = asyncio.run(run_suite(cases, backend, permutations=args.permutations))
+    timed_backend = _TimingBackend(backend)
+    result = asyncio.run(run_suite(cases, timed_backend, permutations=args.permutations))
     report = build_report(
         "suite",
         result,
@@ -226,6 +383,7 @@ def bench_suite(args) -> int:
         provider="typesafe" if backend_external else "offline",
         backend_external=backend_external,
     )
+    report = _augment_suite_report(report, timed_backend, args.permutations)
     swing = report["accuracy_proxy"]["max_probability_swing"]
     if isinstance(swing, (int, float)) and swing > 0.15:
         print(
@@ -462,7 +620,17 @@ def main(argv=None) -> int:
     suite.add_argument("suite_path", nargs="?", default=None, help="Suite JSONL file")
     suite.add_argument("--suite", default=str(DEFAULT_SUITE))
     suite.add_argument(
-        "--backend", choices=["deterministic", "jev"], default="deterministic"
+        "--backend", choices=["deterministic", "jev", "ollama", "mlx", "gateway"],
+        default="deterministic"
+    )
+    suite.add_argument(
+        "--model", default=None,
+        help="Model name, passed to the jev/ollama/mlx/gateway backend"
+    )
+    suite.add_argument(
+        "--gateway-url", default=None,
+        help="Override the hosted gateway base URL (else FAST_DECISIONS_GATEWAY_URL "
+             "or your team's configured gateway; required if neither is set)"
     )
     suite.add_argument("--live", action="store_true")
     suite.add_argument("--permutations", type=int, default=4)
@@ -556,7 +724,7 @@ def main(argv=None) -> int:
                 remove_state(state_file)
         return 0
     except (ValueError, OSError) as exc:
-        print("afast: " + str(exc), file=sys.stderr)
+        print("afast: " + (str(exc) or type(exc).__name__), file=sys.stderr)
         return 2
 
 

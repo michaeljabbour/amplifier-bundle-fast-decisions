@@ -1,0 +1,100 @@
+requires:
+  env:
+    - ANTHROPIC_API_KEY
+
+# Variant "fd-candidate": foundation + fast-decisions ACTIVE, configured from
+# evals/swebench/candidate.config.json (the S1/S2 confirmed champion cell --
+# see STUDY-DESIGN.md section 8's decision rule; NOT hardcoded here so this
+# file always reflects whatever S1/S2 actually confirmed, not a guess made
+# while writing the S3 harness).
+#
+# THIS FILE IS A TEMPLATE. The `{{FD_*}}` placeholders below are NOT valid
+# YAML/shell as committed -- do not hand this file to the harness directly.
+# Render it first:
+#
+#   python3 evals/swebench/swebench_stage.py render-candidate \
+#       --config evals/swebench/candidate.config.json \
+#       --template evals/swebench/agents/amplifier-fd-candidate/install.yaml \
+#       --out /tmp/fd-candidate-rendered/install.yaml
+#
+# `render_candidate_install_yaml()` (evals/swebench/swebench_stage.py) refuses
+# with a clear error while candidate.config.json's `status` is not
+# `"confirmed"` (the shipped placeholder's status), so a run can never
+# silently proceed against unset config. `run.sh` performs this render step
+# automatically before invoking the harness and points `--agents-dir` at the
+# rendered copy (see run.sh and README.md "Preflight").
+#
+# Same deviation from the literal "#subdirectory=behaviors/<file>"
+# instruction as amplifier-fd-incumbent/install.yaml, for the same reason
+# (the hooks-only `behaviors/fast-decisions.yaml` can never own an "active"
+# policy -- see that file's install.yaml comment for the full explanation).
+setup_cmds:
+  - export PATH="/root/.local/bin:$PATH"; uv tool install git+https://github.com/microsoft/amplifier
+  - |
+    mkdir -p /root/.amplifier
+    cat > /root/.amplifier/settings.yaml <<EOF
+    config:
+      providers:
+        - module: provider-anthropic
+          source: git+https://github.com/microsoft/amplifier-module-provider-anthropic@main
+          config:
+            api_key: ${ANTHROPIC_API_KEY}
+            default_model: claude-fable-5-1
+            enable_1m_context: 'true'
+            enable_prompt_caching: 'true'
+            priority: 1
+    EOF
+  - export PATH="/root/.local/bin:$PATH"; amplifier bundle add git+https://github.com/microsoft/amplifier-foundation@main --app
+  - |
+    cat > /root/fd-candidate-bundle.yaml <<EOF
+    bundle:
+      name: fast-decisions-fd-candidate
+      version: 0.1.0
+      description: >-
+        S3 fd-candidate bundle: fast-decisions orchestrator swap (active),
+        configured from the S1/S2 confirmed champion cell.
+
+    session:
+      orchestrator:
+        module: loop-fast-decisions
+        source: git+https://github.com/michaeljabbour/amplifier-bundle-fast-decisions@{{FD_SHA}}#subdirectory=modules/loop-fast-decisions
+        config:
+          mode: active
+          backend: {{FD_BACKEND}}
+{{FD_MODEL_LINE}}
+{{FD_EFFORT_ROUTING_YAML}}
+          allow_external_state: {{FD_ALLOW_EXTERNAL_STATE}}
+          timeout_ms: 750
+          min_probability: 0.90
+          min_margin: 0.20
+          max_fast_streak: 3
+          max_fast_per_turn: 12
+          max_candidates: 12
+          max_state_chars: 12000
+          allowed_tools: [fast_workspace]
+          upstream:
+            max_iterations: 100
+            extended_thinking: true
+
+    hooks:
+      - module: hooks-fast-decisions
+        source: git+https://github.com/michaeljabbour/amplifier-bundle-fast-decisions@{{FD_SHA}}#subdirectory=modules/hooks-fast-decisions
+        config:
+          mode: shadow
+          backend: {{FD_BACKEND}}
+          allow_external_state: {{FD_ALLOW_EXTERNAL_STATE}}
+          observatory:
+            enabled: false
+
+    tools:
+      - module: tool-fast-workspace
+        source: git+https://github.com/michaeljabbour/amplifier-bundle-fast-decisions@{{FD_SHA}}#subdirectory=modules/tool-fast-workspace
+        config:
+          root: .
+          max_bytes: 32768
+    EOF
+  - export PATH="/root/.local/bin:$PATH"; curl -fsSL https://ollama.com/install.sh | sh
+  - (ollama serve > /tmp/ollama.log 2>&1 &) ; sleep 3; ollama pull {{FD_OLLAMA_MODEL}}
+  - export PATH="/root/.local/bin:$PATH"; amplifier bundle add /root/fd-candidate-bundle.yaml --app
+  - export PATH="/root/.local/bin:$PATH"; amplifier --version
+  - export PATH="/root/.local/bin:$PATH"; amplifier bundle list | tee /tmp/bundle-list.txt

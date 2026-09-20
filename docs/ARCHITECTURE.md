@@ -121,6 +121,151 @@ read `request.reasoning_effort` before falling back to their own
 provider-level config default, so a lowered `explore` effort applies to
 that one request only.
 
+## Model routing with escalation (HC04, opt-in)
+
+`Policy.model_routing` (default `None`) lets a host start a turn on a
+cheaper/faster `start_model` (and optionally a starting
+`start_effort`), entirely inside `RoutedProvider.complete` -- the same
+seam HC03 (`effort_routing`, above) owns -- and escalate to the host's
+normal provider-configured default the moment risk appears. When it is
+`None`, this feature is inert: no attribute is read from or written to
+the request, `kwargs` is not touched, and no `model_routed` event is
+emitted.
+
+**What is routed.** For each slow (non-fast-path) request, while
+`turn.escalated` is `False`: an explicit host-set `request.model` is
+always respected (`reason_code: host_pinned`) unless
+`model_routing["override_explicit_model"]` is `true`. Otherwise
+`request.model` is set to `start_model`, and (verified against the
+installed Anthropic provider, which reads the effective model from
+`kwargs.get("model", self.default_model)` and never from
+`request.model`) `kwargs["model"]` is set too, so the routed model is
+the one actually served, not just a label on the request object the
+real provider ignores. If `start_effort` is configured, it is applied
+to `request.reasoning_effort` only when nothing has already set it
+this request -- neither this same call's HC03 `effort_routing` nor a
+host pin -- so HC04 never clobbers a decision HC03 or the host already
+made.
+
+**Escalation triggers (any one flips `turn.escalated` permanently for
+the rest of the turn):**
+
+- `max_requests_before_escalation`: this turn's slow-request count
+  (`turn.slow_requests_seen`, incremented once per slow request while
+  model_routing is enabled) exceeds the configured value
+  (`escalated_max_requests`).
+- `escalate_on_test_failure`: `ObservedTool.execute` observed a
+  *successful* execution (no exception raised) of a test-shaped tool
+  (`bash`, `python_check`, `run_tests`, or any tool whose name contains
+  `"test"`) whose own result text matches a failure signature (`FAILED
+  (`, `FAIL:`, a Python traceback header, an `Error:` line, or an `N
+  failed` count) -- `turn.test_failure_seen` latches, and the *next*
+  slow request escalates (`escalated_test_failure`).
+- `escalate_on_provider_error`: the upstream provider call raised (the
+  existing `except Exception` branch already incrementing
+  `turn.provider_errors_seen`) -- escalates immediately for the
+  *following* request (`escalated_provider_error`); the failed request
+  itself already got its `model_routed` event before the exception.
+
+Once escalated, `request.model`/`kwargs["model"]` and
+`request.reasoning_effort` are left untouched by this feature -- the
+provider's own configured default takes over, exactly as if
+`model_routing` had never been set.
+
+**Never bypasses approvals or the loop.** Only `request.model`,
+`kwargs["model"]`, and (conditionally) `request.reasoning_effort` are
+ever touched; tool approvals, `stream()`, and every other policy
+dimension are untouched. `Policy.__post_init__` validates
+`model_routing` at construction (i.e. at mount, via `Policy.from_config`):
+unlike `effort_routing`, an empty dict is *not* a valid off-state --
+`start_model` is required whenever a dict is supplied at all, because a
+model pin with no starting model is meaningless. `TurnState` tracks
+`slow_requests_seen`, `model_routed_requests`, `test_failure_seen`,
+`escalated`, and `escalation_reason` per turn, reset alongside the rest
+of `TurnState` at turn start.
+
+Receipts: the `fast_decisions:model_routed` event proves what this
+feature *requested* (`requested_model`, `requested_effort`,
+`reason_code`, `escalated`); the native `llm:request` receipt on the
+host side shows what the provider actually served, since `kwargs["model"]`
+(not just `request.model`) carries the override into the real
+`complete()` call.
+
+## Judge-driven escalation and phase classification (HC05, opt-in)
+
+Two independent opt-ins let the CONFIGURED `DecisionBackend` -- the same
+judge used for the read-shortcut -- answer a bounded judgment question
+instead of (or alongside) the deterministic HC03/HC04 rules. Both are ask
+a single Choice `Question` via `orchestrator._ask_judge_choice`, which
+builds one `DecisionRequest` (`candidates=()`, one contributed `Question`)
+and calls `service.backend.ask()` directly -- never `DecisionService.choose`,
+since there is no prepared action to submit here, only a judgment. This
+reuses the read-shortcut's own contract and constraints: `Policy.timeout_ms`
+bounds the call, and `backend.external and not Policy.allow_external_state`
+blocks it before any external call is attempted (Jev refuses without
+consent, exactly as for a read candidate) -- the caller sees this as an
+ordinary abstain and falls back to its deterministic rule.
+
+**Compact judge state (`orchestrator._judge_state`).** Both mechanisms send
+the same small, bounded, JSON-able state: a 300-char head of the first user
+message (`task_prompt_head`), the phase, this turn's slow-request count
+(`slow_requests_seen`), the tool names used so far this turn
+(`tool_names_used`), a 600-char excerpt of the last tool result
+(`last_tool_result_excerpt`), and the two HC04 failure signals
+(`test_failure_seen`, `provider_errors_seen`). If the canonical
+serialization would still exceed `Policy.max_state_chars`, the excerpt is
+dropped first, then the prompt head -- never the full conversation, tool
+arguments, or model output. `tool_names_used`/`last_tool_result_text` are
+fed onto `TurnState` by `ObservedTool.execute`, but ONLY while a judge
+mechanism is actually configured (`_judge_context_needed`) -- inert
+otherwise, matching every other HC0x seam.
+
+**Escalation judge (`model_routing.escalation_judge`).** `"rules"` (the
+default) is today's HC04 behavior unchanged. `"judge"` asks the judge a
+two-criteria Choice question (`continue_cheap` / `escalate`) before every
+slow request past the turn's first, while `turn.escalated` is still
+`False` -- but ONLY once neither deterministic trigger (`test_failure`,
+`max_requests`) has already fired for this same request: those triggers
+remain a floor, escalating regardless of what the judge would have said.
+The judge escalates when its answer's `choice == "escalate"` AND its
+probability for that choice is at least `model_routing.escalate_min_probability`
+(default `0.7`); anything else (an explicit `continue_cheap`, a
+below-threshold `escalate`, or a `None` choice from an abstain/blocked/error
+answer) leaves the request to the deterministic rules for that request only
+(`decided: "fallback_rules"` or `"continue"`). A judge-caused escalation
+sets `turn.escalation_reason = "judge"` (`reason_code:
+escalated_judge` on the next `model_routed`), latches exactly like every
+other HC04 trigger, and increments `TurnState.escalations_by_judge`;
+`TurnState.escalation_judgements` counts every time the judge was actually
+asked, regardless of its answer. The `fast_decisions:escalation_judged`
+event is emitted once per ask, immediately before that request's
+`model_routed` event, and always precedes it in decision order.
+
+**Phase judge (`effort_routing.phase_judge`).** When `true`, the
+deterministic `effort.classify_phase(request)` result is still computed
+first (it is always the fallback and the comparison baseline), then the
+judge is asked a three-criteria Choice question (`orient` / `explore` /
+`implement`, worded from `effort.PHASE_CRITERIA`). A non-null answer
+REPLACES the phase used for the rest of this request's effort routing
+(`effort.decide_effort`) and, if `model_routing` is also configured, the
+`phase` recorded on that same request's `model_routed`/`escalation_judged`
+events. An abstain/blocked/error answer (`choice is None`) leaves the
+deterministic phase in place -- there is no separate "escalation" concept
+for phase classification, only override-or-fall-back. The
+`fast_decisions:phase_judged` event carries `agreed_with_rules` (whether the
+judge's choice matched the deterministic phase, or `null` when the judge
+abstained) so a benchmark can measure judge/rules agreement independent of
+which one "won".
+
+**Never bypasses approvals, the loop, or HC03/HC04's own contracts.** Both
+mechanisms are pure decision inputs: they change which phase or escalation
+state HC03/HC04 act on, never `request.model`/`request.reasoning_effort`
+directly, never tool approvals, and never `stream()`. `Policy.__post_init__`
+validates `model_routing.escalation_judge` (`"rules"` / `"judge"`),
+`model_routing.escalate_min_probability` (a number in `[0, 1]`), and
+`effort_routing.phase_judge` (a bool) at construction, alongside the
+existing HC03/HC04 validation.
+
 ## Deadlines, budgets and failures
 
 ## Deadlines, budgets and failures
