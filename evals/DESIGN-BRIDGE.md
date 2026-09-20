@@ -166,3 +166,43 @@ that produces `results.json` (i.e. every invocation except `--dry-run`). It
 never edits `behaviors/fast-decisions.yaml` itself -- "for human ratification"
 means a person reads the recommendation, checks it against this file's rules
 and the underlying `RESULTS.md`, and makes the edit by hand.
+
+---
+
+## Applying the recommendation
+
+`evals/apply_recommendation.py` is the tool that turns a confirmed result
+into an actual bundle change. It reads `<out>/results.json` (and, when
+present, `<out>/gates.json` for mechanism-gate flags and
+`latency_within_budget`) and `evals/cells.yaml` (the same fd/effort_profiles/
+model_routing_profiles source `evals/run.py::cell_to_argv` reads), applies
+ONLY the rules above whose evidence requirement is `verdict == "confirmed"`,
+and writes/refreshes `behaviors/fast-decisions-active.yaml` -- an OPT-IN
+`session.orchestrator` profile (the shape of `bundles/active.yaml`), never
+the shadow default. `--promote-default` additionally flips
+`behaviors/fast-decisions.yaml`'s hook `mode`/`backend` fields (never
+`allow_external_state`) to the confirmed values.
+
+**Confirmed-only, no exceptions.** A `screen`-level result never triggers a
+file change, matching rule (a)'s "screen-level results ... are never
+sufficient" language applied uniformly across (a)-(d): `--dry-run` and
+`--apply` both exit `2` with no files touched when nothing is confirmed.
+
+**Rule (b) stays a note, never a write.** Even when the `jev` twin of the
+confirmed arm is independently confirmed with a passed mechanism gate and
+`latency_within_budget: true`, `apply_recommendation.py` does not write
+`backend: jev` anywhere -- it adds a note recommending `backend: auto`
+semantics (jev when `TYPESAFE_API_KEY` is present AND
+`allow_external_state` is explicitly set by the operator, else local) for a
+human to apply by hand. Rule (e) (external state stays opt-in) is enforced
+unconditionally: no evidence, confirmed or otherwise, ever sets
+`allow_external_state: true` in a file this tool writes.
+
+**Rule (d)'s two outcomes are both visible.** When the routing cell
+(`judge-local+effort+route`) is confirmed against its `plain-sonnet` control
+(R5) AND its mechanism gate's `flag_if_zero_escalations` did not fire (read
+via `gates.json[cell]["flags"]`, never re-derived), `model_routing` is added
+to the active profile. When it is confirmed but zero escalations fired, the
+gain is explained by the model, not the routing, and the tool omits
+`model_routing` and writes the "pin the cheaper model instead" comment in
+its place -- exactly rule (d)'s own text.

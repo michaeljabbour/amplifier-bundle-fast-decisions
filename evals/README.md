@@ -209,3 +209,36 @@ failed claim rather than a partial one.
 | `run.py` exits 6 | `--resume` finished its loop but a run is still incomplete (no `result.json`, no live worker) | `--resume` again once the missing runs have a chance to finish or restart |
 | a cell's numbers look too good | check the gate first, then the transcripts | a mechanism that never engaged produces plain-Amplifier numbers under a fancy label |
 | the evaluator was wrong | re-score, never re-run | `--report-only` re-derives outcomes from preserved workspaces at zero cost |
+
+---
+
+## Applying the recommendation
+
+`run.py` never edits `behaviors/*.yaml` itself -- it only writes
+`DESIGN-RECOMMENDATION.md` "for human ratification" (see DESIGN-BRIDGE.md).
+`evals/apply_recommendation.py` is the tool that actually applies a
+confirmed recommendation to the bundle, and it applies ONLY what
+DESIGN-BRIDGE.md's rules say is confirmed -- never a `screen`-level result.
+
+```bash
+python3 evals/apply_recommendation.py \
+  --results <out-dir> [--holdout-results <out-dir>] \
+  --repo <bundle-repo-worktree> \
+  --dry-run   # or --apply
+```
+
+- Default output is opt-in: it writes/refreshes
+  `behaviors/fast-decisions-active.yaml` (a `session.orchestrator` profile,
+  in the shape of `bundles/active.yaml`), and leaves the shadow default
+  (`behaviors/fast-decisions.yaml`) untouched.
+- Pass `--promote-default` to also flip the default behavior's hook
+  `mode`/`backend` fields to the confirmed values -- it never sets
+  `allow_external_state: true` there, regardless of what was confirmed
+  (DESIGN-BRIDGE.md rule (e) is a policy invariant, not a result-driven
+  decision).
+- Exit codes: `0` applied (or would be, under `--dry-run`); `2` nothing was
+  confirmed, no files touched; `4` malformed inputs (missing/unparseable
+  `results.json` or `cells.yaml`).
+- `--dry-run` prints the unified diff for each file it would touch plus a
+  changelog-style summary of exactly which rule fired and the numbers that
+  triggered it -- read that before ever passing `--apply`.

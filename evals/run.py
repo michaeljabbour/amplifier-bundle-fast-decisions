@@ -438,8 +438,27 @@ def gate_eval(mechanism_gate, mechanism):
         if total_esc == 0:
             flags.append(mechanism_gate["flag_if_zero_escalations"])
 
-    return {"passed": passed, "flags": flags, "reason": "; ".join(reasons) if reasons else None,
-            "counters": mechanism}
+    # STUDY-DESIGN.md section 14 "Judge head-to-head": a cell with
+    # escalation_judge: "judge" or effort_routing.phase_judge: true declares
+    # mechanism_gate: {..., require_judged: true}. scripts/battery.py's
+    # _mechanism_report already computes the DATA half (judged_engaged /
+    # judged_reason); this is the wiring of that data into the gate itself
+    # (DESIGN-BRIDGE.md rule (d2)'s open item).
+    if mechanism_gate.get("require_judged"):
+        judged_engaged = mechanism.get("judged_engaged")
+        if judged_engaged is not True:
+            passed = False
+            reasons.append(mechanism.get("judged_reason") or
+                            "judged_engaged is not true (mechanism_gate.require_judged)")
+
+    result = {"passed": passed, "flags": flags, "reason": "; ".join(reasons) if reasons else None,
+              "counters": mechanism}
+    # Expose decision-latency budget status for any judge cell (any cell
+    # whose mechanism receipts were recorded at all -- amplifier-fd harnesses
+    # only; DESIGN-BRIDGE.md rule (b) needs this for judge-backend cells that
+    # don't carry require_judged, not only the require_judged HC05 cells).
+    result["latency_within_budget"] = mechanism.get("latency_within_budget")
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -1511,6 +1530,16 @@ def main(argv=None):
                     cell_gate["passed"] = False
                     any_gate_failed = True
                 cell_gate["flags"] = sorted(set(cell_gate["flags"]) | set(result["gate"].get("flags", [])))
+                if "latency_within_budget" in result["gate"]:
+                    cell_gate.setdefault("latency_within_budget_by_rep", []).append(
+                        result["gate"]["latency_within_budget"])
+            if "latency_within_budget_by_rep" in cell_gate:
+                per_rep = cell_gate["latency_within_budget_by_rep"]
+                # None means "no latency figure this rep" (never fabricated);
+                # a judge cell is within budget only when every rep that did
+                # report a figure was within it.
+                known = [v for v in per_rep if v is not None]
+                cell_gate["latency_within_budget"] = all(known) if known else None
             gates_report[cid] = cell_gate
             cells_report.append({
                 "id": cid, "experiments": experiments, "seeds": seeds,

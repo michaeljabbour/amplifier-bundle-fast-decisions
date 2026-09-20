@@ -310,6 +310,47 @@ class GateEvalTests(unittest.TestCase):
                                "model_routed_requested_models": {}, "model_routed_escalations_by_reason": {}})
         self.assertFalse(gate["passed"])
 
+    def test_require_judged_false_fails_gate_with_judged_reason(self):
+        gate = run.gate_eval(
+            {"scored_backend": "ollama", "min_scored": 1, "require_judged": True},
+            {"mechanism_engaged": True, "mechanism_reason": None,
+             "scored_by_backend": {"ollama": 5}, "fallback_count": 0,
+             "routed_by_route": {}, "effort_routed_by_phase_effort": {},
+             "model_routed_requested_models": {}, "model_routed_escalations_by_reason": {},
+             "judged_engaged": False,
+             "judged_reason": "phase_judge configured but 0 phase_judged receipts",
+             "latency_within_budget": None},
+        )
+        self.assertFalse(gate["passed"])
+        self.assertEqual(gate["reason"], "phase_judge configured but 0 phase_judged receipts")
+
+    def test_require_judged_true_passes_gate_and_exposes_latency(self):
+        gate = run.gate_eval(
+            {"scored_backend": "ollama", "min_scored": 1, "require_judged": True},
+            {"mechanism_engaged": True, "mechanism_reason": None,
+             "scored_by_backend": {"ollama": 5}, "fallback_count": 0,
+             "routed_by_route": {}, "effort_routed_by_phase_effort": {},
+             "model_routed_requested_models": {}, "model_routed_escalations_by_reason": {},
+             "judged_engaged": True, "judged_reason": None,
+             "latency_within_budget": True},
+        )
+        self.assertTrue(gate["passed"])
+        self.assertIsNone(gate["reason"])
+        self.assertTrue(gate["latency_within_budget"])
+
+    def test_require_judged_absent_leaves_non_judged_cell_unaffected(self):
+        gate = run.gate_eval(
+            {"scored_backend": "ollama", "min_scored": 1},
+            {"mechanism_engaged": True, "mechanism_reason": None,
+             "scored_by_backend": {"ollama": 5}, "fallback_count": 0,
+             "routed_by_route": {}, "effort_routed_by_phase_effort": {},
+             "model_routed_requested_models": {}, "model_routed_escalations_by_reason": {},
+             "judged_engaged": None, "judged_reason": None,
+             "latency_within_budget": None},
+        )
+        self.assertTrue(gate["passed"])
+        self.assertIsNone(gate["latency_within_budget"])
+
 
 class ResumeDetectionTests(unittest.TestCase):
     def test_no_proposal_means_prepare(self):
