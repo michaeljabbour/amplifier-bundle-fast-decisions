@@ -70,14 +70,24 @@ def _mlx_server_check() -> dict:
 
 def _gateway_server_check() -> dict:
     """Read-only GET {base}/models probe against the configured hosted
-    gateway backend (a RunPod-hosted OpenAI-compatible endpoint, or any
-    other). Never required; state is one of ``reachable``, ``auth_failed``
-    or ``unreachable`` -- the key value itself is never reported, only
+    gateway backend (your team's OpenAI-compatible gateway, e.g. a LiteLLM
+    deployment). Never required; state is one of ``reachable``, ``auth_failed``,
+    ``unreachable`` or ``not_configured`` -- the key value itself is never reported, only
     whether it authenticated.
     """
     from .local_backend import GATEWAY_DEFAULT_KEY_ENV, GATEWAY_DEFAULT_URL
 
-    url = os.getenv("FAST_DECISIONS_GATEWAY_URL", GATEWAY_DEFAULT_URL).rstrip("/")
+    url = os.getenv("FAST_DECISIONS_GATEWAY_URL") or GATEWAY_DEFAULT_URL
+    if not url:
+        return {
+            "check": "gateway_server",
+            "ok": False,
+            "value": None,
+            "state": "not_configured",
+            "note": "Set gateway_url (config) or FAST_DECISIONS_GATEWAY_URL (env) to your "
+                    "team's OpenAI-compatible gateway; not required unless using --backend gateway.",
+        }
+    url = url.rstrip("/")
     key_env = os.getenv("FAST_DECISIONS_GATEWAY_KEY_ENV", GATEWAY_DEFAULT_KEY_ENV)
     api_key = os.getenv(key_env)
     state = "unreachable"
@@ -620,7 +630,7 @@ def main(argv=None) -> int:
     suite.add_argument(
         "--gateway-url", default=None,
         help="Override the hosted gateway base URL (else FAST_DECISIONS_GATEWAY_URL "
-             "or the built-in default)"
+             "or your team's configured gateway; required if neither is set)"
     )
     suite.add_argument("--live", action="store_true")
     suite.add_argument("--permutations", type=int, default=4)

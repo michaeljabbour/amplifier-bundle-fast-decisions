@@ -27,7 +27,6 @@ from amplifier_fast_decisions.backends import BackendUnavailable
 from amplifier_fast_decisions.contracts import Candidate, DecisionRequest
 from amplifier_fast_decisions.local_backend import (
     GATEWAY_DEFAULT_KEY_ENV,
-    GATEWAY_DEFAULT_URL,
     GatewayBackend,
     gateway_base_url,
     score_tokens,
@@ -170,11 +169,14 @@ class GatewayConstructionTests(unittest.TestCase):
         with self.assertRaises(BackendUnavailable):
             GatewayBackend(model=None)  # type: ignore[arg-type]
 
-    def test_default_url_is_the_built_in_default(self):
+    def test_missing_url_raises_backend_unavailable(self):
+        # No public default: a public repo must not hardcode any private
+        # team hostname. Without a gateway_url config or
+        # FAST_DECISIONS_GATEWAY_URL env var, construction must fail loud.
         with mock.patch.dict(os.environ, {}, clear=False):
             os.environ.pop("FAST_DECISIONS_GATEWAY_URL", None)
-            backend = GatewayBackend(model="some-model")
-        self.assertEqual(backend.base_url, GATEWAY_DEFAULT_URL.rstrip("/"))
+            with self.assertRaises(BackendUnavailable):
+                GatewayBackend(model="some-model")
 
     def test_env_url_overrides_default(self):
         with mock.patch.dict(os.environ, {"FAST_DECISIONS_GATEWAY_URL": "https://custom.example/v1"}):
@@ -363,6 +365,19 @@ class GatewayDoctorCheckTests(unittest.TestCase):
             check = cli._gateway_server_check()
         self.assertFalse(check["ok"])
         self.assertEqual(check["state"], "unreachable")
+
+    def test_doctor_reports_gateway_not_configured(self):
+        # No public default: without gateway_url configured, the check
+        # must report not_configured rather than crashing or hardcoding
+        # any team-specific host.
+        from amplifier_fast_decisions import cli
+
+        with mock.patch.dict(os.environ, {}, clear=False):
+            os.environ.pop("FAST_DECISIONS_GATEWAY_URL", None)
+            check = cli._gateway_server_check()
+        self.assertFalse(check["ok"])
+        self.assertEqual(check["state"], "not_configured")
+        self.assertIsNone(check["value"])
 
 
 class CellsYamlGatewayCellTests(unittest.TestCase):

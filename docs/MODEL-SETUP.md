@@ -258,9 +258,9 @@ evaluation. No cloud resource was provisioned for this guide.
 
 The above hosts (Ollama, MLX) keep the judge model on the same machine as
 Amplifier, so no snapshot state leaves it. A **hosted gateway** instead runs
-the judge on shared infrastructure the team controls (for example a
-RunPod-backed OpenAI-compatible endpoint), reached over HTTPS with an API
-key. This is a real network call, so it always requires explicit opt-in:
+the judge on shared infrastructure your team controls -- your team's
+OpenAI-compatible gateway (e.g. a LiteLLM deployment) -- reached over HTTPS
+with an API key. This is a real network call, so it always requires explicit opt-in:
 `--backend gateway --allow-external-state` (`battery.py prepare
 --fd-backend gateway --allow-external-state`; the bundle's own
 `allow_external_state: true` config for direct runtime use). It is gated by
@@ -279,7 +279,7 @@ and never anything from outside the `fast_workspace` boundary. See
 
 | Setting | Default | Notes |
 |---|---|---|
-| `gateway_url` (config) / `FAST_DECISIONS_GATEWAY_URL` (env) | `https://llm.amplifier.run/v1` | Must be `https://` unless the host is literal loopback (`127.0.0.1`/`::1`), which may use `http://` for local gateway development. No credentials, query string or fragment in the URL -- the key travels only in the `Authorization` header. |
+| `gateway_url` (config) / `FAST_DECISIONS_GATEWAY_URL` (env) | none -- **required** | No public default: point this at your team's OpenAI-compatible gateway, e.g. `https://llm.example.internal/v1`. Must be `https://` unless the host is literal loopback (`127.0.0.1`/`::1`), which may use `http://` for local gateway development. No credentials, query string or fragment in the URL -- the key travels only in the `Authorization` header. |
 | `model` (config) | none -- **required** | Unlike the local backends, there is no default judge model for a hosted gateway; a missing `model` is a startup error, not a silent fallback. |
 | `gateway_key_env` (config) | `LITELLM_INFERENCE_KEY` | Names the environment variable holding the API key. The key value itself is never a config field, never logged, and never appears in receipts, profiles or the doctor check -- only the outbound `Authorization: Bearer <key>` header carries it, for that one request. |
 
@@ -294,11 +294,11 @@ backends and compare:
 ```bash
 afast bench suite --live --backend ollama --model qwen3:0.6b
 afast bench suite --live --backend gateway --model <hosted-model-id> \
-  --gateway-url https://llm.amplifier.run/v1
+  --gateway-url https://llm.example.internal/v1
 ```
 
-(`--gateway-url` is optional; it overrides `FAST_DECISIONS_GATEWAY_URL` and
-the built-in default.) This isolates the question a hosted judge actually
+(`--gateway-url` overrides `FAST_DECISIONS_GATEWAY_URL`; one of the two is
+required -- there is no built-in default.) This isolates the question a hosted judge actually
 answers: does it reach the same decisions as the local judge, and at what
 added network latency cost? It does not by itself establish accuracy,
 reliability, or a cost advantage over Ollama/MLX -- benchmark before

@@ -201,7 +201,11 @@ class OllamaBackend:
 MLX_DEFAULT_URL = "http://127.0.0.1:8080"
 MLX_DEFAULT_MODEL = "mlx-community/Qwen3-0.6B-4bit"
 
-GATEWAY_DEFAULT_URL = "https://llm.amplifier.run/v1"
+# No public default: a public repo must not hardcode any private team
+# hostname. Callers configure `gateway_url` (config) or
+# FAST_DECISIONS_GATEWAY_URL (env) to point at their own OpenAI-compatible
+# gateway (e.g. a LiteLLM deployment) -- see docs/MODEL-SETUP.md.
+GATEWAY_DEFAULT_URL = None
 GATEWAY_DEFAULT_KEY_ENV = "LITELLM_INFERENCE_KEY"
 
 GATEWAY_SYSTEM = (
@@ -466,7 +470,7 @@ class MlxBackend(OpenAICompatBackend):
 
 
 class GatewayBackend(OpenAICompatBackend):
-    """Hosted OpenAI-compatible judge (e.g. the team's RunPod-backed gateway).
+    """Hosted OpenAI-compatible judge (e.g. your team's LiteLLM/vLLM gateway).
 
     Same request/response contract as ``MlxBackend``, but the model runs on
     infrastructure this process does not control end-to-end, so state
@@ -494,9 +498,16 @@ class GatewayBackend(OpenAICompatBackend):
         if not model:
             raise BackendUnavailable("Gateway backend requires a model")
         resolved_url = url or os.getenv("FAST_DECISIONS_GATEWAY_URL") or GATEWAY_DEFAULT_URL
+        if not resolved_url:
+            raise BackendUnavailable(
+                "Gateway backend requires a gateway_url config value or "
+                "FAST_DECISIONS_GATEWAY_URL env var pointing at your team's "
+                "OpenAI-compatible gateway (e.g. a LiteLLM deployment), such as "
+                "https://llm.example.internal/v1"
+            )
         super().__init__(model=model, url=resolved_url, timeout_ms=timeout_ms, api_key=api_key)
         # vLLM honours chat_template_kwargs; Qwen3-family models otherwise emit a thinking block first
-        # (verified live on the team gateway: first token "We"/"Thinking", never a label).
+        # (verified live against a LiteLLM+vLLM deployment: first token "We"/"Thinking", never a label).
         self.extra_body = dict(extra_body) if extra_body is not None else {"chat_template_kwargs": {"enable_thinking": False}}
 
     def _validate_url(self, url: str) -> str:

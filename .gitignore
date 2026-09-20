@@ -17,3 +17,11 @@ playwright-report/
 # workspace contents, session traces -- never commit; already covered by
 # .amplifier/ above, listed explicitly per evals/README.md)
 .amplifier/evaluation/
+
+# agent-tool scratch dirs and local artifacts -- not part of the project
+.agents/
+.claude/
+.grok/
+Claude outputs/
+skills-lock.json
+results/
