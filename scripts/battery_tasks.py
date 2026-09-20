@@ -229,14 +229,39 @@ def _make_repair_evaluate(func_name: str, oracle_fn, arg_fn, boundary_specs: lis
     return _evaluate
 
 
+_ANSWER_LEADING_MARKERS_RE = re.compile(r"^[\s>*\-]+")
+_ANSWER_LINE_RE = re.compile(r"^answer:\s*(.*)$", re.IGNORECASE)
+
+
+def _clean_answer_line(raw_line: str) -> str | None:
+    """Strip common markdown wrapping (leading list/quote markers, surrounding
+    emphasis) from one line and return its ANSWER: value, or None if the
+    cleaned line is not an ANSWER line at all.
+
+    Handles e.g. "**ANSWER: 8765**", "`ANSWER: storage`", "> answer: 4."
+    """
+    line = _ANSWER_LEADING_MARKERS_RE.sub("", raw_line.strip()).strip()
+    line = line.strip("*_`").strip()
+    m = _ANSWER_LINE_RE.match(line)
+    if not m:
+        return None
+    return m.group(1).strip().strip("*_`").rstrip(".").strip()
+
+
 def check_answer(task: Task, final_message: str | None) -> dict:
     if final_message is None:
         return {"checks": 1, "passed": 0, "failed": 1, "failure_labels": ["no_final_message"]}
-    m = re.search(r"^\s*ANSWER:\s*(.*)$", final_message, re.MULTILINE | re.IGNORECASE)
-    if not m:
+    # Scan from the end: the agent's actual answer is usually the last ANSWER:
+    # line, but any ANSWER: line (however deep in the message) counts.
+    answer_value = None
+    for raw_line in reversed(final_message.splitlines()):
+        cleaned = _clean_answer_line(raw_line)
+        if cleaned is not None:
+            answer_value = cleaned
+            break
+    if answer_value is None:
         return {"checks": 1, "passed": 0, "failed": 1, "failure_labels": ["no_answer_line"]}
-    line = m.group(1)
-    if task.expected_answer and re.search(task.expected_answer, line, re.IGNORECASE):
+    if task.expected_answer and re.search(task.expected_answer, answer_value, re.IGNORECASE):
         return {"checks": 1, "passed": 1, "failed": 0, "failure_labels": []}
     return {"checks": 1, "passed": 0, "failed": 1, "failure_labels": ["answer_mismatch"]}
 

@@ -25,6 +25,7 @@ import os
 from pathlib import Path
 import platform
 import shlex
+import shutil
 import subprocess
 import sys
 import time
@@ -465,6 +466,73 @@ def _mode_observed(run):
     return modes
 
 
+def _interpreter_with_pytest():
+    """First of (sys.executable, python3 on PATH) that can `import pytest`, or None.
+
+    Never imports pytest into this process -- each candidate is probed in its
+    own subprocess.
+    """
+    candidates = []
+    if sys.executable:
+        candidates.append(sys.executable)
+    py3 = shutil.which('python3')
+    if py3 and py3 not in candidates:
+        candidates.append(py3)
+    for interp in candidates:
+        try:
+            proc = subprocess.run([interp, '-c', 'import pytest'], capture_output=True, timeout=10)
+        except (OSError, subprocess.TimeoutExpired):
+            continue
+        if proc.returncode == 0:
+            return interp
+    return None
+
+
+def run_workspace_tests(workspace, timeout=45, targets=None):
+    """Run whatever tests exist in `workspace` with the best available runner,
+    always in a fresh subprocess (never imports candidate code in-process).
+
+    Prefers pytest (handles both pytest-style and unittest-style test files);
+    falls back to `unittest discover` only when no interpreter on this host can
+    import pytest. `targets`, if given, restricts the run to those paths/files
+    (e.g. ['test_public.py']); otherwise the whole workspace is discovered.
+
+    Returns (passed, runner, summary):
+      passed: True (all pass), False (a failure/timeout/error), or None (no
+              tests were collected -- not applicable, not a failure).
+      runner: 'pytest' or 'unittest'.
+      summary: tail of combined stdout+stderr, for diagnostics.
+    """
+    workspace = Path(workspace)
+    interp = _interpreter_with_pytest()
+    if interp is not None:
+        argv = [interp, '-m', 'pytest', '-q', '-p', 'no:cacheprovider', *(targets or [])]
+        # Auto-loaded third-party pytest plugins from this host's environment (installed
+        # via setuptools entrypoints, e.g. framework-specific pytest plugins) can crash on
+        # import when the candidate workspace's PYTHONPATH doesn't include their deps --
+        # that is not a test failure, so run pytest in its bare, plugin-autoload-free mode.
+        env = {**os.environ, 'PYTEST_DISABLE_PLUGIN_AUTOLOAD': '1'}
+        try:
+            proc = subprocess.run(argv, cwd=workspace, capture_output=True, text=True, timeout=timeout, env=env)
+        except subprocess.TimeoutExpired:
+            return False, 'pytest', 'pytest timed out'
+        summary = ((getattr(proc, 'stdout', None) or '') + (getattr(proc, 'stderr', None) or ''))[-4000:]
+        if proc.returncode == 0:
+            return True, 'pytest', summary
+        if proc.returncode == 5:  # no tests collected
+            return None, 'pytest', summary
+        return False, 'pytest', summary
+    unittest_argv = [sys.executable, '-m', 'unittest'] + (['-v', *targets] if targets else ['discover', '-v'])
+    try:
+        proc = subprocess.run(unittest_argv, cwd=workspace, capture_output=True, text=True, timeout=timeout)
+    except subprocess.TimeoutExpired:
+        return False, 'unittest', 'unittest timed out'
+    summary = ((getattr(proc, 'stdout', None) or '') + (getattr(proc, 'stderr', None) or ''))[-4000:]
+    if proc.returncode == 5:  # NO TESTS RAN (Python 3.12+)
+        return None, 'unittest', summary
+    return proc.returncode == 0, 'unittest', summary
+
+
 def worker(root,name):
     manifest=json.loads((root/'manifest.json').read_text());run=root/name;workspace=run/'workspace';item=manifest['runs'][name]
     if hash_files(workspace)!=item['workspace_hash']:raise RuntimeError('Starting workspace changed')
@@ -472,7 +540,24 @@ def worker(root,name):
     source_root = Path(side['source_root'])
     if tree_sha256(source_root/'src'/'amplifier_fast_decisions') != side['source_tree_sha256']:
         raise RuntimeError('Source changed during the experiment')
-    prompt = item.get('prompt') or manifest['prompt']
+    task = item['task']
+    prompt = item.get('prompt')
+    if prompt is None:
+        if task not in SPECS:
+            # A battery task (anything not in the legacy SPECS trio) must never silently
+            # fall back to the generic legacy prompt -- that silently sends the wrong
+            # instructions to the agent (see: amplifier runs getting the README-repair
+            # boilerplate instead of their task-specific prompt).
+            raise SystemExit(f'worker: run {name!r} (task={task!r}) has no prompt recorded; '
+                              'refusing to fall back to the generic legacy prompt for a battery task')
+        prompt = manifest['prompt']
+    expected_prompt_sha256 = item.get('prompt_sha256')
+    if expected_prompt_sha256 is not None:
+        actual_prompt_sha256 = hashlib.sha256(prompt.encode()).hexdigest()
+        if actual_prompt_sha256 != expected_prompt_sha256:
+            raise SystemExit(f'worker: run {name!r} prompt does not match the preregistered '
+                              f'prompt_sha256 (expected {expected_prompt_sha256}, got '
+                              f'{actual_prompt_sha256}); refusing to launch amplifier')
     deadline_seconds = item.get('deadline_seconds') or manifest['limits']['timeout_seconds']
     warm=urllib.request.Request('http://127.0.0.1:11434/api/generate',data=json.dumps({'model':'qwen3:0.6b','stream':False,'keep_alive':'20m','options':{'num_ctx':4096}}).encode(),headers={'Content-Type':'application/json'})
     with urllib.request.urlopen(warm,timeout=60) as response:json.load(response)
@@ -518,6 +603,7 @@ def worker(root,name):
             quality = {'checks':0,'passed':0,'failed':1,'failure_labels':['check_answer_failed']}
         public_ok = None
         suite_ok = None
+        workspace_tests_runner = None
     else:
         final_message = None
         # Execute the independent evaluator in its own process with a deadline.
@@ -527,17 +613,10 @@ def worker(root,name):
         except (ValueError,subprocess.TimeoutExpired):
             quality={'checks':0,'passed':0,'failed':1,'failure_labels':['evaluator_failed_or_timed_out']}
         if (workspace/'test_public.py').exists():
-            try:
-                public=subprocess.run([sys.executable,'-m','unittest','-v','test_public.py'],cwd=workspace,capture_output=True,text=True,timeout=45)
-                public_ok=public.returncode==0
-            except subprocess.TimeoutExpired:public_ok=False
+            public_ok, _public_runner, _public_summary = run_workspace_tests(workspace, targets=['test_public.py'])
         else:
             public_ok=None
-        try:
-            suite=subprocess.run([sys.executable,'-m','unittest','discover','-v'],cwd=workspace,capture_output=True,text=True,timeout=45)
-            # unittest exits 5 when NO TESTS RAN (Python 3.12+): not applicable, not a failure.
-            suite_ok=None if suite.returncode==5 else suite.returncode==0
-        except subprocess.TimeoutExpired:suite_ok=False
+        suite_ok, workspace_tests_runner, _suite_summary = run_workspace_tests(workspace)
     protected = _task_protected(item['task'])
     files = _task_files(item['task'])
     unchanged={f:(workspace/f).exists() and (workspace/f).read_text()==files.get(f,'') for f in protected}
@@ -556,7 +635,7 @@ def worker(root,name):
     model = next((e['model'] for e in effort if e.get('model')), None)
     result={'name':name,'task':item['task'],'side':item['side'],'session_id':sid,'exit_code':code,'timed_out':timed_out,
             'wall_time_ms':elapsed,'native':native,'measurements':measured,'quality':quality,'public_tests_passed':public_ok,
-            'workspace_tests_passed':suite_ok,'protected_files_unchanged':unchanged,
+            'workspace_tests_passed':suite_ok,'workspace_tests_runner':workspace_tests_runner,'protected_files_unchanged':unchanged,
             'final_solution_sha256':hashlib.sha256((workspace/'solution.py').read_bytes()).hexdigest() if (workspace/'solution.py').exists() else None,
             'attempt': item.get('attempt', 1), 'deadline_seconds': deadline_seconds,
             'started_at': started_at, 'ended_at': ended_at,

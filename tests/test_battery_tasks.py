@@ -187,5 +187,41 @@ class TestAnswerTasks(unittest.TestCase):
                 self.assertEqual(result["failed"], 1)
 
 
+class TestCheckAnswerMarkdownWrapping(unittest.TestCase):
+    """Defect 3: an ANSWER: line wrapped in markdown emphasis, backticks, or a
+    blockquote/list marker must still be recognized and scored correctly."""
+
+    def test_bold_wrapped_answer_line(self):
+        task = bt.TASKS["answer_default_port"]
+        result = bt.check_answer(task, "**ANSWER: 8765**")
+        self.assertEqual(result["failed"], 0, result)
+        self.assertEqual(result["passed"], 1)
+
+    def test_backtick_wrapped_answer_line(self):
+        task = bt.TASKS["answer_sqlite_import_module"]
+        result = bt.check_answer(task, "`ANSWER: storage`")
+        self.assertEqual(result["failed"], 0, result)
+        self.assertEqual(result["passed"], 1)
+
+    def test_blockquote_marker_and_trailing_period(self):
+        task = bt.TASKS["answer_exception_count"]
+        result = bt.check_answer(task, "> answer: 4.")
+        self.assertEqual(result["failed"], 0, result)
+        self.assertEqual(result["passed"], 1)
+
+    def test_multiline_message_with_answer_not_on_last_line(self):
+        task = bt.TASKS["answer_default_port"]
+        message = "ANSWER: 8765\n(post-hoc note appended after the answer line)"
+        result = bt.check_answer(task, message)
+        self.assertEqual(result["failed"], 0, result)
+        self.assertEqual(result["passed"], 1)
+
+    def test_decoy_still_fails_when_markdown_wrapped(self):
+        task = bt.TASKS["answer_default_port"]
+        result = bt.check_answer(task, "**ANSWER: 9999**")
+        self.assertEqual(result["failed"], 1, result)
+        self.assertEqual(result["failure_labels"], ["answer_mismatch"])
+
+
 if __name__ == "__main__":
     unittest.main()

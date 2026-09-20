@@ -100,6 +100,21 @@ def _load_forge(forge_py):
     return forge
 
 
+def _amplifier_prompt_and_deadline(task, deadline_seconds):
+    """Extra fields for an amplifier run spec: always `deadline_seconds`, plus an
+    explicit `prompt` for any battery task with a fixed prompt (forge_workloads
+    returns None only for the legacy SPECS trio, which keeps its no-prompt
+    fallback). Passing the prompt explicitly is what makes forge_e2e._build_run
+    store it on the sub-manifest item -- and worker() verify it -- instead of
+    silently falling back to the generic legacy prompt.
+    """
+    fields = {'deadline_seconds': deadline_seconds}
+    task_prompt = forge_workloads.task_prompt(task)
+    if task_prompt:
+        fields['prompt'] = task_prompt
+    return fields
+
+
 def _run_dir_for(experiment_dir, name, harness):
     runs_root = experiment_dir/'runs'
     if harness in AMPLIFIER_HARNESSES:
@@ -226,7 +241,7 @@ def cmd_prepare(args):
         fe_config = {
             'runs': [{'name': r['name'], 'task': r['task'], 'side': r['harness'], 'rep': 1,
                       'attempt': 1, 'block': None, 'seed': args.seed,
-                      'deadline_seconds': deadline_seconds} for r in amplifier_runs],
+                      **_amplifier_prompt_and_deadline(r['task'], deadline_seconds)} for r in amplifier_runs],
             'sides': sides,
             'provider': 'anthropic', 'model': 'claude-fable-5-1',
             'limits': {'timeout_seconds': deadline_seconds, 'max_iterations': 30, 'extended_thinking': True},
@@ -472,12 +487,11 @@ def _protected_unchanged(task_name, workspace):
 def _run_public_tests(workspace):
     if not (Path(workspace)/'test_public.py').exists():
         return None
-    try:
-        proc = subprocess.run([sys.executable, '-m', 'unittest', '-v', 'test_public.py'],
-                               cwd=workspace, capture_output=True, text=True, timeout=45)
-        return proc.returncode == 0
-    except subprocess.TimeoutExpired:
-        return False
+    # test_public.py may be pytest-style; run_workspace_tests picks the best available
+    # runner instead of assuming unittest (which silently collects nothing for plain
+    # `def test_*` functions).
+    passed, _runner, _summary = forge_e2e.run_workspace_tests(workspace, targets=['test_public.py'])
+    return passed
 
 
 def _run_external(harness, run_dir, workspace, prompt, deadline, model, forge_module, claude_max_budget_usd):
@@ -873,7 +887,12 @@ def cmd_run(args, launcher=None, waiter=None, closer=None, forge_module=None):
             campaign._ledger_append(root, {'type': 'settlement', 'reservation': rid, 'actual_usd': 0.0,
                                             'note': 'not_billable_here'})
         else:
-            campaign._ledger_append(root, {'type': 'settlement', 'reservation': rid, 'unknown': True})
+            if result.get('infrastructure_failure') and result.get('session_id') is None and not result.get('provider_requests'):
+                # No session ever started: zero provider usage, not an unknown cost.
+                campaign._ledger_append(root, {'type': 'settlement', 'reservation': rid, 'actual_usd': 0.0,
+                                               'note': 'infrastructure failure before any provider call'})
+            else:
+                campaign._ledger_append(root, {'type': 'settlement', 'reservation': rid, 'unknown': True})
 
         infra_failure = bool(result.get('infrastructure_failure'))
         campaign._ledger_append(root, {'type': 'run_completed', 'experiment': args.experiment, 'run': name,
@@ -889,9 +908,11 @@ def cmd_run(args, launcher=None, waiter=None, closer=None, forge_module=None):
                 retry_name = f"{name[:-3]}-a2" if name.endswith('-a1') else f'{name}-a2'
                 retry_item = {**item, 'name': retry_name, 'attempt': 2}
                 if item['harness'] in AMPLIFIER_HARNESSES:
+                    retry_deadline = item.get('deadline_seconds') or proposal.get('deadline_seconds')
                     forge_e2e.add_run(runs_root/'amplifier', {'name': retry_name, 'task': item['task'],
                                                                 'side': item['harness'], 'rep': 1, 'attempt': 2,
-                                                                'block': item.get('block'), 'seed': item.get('seed')})
+                                                                'block': item.get('block'), 'seed': item.get('seed'),
+                                                                **_amplifier_prompt_and_deadline(item['task'], retry_deadline)})
                 else:
                     forge_e2e._build_workspace(runs_root/retry_name, item['task'])
                 manifest['runs'][retry_name] = retry_item
@@ -1114,16 +1135,43 @@ def cmd_backfill_exec(args):
     return {'experiment': args.experiment, 'updated': updated}
 
 
+def _prompt_match_info(name, item, amp_manifest):
+    """(prompt_matches: bool|None, note: str|None) for one run's preregistered prompt,
+    checked without re-running anything.
+
+    Only amplifier sub-manifests (runs/amplifier/manifest.json) record a per-run
+    prompt_sha256 today; external harnesses' battery-level manifest never persisted
+    one, so this honestly reports None rather than reconstructing a value it cannot
+    actually attest to.
+    """
+    if item.get('harness') not in AMPLIFIER_HARNESSES:
+        return None, 'prompt_sha256 not tracked for external harnesses'
+    amp_item = ((amp_manifest or {}).get('runs') or {}).get(name) or {}
+    recorded_prompt = amp_item.get('prompt')
+    if recorded_prompt is None:
+        return None, 'prompt not recorded; generic prompt suspected'
+    expected_sha256 = amp_item.get('prompt_sha256')
+    if expected_sha256 is None:
+        return None, 'no prompt_sha256 recorded for this run'
+    actual_sha256 = hashlib.sha256(recorded_prompt.encode()).hexdigest()
+    return actual_sha256 == expected_sha256, None
+
+
 def cmd_reevaluate(args):
     """Recompute quality/outcome for every finished run from its workspace (deterministic, no model calls).
 
     Used after an evaluator/outcome-rule fix; the previous result is kept as result-before-reevaluate.json.
+    Also reports (without re-running) whether each run's actual prompt matches its
+    preregistered prompt_sha256 -- see _prompt_match_info.
     """
     root = Path(args.root).expanduser().resolve()
     experiment_dir = root/'experiments'/args.experiment
     manifest = _read_json(experiment_dir/'runs'/'manifest.json')
     battery_tasks = _load_battery_tasks()
+    amp_manifest_path = experiment_dir/'runs'/'amplifier'/'manifest.json'
+    amp_manifest = _read_json(amp_manifest_path) if amp_manifest_path.exists() else None
     changed = []
+    prompt_checks = []
     for name, item in manifest['runs'].items():
         run_dir = _run_dir_for(experiment_dir, name, item['harness'])
         path = run_dir/'result.json'
@@ -1137,25 +1185,25 @@ def cmd_reevaluate(args):
         protected = {f: (workspace/f).exists() and (workspace/f).read_text() == files.get(f, '')
                      for f in forge_workloads.task_protected(item['task'])}
         suite_ok = None
+        workspace_tests_runner = None
         if any(workspace.glob('test*.py')):
-            try:
-                proc = subprocess.run([sys.executable, '-m', 'unittest', 'discover', '-v'], cwd=workspace,
-                                      capture_output=True, text=True, timeout=45)
-                suite_ok = None if proc.returncode == 5 else proc.returncode == 0  # 5 = NO TESTS RAN
-            except subprocess.TimeoutExpired:
-                suite_ok = False
+            suite_ok, workspace_tests_runner, _summary = forge_e2e.run_workspace_tests(workspace)
+        prompt_matches, prompt_note = _prompt_match_info(name, item, amp_manifest)
+        prompt_checks.append({'run': name, 'prompt_matches': prompt_matches, 'note': prompt_note})
         outcome = bool(result.get('exit_code') == 0 and not result.get('timed_out') and quality.get('failed') == 0
                        and suite_ok is not False and all(protected.values()) and not result.get('infrastructure_failure'))
         if outcome != bool(result.get('outcome_passed')) or quality != result.get('quality'):
             (run_dir/'result-before-reevaluate.json').write_text(json.dumps(result, indent=2)+'\n')
             notes = list(result.get('notes') or []) + [f'reevaluated: outcome {result.get("outcome_passed")} -> {outcome}']
             result = {**result, 'quality': quality, 'protected_files_unchanged': protected, 'workspace_tests_passed': suite_ok,
+                      'workspace_tests_runner': workspace_tests_runner, 'prompt_matches': prompt_matches,
                       'outcome_passed': outcome, 'notes': notes}
             path.write_text(json.dumps(result, indent=2)+'\n')
             changed.append({'run': name, 'outcome_passed': outcome, 'failed_checks': quality.get('failed')})
     campaign._ledger_append(root, {'type': 'reevaluated', 'experiment': args.experiment, 'changed': len(changed),
                                    'reason': getattr(args, 'reason', None)})
-    _print({'experiment': args.experiment, 'changed': changed})
+    _print({'experiment': args.experiment, 'changed': changed, 'prompt_checks': prompt_checks})
+    return {'experiment': args.experiment, 'changed': changed, 'prompt_checks': prompt_checks}
 
 
 def cmd_evaluate(args):

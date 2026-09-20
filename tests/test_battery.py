@@ -11,6 +11,7 @@ another builder is writing concurrently).
 """
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 import re
@@ -343,6 +344,30 @@ class PrepareTests(unittest.TestCase):
             tasks_seen = {item['task'] for item in manifest['runs'].values()}
             self.assertEqual(tasks_seen, {'add_one', 'capital'})
 
+    def test_amplifier_sub_manifest_carries_battery_task_prompt_and_matching_sha256(self):
+        """Defect 1: amplifier runs must receive the battery task's own prompt, not
+        the generic legacy README-repair prompt -- and the sub-manifest must record
+        it so forge_e2e.worker can verify it before ever launching amplifier."""
+        with tempfile.TemporaryDirectory() as tmp, _patched_battery_tasks():
+            import forge_workloads
+            base = Path(tmp)
+            baseline = base/'baseline'; candidate = base/'candidate'
+            baseline.mkdir(); candidate.mkdir()
+            root = base/'campaign'
+            args = _prepare_args(root, 'e8', harnesses='amplifier-fd', tasks='dev',
+                                  baseline_source=str(baseline), candidate_source=str(candidate))
+            battery.cmd_prepare(args)
+            experiment_dir = root/'experiments'/'e8'
+            amp_manifest = json.loads((experiment_dir/'runs'/'amplifier'/'manifest.json').read_text())
+            self.assertTrue(amp_manifest['runs'])
+            for name, item in amp_manifest['runs'].items():
+                task_prompt = forge_workloads.task_prompt(item['task'])
+                self.assertIsNotNone(task_prompt, name)
+                self.assertNotEqual(task_prompt, forge_e2e.PROMPT, name)
+                self.assertEqual(item['prompt'], task_prompt, name)
+                self.assertEqual(item['prompt_sha256'], hashlib.sha256(task_prompt.encode()).hexdigest(), name)
+                self.assertEqual(item['deadline_seconds'], 60)
+
     def test_amplifier_harnesses_require_sources(self):
         with tempfile.TemporaryDirectory() as tmp, _patched_battery_tasks():
             root = Path(tmp)/'campaign'
@@ -623,6 +648,33 @@ class RunTests(unittest.TestCase):
             ledger = [json.loads(line) for line in (root/'ledger.jsonl').read_text().splitlines()]
             self.assertTrue(any(e.get('type') == 'infrastructure_retry_scheduled' for e in ledger))
 
+    def test_amplifier_retry_carries_prompt_and_deadline(self):
+        """Defect 1: a retried amplifier run must also carry the battery task's
+        prompt into the sub-manifest (add_run), not just the initial prepare."""
+        with tempfile.TemporaryDirectory() as tmp, _patched_battery_tasks():
+            import forge_workloads
+            root = self._prepared(tmp, 'amplifier-fd', tasks='dev')
+            attempts = {'n': 0}
+
+            def flaky_launcher(amp_root, name):
+                attempts['n'] += 1
+                if attempts['n'] == 1:
+                    raise RuntimeError('simulated launch crash')
+                fake_amplifier_launcher(amp_root, name)
+
+            battery.cmd_run(SimpleNamespace(root=str(root), experiment='e1'),
+                             launcher=flaky_launcher, waiter=fake_amplifier_waiter,
+                             closer=fake_amplifier_closer)
+            experiment_dir = root/'experiments'/'e1'
+            manifest = json.loads((experiment_dir/'runs'/'manifest.json').read_text())
+            retried = [n for n in manifest['run_order'] if n.endswith('-a2')]
+            self.assertEqual(len(retried), 1)
+            amp_manifest = json.loads((experiment_dir/'runs'/'amplifier'/'manifest.json').read_text())
+            retry_item = amp_manifest['runs'][retried[0]]
+            expected_prompt = forge_workloads.task_prompt(retry_item['task'])
+            self.assertEqual(retry_item['prompt'], expected_prompt)
+            self.assertEqual(retry_item['deadline_seconds'], 60)
+
     def test_budget_refusal_pauses(self):
         with tempfile.TemporaryDirectory() as tmp, _patched_battery_tasks():
             root = self._prepared(tmp, 'claude', tasks='dev', per_launch=50.0, cap=10.0)
@@ -692,6 +744,80 @@ class EvaluateTests(unittest.TestCase):
             self.assertEqual(comparison['per_task']['add_one']['fastest_passing_harness'], 'amplifier-fd')
             self.assertEqual(comparison['per_task']['double']['fastest_passing_harness'], 'amplifier-plain')
             self.assertAlmostEqual(paired['cost_ratio'], (0.10+0.10)/(0.20+0.20))
+
+
+# --------------------------------------------------------------------------
+# reevaluate: prompt_matches re-scoring (Re-scoring requirement, no re-runs)
+# --------------------------------------------------------------------------
+
+class ReevaluatePromptMatchesTests(unittest.TestCase):
+    def _base_experiment(self, tmp, name='amplifier-fd', prompt=None, prompt_sha256=None):
+        with _patched_battery_tasks():
+            pass  # noqa: keep the same import surface as other tests below
+        root = Path(tmp)/'campaign'
+        experiment_dir = root/'experiments'/'e1'
+        runs_root = experiment_dir/'runs'
+        run_name = 'e1-add_one-'+name+'-a1'
+        run_dir = (runs_root/'amplifier'/run_name) if name in battery.AMPLIFIER_HARNESSES else (runs_root/run_name)
+        workspace = run_dir/'workspace'
+        workspace.mkdir(parents=True)
+        (workspace/'README.md').write_text('Fix add_one.\n')
+        (workspace/'solution.py').write_text('def add_one(x):\n    return x+1\n')
+        (run_dir/'result.json').write_text(json.dumps({
+            'name': run_name, 'task': 'add_one', 'harness': name, 'attempt': 1,
+            'exit_code': 0, 'timed_out': False, 'infrastructure_failure': False,
+            'outcome_passed': False, 'quality': {'checks': 0, 'passed': 0, 'failed': 0, 'failure_labels': []},
+        }))
+        (runs_root/'manifest.json').write_text(json.dumps({
+            'run_order': [run_name],
+            'runs': {run_name: {'name': run_name, 'task': 'add_one', 'harness': name, 'attempt': 1}},
+            'deadline_seconds': 600,
+        }))
+        (experiment_dir/'proposal.json').write_text(json.dumps({'experiment_id': 'e1'}))
+        campaign_stub = {'campaign_id': 'stub'}
+        (root/'campaign.json').write_text(json.dumps(campaign_stub))
+        if name in battery.AMPLIFIER_HARNESSES:
+            amp_item = {'name': run_name, 'task': 'add_one', 'side': name, 'attempt': 1}
+            if prompt is not None:
+                amp_item['prompt'] = prompt
+            if prompt_sha256 is not None:
+                amp_item['prompt_sha256'] = prompt_sha256
+            (runs_root/'amplifier').mkdir(parents=True, exist_ok=True)
+            (runs_root/'amplifier'/'manifest.json').write_text(json.dumps({'runs': {run_name: amp_item}}))
+        return root, run_name
+
+    def test_prompt_matches_true_when_recorded_prompt_matches_sha256(self):
+        with tempfile.TemporaryDirectory() as tmp, _patched_battery_tasks():
+            prompt = 'Fix solution.py so add_one(x) returns x+1. Run python3 -m unittest -v test_public.py.'
+            sha = hashlib.sha256(prompt.encode()).hexdigest()
+            root, run_name = self._base_experiment(tmp, prompt=prompt, prompt_sha256=sha)
+            result = battery.cmd_reevaluate(SimpleNamespace(root=str(root), experiment='e1'))
+            check = next(c for c in result['prompt_checks'] if c['run'] == run_name)
+            self.assertIs(check['prompt_matches'], True)
+            self.assertIsNone(check['note'])
+
+    def test_prompt_matches_false_when_sha256_disagrees(self):
+        with tempfile.TemporaryDirectory() as tmp, _patched_battery_tasks():
+            root, run_name = self._base_experiment(tmp, prompt='tampered prompt', prompt_sha256='deadbeef')
+            result = battery.cmd_reevaluate(SimpleNamespace(root=str(root), experiment='e1'))
+            check = next(c for c in result['prompt_checks'] if c['run'] == run_name)
+            self.assertIs(check['prompt_matches'], False)
+
+    def test_prompt_matches_none_when_legacy_sub_manifest_has_no_prompt_field(self):
+        with tempfile.TemporaryDirectory() as tmp, _patched_battery_tasks():
+            root, run_name = self._base_experiment(tmp)  # no prompt/prompt_sha256 recorded
+            result = battery.cmd_reevaluate(SimpleNamespace(root=str(root), experiment='e1'))
+            check = next(c for c in result['prompt_checks'] if c['run'] == run_name)
+            self.assertIsNone(check['prompt_matches'])
+            self.assertEqual(check['note'], 'prompt not recorded; generic prompt suspected')
+
+    def test_prompt_matches_none_for_external_harness(self):
+        with tempfile.TemporaryDirectory() as tmp, _patched_battery_tasks():
+            root, run_name = self._base_experiment(tmp, name='claude')
+            result = battery.cmd_reevaluate(SimpleNamespace(root=str(root), experiment='e1'))
+            check = next(c for c in result['prompt_checks'] if c['run'] == run_name)
+            self.assertIsNone(check['prompt_matches'])
+            self.assertEqual(check['note'], 'prompt_sha256 not tracked for external harnesses')
 
 
 # --------------------------------------------------------------------------

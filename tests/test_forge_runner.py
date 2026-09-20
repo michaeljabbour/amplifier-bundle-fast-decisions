@@ -10,6 +10,7 @@ from unittest.mock import patch
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]/'scripts'))
 import forge_e2e
 import forge_report
+import hashlib
 
 
 class ForgeControllerTests(unittest.TestCase):
@@ -121,3 +122,149 @@ class SideProfileModeTests(unittest.TestCase):
         off = forge_e2e._side_profile('n', {'source_root': '/tmp/s', 'mode': 'off'}, 'scheduler', '/tmp/w', cfg)
         self.assertEqual(off['session']['orchestrator']['module'], 'loop-streaming')
         self.assertEqual(off['hooks'][0]['config']['mode'], 'off')
+
+
+class WorkerPromptVerificationTests(unittest.TestCase):
+    """Defect 1: worker() must never silently fall back to the generic legacy
+    prompt for a battery task, and must refuse to launch amplifier at all when
+    the prompt it is about to send does not match the preregistered
+    prompt_sha256."""
+
+    def _base_manifest(self, side_source, tree_sha, **item_overrides):
+        item = {'task': 'battery_task_x', 'side': 'fast', 'attempt': 1}
+        item.update(item_overrides)
+        return {
+            'runs': {'one': item},
+            'sides': {'fast': {'source_root': str(side_source), 'mode': 'active',
+                                'source_git_sha': None, 'source_tree_sha256': tree_sha}},
+            'provider': 'anthropic', 'model': 'claude-fable-5-1', 'prompt': 'generic legacy prompt',
+            'events_dir': '/tmp/events',
+            'limits': {'timeout_seconds': 5},
+        }
+
+    def _set_up_workspace(self, root, workspace_hash_task='scheduler'):
+        side_source = root/'side-source'
+        (side_source/'src'/'amplifier_fast_decisions').mkdir(parents=True)
+        (side_source/'src'/'amplifier_fast_decisions'/'mod.py').write_text('x = 1\n')
+        tree_sha = forge_e2e.tree_sha256(side_source/'src'/'amplifier_fast_decisions')
+        run = root/'one'
+        workspace = run/'workspace'
+        (workspace/'.amplifier').mkdir(parents=True)
+        (run/'profile.md').write_text('---\n{}\n---\n')
+        return side_source, tree_sha, workspace
+
+    def test_missing_prompt_for_battery_task_refuses_before_launch(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            side_source, tree_sha, workspace = self._set_up_workspace(root)
+            workspace_hash = forge_e2e.hash_files(workspace)
+            manifest = self._base_manifest(side_source, tree_sha, workspace_hash=workspace_hash)
+            (root/'manifest.json').write_text(json.dumps(manifest))
+
+            with patch.object(forge_e2e.subprocess, 'Popen') as fake_popen, \
+                 patch.object(forge_e2e.urllib.request, 'urlopen') as fake_urlopen:
+                with self.assertRaises(SystemExit):
+                    forge_e2e.worker(root, 'one')
+            fake_popen.assert_not_called()
+            fake_urlopen.assert_not_called()
+
+    def test_prompt_sha256_mismatch_refuses_before_launch(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            side_source, tree_sha, workspace = self._set_up_workspace(root)
+            workspace_hash = forge_e2e.hash_files(workspace)
+            manifest = self._base_manifest(
+                side_source, tree_sha, workspace_hash=workspace_hash,
+                prompt='the real task prompt', prompt_sha256='0'*64)
+            (root/'manifest.json').write_text(json.dumps(manifest))
+
+            with patch.object(forge_e2e.subprocess, 'Popen') as fake_popen, \
+                 patch.object(forge_e2e.urllib.request, 'urlopen') as fake_urlopen:
+                with self.assertRaises(SystemExit):
+                    forge_e2e.worker(root, 'one')
+            fake_popen.assert_not_called()
+            fake_urlopen.assert_not_called()
+
+    def test_matching_prompt_and_sha256_launches_normally(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            side_source, tree_sha, workspace = self._set_up_workspace(root)
+            (workspace/'README.md').write_text('readme\n')
+            (workspace/'solution.py').write_text('x = 1\n')
+            workspace_hash = forge_e2e.hash_files(workspace)
+            prompt = 'the real task prompt'
+            manifest = self._base_manifest(
+                side_source, tree_sha, workspace_hash=workspace_hash,
+                prompt=prompt, prompt_sha256=hashlib.sha256(prompt.encode()).hexdigest())
+            (root/'manifest.json').write_text(json.dumps(manifest))
+
+            fake_tasks = SimpleNamespace(TASKS={}, check_answer=lambda *a: None)
+
+            class FakeProcess:
+                pid = 4242
+                def wait(self, timeout=None):
+                    return 0
+
+            with patch.dict(sys.modules, {'battery_tasks': fake_tasks}), \
+                 patch.object(forge_e2e.forge_workloads, 'task_files', lambda t: {'README.md': 'readme\n', 'solution.py': 'x = 1\n'}), \
+                 patch.object(forge_e2e.forge_workloads, 'task_protected', lambda t: ('README.md',)), \
+                 patch.object(forge_e2e, '_task_kind', lambda t: 'code'), \
+                 patch.object(forge_e2e.subprocess, 'Popen', lambda *a, **k: FakeProcess()), \
+                 patch.object(forge_e2e.urllib.request, 'urlopen') as fake_urlopen, \
+                 patch.object(forge_e2e.subprocess, 'run',
+                               lambda *a, **k: SimpleNamespace(returncode=0, stdout='{"checks":0,"passed":0,"failed":0,"failure_labels":[]}', stderr='')):
+                fake_urlopen.return_value.__enter__.return_value = SimpleNamespace()
+                with patch('json.load', return_value={}):
+                    forge_e2e.worker(root, 'one')
+            result = json.loads((root/'one'/'result.json').read_text())
+            self.assertEqual(result['exit_code'], 0)
+
+
+class RunWorkspaceTestsTests(unittest.TestCase):
+    """Defect 2: run_workspace_tests must run pytest-style tests correctly
+    (unittest discover silently collects nothing for plain `def test_*`
+    functions), and must distinguish 'no tests collected' (None) from an
+    actual failure (False)."""
+
+    def _pytest_available(self):
+        return forge_e2e._interpreter_with_pytest() is not None
+
+    def test_passing_pytest_style_test(self):
+        if not self._pytest_available():
+            self.skipTest('no interpreter on this host can import pytest')
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace = Path(tmp)
+            (workspace/'test_thing.py').write_text('def test_ok():\n    assert True\n')
+            passed, runner, _summary = forge_e2e.run_workspace_tests(workspace)
+            self.assertTrue(passed)
+            self.assertEqual(runner, 'pytest')
+
+    def test_failing_pytest_style_test(self):
+        if not self._pytest_available():
+            self.skipTest('no interpreter on this host can import pytest')
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace = Path(tmp)
+            (workspace/'test_thing.py').write_text('def test_bad():\n    assert False\n')
+            passed, runner, _summary = forge_e2e.run_workspace_tests(workspace)
+            self.assertFalse(passed)
+            self.assertEqual(runner, 'pytest')
+
+    def test_no_tests_collected_returns_none(self):
+        if not self._pytest_available():
+            self.skipTest('no interpreter on this host can import pytest')
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace = Path(tmp)
+            (workspace/'test_empty.py').write_text('x = 1\n')
+            passed, runner, _summary = forge_e2e.run_workspace_tests(workspace)
+            self.assertIsNone(passed)
+            self.assertEqual(runner, 'pytest')
+
+    def test_falls_back_to_unittest_when_pytest_unavailable(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace = Path(tmp)
+            (workspace/'test_thing.py').write_text(
+                'import unittest\n\nclass T(unittest.TestCase):\n    def test_ok(self):\n        self.assertTrue(True)\n')
+            with patch.object(forge_e2e, '_interpreter_with_pytest', lambda: None):
+                passed, runner, _summary = forge_e2e.run_workspace_tests(workspace)
+            self.assertTrue(passed)
+            self.assertEqual(runner, 'unittest')
