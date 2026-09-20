@@ -31,8 +31,9 @@ Session identity is read from the coordinator/session if exposed. A generated fa
 | `source` | Once per session, at mount, in every mode including `off`: which source actually ran. `source_kind` is `installed-cache` / `worktree` / `site-packages` / `unknown`; `source_git_sha` (40-hex or `null`) and `source_tree_sha256` (a SHA-256 over every `*.py` file's relative path and bytes, skipping `__pycache__`) identify the exact code; `source_py_files`, `package_version`, `python`, `mode`, and `module` (`hooks-fast-decisions` or `loop-fast-decisions`) round it out. Never a filesystem path -- see `provenance.describe_source` and docs/PRIVACY.md |
 | `effort_routed` | HC03 (opt-in, off unless `Policy.effort_routing` is configured): emitted once per slow (`RoutedProvider.complete`) request, before the upstream provider call; carries `phase` (`orient` / `explore` / `implement`), `requested_effort` (the string set on `request.reasoning_effort`, or `null` when left unchanged), `default_effort` (always `"provider_default"` -- the policy never claims to know the provider's actual default), `reason_code` (`phase_policy` / `default_effort` / `host_pinned` / `escalated_max_explore` / `escalated_after_error`), `explore_requests` (this turn's explore-phase request count so far), `provider_call_id`, and `mode` |
 | `model_routed` | HC04 (opt-in, off unless `Policy.model_routing` is configured): emitted once per slow (`RoutedProvider.complete`) request, before the upstream provider call; carries `phase`, `requested_model` (the string set on `request.model`/`kwargs["model"]`, or `null` when left unchanged), `requested_effort` (the starting effort applied, or `null`), `reason_code` (`start_model` / `host_pinned` / `escalated_max_requests` / `escalated_test_failure` / `escalated_provider_error` / `escalated_judge`), `escalated` (this turn's latch, once tripped it stays tripped), `escalation_reason` (`max_requests` / `test_failure` / `provider_error` / `judge` / `null`), `model_routed_requests` (this turn's count of requests where `start_model` was actually applied), `provider_call_id`, and `mode` |
-| `escalation_judged` | HC05 (opt-in, off unless `Policy.model_routing.escalation_judge == "judge"`): emitted once per slow request past the turn's first, while not yet escalated, immediately before the deterministic `model_routed` decision on the SAME request; carries `backend` (`service.backend.name`), `choice` (`continue_cheap` / `escalate` / `null` on abstain/blocked/error), `probability` (the judge's own probability for `choice`, or `null`), `decided` (`escalate` / `continue` / `fallback_rules`), `duration_ms`, `phase`, `slow_requests_seen`, and `mode`. Never fires when a deterministic trigger (`test_failure` / `max_requests`) already escalated this same request -- those remain a floor regardless of the judge |
-| `phase_judged` | HC05 (opt-in, off unless `Policy.effort_routing.phase_judge` is `true`): emitted once per slow request, immediately after the deterministic `effort.classify_phase(request)` call and before `effort_routed`; carries `backend`, `choice` (one of `orient`/`explore`/`implement`, or `null` on abstain/blocked/error), `probability`, `agreed_with_rules` (`choice == the deterministic phase`, or `null` when `choice` is `null`), and `duration_ms`. A non-null `choice` overrides the phase used for the rest of this request's effort/model routing; `null` leaves the deterministic classification in place |
+| `escalation_judged` | HC05 (opt-in, off unless `Policy.model_routing.escalation_judge == "judge"`): emitted once per slow request past the turn's first, while not yet escalated, immediately before the deterministic `model_routed` decision on the SAME request; carries `backend` (`service.backend.name`), `choice` (`continue_cheap` / `escalate` / `null` on abstain/blocked/error), `probability` (the judge's own probability for `choice`, or `null`), `decided` (`escalate` / `continue` / `fallback_rules`), `duration_ms`, `phase`, `slow_requests_seen`, `mode`, `gate` (HC09's stake-scaled confidence floor for this decision), and `passed_gate` (whether `choice == "escalate"` and `probability >= gate`). Never fires when a deterministic trigger (`test_failure` / `max_requests`) already escalated this same request -- those remain a floor regardless of the judge |
+| `phase_judged` | HC05 (opt-in, off unless `Policy.effort_routing.phase_judge` is `true`): emitted once per slow request, immediately after the deterministic `effort.classify_phase(request)` call and before `effort_routed`; carries `backend`, `choice` (one of `orient`/`explore`/`implement`, or `null` on abstain/blocked/error), `probability`, `agreed_with_rules` (`choice == the deterministic phase`, or `null` when `choice` is `null`), `duration_ms`, `gate` (HC09's stake-scaled confidence floor for this decision, see below), and `passed_gate` (whether `probability >= gate`). A non-null `choice` that also `passed_gate` overrides the phase used for the rest of this request's effort/model routing; otherwise the deterministic classification stands |
+| `decided_batch` | HC08 (opt-in, off unless `Policy.decision_batching` is `true`): emitted once per request where the phase judge AND the escalation judge were both due and combined into ONE `ask_many()` backend call instead of two separate `ask()` calls; carries `backend`, `question_ids` (the batched question names), `n_questions`, `duration_ms`, and `mode`. Never fires when only one judge is due (nothing to batch) or when the batched call itself failed (see `TurnState.batch_fallbacks`) |
 
 Fast tool IDs match the synthesized core ToolCall ID when the argument fingerprint still matches. If upstream modifies a call, or for ordinary slow-path calls, the tool facade may allocate an `observed_*` correlation ID instead. The native hook bridge can carry the original native ID. Do not assume these are identical in every path.
 
@@ -158,6 +159,45 @@ unknown unless measured. `routed:fast` includes the prepared `tool_call_id`.
 `turn_end` records status and execution wall time, never task-quality success.
 The instrumented `off` mode records ordinary execution without active or background
 shadow inference. See [OPERATIONS.md](OPERATIONS.md) for aggregation and completeness.
+
+**HC08 ("one call per decision point", opt-in) combines HC05's two judge
+asks into one backend call.** `Policy.decision_batching` (default `False`)
+lets the orchestrator ask the phase judge (`effort_routing.phase_judge`)
+and the escalation judge (`model_routing.escalation_judge == "judge"`) in
+ONE `ask_many()` call, instead of two separate `ask()` calls, whenever
+BOTH are due for the same request. `backends.ask_many()` provides this as
+a mixin: a backend with its own `ask_many` (Jev, and the in-repo
+`ScriptedBackend` test double) answers every question in one wire call;
+any other backend (ollama/mlx/hosted/laya) gets the identical capability
+via a generic fallback that runs one single-question `ask()` per question
+concurrently and merges the answers -- no change required in those
+modules. The `fast_decisions:decided_batch` receipt records the batch;
+`phase_judged`/`escalation_judged` are still emitted exactly as before,
+using the batched answers instead of asking again. If the batched call
+raises or times out, the request falls back to the pre-HC08 sequential
+path (unchanged) and `TurnState.batch_fallbacks` is incremented. Batching
+never changes which candidates or questions are asked, only how many
+backend calls it takes to ask them; it is a no-op whenever fewer than two
+judge mechanisms are configured/due for the same request.
+
+**HC09 ("stake-scaled confidence gates", opt-in) is a per-judged-decision
+probability floor.** `Policy.confidence_gates` (default `None`) maps up to
+three kinds -- `read_shortcut` (the fast-path action choice), `phase`, and
+`escalation` -- to a probability in `(0, 1]` below which the judge's
+answer is NOT acted on: `read_shortcut` lets the model run instead of
+submitting the prepared action, `phase` keeps the deterministic
+classification, and `escalation` stays on the deterministic rules. Any
+kind absent from `confidence_gates` (or the whole policy omitting it)
+falls back to its pre-HC09 legacy source byte-for-byte:
+`Policy.min_probability` for `read_shortcut` (unchanged, already the
+existing `DecisionService.choose` threshold), `model_routing.escalate_min_probability`
+(default `0.7`) for `escalation`, and `0.0` for `phase` -- phase
+classification never had a probability floor before HC09, so any
+non-abstain judge answer still applies by default. A `confidence_gates`
+key always overrides its legacy alias when both are set. `gate` and
+`passed_gate` are added to `scored` (read-shortcut), `phase_judged`, and
+`escalation_judged` so every judged decision's receipt shows the floor it
+was measured against and whether it cleared it.
 
 **HC04 (opt-in model routing with escalation) never bypasses approvals or the upstream tool-call loop.**
 `Policy.model_routing` (default `None`) lets a host start a turn's generative

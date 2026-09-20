@@ -210,6 +210,8 @@ def cell_to_argv(cell_id, cells_doc, suites_doc, suite_id, split, rep, *, out_ro
         backend = fd.get("backend")
         if backend == "ollama":
             argv += ["--fd-backend", "ollama"]
+        elif backend == "laya":
+            argv += ["--fd-backend", "laya"]
         elif backend == "jev":
             if not fd.get("allow_external_state"):
                 raise EvalsError(2, f"cell {cell_id!r}: fd backend 'jev' requires allow_external_state: true")

@@ -18,11 +18,13 @@ from .contracts import (
     Question,
     TurnState,
     canonical,
+    effective_gate,
     field_value,
     digest,
     candidate_read_identity,
 )
 from . import effort
+from .backends import ask_many as backend_ask_many
 from .runtime import Runtime, get_runtime
 from . import provenance
 
@@ -197,6 +199,93 @@ async def _ask_judge_choice(
     return choice, answer.probabilities[choice], duration_ms
 
 
+def _escalation_judge_due(model_routing: dict[str, Any] | None, turn: TurnState) -> bool:
+    """Whether HC05's escalation judge WOULD be asked for the upcoming slow
+    request -- mirrors the elif chain in RoutedProvider.complete without
+    mutating turn state, so it can be evaluated safely before
+    ``turn.slow_requests_seen`` is incremented for real. Single source of
+    truth for both the HC08 batching pre-check and the sequential path
+    below (which reuses this same function, so the two can never drift).
+    """
+    if not model_routing or turn.escalated:
+        return False
+    if model_routing.get("escalate_on_test_failure") and turn.test_failure_seen:
+        return False
+    max_requests = model_routing.get("max_requests_before_escalation")
+    prospective_slow_requests_seen = turn.slow_requests_seen + 1
+    if max_requests is not None and prospective_slow_requests_seen > max_requests:
+        return False
+    return (
+        model_routing.get("escalation_judge", "rules") == "judge"
+        and prospective_slow_requests_seen > 1
+    )
+
+
+# HC08 ("one call per decision point", opt-in): the two Question shapes
+# combined by a batched ask_many() call, identical in wording to the ones
+# `_ask_judge_choice` builds inline for the sequential path -- kept in one
+# place so the batched and sequential paths can never silently diverge in
+# what they ask.
+def _phase_question() -> Question:
+    return Question(
+        name="phase_classification", type="choice",
+        instructions="Classify the current turn's phase for effort routing.",
+        criteria=dict(effort.PHASE_CRITERIA),
+    )
+
+
+def _escalation_question() -> Question:
+    return Question(
+        name="escalation_judge", type="choice",
+        instructions=(
+            "Decide whether to keep using the cheaper model or "
+            "escalate to the stronger model now."
+        ),
+        criteria={
+            "continue_cheap": "The cheaper model is making progress; keep going.",
+            "escalate": (
+                "The task is beyond the cheaper model, or the plan has "
+                "derailed; switch to the stronger model now."
+            ),
+        },
+    )
+
+
+async def _ask_judges_many(
+    service: Any, *, questions: list[Question], state: dict[str, Any]
+) -> dict[str, tuple[str | None, float | None]] | None:
+    """HC08: ask every named ``Question`` in ONE ``ask_many()`` call,
+    honoring the identical external-state gate ``_ask_judge_choice``
+    enforces. Returns ``{question_name: (choice, probability)}`` on
+    success -- including a policy-blocked or abstained call, which returns
+    every question as ``(None, None)``, exactly what the sequential
+    per-question path would also produce for the identical gate. Returns
+    ``None`` only on an actual backend failure/timeout, signalling the
+    caller to fall back to the sequential per-question path and count a
+    batch fallback. Never raises (``CancelledError`` propagates).
+    """
+    if service.backend.external and not service.policy.allow_external_state:
+        return {q.name: (None, None) for q in questions}
+    decision_request = DecisionRequest(state=state, candidates=(), questions=tuple(questions))
+    deadline = asyncio.get_running_loop().time() + service.policy.timeout_ms / 1000
+    try:
+        async with asyncio.timeout_at(deadline):
+            result = await backend_ask_many(service.backend, decision_request)
+    except asyncio.CancelledError:
+        raise
+    except Exception:
+        return None
+    answers: dict[str, tuple[str | None, float | None]] = {}
+    for question in questions:
+        answer = result.answers.get(question.name)
+        if answer is None or not answer.probabilities:
+            answers[question.name] = (None, None)
+            continue
+        choice = max(answer.probabilities, key=answer.probabilities.get)
+        answers[question.name] = (choice, answer.probabilities[choice])
+    return answers
+
+
 class RoutedProvider:
     """Preserve the Provider protocol while intercepting complete() boundaries.
 
@@ -290,30 +379,80 @@ docs/UPSTREAM_CONTRACT.md.
         # -- no attribute touched, no event emitted -- when the policy has
         # no effort_routing configured. See effort.py and docs/EVENTS.md.
         effort_routing = service.policy.effort_routing
+        # HC04 ("opt-in model routing with escalation", opt-in): entirely
+        # skipped -- no attribute touched, no event emitted -- when the
+        # policy has no model_routing configured. See docs/ARCHITECTURE.md.
+        model_routing = service.policy.model_routing
         effort_applied_this_request = False
         phase = None
         if effort_routing:
             phase = effort.classify_phase(request)
+
+        # HC08 ("one call per decision point", opt-in): when a phase judge
+        # AND an escalation judge would BOTH fire for this same request,
+        # ask them in ONE ask_many() call instead of two separate
+        # backend.ask() calls below. `_escalation_judge_due` mirrors the
+        # elif chain inside the model_routing block further down without
+        # mutating turn state, so it is safe to consult here, before that
+        # block's own `turn.slow_requests_seen += 1`. Falls back to the
+        # identical sequential path (unchanged) whenever batching is off,
+        # only one judge is due, or the batched call itself fails.
+        phase_judge_due = bool(effort_routing and effort_routing.get("phase_judge"))
+        escalation_judge_due = _escalation_judge_due(model_routing, turn)
+        batched_answers: dict[str, tuple[str | None, float | None]] | None = None
+        batch_duration_ms = 0.0
+        if service.policy.decision_batching and phase_judge_due and escalation_judge_due:
+            batch_questions = [_phase_question(), _escalation_question()]
+            batch_state = _judge_state(request, turn, phase, service.policy.max_state_chars)
+            batch_start = time.perf_counter()
+            batched_answers = await _ask_judges_many(
+                service, questions=batch_questions, state=batch_state
+            )
+            batch_duration_ms = (time.perf_counter() - batch_start) * 1000
+            if batched_answers is None:
+                turn.batch_fallbacks += 1
+            else:
+                await service.emit("decided_batch", {
+                    "backend": service.backend.name,
+                    "question_ids": [q.name for q in batch_questions],
+                    "n_questions": len(batch_questions),
+                    "duration_ms": batch_duration_ms,
+                    "mode": service.policy.mode,
+                }, decision_id)
+
+        if effort_routing:
             # HC05 ("judge-driven phase classification", opt-in): ask the
             # judge to classify the phase instead of trusting the
             # deterministic classifier alone. An abstain/blocked/error
-            # answer leaves `phase` as the deterministic classification.
-            if effort_routing.get("phase_judge"):
-                judge_state = _judge_state(request, turn, phase, service.policy.max_state_chars)
-                judged_choice, judged_probability, judged_duration_ms = await _ask_judge_choice(
-                    service,
-                    question_name="phase_classification",
-                    instructions="Classify the current turn's phase for effort routing.",
-                    criteria=dict(effort.PHASE_CRITERIA),
-                    state=judge_state,
+            # answer, or one below HC09's phase confidence gate, leaves
+            # `phase` as the deterministic classification.
+            if phase_judge_due:
+                if batched_answers is not None:
+                    judged_choice, judged_probability = batched_answers["phase_classification"]
+                    judged_duration_ms = batch_duration_ms
+                else:
+                    judge_state = _judge_state(request, turn, phase, service.policy.max_state_chars)
+                    judged_choice, judged_probability, judged_duration_ms = await _ask_judge_choice(
+                        service,
+                        question_name="phase_classification",
+                        instructions="Classify the current turn's phase for effort routing.",
+                        criteria=dict(effort.PHASE_CRITERIA),
+                        state=judge_state,
+                    )
+                phase_gate = effective_gate(service.policy, "phase")
+                phase_passed_gate = (
+                    judged_choice is not None
+                    and judged_probability is not None
+                    and judged_probability >= phase_gate
                 )
                 agreed_with_rules = judged_choice == phase if judged_choice is not None else None
                 await service.emit("phase_judged", {
                     "backend": service.backend.name, "choice": judged_choice,
                     "probability": judged_probability, "agreed_with_rules": agreed_with_rules,
                     "duration_ms": judged_duration_ms,
+                    "gate": phase_gate, "passed_gate": phase_passed_gate,
                 }, decision_id)
-                if judged_choice is not None:
+                if phase_passed_gate:
                     phase = judged_choice
             explore_requests = (
                 turn.explore_requests + 1 if phase == effort.PHASE_EXPLORE else turn.explore_requests
@@ -341,10 +480,6 @@ docs/UPSTREAM_CONTRACT.md.
                 "explore_requests": turn.explore_requests,
                 "provider_call_id": provider_call_id, "mode": service.policy.mode,
             }, decision_id)
-        # HC04 ("opt-in model routing with escalation", opt-in): entirely
-        # skipped -- no attribute touched, no event emitted -- when the
-        # policy has no model_routing configured. See docs/ARCHITECTURE.md.
-        model_routing = service.policy.model_routing
         if model_routing:
             start_model = model_routing["start_model"]
             start_effort = model_routing.get("start_effort")
@@ -353,7 +488,6 @@ docs/UPSTREAM_CONTRACT.md.
             escalate_on_test_failure = model_routing.get("escalate_on_test_failure", False)
 
             escalation_judge_mode = model_routing.get("escalation_judge", "rules")
-            escalate_min_probability = model_routing.get("escalate_min_probability", 0.7)
 
             turn.slow_requests_seen += 1
             routing_phase = phase if phase is not None else effort.classify_phase(request)
@@ -368,33 +502,39 @@ docs/UPSTREAM_CONTRACT.md.
                     # escalate regardless of the judge. Only asked once
                     # neither has already fired this request, and only past
                     # the turn's first slow request.
-                    judge_state = _judge_state(
-                        request, turn, routing_phase, service.policy.max_state_chars
-                    )
-                    judged_choice, judged_probability, judged_duration_ms = await _ask_judge_choice(
-                        service,
-                        question_name="escalation_judge",
-                        instructions=(
-                            "Decide whether to keep using the cheaper model or "
-                            "escalate to the stronger model now."
-                        ),
-                        criteria={
-                            "continue_cheap": "The cheaper model is making progress; keep going.",
-                            "escalate": (
-                                "The task is beyond the cheaper model, or the plan has "
-                                "derailed; switch to the stronger model now."
+                    if batched_answers is not None:
+                        judged_choice, judged_probability = batched_answers["escalation_judge"]
+                        judged_duration_ms = batch_duration_ms
+                    else:
+                        judge_state = _judge_state(
+                            request, turn, routing_phase, service.policy.max_state_chars
+                        )
+                        judged_choice, judged_probability, judged_duration_ms = await _ask_judge_choice(
+                            service,
+                            question_name="escalation_judge",
+                            instructions=(
+                                "Decide whether to keep using the cheaper model or "
+                                "escalate to the stronger model now."
                             ),
-                        },
-                        state=judge_state,
-                    )
+                            criteria={
+                                "continue_cheap": "The cheaper model is making progress; keep going.",
+                                "escalate": (
+                                    "The task is beyond the cheaper model, or the plan has "
+                                    "derailed; switch to the stronger model now."
+                                ),
+                            },
+                            state=judge_state,
+                        )
                     turn.escalation_judgements += 1
-                    if judged_choice is None:
-                        judge_decided = "fallback_rules"
-                    elif (
+                    escalation_gate = effective_gate(service.policy, "escalation")
+                    escalation_passed_gate = (
                         judged_choice == "escalate"
                         and judged_probability is not None
-                        and judged_probability >= escalate_min_probability
-                    ):
+                        and judged_probability >= escalation_gate
+                    )
+                    if judged_choice is None:
+                        judge_decided = "fallback_rules"
+                    elif escalation_passed_gate:
                         judge_decided = "escalate"
                         turn.escalated, turn.escalation_reason = True, "judge"
                         turn.escalations_by_judge += 1
@@ -406,6 +546,7 @@ docs/UPSTREAM_CONTRACT.md.
                         "duration_ms": judged_duration_ms, "phase": routing_phase,
                         "slow_requests_seen": turn.slow_requests_seen,
                         "mode": service.policy.mode,
+                        "gate": escalation_gate, "passed_gate": escalation_passed_gate,
                     }, decision_id)
 
             requested_model = None

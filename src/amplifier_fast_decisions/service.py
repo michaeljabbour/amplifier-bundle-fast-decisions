@@ -19,6 +19,7 @@ from .contracts import (
     candidate_read_identity,
     classify_domain,
     compute_candidate_order_hash,
+    effective_gate,
 )
 from .questions import collect_questions
 from .state import automatic_tools, build_state, request_fingerprint, tool_names
@@ -257,7 +258,14 @@ class DecisionService:
         p = decision.probabilities[decision.choice]
         others = [v for k, v in decision.probabilities.items() if k != decision.choice]
         margin = p - max(others, default=0)
+        # HC09 ("stake-scaled confidence gates", opt-in): the read-shortcut
+        # gate defaults to `min_probability` (unchanged) but a configured
+        # `Policy.confidence_gates["read_shortcut"]` overrides it.
+        gate = effective_gate(self.policy, "read_shortcut")
+        passed_gate = p >= gate
         scored_data = {
+            "gate": gate,
+            "passed_gate": passed_gate,
             **common,
             "choice": decision.choice,
             "probabilities": decision.probabilities,
@@ -288,7 +296,7 @@ class DecisionService:
             return await slow("synthetic_backend_not_authorized")
         if decision.choice == SLOW:
             return await slow("model_abstained")
-        if p < self.policy.min_probability or margin < self.policy.min_margin:
+        if p < gate or margin < self.policy.min_margin:
             return await slow("selection_threshold", proposed_route=proposed)
         candidate = next(c for c in candidates if c.id == decision.choice)
         # Revalidate both conversation and prepared action immediately before submission.

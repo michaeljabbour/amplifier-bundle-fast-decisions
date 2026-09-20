@@ -200,6 +200,9 @@ class GatewayAuthHeaderTests(unittest.TestCase):
         self.assertEqual(handler.request_headers[0]["Authorization"], "Bearer sk-test-opaque-000111")
 
     def test_no_authorization_header_when_api_key_absent(self):
+        import os
+        for var in ('FAST_DECISIONS_HOSTED_TOKEN', 'LITELLM_INFERENCE_KEY'):
+            os.environ.pop(var, None)
         handler = _make_handler()
         with _running_server(handler) as base_url:
             backend = GatewayBackend(model="gw-test", url=base_url, timeout_ms=2000, api_key=None)

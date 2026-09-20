@@ -130,6 +130,41 @@ def _gateway_server_check() -> dict:
     return _hosted_server_check()
 
 
+def _laya_server_check() -> dict:
+    """Read-only GET /health probe against the configured Laya decide
+    server (laya_server.py). Never required (opt-in decide backend); state
+    is one of ``reachable``, ``auth_failed``, or ``unreachable`` -- a token
+    value, if configured, is never reported, only whether it authenticated.
+    """
+    from .local_backend import LAYA_DEFAULT_TOKEN_ENV, LAYA_DEFAULT_URL
+
+    url = os.getenv("FAST_DECISIONS_LAYA_URL") or LAYA_DEFAULT_URL
+    token_env = os.getenv("FAST_DECISIONS_LAYA_TOKEN_ENV") or LAYA_DEFAULT_TOKEN_ENV
+    token = os.getenv(token_env)
+    state = "unreachable"
+    try:
+        req = urllib.request.Request(f"{url}/health", method="GET")
+        if token:
+            req.add_header("Authorization", f"Bearer {token}")
+        with urllib.request.urlopen(req, timeout=1) as response:
+            state = "reachable" if response.status == 200 else "unreachable"
+    except urllib.error.HTTPError as exc:
+        state = "auth_failed" if exc.code in (401, 403) else "unreachable"
+        exc.close()
+    except (urllib.error.URLError, TimeoutError, OSError):
+        state = "unreachable"
+    except Exception:  # noqa: BLE001 -- a probe must never raise
+        state = "unreachable"
+    return {
+        "check": "laya_judge",
+        "ok": state == "reachable",
+        "value": url,
+        "state": state,
+        "note": f"GET {{base}}/health using ${token_env}; not required unless using "
+                "--backend laya. The token value is never reported.",
+    }
+
+
 def doctor(require_amplifier: bool = False) -> int:
     checks: list[dict] = []
     checks.append(
@@ -204,6 +239,7 @@ def doctor(require_amplifier: bool = False) -> int:
     )
     checks.append(_mlx_server_check())
     checks.append(_hosted_server_check())
+    checks.append(_laya_server_check())
     entries = {
         e.name for e in importlib.metadata.entry_points(group="amplifier.modules")
     }
@@ -311,12 +347,16 @@ class _TimingBackend:
 
 
 def _augment_suite_report(
-    report: dict, timed_backend: "_TimingBackend", permutations: int
+    report: dict, timed_backend: "_TimingBackend", permutations: int, *, errors: int = 0
 ) -> dict:
-    """Add per-case decision latency (p50/p95, canonical order only) and an
-    explicit ``agreement_with_expected`` alias to a suite report, in place.
-    Bench-suite CLI wiring only; ``report`` is the plain dict returned by
-    ``build_report``, mutated here rather than in bench/report.py."""
+    """Add per-case decision latency (p50/p95, canonical order only), an
+    explicit ``agreement_with_expected`` alias, and an ``errors``/
+    ``error_rate`` pair to a suite report, in place. Bench-suite CLI wiring
+    only; ``report`` is the plain dict returned by ``build_report``, mutated
+    here rather than in bench/report.py. ``errors`` counts per-case
+    ``TimeoutError``/``BackendUnavailable`` outcomes that ``run_suite``
+    recorded as abstentions rather than aborting the suite (see
+    bench/suite.py's ``SuiteResult.errors``)."""
     k = max(1, permutations)
     canonical_latencies = timed_backend.latencies_ms[0::k]
     report["decision"]["decision_latency_ms_p50"] = percentile(canonical_latencies, 50)
@@ -324,6 +364,10 @@ def _augment_suite_report(
     report["accuracy_proxy"]["agreement_with_expected"] = report["accuracy_proxy"].get(
         "agreement_rate"
     )
+    n_observed = report["accuracy_proxy"].get("n_observed") or 0
+    total_attempts = errors + n_observed
+    report["accuracy_proxy"]["errors"] = errors
+    report["accuracy_proxy"]["error_rate"] = (errors / total_attempts) if total_attempts else 0.0
     return report
 
 
@@ -379,6 +423,12 @@ def bench_suite(args) -> int:
         model_name = model_arg or MLX_DEFAULT_MODEL
         backend = MlxBackend(model=model_name)
         backend_external = False
+    elif backend_name == "laya":
+        from .local_backend import LayaBackend
+
+        backend = LayaBackend(url=getattr(args, "laya_url", None))
+        backend_external = backend.external
+        model_name = model_arg or "laya-rl-agent"
     else:
         if live_requested and backend_name == "jev" and not both_gates:
             print(
@@ -396,6 +446,13 @@ def bench_suite(args) -> int:
         backend = DeterministicSuiteBackend()
         backend_external = False
         model_name = "deterministic-suite-backend"
+    warmup_fn = getattr(backend, "warmup", None)
+    if callable(warmup_fn):
+        try:
+            asyncio.run(warmup_fn())
+        except Exception as exc:  # noqa: BLE001 -- warmup is best-effort; a genuinely
+            # broken backend still fails on the first real ask() inside run_suite.
+            print(f"afast bench suite: warmup failed ({exc}); continuing", file=sys.stderr)
     timed_backend = _TimingBackend(backend)
     result = asyncio.run(run_suite(cases, timed_backend, permutations=args.permutations))
     report = build_report(
@@ -406,7 +463,9 @@ def bench_suite(args) -> int:
         provider="typesafe" if backend_external else "offline",
         backend_external=backend_external,
     )
-    report = _augment_suite_report(report, timed_backend, args.permutations)
+    report = _augment_suite_report(
+        report, timed_backend, args.permutations, errors=result.errors
+    )
     swing = report["accuracy_proxy"]["max_probability_swing"]
     if isinstance(swing, (int, float)) and swing > 0.15:
         print(
@@ -647,19 +706,25 @@ def main(argv=None) -> int:
     suite.add_argument("suite_path", nargs="?", default=None, help="Suite JSONL file")
     suite.add_argument("--suite", default=str(DEFAULT_SUITE))
     suite.add_argument(
-        "--backend", choices=["deterministic", "jev", "ollama", "mlx", "hosted", "gateway"],
+        "--backend",
+        choices=["deterministic", "jev", "ollama", "mlx", "hosted", "gateway", "laya"],
         default="deterministic",
         help="'gateway' is a legacy alias for 'hosted'"
     )
     suite.add_argument(
         "--model", default=None,
-        help="Model name, passed to the jev/ollama/mlx/hosted backend"
+        help="Model name, passed to the jev/ollama/mlx/hosted backend (unused for laya)"
     )
     suite.add_argument(
         "--hosted-url", "--gateway-url", dest="hosted_url", default=None,
         help="Override the hosted judge base URL (else FAST_DECISIONS_HOSTED_URL, "
              "FAST_DECISIONS_GATEWAY_URL (legacy alias), or your configured host; "
              "required if none of those are set)"
+    )
+    suite.add_argument(
+        "--laya-url", dest="laya_url", default=None,
+        help="Override the Laya judge base URL (else FAST_DECISIONS_LAYA_URL or "
+             "the local default http://127.0.0.1:8090)"
     )
     suite.add_argument("--live", action="store_true")
     suite.add_argument("--permutations", type=int, default=4)

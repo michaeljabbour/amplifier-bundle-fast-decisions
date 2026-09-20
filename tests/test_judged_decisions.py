@@ -171,6 +171,10 @@ class EscalationJudgeTests(unittest.IsolatedAsyncioTestCase):
         self.assertAlmostEqual(judged[0]["data"]["probability"], 0.9)
         self.assertEqual(judged[0]["data"]["slow_requests_seen"], 2)
         self.assertEqual(judged[0]["data"]["backend"], "fake-judge")
+        # HC09: with no `confidence_gates` configured, the gate defaults
+        # to the legacy `escalate_min_probability` (0.7 here), unchanged.
+        self.assertEqual(judged[0]["data"]["gate"], 0.7)
+        self.assertTrue(judged[0]["data"]["passed_gate"])
 
         routed = [e for e in events if e["event"].endswith("model_routed")]
         self.assertEqual(routed[-1]["data"]["reason_code"], "escalated_judge")
@@ -309,6 +313,33 @@ class EscalationJudgeTests(unittest.IsolatedAsyncioTestCase):
 
 
 class PhaseJudgeTests(unittest.IsolatedAsyncioTestCase):
+    async def test_default_phase_gate_is_zero_any_non_abstain_applies(self):
+        """HC09: with no `confidence_gates` configured, the phase gate
+        defaults to 0.0 -- byte-identical to pre-HC09 behavior, where any
+        non-abstain judge choice was always applied regardless of its
+        probability."""
+        policy = Policy(
+            mode="off",
+            effort_routing={
+                "orient": "medium", "explore": "low", "implement": "high",
+                "phase_judge": True,
+            },
+        )
+        backend = FakeJudgeBackend(
+            [{"phase_classification": {"orient": 0.33, "explore": 0.33, "implement": 0.34}}]
+        )
+        service, runtime, events = setup_service(policy=policy, backend=backend)
+        provider = DemoProvider(delay_ms=0)
+        facade = RoutedProvider(provider, runtime, {}, demo_response)
+
+        req = request(explore_messages())
+        await facade.complete(req)
+
+        judged = [e for e in events if e["event"].endswith("phase_judged")]
+        self.assertEqual(judged[0]["data"]["gate"], 0.0)
+        self.assertTrue(judged[0]["data"]["passed_gate"])
+        self.assertEqual(req.reasoning_effort, "high")  # judge's barely-won "implement" still applies (no gate)
+
     async def test_confident_judge_overrides_and_flags_disagreement(self):
         policy = Policy(
             mode="off",

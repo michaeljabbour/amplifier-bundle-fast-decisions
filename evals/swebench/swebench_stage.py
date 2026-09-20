@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -96,7 +97,10 @@ def render_candidate_install_yaml(config: dict[str, Any], *, template_text: str)
     missing = [k for k in REQUIRED_CANDIDATE_KEYS if k not in config]
     if missing:
         raise CandidateConfigError(f"candidate config missing required keys: {missing}")
-    if config.get("status") != "confirmed":
+    # Screen-grade candidates may run ONLY with an explicit operator override; the rendered agent records
+    # `candidate_status` so the S3 report can never present a screen result as a confirmed one.
+    allow_screen = os.getenv("S3_ALLOW_SCREEN_CANDIDATE") == "1" and config.get("status") == "screen"
+    if config.get("status") != "confirmed" and not allow_screen:
         raise CandidateConfigError(
             "candidate.config.json status is "
             f"{config.get('status')!r}, not 'confirmed' -- fill it from the "

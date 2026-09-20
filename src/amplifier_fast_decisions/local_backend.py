@@ -21,7 +21,15 @@ import urllib.request
 from urllib.parse import urlsplit
 
 from .backends import BackendUnavailable
-from .contracts import Decision, DecisionRequest, DecisionResult, SLOW, canonical, digest
+from .contracts import (
+    NEXT_ACTION,
+    SLOW,
+    Decision,
+    DecisionRequest,
+    DecisionResult,
+    canonical,
+    digest,
+)
 from .privacy import scrub
 
 SYSTEM = (
@@ -309,6 +317,21 @@ def _mlx_top_logprobs(payload: dict) -> list:
     return top[0]
 
 
+    async def warmup(self) -> None:
+        """One request with the SAME options as real decisions (num_ctx etc.), with a generous timeout, so a
+        model (re)load -- ~0.6-3 s when the server had the model resident with a different context size --
+        is absorbed before any budgeted decision runs. Errors are swallowed; the suite runner logs them."""
+        req = urllib.request.Request(
+            f"{self.base_url}/api/chat",
+            data=json.dumps({"model": self.model, "stream": False, "think": False, "keep_alive": "10m",
+                             "messages": [{"role": "user", "content": "warm"}],
+                             "options": {"temperature": 0, "num_predict": 1, "num_ctx": 4096}}).encode("utf-8"),
+            method="POST", headers={"Content-Type": "application/json"})
+        try:
+            await asyncio.to_thread(lambda: urllib.request.urlopen(req, timeout=60).read())
+        except Exception:  # noqa: BLE001 -- warm-up is best effort
+            return
+
 class OpenAICompatBackend:
     """Shared client for any OpenAI-compatible ``/v1/chat/completions`` host
     that returns per-token logprobs: mlx-lm's local server (``MlxBackend``)
@@ -506,7 +529,7 @@ class HostedBackend(OpenAICompatBackend):
     format_tag = "gateway-options-v1"  # unchanged: an option-set cache key, not user-facing vocabulary
 
     def __init__(self, *, model: str, url: str | None = None, timeout_ms: int = 500,
-                 api_key: str | None = None, extra_body: dict | None = None):
+                 api_key: str | None = None, extra_body: dict | None = None, token_env: str | None = None):
         if not model:
             raise BackendUnavailable("Hosted backend requires a model")
         resolved_url = (
@@ -522,6 +545,11 @@ class HostedBackend(OpenAICompatBackend):
                 "OpenAI-compatible host (e.g. a LiteLLM+vLLM deployment), such as "
                 "https://llm.example.internal/v1"
             )
+        # Bearer token from the env var named by token_env (default FAST_DECISIONS_HOSTED_TOKEN) when no explicit
+        # api_key is given; it only ever travels on the Authorization header -- never logged or stored in receipts.
+        self.token_env = token_env or HOSTED_DEFAULT_TOKEN_ENV
+        if api_key is None:
+            api_key = os.getenv(self.token_env) or None
         super().__init__(model=model, url=resolved_url, timeout_ms=timeout_ms, api_key=api_key)
         # vLLM honours chat_template_kwargs; Qwen3-family models otherwise emit a thinking block first
         # (verified live against a LiteLLM+vLLM deployment: first token "We"/"Thinking", never a label).
@@ -543,3 +571,206 @@ class HostedBackend(OpenAICompatBackend):
 # Legacy aliases (pre-"hosted" rename). Same class/objects -- kept so
 # existing imports (``from .local_backend import GatewayBackend``) keep working.
 GatewayBackend = HostedBackend
+
+
+# --- Laya (open-source typed-decision classifier) --------------------------
+#
+# Talks to ``laya_server.py`` (this package) over its own ``{state,
+# questions} -> {answers}`` contract -- not the OpenAI-compatible
+# chat-completions shape ``OpenAICompatBackend`` uses, so ``LayaBackend``
+# is a standalone client rather than a subclass of it. Same abstention
+# vocabulary (``SLOW``/``reason``) and ``DecisionResult`` contract as every
+# other backend here.
+
+LAYA_DEFAULT_URL = "http://127.0.0.1:8090"
+LAYA_DEFAULT_TOKEN_ENV = "FAST_DECISIONS_LAYA_TOKEN"
+
+
+def _is_loopback_host(url: str) -> bool:
+    return urlsplit(url).hostname in {"127.0.0.1", "::1"}
+
+
+def laya_base_url(url: str) -> str:
+    """Origin check for the Laya backend: same rule as the hosted judge --
+    HTTPS required unless the host is literal loopback, no credentials,
+    query, or fragment. A Laya server is local by default (loopback), but
+    nothing stops a team from running it on a private, non-loopback host,
+    so the same trust boundary the hosted backend uses applies."""
+    return hosted_base_url(url)
+
+
+def _build_laya_input(request: DecisionRequest) -> tuple[str, dict[str, str], str]:
+    """Assemble the state text and choice criteria sent to the Laya judge.
+
+    Mirrors ``_build_label_prompt``'s validation and evidence text (same
+    routing-classifier instructions, same 1..12 prepared ``fast_workspace``
+    read/list candidates, same scrubbed observations) but the option set
+    travels in Laya's ``criteria`` mapping instead of being rendered into
+    the prose, and criteria keys are the candidates' own ids (Laya's
+    ``choice`` questions are not limited to single letters).
+    """
+    if request.questions:
+        raise BackendUnavailable("Laya backend does not support batched questions")
+    if not 1 <= len(request.candidates) <= 12:
+        raise BackendUnavailable("Laya backend accepts 1 to 12 candidates")
+    if any(c.tool != "fast_workspace" for c in request.candidates):
+        raise BackendUnavailable("Laya backend is limited to prepared workspace actions")
+    ids = [c.id for c in request.candidates]
+    if len(set(ids)) != len(ids) or SLOW in ids:
+        raise BackendUnavailable("Invalid candidate identifiers")
+    for c in request.candidates:
+        operation, path = c.arguments.get("operation"), c.arguments.get("path")
+        if operation not in {"read", "list"} or not isinstance(path, str) or not path:
+            raise BackendUnavailable("Laya backend requires a prepared read/list target")
+    observations = request.state.get("observations", [])
+    # Same evidence text _build_label_prompt renders (minus the rendered
+    # options list, which travels in ``criteria`` here instead).
+    state_text = "Observations: " + scrub(canonical(observations), 3501)
+    criteria = {c.id: c.label for c in request.candidates}
+    criteria[SLOW] = "None of these; let the model reason"
+    option_set_hash = digest({"format": "laya-options-v1", "criteria": criteria})
+    return state_text, criteria, option_set_hash
+
+
+class LayaBackend:
+    """Client for the local Laya decide endpoint (``laya_server.py``): a
+    typed-decision classifier, not a single-token LLM judge. ``external`` is
+    computed from the configured URL -- loopback (the default) is not
+    external; anything else is, and is gated by the existing
+    ``allow_external_state`` consent check exactly like ``HostedBackend``.
+    """
+
+    name = "laya"
+
+    def __init__(
+        self,
+        *,
+        url: str | None = None,
+        timeout_ms: int = 500,
+        token_env: str | None = None,
+    ):
+        resolved_url = url or os.getenv("FAST_DECISIONS_LAYA_URL") or LAYA_DEFAULT_URL
+        self.base_url = laya_base_url(resolved_url)
+        self.external = not _is_loopback_host(self.base_url)
+        self.timeout_ms = timeout_ms
+        self.token_env = token_env or LAYA_DEFAULT_TOKEN_ENV
+        self._lock = asyncio.Lock()
+
+    def _headers(self) -> dict:
+        headers = {"Content-Type": "application/json"}
+        # Only ever placed on the outbound request header for this one
+        # call -- never logged, echoed, or stored anywhere.
+        token = os.getenv(self.token_env) if self.token_env else None
+        if token:
+            headers["Authorization"] = f"Bearer {token}"
+        return headers
+
+    def _decide_url(self) -> str:
+        return f"{self.base_url}/v1/decide"
+
+    async def ask(self, request: DecisionRequest) -> DecisionResult:
+        state_text, criteria, option_set_hash = _build_laya_input(request)
+        body = {
+            "state": state_text,
+            "questions": {
+                NEXT_ACTION: {
+                    "type": "choice",
+                    "instructions": SYSTEM,
+                    "criteria": criteria,
+                }
+            },
+        }
+        req = urllib.request.Request(
+            self._decide_url(),
+            data=json.dumps(body).encode("utf-8"),
+            method="POST",
+            headers=self._headers(),
+        )
+        async with self._lock:
+            payload, status = await asyncio.to_thread(
+                _mlx_urllib_call, req, self.timeout_ms / 1000
+            )
+        if status != 200:
+            raise BackendUnavailable(f"laya request failed: HTTP {status}")
+        answers = payload.get("answers")
+        if not isinstance(answers, dict):
+            raise BackendUnavailable("laya response omitted answers")
+        answer = answers.get(NEXT_ACTION)
+        if not isinstance(answer, dict) or answer.get("type") != "choice":
+            raise BackendUnavailable("laya response missing next_action choice answer")
+        probabilities = answer.get("probabilities")
+        choice = answer.get("choice")
+        if not isinstance(probabilities, dict) or not isinstance(choice, str):
+            raise BackendUnavailable("laya response missing choice/probabilities")
+        expected = set(criteria)
+        if set(probabilities) != expected or choice not in expected:
+            raise BackendUnavailable("laya response alternatives do not match the request")
+        vals = list(probabilities.values())
+        if any(
+            isinstance(v, bool) or not isinstance(v, (int, float)) or not math.isfinite(v) or v < 0
+            for v in vals
+        ):
+            raise BackendUnavailable("laya returned an invalid probability")
+        total = sum(vals)
+        if total <= 0 or not math.isclose(total, 1.0, abs_tol=0.05):
+            raise BackendUnavailable("laya probability mass is not close to one")
+        if not math.isclose(total, 1.0, abs_tol=1e-9):
+            probabilities = {k: v / total for k, v in probabilities.items()}
+        model = payload.get("model") or "laya-rl-agent"
+        confidence = answer.get("confidence")
+        reported_confidence = (
+            confidence
+            if isinstance(confidence, (int, float))
+            and not isinstance(confidence, bool)
+            and math.isfinite(confidence)
+            and 0 <= confidence <= 1
+            else None
+        )
+        decision = Decision(
+            choice=choice,
+            probabilities=probabilities,
+            reported_confidence=reported_confidence,
+            model=model,
+            probability_kind="model_reported",
+            confidence_kind="model_reported" if reported_confidence is not None else "not_reported",
+            option_set_hash=option_set_hash,
+        )
+        decision.validate(expected)
+        return DecisionResult(action=decision, model=model, input_tokens=None, output_tokens=None)
+
+    async def warmup(self) -> None:
+        """Best-effort readiness probe: GET /health, then one tiny decide
+        to force the weights resident and the compile cost paid. Raises
+        ``BackendUnavailable`` (never a raw exception) on failure."""
+        health_req = urllib.request.Request(
+            f"{self.base_url}/health", method="GET", headers=self._headers()
+        )
+        _, status = await asyncio.to_thread(
+            _mlx_urllib_call, health_req, max(self.timeout_ms, 5000) / 1000, expect_json=False
+        )
+        if status != 200:
+            raise BackendUnavailable("laya server /health check failed")
+        body = {
+            "state": "warmup",
+            "questions": {
+                NEXT_ACTION: {
+                    "type": "choice",
+                    "instructions": "warmup probe",
+                    "criteria": {"a": "a", SLOW: "reason"},
+                }
+            },
+        }
+        req = urllib.request.Request(
+            self._decide_url(),
+            data=json.dumps(body).encode("utf-8"),
+            method="POST",
+            headers=self._headers(),
+        )
+        _, status = await asyncio.to_thread(
+            _mlx_urllib_call, req, max(self.timeout_ms, 30000) / 1000
+        )
+        if status != 200:
+            raise BackendUnavailable("laya warmup decide failed")
+
+    async def close(self) -> None:
+        return None
