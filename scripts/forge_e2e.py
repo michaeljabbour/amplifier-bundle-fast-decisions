@@ -24,10 +24,13 @@ import json
 import os
 from pathlib import Path
 import platform
+import random
+import re
 import shlex
 import shutil
 import subprocess
 import sys
+import threading
 import time
 import urllib.request
 
@@ -47,6 +50,69 @@ PROMPT = ('Read README.md first, then repair the implementation to satisfy its f
 
 # The upstream orchestrator the "off" (no fast-decisions routing) side runs.
 UPSTREAM_LOOP_SOURCE = 'git+https://github.com/microsoft/amplifier-module-loop-streaming@20aac7a9eb26034d230357f6aa6805f27c86df52'
+
+_UNSAFE_PATH_CHARS = re.compile(r'[^A-Za-z0-9._-]')
+_PATH_SAFE_RE = re.compile(r'^[A-Za-z0-9._/-]+$')
+
+
+def _slug(value):
+    """Filesystem/URI-safe slug for a run name -- mirrors scripts/battery.py's
+    `_slug` exactly (deliberately duplicated rather than imported: battery.py
+    already imports this module, so importing battery here would be
+    circular). A run name may contain '+' (inherited from an experiment/cell
+    id like 'judge-jev+effort-incumbent'); '+' is outside RFC 3986's
+    unreserved set, so Path.as_uri() percent-encodes it to '%2B' when this
+    module turns a run directory into a `file://` bundle URI, and Amplifier's
+    bundle loader does not percent-decode it back. Slugging the directory
+    name up front makes that class of bug structurally impossible."""
+    return _UNSAFE_PATH_CHARS.sub('-', value)
+
+
+def _assert_bundle_uri_safe(path):
+    """Fail loudly, before ever invoking amplifier, if `path` (about to become
+    a `file://` bundle URI) contains a character the URI encoder would
+    percent-escape. This is a defensive canary -- with directory names
+    slugged via `_slug`, it should never fire -- rather than the primary
+    fix, so a regression here surfaces as a clear pre-launch error instead of
+    a silent "Bundle Error -- File not found" deep inside amplifier."""
+    text = str(path)
+    if not _PATH_SAFE_RE.match(text):
+        raise SystemExit(f'worker: refusing to launch -- profile path is not bundle-URI-safe '
+                          f'(would be percent-encoded): {text!r}')
+
+
+# Forge launch resilience (defect: a bursty scheduler hammered an unreachable/
+# restarting Forge daemon with back-to-back launches). MIN_LAUNCH_SPACING_SECONDS
+# serializes the moment a launch is handed to Forge across all threads in this
+# process; the backoff constants bound the retry-with-jitter loop for launches
+# that fail because Forge itself is unreachable (as opposed to a session-limit
+# or spawn-helper error, which already had their own narrower retries).
+MIN_LAUNCH_SPACING_SECONDS = 2.0
+BACKOFF_INITIAL_SECONDS = 0.5
+BACKOFF_CAP_SECONDS = 30.0
+MAX_FORGE_UNREACHABLE_RETRIES = 6
+FORGE_UNREACHABLE_MARKERS = ('cannot reach', 'empty response', 'connection refused', 'econnrefused')
+
+_launch_spacing_lock = threading.Lock()
+_last_launch_at = [0.0]
+
+
+def _is_forge_unreachable_error(text):
+    lowered = (text or '').lower()
+    return any(marker in lowered for marker in FORGE_UNREACHABLE_MARKERS)
+
+
+def _wait_for_launch_spacing(sleep_fn, now_fn):
+    """Enforce a minimum spacing between handing launches to Forge, across
+    every thread in this process (a bounded --parallel N battery.py run
+    launches from N worker threads). Serializes only this short wait, never
+    the launch itself, so N launches can still be genuinely in flight at
+    once, just started at least MIN_LAUNCH_SPACING_SECONDS apart."""
+    with _launch_spacing_lock:
+        elapsed = now_fn() - _last_launch_at[0]
+        if elapsed < MIN_LAUNCH_SPACING_SECONDS:
+            sleep_fn(MIN_LAUNCH_SPACING_SECONDS - elapsed)
+        _last_launch_at[0] = now_fn()
 
 # --amplifier-bundle lean (battery.py prepare): the minimal explicit module set
 # used INSTEAD OF including the fast-decisions bundle root (which transitively
@@ -343,7 +409,7 @@ def _build_workspace(run_dir, task):
 
 def _build_run(root, run_spec, config, sides):
     name = run_spec['name']
-    run = root/name
+    run = root/_slug(name)
     run.mkdir(parents=True, exist_ok=True)
     task = run_spec['task']
     workspace = _build_workspace(run, task)
@@ -624,7 +690,7 @@ def _ensure_task_source_registered(manifest):
 
 
 def worker(root,name):
-    manifest=json.loads((root/'manifest.json').read_text());_ensure_task_source_registered(manifest);run=root/name;workspace=run/'workspace';item=manifest['runs'][name]
+    manifest=json.loads((root/'manifest.json').read_text());_ensure_task_source_registered(manifest);run=root/_slug(name);workspace=run/'workspace';item=manifest['runs'][name]
     if hash_files(workspace)!=item['workspace_hash']:raise RuntimeError('Starting workspace changed')
     side = manifest['sides'][item['side']]
     source_root = Path(side['source_root'])
@@ -656,6 +722,7 @@ def worker(root,name):
     before=set(sessions.iterdir()) if sessions.exists() else set()
     env=dict(os.environ,AFAST_OBSERVATORY='off')
     env['PYTHONPATH'] = str(source_root/'src')
+    _assert_bundle_uri_safe(run/'profile.md')
     command=['amplifier','run','--bundle',(run/'profile.md').as_uri(),'--mode','single','--provider',manifest['provider'],'--model',manifest['model'],'--output-format','json',prompt]
     started_at=datetime.now(timezone.utc).isoformat();started=time.perf_counter()
     process=subprocess.Popen(command,cwd=workspace,env=env)
@@ -756,14 +823,31 @@ def forge_self_heal(manifest):
     return 'healthy' in (proc.stdout + proc.stderr)
 
 
-def launch_run(root, name, forge_module=None):
+def launch_run(root, name, forge_module=None, sleep_fn=None, now_fn=None,
+                max_unreachable_retries=MAX_FORGE_UNREACHABLE_RETRIES):
     """Hand one run's worker command to Forge; return its observation dict.
 
     A Forge observation deadline is reported as an MCP error (SystemExit) but
     the launched process is explicitly kept alive -- that is not completion.
+
+    Three distinct failure kinds get three distinct retries, each bounded and
+    each retried WITHOUT consuming one of the run's own (attempt 1/attempt 2)
+    slots -- a Forge hiccup is infrastructure, not a bad run:
+      - 'Maximum sessions' (Forge's own terminal cap): reap our exited
+        terminals once, then retry once.
+      - 'posix_spawnp' (stale exec bit on Forge's spawn-helper): self-heal
+        once, then retry once.
+      - Forge unreachable/empty response (Forge itself down or restarting):
+        exponential backoff with jitter (0.5s -> 30s cap), up to
+        `max_unreachable_retries` times -- this is the case a bursty
+        scheduler previously turned into a hammering storm.
+    Every actual hand-off to Forge is also preceded by a minimum spacing wait
+    (`_wait_for_launch_spacing`) shared across all threads in this process.
     """
+    sleep_fn = sleep_fn or time.sleep
+    now_fn = now_fn or time.monotonic
     manifest=json.loads((root/'manifest.json').read_text())
-    run=root/name
+    run=root/_slug(name)
     if forge_module is None:
         forge_py = Path(manifest.get('forge_py', str(FORGE))).expanduser()
         sys.path.insert(0, str(forge_py.parent))
@@ -773,7 +857,11 @@ def launch_run(root, name, forge_module=None):
     # The Forge daemon's shell does not carry the user's API keys; source ~/.amplifier/keys.env (0600) into the
     # worker's environment so external decision backends (e.g. TYPESAFE_API_KEY) work. Values never appear in logs.
     cmd='set -a; . ~/.amplifier/keys.env 2>/dev/null; set +a; '+cmd
-    for attempt in (1, 2):
+    session_attempt = 1  # 'Maximum sessions'/posix_spawnp retry gate: at most one retry each
+    unreachable_retries = 0
+    backoff = BACKOFF_INITIAL_SECONDS
+    while True:
+        _wait_for_launch_spacing(sleep_fn, now_fn)
         try:
             result=forge_module.call('run_command',{'command':'/bin/zsh','args':['-lc',cmd],
                 'cwd':str(run/'workspace'),'timeoutMs':60000})
@@ -782,13 +870,22 @@ def launch_run(root, name, forge_module=None):
             text=str(exc).removeprefix('forge: ')
             try:result=json.loads(text)
             except ValueError:
+                # Forge itself is unreachable/restarting: back off with jitter and retry the
+                # SAME launch attempt (never counted against the run's own attempt budget).
+                if _is_forge_unreachable_error(text) and unreachable_retries < max_unreachable_retries:
+                    unreachable_retries += 1
+                    sleep_fn(backoff + random.uniform(0, backoff))
+                    backoff = min(backoff*2, BACKOFF_CAP_SECONDS)
+                    continue
                 # Forge refuses new terminals once exited ones pile up. Reap only OUR exited worker
                 # terminals (never live or unowned sessions) and retry once; otherwise fail loud.
-                if 'Maximum sessions' in text and attempt == 1 and reap_exited_worker_terminals(forge_module, root):
+                if 'Maximum sessions' in text and session_attempt == 1 and reap_exited_worker_terminals(forge_module, root):
+                    session_attempt = 2
                     continue
                 # A skills-cache refresh resets the exec bit on Forge's node-pty spawn-helper binaries
                 # ("posix_spawnp failed"); `forge doctor` repairs it. Self-heal once, then fail loud.
-                if 'posix_spawnp' in text and attempt == 1 and forge_self_heal(manifest):
+                if 'posix_spawnp' in text and session_attempt == 1 and forge_self_heal(manifest):
+                    session_attempt = 2
                     continue
                 raise RuntimeError('forge launch failed: '+text) from None
             if result.get('timeout') is not True:
@@ -824,7 +921,7 @@ def reap_exited_worker_terminals(forge_module, root):
 
 def close_worker_terminal(root, name, forge_module=None):
     """Close the terminal this runner opened for ``name`` (recorded in forge-observation.json), if any."""
-    obs=root/name/'forge-observation.json'
+    obs=root/_slug(name)/'forge-observation.json'
     if not obs.exists():
         return False
     try:sid=json.loads(obs.read_text()).get('sessionId')
@@ -842,7 +939,7 @@ def close_worker_terminal(root, name, forge_module=None):
 
 def wait_for_result(root, name, timeout_seconds):
     """Poll for result.json; bail out early if the launching controller died."""
-    run = root/name
+    run = root/_slug(name)
     deadline = time.monotonic()+timeout_seconds
     dead_since = None
     while True:
@@ -874,7 +971,7 @@ def batch(root):
     manifest=json.loads((root/'manifest.json').read_text())
     wait_seconds = manifest['limits']['timeout_seconds'] + 180
     for name in manifest['run_order']:
-        run = root/name
+        run = root/_slug(name)
         if (run/'result.json').exists():continue
         print('LAUNCH '+name,flush=True)
         observation = launch_run(root, name)
@@ -898,5 +995,5 @@ if __name__=='__main__':
     elif args.command=='worker':sys.exit(worker(root,args.name))
     elif args.command=='evaluate':
         _manifest=json.loads((root/'manifest.json').read_text());_ensure_task_source_registered(_manifest)
-        print(json.dumps(evaluate(_manifest['runs'][args.name]['task'],root/args.name/'workspace')))
+        print(json.dumps(evaluate(_manifest['runs'][args.name]['task'],root/_slug(args.name)/'workspace')))
     else:batch(root)

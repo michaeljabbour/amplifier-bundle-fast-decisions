@@ -20,6 +20,7 @@ sys.path.insert(0, str(REPO_ROOT / "evals"))
 sys.path.insert(0, str(REPO_ROOT / "scripts"))
 
 import run
+import battery
 import battery_tasks
 import forge_workloads
 
@@ -540,7 +541,7 @@ class EndToEndTwoCellTests(unittest.TestCase):
                 for a in it:
                     if a.startswith("--"):
                         flags[a] = next(it, True)
-                exp_dir = Path(flags["--root"]) / "experiments" / flags["--experiment"]
+                exp_dir = battery.experiment_dir_for(Path(flags["--root"]), flags["--experiment"])
                 exp_dir.mkdir(parents=True, exist_ok=True)
                 (exp_dir / "proposal.json").write_text(json.dumps({
                     "tasks": ["t1"], "claude_permission_mode": "bypassPermissions",
@@ -1049,7 +1050,7 @@ class ExitCodeThreeAndSixTests(unittest.TestCase):
                 for a in it:
                     if a.startswith("--"):
                         flags[a] = next(it, True)
-                exp_dir = Path(flags["--root"]) / "experiments" / flags["--experiment"]
+                exp_dir = battery.experiment_dir_for(Path(flags["--root"]), flags["--experiment"])
                 exp_dir.mkdir(parents=True, exist_ok=True)
                 (exp_dir / "proposal.json").write_text(json.dumps({
                     "tasks": ["t1"], "claude_permission_mode": "bypassPermissions",
@@ -1077,6 +1078,64 @@ class ExitCodeThreeAndSixTests(unittest.TestCase):
                 self.assertEqual(rc, 3)
                 manifest = json.loads((Path(out) / "manifest.json").read_text())
                 self.assertEqual(manifest["cells"][0]["id"], "plain")
+                self.assertFalse((Path(out) / "results.json").exists())
+        finally:
+            run.invoke_tool = orig_invoke
+            run.run_verification = orig_verify
+
+    def test_consecutive_infra_failures_pause_exits_3_with_partial_manifest(self):
+        """battery.py run's circuit breaker (defect: a bursty scheduler ran 35
+        experiments of garbage after Forge became unreachable) pauses with
+        exit 3 and reason 'consecutive_infra_failures' -- run.py must treat
+        this exactly like its existing budget/launch_cap pause: write the
+        partial manifest, stop the stage, surface the reason -- never move
+        on to the next cell as if nothing happened."""
+        def fake_invoke(tool, targv):
+            if tool == "campaign" and targv[0] == "init":
+                root = Path(targv[targv.index("--root") + 1])
+                root.mkdir(parents=True, exist_ok=True)
+                (root / "protocol.json").write_text("{}")
+                return {"initialized": str(root)}
+            if tool == "campaign" and targv[:2] == ["budget", "status"]:
+                return {"remaining": 1000.0}
+            if tool == "battery" and targv[0] == "prepare":
+                flags = {}
+                it = iter(targv[1:])
+                for a in it:
+                    if a.startswith("--"):
+                        flags[a] = next(it, True)
+                exp_dir = battery.experiment_dir_for(Path(flags["--root"]), flags["--experiment"])
+                exp_dir.mkdir(parents=True, exist_ok=True)
+                (exp_dir / "proposal.json").write_text(json.dumps({
+                    "tasks": ["t1"], "claude_permission_mode": "bypassPermissions",
+                    "commands": {}, "task_source": None, "candidate_source_snapshot": None,
+                    "frozen_run_schedule": [],
+                }))
+                return {"prepared": str(exp_dir)}
+            if tool == "battery" and targv[0] == "run":
+                # Mirrors battery.py's own exit-3 pause payload shape exactly
+                # (see cmd_run's consecutive_infra_failures branch): reason
+                # carries the diagnostic text, exit code falls back to 3.
+                raise run.EvalsError(3, "consecutive_infra_failures: cannot reach http://127.0.0.1:3141/mcp")
+            raise AssertionError(f"unexpected invoke_tool call: {tool} {targv}")
+
+        orig_invoke = run.invoke_tool
+        orig_verify = run.run_verification
+        run.invoke_tool = fake_invoke
+        run.run_verification = lambda *a, **k: (True, {"checks": {}}, {"ok": True, "tasks": {}})
+        try:
+            with tempfile.TemporaryDirectory() as tmp:
+                out = str(Path(tmp) / "out")
+                rc = run.main([
+                    "--suite", "s1", "--split", "dev", "--cells", "plain",
+                    "--reps", "1", "--out", out, "--baseline-source", "/b",
+                    "--candidate-source", "/c", "--candidate-sha", "deadbeef",
+                    "--installed-cache", "/ic", "--history-index", "/hi", "--events-dir", "/ev",
+                ])
+                self.assertEqual(rc, 3)
+                manifest = json.loads((Path(out) / "manifest.json").read_text())
+                self.assertEqual(manifest["cells"][0]["id"], "plain")
+                self.assertTrue(manifest["cells"][0]["excluded_from_claims"])
                 self.assertFalse((Path(out) / "results.json").exists())
         finally:
             run.invoke_tool = orig_invoke
@@ -1173,7 +1232,7 @@ class ExitCodeThreeAndSixTests(unittest.TestCase):
                 for a in it:
                     if a.startswith("--"):
                         flags[a] = next(it, True)
-                exp_dir = Path(flags["--root"]) / "experiments" / flags["--experiment"]
+                exp_dir = battery.experiment_dir_for(Path(flags["--root"]), flags["--experiment"])
                 exp_dir.mkdir(parents=True, exist_ok=True)
                 (exp_dir / "proposal.json").write_text(json.dumps({
                     "tasks": ["t1"], "claude_permission_mode": "bypassPermissions",
@@ -1290,7 +1349,7 @@ class EndToEndResultsArtifactsTests(unittest.TestCase):
                 for a in it:
                     if a.startswith("--"):
                         flags[a] = next(it, True)
-                exp_dir = Path(flags["--root"]) / "experiments" / flags["--experiment"]
+                exp_dir = battery.experiment_dir_for(Path(flags["--root"]), flags["--experiment"])
                 exp_dir.mkdir(parents=True, exist_ok=True)
                 (exp_dir / "proposal.json").write_text(json.dumps({
                     "tasks": ["t1", "t2"], "claude_permission_mode": "bypassPermissions",
