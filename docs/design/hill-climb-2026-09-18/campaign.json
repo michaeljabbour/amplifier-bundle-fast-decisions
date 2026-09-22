@@ -1,0 +1,74 @@
+{
+  "schema_version": "fast-decisions-campaign-proposal/v1",
+  "status": "proposed_not_started",
+  "campaign_name": "fast-decisions-useful-work",
+  "repository": "~/dev/amplifier-bundle-fast-decisions",
+  "evidence_root": "~/dev/afast-forge-evidence-20260918-02",
+  "candidate_worktree_to_review": "~/dev/amplifier-fast-decisions-forge-e2e",
+  "history_index": "~/.amplifier/fast-decisions/history/2026-09-18-forge-root-cause/index.json",
+  "campaign_root": null,
+  "budgets": {
+    "wall_hours": 12,
+    "estimated_total_usd": 150,
+    "includes_builder_supervisor_evaluator_and_retries": true,
+    "max_candidates": 8,
+    "max_benchmark_worker_launches": 60,
+    "default_task_deadline_seconds": 1200,
+    "max_infrastructure_retries_per_run": 1,
+    "max_parallel_timed_runs_on_shared_resources": 1,
+    "benchmark_reservation_floor_usd": 5,
+    "require_conservative_price_and_usage_reservation": true,
+    "artifact_storage_limit_gib": 10,
+    "auto_increase": false
+  },
+  "targets": {
+    "warm_full_decision_p95_ms_below": 500,
+    "no_eligible_path_added_p95_ms_below": 25,
+    "pilot_primary_ratio_at_most": 0.8,
+    "pilot_primary_ratio_95pct_ci_upper_below": 1.0,
+    "pilot_secondary_ratio_point_estimate_at_most": 1.1,
+    "broad_success_rate_noninferiority_margin": 0.02,
+    "critical_new_failures_allowed": 0
+  },
+  "evaluation": {
+    "screen_distinct_tasks": 2,
+    "screen_repetitions_per_task_variant": 1,
+    "pilot_min_distinct_tasks": 8,
+    "pilot_min_families": 4,
+    "pilot_repetitions_per_task_variant": 3,
+    "warm_boundary_claim_min_observations": 200,
+    "randomized_paired_blocks": true,
+    "cluster_analysis_unit": "task",
+    "primary_metric": "paired_penalized_task_time_ratio",
+    "secondary_metric": "total_cost_per_successful_task_ratio",
+    "holdout_reuse_for_selection": false,
+    "include_all_assigned_runs": true
+  },
+  "search": {
+    "initial_order": ["HC00", "HC01", "HC02", "HC03"],
+    "one_causal_change_per_experiment": true,
+    "reprofile_after_no_gain_candidates": 3,
+    "stop_after_no_gain_candidates": 6,
+    "max_exploration_fraction": 0.2,
+    "combine_only_after_individual_evaluation": true
+  },
+  "scope": {
+    "configured_providers_only": true,
+    "public_disposable_evaluation_workspaces": true,
+    "preserve_dirty_checkouts": true,
+    "preserve_user_provider_and_model_pins": true,
+    "native_permissions_required": true,
+    "paid_infrastructure_provisioning": false,
+    "change_global_defaults": false,
+    "interrupt_unowned_sessions": false,
+    "merge_or_global_install_without_recorded_authorization": false
+  },
+  "history": {
+    "default_content": "allowlisted_metadata",
+    "private_transcript_copy": false,
+    "retain_failed_and_excluded_runs": true,
+    "automatic_deletion": false,
+    "children_included_by_default": true
+  },
+  "implementation_note": "Proposed supervisor input. No existing Amplifier CLI or recipe consumes this file yet. Create a new campaign_root and freeze the resolved configuration at launch."
+}

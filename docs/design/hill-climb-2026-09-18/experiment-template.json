@@ -1,0 +1,55 @@
+{
+  "schema_version": "fast-decisions-experiment-proposal/v1",
+  "status": "template_not_preregistered",
+  "campaign_id": null,
+  "experiment_id": null,
+  "backlog_id": "HC01",
+  "hypothesis": "Anchoring the latest task and clipping fresh evidence prevents empty scoring states without exceeding the state budget or changing native permissions.",
+  "expected_mechanism": "Improved available evidence may change abstention and downstream task trajectories; a latency improvement is not assumed.",
+  "one_changed_variable": "state projection algorithm",
+  "baseline_source_sha": null,
+  "candidate_source_sha": null,
+  "candidate_diff_sha256": null,
+  "protocol_sha256": null,
+  "task_manifest_sha256": null,
+  "evaluator_sha256": null,
+  "frozen_run_schedule": [],
+  "controls": [
+    "same task prompt and fixture hashes",
+    "same model and effective effort",
+    "same scoring backend, thresholds and limits",
+    "same tool permissions and task deadline",
+    "record warmup and provider cache conditions",
+    "serialize paired runs sharing resources"
+  ],
+  "mechanism_checks": [
+    "latest task retained beyond the old 12-message window",
+    "fresh evidence retained when a long tool result exceeds the budget",
+    "serialized Unicode and escaping remain within max_state_chars",
+    "system content, private thinking and executable argument objects excluded",
+    "steering replaces the task anchor and invalidates stale proposals"
+  ],
+  "primary_metric": "paired_penalized_task_time_ratio",
+  "secondary_metric": "total_cost_per_successful_task_ratio",
+  "diagnostics": [
+    "empty observation count",
+    "observation count and truncation reasons",
+    "abstention and accepted execution rates",
+    "full decision boundary p50/p95/max",
+    "native provider and tool request totals"
+  ],
+  "falsification": "Reject as a repair if task/evidence loss persists or privacy/budget contracts fail. Reject a performance claim if completed-work outcomes do not improve under the frozen comparison gates. A correct repair may still be retained without a speed claim.",
+  "reserved_usd": null,
+  "preregistered_at_utc": null,
+  "gate_results": {
+    "G0": "not_run",
+    "G1": "not_run",
+    "G2": "not_run",
+    "G3": "not_run",
+    "G4": "not_run",
+    "G5": "not_run"
+  },
+  "decision": null,
+  "evidence_references": [],
+  "note": "Fill identities, hashes, reservations and frozen run schedule before changing status to preregistered. This template contains no completed experiment or measured outcome."
+}

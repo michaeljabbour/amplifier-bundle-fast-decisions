@@ -1,0 +1,347 @@
+// Layered (enterprise) view of amplifier-bundle-fast-decisions.
+// Companion to docs/architecture.dot (file-level view) and bundle.dot (composition only).
+// Viewpoint: logical layers as horizontal tiers; every arrow means "uses / calls / reads"
+// and points DOWN into the tier being used (the few upward arrows are marked as such).
+// Render: dot -Tpng docs/architecture-layered.dot -o docs/architecture-layered.png
+digraph fast_decisions_layered {
+    rankdir=TB
+    newrank=true
+    compound=true
+    splines=polyline
+    nodesep=0.45
+    ranksep=0.9
+    bgcolor="white"
+    fontname="Helvetica"
+    labelloc=t
+    labeljust=l
+    fontsize=14
+    label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="2">
+        <TR><TD ALIGN="LEFT"><B>amplifier-bundle-fast-decisions — layered architecture (logical view, v0.1.0)</B></TD></TR>
+        <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="10">Tiers top-to-bottom: configuration → host platform → integration adapters → decision domain → backend port → cross-cutting → presentation &amp; tooling → data stores → external systems</FONT></TD></TR>
+        <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="10">Arrows = uses / calls / reads. Solid coloured arrows are numbered by scenario (S1–S5, key at bottom). Dashed grey = composition or port realisation. Red = the only network egress.</FONT></TD></TR>
+    </TABLE>>
+
+    node [fontname="Helvetica", fontsize=10, shape=box, style="filled,rounded", color="#8a8a8a", fillcolor="#ffffff", margin="0.12,0.06"]
+    edge [fontname="Helvetica", fontsize=8, color="#555555", fontcolor="#333333", arrowsize=0.75]
+
+    // =========================================================== T0 configuration
+    subgraph cluster_t0 {
+        label=<<B>T0 · Configuration &amp; deployment profiles</B> <FONT POINT-SIZE="9" COLOR="#555555">(build-time composition; this repo)</FONT>>
+        labeljust=l; style="filled"; fillcolor="#f1f8f7"; color="#80cbc4"; fontsize=11
+        rank=same
+        node [fillcolor="#e0f2f1"]
+        prof_shadow [label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="1">
+            <TR><TD><FONT POINT-SIZE="8" COLOR="#555555">«deployment profile · default»</FONT></TD></TR>
+            <TR><TD><B>Shadow</B></TD></TR>
+            <TR><TD><FONT POINT-SIZE="8">bundle.md → behaviors/fast-decisions.yaml</FONT></TD></TR>
+            <TR><TD><FONT POINT-SIZE="8">mounts hook + workspace tool · orchestrator untouched</FONT></TD></TR>
+            <TR><TD><FONT POINT-SIZE="8">mode: shadow · backend: deterministic · role_router: on</FONT></TD></TR>
+        </TABLE>>]
+        prof_active [label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="1">
+            <TR><TD><FONT POINT-SIZE="8" COLOR="#555555">«deployment profile · opt-in»</FONT></TD></TR>
+            <TR><TD><B>Active</B></TD></TR>
+            <TR><TD><FONT POINT-SIZE="8">bundles/active.yaml (includes bundle.md)</FONT></TD></TR>
+            <TR><TD><FONT POINT-SIZE="8">swaps session.orchestrator → loop-fast-decisions</FONT></TD></TR>
+            <TR><TD><FONT POINT-SIZE="8">mode: active · backend: jev · allow_external_state: true</FONT></TD></TR>
+        </TABLE>>]
+        prof_foundation [style="filled,rounded,dashed", fillcolor="#f5f5f5", label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="1">
+            <TR><TD><FONT POINT-SIZE="8" COLOR="#555555">«external bundle»</FONT></TD></TR>
+            <TR><TD><B>amplifier-foundation</B></TD></TR>
+            <TR><TD><FONT POINT-SIZE="8">included by bundle.md · base tools, agents, context</FONT></TD></TR>
+        </TABLE>>]
+    }
+
+    // =========================================================== T1 host platform
+    subgraph cluster_t1 {
+        label=<<B>T1 · Host platform — Amplifier session</B> <FONT POINT-SIZE="9" COLOR="#555555">(external to this repo: amplifier-core + loop-streaming)</FONT>>
+        labeljust=l; style="filled,dashed"; fillcolor="#fafafa"; color="#9e9e9e"; fontsize=11
+        rank=same
+        node [fillcolor="#eeeeee", style="filled,rounded,dashed"]
+        host_kernel [label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="1">
+            <TR><TD><FONT POINT-SIZE="8" COLOR="#555555">«platform kernel»</FONT></TD></TR>
+            <TR><TD><B>amplifier-core coordinator</B></TD></TR>
+            <TR><TD><FONT POINT-SIZE="8">hook bus (register / emit) · capability registry</FONT></TD></TR>
+            <TR><TD><FONT POINT-SIZE="8">contribution channels · mounted context manager</FONT></TD></TR>
+        </TABLE>>]
+        host_loop [label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="1">
+            <TR><TD><FONT POINT-SIZE="8" COLOR="#555555">«platform runtime»</FONT></TD></TR>
+            <TR><TD><B>Upstream agent loop</B></TD></TR>
+            <TR><TD><FONT POINT-SIZE="8">StreamingOrchestrator (loop-streaming) — unchanged</FONT></TD></TR>
+            <TR><TD><FONT POINT-SIZE="8">session providers &amp; tools · native approvals &amp; hooks</FONT></TD></TR>
+        </TABLE>>]
+    }
+
+    // ====================================================== T2 integration adapters
+    subgraph cluster_t2 {
+        label=<<B>T2 · Integration layer — kernel-facing adapters</B> <FONT POINT-SIZE="9" COLOR="#555555">(modules/* are one-line shims onto these entry points)</FONT>>
+        labeljust=l; style="filled"; fillcolor="#fff8f0"; color="#f6ad55"; fontsize=11
+        rank=same
+        node [fillcolor="#ffedd5"]
+        adp_hook [label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="1">
+            <TR><TD><FONT POINT-SIZE="8" COLOR="#555555">«adapter · hook module»</FONT></TD></TR>
+            <TR><TD><B>Shadow observer</B></TD></TR>
+            <TR><TD><FONT POINT-SIZE="8">hooks-fast-decisions → observer.py</FONT></TD></TR>
+            <TR><TD><FONT POINT-SIZE="8">subscribes session:start · tool:pre/post · execution:* · provider:*</FONT></TD></TR>
+            <TR><TD><FONT POINT-SIZE="8">observation only — always returns "continue" · never owns Policy</FONT></TD></TR>
+        </TABLE>>]
+        adp_orch [label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="1">
+            <TR><TD><FONT POINT-SIZE="8" COLOR="#555555">«adapter · orchestrator module»</FONT></TD></TR>
+            <TR><TD><B>Hybrid orchestrator facade</B></TD></TR>
+            <TR><TD><FONT POINT-SIZE="8">loop-fast-decisions → orchestrator.py</FONT></TD></TR>
+            <TR><TD><FONT POINT-SIZE="8">RoutedProvider.complete() · ObservedTool.execute()</FONT></TD></TR>
+            <TR><TD><FONT POINT-SIZE="8">per-turn copies, no monkeypatching · sole owner of Policy</FONT></TD></TR>
+        </TABLE>>]
+        adp_tool [label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="1">
+            <TR><TD><FONT POINT-SIZE="8" COLOR="#555555">«adapter · tool module»</FONT></TD></TR>
+            <TR><TD><B>Workspace tool</B></TD></TR>
+            <TR><TD><FONT POINT-SIZE="8">tool-fast-workspace → workspace.py</FONT></TD></TR>
+            <TR><TD><FONT POINT-SIZE="8">read / list only · path containment · size cap</FONT></TD></TR>
+            <TR><TD><FONT POINT-SIZE="8">revision digests · validates candidates</FONT></TD></TR>
+        </TABLE>>]
+    }
+
+    // ============================================================ T3 decision domain
+    subgraph cluster_t3 {
+        label=<<B>T3 · Application / domain layer — decision core</B> <FONT POINT-SIZE="9" COLOR="#555555">(src/amplifier_fast_decisions)</FONT>>
+        labeljust=l; style="filled"; fillcolor="#eef4fd"; color="#7fa8e8"; fontsize=11
+        rank=same
+        node [fillcolor="#dbeafe"]
+        dom_runtime [label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="1">
+            <TR><TD><FONT POINT-SIZE="8" COLOR="#555555">«lifecycle · session singleton»</FONT></TD></TR>
+            <TR><TD><B>Runtime</B></TD></TR>
+            <TR><TD><FONT POINT-SIZE="8">runtime.py · get_runtime(owner=?)</FONT></TD></TR>
+            <TR><TD><FONT POINT-SIZE="8">backend factory · owns shadow worker + recorder lifecycle</FONT></TD></TR>
+            <TR><TD><FONT POINT-SIZE="8">publishes fast_decisions.runtime / .service capabilities</FONT></TD></TR>
+        </TABLE>>]
+        dom_service [label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="1">
+            <TR><TD><FONT POINT-SIZE="8" COLOR="#555555">«domain service»</FONT></TD></TR>
+            <TR><TD><B>Decision service</B></TD></TR>
+            <TR><TD><FONT POINT-SIZE="8">service.py · choose(request, tools) — serial, turn-scoped</FONT></TD></TR>
+            <TR><TD><FONT POINT-SIZE="8">eligibility → budgets → one batched ask() → thresholds → revalidation</FONT></TD></TR>
+            <TR><TD><FONT POINT-SIZE="8">Policy: mode · 3 consecutive / 12 per turn · 750 ms deadline · allowlist</FONT></TD></TR>
+        </TABLE>>]
+        dom_shadow [label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="1">
+            <TR><TD><FONT POINT-SIZE="8" COLOR="#555555">«async worker»</FONT></TD></TR>
+            <TR><TD><B>Shadow scorer</B></TD></TR>
+            <TR><TD><FONT POINT-SIZE="8">shadow.py · single background asyncio.Task</FONT></TD></TR>
+            <TR><TD><FONT POINT-SIZE="8">joins proposal ↔ observed tool call → agreement</FONT></TD></TR>
+            <TR><TD><FONT POINT-SIZE="8">bounded drain (2 s) · sweeps unobserved at execution:end</FONT></TD></TR>
+        </TABLE>>]
+        dom_router [label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="1">
+            <TR><TD><FONT POINT-SIZE="8" COLOR="#555555">«domain service · shadow-only»</FONT></TD></TR>
+            <TR><TD><B>Model-role router (P4)</B></TD></TR>
+            <TR><TD><FONT POINT-SIZE="8">router.py · proposes model_role at delegate calls</FONT></TD></TR>
+            <TR><TD><FONT POINT-SIZE="8">records vs. what delegate resolved · never mutates</FONT></TD></TR>
+        </TABLE>>]
+        dom_inputs [label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="1">
+            <TR><TD><FONT POINT-SIZE="8" COLOR="#555555">«collectors · input validation»</FONT></TD></TR>
+            <TR><TD><B>Trusted inputs</B></TD></TR>
+            <TR><TD><FONT POINT-SIZE="8">candidates.py · questions.py · state.py</FONT></TD></TR>
+            <TR><TD><FONT POINT-SIZE="8">per-contributor groups, conflicting group dropped whole</FONT></TD></TR>
+            <TR><TD><FONT POINT-SIZE="8">bounded snapshot ≤12 msgs, no system/thinking · fingerprint</FONT></TD></TR>
+        </TABLE>>]
+        dom_contracts [fillcolor="#eeeeee", label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="1">
+            <TR><TD><FONT POINT-SIZE="8" COLOR="#555555">«shared kernel · types»</FONT></TD></TR>
+            <TR><TD><B>Contracts</B></TD></TR>
+            <TR><TD><FONT POINT-SIZE="8">contracts.py · Candidate · Question · Decision · Policy</FONT></TD></TR>
+            <TR><TD><FONT POINT-SIZE="8">DecisionBackend protocol · event names (used by every tier)</FONT></TD></TR>
+        </TABLE>>]
+    }
+
+    // ============================================================ T4 backend port
+    subgraph cluster_t4 {
+        label=<<B>T4 · Backend port &amp; adapters</B> <FONT POINT-SIZE="9" COLOR="#555555">(one port, four realisations; chosen by config, never substituted silently)</FONT>>
+        labeljust=l; style="filled"; fillcolor="#fbf5ff"; color="#c084fc"; fontsize=11
+        rank=same
+        node [fillcolor="#f3e8ff"]
+        port_backend [shape=box, style="filled,rounded,bold", penwidth=2, color="#7e22ce", label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="1">
+            <TR><TD><FONT POINT-SIZE="8" COLOR="#555555">«port»</FONT></TD></TR>
+            <TR><TD><B>DecisionBackend.ask(DecisionRequest) → DecisionResult</B></TD></TR>
+            <TR><TD><FONT POINT-SIZE="8">one batched request: action candidates + all judgment questions</FONT></TD></TR>
+            <TR><TD><FONT POINT-SIZE="8">abstention / invalid label / timeout ⇒ fall back to the generative provider</FONT></TD></TR>
+        </TABLE>>]
+        be_scripted [label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="1">
+            <TR><TD><FONT POINT-SIZE="8" COLOR="#555555">«adapter · in-process»</FONT></TD></TR>
+            <TR><TD><B>Deterministic (ScriptedBackend)</B></TD></TR>
+            <TR><TD><FONT POINT-SIZE="8">offline · external=false · shipped shadow default</FONT></TD></TR>
+        </TABLE>>]
+        be_jev [label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="1">
+            <TR><TD><FONT POINT-SIZE="8" COLOR="#555555">«adapter · hosted»</FONT></TD></TR>
+            <TR><TD><B>Jev (JevBackend)</B></TD></TR>
+            <TR><TD><FONT POINT-SIZE="8">typesafe_sdk · retries off · 5 s cooldown on failure</FONT></TD></TR>
+        </TABLE>>]
+        be_ollama [label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="1">
+            <TR><TD><FONT POINT-SIZE="8" COLOR="#555555">«adapter · local»</FONT></TD></TR>
+            <TR><TD><B>Ollama (OllamaBackend)</B></TD></TR>
+            <TR><TD><FONT POINT-SIZE="8">one-token classifier over HTTP · optional extra</FONT></TD></TR>
+        </TABLE>>]
+        be_unavailable [label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="1">
+            <TR><TD><FONT POINT-SIZE="8" COLOR="#555555">«adapter · null object»</FONT></TD></TR>
+            <TR><TD><B>Unavailable</B></TD></TR>
+            <TR><TD><FONT POINT-SIZE="8">always falls back · never a scripted stand-in</FONT></TD></TR>
+        </TABLE>>]
+    }
+
+    // ============================================================ T5 cross-cutting
+    subgraph cluster_t5 {
+        label=<<B>T5 · Cross-cutting — observability &amp; privacy</B> <FONT POINT-SIZE="9" COLOR="#555555">(every event from T2–T4 passes through here)</FONT>>
+        labeljust=l; style="filled"; fillcolor="#fdf2f8"; color="#f472b6"; fontsize=11
+        rank=same
+        node [fillcolor="#fce7f3"]
+        xc_telemetry [label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="1">
+            <TR><TD><FONT POINT-SIZE="8" COLOR="#555555">«cross-cutting · events»</FONT></TD></TR>
+            <TR><TD><B>Telemetry</B></TD></TR>
+            <TR><TD><FONT POINT-SIZE="8">telemetry.py · Emitter: one envelope per event</FONT></TD></TR>
+            <TR><TD><FONT POINT-SIZE="8">→ JsonlRecorder (bounded queue, writer thread) + hooks.emit(fast_decisions:*)</FONT></TD></TR>
+            <TR><TD><FONT POINT-SIZE="8">observation only — never an authorisation or audit guarantee</FONT></TD></TR>
+        </TABLE>>]
+        xc_privacy [label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="1">
+            <TR><TD><FONT POINT-SIZE="8" COLOR="#555555">«cross-cutting · data protection»</FONT></TD></TR>
+            <TR><TD><B>Privacy</B></TD></TR>
+            <TR><TD><FONT POINT-SIZE="8">privacy.py · scrub() secrets · safe_data() field allowlist</FONT></TD></TR>
+            <TR><TD><FONT POINT-SIZE="8">no raw requests recorded — hashes and fingerprints only</FONT></TD></TR>
+        </TABLE>>]
+    }
+
+    // ==================================================== T6 presentation & tooling
+    subgraph cluster_t6 {
+        label=<<B>T6 · Presentation &amp; tooling</B> <FONT POINT-SIZE="9" COLOR="#555555">(local only, stdlib only; observatory has no Amplifier imports — enforced by tests/test_layering.py)</FONT>>
+        labeljust=l; style="filled"; fillcolor="#f0fdfa"; color="#2dd4bf"; fontsize=11
+        rank=same
+        node [fillcolor="#ccfbf1"]
+        ui_observatory [label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="1">
+            <TR><TD><FONT POINT-SIZE="8" COLOR="#555555">«bootstrap»</FONT></TD></TR>
+            <TR><TD><B>Observatory launcher</B></TD></TR>
+            <TR><TD><FONT POINT-SIZE="8">observatory.py · ensure_viewer(): reuse-or-spawn detached `afast serve`</FONT></TD></TR>
+            <TR><TD><FONT POINT-SIZE="8">state file (pid · port · url) · optional browser open</FONT></TD></TR>
+        </TABLE>>]
+        ui_viewer [label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="1">
+            <TR><TD><FONT POINT-SIZE="8" COLOR="#555555">«local web app · read-only»</FONT></TD></TR>
+            <TR><TD><B>Viewer</B></TD></TR>
+            <TR><TD><FONT POINT-SIZE="8">server.py + static/ · EventIndex tails JSONL · http.server</FONT></TD></TR>
+            <TR><TD><FONT POINT-SIZE="8">token-auth /api/* · 250 ms poll · replay without a session</FONT></TD></TR>
+            <TR><TD><FONT POINT-SIZE="8">no browser → agent control channel</FONT></TD></TR>
+        </TABLE>>]
+        cli [label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="1">
+            <TR><TD><FONT POINT-SIZE="8" COLOR="#555555">«CLI»</FONT></TD></TR>
+            <TR><TD><B>afast</B></TD></TR>
+            <TR><TD><FONT POINT-SIZE="8">cli.py · doctor · configure · demo · serve [--stop] · export</FONT></TD></TR>
+            <TR><TD><FONT POINT-SIZE="8">demo.py drives the real service with a synthetic loop</FONT></TD></TR>
+        </TABLE>>]
+        bench [label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="1">
+            <TR><TD><FONT POINT-SIZE="8" COLOR="#555555">«offline analysis»</FONT></TD></TR>
+            <TR><TD><B>Bench</B></TD></TR>
+            <TR><TD><FONT POINT-SIZE="8">bench/ · replay recorded telemetry · labelled suite · report</FONT></TD></TR>
+            <TR><TD><FONT POINT-SIZE="8">DeterministicSuiteBackend for reproducible scoring</FONT></TD></TR>
+        </TABLE>>]
+    }
+
+    // ============================================================== T7 data stores
+    subgraph cluster_t7 {
+        label=<<B>T7 · Data stores</B> <FONT POINT-SIZE="9" COLOR="#555555">(local disk; append-only telemetry)</FONT>>
+        labeljust=l; style="filled"; fillcolor="#fffbeb"; color="#fbbf24"; fontsize=11
+        rank=same
+        node [shape=note, style="filled", fillcolor="#fef3c7"]
+        ds_events [label=<<B>events/*.jsonl</B><BR/><FONT POINT-SIZE="8">~/.amplifier/fast-decisions/ · one file per session</FONT>>]
+        ds_state  [label=<<B>serve.json · serve.log</B><BR/><FONT POINT-SIZE="8">~/.amplifier/fast-decisions/ · viewer pid, port, url</FONT>>]
+        ds_suite  [label=<<B>suites/v1.jsonl</B><BR/><FONT POINT-SIZE="8">in repo · labelled bench suite</FONT>>]
+    }
+
+    // ========================================================== T8 external systems
+    subgraph cluster_t8 {
+        label=<<B>T8 · External systems</B>>
+        labeljust=l; style="filled,dashed"; fillcolor="#fafafa"; color="#9e9e9e"; fontsize=11
+        rank=same
+        node [style="filled,rounded,dashed", fillcolor="#eeeeee"]
+        ext_jev [color="#b91c1c", label=<<B>Jev API</B><BR/><FONT POINT-SIZE="8">hosted · the only network egress</FONT><BR/><FONT POINT-SIZE="8">reached only with backend: jev + allow_external_state</FONT>>]
+        ext_ollama [label=<<B>Ollama daemon</B><BR/><FONT POINT-SIZE="8">http://127.0.0.1:11434 · local</FONT>>]
+        ext_browser [label=<<B>Browser</B><BR/><FONT POINT-SIZE="8">operator's local browser</FONT>>]
+    }
+
+    // ---------------------------------------------------------- tier stacking
+    // Invisible spine that pins the tiers in order regardless of edge direction.
+    edge [style=invis]
+    prof_shadow -> host_kernel -> adp_hook -> dom_service -> port_backend -> xc_telemetry -> ui_viewer -> ds_events -> ext_browser
+
+    // ------------------------------------------------ composition / realisation
+    edge [style=dashed, color="#8a8a8a", fontcolor="#666666"]
+    prof_shadow -> prof_foundation [label="includes", constraint=false]
+    prof_active -> prof_shadow     [label="includes", constraint=false]
+    prof_shadow -> adp_hook  [label="mounts"]
+    prof_shadow -> adp_tool  [label="mounts"]
+    prof_active -> adp_orch  [label="session.orchestrator"]
+    port_backend -> be_scripted    [label="backend: deterministic", constraint=false]
+    port_backend -> be_jev         [label="backend: jev", constraint=false]
+    port_backend -> be_ollama      [label="backend: ollama", constraint=false]
+    port_backend -> be_unavailable [label="backend: unavailable", constraint=false]
+
+    // ------------------------------------------- S1 shadow measurement (default)
+    edge [style=solid, color="#1d4ed8", fontcolor="#1e3a8a", penwidth=1.4]
+    host_kernel -> adp_hook    [label="S1.1 hook events\n(tool:pre is the scoring point)"]
+    adp_hook    -> dom_inputs  [label="S1.2 bounded snapshot\n+ candidate collection"]
+    adp_hook    -> dom_runtime [label="S1.3 submit_shadow(job)\nresolve_shadow(observed)"]
+    dom_runtime -> dom_shadow  [label="S1.4 enqueue\n(off the critical path)", constraint=false]
+    dom_shadow  -> port_backend [label="S1.5 ask()"]
+    dom_shadow  -> xc_telemetry [label="S1.6 shadow_observed →\nshadow_proposed → shadow_agreement"]
+
+    // ------------------------------------------------- S2 active routing (opt-in)
+    edge [style=solid, color="#15803d", fontcolor="#14532d", penwidth=1.4]
+    adp_orch    -> host_loop    [label="S2.1 wraps execute();\ncopies provider & tool maps per turn\n(upward: facade over the host loop)", constraint=false]
+    adp_orch    -> dom_service  [label="S2.2 RoutedProvider.complete()\n→ choose(request, tools)"]
+    dom_service -> dom_inputs   [label="S2.3 collect + recheck", constraint=false]
+    dom_service -> port_backend [label="S2.4 one batched ask()\nwithin the 750 ms deadline"]
+    dom_service -> adp_orch     [label="S2.5 fast: synthetic ToolCall\nslow: original provider", constraint=false]
+    adp_orch    -> xc_telemetry [label="S2.6 ObservedTool records\nactual execution"]
+
+    // -------------------------------------------------- S3 model-role router
+    edge [style=solid, color="#0e7490", fontcolor="#164e63", penwidth=1.2]
+    adp_hook    -> dom_router   [label="S3.1 delegate tool:pre / tool:post"]
+    dom_router  -> host_kernel  [label="S3.2 read model_role_resolver\n(upward, read-only)", constraint=false]
+    dom_router  -> xc_telemetry [label="S3.3 role_proposed\nrole_agreement"]
+
+    // -------------------------------------------------- S4 observability pipeline
+    edge [style=solid, color="#7e22ce", fontcolor="#581c87", penwidth=1.2]
+    xc_telemetry -> xc_privacy   [label="S4.1 safe_data() allowlist\nbefore every write / emit", constraint=false]
+    xc_telemetry -> ds_events    [label="S4.2 append JSONL"]
+    xc_telemetry -> host_kernel  [label="S4.3 hooks.emit(fast_decisions:*)\n(upward, observation only)", constraint=false]
+    adp_hook     -> ui_observatory [label="S4.4 session:start →\nensure_viewer() once"]
+    ui_observatory -> ui_viewer  [label="S4.5 spawn / reuse\ndetached `afast serve`", constraint=false]
+    ui_observatory -> ds_state   [label="S4.6 state file"]
+    ui_viewer    -> ds_events    [label="S4.7 tail (read-only)"]
+    ui_viewer    -> ext_browser  [label="S4.8 serves UI + /api/*\n(token, 250 ms poll)"]
+
+    // -------------------------------------------------- S5 offline tooling
+    edge [style=solid, color="#b45309", fontcolor="#78350f", penwidth=1.2]
+    cli   -> bench     [label="S5.1 bench replay / suite", constraint=false]
+    cli   -> ui_viewer [label="S5.2 serve / serve --stop", constraint=false]
+    bench -> ds_events [label="S5.3 replay"]
+    bench -> ds_suite  [label="S5.4 suite"]
+
+    // -------------------------------------------------- supporting dependencies
+    edge [style=solid, color="#9a9a9a", fontcolor="#666666", penwidth=1]
+    dom_runtime -> port_backend [label="backend factory"]
+    dom_runtime -> host_kernel  [label="publishes capabilities\n(upward)", constraint=false]
+    dom_inputs  -> host_kernel  [label="fast_decisions.candidates / .questions\ncapabilities + contributions (upward)", constraint=false]
+    dom_inputs  -> adp_tool     [label="validate_candidate\n(containment, revision) (upward)", constraint=false]
+    host_loop   -> adp_tool     [label="execute() — an ordinary tool"]
+
+    // -------------------------------------------------- network egress boundary
+    edge [style=dashed, color="#b91c1c", fontcolor="#7f1d1d", penwidth=1.6]
+    be_jev    -> ext_jev    [label="HTTPS — sends bounded, scrubbed\nstate + candidates; no raw transcript"]
+    edge [style=dashed, color="#8a8a8a", fontcolor="#666666", penwidth=1]
+    be_ollama -> ext_ollama [label="HTTP loopback"]
+
+    // ------------------------------------------------------------- scenario key
+    key [shape=plaintext, style="", label=<
+        <TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4" BGCOLOR="white" COLOR="#bbbbbb">
+            <TR><TD COLSPAN="2" ALIGN="LEFT"><B>Scenario key</B></TD></TR>
+            <TR><TD><FONT COLOR="#1d4ed8"><B>S1</B></FONT></TD><TD ALIGN="LEFT">Shadow measurement (shipped default) — score "what would we have chosen" at tool:pre; never touches the turn</TD></TR>
+            <TR><TD><FONT COLOR="#15803d"><B>S2</B></FONT></TD><TD ALIGN="LEFT">Active routing (bundles/active.yaml only) — substitute a prepared read-only tool call for an LLM turn, else pass through</TD></TR>
+            <TR><TD><FONT COLOR="#0e7490"><B>S3</B></FONT></TD><TD ALIGN="LEFT">Model-role router (P4) — shadow-only proposal of model_role at delegate calls</TD></TR>
+            <TR><TD><FONT COLOR="#7e22ce"><B>S4</B></FONT></TD><TD ALIGN="LEFT">Observability — allowlisted events → JSONL → local viewer → browser</TD></TR>
+            <TR><TD><FONT COLOR="#b45309"><B>S5</B></FONT></TD><TD ALIGN="LEFT">Offline tooling — replay and benchmark recorded telemetry</TD></TR>
+            <TR><TD COLSPAN="2" ALIGN="LEFT"><B>Control principles</B></TD></TR>
+            <TR><TD COLSPAN="2" ALIGN="LEFT">Hooks observe, never decide · the orchestrator alone owns Policy · confidence is never an approval token · <FONT COLOR="#b91c1c">red</FONT> = only network egress</TD></TR>
+        </TABLE>>]
+    ext_browser -> key [style=invis]
+}
