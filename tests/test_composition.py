@@ -28,7 +28,6 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 
-SOURCE_PREFIX = "git+https://github.com/michaeljabbour/amplifier-bundle-fast-decisions@main#subdirectory=modules/"
 UNSUPPORTED_PREFIX = "fast-decisions:modules/"
 
 # Files that may declare a module `source:` pointing into modules/.
@@ -280,12 +279,10 @@ class BundleLoadTests(unittest.TestCase):
         self.assertIs(config["allow_external_state"], expected_allow_external)
         self.assertIn("upstream", config)
 
-        self.assertTrue(
-            orchestrator["source"].startswith(
-                "git+https://github.com/michaeljabbour/amplifier-bundle-fast-decisions@main"
-                "#subdirectory=modules/loop-fast-decisions"
-            ),
+        self.assertRegex(
             orchestrator["source"],
+            r"^git\+https://github\.com/michaeljabbour/amplifier-bundle-fast-decisions@"
+            r"(?:main|[0-9a-f]{40})#subdirectory=modules/loop-fast-decisions$",
         )
 
         # Inherited from root bundle.md via the includes chain.
