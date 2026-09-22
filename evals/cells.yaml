@@ -351,5 +351,12 @@ budget:
   estimated_total_usd: 1800.0
   max_benchmark_worker_launches: 2400
   max_infrastructure_retries_per_run: 1
-  max_parallel_timed_runs: 1        # never raise this: timed runs must not share resources
+  # Raised 1 -> 3 (see STUDY-DESIGN.md section 17): measured wall time is
+  # 93-95% remote provider spans, not local compute, so up to 3 timed runs
+  # may share the machine. Validity is conditional, not free -- judge decision
+  # latency p95 (from receipts) must stay < 200ms under load and is reported
+  # per cell; absolute times carry a load caveat; the release gate uses
+  # quality plus matched relative time (same wave), never absolute time
+  # compared across waves.
+  max_parallel_timed_runs: 3
   wall_hours: 24

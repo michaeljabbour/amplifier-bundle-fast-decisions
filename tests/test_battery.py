@@ -18,6 +18,8 @@ import re
 import subprocess
 import sys
 import tempfile
+import threading
+import time
 from types import ModuleType, SimpleNamespace
 import unittest
 from unittest.mock import patch
@@ -727,13 +729,17 @@ class ClaudePermissionModeTests(unittest.TestCase):
 # run
 # --------------------------------------------------------------------------
 
-def _write_protocol(root, per_launch=1.0, cap=1000.0, max_launches=100, baseline=None, candidate=None):
+def _write_protocol(root, per_launch=1.0, cap=1000.0, max_launches=100, baseline=None, candidate=None,
+                     max_parallel_timed_runs=None):
     root.mkdir(parents=True, exist_ok=True)
     for sub in ('experiments', 'reports', 'handoff'):
         (root/sub).mkdir(parents=True, exist_ok=True)
+    limits = {'max_benchmark_worker_launches': max_launches, 'estimated_total_usd': cap, 'max_candidates': 100}
+    if max_parallel_timed_runs is not None:
+        limits['max_parallel_timed_runs'] = max_parallel_timed_runs
     (root/'protocol.json').write_text(json.dumps({
         'reservation_policy': {'per_launch_usd': per_launch},
-        'limits': {'max_benchmark_worker_launches': max_launches, 'estimated_total_usd': cap, 'max_candidates': 100},
+        'limits': limits,
     }))
     # campaign._write_checkpoint() (called by battery.cmd_run) needs campaign.json's
     # sources block; a minimal stub is enough since we bypass campaign.py's full init.
@@ -770,16 +776,18 @@ def fake_amplifier_closer(amp_root, name):
 
 
 class RunTests(unittest.TestCase):
-    def _prepared(self, tmp, harnesses, tasks='dev', per_launch=1.0, cap=1000.0, max_launches=100):
+    def _prepared(self, tmp, harnesses, tasks='dev', per_launch=1.0, cap=1000.0, max_launches=100,
+                  max_parallel_timed_runs=None, experiment='e1'):
         base = Path(tmp)
         baseline = base/'baseline'; candidate = base/'candidate'
-        baseline.mkdir(); candidate.mkdir()
+        baseline.mkdir(exist_ok=True); candidate.mkdir(exist_ok=True)
         root = base/'campaign'
-        args = _prepare_args(root, 'e1', harnesses=harnesses, tasks=tasks,
+        args = _prepare_args(root, experiment, harnesses=harnesses, tasks=tasks,
                               baseline_source=str(baseline), candidate_source=str(candidate))
         battery.cmd_prepare(args)
         _write_protocol(root, per_launch=per_launch, cap=cap, max_launches=max_launches,
-                         baseline=baseline, candidate=candidate)
+                         baseline=baseline, candidate=candidate,
+                         max_parallel_timed_runs=max_parallel_timed_runs)
         return root
 
     def test_external_harnesses_dispatch_parse_and_settle(self):
@@ -938,6 +946,135 @@ class RunTests(unittest.TestCase):
             self.assertEqual(ctx.exception.code, 3)
             ledger = [json.loads(line) for line in (root/'ledger.jsonl').read_text().splitlines()]
             self.assertTrue(any(e.get('type') == 'paused' and e.get('reason') == 'launch_cap' for e in ledger))
+
+
+# --------------------------------------------------------------------------
+# --parallel N: bounded-concurrency scheduler (still single-writer for the
+# ledger/manifest; only the blocking dispatch itself overlaps)
+# --------------------------------------------------------------------------
+
+def _tracking_amplifier_launcher(tracker, delay=0.05):
+    """Fake launcher that records how many launches are concurrently "in the
+    harness" (between incrementing and decrementing `tracker['current']`),
+    sleeping just long enough that --parallel > 1 actually overlaps two of
+    these in real wall-clock time instead of finishing before the next one
+    is even submitted."""
+    def launcher(amp_root, name):
+        with tracker['lock']:
+            tracker['current'] += 1
+            tracker['max_seen'] = max(tracker['max_seen'], tracker['current'])
+            tracker['order'].append(name)
+        time.sleep(delay)
+        (amp_root/name).mkdir(parents=True, exist_ok=True)
+        result = {
+            'outcome_passed': True, 'wall_time_ms': 1000.0, 'exit_code': 0,
+            'timed_out': False, 'native': {'usage': {'cost_usd': None}},
+            'effort_receipts': [], 'model': 'claude-fable-5-1',
+            'final_message': None, 'quality': {'checks': 1, 'passed': 1, 'failed': 0, 'failure_labels': []},
+            'protected_files_unchanged': {'README.md': True},
+            'started_at': 't0', 'ended_at': 't1', 'infrastructure_failure': False,
+        }
+        (amp_root/name/'result.json').write_text(json.dumps(result))
+        with tracker['lock']:
+            tracker['current'] -= 1
+    return launcher
+
+
+class ParallelSchedulerTests(unittest.TestCase):
+    def _prepared(self, tmp, harnesses, tasks='all', max_parallel_timed_runs=None):
+        return RunTests._prepared(self, tmp, harnesses, tasks=tasks,
+                                   max_parallel_timed_runs=max_parallel_timed_runs)
+
+    def test_parallel_never_exceeds_requested_bound(self):
+        with tempfile.TemporaryDirectory() as tmp, _patched_battery_tasks():
+            root = self._prepared(tmp, 'amplifier-plain,amplifier-fd', tasks='all',
+                                   max_parallel_timed_runs=3)
+            tracker = {'lock': threading.Lock(), 'current': 0, 'max_seen': 0, 'order': []}
+            battery.cmd_run(SimpleNamespace(root=str(root), experiment='e1', parallel=3),
+                             launcher=_tracking_amplifier_launcher(tracker),
+                             waiter=fake_amplifier_waiter, closer=fake_amplifier_closer)
+            self.assertLessEqual(tracker['max_seen'], 3)
+            self.assertGreater(tracker['max_seen'], 1, 'test is meaningless if nothing ever overlapped')
+            manifest = json.loads((root/'experiments'/'e1'/'runs'/'manifest.json').read_text())
+            self.assertEqual(len(tracker['order']), len(manifest['run_order']))
+
+    def test_pairs_of_same_task_launch_in_the_same_wave(self):
+        """cmd_prepare's frozen schedule already groups every harness for a task
+        consecutively (see cmd_prepare); the scheduler must preserve that
+        adjacency instead of reordering it, so a task's amplifier-plain and
+        amplifier-fd runs launch back to back, not scattered across waves."""
+        with tempfile.TemporaryDirectory() as tmp, _patched_battery_tasks():
+            root = self._prepared(tmp, 'amplifier-plain,amplifier-fd', tasks='all',
+                                   max_parallel_timed_runs=2)
+            tracker = {'lock': threading.Lock(), 'current': 0, 'max_seen': 0, 'order': []}
+            battery.cmd_run(SimpleNamespace(root=str(root), experiment='e1', parallel=2),
+                             launcher=_tracking_amplifier_launcher(tracker),
+                             waiter=fake_amplifier_waiter, closer=fake_amplifier_closer)
+            manifest = json.loads((root/'experiments'/'e1'/'runs'/'manifest.json').read_text())
+            position = {name: i for i, name in enumerate(tracker['order'])}
+            by_task = {}
+            for name, item in manifest['runs'].items():
+                by_task.setdefault(item['task'], []).append(name)
+            for task, names in by_task.items():
+                self.assertEqual(len(names), 2, task)
+                positions = sorted(position[n] for n in names)
+                self.assertEqual(positions[1]-positions[0], 1,
+                                  f'{task}: launch positions {positions} not adjacent')
+
+    def test_parallel_one_output_matches_sequential_fields(self):
+        with tempfile.TemporaryDirectory() as tmp, _patched_battery_tasks():
+            root = self._prepared(tmp, 'claude', tasks='dev', max_parallel_timed_runs=1)
+            forge_module, _calls = make_fake_forge({'claude': {'output': CLAUDE_STDOUT, 'exitCode': 0}})
+            battery.cmd_run(SimpleNamespace(root=str(root), experiment='e1', parallel=1),
+                             forge_module=forge_module)
+            manifest = json.loads((root/'experiments'/'e1'/'runs'/'manifest.json').read_text())
+            for name, item in manifest['runs'].items():
+                run_dir = battery._run_dir_for(root/'experiments'/'e1', name, item['harness'])
+                result = json.loads((run_dir/'result.json').read_text())
+                self.assertEqual(result['concurrency_at_launch'], 1)
+                self.assertEqual(result['concurrency_max'], 1)
+                self.assertIn(result['outcome_passed'], (True, False))  # field present
+            add_one_result = json.loads((battery._run_dir_for(
+                root/'experiments'/'e1', 'e1-add_one-claude-a1', 'claude')/'result.json').read_text())
+            self.assertEqual(add_one_result['cost_usd'], 0.42)
+
+    def test_concurrency_fields_present_on_every_result(self):
+        with tempfile.TemporaryDirectory() as tmp, _patched_battery_tasks():
+            root = self._prepared(tmp, 'amplifier-plain,amplifier-fd', tasks='dev',
+                                   max_parallel_timed_runs=2)
+            tracker = {'lock': threading.Lock(), 'current': 0, 'max_seen': 0, 'order': []}
+            battery.cmd_run(SimpleNamespace(root=str(root), experiment='e1', parallel=2),
+                             launcher=_tracking_amplifier_launcher(tracker),
+                             waiter=fake_amplifier_waiter, closer=fake_amplifier_closer)
+            manifest = json.loads((root/'experiments'/'e1'/'runs'/'manifest.json').read_text())
+            for name, item in manifest['runs'].items():
+                run_dir = battery._run_dir_for(root/'experiments'/'e1', name, item['harness'])
+                result = json.loads((run_dir/'result.json').read_text())
+                self.assertIn('concurrency_at_launch', result)
+                self.assertIn('concurrency_max', result)
+                self.assertIsInstance(result['concurrency_at_launch'], int)
+                self.assertIsInstance(result['concurrency_max'], int)
+                self.assertGreaterEqual(result['concurrency_max'], result['concurrency_at_launch'])
+
+    def test_protocol_guard_refuses_parallel_above_limit(self):
+        with tempfile.TemporaryDirectory() as tmp, _patched_battery_tasks():
+            root = self._prepared(tmp, 'claude', tasks='dev', max_parallel_timed_runs=2)
+            forge_module, _calls = make_fake_forge({'claude': {'output': CLAUDE_STDOUT, 'exitCode': 0}})
+            with self.assertRaises(SystemExit) as ctx:
+                battery.cmd_run(SimpleNamespace(root=str(root), experiment='e1', parallel=3),
+                                 forge_module=forge_module)
+            self.assertEqual(ctx.exception.code, 4)
+
+    def test_protocol_guard_defaults_limit_to_one(self):
+        """No max_parallel_timed_runs recorded in protocol.json (older/unwired
+        campaigns) -> the same conservative default (1) campaign.py itself uses."""
+        with tempfile.TemporaryDirectory() as tmp, _patched_battery_tasks():
+            root = self._prepared(tmp, 'claude', tasks='dev', max_parallel_timed_runs=None)
+            forge_module, _calls = make_fake_forge({'claude': {'output': CLAUDE_STDOUT, 'exitCode': 0}})
+            with self.assertRaises(SystemExit) as ctx:
+                battery.cmd_run(SimpleNamespace(root=str(root), experiment='e1', parallel=2),
+                                 forge_module=forge_module)
+            self.assertEqual(ctx.exception.code, 4)
 
 
 # --------------------------------------------------------------------------

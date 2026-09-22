@@ -837,6 +837,133 @@ class RenderResultsMarkdownTests(unittest.TestCase):
         self.assertIn("n_tasks=10", md)
 
 
+class CampaignRootTests(unittest.TestCase):
+    """--campaign-root / campaign-root.txt split (STUDY-DESIGN.md section 17):
+    the campaign lives outside --out by default so its long nested run-dir
+    paths don't count against --out's own path budget."""
+
+    def test_default_campaign_root_is_pure_and_never_created(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            out_dir = Path(tmp) / "myrun-out"
+            root = run.default_campaign_root(out_dir)
+            self.assertEqual(root, Path.home() / "dev" / "afast-ev" / "myrun-out")
+            self.assertFalse(root.exists())
+            self.assertFalse(out_dir.exists())
+
+    def test_resolve_campaign_root_honors_explicit_arg_and_writes_pointer(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            out_dir = Path(tmp) / "out"
+            campaign_dir = Path(tmp) / "elsewhere" / "campaign"
+            resolved = run.resolve_campaign_root(out_dir, str(campaign_dir))
+            self.assertEqual(resolved, campaign_dir.resolve())
+            self.assertTrue(campaign_dir.exists())
+            pointer = out_dir / "campaign-root.txt"
+            self.assertEqual(pointer.read_text(encoding="utf-8").strip(), str(campaign_dir.resolve()))
+
+    def test_resolve_campaign_root_is_idempotent_via_the_pointer(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            out_dir = Path(tmp) / "out"
+            campaign_dir = Path(tmp) / "campaign"
+            first = run.resolve_campaign_root(out_dir, str(campaign_dir))
+            second = run.resolve_campaign_root(out_dir, None)  # pointer wins on the 2nd call
+            self.assertEqual(first, second)
+
+    def test_resolve_campaign_root_rejects_a_disagreeing_override(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            out_dir = Path(tmp) / "out"
+            run.resolve_campaign_root(out_dir, str(Path(tmp) / "campaign-a"))
+            with self.assertRaises(run.EvalsError) as ctx:
+                run.resolve_campaign_root(out_dir, str(Path(tmp) / "campaign-b"))
+            self.assertEqual(ctx.exception.code, 2)
+
+    def test_resolve_campaign_root_adopts_a_pre_existing_out_nested_campaign(self):
+        """A campaign directly under --out/campaign from before campaign-root.txt
+        existed is adopted in place, never orphaned under a new default root."""
+        with tempfile.TemporaryDirectory() as tmp:
+            out_dir = Path(tmp) / "out"
+            legacy_campaign = out_dir / "campaign"
+            legacy_campaign.mkdir(parents=True)
+            (legacy_campaign / "protocol.json").write_text("{}")
+            resolved = run.resolve_campaign_root(out_dir, None)
+            self.assertEqual(resolved, legacy_campaign)
+
+
+class WorkspacePathLengthTests(unittest.TestCase):
+    """Preflight check for the six-hour path-length outage (STUDY-DESIGN.md
+    section 17): Amplifier encodes its per-project session dir 1:1 from the
+    resolved workspace path, so a too-long workspace path silently kills the
+    run before it launches. Reuses battery.run_dir_for rather than
+    re-deriving the path, so it can never drift from what battery.py builds."""
+
+    def test_passes_when_under_the_limit(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            experiment_dir = Path(tmp) / "exp1"
+            proposal = {"frozen_run_schedule": [{"name": "short-run-a1", "task": "t1", "harness": "claude"}]}
+            ok, reason, max_len = run.check_workspace_path_length(experiment_dir, proposal)
+            self.assertTrue(ok)
+            self.assertIsNone(reason)
+            self.assertGreater(max_len, 0)
+
+    def test_fails_loudly_with_the_longest_path_and_its_length(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            experiment_dir = Path(tmp) / "exp1"
+            long_name = "x" * 300
+            proposal = {"frozen_run_schedule": [{"name": long_name, "task": "t1", "harness": "claude"}]}
+            ok, reason, max_len = run.check_workspace_path_length(experiment_dir, proposal, max_len=240)
+            self.assertFalse(ok)
+            self.assertIn(long_name, reason)
+            self.assertIn(str(max_len), reason)
+            self.assertGreater(max_len, 240)
+
+    def test_amplifier_harness_uses_the_nested_amplifier_run_dir(self):
+        """amplifier-plain/amplifier-fd runs nest one level deeper
+        (runs/amplifier/<name>/workspace) -- exactly what battery.run_dir_for
+        (not a re-derived path) returns for these two harnesses."""
+        with tempfile.TemporaryDirectory() as tmp:
+            experiment_dir = Path(tmp) / "exp1"
+            proposal = {"frozen_run_schedule": [{"name": "r1", "task": "t1", "harness": "amplifier-fd"}]}
+            ok, _reason, max_len = run.check_workspace_path_length(experiment_dir, proposal)
+            self.assertTrue(ok)
+            expected_ws = experiment_dir / "runs" / "amplifier" / "r1" / "workspace"
+            expected_len = len(str(expected_ws.resolve()).replace("/", "-"))
+            self.assertEqual(max_len, expected_len)
+
+    def test_wired_into_run_verification_preflight(self):
+        """run_verification records max_encoded_len at the top level of the
+        preflight dict (not just nested under checks), per spec."""
+        saved = {name: getattr(run, name) for name in (
+            "check_permission_mode", "check_command_templates", "check_task_count",
+            "check_corpus_sha", "check_frozen_candidate", "check_workspace_identity",
+            "check_toolchains", "run_forge_doctor", "verify_prompts_for_experiment",
+        )}
+        run.check_permission_mode = lambda proposal, cell: (True, None)
+        run.check_command_templates = lambda proposal, cell, defaults: (True, None)
+        run.check_task_count = lambda proposal, suite, split: (True, None)
+        run.check_corpus_sha = lambda proposal, suite: (True, None)
+        run.check_frozen_candidate = lambda proposal, candidate_sha: (True, None)
+        run.check_workspace_identity = lambda experiment_dir, proposal: (True, None, {})
+        run.check_toolchains = lambda required, which=None: (True, None)
+        run.run_forge_doctor = lambda host_python, forge_py, runner=None: (True, None)
+        run.verify_prompts_for_experiment = lambda experiment_dir, proposal: {"ok": True, "tasks": {}}
+        try:
+            with tempfile.TemporaryDirectory() as tmp:
+                experiment_dir = Path(tmp) / "exp1"
+                proposal = {"frozen_run_schedule": [{"name": "r1", "task": "t1", "harness": "claude"}]}
+                ok, preflight, _pv = run.run_verification(
+                    experiment_dir, proposal, cell={}, suite={}, split="dev", candidate_sha="x",
+                    defaults={}, required_toolchains=[], host_python=sys.executable,
+                    forge_py="/no/such/forge.py",
+                )
+        finally:
+            for name, fn in saved.items():
+                setattr(run, name, fn)
+        self.assertTrue(ok)
+        self.assertIn("workspace_path_length", preflight["checks"])
+        self.assertIn("max_encoded_len", preflight)
+        self.assertEqual(preflight["checks"]["workspace_path_length"]["max_encoded_len"],
+                         preflight["max_encoded_len"])
+
+
 class ScanIncompleteRunsTests(unittest.TestCase):
     def test_missing_result_and_no_running_json_is_incomplete(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -1307,7 +1434,7 @@ class InitOrAdoptCampaignBudgetMappingTests(unittest.TestCase):
                     }
                 }
                 run.init_or_adopt_campaign(
-                    tmp, cells_doc,
+                    tmp, cells_doc, campaign_root=Path(tmp) / "campaign",
                     baseline_source="/baseline", candidate_source="/candidate",
                     installed_cache="/cache", history_index="/hist",
                     host_python=sys.executable, events_dir="/events",
@@ -1351,7 +1478,7 @@ class InitOrAdoptCampaignBudgetMappingTests(unittest.TestCase):
         try:
             with tempfile.TemporaryDirectory() as tmp:
                 run.init_or_adopt_campaign(
-                    tmp, {},
+                    tmp, {}, campaign_root=Path(tmp) / "campaign",
                     baseline_source="/baseline", candidate_source="/candidate",
                     installed_cache="/cache", history_index="/hist",
                     host_python=sys.executable, events_dir="/events",
