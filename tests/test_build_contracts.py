@@ -27,6 +27,14 @@ HAS_CORE = importlib.util.find_spec("amplifier_core") is not None
 HAS_LOOP = importlib.util.find_spec("amplifier_module_loop_streaming") is not None
 
 class BuildTests(unittest.TestCase):
+    def test_active_profile_pins_the_package_and_loop_together(self):
+        import yaml
+        data = yaml.safe_load((ROOT/'bundles/active.yaml').read_text())
+        package = data['includes'][0]['bundle']
+        self.assertRegex(package, r'^git\+https://github.com/michaeljabbour/amplifier-bundle-fast-decisions@[0-9a-f]{40}$')
+        self.assertEqual(data['session']['orchestrator']['source'], package + '#subdirectory=modules/loop-fast-decisions')
+        self.assertEqual(data['session']['orchestrator']['config']['mode'], 'active')
+
     def test_active_loop_installs_its_wrapped_upstream(self):
         data = tomllib.loads((ROOT/'modules/loop-fast-decisions/pyproject.toml').read_text())
         self.assertIn(
