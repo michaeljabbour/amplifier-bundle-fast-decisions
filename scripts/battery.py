@@ -129,11 +129,45 @@ def _amplifier_prompt_and_deadline(task, deadline_seconds):
     return fields
 
 
+_UNSAFE_PATH_CHARS = re.compile(r'[^A-Za-z0-9._-]')
+
+
+def _slug(value):
+    """Filesystem/URI-safe slug for a cell id, experiment id, or run name:
+    replace any character outside [A-Za-z0-9._-] with '-'.
+
+    Cell ids may legitimately contain '+' (e.g. 'judge-jev+effort-incumbent')
+    -- a real, meaningful separator in the analysis identifier space. But on
+    disk that '+' gets percent-encoded to '%2B' the moment forge_e2e turns a
+    run directory into a `file://` bundle URI (Path.as_uri() percent-encodes
+    anything outside RFC 3986's unreserved set), and Amplifier's bundle loader
+    does not percent-decode it back -- \"File not found\" for a path that
+    plainly exists. Slugging every path SEGMENT derived from an id (never the
+    id itself, which stays the manifest/analysis key) makes that class of bug
+    structurally impossible instead of merely rare.
+    """
+    return _UNSAFE_PATH_CHARS.sub('-', value)
+
+
+def _experiment_dir_for(root, experiment_id):
+    """The on-disk experiment directory for `experiment_id` (slugged; see
+    `_slug`). `experiment_id` itself -- as recorded in proposal.json,
+    manifest.json, ledger entries, etc -- is never modified."""
+    return Path(root)/'experiments'/_slug(experiment_id)
+
+
+# Public alias: evals/run.py reuses this exact naming (rather than re-deriving
+# it) so the two tools can never drift apart on where an experiment actually
+# lives on disk.
+experiment_dir_for = _experiment_dir_for
+
+
 def _run_dir_for(experiment_dir, name, harness):
     runs_root = experiment_dir/'runs'
+    slug = _slug(name)
     if harness in AMPLIFIER_HARNESSES:
-        return runs_root/'amplifier'/name
-    return runs_root/name
+        return runs_root/'amplifier'/slug
+    return runs_root/slug
 
 
 # Public alias: evals/run.py's workspace-path-length preflight check reuses this
@@ -222,7 +256,7 @@ def _resolve_polyglot_tasks(args):
 
 def cmd_prepare(args):
     root = Path(args.root).expanduser().resolve()
-    experiment_dir = root/'experiments'/args.experiment
+    experiment_dir = _experiment_dir_for(root, args.experiment)
     if experiment_dir.exists():
         return _fail(4, f'Experiment {args.experiment} already exists')
 
@@ -342,7 +376,7 @@ def cmd_prepare(args):
     for r in schedule:
         if r['harness'] in AMPLIFIER_HARNESSES:
             continue
-        forge_e2e._build_workspace(runs_root/r['name'], r['task'])
+        forge_e2e._build_workspace(_run_dir_for(experiment_dir, r['name'], r['harness']), r['task'])
 
     # Every workspace for a task must have identical hashed content, no
     # matter which harness will edit it.
@@ -836,14 +870,14 @@ def _dispatch(item, name, experiment_dir, manifest, proposal, launcher=None, wai
         waiter = waiter or forge_e2e.wait_for_result
         closer = closer or forge_e2e.close_worker_terminal
         amp_root = experiment_dir/'runs'/'amplifier'
-        amp_run_dir = amp_root/name
+        amp_run_dir = _run_dir_for(experiment_dir, name, harness)
         wait_seconds = deadline+180
         try:
-            if (amp_root/name/'result.json').exists():
+            if (amp_run_dir/'result.json').exists():
                 # The worker already finished (runner restarted after a crash): adopt, never relaunch.
                 ok = True
                 base['notes'] = ['adopted_existing_worker_result']
-            elif (amp_root/name/'running.json').exists():
+            elif (amp_run_dir/'running.json').exists():
                 # A worker launched by a previous runner is still going: wait for it, never duplicate it.
                 base['notes'] = ['adopted_live_worker']
                 ok = waiter(amp_root, name, wait_seconds)
@@ -861,7 +895,7 @@ def _dispatch(item, name, experiment_dir, manifest, proposal, launcher=None, wai
                     'tokens': None, 'num_turns': None, 'final_message': None, 'quality': None,
                     'protected_files_unchanged': None, 'outcome_passed': False,
                     'infrastructure_failure': True, 'notes': [f'launch_failed:{str(exc)[:300]}']}, amp_run_dir)
-        native = _read_json(amp_root/name/'result.json') if ok and (amp_root/name/'result.json').exists() else None
+        native = _read_json(amp_run_dir/'result.json') if ok and (amp_run_dir/'result.json').exists() else None
         if native is None:
             return _with_exec_time({**base, 'model': None, 'started_at': _now(), 'ended_at': _now(),
                     'wall_time_ms': None, 'harness_duration_ms': None, 'exit_code': None,
@@ -874,13 +908,13 @@ def _dispatch(item, name, experiment_dir, manifest, proposal, launcher=None, wai
             # (re)derive exec_time_ms so a pre-existing normalized result gets annotated too.
             merged = {**native, 'notes': list(native.get('notes') or []) + list(base.get('notes') or [])}
             return _with_exec_time(merged, amp_run_dir)
-        raw_copy = amp_root/name/'worker-result.json'
+        raw_copy = amp_run_dir/'worker-result.json'
         if not raw_copy.exists():
             raw_copy.write_text(json.dumps(native, indent=2)+'\n')  # keep the worker's native evidence
         return _with_exec_time(_normalize_worker_result(base, native), amp_run_dir)
 
     # External harnesses (claude/codex/opencode)
-    run_dir = experiment_dir/'runs'/name
+    run_dir = _run_dir_for(experiment_dir, name, harness)
     workspace = run_dir/'workspace'
     forge_module = forge_module or _load_forge(manifest.get('forge_py', str(forge_e2e.FORGE)))
     model = (proposal.get('models') or {}).get(harness)
@@ -944,7 +978,7 @@ def cmd_run(args, launcher=None, waiter=None, closer=None, forge_module=None):
     """
     forge_e2e.forge_self_heal({'forge_py': str(forge_e2e.FORGE)})  # cheap; repairs spawn-helper exec bits before any launch
     root = Path(args.root).expanduser().resolve()
-    experiment_dir = root/'experiments'/args.experiment
+    experiment_dir = _experiment_dir_for(root, args.experiment)
     runs_root = experiment_dir/'runs'
     protocol = campaign._read_json(root/'protocol.json')
     proposal = _read_json(experiment_dir/'proposal.json')
@@ -956,6 +990,15 @@ def cmd_run(args, launcher=None, waiter=None, closer=None, forge_module=None):
     if max_parallel > protocol_max_parallel:
         _fail(4, f'--parallel {max_parallel} exceeds protocol.limits.max_parallel_timed_runs '
                  f'({protocol_max_parallel})')
+
+    # Circuit breaker (defect: a bursty scheduler ran 35 experiments of garbage
+    # after Forge became unreachable, because nothing stopped it). Tracks
+    # *consecutive* infrastructure failures across settled dispatches -- any
+    # real success resets it to zero. Once the streak reaches the threshold,
+    # stop launching new runs and pause resumably (exit 3), the same shape as
+    # the existing launch_cap/budget pauses below.
+    max_consecutive_infra_failures = max(1, int(getattr(args, 'max_consecutive_infra_failures', None) or 5))
+    infra_failure_streak = {'count': 0, 'last_failure_text': None}
 
     # concurrency bookkeeping: `peaks[name]` is the highest in-flight count
     # observed at any point during that run's life so far (never re-derived
@@ -1009,6 +1052,14 @@ def cmd_run(args, launcher=None, waiter=None, closer=None, forge_module=None):
                                         'timed_out': result.get('timed_out'), 'wall_time_ms': result.get('wall_time_ms'),
                                         'cost_usd': result.get('cost_usd'), 'infrastructure_failure': infra_failure})
 
+        if infra_failure:
+            infra_failure_streak['count'] += 1
+            notes = result.get('notes') or []
+            infra_failure_streak['last_failure_text'] = notes[-1] if notes else 'infrastructure_failure'
+        else:
+            infra_failure_streak['count'] = 0
+            infra_failure_streak['last_failure_text'] = None
+
         if infra_failure and item.get('attempt', 1) == 1:
             manifest = _read_json(runs_root/'manifest.json')
             already_retried = any(
@@ -1024,7 +1075,7 @@ def cmd_run(args, launcher=None, waiter=None, closer=None, forge_module=None):
                                                                 'block': item.get('block'), 'seed': item.get('seed'),
                                                                 **_amplifier_prompt_and_deadline(item['task'], retry_deadline)})
                 else:
-                    forge_e2e._build_workspace(runs_root/retry_name, item['task'])
+                    forge_e2e._build_workspace(_run_dir_for(experiment_dir, retry_name, item['harness']), item['task'])
                 manifest['runs'][retry_name] = retry_item
                 manifest['run_order'].append(retry_name)
                 _dump(runs_root/'manifest.json', manifest)
@@ -1055,6 +1106,19 @@ def cmd_run(args, launcher=None, waiter=None, closer=None, forge_module=None):
                 if (run_dir/'result.json').exists():
                     i += 1
                     continue
+
+                if infra_failure_streak['count'] >= max_consecutive_infra_failures:
+                    if in_flight:
+                        _drain_one()
+                        continue
+                    campaign._ledger_append(root, {'type': 'paused', 'reason': 'consecutive_infra_failures',
+                                                    'experiment': args.experiment, 'run': name,
+                                                    'consecutive_infra_failures': infra_failure_streak['count'],
+                                                    'last_failure': infra_failure_streak['last_failure_text']})
+                    _print({'paused': True, 'reason': 'consecutive_infra_failures', 'run': name,
+                            'consecutive_infra_failures': infra_failure_streak['count'],
+                            'last_failure': infra_failure_streak['last_failure_text']})
+                    sys.exit(3)
 
                 launches_used = sum(1 for e in campaign._ledger_lines(root) if e.get('type') == 'run_launched')
                 if launches_used >= protocol['limits']['max_benchmark_worker_launches']:
@@ -1561,7 +1625,7 @@ def _cross_campaign_comparison(candidate_tasks, candidate_assigned, deadline_ms,
     per-baseline-harness geomean ratio/wins/sign-test, a per-task table, and a per-task
     speed rank of the candidate among all passing harnesses (candidate's own + baseline's).
     """
-    baseline_experiment_dir = Path(baseline_root)/'experiments'/baseline_experiment
+    baseline_experiment_dir = _experiment_dir_for(baseline_root, baseline_experiment)
     baseline_manifest, baseline_assigned = _load_experiment_assigned(baseline_experiment_dir)
     baseline_deadline_ms = baseline_manifest.get('deadline_seconds', 600)*1000
     baseline_tasks = sorted({k[0] for k in baseline_assigned})
@@ -1642,7 +1706,7 @@ def cmd_backfill_exec(args):
     invokes a harness; reads only what's already on disk (result.json,
     worker-result.json, receipts.jsonl, harness-stdout.txt, native events.jsonl)."""
     root = Path(args.root).expanduser().resolve()
-    experiment_dir = root/'experiments'/args.experiment
+    experiment_dir = _experiment_dir_for(root, args.experiment)
     manifest = _read_json(experiment_dir/'runs'/'manifest.json')
     updated = []
     for name, item in manifest['runs'].items():
@@ -1705,7 +1769,7 @@ def cmd_reevaluate(args):
     preregistered prompt_sha256 -- see _prompt_match_info.
     """
     root = Path(args.root).expanduser().resolve()
-    experiment_dir = root/'experiments'/args.experiment
+    experiment_dir = _experiment_dir_for(root, args.experiment)
     manifest = _read_json(experiment_dir/'runs'/'manifest.json')
     proposal = _read_json(experiment_dir/'proposal.json')
     _register_task_source_from_proposal(proposal)
@@ -1749,7 +1813,7 @@ def cmd_reevaluate(args):
 
 def cmd_evaluate(args):
     root = Path(args.root).expanduser().resolve()
-    experiment_dir = root/'experiments'/args.experiment
+    experiment_dir = _experiment_dir_for(root, args.experiment)
     proposal = _read_json(experiment_dir/'proposal.json')
     _register_task_source_from_proposal(proposal)
     manifest, assigned = _load_experiment_assigned(experiment_dir)
@@ -1946,7 +2010,7 @@ def _write_report(experiment_dir, comparison, proposal):
 
 def cmd_status(args):
     root = Path(args.root).expanduser().resolve()
-    experiment_dir = root/'experiments'/args.experiment
+    experiment_dir = _experiment_dir_for(root, args.experiment)
     manifest = _read_json(experiment_dir/'runs'/'manifest.json')
     done = running = 0
     for name, item in manifest['runs'].items():
@@ -2025,6 +2089,10 @@ def main(argv=None):
     p.add_argument('--parallel', type=int, default=1,
                     help='Max runs in flight at once (default 1 = sequential, byte-identical to today). '
                          'Refused if it exceeds protocol.limits.max_parallel_timed_runs.')
+    p.add_argument('--max-consecutive-infra-failures', type=int, default=5,
+                    help='Circuit breaker: stop launching and pause resumably (exit 3) after this many '
+                         'consecutive infrastructure_failure results (default 5). Any real success resets '
+                         'the streak to zero.')
     p.set_defaults(func=cmd_run)
 
     p = sub.add_parser('reevaluate')

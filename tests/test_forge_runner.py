@@ -35,7 +35,8 @@ class ForgeControllerTests(unittest.TestCase):
                 launched.append(name)
                 raise SystemExit('forge: '+json.dumps({'timeout':True,'exitCode':None,'sessionId':name,'output':''}))
             def sleep(_):
-                (root/launched[-1]/'result.json').write_text(json.dumps({'outcome_passed':True}))
+                if launched:
+                    (root/launched[-1]/'result.json').write_text(json.dumps({'outcome_passed':True}))
             with patch.dict(sys.modules,{'forge':SimpleNamespace(call=call)}), patch.object(forge_e2e.time,'sleep',sleep):
                 forge_e2e.batch(root)
             self.assertEqual(launched,['one','two'])

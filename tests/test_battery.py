@@ -483,6 +483,68 @@ class PrepareTests(unittest.TestCase):
             self.assertTrue(manifest['run_order'])
 
 
+class SlugAndExperimentDirTests(unittest.TestCase):
+    """Defect: cell/experiment ids may legitimately contain '+' (e.g.
+    'judge-jev+effort-incumbent'). '+' is outside RFC 3986's unreserved set,
+    so Path.as_uri() percent-encodes it to '%2B' the moment a run directory
+    becomes a bundle file:// URI, and Amplifier's bundle loader never
+    decodes it back -- "Bundle Error -- File not found" for a path that
+    plainly exists on disk. The fix: slug every path SEGMENT derived from an
+    id; never touch the id itself (it stays the manifest/analysis key)."""
+
+    def test_slug_replaces_unsafe_chars_only(self):
+        self.assertEqual(battery._slug('judge-jev+effort-incumbent'), 'judge-jev-effort-incumbent')
+        self.assertEqual(battery._slug('safe-name_1.2'), 'safe-name_1.2')
+        self.assertEqual(battery._slug('a b/c:d'), 'a-b-c-d')
+
+    def test_experiment_dir_for_is_slugged_but_run_dir_for_composes_under_it(self):
+        root = Path('/campaign-root')
+        exp_dir = battery._experiment_dir_for(root, 'judge-jev+effort-incumbent-s1-dev-r1')
+        self.assertNotIn('+', str(exp_dir))
+        self.assertEqual(exp_dir.name, 'judge-jev-effort-incumbent-s1-dev-r1')
+        run_dir = battery._run_dir_for(exp_dir, 'judge-jev+effort-incumbent-s1-dev-r1-amplifier-fd-a2', 'amplifier-fd')
+        self.assertNotIn('+', str(run_dir))
+        self.assertEqual(run_dir.name, 'judge-jev-effort-incumbent-s1-dev-r1-amplifier-fd-a2')
+        self.assertIn('amplifier', run_dir.parts)
+
+    def test_prepare_with_plus_in_experiment_id_produces_safe_on_disk_paths(self):
+        """End-to-end: cmd_prepare with a '+'-bearing experiment id must
+        create directories with no '+' anywhere, while proposal.json/
+        manifest.json keep the id and run names verbatim (the analysis
+        identifiers a downstream evaluate/report call keys off of)."""
+        with tempfile.TemporaryDirectory() as tmp, _patched_battery_tasks():
+            base = Path(tmp)
+            baseline = base/'baseline'; baseline.mkdir()
+            candidate = base/'candidate'; candidate.mkdir()
+            root = base/'campaign'
+            exp_id = 'judge-jev+effort-incumbent-s1-dev-r1'
+            args = _prepare_args(root, exp_id, harnesses='amplifier-fd,claude', tasks='dev',
+                                  baseline_source=str(baseline), candidate_source=str(candidate))
+            manifest = battery.cmd_prepare(args)
+
+            experiment_dir = battery._experiment_dir_for(root, exp_id)
+            self.assertTrue(experiment_dir.exists())
+            self.assertNotIn('+', str(experiment_dir))
+
+            proposal = json.loads((experiment_dir/'proposal.json').read_text())
+            self.assertEqual(proposal['experiment_id'], exp_id)  # analysis identifier, unslugged
+
+            # manifest run keys/run_order are the raw (unslugged) names -- the
+            # analysis identifiers -- even though they contain '+'.
+            self.assertTrue(any('+' in n for n in manifest['run_order']))
+            self.assertTrue(any('+' in n for n in manifest['runs']))
+
+            # But every actual run directory on disk is percent-encoding-safe.
+            for name, item in manifest['runs'].items():
+                run_dir = battery._run_dir_for(experiment_dir, name, item['harness'])
+                self.assertTrue(run_dir.exists(), run_dir)
+                self.assertNotIn('+', str(run_dir))
+                # str(run_dir) must round-trip through urllib.parse.quote unchanged --
+                # i.e. it would never be percent-encoded into a bundle file:// URI.
+                import urllib.parse
+                self.assertEqual(urllib.parse.quote(str(run_dir), safe='/'), str(run_dir))
+
+
 class AmplifierModelEffortTests(unittest.TestCase):
     """--amplifier-model/--amplifier-effort must reach BOTH amplifier side
     profiles/manifests (plain and fd) identically, so amplifier-plain can be
@@ -946,6 +1008,61 @@ class RunTests(unittest.TestCase):
             self.assertEqual(ctx.exception.code, 3)
             ledger = [json.loads(line) for line in (root/'ledger.jsonl').read_text().splitlines()]
             self.assertTrue(any(e.get('type') == 'paused' and e.get('reason') == 'launch_cap' for e in ledger))
+
+    def test_circuit_breaker_trips_after_consecutive_infra_failures(self):
+        """Defect: a bursty scheduler ran 35 experiments of garbage after Forge
+        became unreachable, because nothing stopped it. Every dispatch here
+        raises (simulated launch crash) -- with --max-consecutive-infra-failures
+        set to 2, the THIRD launch must never happen: cmd_run stops launching,
+        pauses resumably (exit 3), and records the streak + last failure text."""
+        with tempfile.TemporaryDirectory() as tmp, _patched_battery_tasks():
+            root = self._prepared(tmp, 'claude', tasks='dev')  # 2 tasks -> up to 4 names with retries
+            attempts = {'n': 0}
+
+            def always_fails(args):
+                attempts['n'] += 1
+                raise RuntimeError(f'simulated launch crash #{attempts["n"]}')
+            forge_module, _calls = make_fake_forge({'claude': always_fails})
+            with self.assertRaises(SystemExit) as ctx:
+                battery.cmd_run(SimpleNamespace(root=str(root), experiment='e1',
+                                                 max_consecutive_infra_failures=2),
+                                 forge_module=forge_module)
+            self.assertEqual(ctx.exception.code, 3)
+            # The breaker must stop launching BEFORE exhausting every scheduled name:
+            # at most 2 real launches happened before it tripped.
+            self.assertLessEqual(attempts['n'], 2)
+            ledger = [json.loads(line) for line in (root/'ledger.jsonl').read_text().splitlines()]
+            paused = [e for e in ledger if e.get('type') == 'paused' and e.get('reason') == 'consecutive_infra_failures']
+            self.assertEqual(len(paused), 1)
+            self.assertEqual(paused[0]['consecutive_infra_failures'], 2)
+            self.assertIn('simulated launch crash', paused[0]['last_failure'])
+            # Resumable: the manifest still has unlaunched retry names queued up,
+            # never marked launched, ready for a later `battery run` to pick up.
+            manifest = json.loads((root/'experiments'/'e1'/'runs'/'manifest.json').read_text())
+            launched_names = {e['run'] for e in ledger if e.get('type') == 'run_launched'}
+            self.assertTrue(set(manifest['run_order']) - launched_names)
+
+    def test_circuit_breaker_default_is_five_and_resets_on_success(self):
+        """The default threshold (5) must not fire on the existing one-infra-
+        failure-then-succeeds retry path (test_infrastructure_failure_retries_once_
+        then_succeeds already covers success outright; this asserts the counter
+        itself resets rather than accumulating across unrelated successes)."""
+        with tempfile.TemporaryDirectory() as tmp, _patched_battery_tasks():
+            root = self._prepared(tmp, 'claude', tasks='dev')
+            attempts = {'n': 0}
+
+            def flaky_once_per_task(args):
+                attempts['n'] += 1
+                if attempts['n'] in (1, 3):
+                    raise RuntimeError('simulated launch crash')
+                return {'output': CLAUDE_STDOUT, 'exitCode': 0}
+            forge_module, _calls = make_fake_forge({'claude': flaky_once_per_task})
+            # Must complete normally (no SystemExit) -- two ISOLATED infra failures,
+            # each immediately followed by a success, never reach the default streak of 5.
+            battery.cmd_run(SimpleNamespace(root=str(root), experiment='e1'), forge_module=forge_module)
+            ledger = [json.loads(line) for line in (root/'ledger.jsonl').read_text().splitlines()]
+            self.assertFalse(any(e.get('type') == 'paused' and e.get('reason') == 'consecutive_infra_failures'
+                                  for e in ledger))
 
 
 # --------------------------------------------------------------------------

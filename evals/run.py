@@ -579,9 +579,10 @@ def scan_incomplete_runs(campaign_root, experiment_names, pid_alive=_pid_alive):
     incomplete when it has no result.json AND (no running.json, or
     running.json names a pid that is not alive). Returns {experiment:
     [run_name, ...]} for experiments with at least one incomplete run."""
+    import battery
     incomplete = {}
     for exp in experiment_names:
-        exp_dir = Path(campaign_root) / "experiments" / exp
+        exp_dir = battery.experiment_dir_for(Path(campaign_root), exp)
         manifest_path = exp_dir / "runs" / "manifest.json"
         if not manifest_path.exists():
             continue
@@ -590,8 +591,7 @@ def scan_incomplete_runs(campaign_root, experiment_names, pid_alive=_pid_alive):
         for name in manifest.get("run_order", []):
             item = manifest["runs"][name]
             harness = item.get("harness")
-            run_dir = (exp_dir / "runs" / "amplifier" / name if harness in ("amplifier-plain", "amplifier-fd")
-                       else exp_dir / "runs" / name)
+            run_dir = battery.run_dir_for(exp_dir, name, harness)
             if (run_dir / "result.json").exists():
                 continue
             running_path = run_dir / "running.json"
@@ -782,12 +782,12 @@ def check_workspace_identity(experiment_dir, proposal):
     re-derive an outcome, just re-check the hashes it already asserted)."""
     try:
         import forge_e2e
+        import battery
     except ImportError as e:  # pragma: no cover
         return False, f"cannot import forge_e2e to re-hash workspaces: {e}", {}
     by_task = {}
     for r in proposal.get("frozen_run_schedule", []):
-        run_dir = Path(experiment_dir) / "runs"
-        run_dir = (run_dir / "amplifier" / r["name"]) if r["harness"] in ("amplifier-plain", "amplifier-fd")             else (run_dir / r["name"])
+        run_dir = battery.run_dir_for(Path(experiment_dir), r["name"], r["harness"])
         ws = run_dir / "workspace"
         if not ws.exists():
             continue
@@ -1465,13 +1465,14 @@ def run_one_experiment(*, cell_id, cells_doc, suites_doc, suite_id, split, rep, 
     """prepare (skip if resuming unchanged) -> verify -> run -> reevaluate -> evaluate -> gate,
     for one (cell, suite, split, rep). Returns a dict describing what happened; raises
     EvalsError(4) pre-launch, never after `battery.py run` has been invoked."""
+    import battery
     cells_doc_cells = cells_doc["cells"]
     cell = cells_doc_cells[cell_id]
     suite = suites_doc["suites"][suite_id]
     defaults = cells_doc.get("defaults", {})
     campaign_root = Path(campaign_root)
     exp = experiment_name(cell_id, suite_id, split, rep)
-    experiment_dir = campaign_root / "experiments" / exp
+    experiment_dir = battery.experiment_dir_for(campaign_root, exp)
 
     argv = cell_to_argv(cell_id, cells_doc, suites_doc, suite_id, split, rep,
                         out_root=out_dir, base_seed=base_seed,
