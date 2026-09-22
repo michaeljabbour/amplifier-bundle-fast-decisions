@@ -767,3 +767,118 @@ and `max_benchmark_worker_launches` to `2400` to cover the 3 new cells (2
 `*-decomposed` twins plus the 1 `*-riskshadow` reference cell) across S1
 and S2, dev and holdout, at the existing 3/5-rep schedule (section 13
 Decision 5).
+
+
+## 17. Runner throughput: campaign-root split and bounded parallel timed runs (2026-09-22)
+
+Two operational fixes to `scripts/battery.py` / `evals/run.py` so the
+remaining formal-stage runs finish faster and stop crashing. Neither changes
+any measurement: no new number in `results.json`/`comparison.json` originates
+here, only how fast and how reliably the existing numbers get collected.
+
+### 17.1 Path-length defect (the six-hour outage)
+
+Amplifier names its per-project session dir by encoding the resolved
+workspace path 1:1 (`/` -> `-`) under `~/.amplifier/projects/`. The formal
+driver nests a run's workspace at
+`<out>/campaign/experiments/<cell>-<suite>-<split>-r<N>/runs/amplifier/
+<cell>-<suite>-<split>-r<N>-<task>-<harness>-a<N>/workspace`, and `<out>`
+itself is a long, timestamped path
+(`<repo>/.amplifier/evaluation/fast-decisions/<ts>-s1-dev`). For
+fast-decisions cells this encoded to 282 characters -- over macOS's 255-byte
+`NAME_MAX` -- and every such run died before it ever launched
+(`OSError: [Errno 63] File name too long`, surfaced by the receipts collector
+as `no_result_json`). Plain cells encoded to 239 and ran; this made the
+defect invisible until a fast-decisions-heavy stretch of the batch hit it,
+six hours in.
+
+**Fix.** `evals/run.py` gained `--campaign-root DIR` (default
+`~/dev/afast-ev/<basename of --out>`, created on first use): the campaign
+(experiments/runs/workspaces/receipts) now lives there instead of nested
+under `--out`. `--out` keeps only `manifest.json`, `gates.json`,
+`preflight.json`/`prompt-verification.json`, `campaign-proposal.json`, and a
+`campaign-root.txt` pointer recording where the campaign actually lives
+(`resolve_campaign_root`, `default_campaign_root`). The split is idempotent
+across `--resume`/`--report-only`: the pointer file is authoritative once
+written, and a campaign that already exists directly under
+`<out>/campaign` (pre-dating this change) is adopted in place rather than
+orphaned.
+
+A new preflight check, `workspace_path_length` (`check_workspace_path_length`
+in `evals/run.py`, reusing `battery.run_dir_for` rather than re-deriving the
+path so the check can never drift from what `battery.py` actually builds),
+computes the exact workspace path for every planned run in the frozen
+schedule and fails loudly (precondition failure, the existing exit-4 path)
+if any encoded length exceeds 240 bytes -- naming the offending run and its
+length. `preflight.json` records `max_encoded_len` (both at the top level and
+inside the check) on every invocation, pass or fail, so the margin is always
+visible, not just at the moment it's finally exceeded.
+
+**Measured margin under the new default.** For suite s1 (the 20-task
+battery), the specific worst case named when this fix was scoped --
+`judge-jev+effort+route-judged-batched`, longest task name
+(`bugfix_average_score_truncation`), harness `amplifier-fd`, attempt 1 --
+encodes to 238 characters: under the 240 limit. A broader scan across every
+cell in `cells.yaml` finds one cell with a longer id,
+`judge-local+effort+route-judged-batched` (39 vs. 37 characters), which
+pushes the same task/harness/attempt combination to 242 -- 2 over. Closing
+that residual 2 characters would mean shortening the on-disk directory name
+independently of the manifest run key (e.g. dropping the redundant
+`<experiment>-` prefix `_run_dir_for` currently repeats even though the run
+already lives under `experiments/<experiment>/...`), which requires the
+amplifier-side run id and the outer manifest key to diverge -- a coupled
+change against `forge_e2e.py`'s own sub-manifest that deserves its own
+dedicated, separately-tested change rather than a rushed addition here. Until
+that lands, the `workspace_path_length` preflight check is the backstop: a
+plan that would exceed the limit is refused in under a second, before any
+worker launches -- not discovered six hours into a run.
+
+### 17.2 Bounded parallel timed runs
+
+`scripts/battery.py run` launched every run strictly one at a time. It now
+accepts `--parallel N` (default 1, byte-identical to the prior sequential
+behavior): a bounded scheduler keeps up to `N` dispatches in flight through a
+thread pool, launching the next run as soon as a slot frees. Every ledger
+append and manifest write still happens on the main thread alone
+(single-writer), so the reservation/budget/launch-cap/retry bookkeeping is
+exactly as correct as it was before parallelism existed -- only the blocking
+wait on Forge or an external harness process overlaps. `--parallel` is
+refused outright if it exceeds `protocol.limits.max_parallel_timed_runs`
+(itself sourced from `cells.yaml`'s `budget.max_parallel_timed_runs`, plumbed
+through `campaign.py init` since HC's original wiring). `evals/run.py` gained
+a matching `--parallel N` flag, plumbed to every `battery.py run` invocation.
+
+Because the frozen schedule already groups every harness for a given task
+consecutively in `run_order` (`cmd_prepare`'s own construction: outer loop
+over shuffled tasks, inner loop over shuffled harnesses), the scheduler
+never needs to reorder anything to keep a task's paired runs (e.g.
+`amplifier-plain` and `amplifier-fd`, or a candidate and its anchor) launching
+in the same wave -- preserving that adjacency is what "matched scheduling"
+means here, and it falls out of not skipping ahead in `run_order`.
+
+Every result now carries two additional integer fields:
+`concurrency_at_launch` (how many runs, including itself, were in flight the
+instant it launched) and `concurrency_max` (the peak in-flight count observed
+at any point during its life -- updated as later runs join the same window,
+not just at launch). At `--parallel 1` both are always `1`.
+
+**Validity conditions for shared-machine timing (why raising
+`max_parallel_timed_runs` from 1 to 3 is sound, not just convenient).**
+Measured wall time for a timed run is 93-95% remote provider round-trip
+spans, not local compute -- so up to 3 runs may share the machine without the
+measurement becoming noise:
+
+- Judge decision latency p95 (from `fast_decisions:*` receipts) must stay
+  under 200ms under load; this is measured and reported per cell, not
+  assumed.
+- Absolute times (e.g. an isolated cell's mean wall-clock) carry a load
+  caveat when collected under `--parallel > 1` -- they are not a clean
+  cross-run comparison point.
+- Relative comparisons *within a wave* (the pairs that actually launched
+  together, sharing the same load) remain valid: the release gate always
+  uses quality plus matched relative time from the same wave, never an
+  absolute time compared across waves collected under different load.
+
+`cells.yaml`'s `budget.max_parallel_timed_runs` is raised to `3` on this
+basis (previously pinned at `1` with a "never raise this" comment written
+before this section's validity conditions existed to justify raising it).

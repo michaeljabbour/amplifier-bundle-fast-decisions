@@ -139,11 +139,63 @@ def experiment_name(cell_id, suite_id, split, rep):
     return f"{cell_id}-{suite_id}-{split}-r{rep}"
 
 
+# ---------------------------------------------------------------------------
+# campaign-root split (see STUDY-DESIGN.md section 17 / the path-length defect
+# this fixes): the campaign's experiments/runs/workspaces/receipts are hosted
+# outside --out by default, because Amplifier encodes its per-project session
+# dir 1:1 from the resolved workspace path, and a workspace nested deep under
+# --out (which itself tends to be a long, timestamped path under a repo's
+# .amplifier/evaluation/... tree) blows past macOS's 255-byte NAME_MAX. --out
+# keeps manifest.json, gates.json, preflight/prompt-verification,
+# campaign-proposal.json, and a campaign-root.txt pointer recording where the
+# campaign actually lives.
+# ---------------------------------------------------------------------------
+
+def default_campaign_root(out_dir):
+    """Pure (no filesystem writes): where a campaign lives when --campaign-root
+    is not given. Kept short and outside --out on purpose -- see module
+    docstring above this section."""
+    return Path.home() / "dev" / "afast-ev" / Path(out_dir).name
+
+
+def resolve_campaign_root(out_dir, campaign_root_arg):
+    """Idempotent: on --resume/--report-only, the campaign-root.txt pointer
+    (if present) is authoritative -- the campaign's actual location, not a
+    freshly recomputed default -- unless --campaign-root explicitly disagrees,
+    which is a hard error (never a silent split-brain campaign). A campaign
+    that already exists directly under --out/campaign from before this
+    pointer file existed is adopted in place rather than orphaned."""
+    out_dir = Path(out_dir)
+    pointer = out_dir / "campaign-root.txt"
+    if pointer.exists():
+        recorded = Path(pointer.read_text(encoding="utf-8").strip())
+        if campaign_root_arg is not None:
+            requested = Path(campaign_root_arg).expanduser().resolve()
+            if requested != recorded:
+                raise EvalsError(
+                    2, f"--campaign-root {requested} disagrees with the campaign root "
+                       f"already recorded in {pointer}: {recorded}")
+        campaign_root = recorded
+    elif (out_dir / "campaign" / "protocol.json").exists():
+        campaign_root = out_dir / "campaign"
+    elif campaign_root_arg is not None:
+        campaign_root = Path(campaign_root_arg).expanduser().resolve()
+    else:
+        campaign_root = default_campaign_root(out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    campaign_root.mkdir(parents=True, exist_ok=True)
+    pointer.write_text(str(campaign_root) + "\n", encoding="utf-8")
+    return campaign_root
+
+
 def cell_to_argv(cell_id, cells_doc, suites_doc, suite_id, split, rep, *, out_root,
                   base_seed, baseline_source, candidate_source, candidate_sha,
-                  polyglot_root=None):
+                  polyglot_root=None, campaign_root=None):
     """The exact `battery.py prepare` argv for one (cell, suite, split, rep).
-    Exhaustive per spec section 3: nothing is passed that isn't listed there."""
+    Exhaustive per spec section 3: nothing is passed that isn't listed there.
+    `campaign_root` (see resolve_campaign_root) is where battery.py's --root
+    actually lives; when omitted it falls back to the pre-campaign-root-split
+    default of `out_root/campaign`, matching every existing caller/test."""
     cells = cells_doc["cells"]
     defaults = cells_doc.get("defaults", {})
     effort_profiles = cells_doc.get("effort_profiles", {})
@@ -163,8 +215,9 @@ def cell_to_argv(cell_id, cells_doc, suites_doc, suite_id, split, rep, *, out_ro
     if amplifier_bundle not in ("foundation", "lean"):
         raise EvalsError(2, f"unknown amplifier_bundle {amplifier_bundle!r} for cell {cell_id!r}")
 
+    root_for_battery = Path(campaign_root) if campaign_root is not None else Path(out_root) / "campaign"
     argv = [
-        "--root", str(Path(out_root) / "campaign"),
+        "--root", str(root_for_battery),
         "--experiment", exp,
         "--harnesses", ",".join(cell["harnesses"]),
         "--seed", str(seed),
@@ -745,6 +798,43 @@ def check_workspace_identity(experiment_dir, proposal):
     return True, None, {t: (h[0] if h else None) for t, h in by_task.items()}
 
 
+WORKSPACE_PATH_MAX_ENCODED_LEN = 240
+
+
+def check_workspace_path_length(experiment_dir, proposal, max_len=WORKSPACE_PATH_MAX_ENCODED_LEN):
+    """Amplifier names its per-project session dir by encoding the resolved
+    workspace path 1:1 ('/' -> '-') under ~/.amplifier/projects/ (see
+    forge_e2e.py's own `slug = str(workspace.resolve()).replace(...)`, reused
+    here so this check can never drift from what actually gets encoded).
+    macOS enforces a 255-byte NAME_MAX per path component; a too-long
+    workspace path silently kills the run before it ever launches
+    (`OSError: [Errno 63] File name too long`, surfaced by battery.py as
+    `no_result_json`). This recomputes the exact workspace path battery.py
+    will use for EVERY planned run (via battery.run_dir_for, reused rather
+    than re-derived) and fails loudly, with the longest path and its length,
+    before a single run launches -- rather than six hours into a campaign.
+
+    Returns (passed: bool, reason: str|None, max_encoded_len: int)."""
+    try:
+        import battery
+    except ImportError as e:  # pragma: no cover
+        return False, f"cannot import battery to compute run_dir_for: {e}", 0
+
+    worst_len = 0
+    worst_name = None
+    for r in proposal.get("frozen_run_schedule", []):
+        run_dir = battery.run_dir_for(Path(experiment_dir), r["name"], r["harness"])
+        workspace = run_dir / "workspace"
+        encoded = str(workspace.resolve()).replace("\\", "-").replace("/", "-").replace(":", "")
+        if len(encoded) > worst_len:
+            worst_len, worst_name = len(encoded), r["name"]
+
+    if worst_len > max_len:
+        return False, (f"workspace path too long for run {worst_name!r}: "
+                        f"{worst_len} encoded chars > {max_len} limit"), worst_len
+    return True, None, worst_len
+
+
 def check_toolchains(required, which=None):
     import shutil as _shutil
     which = which or _shutil.which
@@ -837,6 +927,9 @@ def run_verification(experiment_dir, proposal, cell, suite, split, candidate_sha
     ok6, reason6, hashes = check_workspace_identity(experiment_dir, proposal)
     checks["workspace_identity"] = {"passed": ok6, "reason": reason6, "per_task_hash": hashes}
 
+    ok6b, reason6b, max_encoded_len = check_workspace_path_length(experiment_dir, proposal)
+    checks["workspace_path_length"] = {"passed": ok6b, "reason": reason6b, "max_encoded_len": max_encoded_len}
+
     ok7, reason7 = check_toolchains(required_toolchains, which=which)
     checks["toolchains"] = {"passed": ok7, "reason": reason7}
 
@@ -853,7 +946,7 @@ def run_verification(experiment_dir, proposal, cell, suite, split, candidate_sha
     checks["prompt_identity"] = {"passed": prompt_verification["ok"], "reason": None}
 
     ok_all = all(c["passed"] for c in checks.values())
-    return ok_all, {"checks": checks}, prompt_verification
+    return ok_all, {"checks": checks, "max_encoded_len": max_encoded_len}, prompt_verification
 
 
 # ---------------------------------------------------------------------------
@@ -1281,6 +1374,15 @@ def build_arg_parser():
                     help="default: 5 on --split holdout, else 3 (Decision 2026-09-20b, "
                          "STUDY-DESIGN.md section 12)")
     p.add_argument("--out", required=True)
+    p.add_argument("--campaign-root", default=None,
+                    help="Where the campaign (experiments/runs/workspaces/receipts) lives. "
+                         "Default: ~/dev/afast-ev/<basename of --out> (see STUDY-DESIGN.md section 17). "
+                         "--out itself keeps only manifest.json, gates.json, preflight/prompt-verification, "
+                         "campaign-proposal.json, and a campaign-root.txt pointer.")
+    p.add_argument("--parallel", type=int, default=1,
+                    help="Max runs in flight at once, plumbed through to every `battery.py run` "
+                         "(default 1 = sequential, unchanged behavior). Refused by battery.py if it "
+                         "exceeds cells.yaml's budget.max_parallel_timed_runs.")
     p.add_argument("--baseline-source")
     p.add_argument("--candidate-source", default=str(REPO_ROOT))
     p.add_argument("--candidate-sha")
@@ -1313,11 +1415,13 @@ def _write_json(path, value):
     Path(path).write_text(json.dumps(value, indent=2) + "\n", encoding="utf-8")
 
 
-def init_or_adopt_campaign(out_dir, cells_doc, *, baseline_source, candidate_source,
+def init_or_adopt_campaign(out_dir, cells_doc, *, campaign_root, baseline_source, candidate_source,
                             installed_cache, history_index, host_python, events_dir):
     """section 4: idempotent `campaign.py init`. Skips (does not error) when
-    <out>/campaign/protocol.json already exists."""
-    campaign_root = Path(out_dir) / "campaign"
+    <campaign_root>/protocol.json already exists. `campaign_root` is resolved
+    by the caller via resolve_campaign_root (see that function's docstring
+    for the --out vs --campaign-root split)."""
+    campaign_root = Path(campaign_root)
     if (campaign_root / "protocol.json").exists():
         return {"adopted": True}
     proposal_path = Path(out_dir) / "campaign-proposal.json"
@@ -1355,9 +1459,9 @@ def init_or_adopt_campaign(out_dir, cells_doc, *, baseline_source, candidate_sou
 
 
 def run_one_experiment(*, cell_id, cells_doc, suites_doc, suite_id, split, rep, out_dir,
-                        base_seed, baseline_source, candidate_source, candidate_sha,
+                        campaign_root, base_seed, baseline_source, candidate_source, candidate_sha,
                         polyglot_root, installed_cache, host_python, events_dir,
-                        backfill_exec=False, which=None, doctor_runner=None):
+                        backfill_exec=False, which=None, doctor_runner=None, parallel=1):
     """prepare (skip if resuming unchanged) -> verify -> run -> reevaluate -> evaluate -> gate,
     for one (cell, suite, split, rep). Returns a dict describing what happened; raises
     EvalsError(4) pre-launch, never after `battery.py run` has been invoked."""
@@ -1365,14 +1469,15 @@ def run_one_experiment(*, cell_id, cells_doc, suites_doc, suite_id, split, rep, 
     cell = cells_doc_cells[cell_id]
     suite = suites_doc["suites"][suite_id]
     defaults = cells_doc.get("defaults", {})
-    campaign_root = Path(out_dir) / "campaign"
+    campaign_root = Path(campaign_root)
     exp = experiment_name(cell_id, suite_id, split, rep)
     experiment_dir = campaign_root / "experiments" / exp
 
     argv = cell_to_argv(cell_id, cells_doc, suites_doc, suite_id, split, rep,
                         out_root=out_dir, base_seed=base_seed,
                         baseline_source=baseline_source, candidate_source=candidate_source,
-                        candidate_sha=candidate_sha, polyglot_root=polyglot_root)
+                        candidate_sha=candidate_sha, polyglot_root=polyglot_root,
+                        campaign_root=campaign_root)
 
     action, reason = resume_detection(experiment_dir, argv)
     if action == "error":
@@ -1424,7 +1529,8 @@ def run_one_experiment(*, cell_id, cells_doc, suites_doc, suite_id, split, rep, 
     if backfill_exec:
         invoke_tool("battery", ["backfill-exec", "--root", str(campaign_root), "--experiment", exp])
 
-    invoke_tool("battery", ["run", "--root", str(campaign_root), "--experiment", exp])
+    invoke_tool("battery", ["run", "--root", str(campaign_root), "--experiment", exp,
+                            "--parallel", str(parallel)])
     invoke_tool("battery", ["reevaluate", "--root", str(campaign_root), "--experiment", exp,
                             "--reason", "post-run rescore"])
 
@@ -1493,6 +1599,11 @@ def main(argv=None):
             raise EvalsError(2, "--split holdout requires PREREGISTRATION.md to exist in --out first")
 
         if args.dry_run:
+            # Pure preview: compute the same default a real run would resolve,
+            # but never touch the filesystem (no mkdir, no pointer file) --
+            # resolve_campaign_root is the side-effecting counterpart used below.
+            campaign_root_preview = (Path(args.campaign_root).expanduser().resolve()
+                                      if args.campaign_root else default_campaign_root(out_dir))
             all_argv = []
             for cid in cell_ids:
                 for rep in range(1, reps + 1):
@@ -1501,6 +1612,7 @@ def main(argv=None):
                         out_root=out_dir, base_seed=args.base_seed,
                         baseline_source=baseline_source or "", candidate_source=candidate_source,
                         candidate_sha=candidate_sha, polyglot_root=args.polyglot_root,
+                        campaign_root=campaign_root_preview,
                     ))
             est = cost_estimate(len(cell_ids), reps, cells_doc)
             payload = {"out": str(out_dir), "cells": cell_ids, "exit": 0, "reason": "dry-run",
@@ -1508,9 +1620,12 @@ def main(argv=None):
             _print_result(payload)
             return 0
 
+        campaign_root = resolve_campaign_root(out_dir, args.campaign_root)
+
         if not args.report_only:
             init_or_adopt_campaign(
-                out_dir, cells_doc, baseline_source=baseline_source, candidate_source=candidate_source,
+                out_dir, cells_doc, campaign_root=campaign_root,
+                baseline_source=baseline_source, candidate_source=candidate_source,
                 installed_cache=args.installed_cache, history_index=args.history_index,
                 host_python=args.host_python, events_dir=args.events_dir,
             )
@@ -1557,7 +1672,6 @@ def main(argv=None):
                 seeds.append(args.base_seed + rep)
                 try:
                     if args.report_only:
-                        campaign_root = out_dir / "campaign"
                         exp = experiment_name(cid, suite_id, split, rep)
                         invoke_tool("battery", ["reevaluate", "--root", str(campaign_root), "--experiment", exp,
                                                 "--reason", "report-only rescore"])
@@ -1578,6 +1692,7 @@ def main(argv=None):
                             candidate_sha=candidate_sha, polyglot_root=args.polyglot_root,
                             installed_cache=args.installed_cache, host_python=args.host_python,
                             events_dir=args.events_dir, backfill_exec=args.backfill_exec,
+                            campaign_root=campaign_root, parallel=args.parallel,
                         )
                 except EvalsError as e:
                     if e.code == 3:
@@ -1622,7 +1737,6 @@ def main(argv=None):
         # comparison.json on disk is left exactly as the primary flow set it.
         secondary_comparisons_by_cell = {}
         if not args.dry_run:
-            campaign_root = out_dir / "campaign"
             for cid in cell_ids:
                 cell = cells_doc["cells"][cid]
                 secondary_anchor = cell.get("secondary_anchor")
@@ -1660,7 +1774,7 @@ def main(argv=None):
                     label = series_label(cid, rep, harness, cell, cells_doc.get("defaults", {}),
                                           cells_doc.get("effort_profiles", {}),
                                           cells_doc.get("model_routing_profiles", {}))
-                    series_args.append(f"{label}={out_dir / 'campaign'}:{exp}:{harness}")
+                    series_args.append(f"{label}={campaign_root}:{exp}:{harness}")
 
         report_out = out_dir / "report"
         report_argv = ["--out", str(report_out),
@@ -1741,7 +1855,6 @@ def main(argv=None):
         # Exit 6: on --resume, any planned experiment still missing a result.json
         # with no live worker means the batch did not actually finish.
         if args.resume and not args.report_only:
-            campaign_root = out_dir / "campaign"
             all_experiments = [e for c in cells_report for e in c["experiments"]]
             incomplete = scan_incomplete_runs(campaign_root, all_experiments)
             if incomplete:

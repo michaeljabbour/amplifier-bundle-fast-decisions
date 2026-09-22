@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import argparse
 from collections import Counter
+from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait as _futures_wait
 from datetime import datetime, timezone
 import hashlib
 import json
@@ -24,6 +25,7 @@ from pathlib import Path
 import random
 import subprocess
 import sys
+import threading
 import time
 import uuid
 
@@ -132,6 +134,12 @@ def _run_dir_for(experiment_dir, name, harness):
     if harness in AMPLIFIER_HARNESSES:
         return runs_root/'amplifier'/name
     return runs_root/name
+
+
+# Public alias: evals/run.py's workspace-path-length preflight check reuses this
+# exact naming (rather than re-deriving it) so the two tools can never drift
+# apart on where a run's workspace actually lives.
+run_dir_for = _run_dir_for
 
 
 def _freeze_candidate_source(candidate_source, experiment_dir, candidate_sha=None):
@@ -921,6 +929,19 @@ def _dispatch(item, name, experiment_dir, manifest, proposal, launcher=None, wai
 
 
 def cmd_run(args, launcher=None, waiter=None, closer=None, forge_module=None):
+    """Drives every not-yet-finished run in manifest['run_order'] to a
+    result.json, honoring the launch-cap/budget pauses exactly as before.
+
+    `--parallel N` (args.parallel, default 1) keeps up to N runs in flight at
+    once via a bounded thread pool: only the actual dispatch (the blocking
+    wait on Forge/an external harness process) runs concurrently. Every
+    ledger append and manifest.json write still happens on this thread alone
+    (single-writer), so the reservation/budget/retry bookkeeping is exactly
+    as sequential -- and exactly as correct -- as it was before parallelism
+    existed. At N=1 this reduces to the original one-at-a-time loop, just
+    routed through a one-worker pool, with two extra numeric fields
+    (concurrency_at_launch/concurrency_max, both 1) recorded on every result.
+    """
     forge_e2e.forge_self_heal({'forge_py': str(forge_e2e.FORGE)})  # cheap; repairs spawn-helper exec bits before any launch
     root = Path(args.root).expanduser().resolve()
     experiment_dir = root/'experiments'/args.experiment
@@ -930,48 +951,41 @@ def cmd_run(args, launcher=None, waiter=None, closer=None, forge_module=None):
     _register_task_source_from_proposal(proposal)
     per_launch = proposal.get('per_launch_usd') or protocol['reservation_policy']['per_launch_usd']
 
-    i = 0
-    while True:
-        manifest = _read_json(runs_root/'manifest.json')
-        if i >= len(manifest['run_order']):
-            break
-        name = manifest['run_order'][i]
-        i += 1
-        item = manifest['runs'][name]
-        run_dir = _run_dir_for(experiment_dir, name, item['harness'])
-        if (run_dir/'result.json').exists():
-            continue
+    max_parallel = max(1, int(getattr(args, 'parallel', None) or 1))
+    protocol_max_parallel = protocol['limits'].get('max_parallel_timed_runs', 1)
+    if max_parallel > protocol_max_parallel:
+        _fail(4, f'--parallel {max_parallel} exceeds protocol.limits.max_parallel_timed_runs '
+                 f'({protocol_max_parallel})')
 
-        launches_used = sum(1 for e in campaign._ledger_lines(root) if e.get('type') == 'run_launched')
-        if launches_used >= protocol['limits']['max_benchmark_worker_launches']:
-            campaign._ledger_append(root, {'type': 'paused', 'reason': 'launch_cap',
-                                            'experiment': args.experiment, 'run': name})
-            _print({'paused': True, 'reason': 'launch_cap', 'run': name})
-            sys.exit(3)
+    # concurrency bookkeeping: `peaks[name]` is the highest in-flight count
+    # observed at any point during that run's life so far (never re-derived
+    # once popped at completion). Guarded by `scheduler_lock` because
+    # `_note_launch`/`_note_finish` run on this (the only) thread that
+    # mutates scheduler state, but futures complete on worker threads that
+    # call back into `_drain_one` -- still this same thread, since
+    # `_futures_wait` blocks it; the lock is cheap insurance, not load-bearing.
+    scheduler_lock = threading.Lock()
+    inflight_state = {'count': 0, 'peaks': {}}
 
-        totals = campaign._budget_totals(root)
-        cap = protocol['limits']['estimated_total_usd']
-        spent = totals['settled_benchmark']+totals['unknown_spend']+totals['supervisor_usd']+totals['active_reservations']
-        if spent+per_launch > cap:
-            campaign._ledger_append(root, {'type': 'paused', 'reason': 'budget',
-                                            'experiment': args.experiment, 'run': name})
-            _print({'paused': True, 'reason': 'budget', 'run': name})
-            sys.exit(3)
+    def _note_launch(name):
+        with scheduler_lock:
+            inflight_state['count'] += 1
+            n = inflight_state['count']
+            inflight_state['peaks'][name] = n
+            for other in inflight_state['peaks']:
+                if inflight_state['peaks'][other] < n:
+                    inflight_state['peaks'][other] = n
+            return n
 
-        rid = str(uuid.uuid4())
-        campaign._ledger_append(root, {'type': 'reservation', 'id': rid, 'usd': per_launch, 'purpose': f'run:{name}'})
-        campaign._ledger_append(root, {'type': 'run_launched', 'experiment': args.experiment, 'run': name,
-                                        'reservation': rid, 'attempt': item.get('attempt', 1)})
+    def _note_finish(name):
+        with scheduler_lock:
+            peak = inflight_state['peaks'].pop(name, 1)
+            inflight_state['count'] -= 1
+            return peak
 
-        try:
-            result = _dispatch(item, name, experiment_dir, manifest, proposal,
-                                launcher=launcher, waiter=waiter, closer=closer, forge_module=forge_module)
-        except Exception as exc:  # noqa: BLE001 -- any unexpected dispatch failure is an infra failure, not a crash
-            result = {'name': name, 'task': item['task'], 'harness': item['harness'],
-                      'attempt': item.get('attempt', 1), 'model': None, 'wall_time_ms': None,
-                      'cost_usd': None, 'cost_billable': None, 'timed_out': None,
-                      'infrastructure_failure': True, 'outcome_passed': False,
-                      'notes': [f'dispatch_error:{str(exc)[:300]}']}
+    def _settle_and_record(name, item, run_dir, rid, result):
+        concurrency_max = _note_finish(name)
+        result = {**result, 'concurrency_max': concurrency_max}
         run_dir.mkdir(parents=True, exist_ok=True)
         _dump(run_dir/'result.json', result)
 
@@ -996,6 +1010,7 @@ def cmd_run(args, launcher=None, waiter=None, closer=None, forge_module=None):
                                         'cost_usd': result.get('cost_usd'), 'infrastructure_failure': infra_failure})
 
         if infra_failure and item.get('attempt', 1) == 1:
+            manifest = _read_json(runs_root/'manifest.json')
             already_retried = any(
                 v['task'] == item['task'] and v['harness'] == item['harness'] and v.get('attempt', 1) == 2
                 for v in manifest['runs'].values())
@@ -1017,6 +1032,80 @@ def cmd_run(args, launcher=None, waiter=None, closer=None, forge_module=None):
                                                 'experiment': args.experiment, 'run': retry_name})
 
         campaign._write_checkpoint(root)
+
+    in_flight = {}  # future -> (name, item, run_dir, rid)
+
+    def _drain_one():
+        """Block until at least one in-flight dispatch completes, then settle it."""
+        done, _pending = _futures_wait(list(in_flight.keys()), return_when=FIRST_COMPLETED)
+        for fut in done:
+            name, item, run_dir, rid = in_flight.pop(fut)
+            result = fut.result()  # never raises: the worker below catches everything
+            _settle_and_record(name, item, run_dir, rid, result)
+
+    executor = ThreadPoolExecutor(max_workers=max_parallel)
+    try:
+        i = 0
+        while True:
+            manifest = _read_json(runs_root/'manifest.json')
+            if i < len(manifest['run_order']) and len(in_flight) < max_parallel:
+                name = manifest['run_order'][i]
+                item = manifest['runs'][name]
+                run_dir = _run_dir_for(experiment_dir, name, item['harness'])
+                if (run_dir/'result.json').exists():
+                    i += 1
+                    continue
+
+                launches_used = sum(1 for e in campaign._ledger_lines(root) if e.get('type') == 'run_launched')
+                if launches_used >= protocol['limits']['max_benchmark_worker_launches']:
+                    if in_flight:
+                        _drain_one()
+                        continue
+                    campaign._ledger_append(root, {'type': 'paused', 'reason': 'launch_cap',
+                                                    'experiment': args.experiment, 'run': name})
+                    _print({'paused': True, 'reason': 'launch_cap', 'run': name})
+                    sys.exit(3)
+
+                totals = campaign._budget_totals(root)
+                cap = protocol['limits']['estimated_total_usd']
+                spent = totals['settled_benchmark']+totals['unknown_spend']+totals['supervisor_usd']+totals['active_reservations']
+                if spent+per_launch > cap:
+                    if in_flight:
+                        _drain_one()
+                        continue
+                    campaign._ledger_append(root, {'type': 'paused', 'reason': 'budget',
+                                                    'experiment': args.experiment, 'run': name})
+                    _print({'paused': True, 'reason': 'budget', 'run': name})
+                    sys.exit(3)
+
+                i += 1
+                rid = str(uuid.uuid4())
+                campaign._ledger_append(root, {'type': 'reservation', 'id': rid, 'usd': per_launch, 'purpose': f'run:{name}'})
+                campaign._ledger_append(root, {'type': 'run_launched', 'experiment': args.experiment, 'run': name,
+                                                'reservation': rid, 'attempt': item.get('attempt', 1)})
+                concurrency_at_launch = _note_launch(name)
+
+                def _run_and_catch(item=item, name=name, manifest=manifest, concurrency_at_launch=concurrency_at_launch):
+                    try:
+                        result = _dispatch(item, name, experiment_dir, manifest, proposal,
+                                            launcher=launcher, waiter=waiter, closer=closer, forge_module=forge_module)
+                    except Exception as exc:  # noqa: BLE001 -- any unexpected dispatch failure is an infra failure, not a crash
+                        result = {'name': name, 'task': item['task'], 'harness': item['harness'],
+                                  'attempt': item.get('attempt', 1), 'model': None, 'wall_time_ms': None,
+                                  'cost_usd': None, 'cost_billable': None, 'timed_out': None,
+                                  'infrastructure_failure': True, 'outcome_passed': False,
+                                  'notes': [f'dispatch_error:{str(exc)[:300]}']}
+                    return {**result, 'concurrency_at_launch': concurrency_at_launch}
+
+                fut = executor.submit(_run_and_catch)
+                in_flight[fut] = (name, item, run_dir, rid)
+                continue
+
+            if not in_flight:
+                break
+            _drain_one()
+    finally:
+        executor.shutdown(wait=True)
     _print({'experiment': args.experiment, 'done': True})
 
 
@@ -1933,6 +2022,9 @@ def main(argv=None):
     p = sub.add_parser('run')
     p.add_argument('--root', required=True)
     p.add_argument('--experiment', required=True)
+    p.add_argument('--parallel', type=int, default=1,
+                    help='Max runs in flight at once (default 1 = sequential, byte-identical to today). '
+                         'Refused if it exceeds protocol.limits.max_parallel_timed_runs.')
     p.set_defaults(func=cmd_run)
 
     p = sub.add_parser('reevaluate')

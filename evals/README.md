@@ -139,6 +139,49 @@ Re-scores from preserved workspaces (`battery.py reevaluate`), re-evaluates, and
 regenerates the report. This is the **only** sanctioned way to change a number
 after the fact.
 
+## Where the campaign actually lives (`--campaign-root`)
+
+`--out` keeps only `manifest.json`, `gates.json`, `preflight.json`/
+`prompt-verification.json`, `campaign-proposal.json`, and a
+`campaign-root.txt` pointer. The campaign itself (experiments, runs,
+workspaces, receipts) lives elsewhere by default:
+
+```
+~/dev/afast-ev/<basename of --out>
+```
+
+so its deeply nested run-dir paths don't count against `--out`'s own path
+budget (see `STUDY-DESIGN.md` section 17 -- a workspace path over macOS's
+255-byte `NAME_MAX` silently kills the run before it launches). Override with:
+
+```bash
+python3 evals/run.py --campaign-root /some/other/place ...
+```
+
+Set once per `--out` directory; `--campaign-root` on a later `--resume`/
+`--report-only` call must agree with the value already recorded in
+`campaign-root.txt`, or `run.py` refuses (exit 2) rather than silently
+splitting one campaign across two locations. A new preflight check,
+`workspace_path_length`, fails loudly (exit 4) before any worker launches if
+the plan would still exceed the limit; `preflight.json`'s `max_encoded_len`
+reports the margin on every run, pass or fail.
+
+## Running runs in parallel (`--parallel`)
+
+```bash
+python3 evals/run.py --parallel 3 --suite s1 --split dev --cells all --reps 3 --out <dir>
+```
+
+Keeps up to `N` timed runs in flight at once (default `1`, unchanged
+sequential behavior), plumbed through to every `battery.py run` invocation.
+Refused if `N` exceeds `cells.yaml`'s `budget.max_parallel_timed_runs` (`3`
+by default -- see `STUDY-DESIGN.md` section 17 for the validity conditions
+that make sharing the machine sound: measured wall time is 93-95% remote
+provider spans, not local compute). Every result gains
+`concurrency_at_launch`/`concurrency_max`; relative comparisons within a
+wave stay valid, absolute times collected under `--parallel > 1` carry a
+load caveat.
+
 ---
 
 ## Sanity-check protocol -- do this for every cell, every time
