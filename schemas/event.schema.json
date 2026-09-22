@@ -48,7 +48,9 @@
         "fast_decisions:model_routed",
         "fast_decisions:escalation_judged",
         "fast_decisions:phase_judged",
-        "fast_decisions:decided_batch"
+        "fast_decisions:decided_batch",
+        "fast_decisions:escalation_signals",
+        "fast_decisions:tool_risk"
       ]
     },
     "session_id": {

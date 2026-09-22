@@ -701,3 +701,69 @@ strictly fewer `swebench-resolved` passes than `amplifier-fd-incumbent` on
 the same 30 instances, or fewer than `amplifier-plain` -- is reported as a
 regression on this specific slice, not silently absorbed into the S1/S2
 confirmed claim.
+
+---
+
+## 16. Decomposed escalation signals and tool-risk shadow classification (2026-09-22)
+
+**HC10 -- decomposed escalation signals.** `judge-local+effort+route-decomposed`
+(local judge, routing, `escalation_judge: decomposed`; anchor `plain-sonnet`,
+secondary_anchor `judge-local+effort+route-judged`) and its jev twin
+`judge-jev+effort+route-decomposed`. **Hypothesis:** combining five atomic
+yes/no signals (`plan_derailed`, `repeated_tool_errors`, `tests_failing`,
+`unfamiliar_code`, `beyond_tier`) in code via a weighted sum keeps or
+improves completed-task quality while reducing false escalations, compared
+to trusting a single judged "should we escalate?" verdict (HC05's
+`escalation_judge: judge`) -- the same rationale independent Jev audits
+report for atomic signal decomposition generally (section 14's framing
+extended to escalation itself, not just the read-shortcut). **Mechanism
+gate:** `fast_decisions:escalation_signals` receipts present
+(`require_judged: true`, reusing the same `judged_engaged` computation
+section 14 defines for `escalation_judged`/`phase_judged` -- an
+`escalation_signals` receipt satisfies it identically). **Kill criterion:**
+quality drop on the dev split, or a false-escalation rate (escalations
+where the eventual outcome did not need the stronger model) that is not
+strictly better than the `-judged` twin's.
+
+**Decisive comparison.** `judge-local+effort+route-decomposed` vs
+`judge-local+effort+route-judged` (and the jev pair identically) answers
+"does decomposing the verdict into signals combined in code beat trusting
+the model's own combined judgment?" -- both hand the escalate-or-not call
+away from pure deterministic rules, differing only in HOW the judge's
+signal is used (one combined choice vs five independent probabilities
+weighted in code). This is a plain re-use of `battery.py evaluate`'s
+existing anchor-comparison machinery pointed at the `-judged` twin's
+same-batch experiment, per section 12 Decision 1's pattern -- no new
+measurement logic.
+
+**Decision rule (fed to `DESIGN-BRIDGE.md`).** Decomposed escalation
+becomes the recommended `escalation_judge` mode ONLY if it wins-or-ties on
+time against its `-judged` twin, quality is non-inferior, its mechanism
+gate is green on every rep, AND its false-escalation rate is strictly
+lower than the `-judged` twin's on the dev split. Otherwise `"judge"`
+(HC05's single verdict) remains the recommended judged mode, independent
+of whatever `escalation_weights` tuning might separately be explored.
+
+**HC11 -- tool-risk shadow classification.** `judge-local+effort-incumbent-riskshadow`
+(`tool_risk_shadow: true`, otherwise identical to the incumbent
+`judge-local+effort-incumbent`; anchor `plain`, secondary_anchor
+`judge-local+effort-incumbent`). **Purpose:** measure the wall-clock cost
+of asking a batched `destructive` / `touches_production` / `category`
+classification before every tool call (extra backend round-trips on the
+tool-execution critical path), and collect `fast_decisions:tool_risk`
+receipts as labeled data for a future deny/ask evaluation -- this cell
+does NOT itself evaluate whether tool-risk classification should ever gate
+execution; it only measures overhead and gathers labels. **Mechanism
+gate:** identical to the incumbent's (`scored_backend: ollama, min_scored:
+1, require_effort_phases: ["explore:low"]`) -- `tool_risk_shadow` never
+changes what gets scored or how effort routes, only whether an additional,
+non-authoritative classification receipt is also emitted. **Kill
+criterion:** none -- this is a cost-measurement and label-collection cell,
+not a candidate under evaluation; it is reported alongside the incumbent's
+own numbers, never compared for a win/loss verdict.
+
+**Budget.** `cells.yaml`'s `budget.estimated_total_usd` is raised to `1800`
+and `max_benchmark_worker_launches` to `2400` to cover the 3 new cells (2
+`*-decomposed` twins plus the 1 `*-riskshadow` reference cell) across S1
+and S2, dev and holdout, at the existing 3/5-rep schedule (section 13
+Decision 5).

@@ -1,10 +1,18 @@
 """Local decide endpoint for Laya, an open-source typed-decision classifier.
 
-Speaks the ``{state, questions} -> {answers}`` shape ``laya_mlx``/``laya``
-return: a plain pass-through, not a reinterpretation. ``LayaBackend``
-(local_backend.py) is the client for this server; the same wire contract is
-what a hosted Laya deployment would also serve, so this file doubles as
-that interop reference.
+Accepts Jev's exact request shape (``{state, model?, questions: {id:
+{type, instructions, criteria}}}``) at ``POST /v1/systemone`` -- the same
+path ``JevBackend``'s stdlib fallback transport posts to -- with
+``POST /v1/decide`` kept as an alias (the path ``LayaBackend`` already
+uses). Both routes answer with Jev's shape (``{model, answers: {id:
+{type, noul} | {type, choice, probabilities, confidence} | {type, score,
+legend, probabilities, confidence}}, usage}``): whatever ``laya_mlx``/
+``laya``'s ``agent.predict()`` returns is normalized into that per-question
+shape, filling in ``confidence`` via ``(n*p_max-1)/(n-1)`` (reference only)
+when the agent did not report one. ``LayaBackend`` (local_backend.py) is
+the client for this server and keeps reading ``probabilities`` exactly as
+before -- this normalization only guarantees the wire shape, it does not
+change what ``LayaBackend`` consumes.
 
 Run:
     python -m amplifier_fast_decisions.laya_server --host 127.0.0.1 --port 8090
@@ -27,6 +35,85 @@ DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 8090
 DEFAULT_MODEL = "aac6fef/laya-mlx"
 DEFAULT_DTYPE = "float16"
+
+# Jev's canonical decide path; /v1/decide is kept as an alias since
+# LayaBackend (local_backend.py) already posts there.
+DECIDE_PATHS = ("/v1/systemone", "/v1/decide")
+
+
+def _confidence_from_probabilities(probabilities: Any) -> float | None:
+    """``(n * p_max - 1) / (n - 1)`` -- reference-only confidence derived
+    from a probability distribution when the agent did not report one of
+    its own. ``None`` when there are fewer than two alternatives or the
+    distribution is malformed."""
+    if not isinstance(probabilities, dict) or len(probabilities) < 2:
+        return None
+    values = [
+        v
+        for v in probabilities.values()
+        if isinstance(v, (int, float)) and not isinstance(v, bool)
+    ]
+    if len(values) != len(probabilities):
+        return None
+    n = len(values)
+    p_max = max(values)
+    return (n * p_max - 1) / (n - 1)
+
+
+def _normalize_answer(spec: Any, raw: Any) -> Any:
+    """Reshape one raw per-question answer from ``agent.predict()`` into
+    Jev's ``{type, noul}`` / ``{type, choice, probabilities, confidence}``
+    / ``{type, score, legend, probabilities, confidence}`` union. A
+    non-dict ``raw`` answer is returned unchanged (never guessed at).
+    """
+    if not isinstance(raw, dict):
+        return raw
+    declared_type = spec.get("type") if isinstance(spec, dict) else None
+    answer_type = raw.get("type", declared_type)
+    if answer_type == "noul":
+        return {"type": "noul", "noul": raw.get("noul")}
+    probabilities = raw.get("probabilities") or {}
+    confidence = raw.get("confidence")
+    if confidence is None:
+        confidence = _confidence_from_probabilities(probabilities)
+    if answer_type == "score":
+        return {
+            "type": "score",
+            "score": raw.get("score"),
+            "legend": raw.get("legend"),
+            "probabilities": probabilities,
+            "confidence": confidence,
+        }
+    return {
+        "type": "choice",
+        "choice": raw.get("choice"),
+        "probabilities": probabilities,
+        "confidence": confidence,
+    }
+
+
+def _to_jev_shape(result: Any, questions: dict, default_model: str | None) -> Any:
+    """Normalize ``agent.predict()``'s result into Jev's
+    ``{model, answers, usage}`` response shape. A non-dict result (or one
+    missing ``answers``) is returned unchanged -- this is a reshaping
+    layer, not a validator; malformed output still surfaces to the caller
+    instead of being silently coerced.
+    """
+    if not isinstance(result, dict):
+        return result
+    answers_raw = result.get("answers")
+    if not isinstance(answers_raw, dict):
+        return result
+    answers = {
+        name: _normalize_answer(spec, answers_raw[name])
+        for name, spec in questions.items()
+        if name in answers_raw
+    }
+    return {
+        "model": result.get("model") or default_model,
+        "answers": answers,
+        "usage": result.get("usage") or {},
+    }
 
 
 def _load_agent(model: str, dtype: str) -> Any:
@@ -110,7 +197,7 @@ class _Handler(BaseHTTPRequestHandler):
         )
 
     def do_POST(self) -> None:
-        if self.path != "/v1/decide":
+        if self.path not in DECIDE_PATHS:
             self._write_json(404, {"error": "not found"})
             return
         if not self._authorized():
@@ -135,6 +222,10 @@ class _Handler(BaseHTTPRequestHandler):
                 {"error": "body requires 'state' and a non-empty 'questions' object"},
             )
             return
+        # Jev's request shape allows an optional per-request "model"; this
+        # server always serves whatever model was loaded at startup
+        # (--model), so the field is accepted (never a 400) but not
+        # forwarded to a fixed, already-loaded agent.
         agent = getattr(self.server, "agent", None)
         if agent is None:
             self._write_json(503, {"error": "model not loaded"})
@@ -144,8 +235,11 @@ class _Handler(BaseHTTPRequestHandler):
         except Exception as exc:  # noqa: BLE001 -- a bad prediction must never crash the server
             self._write_json(500, {"error": f"predict failed: {exc}"})
             return
+        shaped = _to_jev_shape(
+            result, questions, getattr(self.server, "model_name", None)
+        )
         try:
-            body_bytes = json.dumps(result).encode("utf-8")
+            body_bytes = json.dumps(shaped).encode("utf-8")
         except (TypeError, ValueError):
             self._write_json(500, {"error": "model returned a non-JSON-safe result"})
             return

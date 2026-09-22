@@ -326,8 +326,8 @@ class LayaServerHandlerTests(unittest.TestCase):
         self.assertEqual(payload["model"], "aac6fef/laya-mlx")
 
     def test_decide_passes_through_agent_result(self):
-        expected = _decide_payload(choice="read", probabilities={"read": 0.8, SLOW: 0.2})
-        server, thread, agent = self._build(agent=_FakeAgent(response=expected))
+        agent_result = _decide_payload(choice="read", probabilities={"read": 0.8, SLOW: 0.2})
+        server, thread, agent = self._build(agent=_FakeAgent(response=agent_result))
         try:
             import urllib.request
 
@@ -351,8 +351,87 @@ class LayaServerHandlerTests(unittest.TestCase):
                 payload = json.loads(resp.read().decode("utf-8"))
         finally:
             self._stop(server, thread)
-        self.assertEqual(payload, expected)
+        # The server reshapes the agent's raw result into Jev's
+        # {model, answers, usage} response shape -- the underlying
+        # choice/probabilities/confidence values are unchanged.
+        self.assertEqual(payload["model"], "laya-rl-agent")
+        self.assertEqual(payload["usage"], {})
+        answer = payload["answers"][NEXT_ACTION]
+        self.assertEqual(answer["type"], "choice")
+        self.assertEqual(answer["choice"], "read")
+        self.assertEqual(answer["probabilities"], {"read": 0.8, SLOW: 0.2})
+        self.assertAlmostEqual(answer["confidence"], 0.9)
         self.assertEqual(len(agent.calls), 1)
+
+    def test_decide_reachable_via_systemone_alias(self):
+        agent_result = _decide_payload(choice="read", probabilities={"read": 0.8, SLOW: 0.2})
+        server, thread, agent = self._build(agent=_FakeAgent(response=agent_result))
+        try:
+            import urllib.request
+
+            body = json.dumps(
+                {
+                    "state": "obs",
+                    "model": "some-model",
+                    "questions": {
+                        NEXT_ACTION: {
+                            "type": "choice",
+                            "instructions": "x",
+                            "criteria": {"read": "read", SLOW: "reason"},
+                        }
+                    },
+                }
+            ).encode("utf-8")
+            req = urllib.request.Request(
+                f"http://127.0.0.1:{server.server_port}/v1/systemone",
+                data=body, method="POST", headers={"Content-Type": "application/json"},
+            )
+            with urllib.request.urlopen(req, timeout=5) as resp:
+                payload = json.loads(resp.read().decode("utf-8"))
+        finally:
+            self._stop(server, thread)
+        answer = payload["answers"][NEXT_ACTION]
+        self.assertEqual(answer["choice"], "read")
+        self.assertEqual(len(agent.calls), 1)
+
+    def test_decide_computes_confidence_when_agent_omits_it(self):
+        agent_result = {
+            "model": "laya-rl-agent",
+            "answers": {
+                NEXT_ACTION: {
+                    "type": "choice",
+                    "choice": "read",
+                    "probabilities": {"read": 0.8, SLOW: 0.2},
+                }
+            },
+        }
+        server, thread, agent = self._build(agent=_FakeAgent(response=agent_result))
+        try:
+            import urllib.request
+
+            body = json.dumps(
+                {
+                    "state": "obs",
+                    "questions": {
+                        NEXT_ACTION: {
+                            "type": "choice",
+                            "instructions": "x",
+                            "criteria": {"read": "read", SLOW: "reason"},
+                        }
+                    },
+                }
+            ).encode("utf-8")
+            req = urllib.request.Request(
+                f"http://127.0.0.1:{server.server_port}/v1/systemone",
+                data=body, method="POST", headers={"Content-Type": "application/json"},
+            )
+            with urllib.request.urlopen(req, timeout=5) as resp:
+                payload = json.loads(resp.read().decode("utf-8"))
+        finally:
+            self._stop(server, thread)
+        answer = payload["answers"][NEXT_ACTION]
+        # (n * p_max - 1) / (n - 1) with n=2, p_max=0.8 -> 0.6
+        self.assertAlmostEqual(answer["confidence"], 0.6)
 
     def test_decide_rejects_missing_questions(self):
         server, thread, _ = self._build()

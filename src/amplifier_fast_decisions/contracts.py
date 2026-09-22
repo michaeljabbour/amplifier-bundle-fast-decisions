@@ -50,6 +50,14 @@ EVENT_NAMES = tuple(
         # HC08 ("one call per decision point", opt-in): summary receipt for
         # a batched ask_many() call. See orchestrator.py and docs/EVENTS.md.
         "decided_batch",
+        # HC10 ("decomposed escalation signals", opt-in): the five atomic
+        # signal probabilities, the weighted score, the gate, and the
+        # action taken. See orchestrator.py and docs/EVENTS.md.
+        "escalation_signals",
+        # HC11 ("pre-tool risk classification in shadow mode", opt-in):
+        # never authorizes or blocks anything -- observation only. See
+        # orchestrator.py and docs/EVENTS.md.
+        "tool_risk",
     )
 )
 
@@ -120,10 +128,34 @@ MODEL_ROUTING_KEYS = frozenset(
         # answer. See orchestrator.py and docs/ARCHITECTURE.md.
         "escalation_judge",
         "escalate_min_probability",
+        # HC10 ("decomposed escalation signals", opt-in): per-signal
+        # weight override for escalation_judge: "decomposed". Missing
+        # signals fall back to DEFAULT_ESCALATION_WEIGHTS. See
+        # orchestrator.py and docs/ARCHITECTURE.md.
+        "escalation_weights",
     }
 )
 
-ESCALATION_JUDGE_MODES = frozenset({"rules", "judge"})
+ESCALATION_JUDGE_MODES = frozenset({"rules", "judge", "decomposed"})
+
+# HC10 ("decomposed escalation signals", opt-in): five atomic yes/no
+# signals asked in ONE batched call, combined in code via a weighted sum
+# instead of trusting a single judged verdict. See orchestrator.py and
+# docs/ARCHITECTURE.md.
+DECOMPOSED_ESCALATION_SIGNALS = (
+    "plan_derailed",
+    "repeated_tool_errors",
+    "tests_failing",
+    "unfamiliar_code",
+    "beyond_tier",
+)
+DEFAULT_ESCALATION_WEIGHTS: dict[str, float] = {
+    "tests_failing": 0.30,
+    "repeated_tool_errors": 0.25,
+    "plan_derailed": 0.20,
+    "beyond_tier": 0.15,
+    "unfamiliar_code": 0.10,
+}
 
 
 def validate_model_routing(model_routing: Any) -> None:
@@ -181,6 +213,24 @@ def validate_model_routing(model_routing: Any) -> None:
         raise ValueError(
             "model_routing.escalate_min_probability must be a number between 0 and 1"
         )
+    escalation_weights = model_routing.get("escalation_weights")
+    if escalation_weights is not None:
+        if not isinstance(escalation_weights, dict):
+            raise ValueError("model_routing.escalation_weights must be a dict")
+        unknown_signals = set(escalation_weights) - set(DECOMPOSED_ESCALATION_SIGNALS)
+        if unknown_signals:
+            raise ValueError(
+                f"model_routing.escalation_weights has unknown keys: {sorted(unknown_signals)}"
+            )
+        for key, value in escalation_weights.items():
+            if (
+                isinstance(value, bool)
+                or not isinstance(value, (int, float))
+                or not 0 <= value <= 1
+            ):
+                raise ValueError(
+                    f"model_routing.escalation_weights.{key} must be a number in [0, 1]"
+                )
 
 
 # HC09 ("stake-scaled confidence gates", opt-in): the three judged decision
@@ -495,6 +545,14 @@ class Policy:
     # -- see effective_gate(). A configured kind here always overrides its
     # legacy alias (min_probability / escalate_min_probability).
     confidence_gates: dict[str, float] | None = None
+    # HC11 ("pre-tool risk classification in shadow mode", opt-in): when
+    # True, ObservedTool.execute asks a batched destructive/
+    # touches_production/category classification BEFORE each tool call
+    # and records a `fast_decisions:tool_risk` receipt. Never blocks,
+    # modifies or approves anything -- native approvals remain
+    # authoritative. Default False -- inert, matching every other HC0x
+    # seam. See orchestrator.py and docs/ARCHITECTURE.md.
+    tool_risk_shadow: bool = False
     version: str = "policy-v1"
 
     def __post_init__(self) -> None:
@@ -521,6 +579,8 @@ class Policy:
         if not isinstance(self.decision_batching, bool):
             raise ValueError("decision_batching must be a bool")
         validate_confidence_gates(self.confidence_gates)
+        if not isinstance(self.tool_risk_shadow, bool):
+            raise ValueError("tool_risk_shadow must be a bool")
 
     @classmethod
     def from_config(cls, config: dict[str, Any]) -> Policy:

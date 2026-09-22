@@ -56,6 +56,17 @@ model_routing_profiles:
     escalate_on_provider_error: true
     escalation_judge: judge
     escalate_min_probability: 0.7
+  # HC10 ("decomposed escalation signals"): otherwise identical to
+  # sonnet_start_judged -- the deterministic triggers remain a floor, but
+  # past the turn's first slow request five atomic yes/no signals are
+  # combined in code via a weighted sum instead of a single judged choice.
+  sonnet_start_decomposed:
+    start_model: claude-sonnet-5
+    max_requests_before_escalation: 6
+    escalate_on_test_failure: true
+    escalate_on_provider_error: true
+    escalation_judge: decomposed
+    escalate_min_probability: 0.7
 
 cells:
   plain:
@@ -268,6 +279,55 @@ cells:
       flag_if_zero_escalations: confounded_with_plain_sonnet
       require_judged: true
 
+  # HC10 ("decomposed escalation signals") decisive pair: does the
+  # weighted-sum of five atomic signals beat the single judged verdict?
+  # Twin of judge-local+effort+route-judged / judge-jev+effort+route-judged
+  # (section 14 of STUDY-DESIGN.md), same routing profile family, only
+  # escalation_judge differs.
+  judge-local+effort+route-decomposed:
+    harnesses: [amplifier-fd]
+    fd: { backend: ollama, model: qwen3:0.6b, effort_profile: all_phase,
+          model_routing_profile: sonnet_start_decomposed }
+    role: "HC10 decomposed escalation (local) -- five atomic signals combined via a weighted sum instead of a single judged verdict"
+    purpose: "does decomposed escalation keep or improve quality while reducing false escalations versus the single judged verdict?"
+    anchor_cell: plain-sonnet
+    secondary_anchor: judge-local+effort+route-judged   # the single-verdict twin: identical routing profile, escalation_judge: judge
+    requires_cells: [plain-sonnet]
+    mechanism_gate:
+      model_routed_model: claude-sonnet-5
+      min_model_routed: 1
+      flag_if_zero_escalations: confounded_with_plain_sonnet
+      require_judged: true
+
+  judge-jev+effort+route-decomposed:
+    harnesses: [amplifier-fd]
+    fd: { backend: jev, allow_external_state: true, effort_profile: all_phase,
+          model_routing_profile: sonnet_start_decomposed }
+    role: "HC10 decomposed escalation (jev) -- judge-vs-judge twin of judge-local+effort+route-decomposed"
+    purpose: "does decomposed escalation keep or improve quality while reducing false escalations versus the single judged verdict, on jev?"
+    anchor_cell: plain-sonnet
+    secondary_anchor: judge-jev+effort+route-judged   # the single-verdict twin: identical routing profile, escalation_judge: judge, jev backend
+    requires_cells: [plain-sonnet]
+    mechanism_gate:
+      model_routed_model: claude-sonnet-5
+      min_model_routed: 1
+      flag_if_zero_escalations: confounded_with_plain_sonnet
+      require_judged: true
+
+  # HC11 ("pre-tool risk classification in shadow mode"): otherwise
+  # identical to the incumbent -- measures the cost of shadow
+  # classification (extra backend calls before every tool execution) and
+  # collects destructive/touches_production/category labels for a future
+  # deny/ask evaluation. Never blocks or changes tool execution.
+  judge-local+effort-incumbent-riskshadow:
+    harnesses: [amplifier-fd]
+    fd: { backend: ollama, model: qwen3:0.6b, effort_profile: explore_only, tool_risk_shadow: true }
+    role: "HC11 tool-risk shadow classification -- reference series, not a candidate; measures shadow-classification overhead and collects labels"
+    purpose: "cost of asking a batched destructive/touches_production/category classification before every tool call, never blocking or approving anything"
+    anchor_cell: plain
+    secondary_anchor: judge-local+effort-incumbent   # the non-shadow twin: identical config, tool_risk_shadow off
+    mechanism_gate: { scored_backend: ollama, min_scored: 1, require_effort_phases: ["explore:low"] }
+
   judge-gateway+effort-incumbent:
     harnesses: [amplifier-fd]
     fd: { backend: gateway, allow_external_state: true, model: "TBD-by-gateway-owner", effort_profile: explore_only }
@@ -285,8 +345,11 @@ cells:
 
 budget:
   per_launch_usd: 12.0
-  estimated_total_usd: 1500.0
-  max_benchmark_worker_launches: 2000
+  # Raised for the HC10 decomposed-escalation pair (2 new cells) and the
+  # HC11 tool-risk-shadow reference series (1 new cell) -- see
+  # STUDY-DESIGN.md section 16.
+  estimated_total_usd: 1800.0
+  max_benchmark_worker_launches: 2400
   max_infrastructure_retries_per_run: 1
   max_parallel_timed_runs: 1        # never raise this: timed runs must not share resources
   wall_hours: 24

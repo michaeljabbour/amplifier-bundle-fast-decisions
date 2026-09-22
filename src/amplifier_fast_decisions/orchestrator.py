@@ -15,6 +15,7 @@ from uuid import uuid4
 from .contracts import (
     Candidate,
     DecisionRequest,
+    DEFAULT_ESCALATION_WEIGHTS,
     Question,
     TurnState,
     canonical,
@@ -105,7 +106,7 @@ def _judge_context_needed(policy: Any) -> bool:
     model_routing = policy.model_routing
     effort_routing = policy.effort_routing
     return bool(
-        (model_routing and model_routing.get("escalation_judge") == "judge")
+        (model_routing and model_routing.get("escalation_judge") in ("judge", "decomposed"))
         or (effort_routing and effort_routing.get("phase_judge"))
     )
 
@@ -283,6 +284,154 @@ async def _ask_judges_many(
             continue
         choice = max(answer.probabilities, key=answer.probabilities.get)
         answers[question.name] = (choice, answer.probabilities[choice])
+    return answers
+
+
+# HC10 ("decomposed escalation signals", opt-in): five atomic yes/no
+# questions asked in ONE batched ask_many() call, combined in code via a
+# weighted sum instead of trusting a single judged verdict -- see
+# DECOMPOSED_ESCALATION_SIGNALS/DEFAULT_ESCALATION_WEIGHTS (contracts.py)
+# and docs/ARCHITECTURE.md. Every instruction is phrased with positive
+# polarity (no negations) so a "yes" always means the signal is present.
+_DECOMPOSED_UNCERTAIN_BAND = 0.1
+_DECOMPOSED_SIGNAL_TEXT = {
+    "plan_derailed": "the agent is repeating itself or has abandoned the stated plan",
+    "repeated_tool_errors": "the last tool results contain repeated errors or failures",
+    "tests_failing": "tests or checks are failing after edits",
+    "unfamiliar_code": "the task requires understanding code the agent has not read",
+    "beyond_tier": "the task needs deeper reasoning than a fast model reliably provides",
+}
+
+
+def _decomposed_escalation_questions() -> list[Question]:
+    return [
+        Question(
+            name=signal,
+            type="choice",
+            instructions=text,
+            criteria={
+                "yes": f"True: {text}.",
+                "no": f"False: {text} is not the case.",
+            },
+        )
+        for signal, text in _DECOMPOSED_SIGNAL_TEXT.items()
+    ]
+
+
+async def _ask_decomposed_signals(
+    service: Any, *, state: dict[str, Any]
+) -> dict[str, float | None]:
+    """HC10: ask all five decomposed escalation questions in ONE
+    ``ask_many()`` call, honoring the identical external-state gate every
+    other HC0x judge ask enforces. Returns ``{signal_name:
+    probability_of_yes}`` -- every signal ``None`` on a policy-block,
+    abstain, or backend failure/timeout (the caller then falls back to
+    the deterministic rules only). Never raises (``CancelledError``
+    propagates).
+    """
+    questions = _decomposed_escalation_questions()
+    if service.backend.external and not service.policy.allow_external_state:
+        return {q.name: None for q in questions}
+    decision_request = DecisionRequest(state=state, candidates=(), questions=tuple(questions))
+    deadline = asyncio.get_running_loop().time() + service.policy.timeout_ms / 1000
+    try:
+        async with asyncio.timeout_at(deadline):
+            result = await backend_ask_many(service.backend, decision_request)
+    except asyncio.CancelledError:
+        raise
+    except Exception:
+        return {q.name: None for q in questions}
+    signals: dict[str, float | None] = {}
+    for question in questions:
+        answer = result.answers.get(question.name)
+        if answer is None or not answer.probabilities:
+            signals[question.name] = None
+            continue
+        signals[question.name] = answer.probabilities.get("yes")
+    return signals
+
+
+# HC11 ("pre-tool risk classification in shadow mode", opt-in): three
+# atomic questions asked BEFORE each tool execution, purely observational
+# -- the answer never blocks, modifies, or approves the tool call; native
+# approvals remain the sole authority. See docs/ARCHITECTURE.md.
+def _tool_risk_state(tool_key: str, input: dict[str, Any]) -> dict[str, Any]:
+    """Redacted judge input: tool name and argument KEYS only -- never
+    argument values. Never raises."""
+    try:
+        keys = sorted(input.keys()) if isinstance(input, dict) else []
+    except Exception:
+        keys = []
+    return {"tool": tool_key, "argument_keys": keys}
+
+
+def _tool_risk_questions() -> list[Question]:
+    return [
+        Question(
+            name="destructive",
+            type="choice",
+            instructions="the command deletes, overwrites or force-pushes data",
+            criteria={
+                "yes": "The command deletes, overwrites, or force-pushes data.",
+                "no": "The command does not delete, overwrite, or force-push data.",
+            },
+        ),
+        Question(
+            name="touches_production",
+            type="choice",
+            instructions="the action affects a production system, credentials or billing",
+            criteria={
+                "yes": "The action affects a production system, credentials, or billing.",
+                "no": "The action does not affect a production system, credentials, or billing.",
+            },
+        ),
+        Question(
+            name="category",
+            type="choice",
+            instructions="Classify the kind of action this tool call performs.",
+            criteria={
+                "read": "The tool call reads data without modifying anything.",
+                "write": "The tool call writes, creates, or modifies data.",
+                "execute": "The tool call executes a command or program.",
+                "network": "The tool call makes a network request.",
+                "other": "The tool call does not fit the other categories.",
+            },
+        ),
+    ]
+
+
+async def _ask_tool_risk(
+    service: Any, *, state: dict[str, Any]
+) -> dict[str, tuple[str | None, dict[str, float] | None]] | None:
+    """HC11: ask the three tool-risk questions in ONE ``ask_many()``
+    call, honoring the identical external-state gate every other HC0x
+    judge ask enforces. Returns ``{question_name: (choice,
+    probabilities)}`` -- including a policy-blocked/abstained call,
+    which returns every question as ``(None, None)``. Returns ``None``
+    only on an actual backend failure/timeout. Never raises
+    (``CancelledError`` propagates); the caller never blocks or modifies
+    tool execution on the result -- classification is observational only.
+    """
+    questions = _tool_risk_questions()
+    if service.backend.external and not service.policy.allow_external_state:
+        return {q.name: (None, None) for q in questions}
+    decision_request = DecisionRequest(state=state, candidates=(), questions=tuple(questions))
+    deadline = asyncio.get_running_loop().time() + service.policy.timeout_ms / 1000
+    try:
+        async with asyncio.timeout_at(deadline):
+            result = await backend_ask_many(service.backend, decision_request)
+    except asyncio.CancelledError:
+        raise
+    except Exception:
+        return None
+    answers: dict[str, tuple[str | None, dict[str, float] | None]] = {}
+    for question in questions:
+        answer = result.answers.get(question.name)
+        if answer is None or not answer.probabilities:
+            answers[question.name] = (None, None)
+            continue
+        choice = max(answer.probabilities, key=answer.probabilities.get)
+        answers[question.name] = (choice, dict(answer.probabilities))
     return answers
 
 
@@ -548,6 +697,50 @@ docs/UPSTREAM_CONTRACT.md.
                         "mode": service.policy.mode,
                         "gate": escalation_gate, "passed_gate": escalation_passed_gate,
                     }, decision_id)
+                elif escalation_judge_mode == "decomposed" and turn.slow_requests_seen > 1:
+                    # HC10 ("decomposed escalation signals", opt-in): five
+                    # atomic yes/no probabilities, asked in ONE batched
+                    # ask_many() call, combined in code via a weighted
+                    # sum -- never a single trusted verdict. The
+                    # deterministic triggers above remain a floor.
+                    judge_state = _judge_state(
+                        request, turn, routing_phase, service.policy.max_state_chars
+                    )
+                    signals_start = time.perf_counter()
+                    signal_probabilities = await _ask_decomposed_signals(
+                        service, state=judge_state
+                    )
+                    signals_duration_ms = (time.perf_counter() - signals_start) * 1000
+                    turn.escalation_judgements += 1
+                    weights = {
+                        **DEFAULT_ESCALATION_WEIGHTS,
+                        **(model_routing.get("escalation_weights") or {}),
+                    }
+                    escalation_score = sum(
+                        weights.get(name, 0.0) * probability
+                        for name, probability in signal_probabilities.items()
+                        if probability is not None
+                    )
+                    escalation_gate = effective_gate(service.policy, "escalation")
+                    if all(p is None for p in signal_probabilities.values()):
+                        signals_decided = "fallback_rules"
+                    elif escalation_score >= escalation_gate + _DECOMPOSED_UNCERTAIN_BAND:
+                        signals_decided = "escalate"
+                        turn.escalated, turn.escalation_reason = True, "decomposed"
+                        turn.escalations_by_judge += 1
+                    elif escalation_score <= escalation_gate - _DECOMPOSED_UNCERTAIN_BAND:
+                        signals_decided = "continue"
+                    else:
+                        signals_decided = "uncertain_rules_only"
+                    await service.emit("escalation_signals", {
+                        "backend": service.backend.name,
+                        "signal_probabilities": signal_probabilities,
+                        "score": escalation_score, "gate": escalation_gate,
+                        "band": _DECOMPOSED_UNCERTAIN_BAND, "decided": signals_decided,
+                        "duration_ms": signals_duration_ms, "phase": routing_phase,
+                        "slow_requests_seen": turn.slow_requests_seen,
+                        "mode": service.policy.mode,
+                    }, decision_id)
 
             requested_model = None
             requested_effort = None
@@ -727,6 +920,37 @@ class ObservedTool:
             turn.revision += 1
         fields = {"tool": self._tool_key, "tool_call_id": tool_call_id, "status": "running"}
         await service.emit("tool_start", fields, decision_id)
+        # HC11 ("pre-tool risk classification in shadow mode", opt-in):
+        # ask the batched destructive/touches_production/category
+        # questions BEFORE the tool runs. Purely observational -- the
+        # answer is recorded in a receipt and never consulted to block,
+        # modify, or approve this call; native approvals remain the sole
+        # authority. Inert (no attribute touched, no call made) unless
+        # `Policy.tool_risk_shadow` is configured, matching every other
+        # HC0x seam.
+        if turn and service.policy.tool_risk_shadow:
+            risk_start = time.perf_counter()
+            risk_state = _tool_risk_state(self._tool_key, input)
+            risk_answers = await _ask_tool_risk(service, state=risk_state)
+            risk_duration_ms = (time.perf_counter() - risk_start) * 1000
+            if risk_answers is not None:
+                destructive_choice, destructive_probabilities = risk_answers["destructive"]
+                production_choice, production_probabilities = risk_answers["touches_production"]
+                category_choice, category_probabilities = risk_answers["category"]
+                await service.emit("tool_risk", {
+                    "tool": self._tool_key,
+                    "destructive": destructive_choice,
+                    "touches_production": production_choice,
+                    "category": category_choice,
+                    "probabilities": {
+                        "destructive": destructive_probabilities,
+                        "touches_production": production_probabilities,
+                        "category": category_probabilities,
+                    },
+                    "latency_ms": risk_duration_ms,
+                    "backend": service.backend.name,
+                    "mode": service.policy.mode,
+                }, decision_id)
         start = time.perf_counter()
         try:
             result = await self._tool.execute(input, **kwargs)

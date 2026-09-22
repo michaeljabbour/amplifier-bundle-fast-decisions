@@ -346,6 +346,35 @@ report can see the exact threshold a judged decision was measured against
 and whether it cleared it -- not just infer it from a comparison against
 policy config after the fact.
 
+## Decomposed escalation signals (HC10, opt-in)
+
+`model_routing.escalation_judge: "decomposed"` replaces HC05's single
+"should we escalate?" verdict with five atomic yes/no probabilities
+(`plan_derailed`, `repeated_tool_errors`, `tests_failing`,
+`unfamiliar_code`, `beyond_tier`), asked in ONE batched `ask_many()` call
+and combined in code as `score = sum(weight[signal] * p[signal])`
+(`model_routing.escalation_weights`, default `DEFAULT_ESCALATION_WEIGHTS`
+in `contracts.py`) -- never a single trusted judged choice. `score` is
+compared against `effective_gate(policy, "escalation")` with an explicit
+±0.1 uncertain band: above it escalates, below it continues, and inside it
+is deliberately left to the deterministic rules (`fast_decisions:escalation_signals`,
+`decided: "uncertain_rules_only"`). The deterministic triggers
+(`escalate_on_test_failure`, `max_requests_before_escalation`,
+`escalate_on_provider_error`) remain a floor exactly as in HC05's `"judge"`
+mode. See `docs/CONFIGURATION.md` and `docs/EVENTS.md`.
+
+## Pre-tool risk classification in shadow mode (HC11, opt-in)
+
+`Policy.tool_risk_shadow` asks a batched `destructive` /
+`touches_production` / `category` classification immediately BEFORE
+`ObservedTool.execute` invokes the real tool, and records a
+`fast_decisions:tool_risk` receipt. This is observation only: the answer
+is never consulted to block, modify, or approve the call -- native
+approvals remain the sole authority, and only the tool name plus argument
+KEYS (never values) reach the backend. A future deny/ask mode built on
+these receipts would require its own preregistered evaluation against
+labeled outcomes; none exists yet.
+
 ## Deadlines, budgets and failures
 
 ## Deadlines, budgets and failures
