@@ -181,6 +181,24 @@ SAFE_FIELDS = {
     # what HC05 already exposes via `probability`.
     "gate",
     "passed_gate",
+    # HC10 ("decomposed escalation signals", opt-in): the five atomic
+    # signal probabilities (keyed by signal name), the weighted score,
+    # and the uncertain-band width -- never the compact state text sent
+    # to the backend. `gate`, `decided`, `duration_ms`, `phase`,
+    # `slow_requests_seen`, `mode`, `backend` (already listed above) are
+    # reused verbatim.
+    "signal_probabilities",
+    "score",
+    "band",
+    # HC11 ("pre-tool risk classification in shadow mode", opt-in): the
+    # classification labels and their probability distributions, never
+    # tool arguments (redacted to keys only before reaching the judge,
+    # and not carried in this receipt at all). `tool`, `probabilities`,
+    # `backend`, `mode` (already listed above) are reused verbatim.
+    "category",
+    "destructive",
+    "touches_production",
+    "latency_ms",
 }
 
 
