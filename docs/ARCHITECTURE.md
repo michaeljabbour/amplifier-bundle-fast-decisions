@@ -367,3 +367,10 @@ The web viewer polls an authenticated local read endpoint every 250 ms. Polling 
 ## Deliberately not in v0.1.0
 
 No local Jev weights, Rust kernel changes, learned action generation, autonomous stopping, an *active* model-role router (shadow-only only -- see P4), production accuracy claim, forced fleet-wide rollout, automatic transcript export, or mandatory replacement of Foundation. These are separate experiments with separate acceptance criteria.
+
+## Diagrams
+
+- [System diagram](architecture.svg) (source: [architecture.dot](architecture.dot))
+- [Layered view](architecture-layered.svg) (source: [architecture-layered.dot](architecture-layered.dot))
+
+The 2026-09-18 hill-climbing campaign specification, launch prompt and companion defaults are kept verbatim under [docs/design/hill-climb-2026-09-18/](design/hill-climb-2026-09-18/START-HERE.md); results live in [docs/EVIDENCE.md](EVIDENCE.md) and `evals/`.

@@ -1,0 +1,27 @@
+Implement and run a bounded, resumable hill-climbing campaign for Fast Decisions. Optimize validated completed-task time and total cost while preserving quality, native permissions and user control. Do the work and iterate; do not stop after writing another plan.
+
+Read these first:
+~/dev/amplifier-bundle-fast-decisions/docs/design/hill-climb-2026-09-18/SPEC.md
+~/dev/amplifier-bundle-fast-decisions/docs/design/hill-climb-2026-09-18/campaign.json
+~/dev/amplifier-bundle-fast-decisions/AGENTS.md
+~/dev/amplifier-bundle-fast-decisions/docs/AGENT-HANDOFF.md
+~/dev/afast-forge-evidence-20260918-02/ROOT-CAUSE.md
+~/dev/afast-forge-evidence-20260918-02/REPORT.md
+
+This launch adopts the companion defaults: at most 12 hours, $150 total estimated campaign spend including builder/supervisor/evaluation models and retries, eight candidates and 60 benchmark worker launches. Enforce conservative reservations before paid calls, not just retrospective reporting. If spend cannot be bounded, continue deterministic work and report the limitation. Do not provision paid infrastructure or silently raise limits.
+
+Start by reconciling current origin/main, installed source and all working trees. The original checkout is dirty and based on an older branch; preserve it. Review the uncommitted state fix, Forge controller and history helper in ~/dev/amplifier-fast-decisions-forge-e2e, then port only demonstrated unique changes to an isolated owned worktree. Do not reset, clean or blanket-commit someone else's changes. Establish the actual Amplifier Python/runtime/provider configuration and obey current repository guidance.
+
+Create a durable campaign directory, frozen protocol, budget ledger, source inventory and checkpoint. If a campaign already exists, reconcile live workers and resume it instead of duplicating experiments. Implement the minimum supervisor and evaluator isolation required by the spec before trusting optimization results. Use installed evaluation/Attractor/Forge facilities only after checking their actual interfaces; the companion JSON is proposed data, not a preexisting recipe. Separate builder/evaluator/reviewer agents are permitted for bounded tasks under this launch, but timed runs sharing resources must be serial.
+
+Prioritize HC00 measurement/restart correctness, HC01 task-state retention, HC02 revision-aware read reuse and batching, and HC03 phase-specific effort routing. The previous sample spent approximately 93–95% of its wall time in provider spans; making an already-fast classifier faster is not the main objective. The local Qwen scorer is not Jev. Never treat bypass count, shadow agreement or a tool-shaped model response as proven net savings.
+
+Run real matched baseline/candidate sessions through Forge with independent frozen acceptance checks and preserved receipts. A Forge polling timeout does not mean the agent finished. Count deadline failures and all retries. Freeze task splits and do not train against the release holdout. Enforce the full warm decision budget below 500 ms, including preparation and transport. Report completed-task quality, cost and latency separately, including uncertainty and missing evidence. A small sample may be promising without qualifying a general claim.
+
+Build the portable library as the product, with thin CLI and optional adapters. Preserve existing APIs where practical. Amplifier is the first deep integration; for Claude Code, Codex and other harnesses distinguish callable Smart Tool access from supported native loop optimization. Respect explicit model pins, native approvals, cancellation, steering and context/tool-result contracts. Do not alter private host internals to manufacture integration.
+
+Retain allowlisted decision history and failed experiments; index existing native histories without copying private thinking or credentials. The Observatory must show actual root/child activity, children included by default, long provider waits, real executed actions and evidence-backed savings/quality in a neutral dark theme. Never archive the token-bearing serve.json or fabricate activity.
+
+Continue the preregister → implement → test → measure → evaluate → keep/reject loop until a configured stop condition. Record hypotheses and negative findings. Prepare focused commits and reviewable PRs for owned work; apply any existing explicit merge/install authorization only after the spec's release gates, otherwise leave a concrete reviewable result. Preserve global defaults and active user sessions.
+
+At each checkpoint report: exact revisions, current bottleneck, experiments completed, measured gains and quality status, spend/reservations, remaining budget, and next experiment. On exit provide the campaign directory, report, history index, PR status, rollback information and a paste-ready continuation. Do not claim the objective is achieved merely because the run budget ended.

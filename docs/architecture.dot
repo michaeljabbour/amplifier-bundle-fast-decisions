@@ -1,0 +1,259 @@
+// Runtime architecture of amplifier-bundle-fast-decisions.
+// Hand-authored companion to the auto-generated bundle.dot (which covers only
+// bundle composition). Render: dot -Tpng docs/architecture.dot -o docs/architecture.png
+digraph fast_decisions_architecture {
+    rankdir=TB
+    newrank=true
+    compound=true
+    splines=spline
+    nodesep=0.3
+    ranksep=0.55
+    bgcolor="white"
+    fontname="Helvetica"
+    fontsize=13
+    labelloc=t
+    label="amplifier-bundle-fast-decisions — runtime architecture (v0.1.0)\nShadow measurement is the shipped default; the active path exists only via bundles/active.yaml"
+
+    node [fontname="Helvetica", fontsize=9, shape=box, style="filled,rounded", fillcolor="#f5f5f5", color="#777777"]
+    edge [fontname="Helvetica", fontsize=7.5, color="#555555", arrowsize=0.7]
+
+    // ------------------------------------------------------------------ host
+    subgraph cluster_host {
+        label="Amplifier host (external — amplifier_core + upstream loop)"
+        style="filled,dashed"; fillcolor="#fafafa"; color="#999999"; fontsize=10
+        node [fillcolor="#eeeeee", style="filled,rounded,dashed"]
+        kernel_hooks   [label="coordinator.hooks\nregister() / emit()"]
+        kernel_caps    [label="coordinator capabilities &\ncontribution channels"]
+        context_mount  [label="context manager\ncoordinator.get(\"context\")"]
+        upstream_loop  [label="StreamingOrchestrator\n(amplifier_module_loop_streaming)"]
+        session_pt     [label="session providers & tools\n(mounted upstream, copied per turn)"]
+    }
+
+    // ----------------------------------------------------------- composition
+    subgraph cluster_composition {
+        label="Bundle composition"
+        style="filled"; fillcolor="#f0faf9"; color="#80cbc4"; fontsize=10
+        node [fillcolor="#e0f2f1"]
+        foundation  [label="amplifier-foundation\n(external include)", style="filled,rounded,dashed", fillcolor="#f5f5f5"]
+        bundle_md   [label="bundle.md\nroot bundle", fillcolor="#80cbc4", style="filled,rounded,bold", penwidth=2]
+        behavior    [label="behaviors/fast-decisions.yaml\nmode: shadow · backend: deterministic\nrole_router: true · auto-observatory"]
+        active_yaml [label="bundles/active.yaml\nsession.orchestrator → loop-fast-decisions\nmode: active · backend: jev"]
+        shadow_yaml [label="bundles/shadow.yaml\n(deprecated forwarder)", style="filled,rounded,dashed"]
+    }
+
+    // ----------------------------------------------------------------- shims
+    subgraph cluster_shims {
+        label="Module shims (modules/*) — one import + mount() each"
+        style="filled"; fillcolor="#f3f8fd"; color="#90caf9"; fontsize=10
+        node [fillcolor="#bbdefb"]
+        mod_hook [label="hooks-fast-decisions\n(hook)"]
+        mod_loop [label="loop-fast-decisions\n(orchestrator)"]
+        mod_tool [label="tool-fast-workspace\n(tool)"]
+    }
+
+    // --------------------------------------------------------------- package
+    subgraph cluster_pkg {
+        label="Shared package — src/amplifier_fast_decisions/"
+        style="filled"; fillcolor="#fcfcfc"; color="#888888"; fontsize=11
+
+        subgraph cluster_entry {
+            label="kernel-facing entry points"
+            style="filled"; fillcolor="#fff7ed"; color="#fdba74"; fontsize=9
+            node [fillcolor="#ffedd5"]
+            observer     [label="observer.py\nmount() · ShadowScorer · native hook bridge\nRoleRouter wiring · auto-observatory"]
+            orchestrator [label="orchestrator.py\nmount() · HybridOrchestrator\nRoutedProvider · ObservedTool"]
+            workspace    [label="workspace.py\nmount() · WorkspaceTool\nread/list · path containment · revision digest"]
+        }
+
+        subgraph cluster_core {
+            label="decision core"
+            style="filled"; fillcolor="#eff6ff"; color="#93c5fd"; fontsize=9
+            node [fillcolor="#dbeafe"]
+            runtime [label="runtime.py\nRuntime · get_runtime()\nbackend factory · shadow-worker lifecycle"]
+            service [label="service.py\nDecisionService.choose()\neligibility · budgets · thresholds · revalidation"]
+            shadow  [label="shadow.py\nShadowWorker (background asyncio.Task)\nShadowJob ⟷ ShadowOutcome join"]
+            router  [label="router.py\nRoleRouter (P4, shadow-only)\nproposes model_role at delegate calls"]
+        }
+
+        subgraph cluster_inputs {
+            label="trusted inputs"
+            style="filled"; fillcolor="#f0fdf4"; color="#86efac"; fontsize=9
+            node [fillcolor="#dcfce7"]
+            candidates [label="candidates.py\ncollect + merge candidate groups\nconfig · capability · contributions · @mentions"]
+            questions  [label="questions.py\njudgment questions (max 8)"]
+            state      [label="state.py\nbounded snapshot (≤12 msgs)\nno system / thinking text · fingerprint"]
+        }
+
+        subgraph cluster_backends {
+            label="backends — DecisionBackend.ask()"
+            style="filled"; fillcolor="#fdf4ff"; color="#d8b4fe"; fontsize=9
+            node [fillcolor="#f3e8ff"]
+            backends      [label="backends.py\nJevBackend · ScriptedBackend (= deterministic)\nUnavailableBackend"]
+            local_backend [label="local_backend.py\nOllamaBackend"]
+        }
+
+        subgraph cluster_leaves {
+            label="leaf modules (no intra-package imports)"
+            style="filled"; fillcolor="#f8f8f8"; color="#bbbbbb"; fontsize=9
+            node [fillcolor="#eeeeee"]
+            contracts [label="contracts.py\nCandidate · Question · Decision · Policy · TurnState\nDecisionBackend protocol · event names\n(imported by every module — edges omitted)"]
+            privacy   [label="privacy.py\nscrub() · safe_data() allowlist"]
+        }
+
+        subgraph cluster_telemetry {
+            label="observability"
+            style="filled"; fillcolor="#fdf2f8"; color="#f9a8d4"; fontsize=9
+            node [fillcolor="#fce7f3"]
+            telemetry [label="telemetry.py\nEmitter (one event envelope)\nJsonlRecorder (bounded queue + writer thread)"]
+        }
+
+        subgraph cluster_viewer {
+            label="observatory — harness-agnostic, stdlib only\n(no amplifier imports; enforced by tests/test_layering.py)"
+            style="filled"; fillcolor="#f0fdfa"; color="#5eead4"; fontsize=9
+            node [fillcolor="#ccfbf1"]
+            observatory [label="observatory.py\nensure_viewer() · viewer_is_alive()\nreuse-or-spawn detached `afast serve`"]
+            server      [label="server.py\nEventIndex (JSONL tailer, dedup)\nViewerServer (http.server, token-auth /api/*)"]
+            static      [label="static/\nindex.html · app.js · style.css"]
+        }
+
+        subgraph cluster_cli {
+            label="CLI — afast / python -m amplifier_fast_decisions"
+            style="filled"; fillcolor="#f9fafb"; color="#9ca3af"; fontsize=9
+            node [fillcolor="#e5e7eb"]
+            cli   [label="cli.py\ndoctor · configure · demo · serve [--stop]\nexport · bench replay / bench suite"]
+            demo  [label="demo.py\nsynthetic coordinator / provider / tool\ndrives the real service + HybridOrchestrator"]
+            bench [label="bench/\nmetrics · replay · report · suite\nDeterministicSuiteBackend"]
+        }
+    }
+
+    // ------------------------------------------------------------------ disk
+    subgraph cluster_disk {
+        label="on-disk state"
+        style="filled"; fillcolor="#fffbeb"; color="#fcd34d"; fontsize=10
+        node [shape=note, style="filled", fillcolor="#fef3c7"]
+        events_jsonl [label="~/.amplifier/fast-decisions/events/*.jsonl\n(telemetry; no raw requests)"]
+        serve_json   [label="~/.amplifier/fast-decisions/serve.json\n(pid · port · url) + serve.log"]
+        suite_jsonl  [label="suites/v1.jsonl\nlabelled bench suite"]
+    }
+
+    // -------------------------------------------------------------- external
+    subgraph cluster_external {
+        label="external services"
+        style="filled,dashed"; fillcolor="#fafafa"; color="#999999"; fontsize=10
+        node [style="filled,rounded,dashed", fillcolor="#eeeeee"]
+        jev     [label="Jev (hosted)\ntypesafe_sdk — [jev] extra"]
+        ollama  [label="Ollama\nhttp://127.0.0.1:11434 — httpx, [local] extra"]
+        browser [label="Browser\npolls /api/* every 250 ms"]
+    }
+
+    // ------------------------------------------------------- composition edges
+    edge [style=dashed, color="#888888", fontcolor="#666666"]
+    bundle_md   -> foundation  [label="includes"]
+    bundle_md   -> behavior    [label="includes"]
+    behavior    -> mod_hook    [label="mounts"]
+    behavior    -> mod_tool    [label="mounts"]
+    active_yaml -> bundle_md   [label="includes"]
+    active_yaml -> mod_loop    [label="session.orchestrator"]
+    shadow_yaml -> bundle_md   [label="forwards"]
+    mod_hook    -> observer    [label="mount()"]
+    mod_loop    -> orchestrator [label="mount()"]
+    mod_tool    -> workspace   [label="mount()"]
+
+    // ----------------------------------------------------- kernel hook events
+    edge [style=solid, color="#c2410c", fontcolor="#9a3412"]
+    kernel_hooks -> observer [label="session:start · tool:pre · tool:post\nexecution:start/end · provider:error\n(provider:request registered but a no-op)"]
+    observer -> context_mount [label="shadow snapshot reads\ncontext.get_messages() at tool:pre", constraint=false]
+
+    // --------------------------------------------- shadow path (shipped default)
+    edge [style=solid, color="#1d4ed8", fontcolor="#1e40af"]
+    observer -> candidates [label="collect_candidates()\n(bounded by shadow_snapshot_budget_ms)"]
+    observer -> state      [label="build_state()"]
+    observer -> runtime    [label="submit_shadow(job)\nresolve_shadow(outcome)"]
+    observer -> router     [label="delegate tool:pre / tool:post"]
+    runtime  -> shadow     [label="owns ShadowWorker\n(lazy start · bounded drain · cancel on close)"]
+    shadow   -> backends   [label="ask() in background", lhead=cluster_backends]
+    router   -> kernel_caps [label="model_role_resolver\n(read-only)", constraint=false]
+
+    // ------------------------------------------ active path (bundles/active.yaml)
+    edge [style=solid, color="#15803d", fontcolor="#166534"]
+    orchestrator -> upstream_loop [label="HybridOrchestrator.execute()\nwraps StreamingOrchestrator.execute()", constraint=false]
+    orchestrator -> session_pt    [label="slow: original_provider.complete()\nObservedTool → original_tool.execute()", constraint=false]
+    orchestrator -> runtime       [label="get_runtime(owner=True)\nsole owner of Policy"]
+    orchestrator -> service       [label="RoutedProvider.complete()\n→ choose(request, tools)\nfast: synthetic ChatResponse + ToolCall"]
+    service -> candidates  [label="collect"]
+    service -> questions   [label="collect"]
+    service -> state       [label="snapshot + recheck"]
+    service -> backends    [label="ask() — one batched call\nunder the 750 ms deadline", lhead=cluster_backends]
+    demo    -> orchestrator [label="drives with a\nsynthetic loop", constraint=false]
+
+    // ------------------------------------------------------ capabilities / factory
+    edge [style=solid, color="#555555", fontcolor="#555555"]
+    runtime    -> kernel_caps [label="registers fast_decisions.runtime\nfast_decisions.service · observability.events", constraint=false]
+    candidates -> kernel_caps [label="fast_decisions.candidates\nfast_decisions.validate_candidate\n+ contribution channel", constraint=false]
+    questions  -> kernel_caps [label="fast_decisions.questions", constraint=false]
+    runtime       -> backends      [label="backend factory\njev · deterministic · unavailable"]
+    runtime       -> local_backend [label="backend: ollama"]
+    backends      -> jev    [label="JevBackend\n(retries disabled, 5 s cooldown)"]
+    local_backend -> ollama [label="one-token classifier"]
+
+    // --------------------------------------------------------------- telemetry
+    edge [style=solid, color="#7e22ce", fontcolor="#6b21a8"]
+    observer     -> telemetry [label="shadow_observed · health\n(via service.emit)"]
+    shadow       -> telemetry [label="shadow_proposed\nshadow_agreement"]
+    router       -> telemetry [label="role_proposed\nrole_agreement"]
+    service      -> telemetry [label="requested · scored\nsubmitted · fallback"]
+    orchestrator -> telemetry [label="ObservedTool:\nactual execution"]
+    telemetry    -> privacy   [label="safe_data() allowlist\nbefore every write/emit"]
+    telemetry    -> kernel_hooks [label="hooks.emit(fast_decisions:*)\nobservation only", constraint=false]
+    edge [style=dotted]
+    telemetry    -> events_jsonl [label="JsonlRecorder append"]
+
+    // ---------------------------------------------------------- observatory
+    edge [style=solid, color="#0f766e", fontcolor="#115e59"]
+    observer    -> observatory [label="session:start → ensure_viewer()\nonce per session, background task"]
+    observatory -> server      [label="spawns detached `afast serve`\n(or reuses a live one)"]
+    server      -> static      [label="serves UI"]
+    server      -> privacy     [label="scrub() on read", constraint=false]
+    observatory -> browser     [label="webbrowser.open\n(opt-in)"]
+    browser     -> server      [label="GET /api/* with token\n250 ms poll · replay without a session", constraint=false]
+    edge [style=dotted]
+    observatory -> serve_json   [label="read / write atomic\nremove on stop"]
+    server      -> events_jsonl [label="EventIndex tails"]
+
+    // ------------------------------------------------------------------- CLI
+    edge [style=solid, color="#4b5563", fontcolor="#4b5563"]
+    cli -> server      [label="serve"]
+    cli -> observatory [label="serve --stop\nstop_server()"]
+    cli -> demo        [label="demo"]
+    cli -> bench       [label="bench replay / suite"]
+    cli -> bundle_md   [label="configure reads\nbundle.md · behavior · active.yaml", lhead=cluster_composition, constraint=false]
+    edge [style=dotted]
+    bench -> events_jsonl [label="replay reads"]
+    bench -> suite_jsonl  [label="suite reads"]
+
+    // ------------------------------------------------------- leaf-module uses
+    edge [style=solid, color="#aaaaaa", fontcolor="#888888", constraint=false]
+    state     -> privacy [label="scrub()"]
+    workspace -> privacy [label="scrub()"]
+
+    // ---------------------------------------------------------------- legend
+    legend [shape=plaintext, style="", label=<
+        <TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4" BGCOLOR="white" COLOR="#cccccc">
+            <TR><TD COLSPAN="2"><B>edges</B></TD></TR>
+            <TR><TD><FONT COLOR="#888888">dashed gray</FONT></TD><TD>bundle composition / mount</TD></TR>
+            <TR><TD><FONT COLOR="#c2410c">orange</FONT></TD><TD>kernel hook events</TD></TR>
+            <TR><TD><FONT COLOR="#1d4ed8">blue</FONT></TD><TD>shadow path (shipped default)</TD></TR>
+            <TR><TD><FONT COLOR="#15803d">green</FONT></TD><TD>active path (bundles/active.yaml only)</TD></TR>
+            <TR><TD><FONT COLOR="#7e22ce">purple</FONT></TD><TD>telemetry events</TD></TR>
+            <TR><TD><FONT COLOR="#0f766e">teal</FONT></TD><TD>observatory / viewer</TD></TR>
+            <TR><TD>dotted</TD><TD>file read / write</TD></TR>
+            <TR><TD>dashed box</TD><TD>external to this repo</TD></TR>
+        </TABLE>>]
+
+    // ------------------------------------------------------- layout hints only
+    // Keep the host cluster on one row, the two leaf modules on one row (so the
+    // package cluster does not stretch to the top rank), and the legend at the bottom.
+    {rank=same; kernel_hooks; kernel_caps; context_mount; upstream_loop; session_pt}
+    {rank=same; contracts; privacy}
+    privacy -> legend [style=invis, constraint=true]
+}
