@@ -27,6 +27,13 @@ HAS_CORE = importlib.util.find_spec("amplifier_core") is not None
 HAS_LOOP = importlib.util.find_spec("amplifier_module_loop_streaming") is not None
 
 class BuildTests(unittest.TestCase):
+    def test_active_loop_installs_its_wrapped_upstream(self):
+        data = tomllib.loads((ROOT/'modules/loop-fast-decisions/pyproject.toml').read_text())
+        self.assertIn(
+            'amplifier-module-loop-streaming @ git+https://github.com/microsoft/amplifier-module-loop-streaming@20aac7a9eb26034d230357f6aa6805f27c86df52',
+            data['project']['dependencies'],
+        )
+
     def test_module_entrypoints(self):
         for name in ('loop-fast-decisions','hooks-fast-decisions','tool-fast-workspace'):
             data=tomllib.loads((ROOT/'modules'/name/'pyproject.toml').read_text())
