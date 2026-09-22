@@ -5,10 +5,14 @@ build-backend = "setuptools.build_meta"
 name = "amplifier-module-loop-fast-decisions"
 version = "0.1.0"
 requires-python = ">=3.11"
-dependencies = []
+dependencies = [
+  "amplifier-module-loop-streaming @ git+https://github.com/microsoft/amplifier-module-loop-streaming@20aac7a9eb26034d230357f6aa6805f27c86df52",
+]
 [project.optional-dependencies]
 jev = ["typesafe-sdk"]
-upstream = ["amplifier-module-loop-streaming @ git+https://github.com/microsoft/amplifier-module-loop-streaming@20aac7a9eb26034d230357f6aa6805f27c86df52"]
+# Retained for callers that already request this extra. The wrapped loop is
+# required for every active session, including a host with an empty module cache.
+upstream = []
 [project.entry-points."amplifier.modules"]
 loop-fast-decisions = "amplifier_module_loop_fast_decisions:mount"
 [tool.setuptools.packages.find]

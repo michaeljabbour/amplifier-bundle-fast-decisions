@@ -28,7 +28,6 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 
-SOURCE_PREFIX = "git+https://github.com/michaeljabbour/amplifier-bundle-fast-decisions@main#subdirectory=modules/"
 UNSUPPORTED_PREFIX = "fast-decisions:modules/"
 
 # Files that may declare a module `source:` pointing into modules/.
@@ -102,12 +101,12 @@ class YamlSourceTests(unittest.TestCase):
                     # Not one of our own modules (e.g. foundation's loop-streaming); skip.
                     continue
                 checked_any = True
-                self.assertTrue(
-                    source.startswith(SOURCE_PREFIX),
-                    f"{path}: module {module_name!r} source {source!r} does not "
-                    f"start with {SOURCE_PREFIX!r}",
+                match = re.fullmatch(
+                    r"git\+https://github\.com/michaeljabbour/amplifier-bundle-fast-decisions@"
+                    r"(?:main|[0-9a-f]{40})#subdirectory=modules/([\w-]+)", source,
                 )
-                mod_dir_name = source[len(SOURCE_PREFIX) :]
+                self.assertIsNotNone(match, f"{path}: unsupported module source {source!r}")
+                mod_dir_name = match.group(1)
                 module_pyproject = ROOT / "modules" / mod_dir_name / "pyproject.toml"
                 self.assertTrue(
                     module_pyproject.is_file(),
@@ -150,7 +149,9 @@ class ActiveBundleOfflineTests(unittest.TestCase):
             {"explore": "low", "max_explore_requests": 6, "escalate_after_provider_errors": 1},
         )
         self.assertNotIn("model_routing", config)
-        self.assertEqual(data["includes"], [{"bundle": "fast-decisions:bundle.md"}])
+        self.assertEqual(len(data["includes"]), 1)
+        self.assertRegex(data["includes"][0]["bundle"],
+            r"^git\+https://github.com/michaeljabbour/amplifier-bundle-fast-decisions@[0-9a-f]{40}$")
 
 
 class ActiveRoutingBundleOfflineTests(unittest.TestCase):
@@ -278,12 +279,10 @@ class BundleLoadTests(unittest.TestCase):
         self.assertIs(config["allow_external_state"], expected_allow_external)
         self.assertIn("upstream", config)
 
-        self.assertTrue(
-            orchestrator["source"].startswith(
-                "git+https://github.com/michaeljabbour/amplifier-bundle-fast-decisions@main"
-                "#subdirectory=modules/loop-fast-decisions"
-            ),
+        self.assertRegex(
             orchestrator["source"],
+            r"^git\+https://github\.com/michaeljabbour/amplifier-bundle-fast-decisions@"
+            r"(?:main|[0-9a-f]{40})#subdirectory=modules/loop-fast-decisions$",
         )
 
         # Inherited from root bundle.md via the includes chain.

@@ -16,12 +16,14 @@ bundle:
     turn. Opt-in only.
 
 includes:
-  - bundle: fast-decisions:bundle.md
+  # A namespace-only include can resolve to an unrelated local registration
+  # (for example an old benchmark checkout). Use the reviewed package revision.
+  - bundle: git+https://github.com/michaeljabbour/amplifier-bundle-fast-decisions@40f7a93b8907fe6ee5acbb9124e263dbeebd8b89
 
 session:
   orchestrator:
     module: loop-fast-decisions
-    source: git+https://github.com/michaeljabbour/amplifier-bundle-fast-decisions@main#subdirectory=modules/loop-fast-decisions
+    source: git+https://github.com/michaeljabbour/amplifier-bundle-fast-decisions@40f7a93b8907fe6ee5acbb9124e263dbeebd8b89#subdirectory=modules/loop-fast-decisions
     config:
       mode: active
       backend: ollama
