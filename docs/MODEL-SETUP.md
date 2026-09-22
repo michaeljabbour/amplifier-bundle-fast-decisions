@@ -386,6 +386,38 @@ existing provider rather than acting on a leaked thinking token. (Verified
 live against a LiteLLM+vLLM deployment: first token "We"/"Thinking", never a
 label, absent `chat_template_kwargs`.)
 
+## Jev: model pin, base URL, and probabilities over vendor confidence
+
+`JevBackend`'s default model is now a pinned version, `jev-1.13.0`
+(`backends.DEFAULT_JEV_MODEL`) -- not the moving alias `jev-latest`. The
+`model` constructor argument, or `TYPESAFE_DEFAULT_MODEL`, still overrides
+it. Pin the version deliberately (and re-run `afast bench calibrate`,
+see docs/BENCH.md) whenever adopting a new one: `min_probability`/
+`min_margin` thresholds tuned against one model version are not
+guaranteed to hold against a different version an alias would have
+silently moved you to on the vendor's own release schedule. The response's
+`model` field is recorded verbatim into `Decision.model`/`DecisionResult.model`
+and carried through into receipts either way.
+
+`TYPESAFE_BASE_URL` (default `https://api.typesafe.ai`) selects the HTTP
+endpoint both transports call. It is not restricted to the hosted vendor
+service -- any Jev-compatible server that speaks the same
+`/v1/systemone` request/response shape (for example an open
+reimplementation such as openjev/NanoJev, or TypeSafe's own
+`system-one-adapter`) can be pointed at directly by overriding this
+variable, with no code change.
+
+Every threshold, gate, and calibration report in this bundle is built
+from the response's `probabilities` -- specifically the chosen option's
+own probability -- never from the response's separate `confidence` field.
+That vendor `confidence` value is still captured, verbatim, as
+`JevBackend.last_vendor_confidence` for receipts/observability only; it is
+never read when building a `Decision` or feeding a gate (see
+`backends._decision_from_answer`). Independent Jev audits found this
+vendor `confidence` flat/uninformative across roughly 0.50-0.95 and
+discriminative only at >=0.99 on some workloads -- treat it as
+observability data, not as an input to any decision.
+
 ## Jev: connection reuse and warmup
 
 The `jev` backend (`amplifier_fast_decisions.backends.JevBackend`) has two

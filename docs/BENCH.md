@@ -9,6 +9,7 @@ you explicitly opt a live backend in.
 afast bench replay <events-dir-or-jsonl> [--session ID] [--out report.jsonl] [--md report.md] [--json]
 afast bench suite  [<suite.jsonl>] [--backend deterministic|jev|ollama] [--model NAME] [--live]
                    [--permutations K] [--domain tool-choice|read-target|model-role] [--out ...] [--md ...] [--json]
+afast bench calibrate --receipts <events-dir-or-jsonl> --labels <labels.jsonl>
 ```
 
 `--json` prints the record to stdout. It is the same record `--out` appends
@@ -139,6 +140,33 @@ It joins the taxonomy's own JSONL on `session_id` -- no mapping layer.
 | `per_domain` | Mandatory per domain (`tool-choice`, `read-target`, `model-role`) present in the data -- a pooled-only report is treated as a failure of the reporting, not an acceptable summary. For `suite`, domain comes directly from each case. For `replay`, domain comes from the explicit `domain` field recorded on the joined events (see below); each domain's entry carries `n_inferred` -- the count of decisions in that group whose domain had to fall back to the legacy heuristic, `0` for any recording made with the current telemetry. |
 | `order_agreement_stability`, `max_probability_swing`, `permutations` | Suite-only (see above). `replay` reports `permutations: 1` and `null` for the other two -- a single already-recorded production trace has no alternate orderings to compare. |
 | `agreement_with_deterministic` | `replay` reconstructs each decision's candidate set from the `requested` event and re-scores it with the offline `DeterministicSuiteBackend`, comparing its choice to what was actually recorded. This is a self-consistency check against a fixed, versioned scorer -- not a claim that the deterministic backend is "right". |
+
+### `calibration` block (`bench suite --json` only, plus `bench calibrate`)
+
+`afast bench suite --json` adds a top-level `calibration` key -- the same
+ECE/bins shape as `accuracy_proxy.calibration_ece`/`calibration_bins`/
+`ece_low_n_bins`, plus a `gate_curve`: for thresholds `0.5, 0.6, 0.7, 0.8,
+0.9, 0.95, 0.99`, each row reports `coverage` (fraction of decisions at or
+above the threshold), `accuracy_above`, and `accuracy_below` (`null`, never
+a fabricated `0`/`1`, when a side is empty). This is what lets an operator
+see, from data, whether raising a `min_probability` gate would actually
+trade coverage for accuracy on their own suite/receipts.
+
+`afast bench calibrate --receipts <events-dir-or-jsonl> --labels
+<labels.jsonl>` prints the identical report over real judged decisions
+instead of the synthetic suite: it joins the same `fast_decisions:*`
+telemetry `bench replay` reads (`decision_id` ->
+`scored.selected_probability`) with an external label file (one JSON
+object per line, `{"decision_id": ..., "correct": bool}`), inner-joined on
+`decision_id` -- a `decision_id` present on only one side contributes
+nothing (never a fabricated pair). This is the tool for fitting
+`min_probability`/`min_margin` from evidence rather than assumption; see
+docs/EVIDENCE.md.
+
+`bench.calibration.derived_confidence(probabilities)` computes `(n *
+p_max - 1) / (n - 1)` over a single decision's full probability vector --
+a reference-only normalized-margin statistic, never substituted for a
+backend's own reported confidence and never wired into any gate.
 
 ## Telemetry fields this bench relies on
 

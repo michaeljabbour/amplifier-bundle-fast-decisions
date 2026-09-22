@@ -49,6 +49,23 @@ CANNED_RESPONSE = {
     "usage": {"input_tokens": 120, "output_tokens": 40},
 }
 
+MISLEADING_CONFIDENCE_RESPONSE = {
+    "model": "jev-1.13.0",
+    "answers": {
+        "next_action": {
+            "type": "choice",
+            "choice": "read_readme",
+            # A vendor "confidence" of 0.99 alongside a near-toss-up
+            # probability split -- exactly the shape independent Jev
+            # audits found: confidence flat/uninformative except at the
+            # extreme. Gating must use the 0.51 probability, never 0.99.
+            "probabilities": {"read_readme": 0.51, SLOW: 0.49},
+            "confidence": 0.99,
+        }
+    },
+    "usage": {"input_tokens": 15, "output_tokens": 3},
+}
+
 DUMMY_KEY = "sk-test-dummy-not-a-real-key-000111222"
 
 
@@ -167,7 +184,10 @@ class JevUrllibFallbackTests(unittest.TestCase):
         result.action.validate({"read_readme", SLOW})
         self.assertEqual(result.action.choice, "read_readme")
         self.assertAlmostEqual(sum(result.action.probabilities.values()), 1.0, places=6)
-        self.assertEqual(result.action.reported_confidence, 0.9)
+        # reported_confidence is the chosen option's own probability
+        # (0.93), never the vendor's separate confidence field (0.9).
+        self.assertEqual(result.action.reported_confidence, 0.93)
+        self.assertEqual(backend.last_vendor_confidence, 0.9)
         self.assertEqual(result.model, "jev-1.13.0")
         self.assertEqual(result.input_tokens, 120)
         self.assertEqual(result.output_tokens, 40)
@@ -218,6 +238,21 @@ class JevUrllibFallbackTests(unittest.TestCase):
                 backend = JevBackend(timeout_ms=2000)
                 with self.assertRaises(BackendUnavailable):
                     asyncio.run(backend.ask(_request()))
+
+    def test_misleading_vendor_confidence_never_feeds_the_decision(self):
+        """A vendor confidence of 0.99 next to a near-even probability
+        split must not leak into Decision.reported_confidence or the
+        chosen action -- only the chosen option's own probability (0.51)
+        may. The raw vendor value is still captured, verbatim, as
+        last_vendor_confidence for receipts/observability."""
+        handler = _make_handler(response_body=MISLEADING_CONFIDENCE_RESPONSE)
+        with _running_server(handler) as base_url:
+            with mock.patch.dict(os.environ, {"TYPESAFE_BASE_URL": base_url}):
+                backend = JevBackend(timeout_ms=2000)
+                result = asyncio.run(backend.ask(_request()))
+        self.assertEqual(result.action.choice, "read_readme")
+        self.assertEqual(result.action.reported_confidence, 0.51)
+        self.assertEqual(backend.last_vendor_confidence, 0.99)
 
     def test_missing_key_raises_before_any_network_call(self):
         handler = _make_handler()

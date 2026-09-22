@@ -77,6 +77,19 @@ afast bench suite --live --backend laya
 `TYPESAFE_API_KEY`, and sends bounded decision state off the machine --
 read [PRIVACY.md](PRIVACY.md) first.
 
+## Calibration gates: fit from data, not assumed
+
+`min_probability`/`min_margin` (see `docs/MODEL-SETUP.md`) are currently
+fixed defaults, not fitted thresholds. Independent Jev audits found
+accuracy flat across roughly 0.50-0.95 reported confidence and
+discriminative only at confidence >=0.99 on some workloads -- a shape a
+single global threshold like `0.90` may not capture well.
+`afast bench calibrate --receipts <events-dir-or-jsonl> --labels
+<labels.jsonl>` (see `docs/BENCH.md`) turns judged-decision receipts into
+an ECE report plus a coverage/accuracy gate curve at seven thresholds, so
+the actual gate can be picked from that curve on your own judged data
+rather than carried over unverified from this document.
+
 ## What these numbers do not establish
 
 - Decision latency is backend scoring time, not whole-task speedup.

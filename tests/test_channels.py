@@ -215,8 +215,12 @@ class BackendBatchTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(set(client.kwargs["questions"]), {"next_action", "risk"})
         self.assertEqual(result.action.choice, "a")
         self.assertIn("risk", result.answers)
-        self.assertEqual(result.action.reported_confidence, .8)
-        self.assertEqual(result.action.confidence_kind, 'typesafe_reported_unspecified')
+        # reported_confidence is the chosen option's own probability
+        # (0.9), never the vendor's separate confidence field (0.8) --
+        # see backends._decision_from_answer / docs/EVIDENCE.md.
+        self.assertEqual(result.action.reported_confidence, .9)
+        self.assertEqual(result.action.confidence_kind, 'chosen_option_probability')
+        self.assertEqual(backend.last_vendor_confidence, .8)
         self.assertEqual(len(result.action.option_set_hash), 64)
         second = Candidate('b', 'Another action', 't', {})
         forward = await backend.ask(replace(req, candidates=(*req.candidates, second)))

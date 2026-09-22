@@ -47,6 +47,16 @@ class BackendUnavailable(RuntimeError):
     pass
 
 
+# The pinned Jev model version used whenever neither the ``model``
+# constructor argument nor ``TYPESAFE_DEFAULT_MODEL`` is set. Pin the
+# version (not a moving alias like the old "jev-latest") so accuracy/
+# calibration thresholds tuned against one model version are never
+# silently re-measured against a different one after a vendor release.
+# Bump this deliberately, alongside re-running `afast bench calibrate`,
+# when adopting a new version -- see docs/MODEL-SETUP.md.
+DEFAULT_JEV_MODEL = "jev-1.13.0"
+
+
 async def ask_many(backend: Any, request: DecisionRequest) -> DecisionResult:
     """HC08 ("one call per decision point"): ask every question in
     ``request.questions`` and merge their answers into one DecisionResult.
@@ -149,6 +159,15 @@ def _build_questions(request: DecisionRequest) -> tuple[dict[str, Any], str]:
 
 def _decision_from_answer(answer: Any, model: str, input_tokens: Any,
                           option_set_hash: str | None = None) -> Decision:
+    """Every threshold and gate is built from ``probabilities`` alone. The
+    vendor's separate ``confidence`` field on this same answer is never
+    read here -- ``JevBackend`` captures it verbatim, elsewhere, as
+    ``last_vendor_confidence`` (see ``_vendor_confidence`` below), for
+    receipts/observability only. See docs/EVIDENCE.md: independent Jev
+    audits found accuracy flat across confidence 0.50-0.95 and
+    discriminative only at >=0.99 on some workloads -- a vendor
+    ``confidence`` value is not a substitute for the chosen option's own
+    probability, and must never feed a gate."""
     probabilities = dict(field_value(answer, "probabilities", {}) or {})
     if not probabilities:
         raise BackendUnavailable("next_action answer missing probabilities")
@@ -156,14 +175,29 @@ def _decision_from_answer(answer: Any, model: str, input_tokens: Any,
     return Decision(
         choice=choice,
         probabilities=probabilities,
-        reported_confidence=field_value(answer, "confidence"),
+        # The chosen option's own probability -- never the vendor's
+        # separate "confidence" field.
+        reported_confidence=probabilities[choice],
         model=model,
         input_tokens=input_tokens,
-        # The remote service does not version its statistic in this response.
-        # Do not assume a formula from a different adapter or backend.
-        confidence_kind="typesafe_reported_unspecified",
+        confidence_kind="chosen_option_probability",
         option_set_hash=option_set_hash,
     )
+
+
+def _vendor_confidence(payload: Any) -> float | None:
+    """The ``next_action`` answer's raw vendor ``confidence`` field,
+    verbatim, or ``None`` if absent/malformed. Recorded only as
+    ``JevBackend.last_vendor_confidence`` for receipts/observability --
+    never used to build a ``Decision`` or feed any threshold/gate (see
+    ``_decision_from_answer``, which uses the chosen option's own
+    probability instead)."""
+    answers_raw = field_value(payload, "answers", {}) or {}
+    next_action_answer = indexed(answers_raw, "next_action")
+    value = field_value(next_action_answer, "confidence")
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None
+    return float(value)
 
 
 def _result_from_payload(
@@ -211,7 +245,7 @@ class JevBackend:
     def __init__(
         self, *, model: str | None = None, timeout_ms: int = 750, client: Any = None
     ):
-        self.model = model or os.getenv("TYPESAFE_DEFAULT_MODEL") or None
+        self.model = model or os.getenv("TYPESAFE_DEFAULT_MODEL") or DEFAULT_JEV_MODEL
         self.timeout_ms = timeout_ms
         self._client = client
         # Which transport actually served the most recent ``ask()`` call --
@@ -227,6 +261,13 @@ class JevBackend:
         # the SDK path) does not expose this measurement.
         self.last_connect_ms: float | None = None
         self.last_reused_connection: bool = False
+        # The vendor's raw, unversioned ``confidence`` field on the most
+        # recent ``next_action`` answer, verbatim -- never fed into a
+        # Decision or a gate (see ``_decision_from_answer``); recorded
+        # here only so receipts/observability can inspect it alongside
+        # the chosen-option probability actually used. ``None`` until the
+        # first call, or if the field was absent/malformed.
+        self.last_vendor_confidence: float | None = None
         # Stdlib (urllib-fallback) transport's persistent keep-alive socket.
         # Guarded by ``_conn_lock`` because ``asyncio.to_thread`` runs the
         # blocking send/receive in a worker thread while this backend
@@ -282,6 +323,7 @@ class JevBackend:
         # ``typesafe_sdk`` package, not of this adapter -- see
         # docs/MODEL-SETUP.md for what is and is not verified here.
         self.last_connect_ms = None
+        self.last_vendor_confidence = _vendor_confidence(result)
         return _result_from_payload(result, self.model, request, option_set_hash)
 
     async def _ask_urllib(self, request: DecisionRequest) -> DecisionResult:
@@ -295,7 +337,7 @@ class JevBackend:
         if not api_key:
             raise BackendUnavailable("TYPESAFE_API_KEY is missing")
         questions, option_set_hash = _build_questions(request)
-        model = self.model or "jev-latest"
+        model = self.model or DEFAULT_JEV_MODEL
         body = {
             "state": request.state,
             "model": model,
@@ -316,6 +358,7 @@ class JevBackend:
             timeout_s,
         )
         self.last_transport = "urllib"
+        self.last_vendor_confidence = _vendor_confidence(payload)
         return _result_from_payload(payload, model, request, option_set_hash)
 
     def _new_connection(
@@ -446,7 +489,7 @@ class JevBackend:
                 "Content-Type": "application/json",
             }
             body = json.dumps(
-                {"state": {}, "model": self.model or "jev-latest", "questions": {}}
+                {"state": {}, "model": self.model or DEFAULT_JEV_MODEL, "questions": {}}
             ).encode("utf-8")
             timeout_s = self.timeout_ms / 1000
             await asyncio.to_thread(

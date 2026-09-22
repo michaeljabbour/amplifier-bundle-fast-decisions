@@ -31,6 +31,7 @@ from .bench import (
     run_suite,
     write_jsonl,
 )
+from .bench.calibration import calibration_report, joined_pairs
 from .bench.suite import DeterministicSuiteBackend, ForbiddenLabelSource
 from .demo import run_demo
 from .observatory import read_state, remove_state, viewer_is_alive, write_state_atomic
@@ -347,7 +348,12 @@ class _TimingBackend:
 
 
 def _augment_suite_report(
-    report: dict, timed_backend: "_TimingBackend", permutations: int, *, errors: int = 0
+    report: dict,
+    timed_backend: "_TimingBackend",
+    permutations: int,
+    *,
+    errors: int = 0,
+    calibration_pairs: list[tuple[float, bool]] | None = None,
 ) -> dict:
     """Add per-case decision latency (p50/p95, canonical order only), an
     explicit ``agreement_with_expected`` alias, and an ``errors``/
@@ -356,7 +362,12 @@ def _augment_suite_report(
     here rather than in bench/report.py. ``errors`` counts per-case
     ``TimeoutError``/``BackendUnavailable`` outcomes that ``run_suite``
     recorded as abstentions rather than aborting the suite (see
-    bench/suite.py's ``SuiteResult.errors``)."""
+    bench/suite.py's ``SuiteResult.errors``). ``calibration_pairs`` (each
+    case's canonical chosen-option probability, agreement with
+    ``expected_choice``), when given, adds a top-level ``calibration``
+    key: ECE/bins plus the gate-coverage curve from
+    ``bench.calibration.calibration_report`` -- the same shape
+    ``afast bench calibrate`` prints from judged receipts."""
     k = max(1, permutations)
     canonical_latencies = timed_backend.latencies_ms[0::k]
     report["decision"]["decision_latency_ms_p50"] = percentile(canonical_latencies, 50)
@@ -368,6 +379,8 @@ def _augment_suite_report(
     total_attempts = errors + n_observed
     report["accuracy_proxy"]["errors"] = errors
     report["accuracy_proxy"]["error_rate"] = (errors / total_attempts) if total_attempts else 0.0
+    if calibration_pairs is not None:
+        report["calibration"] = calibration_report(calibration_pairs)
     return report
 
 
@@ -397,11 +410,11 @@ def bench_suite(args) -> int:
     backend_name = args.backend
     model_arg = getattr(args, "model", None)
     if live_requested and backend_name == "jev" and both_gates:
-        from .backends import JevBackend
+        from .backends import DEFAULT_JEV_MODEL, JevBackend
 
         backend = JevBackend(model=model_arg)
         backend_external = True
-        model_name = model_arg or "jev-latest"
+        model_name = model_arg or DEFAULT_JEV_MODEL
     elif backend_name in ("hosted", "gateway") and hosted_gates:
         from .local_backend import HostedBackend
 
@@ -463,8 +476,15 @@ def bench_suite(args) -> int:
         provider="typesafe" if backend_external else "offline",
         backend_external=backend_external,
     )
+    calibration_pairs = [
+        (item.canonical_probability, item.correct) for item in result.items
+    ]
     report = _augment_suite_report(
-        report, timed_backend, args.permutations, errors=result.errors
+        report,
+        timed_backend,
+        args.permutations,
+        errors=result.errors,
+        calibration_pairs=calibration_pairs,
     )
     swing = report["accuracy_proxy"]["max_probability_swing"]
     if isinstance(swing, (int, float)) and swing > 0.15:
@@ -482,6 +502,24 @@ def bench_suite(args) -> int:
         print(json.dumps(report, sort_keys=True, allow_nan=False))
     else:
         print(render_markdown(report))
+    return 0
+
+
+def bench_calibrate(args) -> int:
+    """``afast bench calibrate``: join judged-decision receipts (the same
+    telemetry ``bench replay`` reads, ``decision_id`` ->
+    ``scored.selected_probability``) with an external label file
+    (``decision_id`` -> ``correct: bool``), and print the same
+    ECE/gate-curve report ``bench suite --json``'s ``calibration`` key
+    carries -- so real judged data, not the synthetic suite, can set the
+    gates (see docs/BENCH.md, docs/EVIDENCE.md)."""
+    try:
+        pairs = joined_pairs(args.receipts, args.labels)
+    except FileNotFoundError as exc:
+        print("afast bench calibrate: " + str(exc), file=sys.stderr)
+        return 2
+    report = calibration_report(pairs)
+    print(json.dumps(report, sort_keys=True, allow_nan=False))
     return 0
 
 
@@ -734,6 +772,22 @@ def main(argv=None) -> int:
     suite.add_argument("--out", default=None)
     suite.add_argument("--md", default=None)
     suite.add_argument("--json", action="store_true")
+    calibrate = bench_commands.add_parser(
+        "calibrate",
+        help="ECE + gate curve over judged receipts joined with labels",
+    )
+    calibrate.add_argument(
+        "--receipts",
+        required=True,
+        help="Events directory or a single JSONL file (same format as "
+             "'bench replay'); chosen-option probability comes from each "
+             "decision's scored.selected_probability",
+    )
+    calibrate.add_argument(
+        "--labels",
+        required=True,
+        help="JSONL file of {'decision_id': ..., 'correct': bool} rows",
+    )
     args = parser.parse_args(argv)
     try:
         if args.command == "doctor":
@@ -747,6 +801,8 @@ def main(argv=None) -> int:
             return bench_replay(args)
         if args.command == "bench" and args.bench_command == "suite":
             return bench_suite(args)
+        if args.command == "bench" and args.bench_command == "calibrate":
+            return bench_calibrate(args)
         if args.command == "serve" and args.stop:
             return stop_server(args.state_file)
         if args.command == "demo" and args.record_only:

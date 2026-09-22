@@ -27,6 +27,7 @@ session:
     config:
       mode: active
       backend: ollama
+      # model: jev-1.13.0  # pin the version when thresholds are tuned; aliases move on release
       model: qwen3:0.6b
       timeout_ms: 500
       allow_external_state: false
