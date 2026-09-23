@@ -1,0 +1,1040 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>Fast Decisions · Decision Observatory</title>
+<style>/* Decision Observatory — dark, high-contrast. Colour carries outcome, never identity alone:
+   every coloured chip also carries a label. */
+:root {
+  color-scheme: dark;
+  --plane: #101625;        /* page */
+  --surface: #172033;      /* panels */
+  --raised: #1c273c;       /* rows, cards */
+  --raised-2: #26334c;     /* hover */
+  --line: #303d54;         /* hairline */
+  --line-strong: #53627b;
+  --ink: #f3f5fb;
+  --ink-2: #c0cbdc;
+  --muted: #a4b2c8;
+  --accent: #80dfc5;       /* fast path / bundle */
+  --accent-ink: #0b1a13;
+  --info: #adaeff;         /* generative provider / reasoning */
+  --warn: #f0c681;         /* mismatch, abstain, scripted */
+  --bad: #ff9fba;          /* errors, retries */
+  --adv: #c9b8ff;          /* advisory smart tool */
+  --focus: #8ee9c5;
+  --sans: "Avenir Next", Avenir, -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --header-h: 66px;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body { margin: 0; background: var(--plane); color: var(--ink); font: 13px/1.45 var(--sans); -webkit-font-smoothing: antialiased; }
+button, input, select { font: inherit; }
+button { cursor: pointer; color: inherit; background: var(--raised); border: 1px solid var(--line-strong); border-radius: 6px; padding: 6px 10px; transition: background .12s, border-color .12s; }
+button:hover { background: var(--raised-2); }
+button:disabled { cursor: default; opacity: .5; }
+button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+h1, h2, h3, h4, p { margin: 0; }
+h1 { font-size: 20px; font-weight: 650; letter-spacing: -.3px; line-height: 1.2; }
+h2 { font-size: 13px; font-weight: 600; color: var(--ink-2); }
+h3 { font-size: 15px; font-weight: 650; }
+h4 { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+input[type=search], input[type=password], select { min-width: 0; border: 1px solid var(--line-strong); background: var(--raised); color: var(--ink); border-radius: 6px; padding: 6px 9px; }
+input[type=checkbox] { accent-color: var(--accent); }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }
+.skip { position: absolute; left: 10px; top: -80px; z-index: 10; background: var(--raised); padding: 12px; }
+.skip:focus { top: 10px; }
+.mono { font-family: var(--mono); font-size: 11px; }
+[hidden] { display: none !important; }
+
+/* ---------- header ---------- */
+.app-header { height: var(--header-h); display: flex; align-items: center; justify-content: space-between; padding: 0 18px; border-bottom: 1px solid var(--line); background: var(--surface); gap: 16px; position: relative; z-index: 1; }
+.brand { display: flex; align-items: center; gap: 10px; }
+.brand svg { color: var(--accent); }
+.brand strong { display: block; font-size: 17px; font-weight: 650; letter-spacing: -.5px; line-height: 1.2; }
+.brand span { display: block; font-size: 11px; color: var(--muted); }
+.header-actions { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.quiet { font-size: 12px; padding: 5px 9px; background: transparent; }
+.follow { font-size: 12px; padding: 5px 10px; color: var(--accent); border-color: rgba(52,211,153,.35); background: rgba(52,211,153,.08); }
+.follow[aria-pressed="false"] { color: var(--ink-2); border-color: var(--line-strong); background: transparent; }
+.connection { display: inline-flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 600; padding: 4px 9px 4px 7px; border: 1px solid var(--line-strong); border-radius: 999px; white-space: nowrap; }
+.connection::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+.connection.connected::before { background: var(--accent); box-shadow: 0 0 0 3px rgba(52,211,153,.18); }
+.connection.problem { border-color: rgba(255,128,128,.45); }
+.connection.problem::before { background: var(--bad); }
+.connection.replay::before { background: var(--warn); }
+.freshness { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 260px; }
+.connection-notice { padding: 8px 18px; background: #3b2f1c; border-bottom: 1px solid #6b5326; color: #f3d48a; font-size: 12px; }
+.reconnect-panel { padding: 12px 18px; background: var(--surface); border-bottom: 1px solid var(--line); }
+.reconnect-panel p { margin-bottom: 10px; max-width: 80ch; color: var(--ink-2); }
+.reconnect-panel form { display: flex; gap: 8px; align-items: center; max-width: 760px; }
+.reconnect-panel input { flex: 1; }
+
+/* ---------- layout ---------- */
+.app-layout { display: grid; grid-template-columns: 200px minmax(480px, 1fr) 300px; height: calc(100vh - var(--header-h)); }
+.sessions-panel, .activity-panel, .detail-panel { min-width: 0; overflow-y: auto; overscroll-behavior: contain; }
+.sessions-panel { padding: 16px 12px; border-right: 1px solid var(--line); background: var(--surface); }
+.activity-panel { padding: 24px 28px 28px; }
+.detail-panel { border-left: 1px solid var(--line); padding: 16px 18px; background: var(--surface); }
+
+/* ---------- sessions ---------- */
+.sessions-heading { display: flex; align-items: center; justify-content: space-between; margin: 0 4px 10px; }
+.count { font-size: 11px; font-family: var(--mono); background: var(--raised-2); border-radius: 4px; padding: 1px 6px; color: var(--ink-2); }
+.search { width: 100%; font-size: 12px; margin-bottom: 10px; }
+.all-sessions { width: 100%; display: flex; justify-content: space-between; align-items: center; background: transparent; border-color: transparent; font-weight: 600; font-size: 12px; margin-bottom: 4px; padding: 7px 10px; }
+.all-sessions.selected { color: var(--accent); background: rgba(52,211,153,.1); }
+.session-list { display: flex; flex-direction: column; gap: 2px; }
+.session-group { position: relative; }
+.session-row { width: 100%; text-align: left; background: transparent; border-color: transparent; padding: 8px 10px; border-radius: 6px; display: block; }
+.session-row:hover { background: var(--raised); }
+.session-row.selected { background: var(--raised); border-color: var(--line-strong); box-shadow: inset 2px 0 var(--accent); }
+.session-row.child { margin-left: 14px; width: calc(100% - 14px); border-left: 1px solid var(--line-strong); border-radius: 0 6px 6px 0; }
+.session-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.session-name { font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.session-name.unnamed { font-family: var(--mono); font-weight: 500; }
+.session-age { font-size: 11px; color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.session-meta { display: flex; align-items: center; gap: 6px; margin-top: 4px; min-width: 0; }
+.session-id { font-family: var(--mono); font-size: 10.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.session-config { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.session-state { display: inline-flex; align-items: center; gap: 5px; margin-top: 5px; font-size: 11px; color: var(--ink-2); }
+.session-state::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--muted); flex: none; }
+.session-state.working::before { background: var(--accent); animation: pulse 1.6s ease-in-out infinite; }
+.session-state.idle::before { background: var(--accent); }
+.session-state.issue { color: var(--bad); }
+.session-state.issue::before { background: var(--bad); }
+.session-state.closed, .session-state.stale { color: var(--muted); }
+.children-toggle { font-size: 11px; background: transparent; border: 0; color: var(--info); padding: 3px 10px 6px 24px; }
+.children-option { font-size: 11px; color: var(--ink-2); display: flex; align-items: center; gap: 6px; margin: 14px 6px 0; }
+.sidebar-note { border-top: 1px solid var(--line); padding: 12px 6px 0; margin-top: 16px; font-size: 11px; color: var(--muted); line-height: 1.5; }
+@keyframes pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(52,211,153,.55); } 60% { box-shadow: 0 0 0 5px rgba(52,211,153,0); } }
+
+/* ---------- workspace heading + KPIs ---------- */
+.workspace-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 14px; margin-bottom: 14px; }
+.workspace-heading p { font-size: 12px; color: var(--muted); margin-top: 4px; max-width: 70ch; }
+.time-filter select { font-size: 12px; padding: 5px 8px; }
+.kpis { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 0; border-block: 1px solid var(--line); padding: 12px 0; }
+.kpi { border-right: 1px solid var(--line); padding: 2px 11px; min-width: 0; }
+.kpi:last-child { border-right: 0; }
+.kpi span { display: block; font-size: 10.5px; color: var(--muted); line-height: 1.25; min-height: 26px; }
+.kpi strong { display: block; font-size: 24px; font-weight: 500; line-height: 1.2; margin-top: 5px; letter-spacing: -.5px; }
+.kpi.accent strong { color: var(--accent); }
+.kpi.bad strong { color: var(--ink); }
+.kpi.bad.has-issues strong { color: var(--bad); }
+.kpi-note { font-size: 11px; color: var(--muted); line-height: 1.5; margin: 8px 2px 14px; }
+
+/* ---------- toolbar ---------- */
+.feed-toolbar { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--line); gap: 12px; margin-bottom: 12px; }
+.feed-tabs { display: flex; gap: 18px; }
+.feed-tabs button { border: 0; background: none; border-bottom: 2px solid transparent; border-radius: 0; padding: 8px 0 9px; font-size: 13px; color: var(--muted); margin-bottom: -1px; }
+.feed-tabs button:hover { color: var(--ink); }
+.feed-tabs button.active { color: var(--ink); border-bottom-color: var(--accent); font-weight: 600; }
+.synthetic-option { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); white-space: nowrap; }
+
+/* ---------- live: runtime strip ---------- */
+.runtime-strip { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.runtime-strip:empty { display: none; }
+.runtime-pulse { display: inline-flex; align-items: center; gap: 7px; font-size: 11.5px; background: var(--surface); border-radius: 999px; padding: 4px 11px 4px 8px; border-color: var(--line); }
+.runtime-pulse strong { font-weight: 600; }
+.runtime-pulse span:last-child { color: var(--muted); }
+.live-dot { width: 7px; height: 7px; background: var(--muted); border-radius: 50%; flex-shrink: 0; }
+.runtime-pulse.working .live-dot { background: var(--accent); animation: pulse 1.6s ease-in-out infinite; }
+.runtime-pulse.idle .live-dot { background: var(--accent); }
+.runtime-pulse.issue .live-dot { background: var(--bad); }
+
+/* ---------- live: decision ledger ---------- */
+.ledger-heading, .flow-summary { display: grid; grid-template-columns: 58px 150px minmax(140px, 1.2fr) 22px minmax(140px, 1.2fr) 118px 62px; gap: 10px; align-items: center; }
+.ledger-heading { font-size: 10.5px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; padding: 0 12px 6px; }
+.ledger-heading span:last-child { text-align: right; }
+.ledger { display: flex; flex-direction: column; gap: 6px; }
+.flow-card { background: var(--raised); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.flow-card.in-flight { border-color: rgba(52,211,153,.45); box-shadow: inset 3px 0 var(--accent); }
+.flow-card.selected-card { border-color: var(--line-strong); }
+.flow-summary { padding: 9px 12px 8px; }
+.flow-summary > * { min-width: 0; }
+.flow-when { font-family: var(--mono); font-size: 11px; color: var(--ink-2); font-variant-numeric: tabular-nums; line-height: 1.3; }
+.flow-when small { display: block; color: var(--muted); font-size: 10px; }
+.clamp2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; line-height: 1.3; }
+.flow-session { border: 0; padding: 0; background: transparent; text-align: left; font-weight: 600; font-size: 12.5px; width: 100%; border-radius: 0; }
+.flow-session:hover { color: var(--accent); background: transparent; }
+.flow-session-wrap { min-width: 0; }
+.flow-session-wrap .tagline { display: flex; align-items: center; gap: 5px; margin-top: 3px; min-width: 0; }
+.flow-parent { color: var(--muted); font-size: 10.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.flow-cell strong { font-size: 12.5px; font-weight: 600; }
+.flow-cell strong.id { font-family: var(--mono); font-size: 12px; }
+.flow-cell span { display: block; font-size: 11px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.flow-card.native { opacity: .75; }
+.flow-card.native:hover { opacity: 1; }
+.flow-cell .prob { display: flex; align-items: center; gap: 6px; margin-top: 3px; }
+.prob-bar { height: 4px; flex: 1; max-width: 120px; background: var(--line-strong); border-radius: 2px; overflow: hidden; }
+.prob-bar i { display: block; height: 100%; background: var(--accent); border-radius: 2px; }
+.flow-cell .prob b { font-size: 11px; font-weight: 600; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.flow-arrow { color: var(--muted); text-align: center; font-size: 14px; }
+.flow-arrow.pending { color: var(--accent); animation: blink 1.2s ease-in-out infinite; }
+@keyframes blink { 50% { opacity: .25; } }
+.flow-latency { text-align: right; font-family: var(--mono); font-size: 11px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.flow-latency small { display: block; color: var(--muted); font-size: 10px; font-family: var(--sans); }
+
+/* verdict chips + tags share one vocabulary */
+.tag, .verdict { display: inline-flex; align-items: center; gap: 5px; font-size: 10.5px; font-weight: 600; padding: 2px 7px; border-radius: 999px; border: 1px solid var(--line-strong); color: var(--ink-2); background: transparent; white-space: nowrap; letter-spacing: .01em; }
+.verdict { font-size: 11px; padding: 3px 9px; }
+.verdict::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex: none; }
+.tone-ok, .verdict.ok, .tag.ok { color: var(--accent); border-color: rgba(52,211,153,.4); background: rgba(52,211,153,.1); }
+.tone-info, .verdict.info, .tag.info { color: var(--info); border-color: rgba(124,180,255,.4); background: rgba(124,180,255,.1); }
+.tone-warn, .verdict.warn, .tag.warn, .tag.synthetic { color: var(--warn); border-color: rgba(245,192,75,.4); background: rgba(245,192,75,.1); }
+.tone-bad, .verdict.bad, .tag.bad, .tag.error { color: var(--bad); border-color: rgba(255,128,128,.45); background: rgba(255,128,128,.1); }
+.tone-adv, .verdict.adv, .tag.adv { color: var(--adv); border-color: rgba(201,184,255,.4); background: rgba(201,184,255,.1); }
+.verdict.live { color: var(--accent); border-style: dashed; background: transparent; }
+.verdict.live::before { animation: pulse 1.6s ease-in-out infinite; }
+
+/* stage chain: compact connected pills */
+.flow-stages { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 0; padding: 0 12px 9px; }
+.flow-stage { flex: none; display: inline-flex; flex-direction: column; align-items: flex-start; gap: 1px; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 4px 9px; text-align: left; min-width: 0; max-width: 220px; position: relative; }
+.flow-stage + .flow-stage { margin-left: 16px; }
+.flow-stage + .flow-stage::before { content: '›'; position: absolute; left: -13px; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: 13px; line-height: 1; }
+.flow-stage strong { font-size: 11px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
+.flow-stage span { font-size: 10px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
+.flow-stage .flow-duration { color: var(--ink-2); font-family: var(--mono); }
+.flow-stage:hover { background: var(--raised-2); }
+.flow-stage.selected { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.flow-stage.decision { border-left: 3px solid var(--accent); }
+.flow-stage.error { border-left: 3px solid var(--bad); }
+.flow-stage.synthetic { border-left: 3px solid var(--warn); }
+.flow-stage.runtime { border-left: 3px solid var(--line-strong); }
+.flow-outcome { font-size: 11px; color: var(--muted); padding: 0 12px 9px; }
+.flow-status { font-size: 11px; color: var(--muted); margin-top: 10px; }
+.flow-empty { font-size: 13px; line-height: 1.7; color: var(--muted); padding: 28px 12px; border: 1px dashed var(--line-strong); border-radius: 8px; margin-top: 8px; }
+.arriving { animation: record-arrival 1.4s ease-out; }
+@keyframes record-arrival { from { box-shadow: inset 0 0 0 2px var(--accent); background: rgba(52,211,153,.18); } to { box-shadow: inset 0 0 0 0 transparent; } }
+.flow-card.arriving { animation: card-arrival 1.4s ease-out; }
+@keyframes card-arrival { from { border-color: var(--accent); background: rgba(52,211,153,.12); } to { background: var(--raised); } }
+
+/* ---------- mechanics (session + non-live tab) ---------- */
+.mechanics { border: 1px solid var(--line); border-radius: 8px; background: var(--raised); padding: 12px 12px 6px; margin-bottom: 14px; }
+.mechanics > p { font-size: 11px; color: var(--muted); margin: 5px 0 10px; overflow-wrap: anywhere; }
+.decision-path { display: flex; align-items: center; overflow-x: auto; padding: 2px 2px 8px; }
+.path-stage { flex: none; display: inline-flex; flex-direction: column; align-items: flex-start; gap: 1px; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 5px 10px; text-align: left; max-width: 220px; position: relative; }
+.path-stage + .path-stage { margin-left: 18px; }
+.path-stage + .path-stage::before { content: ''; position: absolute; left: -19px; top: 50%; width: 18px; height: 1px; background: var(--line-strong); }
+.path-stage strong { font-size: 11.5px; font-weight: 600; white-space: nowrap; }
+.path-stage span { font-size: 10px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
+.path-stage .path-time { font-family: var(--mono); color: var(--muted); }
+.path-stage .path-duration { color: var(--ink-2); font-family: var(--mono); }
+.path-stage.decision { border-left: 3px solid var(--accent); }
+.path-stage.error { border-left: 3px solid var(--bad); }
+.path-stage.synthetic { border-left: 3px solid var(--warn); }
+.path-stage.runtime { border-left: 3px solid var(--line-strong); }
+.path-stage.selected { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+
+/* ---------- event feed ---------- */
+.feed-heading { display: grid; grid-template-columns: 22px minmax(0, 1fr) 130px 120px 70px; gap: 10px; color: var(--muted); font-size: 10.5px; text-transform: uppercase; letter-spacing: .05em; padding: 0 10px 6px; }
+.feed-heading span:last-child { text-align: right; }
+.feed { display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--raised); }
+.event-row { display: grid; grid-template-columns: 22px minmax(0, 1fr) 130px 120px 70px; gap: 10px; align-items: start; border: 0; border-top: 1px solid var(--line); border-radius: 0; padding: 8px 10px; background: transparent; text-align: left; width: 100%; }
+.event-row:first-child { border-top: 0; }
+.event-row:hover { background: var(--raised-2); }
+.event-row.selected { background: rgba(52,211,153,.08); box-shadow: inset 3px 0 var(--accent); }
+.event-row:focus-visible { outline-offset: -2px; }
+.event-icon { width: 18px; height: 18px; margin-top: 1px; border-radius: 4px; background: var(--line-strong); color: var(--ink-2); font-size: 11px; display: flex; align-items: center; justify-content: center; font-weight: 700; }
+.event-icon.decision { background: rgba(52,211,153,.18); color: var(--accent); }
+.event-icon.error { background: rgba(255,128,128,.18); color: var(--bad); }
+.event-icon.synthetic { background: rgba(245,192,75,.18); color: var(--warn); }
+.event-title { font-size: 12.5px; font-weight: 600; display: block; overflow-wrap: anywhere; }
+.event-description { display: block; font-size: 11.5px; color: var(--muted); margin-top: 1px; overflow-wrap: anywhere; }
+.event-source { font-size: 11px; color: var(--ink-2); padding-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.event-session { font-size: 11px; color: var(--muted); padding-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.event-time { text-align: right; font-size: 11px; color: var(--muted); padding-top: 2px; font-family: var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.event-duration { display: block; color: var(--ink-2); margin-top: 2px; }
+.empty-state { text-align: center; padding: 48px 20px 60px; border: 1px dashed var(--line-strong); border-radius: 8px; }
+.empty-state h2 { font-size: 15px; font-weight: 600; text-transform: none; letter-spacing: 0; color: var(--ink); margin-bottom: 6px; }
+.empty-state p { font-size: 12px; color: var(--muted); max-width: 50ch; margin: auto; }
+.feed-footer { display: flex; justify-content: space-between; gap: 16px; padding-top: 10px; margin-top: 8px; font-size: 11px; color: var(--muted); }
+
+/* ---------- details ---------- */
+.detail-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
+.detail-empty p { font-size: 12px; color: var(--muted); margin-bottom: 12px; line-height: 1.6; }
+#detailTitle { font-size: 16px; font-weight: 650; letter-spacing: -.2px; line-height: 1.3; overflow-wrap: anywhere; }
+#detailDescription { font-size: 12px; color: var(--ink-2); margin: 6px 0 14px; line-height: 1.5; overflow-wrap: anywhere; }
+.facts { margin: 0; border-top: 1px solid var(--line); }
+.facts > div { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 8px; border-bottom: 1px solid var(--line); padding: 6px 0; }
+.facts dt { font-size: 11px; color: var(--muted); }
+.facts dd { font-size: 11.5px; margin: 0; overflow-wrap: anywhere; }
+.facts dd.mono { font-family: var(--mono); font-size: 11px; color: var(--ink-2); }
+.runtime-config { margin-top: 16px; }
+.runtime-config p { font-size: 11.5px; color: var(--ink-2); margin: 6px 0 0; line-height: 1.55; }
+#distribution { margin-top: 16px; }
+.score-meaning { font-size: 11px; color: var(--muted); margin: 5px 0 10px; }
+.prob-row { margin-bottom: 8px; }
+.prob-label { display: flex; justify-content: space-between; font-size: 11.5px; gap: 10px; overflow-wrap: anywhere; }
+.prob-label b { font-weight: 600; }
+.prob-label span:last-child { font-family: var(--mono); font-variant-numeric: tabular-nums; color: var(--ink-2); }
+.prob-track { height: 5px; background: var(--line-strong); margin-top: 4px; border-radius: 3px; overflow: hidden; }
+.prob-fill { height: 100%; background: var(--line-strong); filter: brightness(1.6); border-radius: 3px; }
+.prob-row.chosen .prob-fill { background: var(--accent); filter: none; }
+.prob-row.reason .prob-fill { background: var(--info); filter: none; }
+.metadata { border-top: 1px solid var(--line); margin-top: 16px; padding-top: 10px; }
+.metadata summary { cursor: pointer; font-size: 11.5px; color: var(--muted); }
+pre { font: 11px/1.55 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; max-height: 420px; overflow: auto; color: var(--ink-2); background: var(--plane); border-radius: 6px; padding: 8px; margin: 8px 0 0; }
+
+/* ---------- selected decision circuit ---------- */
+.view-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 18px; }
+.view-bar > span { color: var(--muted); font-size: 11px; }
+.view-switch { display: flex; padding: 3px; gap: 3px; background: var(--surface); border: 1px solid var(--line); border-radius: 9px; }
+.view-switch button { background: transparent; border-color: transparent; min-width: 80px; color: var(--muted); font-size: 12px; padding: 6px 15px; }
+.view-switch button[aria-pressed="true"] { color: var(--ink); background: var(--raised-2); border-color: var(--line-strong); }
+.circuit-map.fresh-score .shared-wire { animation: route-arrival 1.4s ease-out; stroke: var(--accent); }
+.circuit-map.fresh-fast .fast-wire, .circuit-map.fresh-slow .slow-wire { animation: route-arrival 1.4s ease-out; }
+@keyframes route-arrival { from { stroke-dasharray: 8 16; stroke-dashoffset: 96; stroke-width: 4; } to { stroke-dasharray: 8 16; stroke-dashoffset: 0; stroke-width: 2; } }
+.decision-circuit { border: 1px solid var(--line); border-radius: 14px; background: var(--surface); margin: 0 0 22px; overflow: hidden; }
+.circuit-heading { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 22px 24px 0; }
+.circuit-heading h2 { font-size: 30px; line-height: 1.2; color: var(--ink); font-weight: 500; letter-spacing: -1px; }
+.circuit-heading p { color: var(--muted); font-size: 12px; margin-top: 7px; overflow-wrap: anywhere; }
+.circuit-legend { display: flex; align-items: center; gap: 20px; padding: 15px 24px 0; color: var(--muted); font-size: 11px; }
+.fast-key::before, .slow-key::before { content: ''; display: inline-block; vertical-align: middle; width: 16px; height: 2px; margin-right: 7px; background: var(--accent); }
+.slow-key::before { background: var(--info); }
+.circuit-legend .tag { margin-left: auto; }
+.circuit-map { position: relative; height: 226px; margin: 4px 24px 10px; }
+.circuit-wires { position: absolute; width: 100%; height: 100%; inset: 0; pointer-events: none; }
+.wire { fill: none; stroke: var(--line-strong); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
+.circuit-map[data-branch="fast"] .fast-wire { stroke: var(--accent); stroke-width: 2; }
+.circuit-map[data-branch="slow"] .slow-wire { stroke: var(--info); stroke-width: 2; }
+.circuit-node { position: absolute; display: flex; flex-direction: column; justify-content: center; text-align: left; gap: 7px; min-height: 80px; padding: 12px; background: var(--surface); border: 1px solid var(--line-strong); border-radius: 9px; }
+.circuit-node:disabled { opacity: 1; cursor: default; }
+.circuit-node:disabled:hover { background: var(--surface); }
+.circuit-node span { font-size: 13px; font-weight: 600; line-height: 1.3; }
+.circuit-node small { color: var(--muted); font-size: 10.5px; line-height: 1.4; overflow-wrap: anywhere; }
+.circuit-node[aria-pressed="true"] { outline: 2px solid var(--focus); outline-offset: 3px; }
+.state-node { left: 0; width: 17%; top: 73px; }
+.judge-node { left: 23.5%; width: 19%; top: 73px; }
+.judge-node:not(:disabled) { background: #223746; border-color: var(--accent); }
+.judge-node span { font-size: 19px; font-weight: 500; color: var(--accent); }
+.fast-node { left: 52%; width: 19%; top: 10px; }
+.slow-node { left: 52%; width: 19%; top: 137px; }
+.host-node { left: 81%; width: 19%; top: 73px; border-color: #8a7755; }
+.host-node span { color: var(--warn); }
+.circuit-map[data-branch="fast"] .fast-node { border-color: var(--accent); }
+.circuit-map[data-branch="slow"] .slow-node { border-color: var(--info); }
+.slow-node span { color: var(--info); }
+.circuit-receipt { display: grid; grid-template-columns: minmax(0,1fr) 24px minmax(0,1.3fr) auto; align-items: center; gap: 14px; border-top: 1px solid var(--line); padding: 18px 24px; background: #1b283b; }
+.receipt-label { display: block; color: var(--muted); font-size: 11px; margin-bottom: 5px; }
+.circuit-receipt strong { display: block; font-size: 13px; font-weight: 550; overflow-wrap: anywhere; }
+.receipt-arrow { color: var(--muted); }
+#circuitOutcomeNote { color: var(--muted); font-size: 11px; display: block; margin-top: 4px; overflow-wrap: anywhere; }
+.receipt-button { font-size: 11px; padding: 7px 10px; max-width: 160px; }
+.receipt-button.ok { color: var(--accent); }.receipt-button.info { color: var(--info); }.receipt-button.bad { color: var(--bad); }.receipt-button.warn { color: var(--warn); }
+.circuit-evidence { font-size: 11px; color: var(--muted); padding: 0 24px 16px; background: #1b283b; line-height: 1.5; }
+
+/* The original compact ledger remains a distinct presentation of the same data.
+   Keep the view switch outside either presentation so filtering and selection
+   survive a switch. These tokens also apply to the shared inspector and feed. */
+body[data-view="ledger"] {
+  --plane: #0f1211; --surface: #161a18; --raised: #1d2220; --raised-2: #242a27;
+  --line: #2a302d; --line-strong: #3a423e; --ink: #f1f3ef; --ink-2: #b8beb8;
+  --muted: #98a29b; --accent: #34d399; --info: #7cb4ff; --warn: #f5c04b; --bad: #ff8080;
+  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --header-h: 52px;
+}
+body[data-view="ledger"] .activity-panel { padding: 18px 22px 24px; }
+body[data-view="ledger"] .brand strong { font-size: 14px; }
+body[data-view="ledger"] .kpis { border: 0; padding: 0; gap: 8px; }
+body[data-view="ledger"] .kpi { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 9px 11px 8px; }
+body[data-view="ledger"] .kpi strong { font-size: 21px; font-weight: 600; margin-top: 2px; }
+
+/* ---------- responsive ---------- */
+@media (min-width: 1700px) {
+  .app-layout { grid-template-columns: 280px minmax(480px, 1fr) 380px; }
+  .activity-panel { padding: 22px 32px; }
+}
+@media (max-width: 1450px) {
+  .app-layout { grid-template-columns: 200px minmax(0, 1fr); grid-template-rows: auto auto; height: auto; min-height: calc(100vh - var(--header-h)); }
+  .sessions-panel { grid-row: 1 / 3; }
+  .detail-panel { grid-column: 2; border-left: 0; border-top: 1px solid var(--line); }
+  .sessions-panel, .activity-panel, .detail-panel { overflow: visible; }
+  .kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px 0; }
+  .kpi:nth-child(4) { border-right: 0; }
+  .ledger-heading { display: none; }
+  .flow-summary { grid-template-columns: 58px minmax(120px, 1fr) minmax(120px, 1fr) 22px minmax(120px, 1fr) 112px; }
+  .flow-summary .verdict-cell { grid-column: 6; grid-row: 1; justify-self: end; }
+  .flow-summary .flow-latency { grid-column: 6; grid-row: 2; text-align: right; margin-top: -6px; }
+  .facts { display: grid; grid-template-columns: 1fr 1fr; gap: 0 20px; }
+}
+@media (max-width: 1000px) {
+  .app-header { height: auto; min-height: var(--header-h); padding: 10px 14px; flex-wrap: wrap; gap: 8px; }
+  .header-actions { flex-wrap: wrap; gap: 6px; }
+  .freshness { display: none; }
+  .quiet, .follow { font-size: 11px; padding: 4px 8px; }
+  .connection-notice, .reconnect-panel { padding: 10px 14px; }
+  .reconnect-panel form { flex-wrap: wrap; }
+  .reconnect-panel label { width: 100%; }
+  .reconnect-panel input { width: 60%; }
+  .app-layout { display: block; height: auto; }
+  .sessions-panel { border-right: 0; border-bottom: 1px solid var(--line); padding: 12px 14px; max-height: 240px; overflow: auto; }
+  .search { display: none; }
+  .all-sessions { width: auto; display: inline-flex; gap: 10px; margin: 0 6px 0 0; vertical-align: top; }
+  .session-list { display: inline-flex; flex-direction: row; max-width: 100%; overflow-x: auto; vertical-align: top; align-items: flex-start; }
+  .session-group { display: inline-block; }
+  .session-row { width: 180px; flex: none; padding: 7px 9px; }
+  .session-row.child { margin-left: 0; width: 180px; }
+  .sidebar-note, .session-state { display: none; }
+  .children-option { margin: 8px 0 0; }
+  .activity-panel { padding: 14px 14px 20px; }
+  h1 { font-size: 18px; }
+  .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+  .kpi strong { font-size: 18px; }
+  .kpi:nth-child(even) { border-right: 0; }
+  .circuit-heading { padding: 18px 16px 0; align-items: flex-start; flex-direction: column; gap: 10px; }
+  .circuit-heading h2 { font-size: 27px; }
+  .circuit-legend { padding: 14px 16px 0; gap: 12px; }
+  .circuit-map { height: auto; margin: 18px 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .circuit-wires { display: none; }
+  .circuit-node { position: static; width: auto; min-width: 0; min-height: 78px; }
+  .host-node { grid-column: 1 / -1; min-height: 62px; }
+  .circuit-receipt { grid-template-columns: 1fr; padding: 16px; gap: 14px; }
+  .receipt-arrow { display: none; }
+  .receipt-button { justify-self: start; }
+  .circuit-evidence { padding: 0 16px 16px; }
+  .feed-toolbar { flex-wrap: wrap; }
+  .feed-tabs { gap: 12px; }
+  .feed-tabs button { font-size: 12px; }
+  .flow-summary { grid-template-columns: 1fr 1fr; gap: 6px 10px; padding: 9px 10px; }
+  .flow-summary .flow-when { grid-column: 1; }
+  .flow-summary .flow-session-wrap { grid-column: 2; }
+  .flow-summary .flow-cell { grid-column: 1 / 3; }
+  .flow-summary .flow-arrow { display: none; }
+  .flow-summary .verdict-cell { grid-column: 1; }
+  .flow-summary .flow-latency { grid-column: 2; text-align: right; }
+  .flow-stages { padding: 0 10px 8px; }
+  .feed-heading { grid-template-columns: 18px 1fr 60px; padding: 0 8px 6px; }
+  .feed-heading span:nth-child(3), .feed-heading span:nth-child(4) { display: none; }
+  .event-row { grid-template-columns: 18px minmax(0, 1fr) 60px; gap: 8px; padding: 8px; }
+  .event-source, .event-session { grid-column: 2; padding: 0; font-size: 10.5px; }
+  .event-time { grid-column: 3; grid-row: 1; }
+  .detail-panel { padding: 14px; border-left: 0; border-top: 1px solid var(--line); }
+  .facts { display: block; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, .arriving, .flow-card.arriving, .session-state.working::before, .runtime-pulse.working .live-dot, .verdict.live::before, .flow-arrow.pending { animation: none !important; transition: none !important; }
+}
+</style>
+</head>
+<body data-view="ledger">
+<a class="skip" href="#activity">Skip to activity</a>
+<header class="app-header">
+  <div class="brand"><svg viewBox="0 0 28 30" width="22" height="24" aria-hidden="true"><path d="M4 21 8 9M11 25 17 5M19 21 23 9" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg><div><strong>Fast Decisions</strong><span>Amplifier observatory</span></div></div>
+  <div class="header-actions">
+    <span id="connection" class="connection" role="status">Connecting</span>
+    <span id="freshness" class="freshness">Waiting for first response</span>
+    <button id="followBtn" class="follow" aria-pressed="true">Following live</button>
+    <button id="loadBtn" class="quiet">Open trace</button>
+    <button id="exportBtn" class="quiet">Export</button>
+    <input id="fileInput" type="file" accept=".jsonl,.json" multiple hidden>
+  </div>
+</header>
+<div id="connectionNotice" class="connection-notice" role="status" hidden></div>
+<section id="reconnectPanel" class="reconnect-panel" hidden aria-label="Reconnect viewer">
+  <p>Open the full viewer link from the launching terminal, or paste it here. This is the local viewer link, not a model API key.</p>
+  <form id="connectForm"><label for="viewerLink">Viewer link</label><input id="viewerLink" type="password" autocomplete="off" placeholder="http://127.0.0.1:…/#token=…"><button type="submit">Connect</button></form>
+</section>
+<div class="app-layout">
+  <aside class="sessions-panel" aria-label="Sessions">
+    <div class="sessions-heading"><h2>Sessions</h2><span id="sessionCount" class="count">0</span></div>
+    <label class="sr-only" for="sessionSearch">Find a session</label><input id="sessionSearch" class="search" type="search" placeholder="Find a session…">
+    <button id="allSessions" class="all-sessions selected" aria-pressed="true"><span>All sessions</span><span id="allSessionCount" class="count">0</span></button>
+    <div id="sessions" class="session-list"></div>
+    <label class="children-option"><input type="checkbox" id="includeChildren" checked> Include child sessions</label>
+    <div class="sidebar-note"><p>Local, read-only telemetry. Only sessions with the bundle loaded report here. Names are the session's working directory, never a full path.</p></div>
+  </aside>
+  <main id="activity" class="activity-panel">
+    <div class="workspace-heading">
+      <div><h1 id="viewTitle">All sessions</h1><p id="viewSubtitle">Runtime activity reported by the fast-decisions bundle.</p></div>
+      <label class="time-filter"><span class="sr-only">Time window</span><select id="timeWindow"><option value="3600000">Last hour</option><option value="86400000">Last 24 hours</option><option value="all">All retained</option></select></label>
+    </div>
+    <div class="view-bar"><div class="view-switch" role="group" aria-label="Dashboard view"><button data-view="ledger" aria-pressed="true">Ledger</button><button data-view="circuit" aria-pressed="false">Circuit</button></div><span>Same live stream, two views</span></div>
+    <section id="decisionCircuit" class="decision-circuit" aria-label="Selected decision circuit" hidden>
+      <div class="circuit-heading"><div><h2>Follow the decision.</h2><p id="circuitContext">Waiting for recorded decisions</p></div><button id="circuitLatest" class="quiet" hidden>Follow latest decision</button></div>
+      <div class="circuit-legend"><span class="fast-key">Fast path</span><span class="slow-key">Generative path</span><span id="circuitMode" class="tag">No records</span></div>
+      <div id="circuitMap" class="circuit-map" data-branch="unknown">
+        <svg class="circuit-wires" viewBox="0 0 1000 220" preserveAspectRatio="none" aria-hidden="true"><path class="wire shared-wire" d="M160 110H235"/><path class="wire fast-wire" d="M420 110H465V49H520M705 49H758V110H810"/><path class="wire slow-wire" d="M420 110H465V171H520M705 171H758V110H810"/></svg>
+        <button id="circuitState" class="circuit-node state-node" disabled><span>Current state</span><small id="circuitStateNote">No request recorded</small></button>
+        <button id="circuitJudge" class="circuit-node judge-node" disabled><span>Fast judge</span><small id="circuitJudgeNote">No score recorded</small></button>
+        <button id="circuitFast" class="circuit-node fast-node" disabled><span>Prepared action</span><small id="circuitFastNote">No fast route recorded</small></button>
+        <button id="circuitSlow" class="circuit-node slow-node" disabled><span>Generative model</span><small id="circuitSlowNote">No invocation recorded</small></button>
+        <button id="circuitHost" class="circuit-node host-node" disabled><span>Host controls execution</span><small id="circuitHostNote">Permissions stay upstream</small></button>
+      </div>
+      <div class="circuit-receipt"><div><span class="receipt-label">Judge proposed</span><strong id="circuitProposed">No proposal recorded</strong></div><span class="receipt-arrow" aria-hidden="true">→</span><div><span class="receipt-label">What happened</span><strong id="circuitHappened">No outcome recorded</strong><span id="circuitOutcomeNote"></span></div><button id="circuitReceipt" class="receipt-button" disabled>Awaiting evidence</button></div>
+      <p id="circuitEvidence" class="circuit-evidence">Recorded routes light up as events arrive. Select a node to inspect its evidence.</p>
+    </section>
+    <section class="kpis" aria-label="Activity in the selected window">
+      <div class="kpi" title="Model and shadow scores recorded in this window"><span>Decisions scored</span><strong id="modelCount">0</strong></div>
+      <div class="kpi accent" title="Prepared actions submitted to the upstream loop instead of a provider call"><span>Fast submitted</span><strong id="fastCount">0</strong></div>
+      <div class="kpi accent" title="Fast submissions with an instrumented, successful tool execution"><span>Fast executed</span><strong id="fastExecuted">0</strong></div>
+      <div class="kpi accent" title="Provider invocations bypassed at the complete() boundary"><span>Calls bypassed</span><strong id="bypassedCount">0</strong></div>
+      <div class="kpi" title="Shadow proposals that matched the tool the LLM actually chose"><span>Shadow matches</span><strong id="matchCount">—</strong></div>
+      <div class="kpi" title="Tool results reported by hooks or measured execution"><span>Tool results</span><strong id="toolCount">0</strong></div>
+      <div class="kpi bad" title="Provider retries, errors, fallbacks and failed executions"><span>Retries / errors</span><strong id="errorCount">0</strong></div>
+      <div class="kpi" title="95th percentile of decision-model wall time"><span>Scoring p95</span><strong id="scorerP95">—</strong></div>
+    </section>
+    <p class="kpi-note"><span id="impactDetail">Waiting for recorded fast-path execution.</span> <span id="qualityEvidence"></span> <span id="scopeNotice">Counts exclude scripted and demo events.</span> Eliminated tool calls, net time and cost saved, and task quality are not measured.</p>
+    <div class="feed-toolbar">
+      <div class="feed-tabs" role="group" aria-label="Event category"><button data-filter="live" class="active" aria-pressed="true">Live decisions</button><button data-filter="activity" aria-pressed="false">Events</button><button data-filter="decisions" aria-pressed="false">Decisions</button><button data-filter="errors" aria-pressed="false">Issues</button></div>
+      <label class="synthetic-option"><input type="checkbox" id="includeSynthetic"> Scripted &amp; demo <span id="syntheticCount"></span></label>
+    </div>
+    <section id="liveFlows" class="live-flows" aria-label="Live decision flows">
+      <div id="runtimeStrip" class="runtime-strip"></div>
+      <div class="ledger-heading"><span>When</span><span>Session</span><span>Model proposed</span><span></span><span>What happened</span><span>Verdict</span><span>Scoring</span></div>
+      <div id="flowCards" class="ledger"></div>
+      <p id="flowStatus" class="flow-status">Waiting for recorded events</p>
+      <p id="flowEmpty" class="flow-empty">No decisions in this window. Start a turn in a session with the bundle loaded, or widen the time window. Scripted shadow proposals never bypass a model call.</p>
+    </section>
+    <section id="mechanics" class="mechanics" hidden aria-label="Observed decision path"><h2>Decision path</h2><p id="pathNote"></p><div id="decisionPath" class="decision-path"></div></section>
+    <div id="feedHeading" class="feed-heading"><span></span><span>Event</span><span>Source</span><span>Session</span><span>Time</span></div>
+    <div id="feed" class="feed" aria-label="Recorded activity"></div>
+    <div id="emptyState" class="empty-state" hidden><h2 id="emptyTitle">Waiting for activity</h2><p id="emptyDetail">Start an Amplifier turn with the bundle loaded. Events appear here as they arrive.</p></div>
+    <div class="feed-footer"><span id="feedCount">0 events</span><span id="dataHealth">No prompts, tool contents, or private reasoning.</span></div>
+  </main>
+  <aside class="detail-panel" aria-label="Event details">
+    <div class="detail-heading"><h2>Details</h2><span id="evidenceKind" class="tag">No selection</span></div>
+    <div id="detailEmpty" class="detail-empty"><p>Select a decision stage or an event to inspect the evidence recorded with it.</p><p>Nothing here infers model reasoning or turns an observation into an execution claim.</p></div>
+    <div id="detailContent" hidden>
+      <h3 id="detailTitle"></h3><p id="detailDescription"></p>
+      <dl id="eventFacts" class="facts"></dl>
+      <section id="distribution" hidden><h4>Candidate scores</h4><p id="scoreMeaning" class="score-meaning"></p><div id="probabilities"></div></section>
+      <section class="runtime-config"><h4>Session configuration</h4><p id="sessionConfig"></p></section>
+      <details class="metadata"><summary>Recorded metadata</summary><pre id="eventJson"></pre></details>
+    </div>
+  </aside>
+</div>
+<script>document.getElementById("includeSynthetic").checked=true;window.AFAST_EMBEDDED=[{"data": {"session_label": "Prepared read-only actions", "synthetic": true}, "decision_id": null, "event": "fast_decisions:health", "event_id": "c8cdde05921f4331a42ec9cf82a3a65b", "monotonic_ns": 1805908020288958, "parent_session_id": null, "schema_version": "1.0", "seq": 1, "session_id": "demo-4f42d6e1", "synthetic": true, "timestamp": "2026-09-22T19:45:44.294888+00:00", "turn_id": null, "cursor": 1}, {"data": {"allow_external_state": false, "backend": "scripted-demo", "effort_routing_enabled": false, "engine": "upstream-loop-streaming", "mode": "active", "model_routing_enabled": false, "policy_version": "policy-v1"}, "decision_id": null, "event": "fast_decisions:turn_start", "event_id": "15c98bf9eb5f49e1b9eea3b7ac11bc96", "monotonic_ns": 1805908020413375, "parent_session_id": null, "schema_version": "1.0", "seq": 2, "session_id": "demo-4f42d6e1", "synthetic": true, "timestamp": "2026-09-22T19:45:44.297518+00:00", "turn_id": "e483f6e3a62e40479b61a808f1d6e5e6", "cursor": 2}, {"data": {"backend": "scripted-demo", "candidate_count": 3, "candidate_order_hash": "3a53aed9fa4f3994f6849f8655af3c4efe1306f8d718c085fc1f0d3abb1fa976", "candidates": [{"id": "inspect_0", "label": "Inspect artifact 1", "tool": "demo_inspect"}, {"id": "inspect_1", "label": "Inspect artifact 2", "tool": "demo_inspect"}, {"id": "inspect_2", "label": "Inspect artifact 3", "tool": "demo_inspect"}], "candidates_suppressed_already_read": 0, "domain": "tool-choice", "mode": "active", "observation_count": 1, "observations_available": 1, "observations_clipped": 0, "observations_dropped": 0, "policy_version": "policy-v1", "question_count": 0, "state_chars": 294, "state_hash": "202548685cf1445f106fe90f3aee662d3553ffad4813c6ab6a1ff945ccee55b4", "state_revision": 0, "step": 1, "task_anchored": true, "truncation_reason": "none"}, "decision_id": "04f62634ca22483e92994d7919b8cceb", "event": "fast_decisions:requested", "event_id": "83ed985337cb4af79efbcb3d79e56205", "monotonic_ns": 1805908020760000, "parent_session_id": null, "schema_version": "1.0", "seq": 3, "session_id": "demo-4f42d6e1", "synthetic": true, "timestamp": "2026-09-22T19:45:44.297856+00:00", "turn_id": "e483f6e3a62e40479b61a808f1d6e5e6", "cursor": 3}, {"data": {"backend": "scripted-demo", "candidate_order_hash": "3a53aed9fa4f3994f6849f8655af3c4efe1306f8d718c085fc1f0d3abb1fa976", "choice": "inspect_0", "confidence_kind": "unspecified", "domain": "tool-choice", "duration_ms": 35.17804201692343, "gate": 0.9, "input_tokens": 0, "latency_kind": "decision_model_wall_time", "margin": 0.96, "mode": "active", "model": "scripted-demo-not-jev", "option_set_hash": null, "output_tokens": 0, "passed_gate": true, "policy_version": "policy-v1", "probabilities": {"inspect_0": 0.97, "inspect_1": 0.010000000000000009, "inspect_2": 0.010000000000000009, "reason": 0.010000000000000009}, "probability_kind": "backend_reported", "reported_confidence": 0.97, "selected_probability": 0.97, "state_revision": 0, "step": 1, "synthetic": true}, "decision_id": "04f62634ca22483e92994d7919b8cceb", "event": "fast_decisions:scored", "event_id": "2ebefc15034b490bb9a20d15f4f971f0", "monotonic_ns": 1805908056018750, "parent_session_id": null, "schema_version": "1.0", "seq": 4, "session_id": "demo-4f42d6e1", "synthetic": true, "timestamp": "2026-09-22T19:45:44.333129+00:00", "turn_id": "e483f6e3a62e40479b61a808f1d6e5e6", "cursor": 4}, {"data": {"backend": "scripted-demo", "destination": "demo_inspect", "mode": "active", "policy_version": "policy-v1", "reason_code": "prepared_action_selected", "route": "fast", "selected_candidate": "inspect_0", "status": "submitted_to_upstream", "tool_call_id": "fd_3e0fcbdbeac44b1f9cffaac0", "transport_measured": "provider-complete"}, "decision_id": "04f62634ca22483e92994d7919b8cceb", "event": "fast_decisions:routed", "event_id": "3acc9372b17f4640831852f4a3ea34e4", "monotonic_ns": 1805908056153250, "parent_session_id": null, "schema_version": "1.0", "seq": 5, "session_id": "demo-4f42d6e1", "synthetic": true, "timestamp": "2026-09-22T19:45:44.333268+00:00", "turn_id": "e483f6e3a62e40479b61a808f1d6e5e6", "cursor": 5}, {"data": {"status": "running", "tool": "demo_inspect", "tool_call_id": "fd_3e0fcbdbeac44b1f9cffaac0"}, "decision_id": "04f62634ca22483e92994d7919b8cceb", "event": "fast_decisions:tool_start", "event_id": "f6d581f687fb448b9bae037813bd271a", "monotonic_ns": 1805908056194000, "parent_session_id": null, "schema_version": "1.0", "seq": 6, "session_id": "demo-4f42d6e1", "synthetic": true, "timestamp": "2026-09-22T19:45:44.333309+00:00", "turn_id": "e483f6e3a62e40479b61a808f1d6e5e6", "cursor": 6}, {"data": {"duration_ms": 26.08408289961517, "status": "ok", "success": true, "tool": "demo_inspect", "tool_call_id": "fd_3e0fcbdbeac44b1f9cffaac0"}, "decision_id": "04f62634ca22483e92994d7919b8cceb", "event": "fast_decisions:tool_end", "event_id": "f1765f0eeb1a4be58b233d3c1eb2f416", "monotonic_ns": 1805908082309458, "parent_session_id": null, "schema_version": "1.0", "seq": 7, "session_id": "demo-4f42d6e1", "synthetic": true, "timestamp": "2026-09-22T19:45:44.359420+00:00", "turn_id": "e483f6e3a62e40479b61a808f1d6e5e6", "cursor": 7}, {"data": {"backend": "scripted-demo", "candidate_count": 2, "candidate_order_hash": "ff8b1c374be97c69cfe15ad7ed0c716729a515b00fc246c1e14aa12b7b4bd56e", "candidates": [{"id": "inspect_1", "label": "Inspect artifact 2", "tool": "demo_inspect"}, {"id": "inspect_2", "label": "Inspect artifact 3", "tool": "demo_inspect"}], "candidates_suppressed_already_read": 0, "domain": "tool-choice", "mode": "active", "observation_count": 2, "observations_available": 3, "observations_clipped": 0, "observations_dropped": 1, "policy_version": "policy-v1", "question_count": 0, "state_chars": 368, "state_hash": "9fafea5f5e2e5ef421e4839f68a928bfb26f244398a1d67927b923dc913e5d30", "state_revision": 2, "step": 2, "task_anchored": true, "truncation_reason": "budget"}, "decision_id": "c1eb808b2e6e48059fb4e7e2999854ba", "event": "fast_decisions:requested", "event_id": "0beea44b3b894ce592001f00cff1a542", "monotonic_ns": 1805908082660041, "parent_session_id": null, "schema_version": "1.0", "seq": 8, "session_id": "demo-4f42d6e1", "synthetic": true, "timestamp": "2026-09-22T19:45:44.359773+00:00", "turn_id": "e483f6e3a62e40479b61a808f1d6e5e6", "cursor": 8}, {"data": {"backend": "scripted-demo", "candidate_order_hash": "ff8b1c374be97c69cfe15ad7ed0c716729a515b00fc246c1e14aa12b7b4bd56e", "choice": "inspect_1", "confidence_kind": "unspecified", "domain": "tool-choice", "duration_ms": 36.12845903262496, "gate": 0.9, "input_tokens": 0, "latency_kind": "decision_model_wall_time", "margin": 0.955, "mode": "active", "model": "scripted-demo-not-jev", "option_set_hash": null, "output_tokens": 0, "passed_gate": true, "policy_version": "policy-v1", "probabilities": {"inspect_1": 0.97, "inspect_2": 0.015000000000000013, "reason": 0.015000000000000013}, "probability_kind": "backend_reported", "reported_confidence": 0.97, "selected_probability": 0.97, "state_revision": 2, "step": 2, "synthetic": true}, "decision_id": "c1eb808b2e6e48059fb4e7e2999854ba", "event": "fast_decisions:scored", "event_id": "4db89d9ec4474ea591fbceccd248ee15", "monotonic_ns": 1805908118856875, "parent_session_id": null, "schema_version": "1.0", "seq": 9, "session_id": "demo-4f42d6e1", "synthetic": true, "timestamp": "2026-09-22T19:45:44.395968+00:00", "turn_id": "e483f6e3a62e40479b61a808f1d6e5e6", "cursor": 9}, {"data": {"backend": "scripted-demo", "destination": "demo_inspect", "mode": "active", "policy_version": "policy-v1", "reason_code": "prepared_action_selected", "route": "fast", "selected_candidate": "inspect_1", "status": "submitted_to_upstream", "tool_call_id": "fd_94ee3eca2b5c4c6192e1157d", "transport_measured": "provider-complete"}, "decision_id": "c1eb808b2e6e48059fb4e7e2999854ba", "event": "fast_decisions:routed", "event_id": "23190ad3c2554dee9a96d2d93a87bc2f", "monotonic_ns": 1805908119008791, "parent_session_id": null, "schema_version": "1.0", "seq": 10, "session_id": "demo-4f42d6e1", "synthetic": true, "timestamp": "2026-09-22T19:45:44.396124+00:00", "turn_id": "e483f6e3a62e40479b61a808f1d6e5e6", "cursor": 10}, {"data": {"status": "running", "tool": "demo_inspect", "tool_call_id": "fd_94ee3eca2b5c4c6192e1157d"}, "decision_id": "c1eb808b2e6e48059fb4e7e2999854ba", "event": "fast_decisions:tool_start", "event_id": "3c784f7810b34b54928d6d60a4cfd8d0", "monotonic_ns": 1805908119049125, "parent_session_id": null, "schema_version": "1.0", "seq": 11, "session_id": "demo-4f42d6e1", "synthetic": true, "timestamp": "2026-09-22T19:45:44.396165+00:00", "turn_id": "e483f6e3a62e40479b61a808f1d6e5e6", "cursor": 11}, {"data": {"duration_ms": 26.09341684728861, "status": "ok", "success": true, "tool": "demo_inspect", "tool_call_id": "fd_94ee3eca2b5c4c6192e1157d"}, "decision_id": "c1eb808b2e6e48059fb4e7e2999854ba", "event": "fast_decisions:tool_end", "event_id": "62a6105a6ff54b87b44ab806bf6193e4", "monotonic_ns": 1805908145177750, "parent_session_id": null, "schema_version": "1.0", "seq": 12, "session_id": "demo-4f42d6e1", "synthetic": true, "timestamp": "2026-09-22T19:45:44.422288+00:00", "turn_id": "e483f6e3a62e40479b61a808f1d6e5e6", "cursor": 12}, {"data": {"backend": "scripted-demo", "candidate_count": 1, "candidate_order_hash": "39e6c7d65d83de70edc01128cec37382812c637bbad33ea1567914a5cbb5d46e", "candidates": [{"id": "inspect_2", "label": "Inspect artifact 3", "tool": "demo_inspect"}], "candidates_suppressed_already_read": 0, "domain": "tool-choice", "mode": "active", "observation_count": 3, "observations_available": 5, "observations_clipped": 0, "observations_dropped": 2, "policy_version": "policy-v1", "question_count": 0, "state_chars": 442, "state_hash": "92ccd31781e27c1bf57df41c255e882f56586896829b3cebc43e0665f44ed052", "state_revision": 4, "step": 3, "task_anchored": true, "truncation_reason": "budget"}, "decision_id": "f0f496e52a914f20a94008df4ddc653a", "event": "fast_decisions:requested", "event_id": "90963bbb82024054a508d6ff60170588", "monotonic_ns": 1805908145483875, "parent_session_id": null, "schema_version": "1.0", "seq": 13, "session_id": "demo-4f42d6e1", "synthetic": true, "timestamp": "2026-09-22T19:45:44.422598+00:00", "turn_id": "e483f6e3a62e40479b61a808f1d6e5e6", "cursor": 13}, {"data": {"backend": "scripted-demo", "candidate_order_hash": "39e6c7d65d83de70edc01128cec37382812c637bbad33ea1567914a5cbb5d46e", "choice": "inspect_2", "confidence_kind": "unspecified", "domain": "tool-choice", "duration_ms": 36.1132079269737, "gate": 0.9, "input_tokens": 0, "latency_kind": "decision_model_wall_time", "margin": 0.94, "mode": "active", "model": "scripted-demo-not-jev", "option_set_hash": null, "output_tokens": 0, "passed_gate": true, "policy_version": "policy-v1", "probabilities": {"inspect_2": 0.97, "reason": 0.030000000000000027}, "probability_kind": "backend_reported", "reported_confidence": 0.97, "selected_probability": 0.97, "state_revision": 4, "step": 3, "synthetic": true}, "decision_id": "f0f496e52a914f20a94008df4ddc653a", "event": "fast_decisions:scored", "event_id": "260186a5e03e40569bba0fbbbeeb693b", "monotonic_ns": 1805908181663041, "parent_session_id": null, "schema_version": "1.0", "seq": 14, "session_id": "demo-4f42d6e1", "synthetic": true, "timestamp": "2026-09-22T19:45:44.458774+00:00", "turn_id": "e483f6e3a62e40479b61a808f1d6e5e6", "cursor": 14}, {"data": {"backend": "scripted-demo", "destination": "demo_inspect", "mode": "active", "policy_version": "policy-v1", "reason_code": "prepared_action_selected", "route": "fast", "selected_candidate": "inspect_2", "status": "submitted_to_upstream", "tool_call_id": "fd_84fe65a3622a49ec8edf53d3", "transport_measured": "provider-complete"}, "decision_id": "f0f496e52a914f20a94008df4ddc653a", "event": "fast_decisions:routed", "event_id": "c20d76641a594257b843018fc012841e", "monotonic_ns": 1805908181820250, "parent_session_id": null, "schema_version": "1.0", "seq": 15, "session_id": "demo-4f42d6e1", "synthetic": true, "timestamp": "2026-09-22T19:45:44.458936+00:00", "turn_id": "e483f6e3a62e40479b61a808f1d6e5e6", "cursor": 15}, {"data": {"status": "running", "tool": "demo_inspect", "tool_call_id": "fd_84fe65a3622a49ec8edf53d3"}, "decision_id": "f0f496e52a914f20a94008df4ddc653a", "event": "fast_decisions:tool_start", "event_id": "e1a3e901d5874a768bfcf74feac7efd7", "monotonic_ns": 1805908181858375, "parent_session_id": null, "schema_version": "1.0", "seq": 16, "session_id": "demo-4f42d6e1", "synthetic": true, "timestamp": "2026-09-22T19:45:44.458975+00:00", "turn_id": "e483f6e3a62e40479b61a808f1d6e5e6", "cursor": 16}, {"data": {"duration_ms": 26.12499985843897, "status": "ok", "success": true, "tool": "demo_inspect", "tool_call_id": "fd_84fe65a3622a49ec8edf53d3"}, "decision_id": "f0f496e52a914f20a94008df4ddc653a", "event": "fast_decisions:tool_end", "event_id": "9a7e50efe8db44e8bfa86125460ebd10", "monotonic_ns": 1805908208031916, "parent_session_id": null, "schema_version": "1.0", "seq": 17, "session_id": "demo-4f42d6e1", "synthetic": true, "timestamp": "2026-09-22T19:45:44.485141+00:00", "turn_id": "e483f6e3a62e40479b61a808f1d6e5e6", "cursor": 17}, {"data": {"backend": "scripted-demo", "destination": "provider", "mode": "active", "policy_version": "policy-v1", "reason_code": "fast_path_budget", "route": "slow", "state_revision": 6, "step": 4}, "decision_id": "22badac0f5a2451d94914fd8b588d5aa", "event": "fast_decisions:routed", "event_id": "1f52967959ae4103a8d49ea07ba6e20b", "monotonic_ns": 1805908208137875, "parent_session_id": null, "schema_version": "1.0", "seq": 18, "session_id": "demo-4f42d6e1", "synthetic": true, "timestamp": "2026-09-22T19:45:44.485255+00:00", "turn_id": "e483f6e3a62e40479b61a808f1d6e5e6", "cursor": 18}, {"data": {"destination": "demo-reasoner", "model": "synthetic-reasoner", "provider": "demo-reasoner", "provider_call_id": "provider_031f306ae3a14a21bba0ef03909e8f9d", "route": "slow", "status": "running", "transport_measured": "provider-complete"}, "decision_id": "22badac0f5a2451d94914fd8b588d5aa", "event": "fast_decisions:slow_start", "event_id": "dffff0d8b7a04f8eba308f442e0e21f7", "monotonic_ns": 1805908208171708, "parent_session_id": null, "schema_version": "1.0", "seq": 19, "session_id": "demo-4f42d6e1", "synthetic": true, "timestamp": "2026-09-22T19:45:44.485289+00:00", "turn_id": "e483f6e3a62e40479b61a808f1d6e5e6", "cursor": 19}, {"data": {"duration_ms": 361.1702090129256, "input_tokens": 180, "latency_kind": "provider_complete_wall_time", "model": "synthetic-reasoner", "output_tokens": 65, "provider": "demo-reasoner", "provider_call_id": "provider_031f306ae3a14a21bba0ef03909e8f9d", "status": "ok", "total_tokens": 245, "transport_measured": "provider-complete"}, "decision_id": "22badac0f5a2451d94914fd8b588d5aa", "event": "fast_decisions:slow_end", "event_id": "dc97593d70e64156813895160d510506", "monotonic_ns": 1805908569428666, "parent_session_id": null, "schema_version": "1.0", "seq": 20, "session_id": "demo-4f42d6e1", "synthetic": true, "timestamp": "2026-09-22T19:45:44.846533+00:00", "turn_id": "e483f6e3a62e40479b61a808f1d6e5e6", "cursor": 20}, {"data": {"duration_ms": 549.1050409618765, "fast_total": 3, "slow_total": 1, "status": "ok"}, "decision_id": "22badac0f5a2451d94914fd8b588d5aa", "event": "fast_decisions:turn_end", "event_id": "e0953b07c74e418f8cc7d5d04f7b2c3d", "monotonic_ns": 1805908569577916, "parent_session_id": null, "schema_version": "1.0", "seq": 21, "session_id": "demo-4f42d6e1", "synthetic": true, "timestamp": "2026-09-22T19:45:44.846697+00:00", "turn_id": "e483f6e3a62e40479b61a808f1d6e5e6", "cursor": 21}, {"data": {"session_label": "Ambiguity escalates to reasoning", "synthetic": true}, "decision_id": null, "event": "fast_decisions:health", "event_id": "604f1289d9634e09aefe77df7455a1e5", "monotonic_ns": 1805908569741625, "parent_session_id": null, "schema_version": "1.0", "seq": 22, "session_id": "demo-4f42d6e1", "synthetic": true, "timestamp": "2026-09-22T19:45:44.846862+00:00", "turn_id": null, "cursor": 22}, {"data": {"allow_external_state": false, "backend": "scripted-demo", "effort_routing_enabled": false, "engine": "upstream-loop-streaming", "mode": "active", "model_routing_enabled": false, "policy_version": "policy-v1"}, "decision_id": null, "event": "fast_decisions:turn_start", "event_id": "3638cb492912430fa4e51b524664851e", "monotonic_ns": 1805908569788291, "parent_session_id": null, "schema_version": "1.0", "seq": 23, "session_id": "demo-4f42d6e1", "synthetic": true, "timestamp": "2026-09-22T19:45:44.846910+00:00", "turn_id": "cbcc040f05944a10ad63ea18d154d9d5", "cursor": 23}, {"data": {"backend": "scripted-demo", "candidate_count": 2, "candidate_order_hash": "98da501871b73ec08b35591e8cb27c70999ec93a6de49d290b0b30ef1129c55a", "candidates": [{"id": "inspect_0", "label": "Inspect artifact 1", "tool": "demo_inspect"}, {"id": "inspect_1", "label": "Inspect artifact 2", "tool": "demo_inspect"}], "candidates_suppressed_already_read": 0, "domain": "tool-choice", "mode": "active", "observation_count": 1, "observations_available": 1, "observations_clipped": 0, "observations_dropped": 0, "policy_version": "policy-v1", "question_count": 0, "state_chars": 300, "state_hash": "5b8eb4cfa1a3afd0ad877249d7f771d1a0ec56087a14a04c294d77f58c26c37e", "state_revision": 0, "step": 1, "task_anchored": true, "truncation_reason": "none"}, "decision_id": "5e968c1e5822482b9bee3245da7d8dc4", "event": "fast_decisions:requested", "event_id": "b9d4e5f9b8e14727ad15ab06bb89c824", "monotonic_ns": 1805908570106375, "parent_session_id": null, "schema_version": "1.0", "seq": 24, "session_id": "demo-4f42d6e1", "synthetic": true, "timestamp": "2026-09-22T19:45:44.847225+00:00", "turn_id": "cbcc040f05944a10ad63ea18d154d9d5", "cursor": 24}, {"data": {"backend": "scripted-demo", "candidate_order_hash": "98da501871b73ec08b35591e8cb27c70999ec93a6de49d290b0b30ef1129c55a", "choice": "inspect_0", "confidence_kind": "unspecified", "domain": "tool-choice", "duration_ms": 36.12166689708829, "gate": 0.9, "input_tokens": 0, "latency_kind": "decision_model_wall_time", "margin": 0.3400000000000001, "mode": "active", "model": "scripted-demo-not-jev", "option_set_hash": null, "output_tokens": 0, "passed_gate": false, "policy_version": "policy-v1", "probabilities": {"inspect_0": 0.56, "inspect_1": 0.21999999999999997, "reason": 0.21999999999999997}, "probability_kind": "backend_reported", "reported_confidence": 0.56, "selected_probability": 0.56, "state_revision": 0, "step": 1, "synthetic": true}, "decision_id": "5e968c1e5822482b9bee3245da7d8dc4", "event": "fast_decisions:scored", "event_id": "ce23cdd0b0c2436d9d37d5bfaa7b1c8f", "monotonic_ns": 1805908606306375, "parent_session_id": null, "schema_version": "1.0", "seq": 25, "session_id": "demo-4f42d6e1", "synthetic": true, "timestamp": "2026-09-22T19:45:44.883423+00:00", "turn_id": "cbcc040f05944a10ad63ea18d154d9d5", "cursor": 25}, {"data": {"backend": "scripted-demo", "destination": "provider", "domain": "tool-choice", "mode": "active", "policy_version": "policy-v1", "proposed_route": "fast", "reason_code": "selection_threshold", "route": "slow", "state_revision": 0, "step": 1}, "decision_id": "5e968c1e5822482b9bee3245da7d8dc4", "event": "fast_decisions:routed", "event_id": "74867438efdf41d1a56623027e50090f", "monotonic_ns": 1805908606436708, "parent_session_id": null, "schema_version": "1.0", "seq": 26, "session_id": "demo-4f42d6e1", "synthetic": true, "timestamp": "2026-09-22T19:45:44.883557+00:00", "turn_id": "cbcc040f05944a10ad63ea18d154d9d5", "cursor": 26}, {"data": {"destination": "demo-reasoner", "model": "synthetic-reasoner", "provider": "demo-reasoner", "provider_call_id": "provider_2b54a63216c24b8f9d0e51d79b3dc542", "route": "slow", "status": "running", "transport_measured": "provider-complete"}, "decision_id": "5e968c1e5822482b9bee3245da7d8dc4", "event": "fast_decisions:slow_start", "event_id": "41484f01fd5e4b83876e89dc169d7b31", "monotonic_ns": 1805908606503000, "parent_session_id": null, "schema_version": "1.0", "seq": 27, "session_id": "demo-4f42d6e1", "synthetic": true, "timestamp": "2026-09-22T19:45:44.883623+00:00", "turn_id": "cbcc040f05944a10ad63ea18d154d9d5", "cursor": 27}, {"data": {"duration_ms": 361.12537514418364, "input_tokens": 180, "latency_kind": "provider_complete_wall_time", "model": "synthetic-reasoner", "output_tokens": 65, "provider": "demo-reasoner", "provider_call_id": "provider_2b54a63216c24b8f9d0e51d79b3dc542", "status": "ok", "total_tokens": 245, "transport_measured": "provider-complete"}, "decision_id": "5e968c1e5822482b9bee3245da7d8dc4", "event": "fast_decisions:slow_end", "event_id": "34f38b71dc534d5c9e89bffee04159b8", "monotonic_ns": 1805908967676791, "parent_session_id": null, "schema_version": "1.0", "seq": 28, "session_id": "demo-4f42d6e1", "synthetic": true, "timestamp": "2026-09-22T19:45:45.244798+00:00", "turn_id": "cbcc040f05944a10ad63ea18d154d9d5", "cursor": 28}, {"data": {"duration_ms": 397.8826671373099, "fast_total": 0, "slow_total": 1, "status": "ok"}, "decision_id": "5e968c1e5822482b9bee3245da7d8dc4", "event": "fast_decisions:turn_end", "event_id": "6c7b48b7f449498297b2d27b6fb411e4", "monotonic_ns": 1805908967766958, "parent_session_id": null, "schema_version": "1.0", "seq": 29, "session_id": "demo-4f42d6e1", "synthetic": true, "timestamp": "2026-09-22T19:45:45.244891+00:00", "turn_id": "cbcc040f05944a10ad63ea18d154d9d5", "cursor": 29}, {"data": {"session_label": "Jev abstains", "synthetic": true}, "decision_id": null, "event": "fast_decisions:health", "event_id": "24caff3587d04f7a99f967e9c7957d7d", "monotonic_ns": 1805908967840375, "parent_session_id": null, "schema_version": "1.0", "seq": 30, "session_id": "demo-4f42d6e1", "synthetic": true, "timestamp": "2026-09-22T19:45:45.244967+00:00", "turn_id": null, "cursor": 30}, {"data": {"allow_external_state": false, "backend": "scripted-demo", "effort_routing_enabled": false, "engine": "upstream-loop-streaming", "mode": "active", "model_routing_enabled": false, "policy_version": "policy-v1"}, "decision_id": null, "event": "fast_decisions:turn_start", "event_id": "006fac61556b4db19aa12d468059998d", "monotonic_ns": 1805908967901666, "parent_session_id": null, "schema_version": "1.0", "seq": 31, "session_id": "demo-4f42d6e1", "synthetic": true, "timestamp": "2026-09-22T19:45:45.245026+00:00", "turn_id": "f774cffa98e044c78fb141f0c58a21b4", "cursor": 31}, {"data": {"backend": "scripted-demo", "candidate_count": 2, "candidate_order_hash": "98da501871b73ec08b35591e8cb27c70999ec93a6de49d290b0b30ef1129c55a", "candidates": [{"id": "inspect_0", "label": "Inspect artifact 1", "tool": "demo_inspect"}, {"id": "inspect_1", "label": "Inspect artifact 2", "tool": "demo_inspect"}], "candidates_suppressed_already_read": 0, "domain": "tool-choice", "mode": "active", "observation_count": 1, "observations_available": 1, "observations_clipped": 0, "observations_dropped": 0, "policy_version": "policy-v1", "question_count": 0, "state_chars": 280, "state_hash": "9cd34ce672031f5e00bea0aa8dc831297d04a164e5f2e1a3565b9c9d001f897f", "state_revision": 0, "step": 1, "task_anchored": true, "truncation_reason": "none"}, "decision_id": "11d7de37c7a4445196a90e146fb6ff2d", "event": "fast_decisions:requested", "event_id": "a8860987a93e45a9a09157981f61f759", "monotonic_ns": 1805908968060583, "parent_session_id": null, "schema_version": "1.0", "seq": 32, "session_id": "demo-4f42d6e1", "synthetic": true, "timestamp": "2026-09-22T19:45:45.245187+00:00", "turn_id": "f774cffa98e044c78fb141f0c58a21b4", "cursor": 32}, {"data": {"backend": "scripted-demo", "candidate_order_hash": "98da501871b73ec08b35591e8cb27c70999ec93a6de49d290b0b30ef1129c55a", "choice": "reason", "confidence_kind": "unspecified", "domain": "tool-choice", "duration_ms": 36.10391682013869, "gate": 0.9, "input_tokens": 0, "latency_kind": "decision_model_wall_time", "margin": 0.955, "mode": "active", "model": "scripted-demo-not-jev", "option_set_hash": null, "output_tokens": 0, "passed_gate": true, "policy_version": "policy-v1", "probabilities": {"inspect_0": 0.015000000000000013, "inspect_1": 0.015000000000000013, "reason": 0.97}, "probability_kind": "backend_reported", "reported_confidence": 0.97, "selected_probability": 0.97, "state_revision": 0, "step": 1, "synthetic": true}, "decision_id": "11d7de37c7a4445196a90e146fb6ff2d", "event": "fast_decisions:scored", "event_id": "29e70803726c43d0b3ebce2c00ca0cad", "monotonic_ns": 1805909004263750, "parent_session_id": null, "schema_version": "1.0", "seq": 33, "session_id": "demo-4f42d6e1", "synthetic": true, "timestamp": "2026-09-22T19:45:45.281386+00:00", "turn_id": "f774cffa98e044c78fb141f0c58a21b4", "cursor": 33}, {"data": {"backend": "scripted-demo", "destination": "provider", "domain": "tool-choice", "mode": "active", "policy_version": "policy-v1", "reason_code": "model_abstained", "route": "slow", "state_revision": 0, "step": 1}, "decision_id": "11d7de37c7a4445196a90e146fb6ff2d", "event": "fast_decisions:routed", "event_id": "82828312a531406abb2dc565dce1d86e", "monotonic_ns": 1805909004465625, "parent_session_id": null, "schema_version": "1.0", "seq": 34, "session_id": "demo-4f42d6e1", "synthetic": true, "timestamp": "2026-09-22T19:45:45.281574+00:00", "turn_id": "f774cffa98e044c78fb141f0c58a21b4", "cursor": 34}, {"data": {"destination": "demo-reasoner", "model": "synthetic-reasoner", "provider": "demo-reasoner", "provider_call_id": "provider_4b931335af2a401187977cd41513c8c0", "route": "slow", "status": "running", "transport_measured": "provider-complete"}, "decision_id": "11d7de37c7a4445196a90e146fb6ff2d", "event": "fast_decisions:slow_start", "event_id": "3882f0ccda68422d88a9f2756964495f", "monotonic_ns": 1805909004516041, "parent_session_id": null, "schema_version": "1.0", "seq": 35, "session_id": "demo-4f42d6e1", "synthetic": true, "timestamp": "2026-09-22T19:45:45.281643+00:00", "turn_id": "f774cffa98e044c78fb141f0c58a21b4", "cursor": 35}, {"data": {"duration_ms": 361.1053340137005, "input_tokens": 180, "latency_kind": "provider_complete_wall_time", "model": "synthetic-reasoner", "output_tokens": 65, "provider": "demo-reasoner", "provider_call_id": "provider_4b931335af2a401187977cd41513c8c0", "status": "ok", "total_tokens": 245, "transport_measured": "provider-complete"}, "decision_id": "11d7de37c7a4445196a90e146fb6ff2d", "event": "fast_decisions:slow_end", "event_id": "ff8119e9536147cda4b7cbe9464e0947", "monotonic_ns": 1805909365666208, "parent_session_id": null, "schema_version": "1.0", "seq": 36, "session_id": "demo-4f42d6e1", "synthetic": true, "timestamp": "2026-09-22T19:45:45.642793+00:00", "turn_id": "f774cffa98e044c78fb141f0c58a21b4", "cursor": 36}, {"data": {"duration_ms": 397.79162500053644, "fast_total": 0, "slow_total": 1, "status": "ok"}, "decision_id": "11d7de37c7a4445196a90e146fb6ff2d", "event": "fast_decisions:turn_end", "event_id": "a55f5f2a0968403e8c9f5acde75c89d5", "monotonic_ns": 1805909365727125, "parent_session_id": null, "schema_version": "1.0", "seq": 37, "session_id": "demo-4f42d6e1", "synthetic": true, "timestamp": "2026-09-22T19:45:45.642859+00:00", "turn_id": "f774cffa98e044c78fb141f0c58a21b4", "cursor": 37}, {"data": {"session_label": "Shadow suggestion, slow execution", "synthetic": true}, "decision_id": null, "event": "fast_decisions:health", "event_id": "8e26daba5825470aad59d3f41d2ad22b", "monotonic_ns": 1805909365781000, "parent_session_id": null, "schema_version": "1.0", "seq": 38, "session_id": "demo-4f42d6e1", "synthetic": true, "timestamp": "2026-09-22T19:45:45.642913+00:00", "turn_id": null, "cursor": 38}, {"data": {"allow_external_state": false, "backend": "scripted-demo", "effort_routing_enabled": false, "engine": "upstream-loop-streaming", "mode": "shadow", "model_routing_enabled": false, "policy_version": "policy-v1"}, "decision_id": null, "event": "fast_decisions:turn_start", "event_id": "3412bffe8df141658013853f1a7865d9", "monotonic_ns": 1805909365800708, "parent_session_id": null, "schema_version": "1.0", "seq": 39, "session_id": "demo-4f42d6e1", "synthetic": true, "timestamp": "2026-09-22T19:45:45.642933+00:00", "turn_id": "df569788a29e4a4ab4e57ad8a882736c", "cursor": 39}, {"data": {"backend": "scripted-demo", "candidate_count": 2, "candidate_order_hash": "98da501871b73ec08b35591e8cb27c70999ec93a6de49d290b0b30ef1129c55a", "candidates": [{"id": "inspect_0", "label": "Inspect artifact 1", "tool": "demo_inspect"}, {"id": "inspect_1", "label": "Inspect artifact 2", "tool": "demo_inspect"}], "candidates_suppressed_already_read": 0, "domain": "tool-choice", "mode": "shadow", "observation_count": 1, "observations_available": 1, "observations_clipped": 0, "observations_dropped": 0, "policy_version": "policy-v1", "question_count": 0, "state_chars": 301, "state_hash": "ff1cae4770138d8f1221b09a592d2dfbfe85c670770959f21c27c96946ba9792", "state_revision": 0, "step": 1, "task_anchored": true, "truncation_reason": "none"}, "decision_id": "5c2262f6950e4f088e95e55bf9030a22", "event": "fast_decisions:requested", "event_id": "882680ccf29f43df9379e222f109c0d4", "monotonic_ns": 1805909365934416, "parent_session_id": null, "schema_version": "1.0", "seq": 40, "session_id": "demo-4f42d6e1", "synthetic": true, "timestamp": "2026-09-22T19:45:45.643066+00:00", "turn_id": "df569788a29e4a4ab4e57ad8a882736c", "cursor": 40}, {"data": {"backend": "scripted-demo", "candidate_order_hash": "98da501871b73ec08b35591e8cb27c70999ec93a6de49d290b0b30ef1129c55a", "choice": "inspect_0", "confidence_kind": "unspecified", "domain": "tool-choice", "duration_ms": 36.07466700486839, "gate": 0.9, "input_tokens": 0, "latency_kind": "decision_model_wall_time", "margin": 0.955, "mode": "shadow", "model": "scripted-demo-not-jev", "option_set_hash": null, "output_tokens": 0, "passed_gate": true, "policy_version": "policy-v1", "probabilities": {"inspect_0": 0.97, "inspect_1": 0.015000000000000013, "reason": 0.015000000000000013}, "probability_kind": "backend_reported", "reported_confidence": 0.97, "selected_probability": 0.97, "state_revision": 0, "step": 1, "synthetic": true}, "decision_id": "5c2262f6950e4f088e95e55bf9030a22", "event": "fast_decisions:scored", "event_id": "02d09219d3314a8ca42e09e4692cca84", "monotonic_ns": 1805909402066041, "parent_session_id": null, "schema_version": "1.0", "seq": 41, "session_id": "demo-4f42d6e1", "synthetic": true, "timestamp": "2026-09-22T19:45:45.679193+00:00", "turn_id": "df569788a29e4a4ab4e57ad8a882736c", "cursor": 41}, {"data": {"backend": "scripted-demo", "destination": "provider", "domain": "tool-choice", "mode": "shadow", "policy_version": "policy-v1", "proposed_route": "fast", "reason_code": "shadow_only", "route": "slow", "selected_candidate": "inspect_0", "shadow": true, "state_revision": 0, "step": 1}, "decision_id": "5c2262f6950e4f088e95e55bf9030a22", "event": "fast_decisions:routed", "event_id": "79c29e774d5e4b7592210fdd00ecdb75", "monotonic_ns": 1805909402151250, "parent_session_id": null, "schema_version": "1.0", "seq": 42, "session_id": "demo-4f42d6e1", "synthetic": true, "timestamp": "2026-09-22T19:45:45.679281+00:00", "turn_id": "df569788a29e4a4ab4e57ad8a882736c", "cursor": 42}, {"data": {"destination": "demo-reasoner", "model": "synthetic-reasoner", "provider": "demo-reasoner", "provider_call_id": "provider_6ef11fef53d64c4c8f7894f258075171", "route": "slow", "status": "running", "transport_measured": "provider-complete"}, "decision_id": "5c2262f6950e4f088e95e55bf9030a22", "event": "fast_decisions:slow_start", "event_id": "d5dd7c0b5037438aaa299326a19d9300", "monotonic_ns": 1805909402207791, "parent_session_id": null, "schema_version": "1.0", "seq": 43, "session_id": "demo-4f42d6e1", "synthetic": true, "timestamp": "2026-09-22T19:45:45.679337+00:00", "turn_id": "df569788a29e4a4ab4e57ad8a882736c", "cursor": 43}, {"data": {"duration_ms": 360.3979169856757, "input_tokens": 180, "latency_kind": "provider_complete_wall_time", "model": "synthetic-reasoner", "output_tokens": 65, "provider": "demo-reasoner", "provider_call_id": "provider_6ef11fef53d64c4c8f7894f258075171", "status": "ok", "total_tokens": 245, "transport_measured": "provider-complete"}, "decision_id": "5c2262f6950e4f088e95e55bf9030a22", "event": "fast_decisions:slow_end", "event_id": "88786028e7d640bea3ad0205ef59dec7", "monotonic_ns": 1805909762685500, "parent_session_id": null, "schema_version": "1.0", "seq": 44, "session_id": "demo-4f42d6e1", "synthetic": true, "timestamp": "2026-09-22T19:45:46.039810+00:00", "turn_id": "df569788a29e4a4ab4e57ad8a882736c", "cursor": 44}, {"data": {"duration_ms": 397.0390409231186, "fast_total": 0, "slow_total": 1, "status": "ok"}, "decision_id": "5c2262f6950e4f088e95e55bf9030a22", "event": "fast_decisions:turn_end", "event_id": "3ea730288f074afea9de3f2899c73f22", "monotonic_ns": 1805909762872208, "parent_session_id": null, "schema_version": "1.0", "seq": 45, "session_id": "demo-4f42d6e1", "synthetic": true, "timestamp": "2026-09-22T19:45:46.040004+00:00", "turn_id": "df569788a29e4a4ab4e57ad8a882736c", "cursor": 45}, {"data": {"session_label": "Timeout returns to baseline", "synthetic": true}, "decision_id": null, "event": "fast_decisions:health", "event_id": "939c6c80699744d9b7ad8b0be4f95ec5", "monotonic_ns": 1805909762992750, "parent_session_id": null, "schema_version": "1.0", "seq": 46, "session_id": "demo-4f42d6e1", "synthetic": true, "timestamp": "2026-09-22T19:45:46.040127+00:00", "turn_id": null, "cursor": 46}, {"data": {"allow_external_state": false, "backend": "scripted-demo", "effort_routing_enabled": false, "engine": "upstream-loop-streaming", "mode": "active", "model_routing_enabled": false, "policy_version": "policy-v1"}, "decision_id": null, "event": "fast_decisions:turn_start", "event_id": "0daf357ca3e94553b85d3d99c09e1930", "monotonic_ns": 1805909763065875, "parent_session_id": null, "schema_version": "1.0", "seq": 47, "session_id": "demo-4f42d6e1", "synthetic": true, "timestamp": "2026-09-22T19:45:46.040199+00:00", "turn_id": "091bad31a15348e4b0fcc6aae7369428", "cursor": 47}, {"data": {"backend": "scripted-demo", "candidate_count": 2, "candidate_order_hash": "98da501871b73ec08b35591e8cb27c70999ec93a6de49d290b0b30ef1129c55a", "candidates": [{"id": "inspect_0", "label": "Inspect artifact 1", "tool": "demo_inspect"}, {"id": "inspect_1", "label": "Inspect artifact 2", "tool": "demo_inspect"}], "candidates_suppressed_already_read": 0, "domain": "tool-choice", "mode": "active", "observation_count": 1, "observations_available": 1, "observations_clipped": 0, "observations_dropped": 0, "policy_version": "policy-v1", "question_count": 0, "state_chars": 295, "state_hash": "7599991faddd8aa83130f87feeb73de7a880cecb534a76452c68ef5354905f3e", "state_revision": 0, "step": 1, "task_anchored": true, "truncation_reason": "none"}, "decision_id": "d18f2a065df1432390fb498c1de8e964", "event": "fast_decisions:requested", "event_id": "1e66bfe7a3d443709b2b0eeef1a91ef9", "monotonic_ns": 1805909763382875, "parent_session_id": null, "schema_version": "1.0", "seq": 48, "session_id": "demo-4f42d6e1", "synthetic": true, "timestamp": "2026-09-22T19:45:46.040518+00:00", "turn_id": "091bad31a15348e4b0fcc6aae7369428", "cursor": 48}, {"data": {"backend": "scripted-demo", "domain": "tool-choice", "duration_ms": 180.81104196608067, "exception_type": "TimeoutError", "mode": "active", "policy_version": "policy-v1", "reason_code": "decision_timeout", "state_revision": 0, "step": 1}, "decision_id": "d18f2a065df1432390fb498c1de8e964", "event": "fast_decisions:fallback", "event_id": "c8fba654341c4d7392961d97367ceeae", "monotonic_ns": 1805909944254291, "parent_session_id": null, "schema_version": "1.0", "seq": 49, "session_id": "demo-4f42d6e1", "synthetic": true, "timestamp": "2026-09-22T19:45:46.221389+00:00", "turn_id": "091bad31a15348e4b0fcc6aae7369428", "cursor": 49}, {"data": {"backend": "scripted-demo", "destination": "provider", "domain": "tool-choice", "mode": "active", "policy_version": "policy-v1", "reason_code": "decision_timeout", "route": "slow", "state_revision": 0, "step": 1}, "decision_id": "d18f2a065df1432390fb498c1de8e964", "event": "fast_decisions:routed", "event_id": "6d367ee33f1a4fd7904ec4b92e61646c", "monotonic_ns": 1805909944343666, "parent_session_id": null, "schema_version": "1.0", "seq": 50, "session_id": "demo-4f42d6e1", "synthetic": true, "timestamp": "2026-09-22T19:45:46.221480+00:00", "turn_id": "091bad31a15348e4b0fcc6aae7369428", "cursor": 50}, {"data": {"destination": "demo-reasoner", "model": "synthetic-reasoner", "provider": "demo-reasoner", "provider_call_id": "provider_41f7cd8421c14adf8374d0671c565f2c", "route": "slow", "status": "running", "transport_measured": "provider-complete"}, "decision_id": "d18f2a065df1432390fb498c1de8e964", "event": "fast_decisions:slow_start", "event_id": "d0429e93e6664094a8652b54e21c1ad5", "monotonic_ns": 1805909944408916, "parent_session_id": null, "schema_version": "1.0", "seq": 51, "session_id": "demo-4f42d6e1", "synthetic": true, "timestamp": "2026-09-22T19:45:46.221545+00:00", "turn_id": "091bad31a15348e4b0fcc6aae7369428", "cursor": 51}, {"data": {"duration_ms": 361.068082973361, "input_tokens": 180, "latency_kind": "provider_complete_wall_time", "model": "synthetic-reasoner", "output_tokens": 65, "provider": "demo-reasoner", "provider_call_id": "provider_41f7cd8421c14adf8374d0671c565f2c", "status": "ok", "total_tokens": 245, "transport_measured": "provider-complete"}, "decision_id": "d18f2a065df1432390fb498c1de8e964", "event": "fast_decisions:slow_end", "event_id": "75b1782918794091ad02669ad966b362", "monotonic_ns": 1805910305533875, "parent_session_id": null, "schema_version": "1.0", "seq": 52, "session_id": "demo-4f42d6e1", "synthetic": true, "timestamp": "2026-09-22T19:45:46.582672+00:00", "turn_id": "091bad31a15348e4b0fcc6aae7369428", "cursor": 52}, {"data": {"duration_ms": 542.4836659803987, "fast_total": 0, "slow_total": 1, "status": "ok"}, "decision_id": "d18f2a065df1432390fb498c1de8e964", "event": "fast_decisions:turn_end", "event_id": "75ed8568b5fb4461916837c044c2fde3", "monotonic_ns": 1805910305593833, "parent_session_id": null, "schema_version": "1.0", "seq": 53, "session_id": "demo-4f42d6e1", "synthetic": true, "timestamp": "2026-09-22T19:45:46.582737+00:00", "turn_id": "091bad31a15348e4b0fcc6aae7369428", "cursor": 53}, {"data": {"session_label": "Fast-path budget returns to reasoning", "synthetic": true}, "decision_id": null, "event": "fast_decisions:health", "event_id": "c5390894d046435ca83cfc4d8417f22f", "monotonic_ns": 1805910305656416, "parent_session_id": null, "schema_version": "1.0", "seq": 54, "session_id": "demo-4f42d6e1", "synthetic": true, "timestamp": "2026-09-22T19:45:46.582800+00:00", "turn_id": null, "cursor": 54}, {"data": {"allow_external_state": false, "backend": "scripted-demo", "effort_routing_enabled": false, "engine": "upstream-loop-streaming", "mode": "active", "model_routing_enabled": false, "policy_version": "policy-v1"}, "decision_id": null, "event": "fast_decisions:turn_start", "event_id": "3bf65268b45344a5b32671256adfa594", "monotonic_ns": 1805910305678583, "parent_session_id": null, "schema_version": "1.0", "seq": 55, "session_id": "demo-4f42d6e1", "synthetic": true, "timestamp": "2026-09-22T19:45:46.582823+00:00", "turn_id": "351e217450d14a15a6b500df645cf9ad", "cursor": 55}, {"data": {"backend": "scripted-demo", "candidate_count": 5, "candidate_order_hash": "fbad42a3bd554c0e26a07697b268d4493807529a65f1066dcfc906c69071366b", "candidates": [{"id": "inspect_0", "label": "Inspect artifact 1", "tool": "demo_inspect"}, {"id": "inspect_1", "label": "Inspect artifact 2", "tool": "demo_inspect"}, {"id": "inspect_2", "label": "Inspect artifact 3", "tool": "demo_inspect"}, {"id": "inspect_3", "label": "Inspect artifact 4", "tool": "demo_inspect"}, {"id": "inspect_4", "label": "Inspect artifact 5", "tool": "demo_inspect"}], "candidates_suppressed_already_read": 0, "domain": "tool-choice", "mode": "active", "observation_count": 1, "observations_available": 1, "observations_clipped": 0, "observations_dropped": 0, "policy_version": "policy-v1", "question_count": 0, "state_chars": 305, "state_hash": "14cd0671fd03a33a97010bde8f99792336c046848d627fd0c94d8e63677f5c55", "state_revision": 0, "step": 1, "task_anchored": true, "truncation_reason": "none"}, "decision_id": "77f3ccbfddc547c38990279dbf75d0fd", "event": "fast_decisions:requested", "event_id": "1c0c558fe3f3407f8ca501d98e547532", "monotonic_ns": 1805910305833416, "parent_session_id": null, "schema_version": "1.0", "seq": 56, "session_id": "demo-4f42d6e1", "synthetic": true, "timestamp": "2026-09-22T19:45:46.582977+00:00", "turn_id": "351e217450d14a15a6b500df645cf9ad", "cursor": 56}, {"data": {"backend": "scripted-demo", "candidate_order_hash": "fbad42a3bd554c0e26a07697b268d4493807529a65f1066dcfc906c69071366b", "choice": "inspect_0", "confidence_kind": "unspecified", "domain": "tool-choice", "duration_ms": 36.089499946683645, "gate": 0.9, "input_tokens": 0, "latency_kind": "decision_model_wall_time", "margin": 0.964, "mode": "active", "model": "scripted-demo-not-jev", "option_set_hash": null, "output_tokens": 0, "passed_gate": true, "policy_version": "policy-v1", "probabilities": {"inspect_0": 0.97, "inspect_1": 0.006000000000000005, "inspect_2": 0.006000000000000005, "inspect_3": 0.006000000000000005, "inspect_4": 0.006000000000000005, "reason": 0.006000000000000005}, "probability_kind": "backend_reported", "reported_confidence": 0.97, "selected_probability": 0.97, "state_revision": 0, "step": 1, "synthetic": true}, "decision_id": "77f3ccbfddc547c38990279dbf75d0fd", "event": "fast_decisions:scored", "event_id": "d5a255acc1e54cfdb51c6f6851273b75", "monotonic_ns": 1805910341990916, "parent_session_id": null, "schema_version": "1.0", "seq": 57, "session_id": "demo-4f42d6e1", "synthetic": true, "timestamp": "2026-09-22T19:45:46.619130+00:00", "turn_id": "351e217450d14a15a6b500df645cf9ad", "cursor": 57}, {"data": {"backend": "scripted-demo", "destination": "demo_inspect", "mode": "active", "policy_version": "policy-v1", "reason_code": "prepared_action_selected", "route": "fast", "selected_candidate": "inspect_0", "status": "submitted_to_upstream", "tool_call_id": "fd_3183644bf57348e28a28db3a", "transport_measured": "provider-complete"}, "decision_id": "77f3ccbfddc547c38990279dbf75d0fd", "event": "fast_decisions:routed", "event_id": "f44cf0ad1491407683720ec60385a28b", "monotonic_ns": 1805910342190708, "parent_session_id": null, "schema_version": "1.0", "seq": 58, "session_id": "demo-4f42d6e1", "synthetic": true, "timestamp": "2026-09-22T19:45:46.619326+00:00", "turn_id": "351e217450d14a15a6b500df645cf9ad", "cursor": 58}, {"data": {"status": "running", "tool": "demo_inspect", "tool_call_id": "fd_3183644bf57348e28a28db3a"}, "decision_id": "77f3ccbfddc547c38990279dbf75d0fd", "event": "fast_decisions:tool_start", "event_id": "582d357da9624c1da707c6be50c15d8a", "monotonic_ns": 1805910342304291, "parent_session_id": null, "schema_version": "1.0", "seq": 59, "session_id": "demo-4f42d6e1", "synthetic": true, "timestamp": "2026-09-22T19:45:46.619444+00:00", "turn_id": "351e217450d14a15a6b500df645cf9ad", "cursor": 59}, {"data": {"duration_ms": 26.073874905705452, "status": "ok", "success": true, "tool": "demo_inspect", "tool_call_id": "fd_3183644bf57348e28a28db3a"}, "decision_id": "77f3ccbfddc547c38990279dbf75d0fd", "event": "fast_decisions:tool_end", "event_id": "9a4494fcbe1b4ca18b1664445cd7f882", "monotonic_ns": 1805910368414041, "parent_session_id": null, "schema_version": "1.0", "seq": 60, "session_id": "demo-4f42d6e1", "synthetic": true, "timestamp": "2026-09-22T19:45:46.645553+00:00", "turn_id": "351e217450d14a15a6b500df645cf9ad", "cursor": 60}, {"data": {"backend": "scripted-demo", "candidate_count": 4, "candidate_order_hash": "36e5508f74b3da2be81413f9f4eacf3e04f9207e967811f6ff1ceebaa2ee6bb6", "candidates": [{"id": "inspect_1", "label": "Inspect artifact 2", "tool": "demo_inspect"}, {"id": "inspect_2", "label": "Inspect artifact 3", "tool": "demo_inspect"}, {"id": "inspect_3", "label": "Inspect artifact 4", "tool": "demo_inspect"}, {"id": "inspect_4", "label": "Inspect artifact 5", "tool": "demo_inspect"}], "candidates_suppressed_already_read": 0, "domain": "tool-choice", "mode": "active", "observation_count": 2, "observations_available": 3, "observations_clipped": 0, "observations_dropped": 1, "policy_version": "policy-v1", "question_count": 0, "state_chars": 379, "state_hash": "471af8de752311e99257816f0066cf58195c7aed071f5b6ccdda47a505e77cd6", "state_revision": 2, "step": 2, "task_anchored": true, "truncation_reason": "budget"}, "decision_id": "7587bc04b2cf44348e48db917d6e1358", "event": "fast_decisions:requested", "event_id": "29503c9a20fe4201b9ab9ac83bae598e", "monotonic_ns": 1805910368637375, "parent_session_id": null, "schema_version": "1.0", "seq": 61, "session_id": "demo-4f42d6e1", "synthetic": true, "timestamp": "2026-09-22T19:45:46.645781+00:00", "turn_id": "351e217450d14a15a6b500df645cf9ad", "cursor": 61}, {"data": {"backend": "scripted-demo", "candidate_order_hash": "36e5508f74b3da2be81413f9f4eacf3e04f9207e967811f6ff1ceebaa2ee6bb6", "choice": "inspect_1", "confidence_kind": "unspecified", "domain": "tool-choice", "duration_ms": 35.59079114347696, "gate": 0.9, "input_tokens": 0, "latency_kind": "decision_model_wall_time", "margin": 0.9624999999999999, "mode": "active", "model": "scripted-demo-not-jev", "option_set_hash": null, "output_tokens": 0, "passed_gate": true, "policy_version": "policy-v1", "probabilities": {"inspect_1": 0.97, "inspect_2": 0.007500000000000007, "inspect_3": 0.007500000000000007, "inspect_4": 0.007500000000000007, "reason": 0.007500000000000007}, "probability_kind": "backend_reported", "reported_confidence": 0.97, "selected_probability": 0.97, "state_revision": 2, "step": 2, "synthetic": true}, "decision_id": "7587bc04b2cf44348e48db917d6e1358", "event": "fast_decisions:scored", "event_id": "fd95ce88add4419295a349f26c3a664e", "monotonic_ns": 1805910404304708, "parent_session_id": null, "schema_version": "1.0", "seq": 62, "session_id": "demo-4f42d6e1", "synthetic": true, "timestamp": "2026-09-22T19:45:46.681444+00:00", "turn_id": "351e217450d14a15a6b500df645cf9ad", "cursor": 62}, {"data": {"backend": "scripted-demo", "destination": "demo_inspect", "mode": "active", "policy_version": "policy-v1", "reason_code": "prepared_action_selected", "route": "fast", "selected_candidate": "inspect_1", "status": "submitted_to_upstream", "tool_call_id": "fd_6aa78a9a8040495da7438872", "transport_measured": "provider-complete"}, "decision_id": "7587bc04b2cf44348e48db917d6e1358", "event": "fast_decisions:routed", "event_id": "344fac3cce9e4942add8f034ff1a2701", "monotonic_ns": 1805910404526750, "parent_session_id": null, "schema_version": "1.0", "seq": 63, "session_id": "demo-4f42d6e1", "synthetic": true, "timestamp": "2026-09-22T19:45:46.681669+00:00", "turn_id": "351e217450d14a15a6b500df645cf9ad", "cursor": 63}, {"data": {"status": "running", "tool": "demo_inspect", "tool_call_id": "fd_6aa78a9a8040495da7438872"}, "decision_id": "7587bc04b2cf44348e48db917d6e1358", "event": "fast_decisions:tool_start", "event_id": "03407838cc55433291fd8413f9e70b94", "monotonic_ns": 1805910404570416, "parent_session_id": null, "schema_version": "1.0", "seq": 64, "session_id": "demo-4f42d6e1", "synthetic": true, "timestamp": "2026-09-22T19:45:46.681715+00:00", "turn_id": "351e217450d14a15a6b500df645cf9ad", "cursor": 64}, {"data": {"duration_ms": 25.506166042760015, "status": "ok", "success": true, "tool": "demo_inspect", "tool_call_id": "fd_6aa78a9a8040495da7438872"}, "decision_id": "7587bc04b2cf44348e48db917d6e1358", "event": "fast_decisions:tool_end", "event_id": "5213c8646fd2421196762a5e44a933a2", "monotonic_ns": 1805910430120625, "parent_session_id": null, "schema_version": "1.0", "seq": 65, "session_id": "demo-4f42d6e1", "synthetic": true, "timestamp": "2026-09-22T19:45:46.707257+00:00", "turn_id": "351e217450d14a15a6b500df645cf9ad", "cursor": 65}, {"data": {"backend": "scripted-demo", "candidate_count": 3, "candidate_order_hash": "da6166b7eec381f96d39282be99cfb1b79cf97c423aff25eebec53f74393280c", "candidates": [{"id": "inspect_2", "label": "Inspect artifact 3", "tool": "demo_inspect"}, {"id": "inspect_3", "label": "Inspect artifact 4", "tool": "demo_inspect"}, {"id": "inspect_4", "label": "Inspect artifact 5", "tool": "demo_inspect"}], "candidates_suppressed_already_read": 0, "domain": "tool-choice", "mode": "active", "observation_count": 3, "observations_available": 5, "observations_clipped": 0, "observations_dropped": 2, "policy_version": "policy-v1", "question_count": 0, "state_chars": 453, "state_hash": "342697a82330c49f64fe3dbacbcdfbc72eab6b01e9b808e28a2d7724bc7c2900", "state_revision": 4, "step": 3, "task_anchored": true, "truncation_reason": "budget"}, "decision_id": "6038d61eff3d45819b5fa051a95d49b1", "event": "fast_decisions:requested", "event_id": "2097ba90766846c0905790275cea71e3", "monotonic_ns": 1805910430496791, "parent_session_id": null, "schema_version": "1.0", "seq": 66, "session_id": "demo-4f42d6e1", "synthetic": true, "timestamp": "2026-09-22T19:45:46.707639+00:00", "turn_id": "351e217450d14a15a6b500df645cf9ad", "cursor": 66}, {"data": {"backend": "scripted-demo", "candidate_order_hash": "da6166b7eec381f96d39282be99cfb1b79cf97c423aff25eebec53f74393280c", "choice": "inspect_2", "confidence_kind": "unspecified", "domain": "tool-choice", "duration_ms": 36.09945788048208, "gate": 0.9, "input_tokens": 0, "latency_kind": "decision_model_wall_time", "margin": 0.96, "mode": "active", "model": "scripted-demo-not-jev", "option_set_hash": null, "output_tokens": 0, "passed_gate": true, "policy_version": "policy-v1", "probabilities": {"inspect_2": 0.97, "inspect_3": 0.010000000000000009, "inspect_4": 0.010000000000000009, "reason": 0.010000000000000009}, "probability_kind": "backend_reported", "reported_confidence": 0.97, "selected_probability": 0.97, "state_revision": 4, "step": 3, "synthetic": true}, "decision_id": "6038d61eff3d45819b5fa051a95d49b1", "event": "fast_decisions:scored", "event_id": "b29c8b3f4f9e474a9468a6563e82ae7a", "monotonic_ns": 1805910466686291, "parent_session_id": null, "schema_version": "1.0", "seq": 67, "session_id": "demo-4f42d6e1", "synthetic": true, "timestamp": "2026-09-22T19:45:46.743827+00:00", "turn_id": "351e217450d14a15a6b500df645cf9ad", "cursor": 67}, {"data": {"backend": "scripted-demo", "destination": "demo_inspect", "mode": "active", "policy_version": "policy-v1", "reason_code": "prepared_action_selected", "route": "fast", "selected_candidate": "inspect_2", "status": "submitted_to_upstream", "tool_call_id": "fd_95a1493e0c3b475fb9e0a294", "transport_measured": "provider-complete"}, "decision_id": "6038d61eff3d45819b5fa051a95d49b1", "event": "fast_decisions:routed", "event_id": "53e3ee8a26d844e5aa7df5eafcd0c8b6", "monotonic_ns": 1805910466856541, "parent_session_id": null, "schema_version": "1.0", "seq": 68, "session_id": "demo-4f42d6e1", "synthetic": true, "timestamp": "2026-09-22T19:45:46.744000+00:00", "turn_id": "351e217450d14a15a6b500df645cf9ad", "cursor": 68}, {"data": {"status": "running", "tool": "demo_inspect", "tool_call_id": "fd_95a1493e0c3b475fb9e0a294"}, "decision_id": "6038d61eff3d45819b5fa051a95d49b1", "event": "fast_decisions:tool_start", "event_id": "d8c580ef19ab45889d7a08965e3a6185", "monotonic_ns": 1805910466933541, "parent_session_id": null, "schema_version": "1.0", "seq": 69, "session_id": "demo-4f42d6e1", "synthetic": true, "timestamp": "2026-09-22T19:45:46.744079+00:00", "turn_id": "351e217450d14a15a6b500df645cf9ad", "cursor": 69}, {"data": {"duration_ms": 25.693709030747414, "status": "ok", "success": true, "tool": "demo_inspect", "tool_call_id": "fd_95a1493e0c3b475fb9e0a294"}, "decision_id": "6038d61eff3d45819b5fa051a95d49b1", "event": "fast_decisions:tool_end", "event_id": "f8f1476da60e4a099b11e09f4773521d", "monotonic_ns": 1805910492663750, "parent_session_id": null, "schema_version": "1.0", "seq": 70, "session_id": "demo-4f42d6e1", "synthetic": true, "timestamp": "2026-09-22T19:45:46.769803+00:00", "turn_id": "351e217450d14a15a6b500df645cf9ad", "cursor": 70}, {"data": {"backend": "scripted-demo", "destination": "provider", "mode": "active", "policy_version": "policy-v1", "reason_code": "fast_path_budget", "route": "slow", "state_revision": 6, "step": 4}, "decision_id": "b3c20584535e498ebbd17354e2b5e3f2", "event": "fast_decisions:routed", "event_id": "197be6ceac8141e283774b9157085bdd", "monotonic_ns": 1805910492751000, "parent_session_id": null, "schema_version": "1.0", "seq": 71, "session_id": "demo-4f42d6e1", "synthetic": true, "timestamp": "2026-09-22T19:45:46.769895+00:00", "turn_id": "351e217450d14a15a6b500df645cf9ad", "cursor": 71}, {"data": {"destination": "demo-reasoner", "model": "synthetic-reasoner", "provider": "demo-reasoner", "provider_call_id": "provider_64d676f497c04ad784d9c75f94d30115", "route": "slow", "status": "running", "transport_measured": "provider-complete"}, "decision_id": "b3c20584535e498ebbd17354e2b5e3f2", "event": "fast_decisions:slow_start", "event_id": "5339c9ede17644a8a9efcc07681b3bff", "monotonic_ns": 1805910492850125, "parent_session_id": null, "schema_version": "1.0", "seq": 72, "session_id": "demo-4f42d6e1", "synthetic": true, "timestamp": "2026-09-22T19:45:46.769992+00:00", "turn_id": "351e217450d14a15a6b500df645cf9ad", "cursor": 72}, {"data": {"duration_ms": 361.1212919931859, "input_tokens": 180, "latency_kind": "provider_complete_wall_time", "model": "synthetic-reasoner", "output_tokens": 65, "provider": "demo-reasoner", "provider_call_id": "provider_64d676f497c04ad784d9c75f94d30115", "status": "ok", "total_tokens": 245, "transport_measured": "provider-complete"}, "decision_id": "b3c20584535e498ebbd17354e2b5e3f2", "event": "fast_decisions:slow_end", "event_id": "a73a515a50484cc9bbb30484a68408bb", "monotonic_ns": 1805910854041791, "parent_session_id": null, "schema_version": "1.0", "seq": 73, "session_id": "demo-4f42d6e1", "synthetic": true, "timestamp": "2026-09-22T19:45:47.131184+00:00", "turn_id": "351e217450d14a15a6b500df645cf9ad", "cursor": 73}, {"data": {"duration_ms": 548.4467910137028, "fast_total": 3, "slow_total": 1, "status": "ok"}, "decision_id": "b3c20584535e498ebbd17354e2b5e3f2", "event": "fast_decisions:turn_end", "event_id": "e7247f365d4d4abd98d997abded2a519", "monotonic_ns": 1805910854182375, "parent_session_id": null, "schema_version": "1.0", "seq": 74, "session_id": "demo-4f42d6e1", "synthetic": true, "timestamp": "2026-09-22T19:45:47.131328+00:00", "turn_id": "351e217450d14a15a6b500df645cf9ad", "cursor": 74}];</script>
+<script>/* Read-only event projection. No generated events or inferred savings.
+   Arrival animations are triggered only by newly received records.
+   The pure projections at the top are exported for tests/test_viewer.cjs; everything
+   after the `document` guard is the browser render layer. */
+(() => {
+  'use strict';
+
+  // ---------- pure projections ----------
+  const kind = e => e.event.replace('fast_decisions:', '');
+  const native = e => e.data.native_event || '';
+  const decisionKey = e => e.session_id + ':' + e.decision_id;
+  const isScore = e => ['scored', 'shadow_proposed'].includes(kind(e));
+  const stamp = e => Date.parse(e.timestamp) || 0;
+  const fmt = n => Number.isFinite(n) ? (n >= 1000 ? (n / 1000).toFixed(2) + ' s' : (n > 0 && n < 1 ? n.toFixed(1) : Math.round(n)) + ' ms') : '—';
+  const pretty = s => String(s || '').replaceAll('_', ' ');
+  const valid = e => e && e.schema_version === '1.0' && typeof e.event_id === 'string' && typeof e.session_id === 'string' && typeof e.event === 'string' && e.event.startsWith('fast_decisions:') && e.data && typeof e.data === 'object' && !Array.isArray(e.data);
+  const carriesConfig = e => e.data.phase === 'configuration' || kind(e) === 'turn_start' || e.data.mode === 'advisory' || typeof e.data.session_label === 'string' || typeof e.data.workspace_name === 'string';
+  // Display name for a session: an explicit label wins, then the working-directory
+  // basename reported by the hook (never a full path), then the short id.
+  const sessionName = (config, id) => config.session_label || config.workspace_name || id.slice(0, 8);
+  function scriptedKeys(events) {
+    return new Set(events.filter(e => e.decision_id && (e.synthetic || e.data.synthetic || (isScore(e) && e.data.backend === 'scripted-demo'))).map(decisionKey));
+  }
+  const synthetic = (e, keys) => !!(e.synthetic || e.data.synthetic || (e.decision_id && !['health', 'observatory'].includes(kind(e)) && keys.has(decisionKey(e))));
+  const issue = e => (e.data.phase === 'advisory_result' && e.data.success === false) || ['provider:error', 'provider:retry'].includes(native(e)) || ['error', 'cancelled'].includes(e.data.status) || kind(e) === 'fallback';
+  const useful = e => kind(e) !== 'health' || native(e) || e.data.reason_code || ['configuration', 'session_closed', 'advisory_result'].includes(e.data.phase);
+  const backendName = b => ({ 'scripted-demo': 'Scripted scorer', deterministic: 'Scripted scorer', 'ollama-token': 'Local model', ollama: 'Local model', jev: 'Jev', unavailable: 'No scorer' }[b] || b || 'Backend not recorded');
+  function configFor(events, id) {
+    return events.filter(e => e.session_id === id && carriesConfig(e)).reduce((config, e) => ({ ...config, ...e.data }), {});
+  }
+  const WORKING = new Set(['execution:start', 'provider:request', 'tool:pre', 'tool:post', 'llm:response', 'context:compaction']);
+  const LIFE = new Set([...WORKING, 'execution:end', 'session:end', 'provider:error', 'provider:retry']);
+  function sessionsFor(events, now) {
+    const map = new Map();
+    for (const e of events) {
+      let s = map.get(e.session_id);
+      if (!s) { s = { id: e.session_id, parent: null, events: [], latest: e, config: {} }; map.set(s.id, s); }
+      s.events.push(e);
+      if (e.parent_session_id) s.parent = e.parent_session_id;
+      if (stamp(e) >= stamp(s.latest)) s.latest = e;
+      if (carriesConfig(e)) s.config = { ...s.config, ...e.data };
+    }
+    for (const s of map.values()) {
+      const life = s.events.findLast(e => LIFE.has(native(e)) || ['turn_start', 'turn_end'].includes(kind(e)) || e.data.phase === 'session_closed');
+      const beat = s.events.findLast(e => ['session_heartbeat', 'configuration'].includes(e.data.phase));
+      const closed = life && (life.data.phase === 'session_closed' || native(life) === 'session:end');
+      s.reporting = !closed && !!beat && now - stamp(beat) < 45000;
+      s.name = sessionName(s.config, s.id);
+      if (s.config.mode === 'advisory') { s.state = 'Advisory invocation recorded'; s.stateKind = 'advisory'; }
+      else if (closed) { s.state = 'Session closed'; s.stateKind = 'closed'; }
+      else if (!s.reporting) { s.state = 'No recent heartbeat'; s.stateKind = 'stale'; }
+      else if (!life) { s.state = 'Connected, idle'; s.stateKind = 'idle'; }
+      else if (issue(life)) { s.state = 'Provider issue reported'; s.stateKind = 'issue'; }
+      else if (native(life) === 'execution:end' || kind(life) === 'turn_end') { s.state = 'Connected, idle'; s.stateKind = 'idle'; }
+      else { s.state = 'Working'; s.stateKind = 'working'; }
+    }
+    return [...map.values()].sort((a, b) => stamp(b.latest) - stamp(a.latest));
+  }
+  function metrics(events) {
+    const scores = events.filter(isScore), fast = new Set(events.filter(e => kind(e) === 'routed' && e.data.route === 'fast').map(decisionKey));
+    const executions = events.filter(e => kind(e) === 'tool_end' && (e.data.success === true || e.data.status === 'ok'));
+    const nativePosts = events.filter(e => native(e) === 'tool:post');
+    const postSessions = new Set(nativePosts.map(e => e.session_id));
+    const durations = scores.map(e => e.data.duration_ms).filter(Number.isFinite).sort((a, b) => a - b);
+    return {
+      scores: scores.length, fast: fast.size, fastExecuted: executions.filter(e => fast.has(decisionKey(e))).length,
+      tools: nativePosts.length + executions.filter(e => !postSessions.has(e.session_id)).length,
+      bypassed: new Set(events.filter(e => kind(e) === 'routed' && e.data.route === 'fast' && e.data.status === 'submitted_to_upstream').map(decisionKey)).size,
+      comparisons: events.filter(e => kind(e) === 'shadow_agreement' && ['match', 'mismatch'].includes(e.data.agreement)),
+      failedFast: events.filter(e => kind(e) === 'tool_end' && fast.has(decisionKey(e)) && (e.data.status === 'error' || e.data.success === false)).length,
+      issues: events.filter(issue).length, p95: durations.length ? durations[Math.ceil(durations.length * .95) - 1] : NaN,
+    };
+  }
+  const STAGES = new Set(['requested', 'scored', 'shadow_proposed', 'shadow_observed', 'routed', 'fallback', 'tool_start', 'tool_end', 'slow_start', 'slow_end', 'shadow_agreement', 'role_proposed', 'role_agreement']);
+  function decisionPath(events, session, selected) {
+    const focus = events.find(e => e.event_id === selected && e.decision_id && e.session_id === session)
+      || events.findLast(e => e.session_id === session && e.decision_id && kind(e) === 'scored')
+      || events.findLast(e => e.session_id === session && e.decision_id && kind(e) === 'requested')
+      || events.findLast(e => e.session_id === session && e.decision_id && isScore(e));
+    if (!focus) return [];
+    return events.filter(e => decisionKey(e) === decisionKey(focus) && STAGES.has(kind(e)))
+      .sort((a, b) => stamp(a) - stamp(b) || (a.seq || 0) - (b.seq || 0));
+  }
+  function describe(e, simulated = false) {
+    const k = kind(e), d = e.data, n = native(e);
+    let title = pretty(k), detail = d.reason_code ? pretty(d.reason_code) : d.status || 'Recorded metadata', source = 'Runtime record', tone = 'runtime';
+    if (n) { title = ({ 'execution:start': 'Turn started', 'execution:end': 'Turn finished', 'session:end': 'Session ended', 'provider:request': 'Provider request', 'provider:retry': 'Provider retry', 'provider:error': 'Provider error', 'tool:pre': 'Tool proposed', 'tool:post': 'Tool result observed', 'context:compaction': 'Context compaction observed', 'llm:response': 'Provider response observed' }[n] || n); detail = [d.tool || d.provider, d.exception_type, d.retry_attempt ? 'Attempt ' + d.retry_attempt : '', d.status_code ? 'HTTP ' + d.status_code : ''].filter(Boolean).join(' · ') || 'Reported by an Amplifier hook'; source = 'Native hook observation'; }
+    if (d.phase === 'configuration') { title = 'Bundle mounted'; detail = backendName(d.backend) + ' · ' + (d.mode || 'Mode not recorded') + (d.workspace_name ? ' · ' + d.workspace_name : ''); source = 'Runtime configuration'; }
+    if (d.phase === 'session_closed') { title = 'Telemetry session closed'; detail = 'The bundle observer was unmounted.'; }
+    if (k === 'requested') { title = 'Decision requested'; detail = (d.candidate_count ?? '?') + ' prepared candidates'; source = 'Decision service'; tone = 'decision'; }
+    if (isScore(e)) { title = k === 'shadow_proposed' ? 'Shadow proposal scored' : 'Decision scored'; detail = d.model || backendName(d.backend); source = simulated ? 'Scripted score' : 'Model score'; tone = 'decision'; }
+    if (d.mode === 'advisory' && isScore(e)) { title = 'Advisory decision scored'; source = 'Portable Smart Tool'; }
+    if (d.phase === 'advisory_result') { title = 'Advisory result returned'; detail = 'Caller owns execution and policy; no bypass claimed.'; source = 'Portable Smart Tool'; }
+    if (k === 'routed') { title = d.route === 'fast' ? 'Fast action submitted' : 'Reasoning provider selected'; detail = pretty(d.reason_code); source = 'Routing decision'; tone = 'decision'; }
+    if (k === 'tool_start') { title = 'Tool execution started'; detail = d.tool || 'Tool not recorded'; source = 'Measured execution'; }
+    if (k === 'tool_end') { title = d.success === false || d.status === 'error' ? 'Tool execution failed' : 'Tool execution ' + (d.status === 'ok' ? 'completed' : (d.status || 'ended')); detail = d.tool || 'Tool not recorded'; source = 'Measured execution'; }
+    if (k === 'slow_start' || k === 'slow_end') { title = k === 'slow_start' ? 'Model invocation started' : 'Model invocation ended'; detail = d.provider || d.model || 'Provider not recorded'; source = 'Measured invocation'; }
+    if (k === 'shadow_observed') { title = 'Tool choice observed'; detail = d.tool || 'Tool not recorded'; source = 'Shadow observation'; }
+    if (k === 'shadow_agreement') { title = 'Shadow comparison: ' + pretty(d.agreement); detail = 'Compared with the observed tool choice; no execution changed.'; source = 'Shadow comparison'; }
+    if (k === 'role_proposed' || k === 'role_agreement') { title = 'Model-role ' + (k === 'role_proposed' ? 'suggestion' : 'comparison'); detail = 'Shadow only; provider selection is unchanged.'; source = 'Shadow comparison'; }
+    if (d.reason_code === 'no_eligible_candidates') { title = 'No prepared action available'; detail = 'The request did not produce an eligible candidate.'; }
+    if (k === 'turn_start') { title = 'Hybrid turn started'; detail = backendName(d.backend) + ' · ' + d.mode; }
+    if (k === 'turn_end') { title = 'Hybrid turn finished'; detail = (d.fast_total ?? 0) + ' fast submissions · ' + (d.slow_total ?? 0) + ' measured provider calls'; }
+    if (k === 'observatory') { title = 'Viewer ' + (d.action || 'event'); detail = pretty(d.reason) || 'Viewer lifecycle metadata'; }
+    if (issue(e)) tone = 'error';
+    if (simulated) { source = 'Synthetic / scripted'; tone = 'synthetic'; }
+    return { title, detail, source, tone };
+  }
+  // One decision group -> the ledger row: what was proposed, what happened, and a verdict.
+  // Every verdict is a label with a tone; the tone never carries meaning alone.
+  function summarize(group, simulated, opts = {}) {
+    const by = k => group.find(e => kind(e) === k), last = k => group.findLast(e => kind(e) === k);
+    const nat = n => group.findLast(e => native(e) === n);
+    const request = by('requested'), score = last('scored') || last('shadow_proposed');
+    const routed = last('routed'), fallback = last('fallback'), agreement = last('shadow_agreement');
+    const toolEnd = last('tool_end'), slowEnd = last('slow_end'), observed = last('shadow_observed') || nat('tool:pre');
+    const roleProposed = last('role_proposed'), roleAgreement = last('role_agreement');
+    const advisory = group.some(e => e.data.mode === 'advisory' || e.data.phase === 'advisory_result');
+    const names = new Map((request?.data.candidates || []).map(c => [c.id, c.label]));
+    names.set('reason', 'Defer to reasoning model');
+    const label = id => names.get(id) || id; // a raw candidate id stays verbatim (rendered monospace)
+    const choice = score?.data.choice;
+    const probability = score ? (Number.isFinite(score.data.selected_probability) ? score.data.selected_probability : score.data.probabilities?.[choice]) : NaN;
+    const submitted = routed?.data.route === 'fast' && routed.data.status === 'submitted_to_upstream';
+    const toolOK = !!toolEnd && (toolEnd.data.success === true || toolEnd.data.status === 'ok') && !['error', 'cancelled'].includes(toolEnd.data.status) && toolEnd.data.success !== false;
+    const providerOK = slowEnd?.data.status === 'ok';
+    const terminal = !!(toolEnd || slowEnd || agreement || fallback || roleAgreement || nat('tool:post') || group.some(e => e.data.phase === 'advisory_result') || (routed && routed.data.route !== 'fast' && !opts.live));
+    const inFlight = !!opts.live && !terminal && (opts.now - stamp(group.at(-1))) < 90000;
+    // proposed
+    let proposed = { title: 'Not scored', detail: '' };
+    if (roleProposed && !score) proposed = { title: roleProposed.data.proposed_model_role ? 'Role: ' + roleProposed.data.proposed_model_role : 'Role router abstained', detail: pretty(roleProposed.data.reason_code) };
+    else if (score) proposed = { title: choice ? label(choice) : 'No choice recorded', id: !!choice && !names.has(choice), detail: (score.data.model || backendName(score.data.backend)) + (request ? ' · ' + (request.data.candidate_count ?? '?') + ' candidates' : ''), probability };
+    else if (fallback) proposed = { title: fallback.data.reason_code === 'no_eligible_candidates' ? 'No prepared action' : 'Fallback', detail: pretty(fallback.data.reason_code) };
+    else if (request) proposed = { title: 'Awaiting score', detail: (request.data.candidate_count ?? '?') + ' candidates' };
+    // happened
+    let happened = { title: '—', detail: '' };
+    if (routed?.data.route === 'fast') happened = { title: 'Fast action → ' + (routed.data.destination || routed.data.selected_candidate || 'tool'), detail: toolEnd ? (!toolOK ? 'execution ' + (toolEnd.data.status || 'outcome unknown') : 'executed' + (Number.isFinite(toolEnd.data.duration_ms) ? ' in ' + fmt(toolEnd.data.duration_ms) : '')) : routed.data.status === 'submitted_to_upstream' ? 'submitted to upstream · no execution recorded' : pretty(routed.data.status) };
+    else if (routed) happened = { title: 'Reasoning provider' + (slowEnd?.data.provider || routed.data.destination ? ' · ' + (slowEnd?.data.provider || routed.data.destination) : ''), detail: (providerOK && Number.isFinite(slowEnd.data.duration_ms) ? 'answered in ' + fmt(slowEnd.data.duration_ms) + ' · ' : '') + pretty(routed.data.reason_code) };
+    else if (advisory) happened = { title: 'Suggestion returned to caller', detail: 'no execution or bypass claimed' };
+    else if (observed) happened = { title: 'LLM called ' + (observed.data.tool || 'a tool'), detail: nat('tool:post') ? 'result observed' : inFlight ? 'running…' : 'no result observed' };
+    else if (roleAgreement) happened = { title: 'Delegate used role ' + (roleAgreement.data.actual_model_role || 'default'), detail: 'read from the tool result' };
+    else if (fallback) happened = { title: 'Deferred to the provider', detail: fallback.data.exception_type || '' };
+    else if (score) happened = { title: inFlight ? 'Waiting for the LLM' : 'Outcome not joined', detail: '' };
+    // verdict
+    let verdict;
+    if (simulated) verdict = { label: 'Scripted', tone: 'warn', note: 'Scripted evidence · excluded from counts' };
+    else if (advisory) verdict = { label: 'Advisory', tone: 'adv', note: 'Advisory only · no execution or savings claimed' };
+    else if (routed?.data.route === 'fast') {
+      const bypassNote = submitted ? 'Generative call bypassed' : 'Bypass not confirmed';
+      verdict = toolEnd
+        ? toolOK ? { label: 'Fast · executed', tone: 'ok', note: bypassNote + ' · tool executed · task quality unverified' }
+          : { label: 'Fast · ' + (toolEnd.data.status === 'cancelled' ? 'cancelled' : toolEnd.data.success === false || toolEnd.data.status === 'error' ? 'failed' : 'outcome unknown'), tone: 'bad', note: bypassNote + ' · successful execution not recorded' }
+        : { label: submitted ? 'Fast · submitted' : 'Fast · selected', tone: submitted ? 'ok' : 'info', note: bypassNote + ' · no completed tool recorded' };
+    }
+    else if (routed) verdict = { label: 'Reasoning model', tone: 'info', note: pretty(routed.data.reason_code) + (providerOK ? ' · provider answered' : slowEnd ? ' · provider ' + (slowEnd.data.status || 'outcome unknown') : ' · no provider completion recorded') };
+    else if (fallback && fallback.data.reason_code === 'no_eligible_candidates') verdict = { label: 'No candidate', tone: 'muted', note: 'No eligible prepared action · provider path unchanged' };
+    else if (fallback) verdict = { label: 'Fallback', tone: fallback.data.exception_type ? 'bad' : 'warn', note: pretty(fallback.data.reason_code) + ' · deferred to the provider' };
+    else if (agreement) verdict = ({ match: { label: 'Match', tone: 'ok' }, mismatch: { label: 'Mismatch', tone: 'warn' }, abstained: { label: 'Abstained', tone: 'info' } }[agreement.data.agreement] || { label: pretty(agreement.data.agreement), tone: 'muted' });
+    else if (roleAgreement) verdict = roleAgreement.data.agreement === 'match' ? { label: 'Role match', tone: 'ok' } : roleAgreement.data.agreement === 'mismatch' ? { label: 'Role mismatch', tone: 'warn' } : { label: 'Role ' + pretty(roleAgreement.data.agreement), tone: 'muted' };
+    else if (score && choice === 'reason') verdict = { label: 'Proposed: defer', tone: 'info' };
+    else if (score || roleProposed) verdict = inFlight ? { label: 'In flight', tone: 'live' } : { label: 'Unjoined', tone: 'muted', note: 'No matching outcome was recorded' };
+    else verdict = inFlight ? { label: 'In flight', tone: 'live' } : { label: 'Not scored', tone: 'muted', note: 'Hook observation only · no decision recorded' };
+    if (!verdict.note) verdict.note = group.some(e => kind(e).startsWith('shadow_')) ? 'Shadow comparison · execution unchanged' : 'Recorded runtime path · no fast bypass claimed';
+    const mode = simulated ? 'Scripted' : advisory ? 'Advisory' : group.some(e => kind(e).startsWith('shadow_') || kind(e).startsWith('role_')) ? 'Shadow' : routed || request ? 'Active' : group.some(e => native(e)) ? 'Native' : 'Runtime';
+    return { proposed, happened, verdict, inFlight, mode, score, request, latency: score?.data.duration_ms };
+  }
+  // Circuit edges require route/invocation evidence. A score, shadow agreement,
+  // or advisory result alone never lights an execution path.
+  function circuitFor(group) {
+    const last = k => group.findLast(e => kind(e) === k);
+    const route = last('routed'), score = last('scored') || last('shadow_proposed');
+    const advisory = group.some(e => e.data.mode === 'advisory' || e.data.phase === 'advisory_result');
+    const shadow = group.some(e => kind(e).startsWith('shadow_') || kind(e).startsWith('role_'));
+    const provider = last('slow_end') || last('slow_start');
+    const fast = !advisory && !shadow && route?.data.route === 'fast' ? route : null;
+    const slow = provider || (!advisory && !shadow && route?.data.route === 'slow' ? route : null);
+    return { request: last('requested'), score, fast, slow,
+      host: group.findLast(e => ['tool_start', 'tool_end'].includes(kind(e)) || ['tool:pre', 'tool:post'].includes(native(e))),
+      branch: fast ? 'fast' : slow ? 'slow' : 'unknown',
+      receipt: last('tool_end') || last('slow_end') || last('shadow_agreement') || group.at(-1) };
+  }
+  if (typeof module !== 'undefined') module.exports = { kind, valid, scriptedKeys, synthetic, sessionsFor, metrics, describe, decisionPath, summarize, sessionName, circuitFor };
+  if (typeof document === 'undefined') return;
+
+  // ---------- browser render layer ----------
+  const $ = id => document.getElementById(id), put = (id, text) => { $(id).textContent = text; };
+  const make = (tag, cls, text) => { const node = document.createElement(tag); if (cls) node.className = cls; if (text !== undefined) node.textContent = text; return node; };
+  let events = [], seen = new Set(), cursor = 0, epoch = null, session = '', selected = null, category = 'live', following = true, source = 'live', lastPoll = 0, connectionError = '', retained = 0, invalidLines = 0, windowGap = false, hasMore = false;
+  let frozenIds = null, expanded = new Set(), token = '', pollTimer = null, pollGeneration = 0, arrivals = new Set(), renderedAt = 0;
+  let circuitFocus = null;
+  let historyReady = false;
+  let dashboardView = new URLSearchParams(location.search).get('view');
+  if (!['ledger', 'circuit'].includes(dashboardView)) {
+    try { dashboardView = sessionStorage.getItem('afast-view'); } catch (_) { }
+  }
+  if (!['ledger', 'circuit'].includes(dashboardView)) dashboardView = 'ledger';
+  const tokenKey = 'afast-token:' + location.host;
+  try { token = new URLSearchParams(location.hash.slice(1)).get('token') || sessionStorage.getItem(tokenKey) || ''; if (token) sessionStorage.setItem(tokenKey, token); } catch (_) { }
+  if (location.hash.startsWith('#token=')) history.replaceState(null, '', location.pathname + location.search);
+  const age = t => { const n = Math.max(0, Math.floor((Date.now() - t) / 1000)); return n < 5 ? 'just now' : n < 60 ? n + 's ago' : n < 3600 ? Math.floor(n / 60) + 'm ago' : n < 86400 ? Math.floor(n / 3600) + 'h ago' : Math.floor(n / 86400) + 'd ago'; };
+  const clock = e => new Date(e.timestamp).toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  const shortId = id => id.length > 12 ? id.slice(0, 8) : id;
+  const toneClass = t => ({ ok: 'ok', info: 'info', warn: 'warn', bad: 'bad', adv: 'adv', live: 'live' }[t] || '');
+
+  function ingest(batch, force = false) {
+    arrivals = new Set(source === 'live' && historyReady && following ? batch.filter(e => !seen.has(e.event_id)).map(e => e.event_id) : []);
+    for (const e of batch) if (valid(e) && !seen.has(e.event_id)) { seen.add(e.event_id); events.push(e); }
+    events.sort((a, b) => stamp(a) - stamp(b) || (a.session_id === b.session_id ? (a.seq || 0) - (b.seq || 0) : 0));
+    if (events.length > 20000) { events = events.slice(-20000); seen = new Set(events.map(e => e.event_id)); }
+    if (force || batch.length || source !== 'live' || Date.now() - renderedAt > 5000) render();
+    arrivals.clear();
+  }
+  function currentWindow() { const limit = $('timeWindow').value; return events.filter(e => (limit === 'all' || Date.now() - stamp(e) <= Number(limit)) && (!frozenIds || frozenIds.has(e.event_id))); }
+  function scopeData(base) {
+    const children = $('includeChildren').checked;
+    const parents = new Map(events.filter(e => e.parent_session_id).map(e => [e.session_id, e.parent_session_id]));
+    const descendant = id => { const visited = new Set(); while (parents.has(id) && !visited.has(id)) { visited.add(id); id = parents.get(id); if (id === session) return true; } return false; };
+    return base.filter(e => session ? (e.session_id === session || (children && descendant(e.session_id))) : (children || !parents.has(e.session_id)));
+  }
+  function selectSession(id) { session = id; selected = null; render(); }
+
+  function renderSessions(base, keys) {
+    const sessions = sessionsFor(base, Date.now()), map = new Map(sessions.map(s => [s.id, s]));
+    const roots = sessions.filter(s => !s.parent), orphans = sessions.filter(s => s.parent && !map.has(s.parent));
+    for (const child of orphans) if (!roots.some(s => s.id === child.parent)) roots.push({ id: child.parent, parent: null, events: [], latest: child.latest, config: {}, name: child.parent.slice(0, 8), state: 'Parent not observed', stateKind: 'stale', reporting: false });
+    const search = $('sessionSearch').value.toLowerCase();
+    put('sessionCount', roots.length); put('allSessionCount', roots.length);
+    $('allSessions').classList.toggle('selected', !session); $('allSessions').setAttribute('aria-pressed', String(!session));
+    const target = $('sessions'); target.replaceChildren();
+    function row(s, child = false) {
+      const button = make('button', 'session-row' + (s.id === session ? ' selected' : '') + (child ? ' child' : ''));
+      button.setAttribute('aria-pressed', String(s.id === session)); button.title = s.id; button.dataset.sessionId = s.id;
+      const named = !!(s.config.session_label || s.config.workspace_name);
+      const top = make('span', 'session-top');
+      top.append(make('span', 'session-name' + (named ? '' : ' unnamed'), s.name), make('span', 'session-age', age(stamp(s.latest))));
+      const meta = make('span', 'session-meta');
+      if (named) meta.append(make('span', 'session-id', shortId(s.id)));
+      meta.append(make('span', 'session-config', s.config.mode ? backendName(s.config.backend) + ' · ' + s.config.mode : 'Configuration not recorded'));
+      button.append(top, meta, make('span', 'session-state ' + (s.stateKind || ''), s.state));
+      button.onclick = () => selectSession(s.id); return button;
+    }
+    function group(s, level = 0, visited = new Set()) {
+      if (visited.has(s.id)) return null; visited = new Set([...visited, s.id]);
+      const kids = sessions.filter(x => x.parent === s.id);
+      const matches = [s, ...kids].some(x => (x.id + ' ' + (x.name || '') + ' ' + (x.config.session_label || '') + ' ' + (x.config.workspace_name || '')).toLowerCase().includes(search));
+      if (!matches) return null;
+      const wrap = make('div', 'session-group'); wrap.append(row(s, level > 0));
+      if (kids.length) {
+        const toggle = make('button', 'children-toggle', (expanded.has(s.id) ? 'Hide ' : 'Show ') + kids.length + ' child session' + (kids.length === 1 ? '' : 's'));
+        toggle.dataset.childrenId = s.id; toggle.setAttribute('aria-expanded', String(expanded.has(s.id)));
+        toggle.onclick = () => { expanded.has(s.id) ? expanded.delete(s.id) : expanded.add(s.id); render(); };
+        wrap.append(toggle);
+        if (expanded.has(s.id)) for (const child of kids) { const g = group(child, level + 1, visited); if (g) wrap.append(g); }
+      }
+      return wrap;
+    }
+    for (const s of roots) { const g = group(s); if (g) target.append(g); }
+    if (!roots.length) target.append(make('p', 'session-config', 'No sessions in this window.'));
+    return sessions;
+  }
+
+  function renderDetails(e, keys) {
+    $('detailEmpty').hidden = !!e; $('detailContent').hidden = !e;
+    if (!e) { put('evidenceKind', 'No selection'); $('evidenceKind').className = 'tag'; return; }
+    const simulated = synthetic(e, keys), info = describe(e, simulated), d = e.data;
+    put('evidenceKind', info.source); $('evidenceKind').className = 'tag ' + ({ decision: 'ok', error: 'bad', synthetic: 'warn' }[info.tone] || '');
+    put('detailTitle', info.title); put('detailDescription', info.detail);
+    const cfg = configFor(events, e.session_id), related = e.decision_id ? events.filter(x => decisionKey(x) === decisionKey(e)) : [e];
+    const score = related.findLast(isScore), request = related.find(x => kind(x) === 'requested');
+    const facts = [
+      ['Session', sessionName(cfg, e.session_id), false], ['Session id', e.session_id, true],
+      ...(e.parent_session_id ? [['Parent', e.parent_session_id, true]] : []),
+      ...(cfg.workspace_name ? [['Directory', cfg.workspace_name, false]] : []),
+      ['Recorded', new Date(e.timestamp).toLocaleString(), false], ['Event', e.event, true], ['Source', info.source, false],
+      ...(d.tool ? [['Tool', d.tool, true]] : []), ...(d.choice ? [['Choice', d.choice, true]] : []), ...(d.tool_call_id ? [['Tool call', d.tool_call_id, true]] : []),
+      ...(e.decision_id ? [['Decision', e.decision_id, true]] : []),
+      ...(Number.isFinite(d.duration_ms) ? [['Measured duration', fmt(d.duration_ms) + (d.latency_kind ? ' · ' + pretty(d.latency_kind) : ''), false]] : []),
+      ...(d.reason_code ? [['Reason code', pretty(d.reason_code), false]] : []),
+      ...(d.agreement ? [['Agreement', pretty(d.agreement) + (d.proposed_candidate ? ' · proposed ' + d.proposed_candidate : '') + (d.actual_tool ? ' · actual ' + d.actual_tool : ''), false]] : []),
+      ...(d.domain ? [['Domain', d.domain, false]] : []),
+    ];
+    $('eventFacts').replaceChildren();
+    for (const [label, value, mono] of facts) { const row = make('div'); row.append(make('dt', '', label), make('dd', mono ? 'mono' : '', value)); $('eventFacts').append(row); }
+    put('sessionConfig', cfg.mode ? backendName(cfg.backend) + ' in ' + cfg.mode + ' mode. ' + (cfg.backend === 'scripted-demo' ? 'Scores are scripted; no model is connected to this scorer.' : cfg.mode === 'shadow' ? 'Proposals do not change execution.' : cfg.mode === 'advisory' ? 'Portable suggestion only; caller owns execution.' : 'Fast selections still pass native approval.') : 'No configuration event is available for this session.');
+    $('distribution').hidden = !score; $('probabilities').replaceChildren();
+    if (score) {
+      put('scoreMeaning', synthetic(score, keys) ? 'Scripted values. These did not come from a model.' : score.data.probability_kind === 'token_mass_with_abstention_residual' ? 'Uncalibrated token scores from ' + (score.data.model || backendName(score.data.backend)) + '. They do not measure correctness.' : 'Backend-reported scores; not independent evidence of correctness.');
+      const names = new Map((request?.data.candidates || []).map(c => [c.id, c.label])); names.set('reason', 'Use reasoning model');
+      for (const [id, p] of Object.entries(score.data.probabilities || {}).filter(([, p]) => Number.isFinite(p)).sort((a, b) => b[1] - a[1])) {
+        const row = make('div', 'prob-row' + (id === score.data.choice ? ' chosen' : '') + (id === 'reason' ? ' reason' : '')), caption = make('div', 'prob-label'), track = make('div', 'prob-track'), fill = make('div', 'prob-fill');
+        caption.append(make(id === score.data.choice ? 'b' : 'span', '', (names.get(id) || id) + (id === score.data.choice ? ' · chosen' : '')), make('span', '', (p * 100).toFixed(1) + '%'));
+        fill.style.width = Math.max(0, Math.min(100, p * 100)) + '%'; track.append(fill); row.append(caption, track); $('probabilities').append(row);
+      }
+    }
+    put('eventJson', JSON.stringify(e, null, 2));
+  }
+
+  // Group events into decision flows. A native tool:pre/tool:post pair joins the decision
+  // whose shadow_observed / tool_start recorded the same tool_call_id in the same session;
+  // otherwise it forms its own hook-observation flow.
+  function flowGroups(scoped) {
+    const callToDecision = new Map();
+    for (const e of scoped) if (e.decision_id && e.data.tool_call_id) callToDecision.set(e.session_id + ':' + e.data.tool_call_id, decisionKey(e));
+    const groups = new Map();
+    for (const e of scoped) {
+      const nativeCall = !e.decision_id && native(e) && e.data.tool_call_id;
+      if (!nativeCall && (!e.decision_id || (['health', 'observatory'].includes(kind(e)) && e.data.phase !== 'advisory_result'))) continue;
+      const key = nativeCall ? (callToDecision.get(e.session_id + ':' + e.data.tool_call_id) || e.session_id + ':native:' + e.data.tool_call_id) : decisionKey(e);
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(e);
+    }
+    for (const g of groups.values()) g.sort((a, b) => stamp(a) - stamp(b) || (a.seq || 0) - (b.seq || 0));
+    return groups;
+  }
+  const isStage = e => STAGES.has(kind(e)) || e.data.phase === 'advisory_result' || (native(e) && e.data.tool_call_id);
+
+  function renderCircuit(rows) {
+    $('decisionCircuit').hidden = category !== 'live' || dashboardView !== 'circuit';
+    const focused = rows.find(row => row.group.some(e => e.event_id === selected));
+    const decisions = rows.filter(row => row.group.some(e => e.decision_id));
+    const latestRow = (decisions.length ? decisions : rows).reduce((latest, row) => !latest || stamp(row.group.at(-1)) > stamp(latest.group.at(-1)) ? row : latest, null);
+    const row = focused || latestRow;
+    const group = row?.group || [], s = row?.summary, path = circuitFor(group);
+    $('circuitLatest').hidden = !focused;
+    const latest = group.at(-1);
+    circuitFocus = path.score || path.receipt || null;
+    put('circuitContext', latest ? sessionName(configFor(events, latest.session_id), latest.session_id) + ' · ' + (focused ? 'Selected decision' : 'Latest decision') + ' · ' + clock(latest) : 'Start a turn or open a saved trace to follow a decision.');
+    put('circuitMode', s?.mode || 'No records');
+    $('circuitMode').className = 'tag ' + (s?.mode === 'Scripted' ? 'warn' : s?.mode === 'Advisory' ? 'adv' : '');
+    $('circuitMap').dataset.branch = path.branch;
+    const newStage = kinds => source === 'live' && following && group.some(e => arrivals.has(e.event_id) && kinds.includes(kind(e)));
+    $('circuitMap').classList.toggle('fresh-score', newStage(['scored', 'shadow_proposed']));
+    $('circuitMap').classList.toggle('fresh-fast', !!path.fast && newStage(['routed', 'tool_start', 'tool_end']));
+    $('circuitMap').classList.toggle('fresh-slow', !!path.slow && newStage(['routed', 'slow_start', 'slow_end']));
+    const bind = (id, event) => {
+      const node = $(id); node.disabled = !event;
+      node.classList.toggle('arriving', !!event && arrivals.has(event.event_id));
+      if (event) node.dataset.circuitEventId = event.event_id; else delete node.dataset.circuitEventId;
+      node.setAttribute('aria-pressed', String(!!event && selected === event.event_id));
+      node.onclick = event ? () => { selected = event.event_id; render(); } : null;
+    };
+    bind('circuitState', path.request); bind('circuitJudge', path.score);
+    bind('circuitFast', path.fast); bind('circuitSlow', path.slow); bind('circuitReceipt', path.receipt);
+    bind('circuitHost', path.host);
+    put('circuitHostNote', path.host ? describe(path.host).title : 'Permissions stay upstream');
+    put('circuitStateNote', path.request ? (path.request.data.candidate_count ?? '?') + ' prepared candidates' : 'No request recorded');
+    put('circuitJudgeNote', path.score ? (path.score.data.model || backendName(path.score.data.backend)) : 'No score recorded');
+    put('circuitFastNote', path.fast ? (path.fast.data.status === 'submitted_to_upstream' ? 'Submitted to host' : 'Selected; not confirmed') : 'No fast route recorded');
+    put('circuitSlowNote', path.slow ? (path.slow.data.model || path.slow.data.provider || (kind(path.slow) === 'routed' ? 'Selected; not yet invoked' : 'Invocation recorded')) : 'No invocation recorded');
+    put('circuitProposed', s?.proposed.title || 'No proposal recorded');
+    put('circuitHappened', s?.happened.title === '—' ? 'No outcome recorded' : s?.happened.title || 'No outcome recorded');
+    put('circuitOutcomeNote', s?.happened.detail || '');
+    put('circuitReceipt', s?.verdict.label || 'Awaiting evidence');
+    $('circuitReceipt').className = 'receipt-button ' + (s ? toneClass(s.verdict.tone) : '');
+    put('circuitEvidence', s ? s.verdict.note + '. Select a node or receipt to inspect recorded evidence.' : 'Recorded routes light up as events arrive. Select a node to inspect its evidence.');
+  }
+
+  function renderFlows(scoped, keys) {
+    $('liveFlows').hidden = category !== 'live';
+    $('decisionCircuit').hidden = category !== 'live' || dashboardView !== 'circuit';
+    if (category !== 'live') return;
+    const now = Date.now();
+    const groups = flowGroups(scoped);
+    const roots = sessionsFor(scoped, now);
+    $('runtimeStrip').replaceChildren();
+    for (const item of roots.filter(s => s.stateKind !== 'closed' && s.stateKind !== 'advisory' && (s.reporting || (now - stamp(s.latest) < 120000 && s.events.some(e => native(e))))).slice(0, 8)) {
+      const observed = item.events.findLast(e => native(e)), row = make('button', 'runtime-pulse ' + (item.stateKind || '') + (arrivals.has(observed?.event_id) ? ' arriving' : ''));
+      row.dataset.runtimeSessionId = item.id;
+      row.append(make('span', 'live-dot'), make('strong', '', item.name), make('span', '', (item.parent ? 'child · ' : '') + (item.reporting ? item.state.toLowerCase() : 'presence unknown') + (observed ? ' · ' + describe(observed).title.toLowerCase() + ' ' + age(stamp(observed)) : '')));
+      row.onclick = () => selectSession(item.id); $('runtimeStrip').append(row);
+    }
+    const live = source === 'live';
+    const rows = [...groups.entries()].map(([key, group]) => ({ key, group, summary: summarize(group, synthetic(group.at(-1), keys), { live, now }) }));
+    rows.sort((a, b) => (b.summary.inFlight - a.summary.inFlight) || stamp(b.group.at(-1)) - stamp(a.group.at(-1)));
+    renderCircuit(rows);
+    const shown = rows.slice(0, 40);
+    put('flowStatus', source !== 'live' ? 'Saved records · ' + rows.length + ' decision flows' : !following ? 'Paused · ' + rows.length + ' decision flows' : rows.length ? (rows.length > shown.length ? 'Latest ' + shown.length + ' of ' + rows.length + ' decision flows' : rows.length + ' decision flow' + (rows.length === 1 ? '' : 's') + ' · following live') : 'Waiting for decisions');
+    $('flowCards').replaceChildren(); $('flowEmpty').hidden = rows.length > 0;
+    for (const { key, group, summary } of shown) {
+      const first = group[0], latest = group.at(-1), cfg = configFor(events, latest.session_id);
+      const simulated = synthetic(latest, keys), s = summary;
+      const card = make('article', 'flow-card' + (s.inFlight ? ' in-flight' : '') + (s.mode === 'Native' ? ' native' : '') + (group.some(e => arrivals.has(e.event_id)) ? ' arriving' : '') + (group.some(e => e.event_id === selected) ? ' selected-card' : ''));
+      card.dataset.decisionKey = key;
+      // summary row
+      const line = make('div', 'flow-summary');
+      const when = make('span', 'flow-when', clock(first)); when.append(make('small', '', age(stamp(latest))));
+      const sessionWrap = make('span', 'flow-session-wrap');
+      const sessionButton = make('button', 'flow-session clamp2', sessionName(cfg, latest.session_id)); sessionButton.title = latest.session_id;
+      sessionButton.onclick = () => selectSession(latest.session_id);
+      const tagline = make('span', 'tagline');
+      tagline.append(make('span', 'tag ' + ({ Scripted: 'warn', Advisory: 'adv', Active: 'ok', Shadow: '', Native: '', Runtime: '' }[s.mode]), s.mode));
+      if (latest.parent_session_id) { const parentName = sessionName(configFor(events, latest.parent_session_id), latest.parent_session_id); const parent = make('span', 'flow-parent', 'child of ' + parentName); parent.title = 'Child of ' + parentName + ' (' + latest.parent_session_id + ')'; tagline.append(parent); }
+      sessionWrap.append(sessionButton, tagline);
+      const cell = (heading, headingClass, detail) => { const node = make('span', 'flow-cell'), strong = make('strong', 'clamp2' + headingClass, heading); strong.title = heading; node.append(strong); return { node, detail: () => { if (detail) { const d = make('span', '', detail); d.title = detail; node.append(d); } } }; };
+      const proposedCell = cell(s.proposed.title, s.proposed.id ? ' id' : '', s.proposed.detail), proposed = proposedCell.node;
+      if (Number.isFinite(s.proposed.probability)) { const prob = make('span', 'prob'), bar = make('span', 'prob-bar'), fill = make('i'); fill.style.width = Math.max(0, Math.min(100, s.proposed.probability * 100)) + '%'; bar.append(fill); prob.append(bar, make('b', '', (s.proposed.probability * 100).toFixed(0) + '%')); prob.title = 'Score reported for the chosen candidate; uncalibrated, not a correctness estimate'; proposed.append(prob); }
+      proposedCell.detail();
+      const arrow = make('span', 'flow-arrow' + (s.inFlight ? ' pending' : ''), s.inFlight ? '…' : '→');
+      const happenedCell = cell(s.happened.title, '', s.happened.detail), happened = happenedCell.node; happenedCell.detail();
+      const verdictCell = make('span', 'verdict-cell'); const verdict = make('span', 'verdict ' + toneClass(s.verdict.tone), s.verdict.label); verdict.title = s.verdict.note; verdictCell.append(verdict);
+      const latency = make('span', 'flow-latency', Number.isFinite(s.latency) ? fmt(s.latency) : '—'); latency.append(make('small', '', Number.isFinite(s.latency) ? 'scoring' : 'no score'));
+      line.append(when, sessionWrap, proposed, arrow, happened, verdictCell, latency);
+      const focusEvent = s.score || latest;
+      for (const cell of [proposed, happened, verdictCell, when, latency]) { cell.style.cursor = 'pointer'; cell.onclick = () => { selected = focusEvent.event_id; render(); }; }
+      // stage chain
+      const stages = make('div', 'flow-stages');
+      for (const e of group.filter(isStage)) {
+        const info = describe(e, synthetic(e, keys)), stage = make('button', 'flow-stage ' + info.tone + (arrivals.has(e.event_id) ? ' arriving' : '') + (e.event_id === selected ? ' selected' : ''));
+        stage.dataset.stageId = e.event_id; stage.setAttribute('aria-pressed', String(e.event_id === selected)); stage.title = clock(e) + ' · ' + info.source;
+        stage.append(make('strong', '', info.title), make('span', '', info.detail));
+        if (Number.isFinite(e.data.duration_ms)) stage.append(make('span', 'flow-duration', fmt(e.data.duration_ms)));
+        stage.onclick = () => { selected = e.event_id; render(); }; stages.append(stage);
+      }
+      card.append(line, stages, make('p', 'flow-outcome', s.verdict.note));
+      $('flowCards').append(card);
+      if (following && group.some(e => arrivals.has(e.event_id))) stages.scrollLeft = stages.scrollWidth;
+    }
+  }
+
+  function renderMechanics(scoped, keys) {
+    $('mechanics').hidden = !session || category === 'live';
+    if ($('mechanics').hidden) { $('decisionPath').replaceChildren(); return; }
+    const path = decisionPath(scoped, session, selected);
+    $('decisionPath').replaceChildren();
+    put('pathNote', path.length ? 'Decision ' + path[0].decision_id + ' · recorded sequence in this session. Select a stage to inspect its evidence.' : 'No scored decision path recorded in this window. Native activity is listed below.');
+    for (const e of path) {
+      const info = describe(e, synthetic(e, keys)), node = make('button', 'path-stage ' + info.tone + (e.event_id === selected ? ' selected' : ''));
+      node.dataset.stageId = e.event_id; node.setAttribute('aria-pressed', String(e.event_id === selected));
+      node.append(make('span', 'path-time', clock(e)), make('strong', '', info.title), make('span', '', info.detail));
+      if (Number.isFinite(e.data.duration_ms)) node.append(make('span', 'path-duration', fmt(e.data.duration_ms)));
+      node.onclick = () => { selected = e.event_id; render(); }; $('decisionPath').append(node);
+    }
+  }
+
+  function render() {
+    renderedAt = Date.now();
+    document.body.dataset.view = dashboardView;
+    document.querySelectorAll('.view-switch [data-view]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.view === dashboardView)));
+    const focused = document.activeElement;
+    const focusKey = ['eventId', 'sessionId', 'childrenId', 'stageId', 'runtimeSessionId', 'circuitEventId'].find(key => focused?.dataset?.[key]);
+    const focusValue = focusKey ? focused.dataset[focusKey] : null;
+    const keys = scriptedKeys(events), base = currentWindow(), realBase = base.filter(e => !synthetic(e, keys));
+    const sessions = renderSessions($('includeSynthetic').checked ? base : realBase, keys);
+    const scoped = scopeData(base), hidden = scoped.filter(e => synthetic(e, keys)).length;
+    const real = scoped.filter(e => !synthetic(e, keys)), m = metrics(real);
+    put('modelCount', m.scores); put('fastCount', m.fast); put('toolCount', m.tools); put('errorCount', m.issues); put('fastExecuted', m.fastExecuted); put('scorerP95', fmt(m.p95));
+    put('matchCount', m.comparisons.length ? m.comparisons.filter(e => e.data.agreement === 'match').length + '/' + m.comparisons.length : '—');
+    $('errorCount').closest('.kpi').classList.toggle('has-issues', m.issues > 0);
+    put('impactDetail', m.fastExecuted ? m.fastExecuted + ' tool execution' + (m.fastExecuted === 1 ? '' : 's') + ' confirmed after a fast submission.' : m.fast ? 'Fast actions were submitted; no completed fast-path execution is recorded.' : 'No executed fast path in this window; shadow proposals never change execution.');
+    put('qualityEvidence', m.failedFast ? m.failedFast + ' fast execution' + (m.failedFast === 1 ? '' : 's') + ' failed.' : '');
+    put('scopeNotice', 'Scripted and demo events are excluded; tool results may be hook observations.');
+    const cfg = session ? configFor(events, session) : null;
+    const current = session ? sessions.find(s => s.id === session) : null;
+    put('viewTitle', session ? sessionName(cfg, session) : 'All sessions');
+    put('viewSubtitle', session ? [cfg.mode ? backendName(cfg.backend) + ' · ' + cfg.mode + ' mode' : 'Configuration not recorded', current?.state, shortId(session) !== sessionName(cfg, session) ? session : ''].filter(Boolean).join(' · ') : 'Runtime activity from ' + sessions.filter(s => !s.parent && s.reporting).length + ' session(s) currently reporting.');
+    put('syntheticCount', hidden ? '(' + hidden + ($('includeSynthetic').checked ? ' shown)' : ' hidden)') : '');
+    const display = scoped.filter(e => ($('includeSynthetic').checked || !synthetic(e, keys)) && useful(e) && (category === 'decisions' ? ['requested', 'scored', 'routed', 'shadow_proposed', 'shadow_observed', 'shadow_agreement', 'role_proposed', 'role_agreement', 'fallback'].includes(kind(e)) : category === 'errors' ? issue(e) : true));
+    const rows = display.slice(-250).reverse(); $('feed').replaceChildren();
+    if (selected && !scoped.some(e => e.event_id === selected && ($('includeSynthetic').checked || !synthetic(e, keys)))) selected = null;
+    for (const e of rows) {
+      const info = describe(e, synthetic(e, keys)), button = make('button', 'event-row' + (selected === e.event_id ? ' selected' : ''));
+      button.setAttribute('aria-pressed', String(selected === e.event_id)); button.dataset.eventId = e.event_id;
+      const icon = make('span', 'event-icon ' + info.tone, info.tone === 'error' ? '!' : info.tone === 'decision' ? '◆' : info.tone === 'synthetic' ? '~' : '·'), body = make('span');
+      body.append(make('span', 'event-title', info.title), make('span', 'event-description', info.detail));
+      const when = make('span', 'event-time', clock(e)); if (Number.isFinite(e.data.duration_ms)) when.append(make('span', 'event-duration', fmt(e.data.duration_ms)));
+      const sessionCfg = configFor(events, e.session_id);
+      button.append(icon, body, make('span', 'event-source', info.source), make('span', 'event-session', sessionName(sessionCfg, e.session_id)), when);
+      button.onclick = () => { selected = e.event_id; render(); }; $('feed').append(button);
+    }
+    $('emptyState').hidden = category === 'live' || rows.length > 0; $('feed').hidden = category === 'live' || !rows.length; $('feedHeading').hidden = category === 'live' || !rows.length;
+    put('emptyTitle', connectionError ? 'Connection needs attention' : hidden ? 'Scripted events are hidden' : category === 'errors' ? 'No issues recorded' : 'No activity in this window');
+    put('emptyDetail', connectionError ? 'Restore the viewer connection above. Existing records remain available.' : hidden ? 'Enable scripted & demo events to inspect them. They never count as model decisions or measured improvements.' : source !== 'live' ? 'This is a saved trace. Try another category or session.' : 'The viewer is listening. Start a turn in a session with the bundle loaded, or widen the time window.');
+    put('feedCount', category === 'live' ? display.length + ' events in window' : display.length > 250 ? 'Latest 250 of ' + display.length + ' events' : display.length + ' events');
+    put('dataHealth', invalidLines ? invalidLines + ' invalid records skipped' : windowGap ? 'Older events expired from the retained window' : 'No prompts, tool contents, or private reasoning.');
+    put('freshness', source !== 'live' ? 'Saved trace · no live updates' : lastPoll ? 'Checked ' + age(lastPoll) + ' · last event ' + (events.length ? age(stamp(events.at(-1))) : 'not received') : 'Waiting for first response');
+    put('followBtn', source !== 'live' ? 'Return to live' : following ? 'Following live' : 'Resume live'); $('followBtn').setAttribute('aria-pressed', String(source === 'live' && following));
+    put('bypassedCount', m.bypassed);
+    renderFlows(scoped.filter(e => $('includeSynthetic').checked || !synthetic(e, keys)), keys);
+    renderMechanics(scoped.filter(e => $('includeSynthetic').checked || !synthetic(e, keys)), keys);
+    renderDetails(events.find(e => e.event_id === selected) || (category === 'live' && dashboardView === 'circuit' ? circuitFocus : null), keys);
+    if (source !== 'live') { put('connection', 'Saved trace'); $('connection').className = 'connection replay'; }
+    else if (connectionError) { put('connection', 'Disconnected'); $('connection').className = 'connection problem'; }
+    else { put('connection', lastPoll ? (hasMore ? 'Syncing history' : following ? 'Connected' : 'Connected · paused') : 'Connecting'); $('connection').className = 'connection' + (lastPoll ? ' connected' : ''); }
+    $('connectionNotice').hidden = !connectionError; put('connectionNotice', connectionError);
+    if (focusKey) { const replacement = [...document.querySelectorAll('button')].find(node => node.dataset[focusKey] === focusValue); replacement?.focus({ preventScroll: true }); }
+  }
+
+  document.querySelectorAll('.view-switch [data-view]').forEach(button => {
+    button.onclick = () => {
+      dashboardView = button.dataset.view;
+      try { sessionStorage.setItem('afast-view', dashboardView); } catch (_) { }
+      const url = new URL(location.href); url.searchParams.set('view', dashboardView);
+      history.replaceState(null, '', url.pathname + url.search + url.hash);
+      render();
+    };
+  });
+  $('circuitLatest').onclick = () => { selected = null; render(); };
+  $('allSessions').onclick = () => selectSession(''); $('sessionSearch').oninput = render;
+  for (const id of ['timeWindow', 'includeSynthetic', 'includeChildren']) $(id).onchange = () => { selected = null; render(); };
+  document.querySelectorAll('[data-filter]').forEach(b => { b.onclick = () => { category = b.dataset.filter; document.querySelectorAll('[data-filter]').forEach(x => { x.classList.toggle('active', x === b); x.setAttribute('aria-pressed', String(x === b)); }); render(); }; });
+  $('followBtn').onclick = () => { if (source !== 'live') { pollGeneration++; source = 'live'; events = []; seen.clear(); cursor = 0; epoch = null; historyReady = false; selected = null; session = ''; following = true; frozenIds = null; $('timeWindow').value = '3600000'; schedule(0); } else { following = !following; frozenIds = following ? null : new Set(events.map(e => e.event_id)); } render(); };
+  $('loadBtn').onclick = () => $('fileInput').click();
+  $('fileInput').onchange = async () => { try { const batch = []; for (const file of $('fileInput').files) { const text = await file.text(); batch.push(...(text.trim().startsWith('[') ? JSON.parse(text) : text.split(/\r?\n/).filter(Boolean).map(JSON.parse))); } pollGeneration++; clearTimeout(pollTimer); source = 'file'; events = []; seen.clear(); selected = null; session = ''; frozenIds = null; following = false; connectionError = ''; $('reconnectPanel').hidden = true; $('timeWindow').value = 'all'; ingest(batch); } catch (_) { connectionError = 'Could not read this trace. Choose a JSON array or a JSONL event file.'; render(); } };
+  $('exportBtn').onclick = () => { const keys = scriptedKeys(events), data = scopeData(currentWindow()).filter(e => $('includeSynthetic').checked || !synthetic(e, keys)), blob = new Blob([data.map(e => JSON.stringify(e)).join('\n') + '\n'], { type: 'application/x-ndjson' }), a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'amplifier-events.jsonl'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000); };
+  $('connectForm').onsubmit = e => { e.preventDefault(); try { const url = new URL($('viewerLink').value); if (url.origin !== location.origin) throw Error(); const value = new URLSearchParams(url.hash.slice(1)).get('token'); if (!value) throw Error(); pollGeneration++; token = value; try { sessionStorage.setItem(tokenKey, token); } catch (_) { } $('viewerLink').value = ''; connectionError = ''; $('reconnectPanel').hidden = true; schedule(0); } catch (_) { connectionError = 'Use the full viewer link for this same local address and port.'; render(); } };
+  function schedule(delay) { clearTimeout(pollTimer); pollTimer = setTimeout(poll, delay); }
+  async function poll() {
+    if (source !== 'live') return;
+    if (!token) { connectionError = 'This tab has no viewer access token. Reopen the full launching link or reconnect below.'; $('reconnectPanel').hidden = false; render(); return; }
+    const generation = ++pollGeneration;
+    try {
+      const response = await fetch('/api/events?after=' + cursor, { headers: { Authorization: 'Bearer ' + token }, signal: AbortSignal.timeout(5000) });
+      if (source !== 'live' || generation !== pollGeneration) return;
+      if (!response.ok) { if (response.status === 401) { $('reconnectPanel').hidden = false; throw Error('The viewer link has expired or is missing its access token. Reopen the launching link.'); } throw Error('The local viewer returned HTTP ' + response.status + '. Retrying…'); }
+      const payload = await response.json();
+      if (source !== 'live' || generation !== pollGeneration) return;
+      if (epoch && epoch !== payload.epoch) { events = []; seen.clear(); cursor = 0; epoch = payload.epoch; historyReady = false; selected = null; windowGap = false; schedule(0); return; }
+      if (cursor && payload.first_cursor > cursor + 1) windowGap = true;
+      const repaint = !lastPoll || !!connectionError || hasMore !== !!payload.has_more;
+      epoch = payload.epoch; cursor = payload.cursor; retained = payload.retained; invalidLines = payload.invalid_lines || 0; hasMore = !!payload.has_more; lastPoll = Date.now(); connectionError = ''; $('reconnectPanel').hidden = true; ingest(payload.events || [], repaint);
+      if (!hasMore) historyReady = true;
+    } catch (error) { if (source !== 'live' || generation !== pollGeneration) return; connectionError = error.name === 'TimeoutError' ? 'The viewer did not respond within 5 seconds. Retrying…' : error instanceof TypeError ? 'Cannot reach the local viewer. Retrying…' : error.message; render(); }
+    if (source === 'live' && generation === pollGeneration) schedule(connectionError ? 2000 : hasMore ? 0 : 500);
+  }
+  // Refresh relative ages and in-flight state even when no event arrives.
+  setInterval(() => { if (source === 'live' && following && Date.now() - renderedAt > 4000) render(); }, 5000);
+  if (window.AFAST_EMBEDDED) { source = 'embedded'; following = false; $('timeWindow').value = 'all'; ingest(window.AFAST_EMBEDDED); }
+  else { render(); schedule(0); }
+})();
+</script>
+</body>
+</html>

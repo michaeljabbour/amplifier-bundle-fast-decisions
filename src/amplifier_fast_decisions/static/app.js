@@ -1,4 +1,5 @@
-/* Read-only event projection. No generated events, animation clock or inferred savings.
+/* Read-only event projection. No generated events or inferred savings.
+   Arrival animations are triggered only by newly received records.
    The pure projections at the top are exported for tests/test_viewer.cjs; everything
    after the `document` guard is the browser render layer. */
 (() => {
@@ -126,7 +127,7 @@
     const terminal = !!(toolEnd || slowEnd || agreement || fallback || roleAgreement || nat('tool:post') || group.some(e => e.data.phase === 'advisory_result') || (routed && routed.data.route !== 'fast' && !opts.live));
     const inFlight = !!opts.live && !terminal && (opts.now - stamp(group.at(-1))) < 90000;
     // proposed
-    let proposed = { title: 'Not scored', detail: '' };
+    let proposed = { title: 'No FD judgment recorded', detail: 'Tool activity only' };
     if (roleProposed && !score) proposed = { title: roleProposed.data.proposed_model_role ? 'Role: ' + roleProposed.data.proposed_model_role : 'Role router abstained', detail: pretty(roleProposed.data.reason_code) };
     else if (score) proposed = { title: choice ? label(choice) : 'No choice recorded', id: !!choice && !names.has(choice), detail: (score.data.model || backendName(score.data.backend)) + (request ? ' · ' + (request.data.candidate_count ?? '?') + ' candidates' : ''), probability };
     else if (fallback) proposed = { title: fallback.data.reason_code === 'no_eligible_candidates' ? 'No prepared action' : 'Fallback', detail: pretty(fallback.data.reason_code) };
@@ -158,12 +159,27 @@
     else if (roleAgreement) verdict = roleAgreement.data.agreement === 'match' ? { label: 'Role match', tone: 'ok' } : roleAgreement.data.agreement === 'mismatch' ? { label: 'Role mismatch', tone: 'warn' } : { label: 'Role ' + pretty(roleAgreement.data.agreement), tone: 'muted' };
     else if (score && choice === 'reason') verdict = { label: 'Proposed: defer', tone: 'info' };
     else if (score || roleProposed) verdict = inFlight ? { label: 'In flight', tone: 'live' } : { label: 'Unjoined', tone: 'muted', note: 'No matching outcome was recorded' };
-    else verdict = inFlight ? { label: 'In flight', tone: 'live' } : { label: 'Not scored', tone: 'muted', note: 'Hook observation only · no decision recorded' };
+    else verdict = inFlight ? { label: 'In flight', tone: 'live' } : { label: 'Observed only', tone: 'muted', note: 'The monitoring hook recorded this call; no Fast Decisions evaluation is linked to it' };
     if (!verdict.note) verdict.note = group.some(e => kind(e).startsWith('shadow_')) ? 'Shadow comparison · execution unchanged' : 'Recorded runtime path · no fast bypass claimed';
     const mode = simulated ? 'Scripted' : advisory ? 'Advisory' : group.some(e => kind(e).startsWith('shadow_') || kind(e).startsWith('role_')) ? 'Shadow' : routed || request ? 'Active' : group.some(e => native(e)) ? 'Native' : 'Runtime';
     return { proposed, happened, verdict, inFlight, mode, score, request, latency: score?.data.duration_ms };
   }
-  if (typeof module !== 'undefined') module.exports = { kind, valid, scriptedKeys, synthetic, sessionsFor, metrics, describe, decisionPath, summarize, sessionName };
+  // Circuit edges require route/invocation evidence. A score, shadow agreement,
+  // or advisory result alone never lights an execution path.
+  function circuitFor(group) {
+    const last = k => group.findLast(e => kind(e) === k);
+    const route = last('routed'), score = last('scored') || last('shadow_proposed');
+    const advisory = group.some(e => e.data.mode === 'advisory' || e.data.phase === 'advisory_result');
+    const shadow = group.some(e => kind(e).startsWith('shadow_') || kind(e).startsWith('role_'));
+    const provider = last('slow_end') || last('slow_start');
+    const fast = !advisory && !shadow && route?.data.route === 'fast' ? route : null;
+    const slow = provider || (!advisory && !shadow && route?.data.route === 'slow' ? route : null);
+    return { request: last('requested'), score, fast, slow,
+      host: group.findLast(e => ['tool_start', 'tool_end'].includes(kind(e)) || ['tool:pre', 'tool:post'].includes(native(e))),
+      branch: fast ? 'fast' : slow ? 'slow' : 'unknown',
+      receipt: last('tool_end') || last('slow_end') || last('shadow_agreement') || group.at(-1) };
+  }
+  if (typeof module !== 'undefined') module.exports = { kind, valid, scriptedKeys, synthetic, sessionsFor, metrics, describe, decisionPath, summarize, sessionName, circuitFor };
   if (typeof document === 'undefined') return;
 
   // ---------- browser render layer ----------
@@ -171,6 +187,15 @@
   const make = (tag, cls, text) => { const node = document.createElement(tag); if (cls) node.className = cls; if (text !== undefined) node.textContent = text; return node; };
   let events = [], seen = new Set(), cursor = 0, epoch = null, session = '', selected = null, category = 'live', following = true, source = 'live', lastPoll = 0, connectionError = '', retained = 0, invalidLines = 0, windowGap = false, hasMore = false;
   let frozenIds = null, expanded = new Set(), token = '', pollTimer = null, pollGeneration = 0, arrivals = new Set(), renderedAt = 0;
+  let circuitFocus = null;
+  let historyReady = false;
+  let lastStudyPoll = 0;
+  // Older Ledger/Circuit URLs now open the same dashboard. Collapse only the
+  // diagram; the event stream, selection and filters always remain shared.
+  try { $('decisionCircuit').open = sessionStorage.getItem('afast-path-collapsed') !== 'true'; } catch (_) { }
+  $('decisionCircuit').ontoggle = () => {
+    try { sessionStorage.setItem('afast-path-collapsed', String(!$('decisionCircuit').open)); } catch (_) { }
+  };
   const tokenKey = 'afast-token:' + location.host;
   try { token = new URLSearchParams(location.hash.slice(1)).get('token') || sessionStorage.getItem(tokenKey) || ''; if (token) sessionStorage.setItem(tokenKey, token); } catch (_) { }
   if (location.hash.startsWith('#token=')) history.replaceState(null, '', location.pathname + location.search);
@@ -180,7 +205,7 @@
   const toneClass = t => ({ ok: 'ok', info: 'info', warn: 'warn', bad: 'bad', adv: 'adv', live: 'live' }[t] || '');
 
   function ingest(batch, force = false) {
-    arrivals = new Set(source === 'live' && events.length ? batch.filter(e => !seen.has(e.event_id)).map(e => e.event_id) : []);
+    arrivals = new Set(source === 'live' && historyReady && following ? batch.filter(e => !seen.has(e.event_id)).map(e => e.event_id) : []);
     for (const e of batch) if (valid(e) && !seen.has(e.event_id)) { seen.add(e.event_id); events.push(e); }
     events.sort((a, b) => stamp(a) - stamp(b) || (a.session_id === b.session_id ? (a.seq || 0) - (b.seq || 0) : 0));
     if (events.length > 20000) { events = events.slice(-20000); seen = new Set(events.map(e => e.event_id)); }
@@ -291,9 +316,48 @@
   }
   const isStage = e => STAGES.has(kind(e)) || e.data.phase === 'advisory_result' || (native(e) && e.data.tool_call_id);
 
+  function renderCircuit(rows) {
+    const focused = rows.find(row => row.group.some(e => e.event_id === selected));
+    const decisions = rows.filter(row => row.group.some(e => e.decision_id));
+    const latestRow = (decisions.length ? decisions : rows).reduce((latest, row) => !latest || stamp(row.group.at(-1)) > stamp(latest.group.at(-1)) ? row : latest, null);
+    const row = focused || latestRow;
+    const group = row?.group || [], s = row?.summary, path = circuitFor(group);
+    $('circuitLatest').hidden = !focused;
+    const latest = group.at(-1);
+    circuitFocus = path.score || path.receipt || null;
+    put('circuitContext', latest ? sessionName(configFor(events, latest.session_id), latest.session_id) + ' · ' + (focused ? 'Selected decision' : 'Latest decision') + ' · ' + clock(latest) : 'Start a turn or open a saved trace to follow a decision.');
+    put('circuitMode', s?.mode || 'No records');
+    $('circuitMode').className = 'tag ' + (s?.mode === 'Scripted' ? 'warn' : s?.mode === 'Advisory' ? 'adv' : '');
+    $('circuitMap').dataset.branch = path.branch;
+    const newStage = kinds => source === 'live' && following && group.some(e => arrivals.has(e.event_id) && kinds.includes(kind(e)));
+    $('circuitMap').classList.toggle('fresh-score', newStage(['scored', 'shadow_proposed']));
+    $('circuitMap').classList.toggle('fresh-fast', !!path.fast && newStage(['routed', 'tool_start', 'tool_end']));
+    $('circuitMap').classList.toggle('fresh-slow', !!path.slow && newStage(['routed', 'slow_start', 'slow_end']));
+    const bind = (id, event) => {
+      const node = $(id); node.disabled = !event;
+      node.classList.toggle('arriving', !!event && arrivals.has(event.event_id));
+      if (event) node.dataset.circuitEventId = event.event_id; else delete node.dataset.circuitEventId;
+      node.setAttribute('aria-pressed', String(!!event && selected === event.event_id));
+      node.onclick = event ? () => { selected = event.event_id; render(); } : null;
+    };
+    bind('circuitState', path.request); bind('circuitJudge', path.score);
+    bind('circuitFast', path.fast); bind('circuitSlow', path.slow); bind('circuitReceipt', path.receipt);
+    bind('circuitHost', path.host);
+    put('circuitHostNote', path.host ? describe(path.host).title : 'Permissions stay upstream');
+    put('circuitStateNote', path.request ? (path.request.data.candidate_count ?? '?') + ' prepared candidates' : 'No request recorded');
+    put('circuitJudgeNote', path.score ? (path.score.data.model || backendName(path.score.data.backend)) : 'No score recorded');
+    put('circuitFastNote', path.fast ? (path.fast.data.status === 'submitted_to_upstream' ? 'Submitted to host' : 'Selected; not confirmed') : 'No fast route recorded');
+    put('circuitSlowNote', path.slow ? (path.slow.data.model || path.slow.data.provider || (kind(path.slow) === 'routed' ? 'Selected; not yet invoked' : 'Invocation recorded')) : 'No invocation recorded');
+    put('circuitProposed', s?.proposed.title || 'No proposal recorded');
+    put('circuitHappened', s?.happened.title === '—' ? 'No outcome recorded' : s?.happened.title || 'No outcome recorded');
+    put('circuitOutcomeNote', s?.happened.detail || '');
+    put('circuitReceipt', s?.verdict.label || 'Awaiting evidence');
+    $('circuitReceipt').className = 'receipt-button ' + (s ? toneClass(s.verdict.tone) : '');
+    put('circuitEvidence', s ? s.verdict.note + '. Select a node or receipt to inspect recorded evidence.' : 'Recorded routes light up as events arrive. Select a node to inspect its evidence.');
+  }
+
   function renderFlows(scoped, keys) {
     $('liveFlows').hidden = category !== 'live';
-    if (category !== 'live') return;
     const now = Date.now();
     const groups = flowGroups(scoped);
     const roots = sessionsFor(scoped, now);
@@ -307,6 +371,8 @@
     const live = source === 'live';
     const rows = [...groups.entries()].map(([key, group]) => ({ key, group, summary: summarize(group, synthetic(group.at(-1), keys), { live, now }) }));
     rows.sort((a, b) => (b.summary.inFlight - a.summary.inFlight) || stamp(b.group.at(-1)) - stamp(a.group.at(-1)));
+    renderCircuit(rows);
+    if (category !== 'live') return;
     const shown = rows.slice(0, 40);
     put('flowStatus', source !== 'live' ? 'Saved records · ' + rows.length + ' decision flows' : !following ? 'Paused · ' + rows.length + ' decision flows' : rows.length ? (rows.length > shown.length ? 'Latest ' + shown.length + ' of ' + rows.length + ' decision flows' : rows.length + ' decision flow' + (rows.length === 1 ? '' : 's') + ' · following live') : 'Waiting for decisions');
     $('flowCards').replaceChildren(); $('flowEmpty').hidden = rows.length > 0;
@@ -335,6 +401,12 @@
       const latency = make('span', 'flow-latency', Number.isFinite(s.latency) ? fmt(s.latency) : '—'); latency.append(make('small', '', Number.isFinite(s.latency) ? 'scoring' : 'no score'));
       line.append(when, sessionWrap, proposed, arrow, happened, verdictCell, latency);
       const focusEvent = s.score || latest;
+      const inspect = make('button', 'flow-inspect', 'Inspect');
+      inspect.dataset.inspectId = focusEvent.event_id;
+      inspect.setAttribute('aria-pressed', String(group.some(e => e.event_id === selected)));
+      inspect.setAttribute('aria-label', 'Inspect decision at ' + clock(first) + ' in ' + sessionName(cfg, latest.session_id));
+      inspect.onclick = e => { e.stopPropagation(); selected = focusEvent.event_id; render(); };
+      verdictCell.append(inspect);
       for (const cell of [proposed, happened, verdictCell, when, latency]) { cell.style.cursor = 'pointer'; cell.onclick = () => { selected = focusEvent.event_id; render(); }; }
       // stage chain
       const stages = make('div', 'flow-stages');
@@ -351,25 +423,11 @@
     }
   }
 
-  function renderMechanics(scoped, keys) {
-    $('mechanics').hidden = !session || category === 'live';
-    if ($('mechanics').hidden) { $('decisionPath').replaceChildren(); return; }
-    const path = decisionPath(scoped, session, selected);
-    $('decisionPath').replaceChildren();
-    put('pathNote', path.length ? 'Decision ' + path[0].decision_id + ' · recorded sequence in this session. Select a stage to inspect its evidence.' : 'No scored decision path recorded in this window. Native activity is listed below.');
-    for (const e of path) {
-      const info = describe(e, synthetic(e, keys)), node = make('button', 'path-stage ' + info.tone + (e.event_id === selected ? ' selected' : ''));
-      node.dataset.stageId = e.event_id; node.setAttribute('aria-pressed', String(e.event_id === selected));
-      node.append(make('span', 'path-time', clock(e)), make('strong', '', info.title), make('span', '', info.detail));
-      if (Number.isFinite(e.data.duration_ms)) node.append(make('span', 'path-duration', fmt(e.data.duration_ms)));
-      node.onclick = () => { selected = e.event_id; render(); }; $('decisionPath').append(node);
-    }
-  }
-
   function render() {
     renderedAt = Date.now();
+    if (source !== 'live') $('studyPanel').hidden = true;
     const focused = document.activeElement;
-    const focusKey = ['eventId', 'sessionId', 'childrenId', 'stageId', 'runtimeSessionId'].find(key => focused?.dataset?.[key]);
+    const focusKey = ['eventId', 'sessionId', 'childrenId', 'stageId', 'runtimeSessionId', 'circuitEventId', 'inspectId'].find(key => focused?.dataset?.[key]);
     const focusValue = focusKey ? focused.dataset[focusKey] : null;
     const keys = scriptedKeys(events), base = currentWindow(), realBase = base.filter(e => !synthetic(e, keys));
     const sessions = renderSessions($('includeSynthetic').checked ? base : realBase, keys);
@@ -408,8 +466,7 @@
     put('followBtn', source !== 'live' ? 'Return to live' : following ? 'Following live' : 'Resume live'); $('followBtn').setAttribute('aria-pressed', String(source === 'live' && following));
     put('bypassedCount', m.bypassed);
     renderFlows(scoped.filter(e => $('includeSynthetic').checked || !synthetic(e, keys)), keys);
-    renderMechanics(scoped.filter(e => $('includeSynthetic').checked || !synthetic(e, keys)), keys);
-    renderDetails(events.find(e => e.event_id === selected), keys);
+    renderDetails(events.find(e => e.event_id === selected) || circuitFocus, keys);
     if (source !== 'live') { put('connection', 'Saved trace'); $('connection').className = 'connection replay'; }
     else if (connectionError) { put('connection', 'Disconnected'); $('connection').className = 'connection problem'; }
     else { put('connection', lastPoll ? (hasMore ? 'Syncing history' : following ? 'Connected' : 'Connected · paused') : 'Connecting'); $('connection').className = 'connection' + (lastPoll ? ' connected' : ''); }
@@ -417,29 +474,62 @@
     if (focusKey) { const replacement = [...document.querySelectorAll('button')].find(node => node.dataset[focusKey] === focusValue); replacement?.focus({ preventScroll: true }); }
   }
 
+  $('circuitLatest').onclick = () => { selected = null; render(); };
   $('allSessions').onclick = () => selectSession(''); $('sessionSearch').oninput = render;
   for (const id of ['timeWindow', 'includeSynthetic', 'includeChildren']) $(id).onchange = () => { selected = null; render(); };
   document.querySelectorAll('[data-filter]').forEach(b => { b.onclick = () => { category = b.dataset.filter; document.querySelectorAll('[data-filter]').forEach(x => { x.classList.toggle('active', x === b); x.setAttribute('aria-pressed', String(x === b)); }); render(); }; });
-  $('followBtn').onclick = () => { if (source !== 'live') { pollGeneration++; source = 'live'; events = []; seen.clear(); cursor = 0; epoch = null; selected = null; session = ''; following = true; frozenIds = null; $('timeWindow').value = '3600000'; schedule(0); } else { following = !following; frozenIds = following ? null : new Set(events.map(e => e.event_id)); } render(); };
+  $('followBtn').onclick = () => { if (source !== 'live') { pollGeneration++; source = 'live'; events = []; seen.clear(); cursor = 0; epoch = null; historyReady = false; selected = null; session = ''; following = true; frozenIds = null; $('timeWindow').value = '3600000'; schedule(0); } else { following = !following; frozenIds = following ? null : new Set(events.map(e => e.event_id)); } render(); };
   $('loadBtn').onclick = () => $('fileInput').click();
   $('fileInput').onchange = async () => { try { const batch = []; for (const file of $('fileInput').files) { const text = await file.text(); batch.push(...(text.trim().startsWith('[') ? JSON.parse(text) : text.split(/\r?\n/).filter(Boolean).map(JSON.parse))); } pollGeneration++; clearTimeout(pollTimer); source = 'file'; events = []; seen.clear(); selected = null; session = ''; frozenIds = null; following = false; connectionError = ''; $('reconnectPanel').hidden = true; $('timeWindow').value = 'all'; ingest(batch); } catch (_) { connectionError = 'Could not read this trace. Choose a JSON array or a JSONL event file.'; render(); } };
   $('exportBtn').onclick = () => { const keys = scriptedKeys(events), data = scopeData(currentWindow()).filter(e => $('includeSynthetic').checked || !synthetic(e, keys)), blob = new Blob([data.map(e => JSON.stringify(e)).join('\n') + '\n'], { type: 'application/x-ndjson' }), a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'amplifier-events.jsonl'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000); };
   $('connectForm').onsubmit = e => { e.preventDefault(); try { const url = new URL($('viewerLink').value); if (url.origin !== location.origin) throw Error(); const value = new URLSearchParams(url.hash.slice(1)).get('token'); if (!value) throw Error(); pollGeneration++; token = value; try { sessionStorage.setItem(tokenKey, token); } catch (_) { } $('viewerLink').value = ''; connectionError = ''; $('reconnectPanel').hidden = true; schedule(0); } catch (_) { connectionError = 'Use the full viewer link for this same local address and port.'; render(); } };
   function schedule(delay) { clearTimeout(pollTimer); pollTimer = setTimeout(poll, delay); }
+  window.addEventListener('hashchange', () => {
+    const value = new URLSearchParams(location.hash.slice(1)).get('token');
+    if (!value) return;
+    token = value; pollGeneration++;
+    try { sessionStorage.setItem(tokenKey, token); } catch (_) { }
+    history.replaceState(null, '', location.pathname + location.search);
+    connectionError = ''; schedule(0);
+  });
+  async function pollStudy() {
+    if (Date.now() - lastStudyPoll < 5000 || source !== 'live') return;
+    lastStudyPoll = Date.now();
+    try {
+      const response = await fetch('/api/study', { credentials: 'same-origin', headers: token ? { Authorization: 'Bearer ' + token } : {}, signal: AbortSignal.timeout(5000) });
+      if (!response.ok) return;
+      const study = await response.json();
+      if (source !== 'live') return;
+      $('studyPanel').hidden = study.status === 'not_configured';
+      if (!study.available) { put('studyStatus', 'Data unavailable'); return; }
+      put('studyProgress', study.completed + ' / ' + study.planned + ' runs');
+      put('studyStatus', pretty(study.status));
+      $('studyMeter').max = study.planned; $('studyMeter').value = study.completed;
+      put('studyNote', study.complete ? 'Collection complete. Event counts alone do not establish savings or quality.' : 'Collection incomplete. These counts include failures and non-use; they are not a final performance verdict.');
+      $('studyRows').replaceChildren();
+      for (const arm of study.arms) {
+        const row = make('tr');
+        const seconds = Number.isFinite(arm.median_seconds) ? Math.round(arm.median_seconds) + ' s' : '—';
+        for (const value of [arm.harness + ' / ' + arm.arm, arm.completed + '/' + arm.planned, arm.passed, seconds, arm.fd_requests]) row.append(make('td', '', String(value)));
+        $('studyRows').append(row);
+      }
+    } catch (_) { put('studyStatus', 'Update unavailable'); }
+  }
   async function poll() {
     if (source !== 'live') return;
-    if (!token) { connectionError = 'This tab has no viewer access token. Reopen the full launching link or reconnect below.'; $('reconnectPanel').hidden = false; render(); return; }
     const generation = ++pollGeneration;
     try {
-      const response = await fetch('/api/events?after=' + cursor, { headers: { Authorization: 'Bearer ' + token }, signal: AbortSignal.timeout(5000) });
+      const response = await fetch('/api/events?after=' + cursor, { credentials: 'same-origin', headers: token ? { Authorization: 'Bearer ' + token } : {}, signal: AbortSignal.timeout(5000) });
       if (source !== 'live' || generation !== pollGeneration) return;
       if (!response.ok) { if (response.status === 401) { $('reconnectPanel').hidden = false; throw Error('The viewer link has expired or is missing its access token. Reopen the launching link.'); } throw Error('The local viewer returned HTTP ' + response.status + '. Retrying…'); }
       const payload = await response.json();
       if (source !== 'live' || generation !== pollGeneration) return;
-      if (epoch && epoch !== payload.epoch) { events = []; seen.clear(); cursor = 0; epoch = payload.epoch; selected = null; windowGap = false; schedule(0); return; }
+      if (epoch && epoch !== payload.epoch) { events = []; seen.clear(); cursor = 0; epoch = payload.epoch; historyReady = false; selected = null; windowGap = false; schedule(0); return; }
       if (cursor && payload.first_cursor > cursor + 1) windowGap = true;
       const repaint = !lastPoll || !!connectionError || hasMore !== !!payload.has_more;
       epoch = payload.epoch; cursor = payload.cursor; retained = payload.retained; invalidLines = payload.invalid_lines || 0; hasMore = !!payload.has_more; lastPoll = Date.now(); connectionError = ''; $('reconnectPanel').hidden = true; ingest(payload.events || [], repaint);
+      if (!hasMore) historyReady = true;
+      void pollStudy();
     } catch (error) { if (source !== 'live' || generation !== pollGeneration) return; connectionError = error.name === 'TimeoutError' ? 'The viewer did not respond within 5 seconds. Retrying…' : error instanceof TypeError ? 'Cannot reach the local viewer. Retrying…' : error.message; render(); }
     if (source === 'live' && generation === pollGeneration) schedule(connectionError ? 2000 : hasMore ? 0 : 500);
   }

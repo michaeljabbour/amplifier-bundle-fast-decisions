@@ -3,7 +3,7 @@
   "smart_tool_format": 1,
   "name": "amplifier-fast-decisions",
   "version": "0.1.0",
-  "description": "Suggests a prepared read or list action using a bounded local model call. Use when a harness has eligible workspace targets and wants a fast advisory choice with explicit abstention.",
+  "description": "Suggests a prepared read or list action using a bounded local or Jev model call. Use when a harness has eligible workspace targets and wants a fast advisory choice with explicit abstention.",
   "use_cases": ["Choose among caller-validated workspace read targets", "Measure a local decision scorer independently of an agent harness", "Record advisory decisions alongside parent and child session metadata"],
   "platforms": ["macos", "linux", "windows"],
   "requires": [{"name": "ollama", "purpose": "Runs the local model for select. Without it, manifest, describe and help still work.", "optional": true, "install": "https://docs.ollama.com/"}]
@@ -38,9 +38,26 @@ During development use `uv tool install --editable '.[local]'` from this checkou
 `install-skill --host codex|claude|amplifier|all` adds a minimal discovery skill
 to the selected user catalogs, with no overwrite of modified existing files.
 Start Ollama and warm the model before latency-sensitive calls. The adapter
-requires native generate token log probabilities. No API key is required; the
-only endpoint accepted is literal loopback HTTP. A missing model is an explicit
+requires native generate token log probabilities. Local calls need no API key and
+accept only literal loopback HTTP. A missing model is an explicit
 failure, never a scripted substitute. No web server starts as a side effect.
+
+Jev uses the existing TypeSafe backend and requires explicit external-state
+consent. Set `TYPESAFE_API_KEY` in the process environment; never put it in a
+request file. The optional SDK is not required: the stdlib transport is supported.
+
+```bash
+amplifier-fast-decisions select --backend jev --allow-external-state --input request.json
+```
+
+`--backend` overrides `FAST_DECISIONS_JUDGE` (`local`/`ollama` or `jev`; default
+local). `--allow-external-state` and `--no-allow-external-state` override
+`FAST_DECISIONS_ALLOW_EXTERNAL_STATE` (default false). Jev sends the bounded task,
+context and candidate descriptions to TypeSafe; without consent no external
+backend is constructed. The key is used only by the backend's authorization
+header. `--model` defaults to `qwen3:0.6b` locally, or `TYPESAFE_DEFAULT_MODEL` /
+`jev-latest` for Jev. Actual returned model identity is preserved, including when
+the requested name is an alias. Backend failures never switch to another model.
 
 ## Calling from any harness
 
@@ -75,12 +92,15 @@ file permission, or symlink claim is established by this advisory tool.
 
 ## Evidence and limits
 
-The default model is Qwen3:0.6b, with a 500 ms scoring deadline, score threshold
-0.90 and margin 0.20. Its token scores are uncalibrated. The current workload
-is bounded workspace-action selection, not Jev architecture replication.
+The default local model is Qwen3:0.6b. Both backends use a 500 ms scoring deadline,
+score threshold 0.90 and margin 0.20. Results preserve each backend's
+`probability_kind` and `confidence_kind`; the numbers are not calibrated
+correctness probabilities or necessarily comparable statistics across backends.
+The current workload is bounded workspace-action selection.
 
 Each invocation appends metadata to a new JSONL file under
-`~/.amplifier/fast-decisions/events` or explicit `--events`. Task/context/target
+`~/.amplifier/fast-decisions/events`, `AFAST_EVENTS_DIR`, or explicit `--events`
+(the explicit argument wins). Task/context/target
 paths are not logged. Caller-supplied candidate IDs and session IDs are logged:
 use opaque identifiers, not secrets. Provide `session_id`, optional
 `parent_session_id`, and `harness` to preserve caller lineage. These are caller
@@ -93,9 +113,9 @@ avoided. No fast-submission or tool-execution events are invented. For automatic
 Amplifier interception use the separately configured active bundle and native
 approval path. The portable interface is an advisory library/CLI surface.
 
-Successful selections also return `confidence_kind: not_reported` and
-`option_set_hash`, an order-sensitive digest of the local model's presented options
-and ID bindings. The digest records neither actual execution nor correctness, and
+Successful local selections return `confidence_kind: not_reported`; Jev preserves
+its own reported confidence semantics. `option_set_hash` is an order-sensitive
+digest of the backend's presented options and ID bindings. The digest records neither actual execution nor correctness, and
 is not a hash of the complete request.
 
 ## Operational evidence

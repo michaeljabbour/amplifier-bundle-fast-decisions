@@ -2,6 +2,7 @@
 from __future__ import annotations
 from collections import deque
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from http.cookies import CookieError, SimpleCookie
 import hmac
 import json
 import mimetypes
@@ -20,7 +21,7 @@ STATIC = Path(__file__).parent / "static"
 
 
 class EventIndex:
-    def __init__(self, directory: str | Path, capacity: int = 20000):
+    def __init__(self, directory: str | Path, capacity: int = 20000, study=None):
         self.directory = Path(directory).expanduser().resolve()
         self.directory.mkdir(parents=True, exist_ok=True, mode=0o700)
         self.capacity = capacity
@@ -31,15 +32,30 @@ class EventIndex:
         self.epoch = secrets.token_hex(8)
         self.invalid_lines = 0
         self.lock = threading.Lock()
+        self.study = study
 
     def scan(self):
         with self.lock:
-            for path in sorted(self.directory.glob("*.jsonl")):
+            pending = {}
+            sources = [(p, None) for p in sorted(self.directory.glob("*.jsonl"))]
+            if self.study:
+                sources.extend(self.study.event_files())
+            # Keep recently active files when the retained history is bounded;
+            # filename order (or adding study files last) is not time order.
+            def modified(source):
+                try:
+                    return source[0].stat().st_mtime_ns
+                except OSError:
+                    return 0
+            sources.sort(key=modified)
+            for path, required_session in sources:
                 if path.is_symlink():
                     continue
                 try:
                     st = path.stat()
                     offset, inode = self.positions.get(str(path), (0, st.st_ino))
+                    if inode == st.st_ino and st.st_size == offset:
+                        continue
                     if inode != st.st_ino or st.st_size < offset:
                         offset = 0
                     with path.open("rb") as file:
@@ -64,23 +80,31 @@ class EventIndex:
                                     event = json.loads(line, parse_constant=lambda value: (_ for _ in ()).throw(ValueError("Non-finite JSON")))
                                     if not self._valid(event):
                                         raise ValueError("Not a fast-decisions event")
+                                    if required_session and event['session_id'] != required_session:
+                                        continue
                                     # Do not publish arbitrary top-level fields from imported logs.
                                     event = {k: v for k, v in event.items() if k in {
                                         "schema_version", "event_id", "event", "session_id", "parent_session_id",
                                         "turn_id", "decision_id", "seq", "timestamp", "monotonic_ns", "synthetic", "data"}}
-                                    if event["event_id"] not in self.ids:
+                                    if event["event_id"] not in self.ids and event["event_id"] not in pending:
                                         event["data"] = safe_data(event.get("data", {}))
-                                        self.cursor += 1
-                                        event["cursor"] = self.cursor
-                                        if len(self.events) == self.capacity:
-                                            self.ids.discard(self.events[0]["event_id"])
-                                        self.events.append(event)
-                                        self.ids.add(event["event_id"])
+                                        pending[event['event_id']] = event
                                 except (ValueError, TypeError, UnicodeError):
                                     self.invalid_lines += 1
                         self.positions[str(path)] = (file.tell(), st.st_ino)
                 except OSError:
                     self.invalid_lines += 1
+            # A late scan of an old file must not evict current decisions.
+            # Retain by event time, then publish new records with stable cursors.
+            if pending:
+                newest = sorted([*self.events, *pending.values()],
+                                key=lambda e: str(e.get('timestamp', '')))[-self.capacity:]
+                for event in newest:
+                    if 'cursor' not in event:
+                        self.cursor += 1
+                        event['cursor'] = self.cursor
+                self.events = deque(sorted(newest, key=lambda e: e['cursor']), maxlen=self.capacity)
+                self.ids = {e['event_id'] for e in self.events}
 
     @staticmethod
     def _valid(event):
@@ -105,14 +129,21 @@ class EventIndex:
 class ViewerServer(ThreadingHTTPServer):
     daemon_threads = True
     allow_reuse_address = True
-    def __init__(self, directory: str | Path, port: int = 8765, token: str | None = None):
-        self.index = EventIndex(directory)
-        self.token = token or secrets.token_urlsafe(32)
+    def __init__(self, directory: str | Path, port: int = 8765, token: str | None = None, study_dir=None):
+        from .study_view import StudyView
+        self.study = StudyView(study_dir) if study_dir else None
+        self.index = EventIndex(directory, study=self.study)
+        # The viewer binds exclusively to loopback.  Keep the token gate
+        # available for callers that explicitly provide a token (for example a
+        # tunneled/shared viewer), but do not make ordinary local launches
+        # depend on a browser credential.
+        self.token = token
         super().__init__(("127.0.0.1", port), Handler)
 
     @property
     def url(self):
-        return f"http://127.0.0.1:{self.server_port}/#token={self.token}"
+        suffix = f"#token={self.token}" if self.token else ""
+        return f"http://127.0.0.1:{self.server_port}/{suffix}"
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -128,6 +159,8 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Cache-Control", "no-store")
         self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("Referrer-Policy", "no-referrer")
+        if getattr(self, '_set_viewer_cookie', False):
+            self.send_header('Set-Cookie', f'afast_viewer_{self.server.server_port}={self.server.token}; HttpOnly; SameSite=Strict; Path=/')
         self.send_header("Content-Security-Policy", "default-src 'self'; script-src 'self'; "
                          "style-src 'self' 'unsafe-inline'; connect-src 'self'; "
                          "object-src 'none'; frame-ancestors 'none'; base-uri 'none'")
@@ -138,6 +171,7 @@ class Handler(BaseHTTPRequestHandler):
         self._send(status, json.dumps(data, allow_nan=False).encode(), "application/json")
 
     def do_GET(self):
+        self._set_viewer_cookie = False
         parsed = urlparse(self.path)
         host = self.headers.get("Host", "")
         valid_hosts = {f"127.0.0.1:{self.server.server_port}", f"localhost:{self.server.server_port}"}
@@ -147,9 +181,21 @@ class Handler(BaseHTTPRequestHandler):
         if origin and origin not in {f"http://{h}" for h in valid_hosts}:
             return self._json(403, {"error": "Invalid origin"})
         if parsed.path.startswith("/api/"):
-            expected = "Bearer " + self.server.token
-            if not hmac.compare_digest(self.headers.get("Authorization", ""), expected):
+            token_required = self.server.token is not None
+            expected = "Bearer " + self.server.token if token_required else ""
+            authorized = bool(token_required and hmac.compare_digest(self.headers.get("Authorization", ""), expected))
+            cookie = SimpleCookie()
+            try:
+                cookie.load(self.headers.get('Cookie', ''))
+                value = cookie.get(f'afast_viewer_{self.server.server_port}')
+                cookie_authorized = bool(token_required and value and hmac.compare_digest(value.value, self.server.token))
+            except (ValueError, TypeError, CookieError):
+                cookie_authorized = False
+            if token_required and not (authorized or cookie_authorized):
                 return self._json(401, {"error": "Open the token-bearing URL printed by afast"})
+            self._set_viewer_cookie = token_required and authorized and not cookie_authorized
+            if parsed.path == '/api/study':
+                return self._json(200, self.server.study.summary() if self.server.study else {'available': False, 'status': 'not_configured'})
             if parsed.path == "/api/events":
                 query = parse_qs(parsed.query)
                 try:
@@ -169,6 +215,13 @@ class Handler(BaseHTTPRequestHandler):
                                     "truncated": snapshot["first_cursor"] > 1}
                 return self._json(200, report)
             return self._json(404, {"error": "Not found"})
+        if parsed.path in {'/observatory-preview.html', '/decision-loop.html'}:
+            self.send_response(302)
+            self.send_header('Location', '/')
+            self.send_header('Content-Length', '0')
+            self.send_header('Cache-Control', 'no-store')
+            self.end_headers()
+            return
         name = {"/": "index.html", "/index.html": "index.html", "/app.js": "app.js", "/style.css": "style.css"}.get(parsed.path)
         if not name:
             return self._json(404, {"error": "Not found"})

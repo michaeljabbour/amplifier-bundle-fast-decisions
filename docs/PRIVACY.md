@@ -18,9 +18,20 @@ Other tools require explicit allowlisting and a trusted validator. Those control
 
 ## Viewer
 
-The server binds only to 127.0.0.1, requires a random bearer token on data endpoints, checks Host/Origin, applies a content-security policy and serves a fixed static asset allowlist. It has no execution, approval, configuration or write API. The token is delivered in the URL fragment, moved to session storage and removed from the visible location. Do not publish the printed token-bearing URL. Loopback plus a token does not defend against compromised local processes.
+The server binds only to 127.0.0.1, checks Host/Origin, applies a content-security policy and serves a fixed static asset allowlist. The ordinary loopback viewer is open to local browser tabs because it has no network listener and no execution, approval, configuration or write API. A caller that supplies an explicit token enables the optional bearer gate for tunneled or shared deployments. Loopback access does not defend against compromised local processes.
 
-**Auto-observatory state file:** when the hook auto-starts the viewer (`observatory.enabled: true`, the default), it writes `~/.amplifier/fast-decisions/serve.json` (`--state-file` to override) containing the viewer's pid, port, the token-bearing URL, events directory, start time and version. This file is written mode `0600` (owner read/write only) via atomic tmp-file-plus-rename, and is removed on clean shutdown (`afast serve --stop`, or the server's own exit handler). Treat it like the token itself: local-only, not for sharing, and readable only by the invoking user's account. `afast serve --stop` reads it, signals the pid and removes it regardless of whether the process was still alive.
+When the optional token gate is enabled, a token-authorized request sets an
+HttpOnly, SameSite=Strict session cookie for that viewer port. The cookie is
+local viewer access, never a model API key, and expires with the browser session
+or becomes invalid when the viewer restarts with a new token.
+
+`afast serve --study DIRECTORY` additionally reads the selected study's schedule,
+state, completed results and root-session FD receipts. The API exposes only
+counts, durations and fixed condition labels; it does not serve the study files,
+prompts, solutions, native transcripts, full paths or grader output. Unit-test
+receipts inside study workspaces are excluded by matching the actual session ID.
+
+**Auto-observatory state file:** when the hook auto-starts the viewer (`observatory.enabled: true`, the default), it writes `~/.amplifier/fast-decisions/serve.json` (`--state-file` to override) containing the viewer's pid, port, URL, events directory, start time and version. This file is written mode `0600` via atomic tmp-file-plus-rename, and is removed on clean shutdown (`afast serve --stop`, or the server's own exit handler).
 
 The configuration event carries `workspace_name`, the basename of the session's working directory (for example `my-repo`), so the viewer can name sessions; parent directories, home paths and full paths are never recorded. Set `workspace_name` in the hook config to override it.
 

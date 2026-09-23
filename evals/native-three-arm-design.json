@@ -1,0 +1,159 @@
+{
+  "schema": "fast-decisions/native-three-arm-design/v1",
+  "status": "qualified_frozen_collection_started",
+  "runner_compatible": false,
+  "performance_runs_launched": 1,
+  "purpose": "Measure supported read/list decision help in ordinary Codex and Amplifier task execution, separately.",
+  "harnesses": [
+    "codex",
+    "amplifier"
+  ],
+  "arms": [
+    "baseline",
+    "fd-local",
+    "fd-jev"
+  ],
+  "codex_surface": "published discovery skill and public advisory CLI; voluntary use",
+  "amplifier_surface": "native active decision integration with fixed main-model effort",
+  "forbidden_substitutes": [
+    "custom prefetch hook",
+    "private backend injection",
+    "monkeypatched scorer prompt",
+    "forced use in scored tasks",
+    "used-only primary analysis"
+  ],
+  "fixed_within_harness": [
+    "main_model",
+    "reasoning_effort",
+    "non_fd_context",
+    "permissions",
+    "iteration_limit",
+    "task_prompt",
+    "initial_files",
+    "dependencies",
+    "grader"
+  ],
+  "amplifier_fd_overrides": {
+    "effort_routing": null,
+    "model_routing": null
+  },
+  "sample": {
+    "repositories": 6,
+    "tasks_per_repository": 4,
+    "distinct_tasks": 24,
+    "task_categories": {
+      "bug_fix": 12,
+      "small_feature": 6,
+      "maintenance_refactoring": 6
+    },
+    "repetitions": 3,
+    "scored_sessions_per_harness": 216,
+    "maximum_scored_sessions": 432,
+    "maximum_qualification_sessions": 24,
+    "size_basis": "Fixed precision-limited workload cap; not a power or quality-equivalence claim.",
+    "previously_used_tasks_allowed": false,
+    "task_manifest": "/Users/michaeljabbour/dev/afast-native-study-20260922/tasks.json"
+  },
+  "ordering": {
+    "seed": 20260922,
+    "balanced_position_within_task": true,
+    "balanced_orientation_across_tasks": true,
+    "randomized_harness_block_order": true,
+    "concurrent_measured_sessions": 1,
+    "frozen_schedule": "/Users/michaeljabbour/dev/afast-native-study-20260922/schedule.json"
+  },
+  "timing": {
+    "deadline_seconds": 1200,
+    "primary_start": "task submission, before any runtime startup/warmup assigned to that job",
+    "primary_end": "final response/process completion",
+    "failure_penalty_seconds": 1200,
+    "failed_attempt_raw_elapsed_retained": true,
+    "grader_inside_task_clock": false,
+    "startup_policy": "Count ordinary documented service startup/warmup in the first local-FD job of each repetition batch; record separately too.",
+    "residency_gate_for_inclusion": false,
+    "native_lifecycle_only": true
+  },
+  "analysis": {
+    "unit": "task, with three repetitions retained together",
+    "primary_time": "geometric mean of paired ratios of per-task mean failure-penalized completion scores",
+    "bootstrap_draws": 50000,
+    "bootstrap_seed": 20260923,
+    "resampling": "paired tasks within each fixed repository",
+    "planned_speed_comparisons": 4,
+    "primary_interval_level": 0.9875,
+    "secondary_interval_level": 0.95,
+    "acceptance_required": "No observed acceptance decrease or new permission/protected-file violations; report uncertainty, never claim proven equal quality.",
+    "sensitivity": [
+      "all leave-one-task-out point estimates",
+      "all leave-one-repository-out point estimates"
+    ],
+    "non_use_retained": true,
+    "failures_retained": true,
+    "outlier_deletion": false,
+    "outcome_driven_expansion": false,
+    "pool_harnesses": false,
+    "pool_old_hook_studies": false,
+    "dollar_cost_without_valid_source": "unknown"
+  },
+  "launch_requirements": [
+    {
+      "id": "codex_public_jev",
+      "status": "qualified_and_frozen",
+      "scope": "codex",
+      "evidence": "/Users/michaeljabbour/dev/afast-native-study-20260922/qualification-audit.json"
+    },
+    {
+      "id": "actual_host_qualification",
+      "status": "qualified_and_frozen",
+      "scope": "both",
+      "evidence": "/Users/michaeljabbour/dev/afast-native-study-20260922/qualification-audit.json"
+    },
+    {
+      "id": "baseline_discovery_isolation",
+      "status": "qualified_and_frozen",
+      "scope": "both",
+      "evidence": "/Users/michaeljabbour/dev/afast-native-study-20260922/qualification-audit.json"
+    },
+    {
+      "id": "new_task_and_grader_manifest",
+      "status": "qualified_and_frozen",
+      "scope": "both",
+      "evidence": "/Users/michaeljabbour/dev/afast-native-study-20260922/qualification-audit.json"
+    },
+    {
+      "id": "verified_native_runner",
+      "status": "qualified_and_frozen",
+      "scope": "both",
+      "evidence": "/Users/michaeljabbour/dev/afast-native-study-20260922/qualification-audit.json"
+    },
+    {
+      "id": "numeric_resource_limits",
+      "status": "qualified_and_frozen",
+      "scope": "both",
+      "evidence": "/Users/michaeljabbour/dev/afast-native-study-20260922/qualification-audit.json"
+    },
+    {
+      "id": "source_config_schedule_analysis_freeze",
+      "status": "qualified_and_frozen",
+      "scope": "both",
+      "evidence": "/Users/michaeljabbour/dev/afast-native-study-20260922/qualification-audit.json"
+    }
+  ],
+  "execution_limits": {
+    "currency": "USD",
+    "initial_currency_ceiling": 1000,
+    "authorized_currency_ceiling": 2500,
+    "aggregate_output_tokens": 12000000,
+    "per_job_output_tokens": 40000,
+    "collection_wall_seconds": 604800,
+    "billing_status": "Actual Codex/Jev invoices unavailable; declared API-equivalent valuations and provider estimates used for resource tracking."
+  },
+  "readiness": "A harness can start only after all its three arms and shared requirements are qualified and frozen. No requirement is waived by the design file existing.",
+  "protocol": "NATIVE-THREE-ARM-STUDY.md",
+  "interface_audit": "native-three-arm-audit.json",
+  "performance_runs_count_note": "Launch snapshot; read the live study ledger for current progress.",
+  "execution_directory": "/Users/michaeljabbour/dev/afast-native-study-20260922",
+  "native_runner": "/Users/michaeljabbour/dev/afast-native-study-20260922/study_runner.py",
+  "analysis_script": "/Users/michaeljabbour/dev/afast-native-study-20260922/analyze.py",
+  "execution_freeze": "/Users/michaeljabbour/dev/afast-native-study-20260922/freeze.json"
+}

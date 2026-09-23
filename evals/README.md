@@ -1,5 +1,12 @@
 # evals/ -- how to run the fast-decisions benchmark
 
+For the corrected **Codex and Amplifier three-condition normal-use study**, read
+[NATIVE-THREE-ARM-STUDY.md](NATIVE-THREE-ARM-STUDY.md). That design replaces the
+September 21 custom Codex hook experiments for this question. It requires a
+supported Codex/Jev interface and new qualification before collection; its JSON
+design record is not input for `run.py`. The operating instructions below belong
+to the existing campaign and do not implement the corrected study.
+
 Read `STUDY-DESIGN.md` first: it says what is being measured and which rules are
 non-negotiable. This file is the operating manual. `SPEC-for-builder.md` is the
 implementation spec for `evals/run.py`, which now exists (see `cells.yaml`,

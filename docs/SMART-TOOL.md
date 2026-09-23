@@ -1,8 +1,8 @@
 # Portable Fast Decisions Smart Tool
 
 The portable surface is a Python library plus CLI that any coding-agent
-harness (Claude Code, Codex, OpenCode, Amplifier, ...) can call. It asks the
-real local model to select among caller-supplied read/list candidates and
+harness (Claude Code, Codex, OpenCode, Amplifier, ...) can call. It asks a
+real local model or Jev to select among caller-supplied read/list candidates and
 returns a typed suggestion or abstention. It does not require Amplifier or
 any other specific harness to be running.
 
@@ -82,6 +82,27 @@ Full commands, raw outputs, and per-harness notes (model-availability retries,
 Forge terminal polling) are in the harness-smoke evidence directory.
 
 ## A bounded call
+
+The public `select` interface supports `--backend local` (alias `ollama`) and
+`--backend jev`. The default comes from `FAST_DECISIONS_JUDGE`, otherwise local.
+Jev requires `--allow-external-state` or `FAST_DECISIONS_ALLOW_EXTERNAL_STATE=true`
+and `TYPESAFE_API_KEY` in the environment. Explicit flags override environment
+defaults; `--no-allow-external-state` denies an external call even when the
+environment permits it. The consent check happens before backend construction.
+No repository key file is read. All ordinary input bounds and advisory-only
+semantics are unchanged. Failure never silently uses the other backend.
+
+```bash
+amplifier-fast-decisions select --backend jev --allow-external-state --input request.json
+```
+
+Both backends use their existing prompts and return their native probability
+semantics. A Jev response may resolve `jev-latest` to a versioned model; that
+actual identity and usage are retained. Model scores are not calibrated accuracy.
+`AFAST_EVENTS_DIR` supplies the default event directory. `FAST_DECISIONS_OLLAMA_URL`
+and `FAST_DECISIONS_LOCAL_MODEL` configure the local backend when corresponding
+explicit arguments are absent. These options enable ordinary harness deployment;
+they do not add automatic Codex interception or guarantee useful adoption.
 
 Start Ollama, pull `qwen3:0.6b`, and warm it as described in
 [model setup](MODEL-SETUP.md). Save this public example as `request.json`:

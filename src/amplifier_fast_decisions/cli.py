@@ -694,6 +694,7 @@ def main(argv=None) -> int:
         if name == "demo":
             command.add_argument("--record-only", action="store_true")
         if name == "serve":
+            command.add_argument('--study', default=None, help='Include live receipts and progress from a native-study directory (read only)')
             command.add_argument("--state-file", default=str(DEFAULT_STATE_FILE))
             command.add_argument("--stop", action="store_true")
             command.add_argument("--no-fallback", action="store_true")
@@ -812,7 +813,7 @@ def main(argv=None) -> int:
         requested_port = args.port
         no_fallback = args.command == "serve" and getattr(args, "no_fallback", False)
         try:
-            server = ViewerServer(args.events, requested_port)
+            server = ViewerServer(args.events, requested_port, study_dir=getattr(args, 'study', None))
         except OSError as exc:
             can_fall_back = (
                 args.command == "serve"
@@ -822,7 +823,7 @@ def main(argv=None) -> int:
             )
             if not can_fall_back:
                 raise
-            server = ViewerServer(args.events, 0)
+            server = ViewerServer(args.events, 0, study_dir=getattr(args, 'study', None))
             print(
                 f"afast: port {requested_port} was busy; using port "
                 f"{server.server_port} instead",
@@ -850,6 +851,7 @@ def main(argv=None) -> int:
                     "port": server.server_port,
                     "url": server.url,
                     "events_dir": str(Path(args.events).expanduser().resolve()),
+                    "study_dir": str(Path(args.study).expanduser().resolve()) if getattr(args, 'study', None) else None,
                     "started_at": datetime.now(UTC).isoformat(),
                     "version": __version__,
                 },

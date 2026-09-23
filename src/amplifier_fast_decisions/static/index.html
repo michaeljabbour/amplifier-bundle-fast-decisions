@@ -3,13 +3,13 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="dark">
-<title>Decision Observatory · Amplifier</title>
+<title>Fast Decisions · Decision Observatory</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <a class="skip" href="#activity">Skip to activity</a>
 <header class="app-header">
-  <div class="brand"><svg viewBox="0 0 28 30" width="22" height="24" aria-hidden="true"><path d="M4 21 8 9M11 25 17 5M19 21 23 9" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg><div><strong>Decision Observatory</strong><span>Amplifier · fast decisions</span></div></div>
+  <div class="brand"><svg viewBox="0 0 28 30" width="22" height="24" aria-hidden="true"><path d="M4 21 8 9M11 25 17 5M19 21 23 9" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg><div><strong>Fast Decisions</strong><span>Amplifier observatory</span></div></div>
   <div class="header-actions">
     <span id="connection" class="connection" role="status">Connecting</span>
     <span id="freshness" class="freshness">Waiting for first response</span>
@@ -36,8 +36,22 @@
   <main id="activity" class="activity-panel">
     <div class="workspace-heading">
       <div><h1 id="viewTitle">All sessions</h1><p id="viewSubtitle">Runtime activity reported by the fast-decisions bundle.</p></div>
-      <label class="time-filter"><span class="sr-only">Time window</span><select id="timeWindow"><option value="3600000">Last hour</option><option value="86400000">Last 24 hours</option><option value="all">All retained</option></select></label>
+      <label class="time-filter"><span class="sr-only">Time window</span><select id="timeWindow"><option value="3600000">Last hour</option><option value="86400000" selected>Last 24 hours</option><option value="all">All retained</option></select></label>
     </div>
+    <details id="decisionCircuit" class="decision-circuit" open>
+      <summary class="circuit-heading"><span><strong>Decision path</strong><span id="circuitContext">Waiting for recorded decisions</span></span><span class="circuit-disclosure"><span class="when-open">Hide path</span><span class="when-closed">Show path</span><span aria-hidden="true">⌄</span></span></summary>
+      <div class="circuit-legend"><span class="fast-key">Fast path</span><span class="slow-key">Generative path</span><span id="circuitMode" class="tag">No records</span><button id="circuitLatest" class="quiet" hidden>Follow latest decision</button></div>
+      <div id="circuitMap" class="circuit-map" data-branch="unknown">
+        <svg class="circuit-wires" viewBox="0 0 1000 220" preserveAspectRatio="none" aria-hidden="true"><path class="wire shared-wire" d="M160 110H235"/><path class="wire fast-wire" d="M420 110H465V49H520M705 49H758V110H810"/><path class="wire slow-wire" d="M420 110H465V171H520M705 171H758V110H810"/></svg>
+        <button id="circuitState" class="circuit-node state-node" disabled><span>Current state</span><small id="circuitStateNote">No request recorded</small></button>
+        <button id="circuitJudge" class="circuit-node judge-node" disabled><span>Fast judge</span><small id="circuitJudgeNote">No score recorded</small></button>
+        <button id="circuitFast" class="circuit-node fast-node" disabled><span>Prepared action</span><small id="circuitFastNote">No fast route recorded</small></button>
+        <button id="circuitSlow" class="circuit-node slow-node" disabled><span>Generative model</span><small id="circuitSlowNote">No invocation recorded</small></button>
+        <button id="circuitHost" class="circuit-node host-node" disabled><span>Host controls execution</span><small id="circuitHostNote">Permissions stay upstream</small></button>
+      </div>
+      <div class="circuit-receipt"><div><span class="receipt-label">Judge proposed</span><strong id="circuitProposed">No proposal recorded</strong></div><span class="receipt-arrow" aria-hidden="true">→</span><div><span class="receipt-label">What happened</span><strong id="circuitHappened">No outcome recorded</strong><span id="circuitOutcomeNote"></span></div><button id="circuitReceipt" class="receipt-button" disabled>Awaiting evidence</button></div>
+      <p id="circuitEvidence" class="circuit-evidence">Recorded routes light up as events arrive. Select a node to inspect its evidence.</p>
+    </details>
     <section class="kpis" aria-label="Activity in the selected window">
       <div class="kpi" title="Model and shadow scores recorded in this window"><span>Decisions scored</span><strong id="modelCount">0</strong></div>
       <div class="kpi accent" title="Prepared actions submitted to the upstream loop instead of a provider call"><span>Fast submitted</span><strong id="fastCount">0</strong></div>
@@ -48,19 +62,31 @@
       <div class="kpi bad" title="Provider retries, errors, fallbacks and failed executions"><span>Retries / errors</span><strong id="errorCount">0</strong></div>
       <div class="kpi" title="95th percentile of decision-model wall time"><span>Scoring p95</span><strong id="scorerP95">—</strong></div>
     </section>
+    <details class="measurement-notes"><summary>What these measurements tell us</summary>
+    <section class="impact-evidence" aria-label="Impact evidence">
+      <div><span>Poor tool calls diverted</span><strong>Not measured</strong><small>Bypassing a model call does not establish that a bad tool call was prevented.</small></div>
+      <div><span>Net time saved</span><strong>Not established</strong><small>Scoring latency is measured. Net savings require completed, matched task comparisons.</small></div>
+    </section>
     <p class="kpi-note"><span id="impactDetail">Waiting for recorded fast-path execution.</span> <span id="qualityEvidence"></span> <span id="scopeNotice">Counts exclude scripted and demo events.</span> Eliminated tool calls, net time and cost saved, and task quality are not measured.</p>
+    </details>
+    <section id="studyPanel" class="study-panel" aria-label="Live study progress" hidden>
+      <div class="study-heading"><h2>Live three-arm study</h2><strong id="studyProgress"></strong><span id="studyStatus"></span></div>
+      <progress id="studyMeter" value="0" max="432" aria-label="Study runs completed"></progress>
+      <details><summary>Results so far · baseline / local / Jev</summary><div class="study-table-wrap"><table><thead><tr><th>Harness / arm</th><th>Completed</th><th>Passed</th><th>Median task time</th><th>FD requests</th></tr></thead><tbody id="studyRows"></tbody></table></div></details>
+      <p id="studyNote">Collection is in progress. Results are preliminary.</p>
+    </section>
     <div class="feed-toolbar">
-      <div class="feed-tabs" role="group" aria-label="Event category"><button data-filter="live" class="active" aria-pressed="true">Live decisions</button><button data-filter="activity" aria-pressed="false">Events</button><button data-filter="decisions" aria-pressed="false">Decisions</button><button data-filter="errors" aria-pressed="false">Issues</button></div>
+      <div class="feed-tabs" role="group" aria-label="Event category"><button data-filter="live" class="active" aria-pressed="true">Decision ledger</button><button data-filter="activity" aria-pressed="false">All events</button><button data-filter="decisions" aria-pressed="false">Judgments</button><button data-filter="errors" aria-pressed="false">Issues</button></div>
       <label class="synthetic-option"><input type="checkbox" id="includeSynthetic"> Scripted &amp; demo <span id="syntheticCount"></span></label>
     </div>
     <section id="liveFlows" class="live-flows" aria-label="Live decision flows">
       <div id="runtimeStrip" class="runtime-strip"></div>
+      <p class="ledger-help">Inspect a decision to follow its path and recorded stages.</p>
       <div class="ledger-heading"><span>When</span><span>Session</span><span>Model proposed</span><span></span><span>What happened</span><span>Verdict</span><span>Scoring</span></div>
       <div id="flowCards" class="ledger"></div>
       <p id="flowStatus" class="flow-status">Waiting for recorded events</p>
       <p id="flowEmpty" class="flow-empty">No decisions in this window. Start a turn in a session with the bundle loaded, or widen the time window. Scripted shadow proposals never bypass a model call.</p>
     </section>
-    <section id="mechanics" class="mechanics" hidden aria-label="Observed decision path"><h2>Decision path</h2><p id="pathNote"></p><div id="decisionPath" class="decision-path"></div></section>
     <div id="feedHeading" class="feed-heading"><span></span><span>Event</span><span>Source</span><span>Session</span><span>Time</span></div>
     <div id="feed" class="feed" aria-label="Recorded activity"></div>
     <div id="emptyState" class="empty-state" hidden><h2 id="emptyTitle">Waiting for activity</h2><p id="emptyDetail">Start an Amplifier turn with the bundle loaded. Events appear here as they arrive.</p></div>

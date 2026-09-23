@@ -1,0 +1,70 @@
+{
+  "schema": "fast-decisions/native-three-arm-interface-audit/v1",
+  "observed_at": "2026-09-22T03:12:54.470925+00:00",
+  "source_commit": "a22b236f3c648a3d245849b652a8500722ce60f4",
+  "installed_version": "0.1.0",
+  "installed_commit": "a22b236f3c648a3d245849b652a8500722ce60f4",
+  "source_hashes": {
+    "docs/SMART-TOOL.md": "82c18c30697408e187f63fe9ba28ac3f6d454c8fce79c47c186ac2a7f05d0c80",
+    "docs/CONFIGURATION.md": "c5379273fba1fa45c7715ebeac6f5f6efbf5ec28ccc7183326bbe52cec38422e",
+    "docs/AGENT-HANDOFF.md": "6a5d1bd9852b953af58cd761cae7b9102a8fb6a8e1909c92aded74979570d533",
+    "bundles/active.yaml": "47d3c1f8b8198e13c70bde9ea27764fefa4b6193bd2b528d606ecc6842a3725d",
+    "src/amplifier_fast_decisions/smart_tool.py": "e1ec92b592565da19ff89f6c7582ca5e6af35ed59614ce54b3eb320001f1d58e"
+  },
+  "installed_smart_tool_sha256": "e1ec92b592565da19ff89f6c7582ca5e6af35ed59614ce54b3eb320001f1d58e",
+  "installed_source_matches_checkout": true,
+  "public_select_help_sha256": "006ac888c4f233416523c3b9b173ea81cea6d8a4b4892634ec30d5236bdc345f",
+  "observations": [
+    {
+      "id": "codex_local_public_surface",
+      "evidence": [
+        "installed select --help",
+        "src/amplifier_fast_decisions/smart_tool.py:283"
+      ],
+      "finding": "Public advisory CLI supports Ollama, executes no action, and does not intercept Codex provider calls.",
+      "scope": "interface verified; normal-use performance not established"
+    },
+    {
+      "id": "codex_jev_unavailable",
+      "evidence": [
+        "installed select --help",
+        "src/amplifier_fast_decisions/smart_tool.py:291",
+        "src/amplifier_fast_decisions/smart_tool.py:300"
+      ],
+      "finding": "No public backend selector. Private _backend test seam and local-only validation are not a supported Jev integration.",
+      "scope": "current installed version"
+    },
+    {
+      "id": "amplifier_backend_support",
+      "evidence": [
+        "docs/CONFIGURATION.md",
+        "bundles/active.yaml",
+        "evals/cells.yaml"
+      ],
+      "finding": "Native local and Jev configurations exist; actual-host qualification remains required.",
+      "scope": "source support only"
+    },
+    {
+      "id": "amplifier_effort_confound",
+      "evidence": [
+        "bundles/active.yaml",
+        "docs/CONFIGURATION.md:37"
+      ],
+      "finding": "Active preset includes explore: low. Use supported null routing overrides and verify actual resolved configuration.",
+      "scope": "configuration audit"
+    },
+    {
+      "id": "codex_baseline_discovery",
+      "evidence": [
+        "https://developers.openai.com/codex/skills",
+        "prior confirmation runner.py and trace audit"
+      ],
+      "finding": "Official disable example uses path to SKILL.md. Prior runner used directory paths and FD metadata remained; the revised study must verify isolation, not assume a flag worked.",
+      "scope": "documentation and prior trace observation; corrected isolation not yet qualified"
+    }
+  ],
+  "new_assistant_or_scorer_calls": 0,
+  "keys_read": false,
+  "runtime_configuration_changed": false,
+  "performance_study_ready": false
+}

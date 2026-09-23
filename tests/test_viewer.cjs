@@ -1,6 +1,6 @@
 const {test} = require('node:test');
 const assert = require('node:assert/strict');
-const {scriptedKeys,synthetic,sessionsFor,metrics,describe,valid,decisionPath,summarize,sessionName} = require('../src/amplifier_fast_decisions/static/app.js');
+const {scriptedKeys,synthetic,sessionsFor,metrics,describe,valid,decisionPath,summarize,sessionName,circuitFor} = require('../src/amplifier_fast_decisions/static/app.js');
 let seq=0;
 const now=Date.parse('2026-09-18T03:00:00Z');
 const event=(kind,data={},decision=null,session='parent',extra={})=>({schema_version:'1.0',event_id:String(++seq),event:'fast_decisions:'+kind,session_id:session,decision_id:decision,timestamp:new Date(now).toISOString(),data,...extra});
@@ -85,4 +85,32 @@ test('session labels prefer explicit names and recover after retries',()=>{
  assert.equal(sessionName({workspace_name:'repo',session_label:'Review'},'id'),'Review');
  const rows=[event('health',{phase:'configuration'}),event('health',{native_event:'provider:retry'}),event('health',{native_event:'tool:pre'})];
  assert.equal(sessionsFor(rows,now)[0].state,'Working');
+});
+
+test('circuit never turns a score, shadow agreement, or advisory suggestion into a fast route',()=>{
+ const score=event('scored',{choice:'read',selected_probability:.99},'d');
+ assert.equal(circuitFor([score]).branch,'unknown');
+ const route=event('routed',{route:'fast',status:'submitted_to_upstream'},'d');
+ assert.equal(circuitFor([score,route]).branch,'fast');
+ assert.equal(circuitFor([score,route]).receipt,route);
+ assert.equal(summarize([score,route]).verdict.label,'Fast · submitted');
+ const shadow=event('shadow_proposed',{choice:'read'},'d');
+ assert.equal(circuitFor([shadow,route,event('shadow_agreement',{agreement:'match'},'d')]).branch,'unknown');
+ assert.equal(circuitFor([event('scored',{mode:'advisory',choice:'read'},'d'),route]).branch,'unknown');
+});
+
+test('circuit distinguishes a recorded provider route from an invocation and preserves failed outcomes',()=>{
+ const route=event('routed',{route:'slow'},'d');
+ assert.equal(circuitFor([route]).slow,route);
+ const started=event('slow_start',{provider:'test-provider'},'d');
+ assert.equal(circuitFor([route,started]).slow,started);
+ const failed=event('tool_end',{status:'error',success:false},'d');
+ const fast=event('routed',{route:'fast',status:'submitted_to_upstream'},'d');
+ assert.equal(circuitFor([fast,failed]).receipt,failed);
+ assert.equal(summarize([fast,failed]).verdict.label,'Fast · failed');
+ assert.equal(circuitFor([]).branch,'unknown');
+ assert.equal(circuitFor([]).receipt,undefined);
+ const observed=event('health',{native_event:'tool:post',tool_call_id:'native-tool',tool:'read_file'});
+ assert.equal(circuitFor([observed]).host,observed);
+ assert.equal(circuitFor([observed]).branch,'unknown');
 });

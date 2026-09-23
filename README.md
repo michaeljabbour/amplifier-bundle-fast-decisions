@@ -127,7 +127,7 @@ routing, model routing, confidence gates -- is in
 
 ## Observatory
 
-A loopback-only, token-protected viewer of the decision ledger: one row per
+A loopback-only viewer of the decision ledger: one row per
 decision, showing what the judge proposed, what the recorded events say
 happened, and a labelled verdict -- metadata only, no prompts, tool contents or
 private reasoning. `afast serve` starts (or reuses) it, `afast serve --stop`

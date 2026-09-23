@@ -14,7 +14,7 @@ from . import operations
 def main(argv=None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
     parser = argparse.ArgumentParser(prog='amplifier-fast-decisions', add_help=False,
-        description='Advisory local-model selection; no action execution.')
+        description='Advisory local or Jev selection; no action execution.')
     parser.add_argument('-h', action='help', help='Show short usage')
     commands = parser.add_subparsers(dest='command', required=True)
     for name, (_, summary) in lib.CAPABILITIES.items():
@@ -34,8 +34,10 @@ def main(argv=None) -> int:
             command.add_argument('--input', required=True, metavar='FILE')
         if name == 'select':
             command.add_argument('--input', default='-', metavar='FILE')
-            command.add_argument('--model', default='qwen3:0.6b')
-            command.add_argument('--ollama-url', default='http://127.0.0.1:11434')
+            command.add_argument('--backend', choices=['local', 'ollama', 'jev'])
+            command.add_argument('--allow-external-state', action=argparse.BooleanOptionalAction, default=None)
+            command.add_argument('--model')
+            command.add_argument('--ollama-url')
             command.add_argument('--timeout-ms', type=int, default=500)
             command.add_argument('--events')
     if argv == ['--help']:
@@ -86,6 +88,7 @@ def main(argv=None) -> int:
         print('Expected readable UTF-8 JSON under 16 KiB. Use describe for the input contract.', file=sys.stderr)
         return 2
     result = asyncio.run(lib.select(payload, model=args.model, ollama_url=args.ollama_url,
+                                   backend=args.backend, allow_external_state=args.allow_external_state,
                                    timeout_ms=args.timeout_ms, events_dir=args.events))
     print(json.dumps(result.to_dict(), sort_keys=True))
     if not result.ok:

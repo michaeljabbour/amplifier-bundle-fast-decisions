@@ -32,7 +32,7 @@ comfortable. Scripted/demo events are hidden by default and excluded from
 improvement counters; enable them when inspecting the demo.
 
 The feed supports pause/resume, time windows, JSONL import/export, and a recoverable
-connection state if the viewer token is missing. Saved traces are labeled separately
+connection state if an explicitly token-protected viewer is missing its token. Saved traces are labeled separately
 from live updates. Generative calls bypassed require a recorded provider-boundary
 submission. Tool calls eliminated, net time/cost savings, and task-quality parity stay
 unmeasured until instrumented; shadow agreement is not independent correctness.
@@ -40,6 +40,16 @@ Decision p95 is backend scoring time, not whole-task speedup. Existing running s
 need to reload the updated observer to emit 15-second presence heartbeats. No prompts,
 tool contents, or private reasoning are shown.
 See [event semantics and limits](EVENTS.md).
+
+The dashboard combines a live **Decision path** with a compact **Decision ledger**.
+Choose **Inspect** on a ledger row to pin its path, expand its recorded stages,
+and read the evidence in the shared inspector. **Follow latest decision** returns
+the path to the newest record. In-progress rows show their stages automatically.
+Collapse the path to give the ledger more room; that preference survives refresh.
+Session filters, pause state, event categories, and trace imports apply to both.
+Incoming records briefly highlight rows, nodes, and routes. Native observations
+can light the host node without implying a judge decision or a fast execution.
+Older `?view=circuit` and `?view=ledger` links both open this unified dashboard.
 
 ## Install the app behavior (shadow measurement only)
 
@@ -54,7 +64,7 @@ amplifier bundle add "git+https://github.com/michaeljabbour/amplifier-bundle-fas
 ```
 
 Start any session; the observatory opens at `http://127.0.0.1:8765`
-(token-protected, loopback) the first time a top-level session starts, with
+(loopback-only) the first time a top-level session starts, with
 shadow measurement already on against the offline backend. It reuses an
 already-running viewer instead of spawning a second one. If port 8765 is busy,
 `afast serve` picks a free port instead; the state file and printed URL tell

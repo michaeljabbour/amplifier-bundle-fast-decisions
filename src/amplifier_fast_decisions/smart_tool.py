@@ -11,6 +11,7 @@ import asyncio
 from dataclasses import asdict, dataclass, field
 from importlib import metadata, resources
 import json
+import os
 from pathlib import Path, PurePosixPath
 import re
 import time
@@ -18,6 +19,7 @@ from typing import Any
 from uuid import uuid4
 
 from .contracts import Candidate, DecisionRequest, SLOW
+from .backends import JevBackend
 from .local_backend import OllamaBackend, PROBABILITY_KIND
 from .privacy import scrub
 from .telemetry import Emitter, JsonlRecorder
@@ -138,7 +140,8 @@ def describe() -> dict[str, Any]:
                        'The backend may abstain when the combined prompt exceeds its byte bound.'],
         'result': {'ok': 'false for invalid input, unavailable/invalid model, or telemetry failure',
                    'status': 'selected or abstain', 'choice': 'offered candidate ID or null',
-                   'reason_code': 'machine-readable outcome', 'probabilities': 'uncalibrated token mass',
+                   'reason_code': 'machine-readable outcome', 'backend': 'actual backend identity, such as ollama-token or jev',
+                   'probabilities': 'native backend scores; inspect probability_kind, not calibrated accuracy',
                    'duration_ms': 'scoring wall time; excludes CLI startup and recording shutdown',
                    'option_set_hash': 'order-sensitive hash of model-facing options and ID bindings; null if unavailable',
                    'confidence_kind': 'not_reported for the local token scorer; not empirical calibration',
@@ -202,7 +205,11 @@ def skill(capability: str | None = None) -> str:
             'Model-backed advisory selection. Use only for an already bounded read/list choice.',
             'Arguments: --input FILE reads a UTF-8 JSON object; --input - reads stdin.',
             'Without --input, stdin must be piped; an interactive terminal fails without prompting.',
-            '--model NAME defaults to qwen3:0.6b; --ollama-url ORIGIN defaults to http://127.0.0.1:11434.',
+            '--backend local|ollama|jev overrides FAST_DECISIONS_JUDGE (default local).',
+            '--model NAME defaults to qwen3:0.6b locally, or TYPESAFE_DEFAULT_MODEL / jev-latest for Jev.',
+            '--ollama-url ORIGIN overrides FAST_DECISIONS_OLLAMA_URL (default http://127.0.0.1:11434).',
+            '--allow-external-state / --no-allow-external-state overrides FAST_DECISIONS_ALLOW_EXTERNAL_STATE.',
+            'Jev requires explicit external-state consent and TYPESAFE_API_KEY in the environment.',
             '--timeout-ms INTEGER defaults to 500 (10–500); --events DIRECTORY sets the metadata recorder location.',
             'Use describe for the complete task/context/candidates/session/parent/harness input schema.',
             'Only task and optional context content are provided as observations. Candidate targets are data.',
@@ -215,7 +222,9 @@ def skill(capability: str | None = None) -> str:
             'Bad command-line syntax or JSON exits 2. Diagnostics use stderr; results use stdout.',
             'Start Ollama, pull qwen3:0.6b, and warm the model before latency-sensitive calls.',
             'The call deadline includes model queue wait. It does not include process startup or telemetry flush.',
-            'No provider key is required; there is no deterministic scoring fallback.',
+            'Local calls require no key. Jev sends bounded task/context and candidate descriptions externally.',
+            'No key is read from a repository file. No backend or deterministic scoring fallback exists.',
+            'AFAST_EVENTS_DIR sets the recorder directory when --events is omitted.',
             'For composition, call await select(payload) from amplifier_fast_decisions.smart_tool.',
         ]
     return '\n'.join(lines + ['', '<skill_resources><file>SMART_TOOL.md</file><file>smart_tool.py</file></skill_resources>', '</skill_content>'])
@@ -232,13 +241,16 @@ class Selection:
     decision_id: str
     choice: str | None = None
     model: str | None = None
+    backend: str | None = None
     probabilities: dict[str, float] = field(default_factory=dict)
-    probability_kind: str = PROBABILITY_KIND
+    probability_kind: str = 'not_reported'
     duration_ms: float = 0.0
     effect: str = 'advisory_only'
     remediation: str | None = None
     confidence_kind: str = 'not_reported'
     option_set_hash: str | None = None
+    input_tokens: int | None = None
+    output_tokens: int | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -271,7 +283,7 @@ def _validated(payload: Any) -> tuple[DecisionRequest, str, str | None, str]:
             raise ValueError('Unsupported target')
         if '\\' in path or ':' in path or any(ord(c) < 32 for c in path) or PurePosixPath(path).is_absolute() or any(p.startswith('.') for p in path.split('/') if p != '.'):
             raise ValueError('Unsupported path')
-        candidates.append(Candidate(row['id'], f'Candidate {i + 1}', 'fast_workspace', {'operation': row['operation'], 'path': path}, origin='portable_caller'))
+        candidates.append(Candidate(row['id'], f"{row['operation']} {path}", 'fast_workspace', {'operation': row['operation'], 'path': path}, origin='portable_caller'))
     if len({c.id for c in candidates}) != len(candidates):
         raise ValueError('Duplicate candidate IDs')
     observations = [{'role': 'user', 'text': scrub(task, 1800)}]
@@ -280,65 +292,102 @@ def _validated(payload: Any) -> tuple[DecisionRequest, str, str | None, str]:
     return DecisionRequest(state={'observations': observations}, candidates=tuple(candidates)), session, parent, harness
 
 
-async def select(payload: dict[str, Any], *, model: str = 'qwen3:0.6b',
-                 ollama_url: str = 'http://127.0.0.1:11434', timeout_ms: int = 500,
+async def select(payload: dict[str, Any], *, model: str | None = None,
+                 backend: str | None = None, allow_external_state: bool | None = None,
+                 ollama_url: str | None = None, timeout_ms: int = 500,
                  events_dir: str | Path | None = None, _backend: Any = None) -> Selection:
     """Score bounded caller data without reading/executing targets.
 
     Uses native token probabilities, score >= .90 and margin >= .20. Optional
     context is content in payload, never a file reference. Missing model or bad
     output produces a failed typed abstention. Cancellation propagates normally.
-    ``_backend`` is a private test seam; callers use the loopback Ollama backend.
+    ``_backend`` is a private test seam; callers select local/ollama or jev.
+    Explicit arguments override environment defaults. Consent is checked before
+    constructing any external backend, including an external test seam.
     """
     session, parent, decision_id = 'portable-' + uuid4().hex, None, uuid4().hex
     try:
         request, session, parent, harness = _validated(payload)
+        backend_name = backend if backend is not None else os.getenv('FAST_DECISIONS_JUDGE', 'local')
+        if backend_name not in ('local', 'ollama', 'jev'):
+            raise ValueError('Unsupported backend')
+        backend_name = 'ollama' if backend_name == 'local' else backend_name
+        if allow_external_state is None:
+            consent = os.getenv('FAST_DECISIONS_ALLOW_EXTERNAL_STATE', 'false').strip().lower()
+            if consent not in ('true', 'false', '1', '0', 'yes', 'no'):
+                raise ValueError('Invalid external-state consent')
+            allow_external_state = consent in ('true', '1', 'yes')
+        if not isinstance(allow_external_state, bool):
+            raise ValueError('Consent must be boolean')
+        external = backend_name == 'jev' or bool(getattr(_backend, 'external', False))
+        if external and not allow_external_state:
+            return Selection(False, 'abstain', 'external_state_not_enabled', session, parent, decision_id,
+                             backend=backend_name, remediation='Enable external state explicitly before using Jev.')
+        if backend_name == 'jev' and _backend is None and not os.getenv('TYPESAFE_API_KEY'):
+            return Selection(False, 'abstain', 'missing_api_key', session, parent, decision_id,
+                             backend=backend_name, remediation='Set TYPESAFE_API_KEY in the process environment.')
+        if model is None:
+            model = (os.getenv('TYPESAFE_DEFAULT_MODEL') or 'jev-latest') if backend_name == 'jev' else (os.getenv('FAST_DECISIONS_LOCAL_MODEL') or 'qwen3:0.6b')
         if isinstance(timeout_ms, bool) or not isinstance(timeout_ms, int) or not 10 <= timeout_ms <= 500:
             raise ValueError('Deadline must be 10–500 ms')
         if not isinstance(model, str) or not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_.:/-]{0,127}', model):
             raise ValueError('Invalid model name')
-        backend = _backend or OllamaBackend(model=model, url=ollama_url, timeout_ms=timeout_ms)
+        scorer = _backend if _backend is not None else (
+            JevBackend(model=model, timeout_ms=timeout_ms) if backend_name == 'jev' else
+            OllamaBackend(model=model, url=ollama_url or os.getenv('FAST_DECISIONS_OLLAMA_URL', 'http://127.0.0.1:11434'), timeout_ms=timeout_ms))
     except (ValueError, TypeError, OverflowError):
         return Selection(False, 'abstain', 'unsupported_request', session, parent, decision_id,
-                         remediation='Use describe for bounded read/list input and a literal loopback endpoint.')
+                         remediation='Check describe and select --help for bounded input, backend, consent and endpoint settings.')
     recorder = None
     duration = 0.0
     try:
-        recorder = JsonlRecorder(events_dir if events_dir is not None else DEFAULT_EVENTS, session)
-        emitter = Emitter(session, parent_session_id=parent, recorder=recorder, synthetic=bool(getattr(backend, 'synthetic', False)))
-        common = {'mode': 'advisory', 'backend': backend.name, 'event_source': 'portable-smart-tool',
-                  'engine': harness, 'allow_external_state': False}
+        recorder = JsonlRecorder(events_dir if events_dir is not None else os.getenv('AFAST_EVENTS_DIR') or DEFAULT_EVENTS, session)
+        emitter = Emitter(session, parent_session_id=parent, recorder=recorder, synthetic=bool(getattr(scorer, 'synthetic', False)))
+        common = {'mode': 'advisory', 'backend': scorer.name, 'event_source': 'portable-smart-tool',
+                  'engine': harness, 'allow_external_state': allow_external_state}
         await emitter.emit('requested', {**common, 'candidate_count': len(request.candidates),
-            'candidates': [{'id': c.id, 'label': c.label} for c in request.candidates]}, decision_id=decision_id)
+            'candidates': [{'id': c.id, 'label': f'Candidate {i + 1}'} for i, c in enumerate(request.candidates)]}, decision_id=decision_id)
         started = time.perf_counter()
         try:
             async with asyncio.timeout(timeout_ms / 1000):
-                response = await backend.ask(request)
+                response = await scorer.ask(request)
             duration = (time.perf_counter() - started) * 1000
             decision = response.action
             decision.validate({c.id for c in request.candidates} | {SLOW})
-            if decision.synthetic or decision.model != model or decision.probability_kind != PROBABILITY_KIND:
+            if decision.synthetic or response.synthetic:
                 raise ValueError('Unexpected model evidence')
+            if backend_name == 'ollama':
+                if decision.model != model or decision.probability_kind != PROBABILITY_KIND:
+                    raise ValueError('Unexpected local model evidence')
+            elif (scorer.name != 'jev' or not isinstance(decision.model, str)
+                  or not decision.model.strip() or decision.model == 'unknown'
+                  or response.model != decision.model or decision.probability_kind != 'backend_reported'):
+                raise ValueError('Unexpected Jev model evidence')
             probability = decision.probabilities[decision.choice]
             margin = probability - max((p for k, p in decision.probabilities.items() if k != decision.choice), default=0)
             await emitter.emit('scored', {**common, 'model': decision.model, 'choice': decision.choice,
                 'probabilities': decision.probabilities, 'probability_kind': decision.probability_kind,
                 'confidence_kind': decision.confidence_kind, 'option_set_hash': decision.option_set_hash,
+                'probability_kind': decision.probability_kind,
+                'input_tokens': response.input_tokens, 'output_tokens': response.output_tokens,
                 'selected_probability': probability, 'margin': margin, 'duration_ms': duration,
                 'latency_kind': 'decision_model_wall_time'}, decision_id=decision_id)
             selected = decision.choice != SLOW and probability >= .90 and margin >= .20
             reason = 'advisory_selected' if selected else ('model_abstained' if decision.choice == SLOW else 'selection_threshold')
             result = Selection(True, 'selected' if selected else 'abstain', reason, session, parent, decision_id,
-                choice=decision.choice if selected else None, model=decision.model,
-                probabilities=dict(decision.probabilities), duration_ms=duration,
-                confidence_kind=decision.confidence_kind, option_set_hash=decision.option_set_hash)
+                choice=decision.choice if selected else None, model=decision.model, backend=scorer.name,
+                probabilities=dict(decision.probabilities), probability_kind=decision.probability_kind, duration_ms=duration,
+                confidence_kind=decision.confidence_kind, option_set_hash=decision.option_set_hash,
+                input_tokens=response.input_tokens, output_tokens=response.output_tokens)
         except asyncio.CancelledError:
             await emitter.emit('cancelled', {**common, 'reason_code': 'caller_cancelled'}, decision_id=decision_id)
             raise
         except Exception:
             duration = (time.perf_counter() - started) * 1000
             result = Selection(False, 'abstain', 'model_unavailable_or_invalid', session, parent, decision_id,
-                duration_ms=duration, remediation='Start Ollama, pull and warm the configured model; verify native token-log-probability support and input bounds.')
+                backend=backend_name, duration_ms=duration,
+                remediation=('Check Jev reachability, credentials and model; no alternate backend was used.' if backend_name == 'jev' else
+                             'Start Ollama, pull and warm the configured model; verify native token-log-probability support and input bounds.'))
         await emitter.emit('health', {**common, 'phase': 'advisory_result', 'status': result.status,
             'reason_code': result.reason_code, 'success': result.ok, 'duration_ms': duration}, decision_id=decision_id)
     except (OSError, ValueError):
@@ -346,7 +395,7 @@ async def select(payload: dict[str, Any], *, model: str = 'qwen3:0.6b',
                            remediation='Choose a writable --events directory outside the installed package.')
     finally:
         if _backend is None:
-            await backend.close()
+            await scorer.close()
         if recorder is not None:
             await asyncio.to_thread(recorder.close)
     if recorder is not None and (recorder.error or recorder.dropped):

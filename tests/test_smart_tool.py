@@ -1,6 +1,7 @@
 """Portable contracts: real model seam, no actions, honest advisory receipts."""
 import asyncio
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -24,6 +25,7 @@ class FakeBackend:
 
     async def ask(self, request):
         self.calls += 1
+        self.request = request
         if self.delay:
             await asyncio.sleep(self.delay)
         if self.error:
@@ -32,6 +34,24 @@ class FakeBackend:
                             model='qwen3:0.6b', probability_kind=PROBABILITY_KIND,
                             confidence_kind='not_reported', option_set_hash='a' * 64)
         return DecisionResult(action=decision)
+
+
+class FakeJevBackend(FakeBackend):
+    name = 'jev'
+    external = True
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.closed = False
+
+    async def ask(self, request):
+        await super().ask(request)
+        return DecisionResult(action=Decision('readme', self.probabilities,
+            model='jev-1.13.0', confidence_kind='typesafe_reported_unspecified',
+            option_set_hash='b' * 64), model='jev-1.13.0', input_tokens=17, output_tokens=2)
+
+    async def close(self):
+        self.closed = True
 
 
 def request():
@@ -43,6 +63,83 @@ def request():
 
 
 class SmartToolTests(unittest.IsolatedAsyncioTestCase):
+    async def test_jev_consent_and_key_checked_before_construction(self):
+        with patch.dict(os.environ, {}, clear=True), patch('amplifier_fast_decisions.smart_tool.JevBackend') as factory:
+            result = await select(request(), backend='jev')
+            self.assertEqual(result.reason_code, 'external_state_not_enabled')
+            result = await select(request(), backend='jev', allow_external_state=True)
+            self.assertEqual(result.reason_code, 'missing_api_key')
+            factory.assert_not_called()
+        with patch.dict(os.environ, {'FAST_DECISIONS_ALLOW_EXTERNAL_STATE': 'true', 'TYPESAFE_API_KEY': 'TEST_KEY'}):
+            with patch('amplifier_fast_decisions.smart_tool.JevBackend') as factory:
+                result = await select(request(), backend='jev', allow_external_state=False)
+                self.assertEqual(result.reason_code, 'external_state_not_enabled')
+                factory.assert_not_called()
+
+    async def test_public_jev_selection_preserves_remote_evidence_and_closes(self):
+        scorer = FakeJevBackend()
+        with tempfile.TemporaryDirectory() as events, patch.dict(os.environ, {'TYPESAFE_API_KEY': 'TEST_KEY'}):
+            with patch('amplifier_fast_decisions.smart_tool.JevBackend', return_value=scorer) as factory:
+                result = await select(request(), backend='jev', allow_external_state=True, events_dir=events)
+            factory.assert_called_once_with(model='jev-latest', timeout_ms=500)
+            self.assertTrue(result.ok)
+            self.assertEqual(result.backend, 'jev')
+            self.assertEqual(result.model, 'jev-1.13.0')
+            self.assertEqual(result.probability_kind, 'backend_reported')
+            self.assertEqual(result.confidence_kind, 'typesafe_reported_unspecified')
+            self.assertEqual((result.input_tokens, result.output_tokens), (17, 2))
+            self.assertTrue(scorer.closed)
+            from amplifier_fast_decisions.backends import _build_questions
+            questions, _ = _build_questions(scorer.request)
+            self.assertEqual(questions['next_action']['criteria']['readme']['action'], 'read README.md')
+            self.assertEqual(questions['next_action']['criteria']['license']['action'], 'read LICENSE.md')
+            raw = ''.join(p.read_text() for p in Path(events).glob('*.jsonl'))
+            records = [json.loads(line) for line in raw.splitlines()]
+            self.assertTrue(all(e['data']['backend'] == 'jev' and e['data']['allow_external_state'] for e in records))
+            for value in ['TEST_KEY', 'PRIVATE_VALUE', 'README.md', 'A prior observation']:
+                self.assertNotIn(value, raw)
+
+    async def test_backend_environment_and_explicit_local_override(self):
+        with tempfile.TemporaryDirectory() as events, patch.dict(os.environ, {
+            'FAST_DECISIONS_JUDGE': 'jev', 'FAST_DECISIONS_ALLOW_EXTERNAL_STATE': 'true',
+            'TYPESAFE_API_KEY': 'TEST_KEY', 'AFAST_EVENTS_DIR': events}, clear=True):
+            with patch('amplifier_fast_decisions.smart_tool.JevBackend', return_value=FakeJevBackend()) as remote:
+                result = await select(request())
+                self.assertTrue(result.ok)
+                self.assertEqual(result.backend, 'jev')
+                local = await select(request(), backend='local', _backend=FakeBackend())
+                self.assertTrue(local.ok)
+                self.assertEqual(local.model, 'qwen3:0.6b')
+                self.assertEqual(remote.call_count, 1)
+
+    async def test_jev_failure_does_not_fall_back_to_local(self):
+        scorer = FakeJevBackend(error=RuntimeError('PRIVATE_NETWORK_ERROR'))
+        with tempfile.TemporaryDirectory() as events, patch.dict(os.environ, {'TYPESAFE_API_KEY': 'TEST_KEY'}):
+            with patch('amplifier_fast_decisions.smart_tool.JevBackend', return_value=scorer), patch('amplifier_fast_decisions.smart_tool.OllamaBackend') as local:
+                result = await select(request(), backend='jev', allow_external_state=True, events_dir=events)
+            self.assertFalse(result.ok)
+            self.assertEqual(result.backend, 'jev')
+            self.assertTrue(scorer.closed)
+            local.assert_not_called()
+            self.assertNotIn('PRIVATE_NETWORK_ERROR', json.dumps(result.to_dict()))
+
+    async def test_external_private_seam_cannot_bypass_consent(self):
+        scorer = FakeJevBackend()
+        with patch.dict(os.environ, {}, clear=True):
+            result = await select(request(), _backend=scorer)
+        self.assertEqual(result.reason_code, 'external_state_not_enabled')
+        self.assertEqual(scorer.calls, 0)
+
+    def test_cli_jev_consent_is_public_and_fail_closed(self):
+        env = {k: v for k, v in os.environ.items() if not k.startswith(('TYPESAFE_', 'FAST_DECISIONS_'))}
+        base = [sys.executable, '-m', 'amplifier_fast_decisions.smart_cli', 'select', '--backend', 'jev']
+        run = subprocess.run(base, input=json.dumps(request()), text=True, capture_output=True, env=env, timeout=5)
+        self.assertEqual(run.returncode, 1)
+        self.assertEqual(json.loads(run.stdout)['reason_code'], 'external_state_not_enabled')
+        run = subprocess.run(base + ['--allow-external-state'], input=json.dumps(request()), text=True, capture_output=True, env=env, timeout=5)
+        self.assertEqual(run.returncode, 1)
+        self.assertEqual(json.loads(run.stdout)['reason_code'], 'missing_api_key')
+
     async def test_selection_is_advisory_and_metadata_only(self):
         with tempfile.TemporaryDirectory() as events:
             backend = FakeBackend()
