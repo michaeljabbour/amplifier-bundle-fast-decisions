@@ -33,27 +33,52 @@ convention that behaviors do not choose the orchestrator
 for exactly this swap. The observer-only behavior remains for anyone who wants
 the convention.
 
-## Default policy: routing-only
+## Default policy: the turn-start difficulty router
+
+Before a turn's first provider call, one typed question ("simple or complex?") decides the model
+**and** the effort for the entire turn:
+
+| Tier | Model | Effort | Mid-turn switches |
+|---|---|---|---|
+| simple ("cheap") | `model_routing.start_model` (claude-sonnet-5), Anthropic providers only (`provider_match`) | `effort_routing.by_tier.cheap` (medium) | escalation on test failure, provider error or after 6 requests |
+| complex ("strong") | the host model: exactly plain Amplifier | provider default | none |
+
+Why per turn, not per request: Anthropic invalidates the cached conversation when the model or the
+thinking/effort parameters change. The previous cheap-first policy re-wrote a 37k–235k-token cache on
+every escalation and every effort flip. On SWE-bench that made it 1.2x plain's time and 1.4x plain's
+cost (`evals/STUDY-DESIGN.md` 18.7).
+
+**Who judges.** The shipped config is `backend: none`: a prompt-length rule decides (AUC 0.60) and
+nothing leaves the machine. Upgrade through Amplifier's sanctioned per-user override in
+`~/.amplifier/settings.yaml`. No bundle edit is needed:
 
 ```yaml
-mode: active
-backend: none            # no judge; set jev (+ allow_external_state) or ollama to add the read shortcut
-effort_routing: {orient: medium, explore: low, implement: high, ...}
-model_routing:  {start_model: claude-sonnet-5, provider_match: anthropic, max_requests_before_escalation: 6,
-                 escalate_on_test_failure: true, escalate_on_provider_error: true}
+overrides:
+  loop-fast-decisions:
+    config:
+      backend: jev                  # TypeSafe Jev (needs TYPESAFE_API_KEY), AUC 0.83 at ~0.2 s
+      allow_external_state: true    # explicit consent: the task text goes to the judge
+      # local alternatives (Ollama, nothing leaves the machine):
+      #   backend: ollama, model: "qwen3:8b",    timeout_ms: 3000   # AUC 0.72 at ~0.36 s
+      #   backend: ollama, model: "qwen:latest", timeout_ms: 8000   # AUC 0.85 at ~1-2.5 s
 ```
 
-- **`backend: none`** (an alias of `unavailable`). `DecisionService.choose`
-  routes slow with `reason_code: judge_disabled` before collecting candidates,
-  so no state is built and no circuit breaker trips. The judged read shortcut
-  rarely fired in the studies, and a judge call sits in front of every slow
-  request, so the default leaves it off.
-- **`provider_match: anthropic`**. The start model is applied only to providers
-  whose mount key or name contains `anthropic`. On a root with several
-  providers, an Anthropic model id is never sent to an OpenAI or vLLM provider
-  (`reason_code: provider_not_matched`).
-- **Sub-sessions** inherit the parent's orchestrator and config (app-cli's
-  `session_spawner`), so delegated agents are routed too.
+The AUCs are measured by `evals/difficulty/probe.py` on SWE-bench Verified human difficulty labels.
+Local judges answer typed questions from first-token letter mass, with a chat prefill and permutation
+debiasing (`local_backend.py`). qwen3:0.6b cannot do this judgment (AUC 0.50).
+
+**Other defaults.**
+- `read_shortcut: false`: the judged read shortcut rarely fired in the studies, and it would put a
+  scoring call in front of every slow request.
+- `provider_match: anthropic`: the start model id is never sent to a non-Anthropic provider.
+- Sub-sessions inherit the parent's orchestrator and config, so delegated agents are routed too.
+
+**Evidence so far** (screens, 1 rep; confirmation at 3 reps running):
+
+| Suite | Router (Jev) vs plain: time | cost | quality |
+|---|---|---|---|
+| S1 simple (12 tasks) | 0.61x | 0.55x | 12/12 vs 12/12 |
+| S3 SWE-bench Verified (10) | 0.90x | 0.94x | 7/10 vs 7/10 |
 
 ## Staying compliant while replacing loop-streaming
 
@@ -89,6 +114,8 @@ the run actually got.
 | `orch-primary` | the product as shipped vs `plain` (anchor) and `plain-sonnet` (confound control) |
 | `orch-primary-effort-only` | ablation: how much is the sonnet start model vs phase effort? |
 | `orch-primary+jev` | does the judged read shortcut on top help, hurt or do nothing? |
+| `orch-primary-monotonic` | cache-aware effort (never step effort down within a turn) |
+| `orch-router-jev` | the turn-start difficulty router judged by Jev |
 
 ```bash
 python3 evals/run.py --suite s1 --split dev \
