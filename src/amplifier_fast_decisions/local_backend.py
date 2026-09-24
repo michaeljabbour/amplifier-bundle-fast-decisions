@@ -95,7 +95,19 @@ def build_question_prompt(state: Any, question: Question, *, reverse: bool = Fal
 
 
 def answer_from_top_logprobs(question: Question, top: list, labels: dict[str, str]) -> Answer:
-    probabilities = score_tokens({"logprobs": [{"top_logprobs": top}]}, labels)
+    # Chat-prefilled answers arrive as " A" / "\tA": fold whitespace
+    # variants into the bare letter before scoring (duplicate letters after
+    # folding sum their mass; score_tokens rejects duplicate tokens).
+    folded: dict[str, float] = {}
+    for item in top:
+        token, logprob = item.get("token"), item.get("logprob")
+        if not isinstance(token, str) or isinstance(logprob, bool) or not isinstance(logprob, (int, float)) \
+                or not math.isfinite(logprob) or logprob > 0:
+            raise BackendUnavailable("Invalid token probability")
+        key = token.strip() or token
+        folded[key] = folded.get(key, 0.0) + math.exp(logprob)
+    merged = [{"token": key, "logprob": math.log(min(mass, 1.0))} for key, mass in folded.items()]
+    probabilities = score_tokens({"logprobs": [{"top_logprobs": merged}]}, labels)
     probabilities.pop(SLOW, None)
     mass = sum(probabilities.values())
     if mass < MIN_OPTION_MASS:
@@ -279,6 +291,27 @@ class OllamaBackend:
 
     async def _answer_once(self, state: Any, question: Question, *, reverse: bool) -> Answer:
         prompt, labels = build_question_prompt(state, question, reverse=reverse)
+        # Chat with an assistant prefill ("Answer:") so reasoning-inclined
+        # models (qwen3:4b/8b answer "We ..."/"First ..." otherwise) must emit
+        # the option letter next. Falls back to /api/generate when a model
+        # returns no token logprobs on the chat endpoint.
+        chat_body = {"model": self.model, "stream": False, "think": False, "logprobs": True,
+                     "top_logprobs": 20, "keep_alive": "10m",
+                     "options": {"temperature": 0, "num_predict": 1, "num_ctx": 4096},
+                     "messages": [{"role": "system", "content": QUESTION_SYSTEM},
+                                  {"role": "user", "content": prompt},
+                                  {"role": "assistant", "content": "Answer:"}]}
+        self._ensure_client()
+        async with asyncio.timeout(self.timeout_ms / 1000):
+            async with self._lock:
+                response = await self._client.post(self.url.replace("/api/generate", "/api/chat"), json=chat_body)
+                payload = response.json() if response.status_code == 200 else {}
+        records = payload.get("logprobs") if payload.get("model") == self.model else None
+        if isinstance(records, list) and len(records) == 1:
+            try:
+                return answer_from_top_logprobs(question, records[0].get("top_logprobs") or [], labels)
+            except BackendUnavailable:
+                pass  # fall through to the generate endpoint
         body = {"model": self.model, "system": QUESTION_SYSTEM, "prompt": prompt,
                 "think": False, "stream": False, "logprobs": True, "top_logprobs": 20,
                 "keep_alive": "10m", "options": {"temperature": 0, "num_predict": 1, "num_ctx": 4096}}
