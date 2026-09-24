@@ -1,0 +1,383 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Making Amplifier Faster: what we tried, what worked, what we learned</title>
+<style>
+  .viz-root {
+    color-scheme: light;
+    --page: #f9f9f7; --surface-1: #fcfcfb; --text-primary: #0b0b0b; --text-secondary: #52514e;
+    --text-muted: #898781; --grid: #e1e0d9; --axis: #c3c2b7; --series-1: #2a78d6;
+    --good: #006300; --border: rgba(11,11,11,0.10); --wash: rgba(42,120,214,0.08);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) .viz-root {
+      color-scheme: dark;
+      --page: #0d0d0d; --surface-1: #1a1a19; --text-primary: #ffffff; --text-secondary: #c3c2b7;
+      --text-muted: #898781; --grid: #2c2c2a; --axis: #383835; --series-1: #3987e5;
+      --good: #0ca30c; --border: rgba(255,255,255,0.10); --wash: rgba(57,135,229,0.12);
+    }
+  }
+  :root[data-theme="dark"] .viz-root {
+    color-scheme: dark;
+    --page: #0d0d0d; --surface-1: #1a1a19; --text-primary: #ffffff; --text-secondary: #c3c2b7;
+    --text-muted: #898781; --grid: #2c2c2a; --axis: #383835; --series-1: #3987e5;
+    --good: #0ca30c; --border: rgba(255,255,255,0.10); --wash: rgba(57,135,229,0.12);
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; }
+  .viz-root { background: var(--page); color: var(--text-primary);
+    font: 16px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif; min-height: 100vh; }
+  main { max-width: 920px; margin: 0 auto; padding: 48px 24px 96px; }
+  h1 { font-size: 34px; line-height: 1.2; margin: 0 0 8px; letter-spacing: -0.01em; }
+  h2 { font-size: 24px; margin: 56px 0 12px; }
+  h3 { font-size: 18px; margin: 28px 0 8px; }
+  p, li { color: var(--text-secondary); }
+  strong { color: var(--text-primary); }
+  .lede { font-size: 19px; color: var(--text-secondary); margin: 0 0 24px; }
+  .meta { font-size: 13px; color: var(--text-muted); }
+  .card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px; padding: 20px 22px; }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; margin: 24px 0; }
+  .tile .num { font-size: 32px; font-weight: 650; color: var(--text-primary); line-height: 1.1; }
+  .tile .lbl { font-size: 14px; color: var(--text-secondary); margin-top: 6px; }
+  .grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; }
+  .flavor h3 { margin-top: 0; }
+  .tag { display: inline-block; font-size: 12px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--border);
+    color: var(--text-secondary); margin-right: 6px; }
+  .chart { margin: 16px 0 8px; }
+  .chart-title { font-weight: 600; color: var(--text-primary); margin: 0; }
+  .chart-sub { font-size: 14px; color: var(--text-muted); margin: 2px 0 8px; }
+  svg text { font: 13px system-ui, -apple-system, "Segoe UI", sans-serif; }
+  details { margin: 6px 0 20px; }
+  summary { cursor: pointer; font-size: 14px; color: var(--text-secondary); }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; margin-top: 8px; font-variant-numeric: tabular-nums; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--grid); color: var(--text-secondary); }
+  th { color: var(--text-primary); font-weight: 600; }
+  .tip { position: fixed; pointer-events: none; background: var(--surface-1); color: var(--text-primary);
+    border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; font-size: 13px; box-shadow: 0 4px 16px rgba(0,0,0,.12);
+    opacity: 0; transition: opacity .08s; max-width: 280px; z-index: 10; }
+  .shape { display: grid; gap: 8px; margin: 12px 0; }
+  .step { display: grid; grid-template-columns: 32px 1fr; gap: 12px; align-items: start; }
+  .step .n { width: 28px; height: 28px; border-radius: 999px; background: var(--wash); color: var(--text-primary);
+    display: grid; place-items: center; font-weight: 650; font-size: 14px; }
+  .toggle { position: fixed; top: 12px; right: 12px; font-size: 13px; background: var(--surface-1); color: var(--text-secondary);
+    border: 1px solid var(--border); border-radius: 999px; padding: 6px 12px; cursor: pointer; }
+  .note { font-size: 14px; color: var(--text-muted); }
+  hr { border: 0; border-top: 1px solid var(--grid); margin: 40px 0; }
+</style>
+</head>
+<body>
+<div class="viz-root">
+<button class="toggle" id="themeToggle" aria-label="Toggle light or dark theme">Light / dark</button>
+<main>
+
+<p class="meta">Study report · 24 September 2026 · fast-decisions for Amplifier</p>
+<h1>Making Amplifier faster: what we tried, what worked, what we learned</h1>
+<p class="lede">We rebuilt the fast-decisions add-on so it can take the driver's seat in Amplifier, then ran it
+through about 400 real coding runs to see where it saves time, where it doesn't, and why. The short version:
+<strong>everyday tasks now finish in about half the time for about 40% of the cost, with no drop in quality.</strong>
+Hard, real-world bug fixes stay exactly as reliable as before, and it turns out the biggest remaining slowdown
+isn't the AI at all: it's Amplifier's own start-up work.</p>
+
+<div class="tiles">
+  <div class="card tile"><div class="num">0.55×</div><div class="lbl">time on everyday tasks, compared with standard Amplifier</div></div>
+  <div class="card tile"><div class="num">0.38×</div><div class="lbl">cost on those same tasks</div></div>
+  <div class="card tile"><div class="num">Same</div><div class="lbl">success rate on real bug fixes (13 of 20 vs 14 of 20; the setups there are identical)</div></div>
+  <div class="card tile"><div class="num">59→13 s</div><div class="lbl">time for Amplifier to answer "ok" on our test machine, before vs. after removing add-on overhead</div></div>
+</div>
+<p class="note">Every number here comes from a recorded run. "Everyday tasks" results are at the screening stage, and a
+pre-registered confirmation run is under way. See "How sure are we?" below.</p>
+
+<h2>What fast-decisions does, in one picture</h2>
+<p>Every request you give Amplifier goes to a large AI model. Some requests are quick jobs ("rename this", "fix this
+obvious bug"); others are real investigations. Standard Amplifier treats them all the same: its biggest model,
+thinking hard, every time.</p>
+<p>fast-decisions puts a <strong>dispatcher</strong> in front. Before the work starts, it takes one quick look at the
+request and decides how much horsepower the job needs: a faster, cheaper model for quick jobs, or the full model for
+real investigations. It decides <strong>once per request</strong> and then gets out of the way.</p>
+
+<h2>The flavors</h2>
+<p>fast-decisions now comes in several forms. Some run <strong>inside your tools</strong> (downstream). Others are
+<strong>improvements we're contributing back to Amplifier itself</strong> (upstream), so every Amplifier user benefits.</p>
+
+<h3>Inside your tools</h3>
+<div class="grid2">
+  <div class="card flavor"><span class="tag">new default</span><span class="tag">Amplifier</span>
+    <h3>The dispatcher in the driver's seat</h3>
+    <p>Installing the add-on now <strong>replaces</strong> Amplifier's standard control loop with ours. Ours wraps the
+    original, so approvals, cancelling, and everything else you rely on keep working. It sorts each request into
+    "quick job" or "real investigation" and picks the model and thinking level to match.</p></div>
+  <div class="card flavor"><span class="tag">observe only</span><span class="tag">Amplifier</span>
+    <h3>Watch-only mode</h3>
+    <p>For people who want measurements before changing anything: it records what it <em>would</em> have decided,
+    without touching your sessions. This was the only form before this work.</p></div>
+  <div class="card flavor"><span class="tag">pick your judge</span>
+    <h3>Who makes the call</h3>
+    <p>The "quick job or real investigation?" call can be made by:</p>
+    <ul>
+      <li><strong>A simple built-in rule</strong>, the default. Nothing leaves your machine.</li>
+      <li><strong>Jev</strong>, TypeSafe's hosted decision model. The most accurate fast option.</li>
+      <li><strong>A model running on your own computer.</strong> It can now answer the same kinds of questions Jev
+      does.</li>
+    </ul>
+    <p>You switch between them with one setting.</p></div>
+  <div class="card flavor"><span class="tag">other assistants</span>
+    <h3>Smart Tool for Claude Code, Codex, OpenCode</h3>
+    <p>The same decision service is callable from other coding assistants as a stand-alone tool. It gives
+    suggestions; it can't change how those assistants run.</p></div>
+</div>
+
+<h3>Back into Amplifier (upstream)</h3>
+<div class="grid2">
+  <div class="card flavor"><span class="tag">proposed fix</span>
+    <h3>A 5.8-second start-up delay, fixed</h3>
+    <p>Every time Amplifier starts, including every helper it spins up, a built-in check searched
+    <em>every file Amplifier has ever saved</em> on your computer. On a well-used machine that took 5.8 seconds. It
+    also misread saved notes as your settings and added an unnecessary warning to every conversation. Our fix looks
+    only where settings actually live: <strong>2 milliseconds</strong>, with every existing test still passing.</p></div>
+  <div class="card flavor"><span class="tag">guide</span>
+    <h3>Trimming add-on overhead</h3>
+    <p>Each add-on you install can add its own start-up work and instructions to every request. On our test machine,
+    24 add-ons turned a 13-second answer into a 59-second one and made each request four times longer. We measured
+    each add-on's share so you can keep the ones you use and park the rest.</p></div>
+</div>
+
+<h2>How we tested</h2>
+<p>We used three test courses, chosen to be fair and hard to fool:</p>
+<ul>
+  <li><strong>Everyday tasks</strong>: 20 small, realistic jobs (fix a bug, add a feature, answer a question about
+  code), each with hidden checks the AI can't see.</li>
+  <li><strong>Real bug fixes</strong>: 10 genuine issues from well-known open-source projects (Django, pytest, SymPy,
+  and others), graded by the official, independent SWE-bench test suite. A fix only counts if the project's own tests
+  pass.</li>
+  <li><strong>The "quick job or investigation?" quiz</strong>: 110 requests with known answers (human-rated
+  difficulty), to see which judges can actually tell the difference.</li>
+</ul>
+<p>Every comparison was run side by side at the same time against <strong>standard Amplifier</strong>, and against
+<strong>standard Amplifier simply using the cheaper model</strong>. That second comparison matters: it shows whether
+savings come from smart dispatching or just from a cheaper model.</p>
+
+<h2>Result 1: everyday tasks got much faster and cheaper</h2>
+<div class="card chart" id="c-simple-time"></div>
+<details><summary>Show the numbers</summary><div id="t-simple"></div></details>
+<div class="card chart" id="c-simple-cost"></div>
+<p>The dispatcher sends almost every everyday task to the faster model and makes exactly one decision per task. It
+ends up as quick as simply using the cheaper model, <strong>without giving up the ability to use the big model when a
+task needs it</strong>. The first version of our design saved time but cost more than necessary. The next section
+explains why, and how we fixed it.</p>
+
+<h2>Result 2: real bug fixes are just as reliable, but switching models mid-task backfires</h2>
+<div class="card chart" id="c-complex-solved"></div>
+<div class="card chart" id="c-complex-time"></div>
+<details><summary>Show the numbers</summary><div id="t-complex"></div></details>
+<p>This is where the most important lessons came from.</p>
+<ul>
+  <li><strong>Starting cheap on hard problems is a false economy.</strong> The first version started every task on
+  the cheaper model and switched up after a few steps. On real bugs, the cheaper model sometimes set off in the wrong
+  direction, and the big model, taking over midway, followed that wrong path. One Django bug went from fixed 3 out of
+  3 times to fixed 1 out of 3.</li>
+  <li><strong>Switching models (or thinking levels) mid-task costs extra.</strong> The AI service keeps a "memory" of
+  the conversation so far to answer quickly. Any switch forces it to rebuild that memory from scratch, which was up
+  to about 175,000 words' worth, paid for again.</li>
+  <li><strong>So the dispatcher now decides once, up front, and never switches.</strong> For work inside a large
+  project, it always uses the full model. That keeps reliability identical to standard Amplifier, and it's why the
+  "recommended" row matches it.</li>
+  <li><strong>Turning down the thinking level</strong> on hard problems saved 19% time but lost one extra fix in
+  twenty. We kept it as an opt-in setting, not the default.</li>
+</ul>
+
+<h2>Result 3: which judges can tell a quick job from an investigation?</h2>
+<div class="card chart" id="c-judges"></div>
+<details><summary>Show the numbers</summary><div id="t-judges"></div></details>
+<p><strong>How to read this:</strong> we show each judge a quick job and a real investigation. The score is how often
+it correctly says which one is harder. 50% is a coin flip; 100% is perfect.</p>
+<ul>
+  <li><strong>Jev</strong> gets it right about 83% of the time in a fifth of a second.</li>
+  <li>A large model on your own computer does as well (85%) but takes 1–2.5 seconds.</li>
+  <li>Mid-size local models manage about 72–74% in a third of a second.</li>
+  <li>The tiny local model we started with was no better than a coin flip at this, so we don't use it for this job.</li>
+  <li>No simple rule based on the wording of the request beats about 60%. We checked nine different ones on 410 more
+  requests.</li>
+</ul>
+<p>Making the local models usable took new work. Before, they could only pick which file to open next. They could
+not answer "which of these options?" questions at all, which quietly left them out of most decisions.</p>
+
+<h2>Result 4: the biggest slowdown is Amplifier's own start-up</h2>
+<div class="card chart" id="c-startup"></div>
+<div id="bundle-section"></div>
+<p>On real bug fixes, the AI's thinking is 86% of the working time, so the dispatcher can only do so much there.
+What's left is the time before and around the AI. On a well-used setup, that's where the big wins are:</p>
+<ul>
+  <li><strong>5.8 s</strong> spent searching old saved files at every start, including every helper Amplifier starts
+  (fix proposed upstream).</li>
+  <li><strong>5.1 s</strong> on every single message, from one add-on that re-downloads its knowledge base each time.</li>
+  <li><strong>4.6 s</strong> of memory look-ups at the start of each conversation.</li>
+  <li><strong>About 70,000 extra words</strong> of add-on instructions and tool descriptions attached to every request.</li>
+</ul>
+
+<h2>The shape we recommend</h2>
+<div class="shape">
+  <div class="step"><div class="n">1</div><div><strong>Put the dispatcher in the driver's seat.</strong> It's the
+  only place that can choose a model or thinking level; watching from the side can't change anything.</div></div>
+  <div class="step"><div class="n">2</div><div><strong>Decide once per request, and never switch mid-task.</strong>
+  Switching forces the AI service to rebuild its memory of the conversation and can send the work down the wrong
+  path.</div></div>
+  <div class="step"><div class="n">3</div><div><strong>Quick jobs get the fast model; anything inside a large
+  project gets the full model.</strong> Everyday speed with no loss of reliability.</div></div>
+  <div class="step"><div class="n">4</div><div><strong>Let people choose their judge</strong>: the built-in rule
+  (private, default), Jev (most accurate), or a local model (private, nearly as accurate if you have the hardware).</div></div>
+  <div class="step"><div class="n">5</div><div><strong>Fix the start-up overhead at the source</strong>: the upstream
+  fix plus trimming unused add-ons. This is where hard tasks can still get faster.</div></div>
+</div>
+
+<h2>How sure are we?</h2>
+<ul>
+  <li><strong>Everyday tasks:</strong> consistent across three separate screening runs, with statistically clear
+  speed-ups. A <strong>pre-registered</strong> confirmation run, on 8 tasks never used for tuning, repeated three
+  times, is in progress. We wrote down the pass/fail rule before it started.</li>
+  <li><strong>Real bug fixes:</strong> the recommended setup behaves identically to standard Amplifier by design, and
+  the measurements agree (13 vs 14 of 20; the one-task difference is the normal run-to-run variation we also see
+  between identical setups). Ten bugs is a small set; more would sharpen these numbers.</li>
+  <li><strong>Judges:</strong> 90 human-rated real issues plus 20 everyday tasks. Good for ranking the judges; not a
+  guarantee for every kind of request.</li>
+  <li><strong>Things we found and fixed in our own test harness along the way</strong>: lost measurements, a broken
+  report step, one stale file lock that made a real fix look empty, and test runs that could quietly pick up the
+  wrong version of our code. We believe the numbers above are clean because of those fixes.</li>
+</ul>
+
+<h2>What's next</h2>
+<ul>
+  <li>Finish the pre-registered confirmation run.</li>
+  <li>Propose the start-up fix to the Amplifier project (drafted and tested, waiting for sign-off).</li>
+  <li>Trim this machine's add-on list using the per-add-on measurements.</li>
+  <li>Test more real bugs, so "just as reliable" rests on a larger sample.</li>
+</ul>
+
+<hr>
+<p class="note">Sources: run records under the study directories; design and protocol in
+<code>docs/ORCHESTRATOR-PRIMARY.md</code> and <code>evals/STUDY-DESIGN.md</code> §18; full numbers in
+<code>docs/RESULTS-2026-09-24.md</code>. The approach of routing requests by difficulty follows published work on
+model routing (RouteLLM, LMSYS, ICLR 2025). Our addition is deciding once per request so the AI service's
+conversation memory is never thrown away.</p>
+</main>
+<div class="tip" id="tip" role="tooltip"></div>
+</div>
+
+<script>
+const DATA = {
+  simpleTime: { title: 'Everyday tasks: time taken', sub: 'Compared with standard Amplifier (1.0× = same). Shorter is faster. 12 tasks, all passed in every setup.', unit: '×', ref: 1,
+    rows: [
+      ['Standard Amplifier, cheaper model', 0.59, 'Just swapping in the cheaper model'],
+      ['First version (start cheap, switch up)', 0.48, 'Fast, but costly (see cost chart)'],
+      ['Recommended (built-in rule)', 0.55, 'The new default', true],
+      ['Recommended with Jev as judge', 0.61, 'Jev sent 3 of 12 tasks to the big model'],
+      ['Big model, lower thinking level only', 0.77, 'Same model as standard Amplifier'],
+    ]},
+  simpleCost: { title: 'Everyday tasks: cost', sub: 'Compared with standard Amplifier (1.0× = same). Shorter is cheaper.', unit: '×', ref: 1,
+    rows: [
+      ['Standard Amplifier, cheaper model', 0.42, ''],
+      ['First version (start cheap, switch up)', 0.79, 'Switching thinking levels made the AI service rebuild its memory'],
+      ['Recommended (built-in rule)', 0.38, 'The new default', true],
+      ['Recommended with Jev as judge', 0.55, ''],
+      ['Big model, lower thinking level only', 1.11, 'Faster but slightly pricier'],
+    ]},
+  complexSolved: { title: 'Real bug fixes: share fixed', sub: 'Fixes that pass the project\'s own tests (official SWE-bench grading). Longer is better.', unit: '%', ref: null, max: 100,
+    rows: [
+      ['Standard Amplifier', 70, '14 of 20 (in the same batch as the recommended row)'],
+      ['Recommended (full model for big projects)', 65, '13 of 20; identical setup to standard, the difference is run-to-run variation', true],
+      ['Lower thinking level on big projects', 60, '12 of 20: lost one bug twice'],
+      ['Dispatcher with Jev (earlier version)', 63, '19 of 30: started some big-project bugs on the cheaper model'],
+      ['Standard Amplifier, cheaper model', 50, '5 of 10'],
+    ]},
+  complexTime: { title: 'Real bug fixes: time taken', sub: 'Compared with standard Amplifier in the same batch (1.0× = same). Shorter is faster.', unit: '×', ref: 1,
+    rows: [
+      ['Recommended (full model for big projects)', 1.00, 'Same as standard, by design', true],
+      ['Lower thinking level on big projects', 0.81, 'Faster, but lost one fix in twenty'],
+      ['Dispatcher with Jev (earlier version)', 0.86, 'Faster on quick bugs, but less reliable'],
+      ['First version (start cheap, switch up)', 1.21, 'Wasted steps on the cheaper model, then rebuilt its memory'],
+      ['Standard Amplifier, cheaper model', 1.66, 'The cheaper model struggles on real bugs'],
+    ]},
+  judges: { title: 'Telling a quick job from an investigation', sub: 'How often each judge correctly picks the harder of two requests (50% = coin flip). 90 human-rated real issues.', unit: '%', ref: 50, max: 100, refLabel: 'coin flip',
+    rows: [
+      ['Large local model (29 GB)', 85, '1–2.5 s per decision'],
+      ['Jev (TypeSafe, hosted)', 83, '≈0.2 s per decision', true],
+      ['Mid-size local model (GLM 4.7 Flash)', 76, '≈0.5 s'],
+      ['Mid-size local model (Qwen3 4B)', 74, '≈0.26 s'],
+      ['Mid-size local model (Qwen3 8B)', 72, '≈0.36 s'],
+      ['Built-in rule (request length)', 60, 'Instant; nothing leaves your machine'],
+      ['Tiny local model (Qwen3 0.6B)', 50, '≈0.06 s, but no better than chance'],
+    ]},
+  startup: { title: 'Time to answer "ok" on our test machine', sub: 'Seconds from pressing enter to the answer. The AI\'s own thinking is about 2 s in both.', unit: ' s', ref: null,
+    rows: [
+      ['Everyday setup (24 add-ons)', 59.3, 'Includes 26 s of add-on start-up work'],
+      ['Same machine, add-ons switched off', 12.9, ''],
+    ]},
+};
+
+const tip = document.getElementById('tip');
+function showTip(e, html) { tip.innerHTML = html; tip.style.opacity = 1; moveTip(e); }
+function moveTip(e) { tip.style.left = Math.min(e.clientX + 14, innerWidth - 300) + 'px'; tip.style.top = (e.clientY + 14) + 'px'; }
+function hideTip() { tip.style.opacity = 0; }
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmt = (v, unit) => unit === '×' ? v.toFixed(2) + '×' : unit === '%' ? v + '%' : v.toFixed(1) + unit;
+
+function barChart(id, d) {
+  const el = document.getElementById(id); if (!el) return;
+  const W = 860, labelW = 300, barH = 22, gap = 14, top = d.ref != null ? 26 : 8;
+  const H = top + d.rows.length * (barH + gap) + 28;
+  const max = d.max || Math.max(...d.rows.map(r => r[1]), d.ref || 0) * 1.12;
+  const x = v => labelW + (W - labelW - 70) * v / max;
+  let svg = `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="${esc(d.title)}">`;
+  // recessive gridlines at clean ticks
+  const step = max > 50 ? 25 : max > 2 ? (max > 20 ? 10 : 1) : 0.25;
+  for (let t = 0; t <= max + 1e-9; t += step) {
+    svg += `<line x1="${x(t)}" x2="${x(t)}" y1="${top}" y2="${H - 24}" stroke="var(--grid)" stroke-width="1"/>`;
+    svg += `<text x="${x(t)}" y="${H - 8}" text-anchor="middle" fill="var(--text-muted)">${d.unit === '×' ? t.toFixed(2).replace(/0$/, '') + '×' : t + (d.unit === '%' ? '%' : '')}</text>`;
+  }
+  if (d.ref != null) {  // drawn first, so bars sit on top; label above the plot, clear of values
+    svg += `<line x1="${x(d.ref)}" x2="${x(d.ref)}" y1="${top - 8}" y2="${H - 24}" stroke="var(--text-secondary)" stroke-width="2"/>`;
+    svg += `<text x="${x(d.ref)}" y="${top - 12}" text-anchor="middle" fill="var(--text-secondary)">${esc(d.refLabel || 'standard Amplifier = 1.0×')}</text>`;
+  }
+  d.rows.forEach((r, i) => {
+    const [label, v, note, hl] = r; const y = top + i * (barH + gap);
+    const w = Math.max(2, x(v) - labelW);
+    svg += `<text x="${labelW - 12}" y="${y + barH / 2 + 4}" text-anchor="end" fill="${hl ? 'var(--text-primary)' : 'var(--text-secondary)'}" ${hl ? 'font-weight="650"' : ''}>${esc(label)}</text>`;
+    // bar: 4px rounded data-end, square at baseline
+    svg += `<path d="M${labelW} ${y} H${labelW + w - 4} Q${labelW + w} ${y} ${labelW + w} ${y + 4} V${y + barH - 4} Q${labelW + w} ${y + barH} ${labelW + w - 4} ${y + barH} H${labelW} Z" fill="var(--series-1)" opacity="${hl ? 1 : 0.55}"/>`;
+    svg += `<text x="${labelW + w + 8}" y="${y + barH / 2 + 4}" fill="var(--text-primary)" stroke="var(--surface-1)" stroke-width="4" paint-order="stroke" ${hl ? 'font-weight="650"' : ''}>${fmt(v, d.unit)}</text>`;
+    svg += `<rect x="0" y="${y - gap / 2}" width="${W}" height="${barH + gap}" fill="transparent" data-i="${i}" class="hit"/>`;
+  });
+  svg += '</svg>';
+  el.innerHTML = `<p class="chart-title">${esc(d.title)}</p><p class="chart-sub">${esc(d.sub)}</p>` + svg;
+  el.querySelectorAll('.hit').forEach(h => {
+    const r = d.rows[+h.dataset.i];
+    h.addEventListener('mousemove', e => showTip(e, `<strong>${esc(r[0])}</strong><br>${fmt(r[1], d.unit)}${r[2] ? '<br><span style="color:var(--text-secondary)">' + esc(r[2]) + '</span>' : ''}`));
+    h.addEventListener('mouseleave', hideTip);
+  });
+}
+function table(id, sets) {
+  const el = document.getElementById(id); if (!el) return;
+  el.innerHTML = sets.map(d => `<table><thead><tr><th>${esc(d.title)}</th><th>Value</th><th>Note</th></tr></thead><tbody>` +
+    d.rows.map(r => `<tr><td>${esc(r[0])}</td><td>${fmt(r[1], d.unit)}</td><td>${esc(r[2] || '')}</td></tr>`).join('') + '</tbody></table>').join('');
+}
+barChart('c-simple-time', DATA.simpleTime); barChart('c-simple-cost', DATA.simpleCost);
+barChart('c-complex-solved', DATA.complexSolved); barChart('c-complex-time', DATA.complexTime);
+barChart('c-judges', DATA.judges); barChart('c-startup', DATA.startup);
+table('t-simple', [DATA.simpleTime, DATA.simpleCost]); table('t-complex', [DATA.complexSolved, DATA.complexTime]); table('t-judges', [DATA.judges]);
+
+// Optional per-add-on section, filled in when bundle-attribution data is embedded.
+if (window.BUNDLE_ROWS && window.BUNDLE_ROWS.length) {
+  const sec = document.getElementById('bundle-section');
+  sec.innerHTML = '<div class="card chart" id="c-bundles"></div><details><summary>Show the numbers</summary><div id="t-bundles"></div></details>';
+  const d = { title: 'Extra start-up time each add-on adds on its own', sub: 'Seconds added before the first answer, compared with Amplifier alone (median of two runs).', unit: ' s', ref: null, rows: window.BUNDLE_ROWS };
+  barChart('c-bundles', d); table('t-bundles', [d]);
+}
+
+document.getElementById('themeToggle').addEventListener('click', () => {
+  const r = document.documentElement; const dark = r.dataset.theme ? r.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+  r.dataset.theme = dark ? 'light' : 'dark';
+});
+</script>
+</body>
+</html>
