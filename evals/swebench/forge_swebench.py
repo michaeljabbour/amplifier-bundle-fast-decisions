@@ -206,7 +206,8 @@ def cmd_prepare(args):
                 'baseline_source': str(baseline), 'baseline_sha': forge_e2e.git_sha(baseline),
                 'upstream_loop_source': forge_e2e.UPSTREAM_LOOP_SOURCE, 'arms': {a: ARMS[a] for a in arms},
                 'seed': args.seed, 'reps': args.reps, 'deadline_seconds': args.deadline_seconds,
-                'limits': limits, 'run_order': list(runs), 'runs': runs}
+                'limits': limits, 'settings_sha256': _settings_sha256(),
+                'run_order': list(runs), 'runs': runs}
     _dump(root/'manifest.json', manifest)
     print(json.dumps({'prepared': str(root), 'runs': len(runs), 'instances': ids, 'arms': arms}))
 
@@ -217,6 +218,12 @@ def _project_sessions_dir(workspace):
 
 
 _launch_lock = threading.Lock()
+SETTINGS = Path.home()/'.amplifier'/'settings.yaml'
+
+
+def _settings_sha256():
+    import hashlib
+    return hashlib.sha256(SETTINGS.read_bytes()).hexdigest() if SETTINGS.exists() else None
 
 
 def _capture_patch(workspace, base_commit, index_path):
@@ -289,6 +296,10 @@ def cmd_agent(args):
 
 def _run_one(root, manifest, name, forge):
     run_dir = root/'runs'/name
+    # STUDY-DESIGN.md 18.5: a mid-campaign change to the user's Amplifier settings
+    # (providers, overrides, modules) invalidates every later run; stop, don't continue.
+    if manifest.get('settings_sha256') and _settings_sha256() != manifest['settings_sha256']:
+        raise SystemExit(f'{SETTINGS} changed since prepare; refusing to launch {name} (STUDY-DESIGN.md 18.5)')
     cmd = shlex.join([sys.executable, str(Path(__file__).resolve()), 'agent', '--root', str(root), '--name', name])
     cmd = 'set -a; . ~/.amplifier/keys.env 2>/dev/null; set +a; ' + cmd
     with _launch_lock:  # same spacing discipline as forge_e2e launches
