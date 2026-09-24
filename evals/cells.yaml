@@ -392,7 +392,7 @@ cells:
     role: "the shipped default: difficulty router with no judge (prompt-length rule)"
     purpose: "what users get before configuring Jev or a local judge"
     anchor_cell: plain
-    secondary_anchor: orch-router-jev
+    secondary_anchor: plain-sonnet
     requires_cells: [plain-sonnet]
     mechanism_gate: { max_scored: 0 }
 
