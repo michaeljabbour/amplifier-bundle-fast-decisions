@@ -417,3 +417,50 @@ class EffortByTierTests(DifficultyRouterTests):
             Policy(effort_routing={"by_tier": {"huge": "low"}})
         with self.assertRaises(ValueError):
             Policy(effort_routing={"by_tier": {"cheap": "turbo"}})
+
+
+class ScopeGateTests(DifficultyRouterTests):
+    """model_routing.cheap_max_workspace_files: repository-scale workspaces start strong."""
+
+    async def _in_workspace(self, n_files, p_complex):
+        import os
+        from amplifier_fast_decisions import orchestrator as orch
+        orch._workspace_file_counts.clear()
+        with tempfile.TemporaryDirectory() as tmp:
+            for i in range(n_files):
+                open(os.path.join(tmp, f"f{i}.py"), "w").close()
+            os.makedirs(os.path.join(tmp, "node_modules"))
+            for i in range(50):  # skipped: never counts toward scope
+                open(os.path.join(tmp, "node_modules", f"d{i}.js"), "w").close()
+            cwd = os.getcwd()
+            os.chdir(tmp)
+            try:
+                judge = self.FakeJudge(p_complex=p_complex)
+                models, judged, _ = await self._run(
+                    dict(self.ROUTING, start_policy="judge", cheap_max_workspace_files=10,
+                         max_requests_before_escalation=6), "typo", judge, requests=1)
+                return models, judged, judge.calls
+            finally:
+                os.chdir(cwd)
+
+    async def test_large_workspace_starts_strong_without_asking_the_judge(self):
+        models, judged, calls = await self._in_workspace(25, p_complex=0.01)
+        self.assertEqual(models, [None])
+        self.assertEqual(judged[0]["reason_code"], "scope_strong")
+        self.assertEqual(calls, 0)
+
+    async def test_small_workspace_defers_to_the_judge(self):
+        models, judged, calls = await self._in_workspace(5, p_complex=0.01)
+        self.assertEqual(models, ["claude-sonnet-5"])
+        self.assertEqual(judged[0]["reason_code"], "judge_cheap")
+        self.assertEqual(calls, 1)
+
+    def test_count_is_bounded(self):
+        import os
+        from amplifier_fast_decisions.orchestrator import workspace_file_count, _workspace_file_counts
+        _workspace_file_counts.clear()
+        with tempfile.TemporaryDirectory() as tmp:
+            for i in range(40):
+                open(os.path.join(tmp, f"f{i}"), "w").close()
+            self.assertEqual(workspace_file_count(tmp, 100), 40)
+            self.assertGreater(workspace_file_count(tmp, 10), 10)

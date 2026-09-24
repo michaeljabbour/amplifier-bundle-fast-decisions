@@ -6,6 +6,7 @@ It never patches a class, a global provider dictionary or amplifier-core.
 """
 from __future__ import annotations
 import asyncio
+import os
 from pathlib import Path
 import re
 import time
@@ -177,6 +178,32 @@ DIFFICULTY_CRITERIA = {
 _DIFFICULTY_STATE_CHARS = 2500
 
 
+_SCOPE_SKIP_DIRS = frozenset({".git", "node_modules", ".venv", "venv", "__pycache__", ".tox",
+                              ".mypy_cache", ".pytest_cache", "dist", "build", ".amplifier", ".swe"})
+_workspace_file_counts: dict[str, int] = {}
+
+
+def workspace_file_count(root: str, limit: int) -> int:
+    """Files under ``root`` (skipping VCS/dependency/cache dirs), counted only
+    up to ``limit + 1`` -- the walk stops as soon as the answer is "more than
+    limit", so a huge repository costs a bounded amount. Memoized per
+    process. Never raises (an unreadable root counts as 0)."""
+    key = f"{root}|{limit}"
+    if key in _workspace_file_counts:
+        return _workspace_file_counts[key]
+    count = 0
+    try:
+        for dirpath, dirnames, filenames in os.walk(root):
+            dirnames[:] = [d for d in dirnames if d not in _SCOPE_SKIP_DIRS]
+            count += len(filenames)
+            if count > limit:
+                break
+    except OSError:
+        count = 0
+    _workspace_file_counts[key] = count
+    return count
+
+
 async def decide_start_tier(service: Any, request: Any, model_routing: dict[str, Any],
                             decision_id: str | None) -> str:
     """``"cheap"`` or ``"strong"`` for this turn (called once, at its first
@@ -188,6 +215,16 @@ async def decide_start_tier(service: Any, request: Any, model_routing: dict[str,
     if policy == "cheap":
         return "cheap"
     task = _turn_user_text(request)
+    scope_limit = model_routing.get("cheap_max_workspace_files")
+    if scope_limit is not None:
+        files = await asyncio.to_thread(workspace_file_count, os.getcwd(), scope_limit)
+        if files > scope_limit:
+            await service.emit("difficulty_judged", {
+                "backend": service.backend.name, "choice": "strong", "probabilities": None,
+                "duration_ms": 0.0, "reason_code": "scope_strong", "state_chars": len(task),
+                "candidate_count": files, "mode": service.policy.mode,
+            }, decision_id)
+            return "strong"
     min_chars = model_routing.get("complex_min_prompt_chars", 2000)
     tier = "strong" if len(task) >= min_chars else "cheap"
     decided_by, p_complex, duration_ms = "rules", None, 0.0

@@ -1042,3 +1042,37 @@ confirm at >=3 reps:
 - Router quality >= plain on S3.
 - Router time <= plain on S3 and ~= plain-sonnet on S1.
 - Router cost <= orch-primary everywhere.
+
+### 18.8 Three-rep S3 result and the scope gate (2026-09-24)
+
+S3, 10 instances x 3 reps, router judged by Jev vs a contemporaneous plain anchor:
+
+| | plain (fable) | orch-router-jev |
+|---|---|---|
+| resolved | **23/30** | **19/30** |
+| time vs plain (geomean, 30 pairs) | 1.00 | 0.86 (cheap-routed turns 0.75, strong-routed 0.98) |
+| cost vs plain | 1.00 | 0.91 |
+
+There were 4 discordant pairs, all favouring plain (McNemar exact p = 0.125). That is not significant,
+but it **fails the non-inferiority bar** (section 8: successes >= plain - 1). Two instances account
+for all four:
+- **django-11532** (human label "15 min - 1 hour"). Jev judged it simple (p = 0.05) in every rep.
+  Sonnet started, escalated to fable after 6 requests, and the run still failed 2 of 3. The cheap
+  model's early trajectory misdirected the fix, and escalation did not recover it.
+- **pytest-10356.** Routed strong, so the config is identical to plain, yet it failed 0/3 vs 2/3.
+  That is run-to-run variance under identical configuration.
+
+Meanwhile S1 (small scope) showed no quality cost at all. The shipped rule-only router ran at 0.55x
+plain's time and 0.38x its cost, 12/12, even with plain-sonnet.
+
+**Conclusion.** For repository-scale bugs, "difficulty" is not "the cheap model can solve it". The
+quality-safe shape gates the cheap tier on task scope. `model_routing.cheap_max_workspace_files: 300`
+(shipped) starts any turn in a larger workspace on the host model, whatever the judge says. It uses a
+bounded, memoized walk that skips VCS, dependency and cache directories.
+
+Expected effect, to be measured:
+- On S3 every instance runs strong: quality = plain, time ~ 0.98x.
+- On S1 nothing changes: 0.55x time, 0.38x cost.
+
+Repository-scale speedups must therefore come from Amplifier's overhead, not the model choice (section
+18.9, next): startup hooks, a 68–114k-token system prompt, and cache stability.

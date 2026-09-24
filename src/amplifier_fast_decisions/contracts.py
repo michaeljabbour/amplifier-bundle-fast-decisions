@@ -174,6 +174,11 @@ MODEL_ROUTING_KEYS = frozenset(
         "start_policy",
         "complex_min_probability",
         "complex_min_prompt_chars",
+        # Scope gate: a workspace with more files than this is a repository-
+        # scale task, where the cheap start model lost quality on SWE-bench
+        # (escalation did not recover a misdirected start); such turns start
+        # strong whatever the judge says. None = no gate.
+        "cheap_max_workspace_files",
     }
 )
 
@@ -227,6 +232,9 @@ def validate_model_routing(model_routing: Any) -> None:
     cmc = model_routing.get("complex_min_prompt_chars")
     if cmc is not None and (isinstance(cmc, bool) or not isinstance(cmc, int) or cmc < 1):
         raise ValueError("model_routing.complex_min_prompt_chars must be a positive integer")
+    cmwf = model_routing.get("cheap_max_workspace_files")
+    if cmwf is not None and (isinstance(cmwf, bool) or not isinstance(cmwf, int) or cmwf < 1):
+        raise ValueError("model_routing.cheap_max_workspace_files must be a positive integer")
     provider_match = model_routing.get("provider_match")
     if provider_match is not None and (not isinstance(provider_match, str) or not provider_match):
         raise ValueError("model_routing.provider_match must be a non-empty string")

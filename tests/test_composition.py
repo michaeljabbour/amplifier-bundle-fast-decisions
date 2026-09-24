@@ -104,6 +104,7 @@ class OrchestratorPrimaryBehaviorOfflineTests(unittest.TestCase):
         self.assertIs(config["allow_external_state"], False)
         self.assertEqual(config["model_routing"]["provider_match"], "anthropic")
         self.assertEqual(config["model_routing"]["start_policy"], "judge")
+        self.assertEqual(config["model_routing"]["cheap_max_workspace_files"], 300)
         self.assertIs(config["read_shortcut"], False)
         self.assertEqual(config["effort_routing"]["by_tier"], {"cheap": "medium", "strong": None})
         # No explicit upstream block: the root's loop-streaming settings are
