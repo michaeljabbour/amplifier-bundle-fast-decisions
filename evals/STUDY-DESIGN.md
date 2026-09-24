@@ -991,3 +991,54 @@ own cell, measured against this one.
    turn-boundary-escalation cell}. This is the escalation contrast at the
    power 18.3 requires.
 4. **S3 holdout, preregistered**: the survivor of step 3 against its controls.
+
+### 18.7 Turn-start difficulty router (2026-09-24)
+
+**Finding that motivated it.** On the S3 screen (10 SWE-bench Verified instances, 1 rep, official
+grader), cheap-first routing reversed its S1 advantage:
+
+| Arm | Resolved | Median exec | Total cost |
+|---|---|---|---|
+| plain (fable) | 7/10 | 122 s | $12.58 |
+| plain-sonnet | 5/10 | 163 s | $17.86 |
+| orch-primary (sonnet first, escalate after 6 requests) | 8/10 | 179 s | $18.51 |
+
+Every complex instance followed the same pattern: 6 sonnet requests, then `max_requests` escalation.
+Each model switch, and each effort change, re-wrote the ~37k-token conversation cache (Anthropic
+invalidates the message cache when thinking or model parameters change). Escalation preserved quality
+but cost 1.2x plain's time and 1.4x its cost.
+
+**Design.** Decide model and effort once per turn, before the first provider call. This is
+RouteLLM-style routing by query difficulty (Ong et al., ICLR 2025, arXiv:2406.18665), adapted to an
+agent loop:
+- `model_routing.start_policy: judge` asks one typed simple/complex question.
+- A simple turn gets the cheap model at a single effort (`effort_routing.by_tier.cheap`).
+- A complex turn gets the host model at provider-default effort, i.e. exactly plain, with no mid-turn
+  switch.
+- Judge failure falls back to a prompt-length rule.
+
+The configuration unit is the turn, not the query, because the cache must stay stable across the
+turn's requests.
+
+**Offline judge evidence** (`evals/difficulty/probe.py`): SWE-bench Verified human difficulty labels,
+45 "<15 min" vs 45 ">=1 h", plus 20 S1 prompts.
+
+| Judge | AUC (SWE difficulty) | Latency p50 |
+|---|---|---|
+| Jev jev-1.13.0 | 0.83 | 156 ms |
+| local qwen:latest (29 GB), typed question, permutation-debiased | 0.85 | ~1–2.5 s |
+| local glm-4.7-flash | 0.76 | 0.5 s |
+| local llama3.1:8b | 0.70 | 0.46 s |
+| prompt-length rule | 0.60 | 0 |
+| local qwen3:0.6b | 0.54 (chance) | 60 ms |
+
+This required new capability: the local one-token backends previously refused typed questions
+outright. They now answer choice and noul questions from first-token option-letter mass, averaged over
+forward and reversed option order.
+
+**Live test (running):** `swe-router10` runs {plain, orch-router-jev, orch-router-local} on the same 10
+instances, with a contemporaneous plain anchor. S1 dev with `orch-router-jev` follows. The hypothesis to
+confirm at >=3 reps:
+- Router quality >= plain on S3.
+- Router time <= plain on S3 and ~= plain-sonnet on S1.
+- Router cost <= orch-primary everywhere.
