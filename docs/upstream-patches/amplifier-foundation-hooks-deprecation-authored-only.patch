@@ -1,0 +1,179 @@
+From ff56431af78dcb46bbab664561e06d037b79b124 Mon Sep 17 00:00:00 2001
+From: "Michael J. Jabbour" <michael.jabbour@gmail.com>
+Date: Thu, 24 Sep 2026 19:31:02 -0400
+Subject: [PATCH] fix(hooks-deprecation): scan only authored .amplifier config
+ for evidence
+
+find_source_files() rglob'd every *.yaml under each search dir's
+.amplifier/ and filtered cache/ afterwards, so every session:start --
+including every delegated sub-session -- walked the entire module cache,
+all stored session transcripts and every bundle's data store. On a
+well-used machine (~35k directories under ~/.amplifier/projects) that is
+5.8 s per session start, blocking the event loop, and data stores that
+mention bundle names (e.g. a team knowledge base describing capabilities)
+matched as false 'evidence', firing the deprecation injection in every
+session.
+
+Scan only where configuration is authored: top-level *.yaml in
+.amplifier/ (settings files) and *.yaml under .amplifier/bundles/
+(hidden and cache dirs skipped, depth-capped). All existing tests pass
+unchanged; new tests pin the contract. Measured: 5.81 s -> 0.002 s,
+false positives 15 -> 0.
+
+Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>
+---
+ .../__init__.py                               | 57 +++++++++++++++----
+ .../tests/test_deprecation_hook.py            | 48 ++++++++++++++++
+ 2 files changed, 95 insertions(+), 10 deletions(-)
+
+diff --git a/modules/hooks-deprecation/amplifier_module_hooks_deprecation/__init__.py b/modules/hooks-deprecation/amplifier_module_hooks_deprecation/__init__.py
+index 1f0678c..f14ff85 100644
+--- a/modules/hooks-deprecation/amplifier_module_hooks_deprecation/__init__.py
++++ b/modules/hooks-deprecation/amplifier_module_hooks_deprecation/__init__.py
+@@ -31,6 +31,7 @@ from __future__ import annotations
+ import logging
+ from dataclasses import dataclass
+ from datetime import date
++import os
+ from pathlib import Path
+ from typing import Any
+ 
+@@ -130,11 +131,50 @@ def parse_deprecation_configs(raw: dict[str, Any]) -> list[DeprecationConfig]:
+     return tombstones
+ 
+ 
++# Authored configuration that can reference a bundle lives in exactly two
++# places under a ``.amplifier/`` directory: the settings files at its top
++# level (settings.yaml, settings.local.yaml, ...) and hand-written bundle
++# files under ``bundles/``. Everything else there is tool-managed state --
++# the resolved module cache (#344), per-project session transcripts, and
++# data stores of installed bundles (knowledge bases, evaluation runs, recipe
++# state) -- which can be very large (tens of thousands of directories on a
++# well-used machine) and can mention bundle names as *data*, producing false
++# "evidence". Scanning only the authored locations keeps session:start cheap
++# and the evidence meaningful.
++_BUNDLES_SUBDIR = "bundles"
++_BUNDLES_MAX_DEPTH = 4
++
++
++def _authored_yaml_files(amp_dir: Path):
++    """Yield top-level ``*.yaml`` files and ``*.yaml`` under ``bundles/``
++    (hidden and ``cache`` directories skipped, depth-capped)."""
++    try:
++        entries = sorted(amp_dir.iterdir())
++    except OSError:
++        return
++    for entry in entries:
++        if entry.suffix == ".yaml" and entry.is_file():
++            yield entry
++    bundles = amp_dir / _BUNDLES_SUBDIR
++    if not bundles.is_dir():
++        return
++    for dirpath, dirnames, filenames in os.walk(bundles):
++        depth = len(Path(dirpath).relative_to(bundles).parts)
++        dirnames[:] = [] if depth >= _BUNDLES_MAX_DEPTH else sorted(
++            d for d in dirnames if not d.startswith(".") and d != "cache"
++        )
++        for filename in sorted(filenames):
++            if filename.endswith(".yaml"):
++                yield Path(dirpath) / filename
++
++
+ def find_source_files(bundle_name: str, search_dirs: list[Path]) -> list[str]:
+-    """Scan .amplifier/ directories for files referencing the deprecated bundle.
++    """Scan authored ``.amplifier/`` configuration for references to the deprecated bundle.
+ 
+     Best-effort: silently skips unreadable files and missing directories.
+-    Searches for any YAML file under .amplifier/ that contains the bundle_name string.
++    Looks only where users author configuration -- top-level ``*.yaml`` in
++    ``.amplifier/`` (settings files) and ``*.yaml`` under ``.amplifier/bundles/``
++    -- never tool-managed state (module cache, sessions, bundle data stores).
+ 
+     Args:
+         bundle_name: Name of the deprecated bundle to search for.
+@@ -144,21 +184,18 @@ def find_source_files(bundle_name: str, search_dirs: list[Path]) -> list[str]:
+         List of absolute file paths containing references to the bundle.
+     """
+     found: list[str] = []
++    seen: set[str] = set()
+ 
+     for base_dir in search_dirs:
+         amp_dir = base_dir / ".amplifier"
+         if not amp_dir.is_dir():
+             continue
+ 
+-        for yaml_file in amp_dir.rglob("*.yaml"):
+-            # Skip resolved/cached artifacts (e.g. .amplifier/cache/...) — the
+-            # tombstone's own carrier config is cached on every install and would
+-            # otherwise always self-match, defeating require_evidence gating. (#344)
+-            # Scope the check to the path *below* .amplifier so a "cache" segment
+-            # in an ancestor of base_dir (e.g. a user project under some cache/
+-            # dir) doesn't suppress genuine authored config.
+-            if "cache" in yaml_file.relative_to(amp_dir).parts:
++        for yaml_file in _authored_yaml_files(amp_dir):
++            key = str(yaml_file.resolve())
++            if key in seen:
+                 continue
++            seen.add(key)
+             try:
+                 content = yaml_file.read_text(encoding="utf-8")
+                 if bundle_name in content:
+diff --git a/modules/hooks-deprecation/tests/test_deprecation_hook.py b/modules/hooks-deprecation/tests/test_deprecation_hook.py
+index 5881760..4ba4d92 100644
+--- a/modules/hooks-deprecation/tests/test_deprecation_hook.py
++++ b/modules/hooks-deprecation/tests/test_deprecation_hook.py
+@@ -1301,3 +1301,51 @@ class TestObservabilityRegistration:
+             await mount(coordinator, {})
+ 
+         assert coordinator.register_contributor_calls == []
++
++
++class TestFindSourceFilesAuthoredOnly:
++    """Only authored config is evidence: top-level settings files and bundles/."""
++
++    def _amp(self, tmp_path):
++        amp = tmp_path / ".amplifier"
++        amp.mkdir()
++        return amp
++
++    def test_ignores_tool_managed_state(self, tmp_path):
++        amp = self._amp(tmp_path)
++        (amp / "settings.yaml").write_text("bundle:\n  app: [lsp-python]\n")
++        noise = {
++            "cache/dep/x.yaml",                                  # resolved modules (#344)
++            "projects/-p/sessions/s1/metadata.yaml",             # session storage
++            "team-knowledge/kb/capabilities/lsp-python.yaml",    # a bundle's data store
++            "evaluation/run1/config.yaml",
++            "resolve/instance.yaml",                             # a subdir's top level
++            ".hidden/x.yaml",
++        }
++        for rel in noise:
++            f = amp / rel
++            f.parent.mkdir(parents=True, exist_ok=True)
++            f.write_text("lsp-python\n")
++        assert find_source_files("lsp-python", [tmp_path]) == [str(amp / "settings.yaml")]
++
++    def test_finds_nested_authored_bundles_within_depth(self, tmp_path):
++        amp = self._amp(tmp_path)
++        shallow = amp / "bundles" / "team" / "profile.yaml"
++        deep = amp / "bundles" / "a" / "b" / "c" / "d" / "e" / "far.yaml"
++        for f in (shallow, deep):
++            f.parent.mkdir(parents=True)
++            f.write_text("includes: [lsp-python]\n")
++        assert find_source_files("lsp-python", [tmp_path]) == [str(shallow)]
++
++    def test_skips_cache_and_hidden_under_bundles(self, tmp_path):
++        amp = self._amp(tmp_path)
++        for rel in ("bundles/cache/x.yaml", "bundles/.git/x.yaml"):
++            f = amp / rel
++            f.parent.mkdir(parents=True)
++            f.write_text("lsp-python\n")
++        assert find_source_files("lsp-python", [tmp_path]) == []
++
++    def test_cwd_equal_to_home_reports_each_file_once(self, tmp_path):
++        amp = self._amp(tmp_path)
++        (amp / "settings.local.yaml").write_text("lsp-python\n")
++        assert find_source_files("lsp-python", [tmp_path, tmp_path]) == [str(amp / "settings.local.yaml")]
+-- 
+2.55.0
+
