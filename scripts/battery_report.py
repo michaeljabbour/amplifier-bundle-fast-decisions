@@ -113,7 +113,8 @@ def parse_series_spec(spec):
     trailing two ':'-separated fields (experiment, harness) are peeled off."""
     if '=' not in spec:
         raise ValueError(f'invalid --series (expected label=root:experiment:harness): {spec!r}')
-    label, rest = spec.split('=', 1)
+    # rsplit: labels carry '=' (series labels are 'cell [judge=...; model=...]'); roots are paths.
+    label, rest = spec.rsplit('=', 1)
     parts = rest.rsplit(':', 2)
     if len(parts) != 3 or not all(p.strip() for p in parts):
         raise ValueError(f'invalid --series (expected label=root:experiment:harness): {spec!r}')
@@ -134,7 +135,8 @@ def parse_aggregate_spec(spec):
     """
     if '=' not in spec:
         raise ValueError(f'invalid --aggregate-reps (expected label=root:exp1,exp2,...:harness): {spec!r}')
-    label, rest = spec.split('=', 1)
+    # rsplit: labels carry '=' (series labels are 'cell [judge=...; model=...]'); roots are paths.
+    label, rest = spec.rsplit('=', 1)
     parts = rest.rsplit(':', 2)
     if len(parts) != 3 or not all(p.strip() for p in parts):
         raise ValueError(f'invalid --aggregate-reps (expected label=root:exp1,exp2,...:harness): {spec!r}')

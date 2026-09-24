@@ -1480,6 +1480,21 @@ def init_or_adopt_campaign(out_dir, cells_doc, *, campaign_root, baseline_source
     return {"adopted": False}
 
 
+def _evaluate_comparison(campaign_root, exp, evaluate_argv):
+    """Run `battery.py evaluate` and return the experiment's full comparison.json.
+
+    `evaluate` prints only a summary to stdout ({experiment, per_harness: {h:
+    success_rate}}); the mechanism receipts, per-harness costs and the series
+    label consumers here need live in the comparison.json it writes. Reading
+    stdout made cost_ratio_from_cell_comparisons crash (per_harness values are
+    floats there) and left gates evaluating a missing `mechanism`."""
+    summary = invoke_tool("battery", evaluate_argv)
+    path = Path(campaign_root) / "experiments" / exp / "comparison.json"
+    if path.exists():
+        return json.loads(path.read_text(encoding="utf-8"))
+    return summary
+
+
 def run_one_experiment(*, cell_id, cells_doc, suites_doc, suite_id, split, rep, out_dir,
                         campaign_root, base_seed, baseline_source, candidate_source, candidate_sha,
                         polyglot_root, installed_cache, host_python, events_dir,
@@ -1562,7 +1577,7 @@ def run_one_experiment(*, cell_id, cells_doc, suites_doc, suite_id, split, rep, 
     if anchor:
         anchor_exp = experiment_name(anchor, suite_id, split, rep)
         evaluate_argv += ["--baseline-root", str(campaign_root), "--baseline-experiment", anchor_exp]
-    comparison = invoke_tool("battery", evaluate_argv)
+    comparison = _evaluate_comparison(campaign_root, exp, evaluate_argv)
 
     mechanism = comparison.get("mechanism")
     gate = gate_eval(cell["mechanism_gate"], mechanism)
@@ -1704,7 +1719,7 @@ def main(argv=None):
                             anchor_exp = experiment_name(anchor, suite_id, split, rep)
                             evaluate_argv += ["--baseline-root", str(campaign_root),
                                               "--baseline-experiment", anchor_exp]
-                        comparison = invoke_tool("battery", evaluate_argv)
+                        comparison = _evaluate_comparison(campaign_root, exp, evaluate_argv)
                         gate = gate_eval(cell["mechanism_gate"], comparison.get("mechanism"))
                         result = {"experiment": exp, "gate": gate, "comparison": comparison}
                     else:
@@ -1770,7 +1785,7 @@ def main(argv=None):
                     exp = experiment_name(cid, suite_id, split, rep)
                     secondary_exp = experiment_name(secondary_anchor, suite_id, split, rep)
                     try:
-                        secondary_comparisons_by_cell[cid].append(invoke_tool("battery", [
+                        secondary_comparisons_by_cell[cid].append(_evaluate_comparison(campaign_root, exp, [
                             "evaluate", "--root", str(campaign_root), "--experiment", exp,
                             "--baseline-root", str(campaign_root), "--baseline-experiment", secondary_exp,
                         ]))

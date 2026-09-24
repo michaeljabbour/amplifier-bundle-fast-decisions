@@ -1500,12 +1500,12 @@ def _mechanism_report(experiment_dir, manifest):
     engaged = True
     reasons = []
     scored_total = sum(scored_by_backend.values())
-    if configured_backend == 'unavailable':
+    if configured_backend in ('unavailable', 'none'):  # 'none' = runtime alias (routing-only)
         if scored_total > 0:
             engaged = False
-            reasons.append(f"judge configured 'unavailable' (off) but scored={scored_total} "
+            reasons.append(f"judge configured {configured_backend!r} (off) but scored={scored_total} "
                             "(the judge was supposed to be off and was not)")
-    elif configured_backend and configured_backend not in ('ollama', 'unavailable'):
+    elif configured_backend and configured_backend not in ('ollama', 'unavailable', 'none'):
         scored_on_backend = scored_by_backend.get(configured_backend, 0)
         if scored_on_backend == 0 or (scored_total == 0 and fallback_count > 0):
             engaged = False
