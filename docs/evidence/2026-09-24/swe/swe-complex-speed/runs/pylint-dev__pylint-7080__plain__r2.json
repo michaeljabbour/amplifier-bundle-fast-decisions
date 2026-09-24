@@ -1,0 +1,61 @@
+{
+  "name": "pylint-dev__pylint-7080__plain__r2",
+  "instance_id": "pylint-dev__pylint-7080",
+  "repo": "pylint-dev/pylint",
+  "base_commit": "3c5eca2ded3dd2b59ebaf23eb289453b5d2930f0",
+  "arm": "plain",
+  "rep": 2,
+  "model": "claude-fable-5-1",
+  "source_root": "/Users/michaeljabbour/dev/afast-orch-primary-20260924/baseline-main",
+  "started_at": "2026-09-24T22:36:04.438663+00:00",
+  "ended_at": "2026-09-24T22:38:21.283341+00:00",
+  "wall_time_ms": 136436.4256250119,
+  "exec_time_ms": 125394.469,
+  "exit_code": 0,
+  "timed_out": false,
+  "session_id": "8358b423-db01-49e5-8af3-5b08e4cd5ed1",
+  "native": {
+    "provider_requests": 16,
+    "provider_responses": 16,
+    "provider_retries": 0,
+    "provider_errors": 0,
+    "tool_results": 15,
+    "tool_names": {
+      "grep": 3,
+      "read_file": 5,
+      "bash": 6,
+      "edit_file": 1
+    },
+    "tool_failures_reported": 1,
+    "execution_completed": true,
+    "provider_response_duration_ms": 96040,
+    "usage": {
+      "input_tokens": 1345531.0,
+      "output_tokens": 6636.0,
+      "cache_read_tokens": 1345493.0,
+      "cache_write_tokens": 63921.0,
+      "cost_usd": 1.46756575
+    },
+    "usage_known_calls": {
+      "input_tokens": 16,
+      "output_tokens": 16,
+      "cache_read_tokens": 16,
+      "cache_write_tokens": 16,
+      "cost_usd": 16
+    },
+    "cost_evidence": "provider_reported_estimate_not_billing"
+  },
+  "models_served": [
+    {
+      "model": "claude-fable-5-1",
+      "thinking_enabled": true,
+      "thinking_budget": null,
+      "count": 16
+    }
+  ],
+  "cost_usd": 1.46756575,
+  "patch_bytes": 451,
+  "empty_patch": false,
+  "infrastructure_failure": false,
+  "notes": []
+}

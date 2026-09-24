@@ -1,0 +1,2705 @@
+{
+  "dataset": "/Users/michaeljabbour/dev/afast-ev/difficulty-dataset.jsonl",
+  "question": "Classify this software engineering task by how much work it takes an expert engineer who is new to the codebase.",
+  "results": [
+    {
+      "judge": "ollama:qwen3:0.6b",
+      "n": 110,
+      "errors": 0,
+      "swe_verified": {
+        "auc": 0.503,
+        "acc_at_0.5": 0.511,
+        "n": 90
+      },
+      "all": {
+        "auc": 0.383,
+        "acc_at_0.5": 0.418,
+        "n": 110
+      },
+      "s1_mean_p_complex": 0.894,
+      "latency_ms_p50": 71.6
+    },
+    {
+      "judge": "ollama:qwen3:4b",
+      "n": 110,
+      "errors": 20,
+      "swe_verified": {
+        "auc": 0.737,
+        "acc_at_0.5": 0.6,
+        "n": 90
+      },
+      "all": {
+        "auc": 0.737,
+        "acc_at_0.5": 0.6,
+        "n": 90
+      },
+      "s1_mean_p_complex": null,
+      "latency_ms_p50": 258.6
+    },
+    {
+      "judge": "ollama:qwen3:8b",
+      "n": 110,
+      "errors": 0,
+      "swe_verified": {
+        "auc": 0.721,
+        "acc_at_0.5": 0.711,
+        "n": 90
+      },
+      "all": {
+        "auc": 0.719,
+        "acc_at_0.5": 0.718,
+        "n": 110
+      },
+      "s1_mean_p_complex": 0.332,
+      "latency_ms_p50": 364.4
+    }
+  ],
+  "rows": {
+    "ollama:qwen3:0.6b": [
+      {
+        "id": "astropy__astropy-13398",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.5030910333863163,
+        "ms": 1027.8639169991948,
+        "error": null
+      },
+      {
+        "id": "astropy__astropy-13579",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.8758146954834101,
+        "ms": 89.74500000476837,
+        "error": null
+      },
+      {
+        "id": "astropy__astropy-14369",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.5969108827232879,
+        "ms": 92.40429199417122,
+        "error": null
+      },
+      {
+        "id": "django__django-10554",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.8371280423900808,
+        "ms": 89.2430000094464,
+        "error": null
+      },
+      {
+        "id": "django__django-11138",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.8570560625809354,
+        "ms": 86.1429579963442,
+        "error": null
+      },
+      {
+        "id": "django__django-11400",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.937412708186921,
+        "ms": 56.465250003384426,
+        "error": null
+      },
+      {
+        "id": "django__django-11885",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.7522204994116979,
+        "ms": 57.938792000641115,
+        "error": null
+      },
+      {
+        "id": "django__django-12325",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.6137486571234714,
+        "ms": 54.29454200202599,
+        "error": null
+      },
+      {
+        "id": "django__django-12708",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.4845609687183135,
+        "ms": 69.95912498678081,
+        "error": null
+      },
+      {
+        "id": "django__django-13128",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.5066835670358586,
+        "ms": 47.91416598891374,
+        "error": null
+      },
+      {
+        "id": "django__django-13212",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.5121817184234814,
+        "ms": 75.97249999525957,
+        "error": null
+      },
+      {
+        "id": "django__django-13344",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.837035182923666,
+        "ms": 57.50720801006537,
+        "error": null
+      },
+      {
+        "id": "django__django-13449",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.8943506776045964,
+        "ms": 90.0136249983916,
+        "error": null
+      },
+      {
+        "id": "django__django-13837",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.6014078463159998,
+        "ms": 62.79133299540263,
+        "error": null
+      },
+      {
+        "id": "django__django-14007",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.7211322356061048,
+        "ms": 59.20154201157857,
+        "error": null
+      },
+      {
+        "id": "django__django-14011",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.9086495328448234,
+        "ms": 73.93958400643896,
+        "error": null
+      },
+      {
+        "id": "django__django-14631",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.4676996496687361,
+        "ms": 71.90712500596419,
+        "error": null
+      },
+      {
+        "id": "django__django-15128",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.8734826635701675,
+        "ms": 82.30100000218954,
+        "error": null
+      },
+      {
+        "id": "django__django-15268",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.4784745329475786,
+        "ms": 89.57299999019597,
+        "error": null
+      },
+      {
+        "id": "django__django-15503",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.8882200900729558,
+        "ms": 81.51058299699798,
+        "error": null
+      },
+      {
+        "id": "django__django-15629",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.4723160024504046,
+        "ms": 102.9536249989178,
+        "error": null
+      },
+      {
+        "id": "django__django-15957",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.8658258933093875,
+        "ms": 61.01449999550823,
+        "error": null
+      },
+      {
+        "id": "django__django-16263",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.5012634596334914,
+        "ms": 65.34950000059325,
+        "error": null
+      },
+      {
+        "id": "django__django-16560",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.6345777564605933,
+        "ms": 53.8718330062693,
+        "error": null
+      },
+      {
+        "id": "django__django-16631",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.8896129109593831,
+        "ms": 55.48066600749735,
+        "error": null
+      },
+      {
+        "id": "pydata__xarray-3993",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.4712128457829586,
+        "ms": 72.71037499594968,
+        "error": null
+      },
+      {
+        "id": "pydata__xarray-6992",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.4943796193423737,
+        "ms": 92.84920900245197,
+        "error": null
+      },
+      {
+        "id": "pylint-dev__pylint-4551",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.5119815874033051,
+        "ms": 89.17200000723824,
+        "error": null
+      },
+      {
+        "id": "pylint-dev__pylint-8898",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.9311307927986692,
+        "ms": 109.08208400360309,
+        "error": null
+      },
+      {
+        "id": "pytest-dev__pytest-10356",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.5156532332276158,
+        "ms": 124.12399999448098,
+        "error": null
+      },
+      {
+        "id": "pytest-dev__pytest-5787",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.5211347854589256,
+        "ms": 118.15995899087284,
+        "error": null
+      },
+      {
+        "id": "pytest-dev__pytest-6197",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.5803590689789706,
+        "ms": 127.43470798886847,
+        "error": null
+      },
+      {
+        "id": "scikit-learn__scikit-learn-25102",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.5067878242780778,
+        "ms": 124.43695899855811,
+        "error": null
+      },
+      {
+        "id": "sphinx-doc__sphinx-11510",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.7598639276732377,
+        "ms": 98.48337499715853,
+        "error": null
+      },
+      {
+        "id": "sphinx-doc__sphinx-7590",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.7088711446988234,
+        "ms": 61.104124994017184,
+        "error": null
+      },
+      {
+        "id": "sphinx-doc__sphinx-8548",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.8200286856440799,
+        "ms": 48.93291699409019,
+        "error": null
+      },
+      {
+        "id": "sphinx-doc__sphinx-9229",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.5049865641229143,
+        "ms": 119.16583300626371,
+        "error": null
+      },
+      {
+        "id": "sphinx-doc__sphinx-9461",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.8577363206398283,
+        "ms": 92.57758299645502,
+        "error": null
+      },
+      {
+        "id": "sympy__sympy-12489",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.5740696260899665,
+        "ms": 62.39600000844803,
+        "error": null
+      },
+      {
+        "id": "sympy__sympy-13852",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.8472475596128866,
+        "ms": 82.46658300049603,
+        "error": null
+      },
+      {
+        "id": "sympy__sympy-13878",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.49997480718660053,
+        "ms": 112.40562501188833,
+        "error": null
+      },
+      {
+        "id": "sympy__sympy-14248",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.5006281153009945,
+        "ms": 86.71270799823105,
+        "error": null
+      },
+      {
+        "id": "sympy__sympy-16597",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.7814848361124673,
+        "ms": 49.851667004986666,
+        "error": null
+      },
+      {
+        "id": "sympy__sympy-17630",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.8285589871722212,
+        "ms": 108.2894999999553,
+        "error": null
+      },
+      {
+        "id": "sympy__sympy-18199",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.6593925852364981,
+        "ms": 54.78216600022279,
+        "error": null
+      },
+      {
+        "id": "astropy__astropy-7336",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.7654932046037511,
+        "ms": 74.06679200357758,
+        "error": null
+      },
+      {
+        "id": "sympy__sympy-12096",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.9050992497228131,
+        "ms": 55.61341700376943,
+        "error": null
+      },
+      {
+        "id": "scikit-learn__scikit-learn-13439",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.5122673212695817,
+        "ms": 101.33095899072941,
+        "error": null
+      },
+      {
+        "id": "sphinx-doc__sphinx-9230",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.5036539192802745,
+        "ms": 101.9267499941634,
+        "error": null
+      },
+      {
+        "id": "sympy__sympy-16766",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.7973602868849424,
+        "ms": 56.945542004541494,
+        "error": null
+      },
+      {
+        "id": "django__django-13297",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.969919943307143,
+        "ms": 73.78250001056585,
+        "error": null
+      },
+      {
+        "id": "scikit-learn__scikit-learn-14496",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.4917270145923558,
+        "ms": 115.44383400178049,
+        "error": null
+      },
+      {
+        "id": "scikit-learn__scikit-learn-25232",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.5049977520623735,
+        "ms": 91.92012500716373,
+        "error": null
+      },
+      {
+        "id": "django__django-11239",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.4261282053445373,
+        "ms": 57.29308299487457,
+        "error": null
+      },
+      {
+        "id": "matplotlib__matplotlib-26113",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.47500399923350006,
+        "ms": 111.73262499505654,
+        "error": null
+      },
+      {
+        "id": "django__django-15380",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.8542860740491558,
+        "ms": 78.85904199793003,
+        "error": null
+      },
+      {
+        "id": "django__django-17087",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.8144660789075859,
+        "ms": 60.62062499404419,
+        "error": null
+      },
+      {
+        "id": "sphinx-doc__sphinx-9591",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.7628692814113311,
+        "ms": 85.1202499907231,
+        "error": null
+      },
+      {
+        "id": "psf__requests-1724",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.449323409651612,
+        "ms": 104.5536669989815,
+        "error": null
+      },
+      {
+        "id": "scikit-learn__scikit-learn-13142",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.5075255066212533,
+        "ms": 148.14029099943582,
+        "error": null
+      },
+      {
+        "id": "django__django-16255",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.8973929509982496,
+        "ms": 81.45541699195746,
+        "error": null
+      },
+      {
+        "id": "django__django-16569",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.6856106225304762,
+        "ms": 74.60675000038464,
+        "error": null
+      },
+      {
+        "id": "sympy__sympy-16886",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.9324048069108428,
+        "ms": 67.77420800062828,
+        "error": null
+      },
+      {
+        "id": "scikit-learn__scikit-learn-13328",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.868133229511475,
+        "ms": 88.72525001061149,
+        "error": null
+      },
+      {
+        "id": "django__django-14792",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.48700463313495634,
+        "ms": 90.0333750032587,
+        "error": null
+      },
+      {
+        "id": "sympy__sympy-19495",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.5611331549593944,
+        "ms": 111.29245901247486,
+        "error": null
+      },
+      {
+        "id": "django__django-15127",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.5247586656575761,
+        "ms": 76.01958399754949,
+        "error": null
+      },
+      {
+        "id": "django__django-14376",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.7560554906125365,
+        "ms": 57.60520799958613,
+        "error": null
+      },
+      {
+        "id": "django__django-15277",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.4119715694038079,
+        "ms": 99.48499999882188,
+        "error": null
+      },
+      {
+        "id": "django__django-11099",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.5186732963531561,
+        "ms": 57.31120800192002,
+        "error": null
+      },
+      {
+        "id": "django__django-11880",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.5054672846779915,
+        "ms": 70.79958300164435,
+        "error": null
+      },
+      {
+        "id": "sphinx-doc__sphinx-7454",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.4935294965553329,
+        "ms": 104.00791699066758,
+        "error": null
+      },
+      {
+        "id": "sympy__sympy-17655",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.8645422611604766,
+        "ms": 81.87916700262576,
+        "error": null
+      },
+      {
+        "id": "pydata__xarray-4356",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.5826364289429028,
+        "ms": 58.85458301054314,
+        "error": null
+      },
+      {
+        "id": "django__django-16139",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.5243583962382584,
+        "ms": 71.60062500042841,
+        "error": null
+      },
+      {
+        "id": "django__django-11555",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.8317838412309455,
+        "ms": 54.13266600226052,
+        "error": null
+      },
+      {
+        "id": "django__django-14999",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.5067764899357661,
+        "ms": 74.34762500633951,
+        "error": null
+      },
+      {
+        "id": "pydata__xarray-4075",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.48360756521737647,
+        "ms": 110.90095799590927,
+        "error": null
+      },
+      {
+        "id": "django__django-14539",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.7425233907353612,
+        "ms": 59.85508399317041,
+        "error": null
+      },
+      {
+        "id": "pytest-dev__pytest-5809",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.8512219111895677,
+        "ms": 58.53337500593625,
+        "error": null
+      },
+      {
+        "id": "sphinx-doc__sphinx-7889",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.8660618311308363,
+        "ms": 60.133624996524304,
+        "error": null
+      },
+      {
+        "id": "pytest-dev__pytest-10081",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.9535786287096689,
+        "ms": 86.12858300330117,
+        "error": null
+      },
+      {
+        "id": "psf__requests-5414",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.7438718859298528,
+        "ms": 77.80795799044427,
+        "error": null
+      },
+      {
+        "id": "psf__requests-1921",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.8243427497775114,
+        "ms": 54.18370899860747,
+        "error": null
+      },
+      {
+        "id": "matplotlib__matplotlib-26208",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.5498300599219088,
+        "ms": 89.29658400302287,
+        "error": null
+      },
+      {
+        "id": "psf__requests-1766",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.8857104206334385,
+        "ms": 58.91424999572337,
+        "error": null
+      },
+      {
+        "id": "django__django-15368",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.6540101541622577,
+        "ms": 59.381250001024455,
+        "error": null
+      },
+      {
+        "id": "sympy__sympy-24539",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.7440614016284326,
+        "ms": 57.45212500914931,
+        "error": null
+      },
+      {
+        "id": "scikit-learn__scikit-learn-14141",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.5225877746628362,
+        "ms": 71.75304199336097,
+        "error": null
+      },
+      {
+        "id": "django__django-13512",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.8310364341117089,
+        "ms": 46.37187499611173,
+        "error": null
+      },
+      {
+        "id": "repair_parse_duration",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": 0.876834915065422,
+        "ms": 48.26445800426882,
+        "error": null
+      },
+      {
+        "id": "repair_merge_intervals",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": 0.876834915065422,
+        "ms": 42.28691699972842,
+        "error": null
+      },
+      {
+        "id": "repair_semver_compare",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": 0.876834915065422,
+        "ms": 41.322582997963764,
+        "error": null
+      },
+      {
+        "id": "repair_tokenize_kv",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": 0.876834915065422,
+        "ms": 44.380749997799285,
+        "error": null
+      },
+      {
+        "id": "repair_word_wrap",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": 0.876834915065422,
+        "ms": 42.65183299139608,
+        "error": null
+      },
+      {
+        "id": "edit_cli_dry_run",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": 0.9510401301879108,
+        "ms": 62.741832996835,
+        "error": null
+      },
+      {
+        "id": "edit_dequeue_validation",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": 0.885287869213503,
+        "ms": 48.87774999951944,
+        "error": null
+      },
+      {
+        "id": "edit_record_to_json",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": 0.9174494463184422,
+        "ms": 46.74266598885879,
+        "error": null
+      },
+      {
+        "id": "edit_clean_text_strict",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": 0.8990025425184418,
+        "ms": 45.72387499501929,
+        "error": null
+      },
+      {
+        "id": "edit_point_repr",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": 0.9157405622378767,
+        "ms": 48.80800000682939,
+        "error": null
+      },
+      {
+        "id": "bugfix_paginate_off_by_one",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": 0.8413035610909327,
+        "ms": 49.074709007982165,
+        "error": null
+      },
+      {
+        "id": "bugfix_session_ttl_naive_tz",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": 0.8013859236298742,
+        "ms": 46.15650000050664,
+        "error": null
+      },
+      {
+        "id": "bugfix_add_tag_mutable_default",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": 0.8477540710740674,
+        "ms": 46.49795799923595,
+        "error": null
+      },
+      {
+        "id": "bugfix_merge_config_precedence",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": 0.8478894923373668,
+        "ms": 44.65408399119042,
+        "error": null
+      },
+      {
+        "id": "bugfix_average_score_truncation",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": 0.859924410217108,
+        "ms": 47.61812499782536,
+        "error": null
+      },
+      {
+        "id": "answer_audit_log_key",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": 0.9463864166157372,
+        "ms": 48.13970900431741,
+        "error": null
+      },
+      {
+        "id": "answer_compute_fee",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": 0.9463864166157372,
+        "ms": 40.8422090113163,
+        "error": null
+      },
+      {
+        "id": "answer_sqlite_import_module",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": 0.9463864166157372,
+        "ms": 39.27116699924227,
+        "error": null
+      },
+      {
+        "id": "answer_default_port",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": 0.9463864166157372,
+        "ms": 42.266458010999486,
+        "error": null
+      },
+      {
+        "id": "answer_exception_count",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": 0.9463864166157372,
+        "ms": 40.16725000110455,
+        "error": null
+      }
+    ],
+    "ollama:qwen3:4b": [
+      {
+        "id": "astropy__astropy-13398",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.442929672370998,
+        "ms": 900.5603330006124,
+        "error": null
+      },
+      {
+        "id": "astropy__astropy-13579",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.5750344733740006,
+        "ms": 347.12874999968335,
+        "error": null
+      },
+      {
+        "id": "astropy__astropy-14369",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.46280104150462287,
+        "ms": 417.7932500024326,
+        "error": null
+      },
+      {
+        "id": "django__django-10554",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.5772100545324865,
+        "ms": 442.2829590039328,
+        "error": null
+      },
+      {
+        "id": "django__django-11138",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.4069669091911912,
+        "ms": 417.1298330038553,
+        "error": null
+      },
+      {
+        "id": "django__django-11400",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.6357855517319128,
+        "ms": 217.36420900560915,
+        "error": null
+      },
+      {
+        "id": "django__django-11885",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.32447062206367133,
+        "ms": 238.1320419954136,
+        "error": null
+      },
+      {
+        "id": "django__django-12325",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.3733917479399498,
+        "ms": 210.30099999916274,
+        "error": null
+      },
+      {
+        "id": "django__django-12708",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.5495878057788869,
+        "ms": 212.52904199354816,
+        "error": null
+      },
+      {
+        "id": "django__django-13128",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.3190528245655696,
+        "ms": 172.10466699907556,
+        "error": null
+      },
+      {
+        "id": "django__django-13212",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.08073297196069182,
+        "ms": 166.25766600191128,
+        "error": null
+      },
+      {
+        "id": "django__django-13344",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.3429828346927132,
+        "ms": 220.00808401207905,
+        "error": null
+      },
+      {
+        "id": "django__django-13449",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.5180108874995898,
+        "ms": 418.94204200070817,
+        "error": null
+      },
+      {
+        "id": "django__django-13837",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.21411201616680436,
+        "ms": 254.90845800959505,
+        "error": null
+      },
+      {
+        "id": "django__django-14007",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.5868090226577529,
+        "ms": 246.30025000078604,
+        "error": null
+      },
+      {
+        "id": "django__django-14011",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.5977591002692275,
+        "ms": 316.5856249979697,
+        "error": null
+      },
+      {
+        "id": "django__django-14631",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.2977096420257029,
+        "ms": 239.61208300897852,
+        "error": null
+      },
+      {
+        "id": "django__django-15128",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.5782792158725943,
+        "ms": 389.29358299355954,
+        "error": null
+      },
+      {
+        "id": "django__django-15268",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.11795830001957425,
+        "ms": 306.2327919906238,
+        "error": null
+      },
+      {
+        "id": "django__django-15503",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.4861658325355845,
+        "ms": 348.907000006875,
+        "error": null
+      },
+      {
+        "id": "django__django-15629",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.43383611509881925,
+        "ms": 355.22316599963233,
+        "error": null
+      },
+      {
+        "id": "django__django-15957",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.5138660364830404,
+        "ms": 208.71024999360088,
+        "error": null
+      },
+      {
+        "id": "django__django-16263",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.18367157874008283,
+        "ms": 171.65116599062458,
+        "error": null
+      },
+      {
+        "id": "django__django-16560",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.07220820824605877,
+        "ms": 191.9391249975888,
+        "error": null
+      },
+      {
+        "id": "django__django-16631",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.5591461895051546,
+        "ms": 195.49541600281373,
+        "error": null
+      },
+      {
+        "id": "pydata__xarray-3993",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.08263540559568652,
+        "ms": 201.38579099148046,
+        "error": null
+      },
+      {
+        "id": "pydata__xarray-6992",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.4533737026807859,
+        "ms": 301.3438330090139,
+        "error": null
+      },
+      {
+        "id": "pylint-dev__pylint-4551",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.43655986495623833,
+        "ms": 234.0942089940654,
+        "error": null
+      },
+      {
+        "id": "pylint-dev__pylint-8898",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.48189485158111667,
+        "ms": 424.39708299934864,
+        "error": null
+      },
+      {
+        "id": "pytest-dev__pytest-10356",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.48345192002839216,
+        "ms": 391.80100000521634,
+        "error": null
+      },
+      {
+        "id": "pytest-dev__pytest-5787",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.29925188918066875,
+        "ms": 380.18900000315625,
+        "error": null
+      },
+      {
+        "id": "pytest-dev__pytest-6197",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.41116624020866344,
+        "ms": 485.3046659991378,
+        "error": null
+      },
+      {
+        "id": "scikit-learn__scikit-learn-25102",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.47568435460114133,
+        "ms": 379.43362499936484,
+        "error": null
+      },
+      {
+        "id": "sphinx-doc__sphinx-11510",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.4742363710969518,
+        "ms": 420.18533300142735,
+        "error": null
+      },
+      {
+        "id": "sphinx-doc__sphinx-7590",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.15945563490442038,
+        "ms": 212.83379099622834,
+        "error": null
+      },
+      {
+        "id": "sphinx-doc__sphinx-8548",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.5995344174231927,
+        "ms": 165.30020799837075,
+        "error": null
+      },
+      {
+        "id": "sphinx-doc__sphinx-9229",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.5008711548122187,
+        "ms": 343.65141700254753,
+        "error": null
+      },
+      {
+        "id": "sphinx-doc__sphinx-9461",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.6275605386131117,
+        "ms": 355.60516601253767,
+        "error": null
+      },
+      {
+        "id": "sympy__sympy-12489",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.4666276390023649,
+        "ms": 222.39774999616202,
+        "error": null
+      },
+      {
+        "id": "sympy__sympy-13852",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.5292691746425071,
+        "ms": 320.08645799942315,
+        "error": null
+      },
+      {
+        "id": "sympy__sympy-13878",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.45551652073671106,
+        "ms": 384.07354199443944,
+        "error": null
+      },
+      {
+        "id": "sympy__sympy-14248",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.4554705089527643,
+        "ms": 202.45283299300354,
+        "error": null
+      },
+      {
+        "id": "sympy__sympy-16597",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.46073148088614524,
+        "ms": 160.04241700284183,
+        "error": null
+      },
+      {
+        "id": "sympy__sympy-17630",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.46239855106215855,
+        "ms": 421.1000000068452,
+        "error": null
+      },
+      {
+        "id": "sympy__sympy-18199",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.025214654244169254,
+        "ms": 165.42399999161717,
+        "error": null
+      },
+      {
+        "id": "astropy__astropy-7336",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.06641260010129295,
+        "ms": 264.67949998914264,
+        "error": null
+      },
+      {
+        "id": "sympy__sympy-12096",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.26680901569601606,
+        "ms": 180.63633299607318,
+        "error": null
+      },
+      {
+        "id": "scikit-learn__scikit-learn-13439",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.357006690762732,
+        "ms": 266.11441699787974,
+        "error": null
+      },
+      {
+        "id": "sphinx-doc__sphinx-9230",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.32621458146297744,
+        "ms": 273.55533400259446,
+        "error": null
+      },
+      {
+        "id": "sympy__sympy-16766",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.06517055818969797,
+        "ms": 179.36604100395925,
+        "error": null
+      },
+      {
+        "id": "django__django-13297",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.07831370960413761,
+        "ms": 258.63083300646394,
+        "error": null
+      },
+      {
+        "id": "scikit-learn__scikit-learn-14496",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.03175852931974956,
+        "ms": 324.6350830013398,
+        "error": null
+      },
+      {
+        "id": "scikit-learn__scikit-learn-25232",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.24174146585378664,
+        "ms": 213.58604199485853,
+        "error": null
+      },
+      {
+        "id": "django__django-11239",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.01008126068306521,
+        "ms": 204.5840000064345,
+        "error": null
+      },
+      {
+        "id": "matplotlib__matplotlib-26113",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.49531590744120346,
+        "ms": 375.9070829983102,
+        "error": null
+      },
+      {
+        "id": "django__django-15380",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.5532195768565659,
+        "ms": 277.3707909946097,
+        "error": null
+      },
+      {
+        "id": "django__django-17087",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.23775363698842505,
+        "ms": 205.28491600998677,
+        "error": null
+      },
+      {
+        "id": "sphinx-doc__sphinx-9591",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.3930672305361331,
+        "ms": 327.82270800089464,
+        "error": null
+      },
+      {
+        "id": "psf__requests-1724",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.2067205459599299,
+        "ms": 344.76270800223574,
+        "error": null
+      },
+      {
+        "id": "scikit-learn__scikit-learn-13142",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.4613719238421296,
+        "ms": 482.05112499999814,
+        "error": null
+      },
+      {
+        "id": "django__django-16255",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.34263284456321397,
+        "ms": 280.44624999165535,
+        "error": null
+      },
+      {
+        "id": "django__django-16569",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.08020241506256254,
+        "ms": 271.5420419990551,
+        "error": null
+      },
+      {
+        "id": "sympy__sympy-16886",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.0763449002960209,
+        "ms": 153.59283299767412,
+        "error": null
+      },
+      {
+        "id": "scikit-learn__scikit-learn-13328",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.21145707739576441,
+        "ms": 357.0577089994913,
+        "error": null
+      },
+      {
+        "id": "django__django-14792",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.4990313338433516,
+        "ms": 280.1925000094343,
+        "error": null
+      },
+      {
+        "id": "sympy__sympy-19495",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.39844328015682656,
+        "ms": 336.5782080072677,
+        "error": null
+      },
+      {
+        "id": "django__django-15127",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.5632551608368371,
+        "ms": 158.75262500776444,
+        "error": null
+      },
+      {
+        "id": "django__django-14376",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.16201752548032533,
+        "ms": 202.9535420006141,
+        "error": null
+      },
+      {
+        "id": "django__django-15277",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.016310960067535643,
+        "ms": 335.40008300042246,
+        "error": null
+      },
+      {
+        "id": "django__django-11099",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.01676837341854378,
+        "ms": 183.4907500015106,
+        "error": null
+      },
+      {
+        "id": "django__django-11880",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.5017202234499515,
+        "ms": 204.984833006165,
+        "error": null
+      },
+      {
+        "id": "sphinx-doc__sphinx-7454",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.34550131772312276,
+        "ms": 360.8384160033893,
+        "error": null
+      },
+      {
+        "id": "sympy__sympy-17655",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.18052472117983454,
+        "ms": 307.7226250024978,
+        "error": null
+      },
+      {
+        "id": "pydata__xarray-4356",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.34272709182392824,
+        "ms": 189.38979199447203,
+        "error": null
+      },
+      {
+        "id": "django__django-16139",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.08764668741062331,
+        "ms": 255.76304100104608,
+        "error": null
+      },
+      {
+        "id": "django__django-11555",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.6388366847098776,
+        "ms": 177.6413330080686,
+        "error": null
+      },
+      {
+        "id": "django__django-14999",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.106202639860947,
+        "ms": 147.28420799656305,
+        "error": null
+      },
+      {
+        "id": "pydata__xarray-4075",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.2342839023398723,
+        "ms": 358.2862080074847,
+        "error": null
+      },
+      {
+        "id": "django__django-14539",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.28465805980987513,
+        "ms": 162.43045900773723,
+        "error": null
+      },
+      {
+        "id": "pytest-dev__pytest-5809",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.21077258606578111,
+        "ms": 201.2643749912968,
+        "error": null
+      },
+      {
+        "id": "sphinx-doc__sphinx-7889",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.5480855432780757,
+        "ms": 217.20941600506194,
+        "error": null
+      },
+      {
+        "id": "pytest-dev__pytest-10081",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.33731769782962123,
+        "ms": 346.85270801128354,
+        "error": null
+      },
+      {
+        "id": "psf__requests-5414",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.24096803289984076,
+        "ms": 322.079916993971,
+        "error": null
+      },
+      {
+        "id": "psf__requests-1921",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.02607565912959861,
+        "ms": 196.38350000604987,
+        "error": null
+      },
+      {
+        "id": "matplotlib__matplotlib-26208",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.3637476481445784,
+        "ms": 391.3592909957515,
+        "error": null
+      },
+      {
+        "id": "psf__requests-1766",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.3979551916518475,
+        "ms": 199.5589170110179,
+        "error": null
+      },
+      {
+        "id": "django__django-15368",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.3977268605593699,
+        "ms": 220.65629198914394,
+        "error": null
+      },
+      {
+        "id": "sympy__sympy-24539",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.2370001065738801,
+        "ms": 200.41124999988824,
+        "error": null
+      },
+      {
+        "id": "scikit-learn__scikit-learn-14141",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.15045326531050462,
+        "ms": 159.48779101017863,
+        "error": null
+      },
+      {
+        "id": "django__django-13512",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.1989547299919226,
+        "ms": 158.9430840103887,
+        "error": null
+      },
+      {
+        "id": "repair_parse_duration",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": null,
+        "ms": 111.44383299688343,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "repair_merge_intervals",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": null,
+        "ms": 35.86779200122692,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "repair_semver_compare",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": null,
+        "ms": 36.17970801133197,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "repair_tokenize_kv",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": null,
+        "ms": 36.239833003492095,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "repair_word_wrap",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": null,
+        "ms": 35.682582994922996,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "edit_cli_dry_run",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": null,
+        "ms": 108.05116700066719,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "edit_dequeue_validation",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": null,
+        "ms": 108.04429200652521,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "edit_record_to_json",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": null,
+        "ms": 108.45920900464989,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "edit_clean_text_strict",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": null,
+        "ms": 109.07812500954606,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "edit_point_repr",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": null,
+        "ms": 108.90783299691975,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "bugfix_paginate_off_by_one",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": null,
+        "ms": 109.9049170006765,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "bugfix_session_ttl_naive_tz",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": null,
+        "ms": 109.17804201017134,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "bugfix_add_tag_mutable_default",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": null,
+        "ms": 116.94741700193845,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "bugfix_merge_config_precedence",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": null,
+        "ms": 111.78449999715667,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "bugfix_average_score_truncation",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": null,
+        "ms": 109.78054199949838,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "answer_audit_log_key",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": null,
+        "ms": 108.2047079980839,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "answer_compute_fee",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": null,
+        "ms": 36.892666001222096,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "answer_sqlite_import_module",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": null,
+        "ms": 35.997209008201025,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "answer_default_port",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": null,
+        "ms": 35.69066699128598,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "answer_exception_count",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": null,
+        "ms": 35.54995800368488,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      }
+    ],
+    "ollama:qwen3:8b": [
+      {
+        "id": "astropy__astropy-13398",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.9842932899671761,
+        "ms": 1287.7465829951689,
+        "error": null
+      },
+      {
+        "id": "astropy__astropy-13579",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.9817228631150734,
+        "ms": 610.9733750054147,
+        "error": null
+      },
+      {
+        "id": "astropy__astropy-14369",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.5788189183303445,
+        "ms": 653.8017089915229,
+        "error": null
+      },
+      {
+        "id": "django__django-10554",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.92179828172019,
+        "ms": 645.0706249888754,
+        "error": null
+      },
+      {
+        "id": "django__django-11138",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.9697359248827888,
+        "ms": 584.8945829930017,
+        "error": null
+      },
+      {
+        "id": "django__django-11400",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.624507239784099,
+        "ms": 294.791541993618,
+        "error": null
+      },
+      {
+        "id": "django__django-11885",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.8272013157944118,
+        "ms": 353.814333997434,
+        "error": null
+      },
+      {
+        "id": "django__django-12325",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.5048846563422222,
+        "ms": 299.76541599899065,
+        "error": null
+      },
+      {
+        "id": "django__django-12708",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.9641517112771123,
+        "ms": 303.1879170011962,
+        "error": null
+      },
+      {
+        "id": "django__django-13128",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.4341583065326228,
+        "ms": 232.4345000088215,
+        "error": null
+      },
+      {
+        "id": "django__django-13212",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.19550645820647755,
+        "ms": 231.01320800196845,
+        "error": null
+      },
+      {
+        "id": "django__django-13344",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.5063635970879078,
+        "ms": 356.40641700592823,
+        "error": null
+      },
+      {
+        "id": "django__django-13449",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.7191001303187217,
+        "ms": 668.2165829988662,
+        "error": null
+      },
+      {
+        "id": "django__django-13837",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.5052296709203707,
+        "ms": 385.81675000023097,
+        "error": null
+      },
+      {
+        "id": "django__django-14007",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.5830516724786149,
+        "ms": 376.6552919987589,
+        "error": null
+      },
+      {
+        "id": "django__django-14011",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.9527420637267681,
+        "ms": 474.0837499994086,
+        "error": null
+      },
+      {
+        "id": "django__django-14631",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.5017121440659537,
+        "ms": 372.59525000990834,
+        "error": null
+      },
+      {
+        "id": "django__django-15128",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.9470670931874923,
+        "ms": 603.3992500015302,
+        "error": null
+      },
+      {
+        "id": "django__django-15268",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.49408028557022504,
+        "ms": 469.6427080052672,
+        "error": null
+      },
+      {
+        "id": "django__django-15503",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.5044744670762592,
+        "ms": 536.8299580004532,
+        "error": null
+      },
+      {
+        "id": "django__django-15629",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.5781674700183503,
+        "ms": 534.9268329882761,
+        "error": null
+      },
+      {
+        "id": "django__django-15957",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.5485097415100997,
+        "ms": 304.1396250046091,
+        "error": null
+      },
+      {
+        "id": "django__django-16263",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.49102310422642176,
+        "ms": 241.92520799988415,
+        "error": null
+      },
+      {
+        "id": "django__django-16560",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.016097673321320394,
+        "ms": 301.45229201298207,
+        "error": null
+      },
+      {
+        "id": "django__django-16631",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.5927298822471961,
+        "ms": 311.7053339956328,
+        "error": null
+      },
+      {
+        "id": "pydata__xarray-3993",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.004823617429869353,
+        "ms": 321.7552089918172,
+        "error": null
+      },
+      {
+        "id": "pydata__xarray-6992",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.9473849859887343,
+        "ms": 466.65166699676774,
+        "error": null
+      },
+      {
+        "id": "pylint-dev__pylint-4551",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.1460127261147922,
+        "ms": 370.88995800877456,
+        "error": null
+      },
+      {
+        "id": "pylint-dev__pylint-8898",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.5769586603412585,
+        "ms": 675.3254590003053,
+        "error": null
+      },
+      {
+        "id": "pytest-dev__pytest-10356",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.8685146249219963,
+        "ms": 594.5571250049397,
+        "error": null
+      },
+      {
+        "id": "pytest-dev__pytest-5787",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.3105726765337089,
+        "ms": 577.8116250003222,
+        "error": null
+      },
+      {
+        "id": "pytest-dev__pytest-6197",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.7070315219429486,
+        "ms": 738.7896250002086,
+        "error": null
+      },
+      {
+        "id": "scikit-learn__scikit-learn-25102",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.7106528334991409,
+        "ms": 572.9293750046054,
+        "error": null
+      },
+      {
+        "id": "sphinx-doc__sphinx-11510",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.8104766125328319,
+        "ms": 671.0277499951189,
+        "error": null
+      },
+      {
+        "id": "sphinx-doc__sphinx-7590",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.035264136353884666,
+        "ms": 309.14995800412726,
+        "error": null
+      },
+      {
+        "id": "sphinx-doc__sphinx-8548",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.565174973336268,
+        "ms": 236.4791250001872,
+        "error": null
+      },
+      {
+        "id": "sphinx-doc__sphinx-9229",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.6867610978971987,
+        "ms": 602.3478330025682,
+        "error": null
+      },
+      {
+        "id": "sphinx-doc__sphinx-9461",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.942867580137524,
+        "ms": 608.670333007467,
+        "error": null
+      },
+      {
+        "id": "sympy__sympy-12489",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.5356434139018135,
+        "ms": 372.0971250004368,
+        "error": null
+      },
+      {
+        "id": "sympy__sympy-13852",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.9573796897531877,
+        "ms": 528.5959580069175,
+        "error": null
+      },
+      {
+        "id": "sympy__sympy-13878",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.9063989439720199,
+        "ms": 673.0785420077154,
+        "error": null
+      },
+      {
+        "id": "sympy__sympy-14248",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.5305182067076161,
+        "ms": 309.55662501219194,
+        "error": null
+      },
+      {
+        "id": "sympy__sympy-16597",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.40684824648868656,
+        "ms": 235.80212499655318,
+        "error": null
+      },
+      {
+        "id": "sympy__sympy-17630",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.7638882317392653,
+        "ms": 729.9958749936195,
+        "error": null
+      },
+      {
+        "id": "sympy__sympy-18199",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.1322453344364189,
+        "ms": 240.03212500247173,
+        "error": null
+      },
+      {
+        "id": "astropy__astropy-7336",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.49572335113500526,
+        "ms": 439.71920799231157,
+        "error": null
+      },
+      {
+        "id": "sympy__sympy-12096",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.4920088743340677,
+        "ms": 295.9931249934016,
+        "error": null
+      },
+      {
+        "id": "scikit-learn__scikit-learn-13439",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.4813343882898728,
+        "ms": 436.5149999939604,
+        "error": null
+      },
+      {
+        "id": "sphinx-doc__sphinx-9230",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.3433027552355146,
+        "ms": 441.4767499984009,
+        "error": null
+      },
+      {
+        "id": "sympy__sympy-16766",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.003042277436929206,
+        "ms": 288.7749579967931,
+        "error": null
+      },
+      {
+        "id": "django__django-13297",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.32969304397303895,
+        "ms": 429.34625000634696,
+        "error": null
+      },
+      {
+        "id": "scikit-learn__scikit-learn-14496",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.4757012720466796,
+        "ms": 574.5370000076946,
+        "error": null
+      },
+      {
+        "id": "scikit-learn__scikit-learn-25232",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.41026784664768035,
+        "ms": 363.870458008023,
+        "error": null
+      },
+      {
+        "id": "django__django-11239",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.00021490594235606042,
+        "ms": 354.91379200539086,
+        "error": null
+      },
+      {
+        "id": "matplotlib__matplotlib-26113",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.5330401693695234,
+        "ms": 760.6011669995496,
+        "error": null
+      },
+      {
+        "id": "django__django-15380",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.5089870315818588,
+        "ms": 443.27379199967254,
+        "error": null
+      },
+      {
+        "id": "django__django-17087",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.5007136413765931,
+        "ms": 354.96608399262186,
+        "error": null
+      },
+      {
+        "id": "sphinx-doc__sphinx-9591",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.4914048592959228,
+        "ms": 578.6905830027536,
+        "error": null
+      },
+      {
+        "id": "psf__requests-1724",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.6117113592388141,
+        "ms": 590.1659160008421,
+        "error": null
+      },
+      {
+        "id": "scikit-learn__scikit-learn-13142",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.9268354612495843,
+        "ms": 808.0455000017537,
+        "error": null
+      },
+      {
+        "id": "django__django-16255",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.48151507724200504,
+        "ms": 443.715000001248,
+        "error": null
+      },
+      {
+        "id": "django__django-16569",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.024153141923026145,
+        "ms": 434.32049998955335,
+        "error": null
+      },
+      {
+        "id": "sympy__sympy-16886",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.0006304571744026182,
+        "ms": 226.91495799517725,
+        "error": null
+      },
+      {
+        "id": "scikit-learn__scikit-learn-13328",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.4784122628449347,
+        "ms": 614.7061250085244,
+        "error": null
+      },
+      {
+        "id": "django__django-14792",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.9953045752744605,
+        "ms": 436.30004199803807,
+        "error": null
+      },
+      {
+        "id": "sympy__sympy-19495",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.6096932901142234,
+        "ms": 546.5747080015717,
+        "error": null
+      },
+      {
+        "id": "django__django-15127",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.5143830575111361,
+        "ms": 227.23341699747834,
+        "error": null
+      },
+      {
+        "id": "django__django-14376",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.4999996114651514,
+        "ms": 334.8214159923373,
+        "error": null
+      },
+      {
+        "id": "django__django-15277",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.36803516065594183,
+        "ms": 552.5091669987887,
+        "error": null
+      },
+      {
+        "id": "django__django-11099",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.00015583137020734467,
+        "ms": 285.92599999683443,
+        "error": null
+      },
+      {
+        "id": "django__django-11880",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.5926378335174327,
+        "ms": 337.7671670023119,
+        "error": null
+      },
+      {
+        "id": "sphinx-doc__sphinx-7454",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.49086914452711794,
+        "ms": 618.4938750084257,
+        "error": null
+      },
+      {
+        "id": "sympy__sympy-17655",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.5089244139844697,
+        "ms": 504.31087499600835,
+        "error": null
+      },
+      {
+        "id": "pydata__xarray-4356",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.4880835692845689,
+        "ms": 306.0313750029309,
+        "error": null
+      },
+      {
+        "id": "django__django-16139",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.4827413381148322,
+        "ms": 431.11370800761506,
+        "error": null
+      },
+      {
+        "id": "django__django-11555",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.9748881954912707,
+        "ms": 289.85349999857135,
+        "error": null
+      },
+      {
+        "id": "django__django-14999",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.3006986318692341,
+        "ms": 235.2828330040211,
+        "error": null
+      },
+      {
+        "id": "pydata__xarray-4075",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.499074936677884,
+        "ms": 733.9736249996349,
+        "error": null
+      },
+      {
+        "id": "django__django-14539",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.4641390215102088,
+        "ms": 244.92224999994505,
+        "error": null
+      },
+      {
+        "id": "pytest-dev__pytest-5809",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.3063102540135073,
+        "ms": 369.82162500498816,
+        "error": null
+      },
+      {
+        "id": "sphinx-doc__sphinx-7889",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.7035830508745913,
+        "ms": 375.23000000510365,
+        "error": null
+      },
+      {
+        "id": "pytest-dev__pytest-10081",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.4989243034589867,
+        "ms": 589.2269579926506,
+        "error": null
+      },
+      {
+        "id": "psf__requests-5414",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.5020734742723715,
+        "ms": 510.75295799819287,
+        "error": null
+      },
+      {
+        "id": "psf__requests-1921",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.004060122779299004,
+        "ms": 295.14583401032723,
+        "error": null
+      },
+      {
+        "id": "matplotlib__matplotlib-26208",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.8453572227519808,
+        "ms": 640.6587910023518,
+        "error": null
+      },
+      {
+        "id": "psf__requests-1766",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.4328390506422628,
+        "ms": 306.67816700588446,
+        "error": null
+      },
+      {
+        "id": "django__django-15368",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.5029438893404945,
+        "ms": 371.2789999990491,
+        "error": null
+      },
+      {
+        "id": "sympy__sympy-24539",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.49524488762816665,
+        "ms": 364.40500000026077,
+        "error": null
+      },
+      {
+        "id": "scikit-learn__scikit-learn-14141",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.06756928904892846,
+        "ms": 233.86579200450797,
+        "error": null
+      },
+      {
+        "id": "django__django-13512",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.29539122488599606,
+        "ms": 235.50745801185258,
+        "error": null
+      },
+      {
+        "id": "repair_parse_duration",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": 0.008593677337270147,
+        "ms": 231.07275000074878,
+        "error": null
+      },
+      {
+        "id": "repair_merge_intervals",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": 0.008593677337270147,
+        "ms": 173.18825000256766,
+        "error": null
+      },
+      {
+        "id": "repair_semver_compare",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": 0.008593677337270147,
+        "ms": 173.25966600037646,
+        "error": null
+      },
+      {
+        "id": "repair_tokenize_kv",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": 0.008593677337270147,
+        "ms": 169.95716700330377,
+        "error": null
+      },
+      {
+        "id": "repair_word_wrap",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": 0.008593677337270147,
+        "ms": 169.98945799423382,
+        "error": null
+      },
+      {
+        "id": "edit_cli_dry_run",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": 0.03420781187802171,
+        "ms": 219.553957998869,
+        "error": null
+      },
+      {
+        "id": "edit_dequeue_validation",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": 0.05068469256417582,
+        "ms": 222.3382079973817,
+        "error": null
+      },
+      {
+        "id": "edit_record_to_json",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": 0.042806731900390596,
+        "ms": 223.97654099040665,
+        "error": null
+      },
+      {
+        "id": "edit_clean_text_strict",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": 0.03552279199133895,
+        "ms": 221.65479100658558,
+        "error": null
+      },
+      {
+        "id": "edit_point_repr",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": 0.03628908192899413,
+        "ms": 220.45620800054166,
+        "error": null
+      },
+      {
+        "id": "bugfix_paginate_off_by_one",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": 0.35693054434337546,
+        "ms": 222.1825830056332,
+        "error": null
+      },
+      {
+        "id": "bugfix_session_ttl_naive_tz",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": 0.2348892198755897,
+        "ms": 219.1224999987753,
+        "error": null
+      },
+      {
+        "id": "bugfix_add_tag_mutable_default",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": 0.3422777912422882,
+        "ms": 219.15833299863152,
+        "error": null
+      },
+      {
+        "id": "bugfix_merge_config_precedence",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": 0.43208820079263616,
+        "ms": 218.9158330002101,
+        "error": null
+      },
+      {
+        "id": "bugfix_average_score_truncation",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": 0.24118462210578956,
+        "ms": 222.34979100176133,
+        "error": null
+      },
+      {
+        "id": "answer_audit_log_key",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": 0.9590748144397666,
+        "ms": 221.61024999513756,
+        "error": null
+      },
+      {
+        "id": "answer_compute_fee",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": 0.9590748144397666,
+        "ms": 170.9519169962732,
+        "error": null
+      },
+      {
+        "id": "answer_sqlite_import_module",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": 0.9590748144397666,
+        "ms": 170.85241600580048,
+        "error": null
+      },
+      {
+        "id": "answer_default_port",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": 0.9590748144397666,
+        "ms": 169.4657920015743,
+        "error": null
+      },
+      {
+        "id": "answer_exception_count",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": 0.9590748144397666,
+        "ms": 169.9313749995781,
+        "error": null
+      }
+    ]
+  }
+}

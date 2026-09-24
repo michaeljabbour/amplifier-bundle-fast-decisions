@@ -1,0 +1,128 @@
+{
+  "schema": "fast-decisions-evals/manifest/v1",
+  "created_at_utc": "2026-09-24T21:21:40Z",
+  "invocation": {
+    "argv": [
+      "--suite",
+      "s1",
+      "--split",
+      "dev",
+      "--cells",
+      "plain,plain-sonnet,orch-router-jev",
+      "--reps",
+      "1",
+      "--candidate-sha",
+      "bb02846ff86d4dcca00c2bb67dfbf44233b84e1d",
+      "--baseline-source",
+      "/Users/michaeljabbour/dev/afast-orch-primary-20260924/baseline-main",
+      "--installed-cache",
+      "/Users/michaeljabbour/dev/afast-orch-primary-20260924/baseline-main",
+      "--history-index",
+      "/Users/michaeljabbour/dev/afast-orch-primary-20260924/history-index.json",
+      "--host-python",
+      "/Users/michaeljabbour/.local/share/uv/tools/amplifier/bin/python",
+      "--events-dir",
+      "/Users/michaeljabbour/.amplifier/fast-decisions/events",
+      "--allow-external-state",
+      "--parallel",
+      "3",
+      "--out",
+      "/Users/michaeljabbour/dev/afast-orch-primary-20260924/router-s1-dev"
+    ],
+    "suite": "s1",
+    "split": "dev",
+    "reps": 1
+  },
+  "suite": {
+    "label": "S1 synthetic battery (20 tasks, 4 families)",
+    "task_source": "battery",
+    "deadline_seconds": 600,
+    "splits": {
+      "dev": {
+        "tasks_flag": "dev",
+        "expected_task_count": 12
+      },
+      "holdout": {
+        "tasks_flag": "holdout",
+        "expected_task_count": 8
+      }
+    },
+    "required_toolchains": [
+      "python3"
+    ]
+  },
+  "candidate": {
+    "source": "/Users/michaeljabbour/dev/amplifier-bundle-fast-decisions",
+    "requested_sha": "bb02846ff86d4dcca00c2bb67dfbf44233b84e1d"
+  },
+  "baseline": {
+    "source": "/Users/michaeljabbour/dev/afast-orch-primary-20260924/baseline-main"
+  },
+  "cells": [
+    {
+      "id": "plain",
+      "experiments": [
+        "plain-s1-dev-r1"
+      ],
+      "seeds": [
+        20260920
+      ],
+      "gate": {
+        "passed": true,
+        "flags": []
+      },
+      "excluded_from_claims": false
+    },
+    {
+      "id": "plain-sonnet",
+      "experiments": [
+        "plain-sonnet-s1-dev-r1"
+      ],
+      "seeds": [
+        20260920
+      ],
+      "gate": {
+        "passed": true,
+        "flags": []
+      },
+      "excluded_from_claims": false
+    },
+    {
+      "id": "orch-router-jev",
+      "experiments": [
+        "orch-router-jev-s1-dev-r1"
+      ],
+      "seeds": [
+        20260920
+      ],
+      "gate": {
+        "passed": true,
+        "flags": [],
+        "latency_within_budget_by_rep": [
+          true
+        ],
+        "latency_within_budget": true
+      },
+      "excluded_from_claims": false
+    }
+  ],
+  "budget": {
+    "per_launch_usd": 12.0,
+    "estimated_total_usd": 1800.0,
+    "max_benchmark_worker_launches": 2400,
+    "max_infrastructure_retries_per_run": 1,
+    "max_parallel_timed_runs": 3,
+    "wall_hours": 24
+  },
+  "verification": {
+    "prompt_hashes": "prompt-verification.json",
+    "preflight": "preflight.json"
+  },
+  "tool_shas": {
+    "battery.py": "422ef9e12fe27cb6dd118631c1c8e51296251ffe02c6162a3e6ce4792253d38b",
+    "battery_tasks.py": "e0b902ba24887372c8674263ce411b0a363bec093d2cc290db88268dc364df5b",
+    "polyglot_tasks.py": "62ac12eae2747d97a33b0546981764e7797175b84749b17f103b9283e1a61271",
+    "battery_report.py": "0cdbbcb41703f9aa564db1db88a08837de7835077a8a814e919de8fe3aaf92e0",
+    "forge_workloads.py": "f5111afe10286634edde75a3539425ed0ea7206c5c11aebe33003c974fcf08a2"
+  }
+}

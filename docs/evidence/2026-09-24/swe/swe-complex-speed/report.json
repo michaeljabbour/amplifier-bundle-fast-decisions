@@ -1,0 +1,577 @@
+{
+  "summary": {
+    "plain": {
+      "runs": 20,
+      "resolved": 14,
+      "graded": 20,
+      "empty_patches": 0,
+      "infra_failures": 0,
+      "timeouts": 0,
+      "median_exec_s": 98.1,
+      "median_wall_s": 111.4,
+      "total_cost_usd": 23.86
+    },
+    "orch-router-rules": {
+      "runs": 20,
+      "resolved": 13,
+      "graded": 20,
+      "empty_patches": 0,
+      "infra_failures": 0,
+      "timeouts": 0,
+      "median_exec_s": 84.6,
+      "median_wall_s": 97.0,
+      "total_cost_usd": 23.76
+    },
+    "orch-strong-phase-effort": {
+      "runs": 20,
+      "resolved": 12,
+      "graded": 20,
+      "empty_patches": 0,
+      "infra_failures": 0,
+      "timeouts": 0,
+      "median_exec_s": 64.6,
+      "median_wall_s": 76.2,
+      "total_cost_usd": 20.33
+    }
+  },
+  "paired": {
+    "orch-router-rules_vs_plain": {
+      "pairs": 20,
+      "geomean_exec_time_ratio": 1.0,
+      "geomean_cost_ratio": 0.985
+    },
+    "orch-strong-phase-effort_vs_plain": {
+      "pairs": 20,
+      "geomean_exec_time_ratio": 0.811,
+      "geomean_cost_ratio": 0.869
+    }
+  },
+  "per_instance": {
+    "django__django-11532 r1": {
+      "orch-strong-phase-effort": {
+        "resolved": true,
+        "exec_s": 61.902,
+        "cost": 0.839,
+        "models": [
+          "claude-fable-5-1"
+        ]
+      },
+      "plain": {
+        "resolved": true,
+        "exec_s": 69.75,
+        "cost": 1.089,
+        "models": [
+          "claude-fable-5-1"
+        ]
+      },
+      "orch-router-rules": {
+        "resolved": true,
+        "exec_s": 54.48,
+        "cost": 0.932,
+        "models": [
+          "claude-fable-5-1"
+        ]
+      }
+    },
+    "django__django-11532 r2": {
+      "orch-router-rules": {
+        "resolved": true,
+        "exec_s": 74.439,
+        "cost": 1.042,
+        "models": [
+          "claude-fable-5-1"
+        ]
+      },
+      "orch-strong-phase-effort": {
+        "resolved": true,
+        "exec_s": 53.613,
+        "cost": 0.827,
+        "models": [
+          "claude-fable-5-1"
+        ]
+      },
+      "plain": {
+        "resolved": true,
+        "exec_s": 38.773,
+        "cost": 0.775,
+        "models": [
+          "claude-fable-5-1"
+        ]
+      }
+    },
+    "django__django-11734 r1": {
+      "orch-router-rules": {
+        "resolved": false,
+        "exec_s": 82.912,
+        "cost": 0.995,
+        "models": [
+          "claude-fable-5-1"
+        ]
+      },
+      "plain": {
+        "resolved": false,
+        "exec_s": 222.472,
+        "cost": 1.597,
+        "models": [
+          "claude-fable-5-1"
+        ]
+      },
+      "orch-strong-phase-effort": {
+        "resolved": false,
+        "exec_s": 144.992,
+        "cost": 1.191,
+        "models": [
+          "claude-fable-5-1"
+        ]
+      }
+    },
+    "django__django-11734 r2": {
+      "orch-router-rules": {
+        "resolved": false,
+        "exec_s": 151.042,
+        "cost": 1.42,
+        "models": [
+          "claude-fable-5-1"
+        ]
+      },
+      "orch-strong-phase-effort": {
+        "resolved": false,
+        "exec_s": 47.204,
+        "cost": 0.764,
+        "models": [
+          "claude-fable-5-1"
+        ]
+      },
+      "plain": {
+        "resolved": false,
+        "exec_s": 130.722,
+        "cost": 1.495,
+        "models": [
+          "claude-fable-5-1"
+        ]
+      }
+    },
+    "django__django-12125 r1": {
+      "orch-strong-phase-effort": {
+        "resolved": true,
+        "exec_s": 110.315,
+        "cost": 1.249,
+        "models": [
+          "claude-fable-5-1"
+        ]
+      },
+      "plain": {
+        "resolved": true,
+        "exec_s": 131.818,
+        "cost": 1.418,
+        "models": [
+          "claude-fable-5-1"
+        ]
+      },
+      "orch-router-rules": {
+        "resolved": true,
+        "exec_s": 177.927,
+        "cost": 1.557,
+        "models": [
+          "claude-fable-5-1"
+        ]
+      }
+    },
+    "django__django-12125 r2": {
+      "orch-router-rules": {
+        "resolved": true,
+        "exec_s": 205.346,
+        "cost": 1.777,
+        "models": [
+          "claude-fable-5-1"
+        ]
+      },
+      "orch-strong-phase-effort": {
+        "resolved": true,
+        "exec_s": 162.714,
+        "cost": 1.385,
+        "models": [
+          "claude-fable-5-1"
+        ]
+      },
+      "plain": {
+        "resolved": true,
+        "exec_s": 171.012,
+        "cost": 1.392,
+        "models": [
+          "claude-fable-5-1"
+        ]
+      }
+    },
+    "django__django-14034 r1": {
+      "orch-strong-phase-effort": {
+        "resolved": false,
+        "exec_s": 149.71,
+        "cost": 1.398,
+        "models": [
+          "claude-fable-5-1"
+        ]
+      },
+      "orch-router-rules": {
+        "resolved": false,
+        "exec_s": 124.2,
+        "cost": 1.194,
+        "models": [
+          "claude-fable-5-1"
+        ]
+      },
+      "plain": {
+        "resolved": false,
+        "exec_s": 90.612,
+        "cost": 1.067,
+        "models": [
+          "claude-fable-5-1"
+        ]
+      }
+    },
+    "django__django-14034 r2": {
+      "orch-router-rules": {
+        "resolved": false,
+        "exec_s": 92.877,
+        "cost": 1.089,
+        "models": [
+          "claude-fable-5-1"
+        ]
+      },
+      "orch-strong-phase-effort": {
+        "resolved": false,
+        "exec_s": 83.227,
+        "cost": 1.094,
+        "models": [
+          "claude-fable-5-1"
+        ]
+      },
+      "plain": {
+        "resolved": false,
+        "exec_s": 110.125,
+        "cost": 1.148,
+        "models": [
+          "claude-fable-5-1"
+        ]
+      }
+    },
+    "django__django-16100 r1": {
+      "orch-router-rules": {
+        "resolved": true,
+        "exec_s": 44.527,
+        "cost": 1.11,
+        "models": [
+          "claude-fable-5-1"
+        ]
+      },
+      "plain": {
+        "resolved": true,
+        "exec_s": 39.152,
+        "cost": 1.071,
+        "models": [
+          "claude-fable-5-1"
+        ]
+      },
+      "orch-strong-phase-effort": {
+        "resolved": true,
+        "exec_s": 31.797,
+        "cost": 1.101,
+        "models": [
+          "claude-fable-5-1"
+        ]
+      }
+    },
+    "django__django-16100 r2": {
+      "orch-strong-phase-effort": {
+        "resolved": true,
+        "exec_s": 25.913,
+        "cost": 0.692,
+        "models": [
+          "claude-fable-5-1"
+        ]
+      },
+      "plain": {
+        "resolved": true,
+        "exec_s": 42.114,
+        "cost": 0.789,
+        "models": [
+          "claude-fable-5-1"
+        ]
+      },
+      "orch-router-rules": {
+        "resolved": true,
+        "exec_s": 34.085,
+        "cost": 0.686,
+        "models": [
+          "claude-fable-5-1"
+        ]
+      }
+    },
+    "pydata__xarray-4687 r1": {
+      "plain": {
+        "resolved": true,
+        "exec_s": 98.654,
+        "cost": 1.202,
+        "models": [
+          "claude-fable-5-1"
+        ]
+      },
+      "orch-strong-phase-effort": {
+        "resolved": true,
+        "exec_s": 84.514,
+        "cost": 1.127,
+        "models": [
+          "claude-fable-5-1"
+        ]
+      },
+      "orch-router-rules": {
+        "resolved": true,
+        "exec_s": 133.434,
+        "cost": 1.464,
+        "models": [
+          "claude-fable-5-1"
+        ]
+      }
+    },
+    "pydata__xarray-4687 r2": {
+      "orch-strong-phase-effort": {
+        "resolved": true,
+        "exec_s": 105.998,
+        "cost": 1.198,
+        "models": [
+          "claude-fable-5-1"
+        ]
+      },
+      "orch-router-rules": {
+        "resolved": true,
+        "exec_s": 298.276,
+        "cost": 2.385,
+        "models": [
+          "claude-fable-5-1"
+        ]
+      },
+      "plain": {
+        "resolved": true,
+        "exec_s": 289.673,
+        "cost": 2.252,
+        "models": [
+          "claude-fable-5-1"
+        ]
+      }
+    },
+    "pylint-dev__pylint-7080 r1": {
+      "orch-router-rules": {
+        "resolved": true,
+        "exec_s": 178.749,
+        "cost": 1.726,
+        "models": [
+          "claude-fable-5-1"
+        ]
+      },
+      "orch-strong-phase-effort": {
+        "resolved": false,
+        "exec_s": 66.882,
+        "cost": 1.092,
+        "models": [
+          "claude-fable-5-1"
+        ]
+      },
+      "plain": {
+        "resolved": true,
+        "exec_s": 148.121,
+        "cost": 1.527,
+        "models": [
+          "claude-fable-5-1"
+        ]
+      }
+    },
+    "pylint-dev__pylint-7080 r2": {
+      "orch-router-rules": {
+        "resolved": false,
+        "exec_s": 46.151,
+        "cost": 0.967,
+        "models": [
+          "claude-fable-5-1"
+        ]
+      },
+      "orch-strong-phase-effort": {
+        "resolved": false,
+        "exec_s": 55.57,
+        "cost": 0.971,
+        "models": [
+          "claude-fable-5-1"
+        ]
+      },
+      "plain": {
+        "resolved": true,
+        "exec_s": 125.394,
+        "cost": 1.468,
+        "models": [
+          "claude-fable-5-1"
+        ]
+      }
+    },
+    "pytest-dev__pytest-10356 r1": {
+      "orch-strong-phase-effort": {
+        "resolved": false,
+        "exec_s": 86.3,
+        "cost": 0.974,
+        "models": [
+          "claude-fable-5-1"
+        ]
+      },
+      "plain": {
+        "resolved": false,
+        "exec_s": 97.506,
+        "cost": 1.087,
+        "models": [
+          "claude-fable-5-1"
+        ]
+      },
+      "orch-router-rules": {
+        "resolved": false,
+        "exec_s": 102.599,
+        "cost": 1.205,
+        "models": [
+          "claude-fable-5-1"
+        ]
+      }
+    },
+    "pytest-dev__pytest-10356 r2": {
+      "orch-router-rules": {
+        "resolved": false,
+        "exec_s": 86.344,
+        "cost": 0.953,
+        "models": [
+          "claude-fable-5-1"
+        ]
+      },
+      "plain": {
+        "resolved": false,
+        "exec_s": 104.228,
+        "cost": 1.132,
+        "models": [
+          "claude-fable-5-1"
+        ]
+      },
+      "orch-strong-phase-effort": {
+        "resolved": false,
+        "exec_s": 126.259,
+        "cost": 1.21,
+        "models": [
+          "claude-fable-5-1"
+        ]
+      }
+    },
+    "pytest-dev__pytest-7571 r1": {
+      "orch-router-rules": {
+        "resolved": true,
+        "exec_s": 69.363,
+        "cost": 0.879,
+        "models": [
+          "claude-fable-5-1"
+        ]
+      },
+      "plain": {
+        "resolved": true,
+        "exec_s": 47.958,
+        "cost": 0.858,
+        "models": [
+          "claude-fable-5-1"
+        ]
+      },
+      "orch-strong-phase-effort": {
+        "resolved": true,
+        "exec_s": 62.299,
+        "cost": 0.892,
+        "models": [
+          "claude-fable-5-1"
+        ]
+      }
+    },
+    "pytest-dev__pytest-7571 r2": {
+      "orch-router-rules": {
+        "resolved": true,
+        "exec_s": 55.172,
+        "cost": 0.876,
+        "models": [
+          "claude-fable-5-1"
+        ]
+      },
+      "plain": {
+        "resolved": true,
+        "exec_s": 42.471,
+        "cost": 0.796,
+        "models": [
+          "claude-fable-5-1"
+        ]
+      },
+      "orch-strong-phase-effort": {
+        "resolved": true,
+        "exec_s": 42.525,
+        "cost": 0.853,
+        "models": [
+          "claude-fable-5-1"
+        ]
+      }
+    },
+    "sympy__sympy-16766 r1": {
+      "orch-router-rules": {
+        "resolved": true,
+        "exec_s": 33.625,
+        "cost": 0.71,
+        "models": [
+          "claude-fable-5-1"
+        ]
+      },
+      "plain": {
+        "resolved": true,
+        "exec_s": 72.261,
+        "cost": 0.961,
+        "models": [
+          "claude-fable-5-1"
+        ]
+      },
+      "orch-strong-phase-effort": {
+        "resolved": true,
+        "exec_s": 51.306,
+        "cost": 0.752,
+        "models": [
+          "claude-fable-5-1"
+        ]
+      }
+    },
+    "sympy__sympy-16766 r2": {
+      "plain": {
+        "resolved": true,
+        "exec_s": 35.873,
+        "cost": 0.734,
+        "models": [
+          "claude-fable-5-1"
+        ]
+      },
+      "orch-strong-phase-effort": {
+        "resolved": true,
+        "exec_s": 61.049,
+        "cost": 0.723,
+        "models": [
+          "claude-fable-5-1"
+        ]
+      },
+      "orch-router-rules": {
+        "resolved": true,
+        "exec_s": 67.9,
+        "cost": 0.79,
+        "models": [
+          "claude-fable-5-1"
+        ]
+      }
+    }
+  },
+  "label": "screen",
+  "evidence_limits": [
+    "Provider-reported cost is an estimate, not billing.",
+    "Fewer than 3 reps is a screen, never a finding (STUDY-DESIGN.md section 8).",
+    "exec time = first llm:request to last llm:response in the parent session."
+  ]
+}

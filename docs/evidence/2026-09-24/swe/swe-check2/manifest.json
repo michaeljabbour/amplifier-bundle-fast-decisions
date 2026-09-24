@@ -1,0 +1,61 @@
+{
+ "schema": "forge-swebench-v1",
+ "created_at": "2026-09-24T19:37:23.050550+00:00",
+ "dataset": "princeton-nlp/SWE-bench_Verified",
+ "candidate_sha": "6045966bb5443a769ba47b3e179a5b8263b39eef",
+ "baseline_source": "/Users/michaeljabbour/dev/afast-orch-primary-20260924/baseline-main",
+ "baseline_sha": "0f0303225e5a89fc6f648c0693a36919d0fd1f20",
+ "upstream_loop_source": "git+https://github.com/microsoft/amplifier-module-loop-streaming@4cc86dd4eae36b40af38b4e2e70b9045649d2903",
+ "arms": {
+  "plain": {
+   "model": "claude-fable-5-1",
+   "composed": false
+  },
+  "plain-sonnet": {
+   "model": "claude-sonnet-5",
+   "composed": false
+  },
+  "orch-primary": {
+   "model": "claude-fable-5-1",
+   "composed": true
+  }
+ },
+ "seed": 20260924,
+ "reps": 1,
+ "deadline_seconds": 1800,
+ "limits": {
+  "max_iterations": 100,
+  "extended_thinking": true
+ },
+ "run_order": [
+  "django__django-13741__plain-sonnet__r1",
+  "django__django-13741__orch-primary__r1",
+  "django__django-13741__plain__r1"
+ ],
+ "runs": {
+  "django__django-13741__plain-sonnet__r1": {
+   "instance_id": "django__django-13741",
+   "repo": "django/django",
+   "base_commit": "d746f28949c009251a8741ba03d156964050717f",
+   "arm": "plain-sonnet",
+   "rep": 1,
+   "model": "claude-sonnet-5"
+  },
+  "django__django-13741__orch-primary__r1": {
+   "instance_id": "django__django-13741",
+   "repo": "django/django",
+   "base_commit": "d746f28949c009251a8741ba03d156964050717f",
+   "arm": "orch-primary",
+   "rep": 1,
+   "model": "claude-fable-5-1"
+  },
+  "django__django-13741__plain__r1": {
+   "instance_id": "django__django-13741",
+   "repo": "django/django",
+   "base_commit": "d746f28949c009251a8741ba03d156964050717f",
+   "arm": "plain",
+   "rep": 1,
+   "model": "claude-fable-5-1"
+  }
+ }
+}

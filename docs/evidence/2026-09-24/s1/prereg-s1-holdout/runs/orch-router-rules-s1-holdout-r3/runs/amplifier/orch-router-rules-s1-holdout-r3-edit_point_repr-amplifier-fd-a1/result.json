@@ -1,0 +1,44 @@
+{
+ "name": "orch-router-rules-s1-holdout-r3-edit_point_repr-amplifier-fd-a1",
+ "task": "edit_point_repr",
+ "family": "edit",
+ "split": "holdout",
+ "kind": "code",
+ "harness": "amplifier-fd",
+ "attempt": 1,
+ "model": "claude-sonnet-5",
+ "started_at": "2026-09-24T23:40:37.560577+00:00",
+ "ended_at": "2026-09-24T23:41:03.234894+00:00",
+ "wall_time_ms": 25673.893500003032,
+ "harness_duration_ms": null,
+ "exit_code": 0,
+ "timed_out": false,
+ "cost_usd": 0.22150065000000002,
+ "cost_source": "harness_reported",
+ "cost_billable": true,
+ "tokens": {
+  "input_tokens": 238026.0,
+  "output_tokens": 501.0,
+  "cache_read_tokens": 238018.0,
+  "cache_write_tokens": 38015.0,
+  "cost_usd": 0.22150065000000002
+ },
+ "num_turns": null,
+ "quality": {
+  "checks": 4,
+  "passed": 4,
+  "failed": 0,
+  "failure_labels": []
+ },
+ "protected_files_unchanged": {
+  "README.md": true
+ },
+ "outcome_passed": true,
+ "infrastructure_failure": false,
+ "notes": [],
+ "exec_time_ms": 11128.862,
+ "exec_time_source": "native_events_first_request_to_last_response",
+ "provider_requests": 4,
+ "concurrency_at_launch": 2,
+ "concurrency_max": 3
+}

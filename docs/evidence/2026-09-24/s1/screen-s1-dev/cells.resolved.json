@@ -1,0 +1,68 @@
+[
+  {
+    "id": "plain",
+    "experiments": [
+      "plain-s1-dev-r1"
+    ],
+    "seeds": [
+      20260920
+    ],
+    "gate": {
+      "passed": true,
+      "flags": []
+    },
+    "excluded_from_claims": false
+  },
+  {
+    "id": "plain-sonnet",
+    "experiments": [
+      "plain-sonnet-s1-dev-r1"
+    ],
+    "seeds": [
+      20260920
+    ],
+    "gate": {
+      "passed": true,
+      "flags": []
+    },
+    "excluded_from_claims": false
+  },
+  {
+    "id": "orch-primary",
+    "experiments": [
+      "orch-primary-s1-dev-r1"
+    ],
+    "seeds": [
+      20260920
+    ],
+    "gate": {
+      "passed": true,
+      "flags": [
+        "confounded_with_plain_sonnet"
+      ],
+      "latency_within_budget_by_rep": [
+        null
+      ],
+      "latency_within_budget": null
+    },
+    "excluded_from_claims": false
+  },
+  {
+    "id": "orch-primary-effort-only",
+    "experiments": [
+      "orch-primary-effort-only-s1-dev-r1"
+    ],
+    "seeds": [
+      20260920
+    ],
+    "gate": {
+      "passed": true,
+      "flags": [],
+      "latency_within_budget_by_rep": [
+        null
+      ],
+      "latency_within_budget": null
+    },
+    "excluded_from_claims": false
+  }
+]

@@ -1,0 +1,72 @@
+{
+  "name": "pytest-dev__pytest-7571__orch-primary__r1",
+  "instance_id": "pytest-dev__pytest-7571",
+  "repo": "pytest-dev/pytest",
+  "base_commit": "422685d0bdc110547535036c1ff398b5e1c44145",
+  "arm": "orch-primary",
+  "rep": 1,
+  "model": "claude-fable-5-1",
+  "started_at": "2026-09-24T19:47:40.539280+00:00",
+  "ended_at": "2026-09-24T19:49:16.403777+00:00",
+  "wall_time_ms": 95688.08875000104,
+  "exec_time_ms": 84621.941,
+  "exit_code": 0,
+  "timed_out": false,
+  "session_id": "029f3215-a130-4f69-9046-79226766ca6d",
+  "native": {
+    "provider_requests": 15,
+    "provider_responses": 15,
+    "provider_retries": 0,
+    "provider_errors": 0,
+    "tool_results": 14,
+    "tool_names": {
+      "grep": 2,
+      "read_file": 2,
+      "edit_file": 4,
+      "bash": 6
+    },
+    "tool_failures_reported": 2,
+    "execution_completed": true,
+    "provider_response_duration_ms": 73063,
+    "usage": {
+      "input_tokens": 903259.0,
+      "output_tokens": 3937.0,
+      "cache_read_tokens": null,
+      "cache_write_tokens": 232854.0,
+      "cost_usd": 1.6742064
+    },
+    "usage_known_calls": {
+      "input_tokens": 15,
+      "output_tokens": 15,
+      "cache_write_tokens": 15,
+      "cost_usd": 15,
+      "cache_read_tokens": 13
+    },
+    "cost_evidence": "provider_reported_estimate_not_billing"
+  },
+  "models_served": [
+    {
+      "model": "claude-sonnet-5",
+      "thinking_enabled": true,
+      "thinking_budget": 32000,
+      "count": 4
+    },
+    {
+      "model": "claude-sonnet-5",
+      "thinking_enabled": true,
+      "thinking_budget": 4096,
+      "count": 2
+    },
+    {
+      "model": "claude-fable-5-1",
+      "thinking_enabled": true,
+      "thinking_budget": null,
+      "count": 9
+    }
+  ],
+  "cost_usd": 1.6742064,
+  "patch_bytes": 2428,
+  "empty_patch": false,
+  "infrastructure_failure": false,
+  "notes": []
+}

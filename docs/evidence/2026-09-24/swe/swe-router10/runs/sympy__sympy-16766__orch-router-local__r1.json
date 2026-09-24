@@ -1,0 +1,61 @@
+{
+  "name": "sympy__sympy-16766__orch-router-local__r1",
+  "instance_id": "sympy__sympy-16766",
+  "repo": "sympy/sympy",
+  "base_commit": "b8fe457a02cc24b3470ff678d0099c350b7fef43",
+  "arm": "orch-router-local",
+  "rep": 1,
+  "model": "claude-fable-5-1",
+  "source_root": "/Users/michaeljabbour/dev/afast-orch-primary-20260924/swe-router10/source",
+  "started_at": "2026-09-24T20:59:24.175261+00:00",
+  "ended_at": "2026-09-24T20:59:53.126241+00:00",
+  "wall_time_ms": 28588.575166999362,
+  "exec_time_ms": 16866.324,
+  "exit_code": 0,
+  "timed_out": false,
+  "session_id": "34e75eee-7b0e-48ad-9d6c-a2a95694f109",
+  "native": {
+    "provider_requests": 5,
+    "provider_responses": 5,
+    "provider_retries": 0,
+    "provider_errors": 0,
+    "tool_results": 4,
+    "tool_names": {
+      "grep": 1,
+      "read_file": 1,
+      "edit_file": 1,
+      "bash": 1
+    },
+    "tool_failures_reported": 0,
+    "execution_completed": true,
+    "provider_response_duration_ms": 12940,
+    "usage": {
+      "input_tokens": 280210.0,
+      "output_tokens": 1101.0,
+      "cache_read_tokens": null,
+      "cache_write_tokens": 73120.0,
+      "cost_usd": 0.3748023
+    },
+    "usage_known_calls": {
+      "input_tokens": 5,
+      "output_tokens": 5,
+      "cache_write_tokens": 5,
+      "cost_usd": 5,
+      "cache_read_tokens": 4
+    },
+    "cost_evidence": "provider_reported_estimate_not_billing"
+  },
+  "models_served": [
+    {
+      "model": "claude-sonnet-5",
+      "thinking_enabled": true,
+      "thinking_budget": 32000,
+      "count": 5
+    }
+  ],
+  "cost_usd": 0.3748023,
+  "patch_bytes": 619,
+  "empty_patch": false,
+  "infrastructure_failure": false,
+  "notes": []
+}

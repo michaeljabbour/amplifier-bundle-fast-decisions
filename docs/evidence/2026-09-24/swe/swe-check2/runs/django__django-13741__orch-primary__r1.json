@@ -1,0 +1,72 @@
+{
+  "name": "django__django-13741__orch-primary__r1",
+  "instance_id": "django__django-13741",
+  "repo": "django/django",
+  "base_commit": "d746f28949c009251a8741ba03d156964050717f",
+  "arm": "orch-primary",
+  "rep": 1,
+  "model": "claude-fable-5-1",
+  "started_at": "2026-09-24T19:38:32.803385+00:00",
+  "ended_at": "2026-09-24T19:39:54.287063+00:00",
+  "wall_time_ms": 80486.06954100251,
+  "exec_time_ms": 67494.492,
+  "exit_code": 0,
+  "timed_out": false,
+  "session_id": "7f26ffa9-a4ba-414c-a497-f9332de34d5a",
+  "native": {
+    "provider_requests": 12,
+    "provider_responses": 12,
+    "provider_retries": 0,
+    "provider_errors": 0,
+    "tool_results": 11,
+    "tool_names": {
+      "grep": 1,
+      "read_file": 3,
+      "edit_file": 3,
+      "bash": 4
+    },
+    "tool_failures_reported": 1,
+    "execution_completed": true,
+    "provider_response_duration_ms": 56327,
+    "usage": {
+      "input_tokens": 725630.0,
+      "output_tokens": 3172.0,
+      "cache_read_tokens": 725607.0,
+      "cache_write_tokens": 167791.0,
+      "cost_usd": 1.3300577999999996
+    },
+    "usage_known_calls": {
+      "input_tokens": 12,
+      "output_tokens": 12,
+      "cache_read_tokens": 12,
+      "cache_write_tokens": 12,
+      "cost_usd": 12
+    },
+    "cost_evidence": "provider_reported_estimate_not_billing"
+  },
+  "models_served": [
+    {
+      "model": "claude-sonnet-5",
+      "thinking_enabled": true,
+      "thinking_budget": 32000,
+      "count": 3
+    },
+    {
+      "model": "claude-sonnet-5",
+      "thinking_enabled": true,
+      "thinking_budget": 4096,
+      "count": 3
+    },
+    {
+      "model": "claude-fable-5-1",
+      "thinking_enabled": true,
+      "thinking_budget": null,
+      "count": 6
+    }
+  ],
+  "cost_usd": 1.3300577999999996,
+  "patch_bytes": 1764,
+  "empty_patch": false,
+  "infrastructure_failure": false,
+  "notes": []
+}

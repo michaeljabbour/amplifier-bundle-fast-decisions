@@ -1,0 +1,56 @@
+{
+  "schema": "fast-decisions-evals/results/v1",
+  "suite": "s1",
+  "split": "dev",
+  "reps": 1,
+  "cells": [
+    {
+      "cell": "orch-router-rules",
+      "anchor": "plain",
+      "reps": 1,
+      "split": "dev",
+      "gate_passed": true,
+      "paired_task_count": 12,
+      "exec_time_ratio": {
+        "geomean": 0.5452742794623457,
+        "ci95_low": 0.44159919536308123,
+        "ci95_high": 0.6901079378245008,
+        "sign_test_p": 0.00634765625
+      },
+      "cost_ratio": 0.412275181173213,
+      "unknown_cost_count": 0,
+      "quality": {
+        "candidate_successes": 12,
+        "anchor_successes": 12,
+        "non_inferior": true
+      },
+      "verdict": "screen",
+      "vs_plain": {
+        "anchor": "plain-sonnet",
+        "exec_time_ratio": {
+          "geomean": 0.9498687569248271,
+          "ci95_low": 0.7331326784164061,
+          "ci95_high": 1.2102988149583995,
+          "sign_test_p": 1.0
+        },
+        "cost_ratio": 1.082785160197702,
+        "quality": {
+          "candidate_successes": 12,
+          "anchor_successes": 12,
+          "non_inferior": true
+        }
+      }
+    }
+  ],
+  "q3": null,
+  "evidence_limits": [
+    "bootstrap_ci: 2000 resamples, seed=20260919",
+    "confirmed requires >= 3 reps, >= 8 paired passing tasks, and split=holdout",
+    "external_harness_exec_time_may_still_include_its_own_startup",
+    "models_not_necessarily_matched_across_campaigns_or_harnesses",
+    "models_not_necessarily_matched_across_harnesses",
+    "n_tasks=12",
+    "non_contemporaneous_runs_across_campaigns",
+    "single_repetition_per_task_per_harness"
+  ]
+}

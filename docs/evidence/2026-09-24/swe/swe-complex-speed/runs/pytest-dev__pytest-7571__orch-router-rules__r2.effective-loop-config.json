@@ -1,0 +1,38 @@
+{
+  "mode": "active",
+  "backend": "none",
+  "allow_external_state": false,
+  "read_shortcut": false,
+  "timeout_ms": 3000,
+  "allowed_tools": [
+    "fast_workspace"
+  ],
+  "effort_routing": {
+    "orient": "medium",
+    "explore": "low",
+    "implement": "high",
+    "by_tier": {
+      "cheap": "medium",
+      "strong": null
+    },
+    "max_explore_requests": 6,
+    "escalate_after_provider_errors": 1
+  },
+  "model_routing": {
+    "start_model": "claude-sonnet-5",
+    "provider_match": "anthropic",
+    "start_policy": "judge",
+    "cheap_max_workspace_files": 300,
+    "max_requests_before_escalation": 6,
+    "escalate_on_test_failure": true,
+    "escalate_on_provider_error": true
+  },
+  "observatory": {
+    "enabled": false,
+    "open_browser": "always",
+    "port": 8765
+  },
+  "max_iterations": 100,
+  "extended_thinking": true,
+  "events_dir": "/Users/michaeljabbour/dev/afast-orch-primary-20260924/swe-complex-speed/runs/pytest-dev__pytest-7571__orch-router-rules__r2/events"
+}

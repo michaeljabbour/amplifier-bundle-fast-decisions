@@ -1,0 +1,60 @@
+{
+  "name": "pylint-dev__pylint-7080__plain-sonnet__r1",
+  "instance_id": "pylint-dev__pylint-7080",
+  "repo": "pylint-dev/pylint",
+  "base_commit": "3c5eca2ded3dd2b59ebaf23eb289453b5d2930f0",
+  "arm": "plain-sonnet",
+  "rep": 1,
+  "model": "claude-sonnet-5",
+  "started_at": "2026-09-24T20:13:01.249487+00:00",
+  "ended_at": "2026-09-24T20:16:21.760768+00:00",
+  "wall_time_ms": 196417.24516700197,
+  "exec_time_ms": 184339.44,
+  "exit_code": 0,
+  "timed_out": false,
+  "session_id": "2000d370-a305-4360-bba7-df936cf8128a",
+  "native": {
+    "provider_requests": 29,
+    "provider_responses": 29,
+    "provider_retries": 0,
+    "provider_errors": 0,
+    "tool_results": 28,
+    "tool_names": {
+      "grep": 4,
+      "read_file": 5,
+      "bash": 15,
+      "edit_file": 4
+    },
+    "tool_failures_reported": 2,
+    "execution_completed": true,
+    "provider_response_duration_ms": 154814,
+    "usage": {
+      "input_tokens": 2763533.0,
+      "output_tokens": 12555.0,
+      "cache_read_tokens": 2763476.0,
+      "cache_write_tokens": 78150.0,
+      "cost_usd": 1.3106012999999994
+    },
+    "usage_known_calls": {
+      "input_tokens": 29,
+      "output_tokens": 29,
+      "cache_read_tokens": 29,
+      "cache_write_tokens": 29,
+      "cost_usd": 29
+    },
+    "cost_evidence": "provider_reported_estimate_not_billing"
+  },
+  "models_served": [
+    {
+      "model": "claude-sonnet-5",
+      "thinking_enabled": true,
+      "thinking_budget": 32000,
+      "count": 29
+    }
+  ],
+  "cost_usd": 1.3106012999999994,
+  "patch_bytes": 2290,
+  "empty_patch": false,
+  "infrastructure_failure": false,
+  "notes": []
+}

@@ -1,0 +1,76 @@
+{
+ "schema": "forge-swebench-v1",
+ "created_at": "2026-09-24T20:46:24.395761+00:00",
+ "dataset": "princeton-nlp/SWE-bench_Verified",
+ "candidate_sha": "2fdd8391823f3ea535cad30f4ee15e54aef348bc",
+ "baseline_source": "/Users/michaeljabbour/dev/afast-orch-primary-20260924/baseline-main",
+ "baseline_sha": "0f0303225e5a89fc6f648c0693a36919d0fd1f20",
+ "upstream_loop_source": "git+https://github.com/microsoft/amplifier-module-loop-streaming@4cc86dd4eae36b40af38b4e2e70b9045649d2903",
+ "arms": {
+  "orch-router-jev": {
+   "model": "claude-fable-5-1",
+   "composed": true,
+   "overrides": {
+    "backend": "jev",
+    "model": "jev-1.13.0",
+    "allow_external_state": true,
+    "read_shortcut": false,
+    "timeout_ms": 3000,
+    "effort_routing": {
+     "monotonic": true
+    },
+    "model_routing": {
+     "start_policy": "judge"
+    }
+   }
+  },
+  "orch-router-local": {
+   "model": "claude-fable-5-1",
+   "composed": true,
+   "overrides": {
+    "backend": "ollama",
+    "model": "qwen:latest",
+    "read_shortcut": false,
+    "timeout_ms": 8000,
+    "effort_routing": {
+     "monotonic": true
+    },
+    "model_routing": {
+     "start_policy": "judge"
+    }
+   }
+  }
+ },
+ "seed": 20260924,
+ "reps": 1,
+ "deadline_seconds": 1800,
+ "limits": {
+  "max_iterations": 100,
+  "extended_thinking": true
+ },
+ "settings_sha256": "c454b7704cd618ff4db3352e11a25f8735fe12fca37ff0a037bae3cb45144fba",
+ "run_order": [
+  "sympy__sympy-16766__orch-router-local__r1",
+  "sympy__sympy-16766__orch-router-jev__r1"
+ ],
+ "runs": {
+  "sympy__sympy-16766__orch-router-local__r1": {
+   "instance_id": "sympy__sympy-16766",
+   "repo": "sympy/sympy",
+   "base_commit": "b8fe457a02cc24b3470ff678d0099c350b7fef43",
+   "arm": "orch-router-local",
+   "rep": 1,
+   "model": "claude-fable-5-1",
+   "source_root": "/Users/michaeljabbour/dev/afast-orch-primary-20260924/swe-router-smoke/source"
+  },
+  "sympy__sympy-16766__orch-router-jev__r1": {
+   "instance_id": "sympy__sympy-16766",
+   "repo": "sympy/sympy",
+   "base_commit": "b8fe457a02cc24b3470ff678d0099c350b7fef43",
+   "arm": "orch-router-jev",
+   "rep": 1,
+   "model": "claude-fable-5-1",
+   "source_root": "/Users/michaeljabbour/dev/afast-orch-primary-20260924/swe-router-smoke/source"
+  }
+ }
+}

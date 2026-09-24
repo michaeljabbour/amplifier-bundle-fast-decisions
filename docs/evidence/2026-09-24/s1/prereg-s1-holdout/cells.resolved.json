@@ -1,0 +1,62 @@
+[
+  {
+    "id": "plain",
+    "experiments": [
+      "plain-s1-holdout-r1",
+      "plain-s1-holdout-r2",
+      "plain-s1-holdout-r3"
+    ],
+    "seeds": [
+      20260920,
+      20260921,
+      20260922
+    ],
+    "gate": {
+      "passed": true,
+      "flags": []
+    },
+    "excluded_from_claims": false
+  },
+  {
+    "id": "plain-sonnet",
+    "experiments": [
+      "plain-sonnet-s1-holdout-r1",
+      "plain-sonnet-s1-holdout-r2",
+      "plain-sonnet-s1-holdout-r3"
+    ],
+    "seeds": [
+      20260920,
+      20260921,
+      20260922
+    ],
+    "gate": {
+      "passed": true,
+      "flags": []
+    },
+    "excluded_from_claims": false
+  },
+  {
+    "id": "orch-router-rules",
+    "experiments": [
+      "orch-router-rules-s1-holdout-r1",
+      "orch-router-rules-s1-holdout-r2",
+      "orch-router-rules-s1-holdout-r3"
+    ],
+    "seeds": [
+      20260920,
+      20260921,
+      20260922
+    ],
+    "gate": {
+      "passed": true,
+      "flags": [],
+      "latency_within_budget_by_rep": [
+        true,
+        true,
+        true
+      ],
+      "latency_within_budget": true
+    },
+    "excluded_from_claims": false
+  }
+]

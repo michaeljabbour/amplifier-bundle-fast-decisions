@@ -1,0 +1,366 @@
+{
+ "schema": "forge-swebench-v1",
+ "created_at": "2026-09-24T20:51:15.254836+00:00",
+ "dataset": "princeton-nlp/SWE-bench_Verified",
+ "candidate_sha": "b746b040d7bb85e758e2fe3df38c54277f6e0b70",
+ "baseline_source": "/Users/michaeljabbour/dev/afast-orch-primary-20260924/baseline-main",
+ "baseline_sha": "0f0303225e5a89fc6f648c0693a36919d0fd1f20",
+ "upstream_loop_source": "git+https://github.com/microsoft/amplifier-module-loop-streaming@4cc86dd4eae36b40af38b4e2e70b9045649d2903",
+ "arms": {
+  "plain": {
+   "model": "claude-fable-5-1",
+   "composed": false
+  },
+  "orch-router-jev": {
+   "model": "claude-fable-5-1",
+   "composed": true,
+   "overrides": {
+    "backend": "jev",
+    "model": "jev-1.13.0",
+    "allow_external_state": true,
+    "read_shortcut": false,
+    "timeout_ms": 3000,
+    "effort_routing": {
+     "by_tier": {
+      "cheap": "medium",
+      "strong": null
+     }
+    },
+    "model_routing": {
+     "start_policy": "judge"
+    }
+   }
+  },
+  "orch-router-local": {
+   "model": "claude-fable-5-1",
+   "composed": true,
+   "overrides": {
+    "backend": "ollama",
+    "model": "qwen:latest",
+    "read_shortcut": false,
+    "timeout_ms": 8000,
+    "effort_routing": {
+     "by_tier": {
+      "cheap": "medium",
+      "strong": null
+     }
+    },
+    "model_routing": {
+     "start_policy": "judge"
+    }
+   }
+  }
+ },
+ "seed": 20260925,
+ "reps": 1,
+ "deadline_seconds": 1800,
+ "limits": {
+  "max_iterations": 100,
+  "extended_thinking": true
+ },
+ "settings_sha256": "c454b7704cd618ff4db3352e11a25f8735fe12fca37ff0a037bae3cb45144fba",
+ "run_order": [
+  "django__django-11734__orch-router-local__r1",
+  "django__django-11734__plain__r1",
+  "django__django-11734__orch-router-jev__r1",
+  "pytest-dev__pytest-10356__plain__r1",
+  "pytest-dev__pytest-10356__orch-router-jev__r1",
+  "pytest-dev__pytest-10356__orch-router-local__r1",
+  "pylint-dev__pylint-7080__orch-router-local__r1",
+  "pylint-dev__pylint-7080__orch-router-jev__r1",
+  "pylint-dev__pylint-7080__plain__r1",
+  "sympy__sympy-16766__orch-router-local__r1",
+  "sympy__sympy-16766__orch-router-jev__r1",
+  "sympy__sympy-16766__plain__r1",
+  "pydata__xarray-4687__orch-router-jev__r1",
+  "pydata__xarray-4687__orch-router-local__r1",
+  "pydata__xarray-4687__plain__r1",
+  "django__django-16100__orch-router-local__r1",
+  "django__django-16100__plain__r1",
+  "django__django-16100__orch-router-jev__r1",
+  "django__django-11532__orch-router-jev__r1",
+  "django__django-11532__orch-router-local__r1",
+  "django__django-11532__plain__r1",
+  "django__django-14034__plain__r1",
+  "django__django-14034__orch-router-jev__r1",
+  "django__django-14034__orch-router-local__r1",
+  "django__django-12125__plain__r1",
+  "django__django-12125__orch-router-jev__r1",
+  "django__django-12125__orch-router-local__r1",
+  "pytest-dev__pytest-7571__orch-router-local__r1",
+  "pytest-dev__pytest-7571__plain__r1",
+  "pytest-dev__pytest-7571__orch-router-jev__r1"
+ ],
+ "runs": {
+  "django__django-11734__orch-router-local__r1": {
+   "instance_id": "django__django-11734",
+   "repo": "django/django",
+   "base_commit": "999891bd80b3d02dd916731a7a239e1036174885",
+   "arm": "orch-router-local",
+   "rep": 1,
+   "model": "claude-fable-5-1",
+   "source_root": "/Users/michaeljabbour/dev/afast-orch-primary-20260924/swe-router10/source"
+  },
+  "django__django-11734__plain__r1": {
+   "instance_id": "django__django-11734",
+   "repo": "django/django",
+   "base_commit": "999891bd80b3d02dd916731a7a239e1036174885",
+   "arm": "plain",
+   "rep": 1,
+   "model": "claude-fable-5-1",
+   "source_root": "/Users/michaeljabbour/dev/afast-orch-primary-20260924/baseline-main"
+  },
+  "django__django-11734__orch-router-jev__r1": {
+   "instance_id": "django__django-11734",
+   "repo": "django/django",
+   "base_commit": "999891bd80b3d02dd916731a7a239e1036174885",
+   "arm": "orch-router-jev",
+   "rep": 1,
+   "model": "claude-fable-5-1",
+   "source_root": "/Users/michaeljabbour/dev/afast-orch-primary-20260924/swe-router10/source"
+  },
+  "pytest-dev__pytest-10356__plain__r1": {
+   "instance_id": "pytest-dev__pytest-10356",
+   "repo": "pytest-dev/pytest",
+   "base_commit": "3c1534944cbd34e8a41bc9e76818018fadefc9a1",
+   "arm": "plain",
+   "rep": 1,
+   "model": "claude-fable-5-1",
+   "source_root": "/Users/michaeljabbour/dev/afast-orch-primary-20260924/baseline-main"
+  },
+  "pytest-dev__pytest-10356__orch-router-jev__r1": {
+   "instance_id": "pytest-dev__pytest-10356",
+   "repo": "pytest-dev/pytest",
+   "base_commit": "3c1534944cbd34e8a41bc9e76818018fadefc9a1",
+   "arm": "orch-router-jev",
+   "rep": 1,
+   "model": "claude-fable-5-1",
+   "source_root": "/Users/michaeljabbour/dev/afast-orch-primary-20260924/swe-router10/source"
+  },
+  "pytest-dev__pytest-10356__orch-router-local__r1": {
+   "instance_id": "pytest-dev__pytest-10356",
+   "repo": "pytest-dev/pytest",
+   "base_commit": "3c1534944cbd34e8a41bc9e76818018fadefc9a1",
+   "arm": "orch-router-local",
+   "rep": 1,
+   "model": "claude-fable-5-1",
+   "source_root": "/Users/michaeljabbour/dev/afast-orch-primary-20260924/swe-router10/source"
+  },
+  "pylint-dev__pylint-7080__orch-router-local__r1": {
+   "instance_id": "pylint-dev__pylint-7080",
+   "repo": "pylint-dev/pylint",
+   "base_commit": "3c5eca2ded3dd2b59ebaf23eb289453b5d2930f0",
+   "arm": "orch-router-local",
+   "rep": 1,
+   "model": "claude-fable-5-1",
+   "source_root": "/Users/michaeljabbour/dev/afast-orch-primary-20260924/swe-router10/source"
+  },
+  "pylint-dev__pylint-7080__orch-router-jev__r1": {
+   "instance_id": "pylint-dev__pylint-7080",
+   "repo": "pylint-dev/pylint",
+   "base_commit": "3c5eca2ded3dd2b59ebaf23eb289453b5d2930f0",
+   "arm": "orch-router-jev",
+   "rep": 1,
+   "model": "claude-fable-5-1",
+   "source_root": "/Users/michaeljabbour/dev/afast-orch-primary-20260924/swe-router10/source"
+  },
+  "pylint-dev__pylint-7080__plain__r1": {
+   "instance_id": "pylint-dev__pylint-7080",
+   "repo": "pylint-dev/pylint",
+   "base_commit": "3c5eca2ded3dd2b59ebaf23eb289453b5d2930f0",
+   "arm": "plain",
+   "rep": 1,
+   "model": "claude-fable-5-1",
+   "source_root": "/Users/michaeljabbour/dev/afast-orch-primary-20260924/baseline-main"
+  },
+  "sympy__sympy-16766__orch-router-local__r1": {
+   "instance_id": "sympy__sympy-16766",
+   "repo": "sympy/sympy",
+   "base_commit": "b8fe457a02cc24b3470ff678d0099c350b7fef43",
+   "arm": "orch-router-local",
+   "rep": 1,
+   "model": "claude-fable-5-1",
+   "source_root": "/Users/michaeljabbour/dev/afast-orch-primary-20260924/swe-router10/source"
+  },
+  "sympy__sympy-16766__orch-router-jev__r1": {
+   "instance_id": "sympy__sympy-16766",
+   "repo": "sympy/sympy",
+   "base_commit": "b8fe457a02cc24b3470ff678d0099c350b7fef43",
+   "arm": "orch-router-jev",
+   "rep": 1,
+   "model": "claude-fable-5-1",
+   "source_root": "/Users/michaeljabbour/dev/afast-orch-primary-20260924/swe-router10/source"
+  },
+  "sympy__sympy-16766__plain__r1": {
+   "instance_id": "sympy__sympy-16766",
+   "repo": "sympy/sympy",
+   "base_commit": "b8fe457a02cc24b3470ff678d0099c350b7fef43",
+   "arm": "plain",
+   "rep": 1,
+   "model": "claude-fable-5-1",
+   "source_root": "/Users/michaeljabbour/dev/afast-orch-primary-20260924/baseline-main"
+  },
+  "pydata__xarray-4687__orch-router-jev__r1": {
+   "instance_id": "pydata__xarray-4687",
+   "repo": "pydata/xarray",
+   "base_commit": "d3b6aa6d8b997df115a53c001d00222a0f92f63a",
+   "arm": "orch-router-jev",
+   "rep": 1,
+   "model": "claude-fable-5-1",
+   "source_root": "/Users/michaeljabbour/dev/afast-orch-primary-20260924/swe-router10/source"
+  },
+  "pydata__xarray-4687__orch-router-local__r1": {
+   "instance_id": "pydata__xarray-4687",
+   "repo": "pydata/xarray",
+   "base_commit": "d3b6aa6d8b997df115a53c001d00222a0f92f63a",
+   "arm": "orch-router-local",
+   "rep": 1,
+   "model": "claude-fable-5-1",
+   "source_root": "/Users/michaeljabbour/dev/afast-orch-primary-20260924/swe-router10/source"
+  },
+  "pydata__xarray-4687__plain__r1": {
+   "instance_id": "pydata__xarray-4687",
+   "repo": "pydata/xarray",
+   "base_commit": "d3b6aa6d8b997df115a53c001d00222a0f92f63a",
+   "arm": "plain",
+   "rep": 1,
+   "model": "claude-fable-5-1",
+   "source_root": "/Users/michaeljabbour/dev/afast-orch-primary-20260924/baseline-main"
+  },
+  "django__django-16100__orch-router-local__r1": {
+   "instance_id": "django__django-16100",
+   "repo": "django/django",
+   "base_commit": "c6350d594c359151ee17b0c4f354bb44f28ff69e",
+   "arm": "orch-router-local",
+   "rep": 1,
+   "model": "claude-fable-5-1",
+   "source_root": "/Users/michaeljabbour/dev/afast-orch-primary-20260924/swe-router10/source"
+  },
+  "django__django-16100__plain__r1": {
+   "instance_id": "django__django-16100",
+   "repo": "django/django",
+   "base_commit": "c6350d594c359151ee17b0c4f354bb44f28ff69e",
+   "arm": "plain",
+   "rep": 1,
+   "model": "claude-fable-5-1",
+   "source_root": "/Users/michaeljabbour/dev/afast-orch-primary-20260924/baseline-main"
+  },
+  "django__django-16100__orch-router-jev__r1": {
+   "instance_id": "django__django-16100",
+   "repo": "django/django",
+   "base_commit": "c6350d594c359151ee17b0c4f354bb44f28ff69e",
+   "arm": "orch-router-jev",
+   "rep": 1,
+   "model": "claude-fable-5-1",
+   "source_root": "/Users/michaeljabbour/dev/afast-orch-primary-20260924/swe-router10/source"
+  },
+  "django__django-11532__orch-router-jev__r1": {
+   "instance_id": "django__django-11532",
+   "repo": "django/django",
+   "base_commit": "a5308514fb4bc5086c9a16a8a24a945eeebb073c",
+   "arm": "orch-router-jev",
+   "rep": 1,
+   "model": "claude-fable-5-1",
+   "source_root": "/Users/michaeljabbour/dev/afast-orch-primary-20260924/swe-router10/source"
+  },
+  "django__django-11532__orch-router-local__r1": {
+   "instance_id": "django__django-11532",
+   "repo": "django/django",
+   "base_commit": "a5308514fb4bc5086c9a16a8a24a945eeebb073c",
+   "arm": "orch-router-local",
+   "rep": 1,
+   "model": "claude-fable-5-1",
+   "source_root": "/Users/michaeljabbour/dev/afast-orch-primary-20260924/swe-router10/source"
+  },
+  "django__django-11532__plain__r1": {
+   "instance_id": "django__django-11532",
+   "repo": "django/django",
+   "base_commit": "a5308514fb4bc5086c9a16a8a24a945eeebb073c",
+   "arm": "plain",
+   "rep": 1,
+   "model": "claude-fable-5-1",
+   "source_root": "/Users/michaeljabbour/dev/afast-orch-primary-20260924/baseline-main"
+  },
+  "django__django-14034__plain__r1": {
+   "instance_id": "django__django-14034",
+   "repo": "django/django",
+   "base_commit": "db1fc5cd3c5d36cdb5d0fe4404efd6623dd3e8fb",
+   "arm": "plain",
+   "rep": 1,
+   "model": "claude-fable-5-1",
+   "source_root": "/Users/michaeljabbour/dev/afast-orch-primary-20260924/baseline-main"
+  },
+  "django__django-14034__orch-router-jev__r1": {
+   "instance_id": "django__django-14034",
+   "repo": "django/django",
+   "base_commit": "db1fc5cd3c5d36cdb5d0fe4404efd6623dd3e8fb",
+   "arm": "orch-router-jev",
+   "rep": 1,
+   "model": "claude-fable-5-1",
+   "source_root": "/Users/michaeljabbour/dev/afast-orch-primary-20260924/swe-router10/source"
+  },
+  "django__django-14034__orch-router-local__r1": {
+   "instance_id": "django__django-14034",
+   "repo": "django/django",
+   "base_commit": "db1fc5cd3c5d36cdb5d0fe4404efd6623dd3e8fb",
+   "arm": "orch-router-local",
+   "rep": 1,
+   "model": "claude-fable-5-1",
+   "source_root": "/Users/michaeljabbour/dev/afast-orch-primary-20260924/swe-router10/source"
+  },
+  "django__django-12125__plain__r1": {
+   "instance_id": "django__django-12125",
+   "repo": "django/django",
+   "base_commit": "89d41cba392b759732ba9f1db4ff29ed47da6a56",
+   "arm": "plain",
+   "rep": 1,
+   "model": "claude-fable-5-1",
+   "source_root": "/Users/michaeljabbour/dev/afast-orch-primary-20260924/baseline-main"
+  },
+  "django__django-12125__orch-router-jev__r1": {
+   "instance_id": "django__django-12125",
+   "repo": "django/django",
+   "base_commit": "89d41cba392b759732ba9f1db4ff29ed47da6a56",
+   "arm": "orch-router-jev",
+   "rep": 1,
+   "model": "claude-fable-5-1",
+   "source_root": "/Users/michaeljabbour/dev/afast-orch-primary-20260924/swe-router10/source"
+  },
+  "django__django-12125__orch-router-local__r1": {
+   "instance_id": "django__django-12125",
+   "repo": "django/django",
+   "base_commit": "89d41cba392b759732ba9f1db4ff29ed47da6a56",
+   "arm": "orch-router-local",
+   "rep": 1,
+   "model": "claude-fable-5-1",
+   "source_root": "/Users/michaeljabbour/dev/afast-orch-primary-20260924/swe-router10/source"
+  },
+  "pytest-dev__pytest-7571__orch-router-local__r1": {
+   "instance_id": "pytest-dev__pytest-7571",
+   "repo": "pytest-dev/pytest",
+   "base_commit": "422685d0bdc110547535036c1ff398b5e1c44145",
+   "arm": "orch-router-local",
+   "rep": 1,
+   "model": "claude-fable-5-1",
+   "source_root": "/Users/michaeljabbour/dev/afast-orch-primary-20260924/swe-router10/source"
+  },
+  "pytest-dev__pytest-7571__plain__r1": {
+   "instance_id": "pytest-dev__pytest-7571",
+   "repo": "pytest-dev/pytest",
+   "base_commit": "422685d0bdc110547535036c1ff398b5e1c44145",
+   "arm": "plain",
+   "rep": 1,
+   "model": "claude-fable-5-1",
+   "source_root": "/Users/michaeljabbour/dev/afast-orch-primary-20260924/baseline-main"
+  },
+  "pytest-dev__pytest-7571__orch-router-jev__r1": {
+   "instance_id": "pytest-dev__pytest-7571",
+   "repo": "pytest-dev/pytest",
+   "base_commit": "422685d0bdc110547535036c1ff398b5e1c44145",
+   "arm": "orch-router-jev",
+   "rep": 1,
+   "model": "claude-fable-5-1",
+   "source_root": "/Users/michaeljabbour/dev/afast-orch-primary-20260924/swe-router10/source"
+  }
+ }
+}

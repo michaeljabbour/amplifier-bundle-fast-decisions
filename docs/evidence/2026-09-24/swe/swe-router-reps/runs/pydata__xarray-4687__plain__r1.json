@@ -1,0 +1,61 @@
+{
+  "name": "pydata__xarray-4687__plain__r1",
+  "instance_id": "pydata__xarray-4687",
+  "repo": "pydata/xarray",
+  "base_commit": "d3b6aa6d8b997df115a53c001d00222a0f92f63a",
+  "arm": "plain",
+  "rep": 1,
+  "model": "claude-fable-5-1",
+  "source_root": "/Users/michaeljabbour/dev/afast-orch-primary-20260924/baseline-main",
+  "started_at": "2026-09-24T21:33:00.428670+00:00",
+  "ended_at": "2026-09-24T21:36:33.984007+00:00",
+  "wall_time_ms": 213385.49366600637,
+  "exec_time_ms": 201403.75499999998,
+  "exit_code": 0,
+  "timed_out": false,
+  "session_id": "0b03654b-927b-45be-93fc-f847ff568e73",
+  "native": {
+    "provider_requests": 24,
+    "provider_responses": 24,
+    "provider_retries": 0,
+    "provider_errors": 0,
+    "tool_results": 23,
+    "tool_names": {
+      "grep": 5,
+      "read_file": 5,
+      "edit_file": 6,
+      "bash": 7
+    },
+    "tool_failures_reported": 0,
+    "execution_completed": true,
+    "provider_response_duration_ms": 158032,
+    "usage": {
+      "input_tokens": 2023384.0,
+      "output_tokens": 11511.0,
+      "cache_read_tokens": 2023324.0,
+      "cache_write_tokens": 65320.0,
+      "cost_usd": 1.8984810000000003
+    },
+    "usage_known_calls": {
+      "input_tokens": 24,
+      "output_tokens": 24,
+      "cache_read_tokens": 24,
+      "cache_write_tokens": 24,
+      "cost_usd": 24
+    },
+    "cost_evidence": "provider_reported_estimate_not_billing"
+  },
+  "models_served": [
+    {
+      "model": "claude-fable-5-1",
+      "thinking_enabled": true,
+      "thinking_budget": null,
+      "count": 24
+    }
+  ],
+  "cost_usd": 1.8984810000000003,
+  "patch_bytes": 4364,
+  "empty_patch": false,
+  "infrastructure_failure": false,
+  "notes": []
+}

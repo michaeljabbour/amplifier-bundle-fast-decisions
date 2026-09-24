@@ -1,0 +1,662 @@
+[
+ {
+  "id": "astropy__astropy-13398",
+  "source": "swe-verified",
+  "label": "complex",
+  "difficulty": "1-4 hours"
+ },
+ {
+  "id": "astropy__astropy-13579",
+  "source": "swe-verified",
+  "label": "complex",
+  "difficulty": "1-4 hours"
+ },
+ {
+  "id": "astropy__astropy-14369",
+  "source": "swe-verified",
+  "label": "complex",
+  "difficulty": "1-4 hours"
+ },
+ {
+  "id": "django__django-10554",
+  "source": "swe-verified",
+  "label": "complex",
+  "difficulty": "1-4 hours"
+ },
+ {
+  "id": "django__django-11138",
+  "source": "swe-verified",
+  "label": "complex",
+  "difficulty": "1-4 hours"
+ },
+ {
+  "id": "django__django-11400",
+  "source": "swe-verified",
+  "label": "complex",
+  "difficulty": "1-4 hours"
+ },
+ {
+  "id": "django__django-11885",
+  "source": "swe-verified",
+  "label": "complex",
+  "difficulty": "1-4 hours"
+ },
+ {
+  "id": "django__django-12325",
+  "source": "swe-verified",
+  "label": "complex",
+  "difficulty": "1-4 hours"
+ },
+ {
+  "id": "django__django-12708",
+  "source": "swe-verified",
+  "label": "complex",
+  "difficulty": "1-4 hours"
+ },
+ {
+  "id": "django__django-13128",
+  "source": "swe-verified",
+  "label": "complex",
+  "difficulty": "1-4 hours"
+ },
+ {
+  "id": "django__django-13212",
+  "source": "swe-verified",
+  "label": "complex",
+  "difficulty": "1-4 hours"
+ },
+ {
+  "id": "django__django-13344",
+  "source": "swe-verified",
+  "label": "complex",
+  "difficulty": "1-4 hours"
+ },
+ {
+  "id": "django__django-13449",
+  "source": "swe-verified",
+  "label": "complex",
+  "difficulty": "1-4 hours"
+ },
+ {
+  "id": "django__django-13837",
+  "source": "swe-verified",
+  "label": "complex",
+  "difficulty": "1-4 hours"
+ },
+ {
+  "id": "django__django-14007",
+  "source": "swe-verified",
+  "label": "complex",
+  "difficulty": "1-4 hours"
+ },
+ {
+  "id": "django__django-14011",
+  "source": "swe-verified",
+  "label": "complex",
+  "difficulty": "1-4 hours"
+ },
+ {
+  "id": "django__django-14631",
+  "source": "swe-verified",
+  "label": "complex",
+  "difficulty": "1-4 hours"
+ },
+ {
+  "id": "django__django-15128",
+  "source": "swe-verified",
+  "label": "complex",
+  "difficulty": "1-4 hours"
+ },
+ {
+  "id": "django__django-15268",
+  "source": "swe-verified",
+  "label": "complex",
+  "difficulty": "1-4 hours"
+ },
+ {
+  "id": "django__django-15503",
+  "source": "swe-verified",
+  "label": "complex",
+  "difficulty": "1-4 hours"
+ },
+ {
+  "id": "django__django-15629",
+  "source": "swe-verified",
+  "label": "complex",
+  "difficulty": "1-4 hours"
+ },
+ {
+  "id": "django__django-15957",
+  "source": "swe-verified",
+  "label": "complex",
+  "difficulty": "1-4 hours"
+ },
+ {
+  "id": "django__django-16263",
+  "source": "swe-verified",
+  "label": "complex",
+  "difficulty": "1-4 hours"
+ },
+ {
+  "id": "django__django-16560",
+  "source": "swe-verified",
+  "label": "complex",
+  "difficulty": "1-4 hours"
+ },
+ {
+  "id": "django__django-16631",
+  "source": "swe-verified",
+  "label": "complex",
+  "difficulty": "1-4 hours"
+ },
+ {
+  "id": "pydata__xarray-3993",
+  "source": "swe-verified",
+  "label": "complex",
+  "difficulty": "1-4 hours"
+ },
+ {
+  "id": "pydata__xarray-6992",
+  "source": "swe-verified",
+  "label": "complex",
+  "difficulty": ">4 hours"
+ },
+ {
+  "id": "pylint-dev__pylint-4551",
+  "source": "swe-verified",
+  "label": "complex",
+  "difficulty": "1-4 hours"
+ },
+ {
+  "id": "pylint-dev__pylint-8898",
+  "source": "swe-verified",
+  "label": "complex",
+  "difficulty": "1-4 hours"
+ },
+ {
+  "id": "pytest-dev__pytest-10356",
+  "source": "swe-verified",
+  "label": "complex",
+  "difficulty": "1-4 hours"
+ },
+ {
+  "id": "pytest-dev__pytest-5787",
+  "source": "swe-verified",
+  "label": "complex",
+  "difficulty": "1-4 hours"
+ },
+ {
+  "id": "pytest-dev__pytest-6197",
+  "source": "swe-verified",
+  "label": "complex",
+  "difficulty": "1-4 hours"
+ },
+ {
+  "id": "scikit-learn__scikit-learn-25102",
+  "source": "swe-verified",
+  "label": "complex",
+  "difficulty": "1-4 hours"
+ },
+ {
+  "id": "sphinx-doc__sphinx-11510",
+  "source": "swe-verified",
+  "label": "complex",
+  "difficulty": "1-4 hours"
+ },
+ {
+  "id": "sphinx-doc__sphinx-7590",
+  "source": "swe-verified",
+  "label": "complex",
+  "difficulty": ">4 hours"
+ },
+ {
+  "id": "sphinx-doc__sphinx-8548",
+  "source": "swe-verified",
+  "label": "complex",
+  "difficulty": "1-4 hours"
+ },
+ {
+  "id": "sphinx-doc__sphinx-9229",
+  "source": "swe-verified",
+  "label": "complex",
+  "difficulty": "1-4 hours"
+ },
+ {
+  "id": "sphinx-doc__sphinx-9461",
+  "source": "swe-verified",
+  "label": "complex",
+  "difficulty": "1-4 hours"
+ },
+ {
+  "id": "sympy__sympy-12489",
+  "source": "swe-verified",
+  "label": "complex",
+  "difficulty": "1-4 hours"
+ },
+ {
+  "id": "sympy__sympy-13852",
+  "source": "swe-verified",
+  "label": "complex",
+  "difficulty": "1-4 hours"
+ },
+ {
+  "id": "sympy__sympy-13878",
+  "source": "swe-verified",
+  "label": "complex",
+  "difficulty": ">4 hours"
+ },
+ {
+  "id": "sympy__sympy-14248",
+  "source": "swe-verified",
+  "label": "complex",
+  "difficulty": "1-4 hours"
+ },
+ {
+  "id": "sympy__sympy-16597",
+  "source": "swe-verified",
+  "label": "complex",
+  "difficulty": "1-4 hours"
+ },
+ {
+  "id": "sympy__sympy-17630",
+  "source": "swe-verified",
+  "label": "complex",
+  "difficulty": "1-4 hours"
+ },
+ {
+  "id": "sympy__sympy-18199",
+  "source": "swe-verified",
+  "label": "complex",
+  "difficulty": "1-4 hours"
+ },
+ {
+  "id": "astropy__astropy-7336",
+  "source": "swe-verified",
+  "label": "simple",
+  "difficulty": "<15 min fix"
+ },
+ {
+  "id": "sympy__sympy-12096",
+  "source": "swe-verified",
+  "label": "simple",
+  "difficulty": "<15 min fix"
+ },
+ {
+  "id": "scikit-learn__scikit-learn-13439",
+  "source": "swe-verified",
+  "label": "simple",
+  "difficulty": "<15 min fix"
+ },
+ {
+  "id": "sphinx-doc__sphinx-9230",
+  "source": "swe-verified",
+  "label": "simple",
+  "difficulty": "<15 min fix"
+ },
+ {
+  "id": "sympy__sympy-16766",
+  "source": "swe-verified",
+  "label": "simple",
+  "difficulty": "<15 min fix"
+ },
+ {
+  "id": "django__django-13297",
+  "source": "swe-verified",
+  "label": "simple",
+  "difficulty": "<15 min fix"
+ },
+ {
+  "id": "scikit-learn__scikit-learn-14496",
+  "source": "swe-verified",
+  "label": "simple",
+  "difficulty": "<15 min fix"
+ },
+ {
+  "id": "scikit-learn__scikit-learn-25232",
+  "source": "swe-verified",
+  "label": "simple",
+  "difficulty": "<15 min fix"
+ },
+ {
+  "id": "django__django-11239",
+  "source": "swe-verified",
+  "label": "simple",
+  "difficulty": "<15 min fix"
+ },
+ {
+  "id": "matplotlib__matplotlib-26113",
+  "source": "swe-verified",
+  "label": "simple",
+  "difficulty": "<15 min fix"
+ },
+ {
+  "id": "django__django-15380",
+  "source": "swe-verified",
+  "label": "simple",
+  "difficulty": "<15 min fix"
+ },
+ {
+  "id": "django__django-17087",
+  "source": "swe-verified",
+  "label": "simple",
+  "difficulty": "<15 min fix"
+ },
+ {
+  "id": "sphinx-doc__sphinx-9591",
+  "source": "swe-verified",
+  "label": "simple",
+  "difficulty": "<15 min fix"
+ },
+ {
+  "id": "psf__requests-1724",
+  "source": "swe-verified",
+  "label": "simple",
+  "difficulty": "<15 min fix"
+ },
+ {
+  "id": "scikit-learn__scikit-learn-13142",
+  "source": "swe-verified",
+  "label": "simple",
+  "difficulty": "<15 min fix"
+ },
+ {
+  "id": "django__django-16255",
+  "source": "swe-verified",
+  "label": "simple",
+  "difficulty": "<15 min fix"
+ },
+ {
+  "id": "django__django-16569",
+  "source": "swe-verified",
+  "label": "simple",
+  "difficulty": "<15 min fix"
+ },
+ {
+  "id": "sympy__sympy-16886",
+  "source": "swe-verified",
+  "label": "simple",
+  "difficulty": "<15 min fix"
+ },
+ {
+  "id": "scikit-learn__scikit-learn-13328",
+  "source": "swe-verified",
+  "label": "simple",
+  "difficulty": "<15 min fix"
+ },
+ {
+  "id": "django__django-14792",
+  "source": "swe-verified",
+  "label": "simple",
+  "difficulty": "<15 min fix"
+ },
+ {
+  "id": "sympy__sympy-19495",
+  "source": "swe-verified",
+  "label": "simple",
+  "difficulty": "<15 min fix"
+ },
+ {
+  "id": "django__django-15127",
+  "source": "swe-verified",
+  "label": "simple",
+  "difficulty": "<15 min fix"
+ },
+ {
+  "id": "django__django-14376",
+  "source": "swe-verified",
+  "label": "simple",
+  "difficulty": "<15 min fix"
+ },
+ {
+  "id": "django__django-15277",
+  "source": "swe-verified",
+  "label": "simple",
+  "difficulty": "<15 min fix"
+ },
+ {
+  "id": "django__django-11099",
+  "source": "swe-verified",
+  "label": "simple",
+  "difficulty": "<15 min fix"
+ },
+ {
+  "id": "django__django-11880",
+  "source": "swe-verified",
+  "label": "simple",
+  "difficulty": "<15 min fix"
+ },
+ {
+  "id": "sphinx-doc__sphinx-7454",
+  "source": "swe-verified",
+  "label": "simple",
+  "difficulty": "<15 min fix"
+ },
+ {
+  "id": "sympy__sympy-17655",
+  "source": "swe-verified",
+  "label": "simple",
+  "difficulty": "<15 min fix"
+ },
+ {
+  "id": "pydata__xarray-4356",
+  "source": "swe-verified",
+  "label": "simple",
+  "difficulty": "<15 min fix"
+ },
+ {
+  "id": "django__django-16139",
+  "source": "swe-verified",
+  "label": "simple",
+  "difficulty": "<15 min fix"
+ },
+ {
+  "id": "django__django-11555",
+  "source": "swe-verified",
+  "label": "simple",
+  "difficulty": "<15 min fix"
+ },
+ {
+  "id": "django__django-14999",
+  "source": "swe-verified",
+  "label": "simple",
+  "difficulty": "<15 min fix"
+ },
+ {
+  "id": "pydata__xarray-4075",
+  "source": "swe-verified",
+  "label": "simple",
+  "difficulty": "<15 min fix"
+ },
+ {
+  "id": "django__django-14539",
+  "source": "swe-verified",
+  "label": "simple",
+  "difficulty": "<15 min fix"
+ },
+ {
+  "id": "pytest-dev__pytest-5809",
+  "source": "swe-verified",
+  "label": "simple",
+  "difficulty": "<15 min fix"
+ },
+ {
+  "id": "sphinx-doc__sphinx-7889",
+  "source": "swe-verified",
+  "label": "simple",
+  "difficulty": "<15 min fix"
+ },
+ {
+  "id": "pytest-dev__pytest-10081",
+  "source": "swe-verified",
+  "label": "simple",
+  "difficulty": "<15 min fix"
+ },
+ {
+  "id": "psf__requests-5414",
+  "source": "swe-verified",
+  "label": "simple",
+  "difficulty": "<15 min fix"
+ },
+ {
+  "id": "psf__requests-1921",
+  "source": "swe-verified",
+  "label": "simple",
+  "difficulty": "<15 min fix"
+ },
+ {
+  "id": "matplotlib__matplotlib-26208",
+  "source": "swe-verified",
+  "label": "simple",
+  "difficulty": "<15 min fix"
+ },
+ {
+  "id": "psf__requests-1766",
+  "source": "swe-verified",
+  "label": "simple",
+  "difficulty": "<15 min fix"
+ },
+ {
+  "id": "django__django-15368",
+  "source": "swe-verified",
+  "label": "simple",
+  "difficulty": "<15 min fix"
+ },
+ {
+  "id": "sympy__sympy-24539",
+  "source": "swe-verified",
+  "label": "simple",
+  "difficulty": "<15 min fix"
+ },
+ {
+  "id": "scikit-learn__scikit-learn-14141",
+  "source": "swe-verified",
+  "label": "simple",
+  "difficulty": "<15 min fix"
+ },
+ {
+  "id": "django__django-13512",
+  "source": "swe-verified",
+  "label": "simple",
+  "difficulty": "<15 min fix"
+ },
+ {
+  "id": "repair_parse_duration",
+  "source": "s1",
+  "label": "simple",
+  "difficulty": "s1"
+ },
+ {
+  "id": "repair_merge_intervals",
+  "source": "s1",
+  "label": "simple",
+  "difficulty": "s1"
+ },
+ {
+  "id": "repair_semver_compare",
+  "source": "s1",
+  "label": "simple",
+  "difficulty": "s1"
+ },
+ {
+  "id": "repair_tokenize_kv",
+  "source": "s1",
+  "label": "simple",
+  "difficulty": "s1"
+ },
+ {
+  "id": "repair_word_wrap",
+  "source": "s1",
+  "label": "simple",
+  "difficulty": "s1"
+ },
+ {
+  "id": "edit_cli_dry_run",
+  "source": "s1",
+  "label": "simple",
+  "difficulty": "s1"
+ },
+ {
+  "id": "edit_dequeue_validation",
+  "source": "s1",
+  "label": "simple",
+  "difficulty": "s1"
+ },
+ {
+  "id": "edit_record_to_json",
+  "source": "s1",
+  "label": "simple",
+  "difficulty": "s1"
+ },
+ {
+  "id": "edit_clean_text_strict",
+  "source": "s1",
+  "label": "simple",
+  "difficulty": "s1"
+ },
+ {
+  "id": "edit_point_repr",
+  "source": "s1",
+  "label": "simple",
+  "difficulty": "s1"
+ },
+ {
+  "id": "bugfix_paginate_off_by_one",
+  "source": "s1",
+  "label": "simple",
+  "difficulty": "s1"
+ },
+ {
+  "id": "bugfix_session_ttl_naive_tz",
+  "source": "s1",
+  "label": "simple",
+  "difficulty": "s1"
+ },
+ {
+  "id": "bugfix_add_tag_mutable_default",
+  "source": "s1",
+  "label": "simple",
+  "difficulty": "s1"
+ },
+ {
+  "id": "bugfix_merge_config_precedence",
+  "source": "s1",
+  "label": "simple",
+  "difficulty": "s1"
+ },
+ {
+  "id": "bugfix_average_score_truncation",
+  "source": "s1",
+  "label": "simple",
+  "difficulty": "s1"
+ },
+ {
+  "id": "answer_audit_log_key",
+  "source": "s1",
+  "label": "simple",
+  "difficulty": "s1"
+ },
+ {
+  "id": "answer_compute_fee",
+  "source": "s1",
+  "label": "simple",
+  "difficulty": "s1"
+ },
+ {
+  "id": "answer_sqlite_import_module",
+  "source": "s1",
+  "label": "simple",
+  "difficulty": "s1"
+ },
+ {
+  "id": "answer_default_port",
+  "source": "s1",
+  "label": "simple",
+  "difficulty": "s1"
+ },
+ {
+  "id": "answer_exception_count",
+  "source": "s1",
+  "label": "simple",
+  "difficulty": "s1"
+ }
+]

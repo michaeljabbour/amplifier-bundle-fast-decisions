@@ -1,0 +1,20 @@
+{
+  "plain": {
+    "passed": true,
+    "flags": []
+  },
+  "plain-sonnet": {
+    "passed": true,
+    "flags": []
+  },
+  "orch-router-rules": {
+    "passed": true,
+    "flags": [],
+    "latency_within_budget_by_rep": [
+      true,
+      true,
+      true
+    ],
+    "latency_within_budget": true
+  }
+}

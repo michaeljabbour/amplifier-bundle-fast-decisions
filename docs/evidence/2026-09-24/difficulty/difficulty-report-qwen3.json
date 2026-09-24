@@ -1,0 +1,1806 @@
+{
+  "dataset": "/Users/michaeljabbour/dev/afast-ev/difficulty-dataset.jsonl",
+  "question": "Classify this software engineering task by how much work it takes an expert engineer who is new to the codebase.",
+  "results": [
+    {
+      "judge": "ollama:qwen3:4b",
+      "n": 110,
+      "errors": 110,
+      "swe_verified": {
+        "auc": null,
+        "acc_at_0.5": null,
+        "n": 0
+      },
+      "all": {
+        "auc": null,
+        "acc_at_0.5": null,
+        "n": 0
+      },
+      "s1_mean_p_complex": null,
+      "latency_ms_p50": null
+    },
+    {
+      "judge": "ollama:qwen3:8b",
+      "n": 110,
+      "errors": 0,
+      "swe_verified": {
+        "auc": 0.737,
+        "acc_at_0.5": 0.711,
+        "n": 90
+      },
+      "all": {
+        "auc": 0.724,
+        "acc_at_0.5": 0.709,
+        "n": 110
+      },
+      "s1_mean_p_complex": 0.396,
+      "latency_ms_p50": 319.3
+    }
+  ],
+  "rows": {
+    "ollama:qwen3:4b": [
+      {
+        "id": "astropy__astropy-13398",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": null,
+        "ms": 1017.4570829985896,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "astropy__astropy-13579",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": null,
+        "ms": 236.81566599407233,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "astropy__astropy-14369",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": null,
+        "ms": 238.25304199999664,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "django__django-10554",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": null,
+        "ms": 237.28516699338797,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "django__django-11138",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": null,
+        "ms": 222.85604200442322,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "django__django-11400",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": null,
+        "ms": 106.48733300331514,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "django__django-11885",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": null,
+        "ms": 116.53204100730363,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "django__django-12325",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": null,
+        "ms": 100.0590000039665,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "django__django-12708",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": null,
+        "ms": 101.50170901033562,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "django__django-13128",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": null,
+        "ms": 79.57137499761302,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "django__django-13212",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": null,
+        "ms": 77.98524999816436,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "django__django-13344",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": null,
+        "ms": 116.88079200393986,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "django__django-13449",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": null,
+        "ms": 239.14929199963808,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "django__django-13837",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": null,
+        "ms": 130.2030829974683,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "django__django-14007",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": null,
+        "ms": 119.5358330005547,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "django__django-14011",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": null,
+        "ms": 165.7596669974737,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "django__django-14631",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": null,
+        "ms": 120.43208300019614,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "django__django-15128",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": null,
+        "ms": 213.48083300108556,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "django__django-15268",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": null,
+        "ms": 164.53758299758192,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "django__django-15503",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": null,
+        "ms": 190.87595799646806,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "django__django-15629",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": null,
+        "ms": 196.38845798908733,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "django__django-15957",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": null,
+        "ms": 102.45912500249688,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "django__django-16263",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": null,
+        "ms": 81.16824999160599,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "django__django-16560",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": null,
+        "ms": 96.15962499810848,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "django__django-16631",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": null,
+        "ms": 98.05529098957777,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "pydata__xarray-3993",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": null,
+        "ms": 101.18050000164658,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "pydata__xarray-6992",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": null,
+        "ms": 166.86899999331217,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "pylint-dev__pylint-4551",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": null,
+        "ms": 119.44729200331494,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "pylint-dev__pylint-8898",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": null,
+        "ms": 232.7788340044208,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "pytest-dev__pytest-10356",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": null,
+        "ms": 215.47354200447444,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "pytest-dev__pytest-5787",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": null,
+        "ms": 214.91395799966995,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "pytest-dev__pytest-6197",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": null,
+        "ms": 283.3855000062613,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "scikit-learn__scikit-learn-25102",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": null,
+        "ms": 218.70366600342095,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "sphinx-doc__sphinx-11510",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": null,
+        "ms": 243.69537500024308,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "sphinx-doc__sphinx-7590",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": null,
+        "ms": 110.91299999679904,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "sphinx-doc__sphinx-8548",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": null,
+        "ms": 82.43687500362284,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "sphinx-doc__sphinx-9229",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": null,
+        "ms": 213.93712499411777,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "sphinx-doc__sphinx-9461",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": null,
+        "ms": 236.81858301279135,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "sympy__sympy-12489",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": null,
+        "ms": 131.5233339992119,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "sympy__sympy-13852",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": null,
+        "ms": 216.63895800884347,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "sympy__sympy-13878",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": null,
+        "ms": 268.0245840019779,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "sympy__sympy-14248",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": null,
+        "ms": 115.29816599795595,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "sympy__sympy-16597",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": null,
+        "ms": 86.20725000218954,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "sympy__sympy-17630",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": null,
+        "ms": 301.0997910023434,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "sympy__sympy-18199",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": null,
+        "ms": 89.65016700676642,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "astropy__astropy-7336",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": null,
+        "ms": 176.83166700589936,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "sympy__sympy-12096",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": null,
+        "ms": 107.65779099892825,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "scikit-learn__scikit-learn-13439",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": null,
+        "ms": 175.77266700391192,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "sphinx-doc__sphinx-9230",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": null,
+        "ms": 181.36129099002574,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "sympy__sympy-16766",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": null,
+        "ms": 105.40995799237862,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "django__django-13297",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": null,
+        "ms": 168.35854199598543,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "scikit-learn__scikit-learn-14496",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": null,
+        "ms": 225.3194580116542,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "scikit-learn__scikit-learn-25232",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": null,
+        "ms": 132.18212500214577,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "django__django-11239",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": null,
+        "ms": 127.3841249931138,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "matplotlib__matplotlib-26113",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": null,
+        "ms": 380.518291000044,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "django__django-15380",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": null,
+        "ms": 176.7110000073444,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "django__django-17087",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": null,
+        "ms": 121.16799999785144,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "sphinx-doc__sphinx-9591",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": null,
+        "ms": 217.24033300415613,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "psf__requests-1724",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": null,
+        "ms": 235.81737499625888,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "scikit-learn__scikit-learn-13142",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": null,
+        "ms": 347.21266699489206,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "django__django-16255",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": null,
+        "ms": 187.31083400780335,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "django__django-16569",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": null,
+        "ms": 178.5167089983588,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "sympy__sympy-16886",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": null,
+        "ms": 83.3574169955682,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "scikit-learn__scikit-learn-13328",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": null,
+        "ms": 245.71520800236613,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "django__django-14792",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": null,
+        "ms": 183.7125419988297,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "sympy__sympy-19495",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": null,
+        "ms": 229.1840840043733,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "django__django-15127",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": null,
+        "ms": 86.01104200351983,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "django__django-14376",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": null,
+        "ms": 118.39183399570175,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "django__django-15277",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": null,
+        "ms": 222.6270410028519,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "django__django-11099",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": null,
+        "ms": 104.36700000718702,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "django__django-11880",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": null,
+        "ms": 122.3055410082452,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "sphinx-doc__sphinx-7454",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": null,
+        "ms": 256.9324579962995,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "sympy__sympy-17655",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": null,
+        "ms": 209.1763749922393,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "pydata__xarray-4356",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": null,
+        "ms": 113.4070420084754,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "django__django-16139",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": null,
+        "ms": 169.2451249982696,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "django__django-11555",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": null,
+        "ms": 103.30599998997059,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "django__django-14999",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": null,
+        "ms": 78.17558299575467,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "pydata__xarray-4075",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": null,
+        "ms": 258.3453749975888,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "django__django-14539",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": null,
+        "ms": 91.01179099525325,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "pytest-dev__pytest-5809",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": null,
+        "ms": 122.28354200487956,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "sphinx-doc__sphinx-7889",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": null,
+        "ms": 131.3501249969704,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "pytest-dev__pytest-10081",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": null,
+        "ms": 228.83208299754187,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "psf__requests-5414",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": null,
+        "ms": 207.42308300395962,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "psf__requests-1921",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": null,
+        "ms": 103.72450000431854,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "matplotlib__matplotlib-26208",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": null,
+        "ms": 256.1037080013193,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "psf__requests-1766",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": null,
+        "ms": 109.26591700990684,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "django__django-15368",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": null,
+        "ms": 128.73687500541564,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "sympy__sympy-24539",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": null,
+        "ms": 109.57387500093319,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "scikit-learn__scikit-learn-14141",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": null,
+        "ms": 78.25479199527763,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "django__django-13512",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": null,
+        "ms": 80.62729200173635,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "repair_parse_duration",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": null,
+        "ms": 79.49854199250694,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "repair_merge_intervals",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": null,
+        "ms": 16.90000000235159,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "repair_semver_compare",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": null,
+        "ms": 15.905375010333955,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "repair_tokenize_kv",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": null,
+        "ms": 15.920416000881232,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "repair_word_wrap",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": null,
+        "ms": 16.05879199632909,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "edit_cli_dry_run",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": null,
+        "ms": 78.39266600785777,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "edit_dequeue_validation",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": null,
+        "ms": 77.5940419989638,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "edit_record_to_json",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": null,
+        "ms": 77.37720799923409,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "edit_clean_text_strict",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": null,
+        "ms": 79.16899998963345,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "edit_point_repr",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": null,
+        "ms": 75.7409999932861,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "bugfix_paginate_off_by_one",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": null,
+        "ms": 79.54904199868906,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "bugfix_session_ttl_naive_tz",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": null,
+        "ms": 81.61804100382142,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "bugfix_add_tag_mutable_default",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": null,
+        "ms": 79.142624992528,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "bugfix_merge_config_precedence",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": null,
+        "ms": 79.83816599880811,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "bugfix_average_score_truncation",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": null,
+        "ms": 79.40533298824448,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "answer_audit_log_key",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": null,
+        "ms": 79.60379199357703,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "answer_compute_fee",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": null,
+        "ms": 17.61558400176,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "answer_sqlite_import_module",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": null,
+        "ms": 16.884541997569613,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "answer_default_port",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": null,
+        "ms": 15.760082998895086,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      },
+      {
+        "id": "answer_exception_count",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": null,
+        "ms": 16.029999998863786,
+        "error": "BackendUnavailable: Local question answer was not an option letter"
+      }
+    ],
+    "ollama:qwen3:8b": [
+      {
+        "id": "astropy__astropy-13398",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.9976148865526862,
+        "ms": 1298.671500000637,
+        "error": null
+      },
+      {
+        "id": "astropy__astropy-13579",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.9999532884323331,
+        "ms": 539.0237079991493,
+        "error": null
+      },
+      {
+        "id": "astropy__astropy-14369",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.5000090734250524,
+        "ms": 549.3319579982199,
+        "error": null
+      },
+      {
+        "id": "django__django-10554",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.680528684919859,
+        "ms": 553.9140420005424,
+        "error": null
+      },
+      {
+        "id": "django__django-11138",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.9893216169436998,
+        "ms": 513.8016250130022,
+        "error": null
+      },
+      {
+        "id": "django__django-11400",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.5000863047042752,
+        "ms": 256.3667079957668,
+        "error": null
+      },
+      {
+        "id": "django__django-11885",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.6779512742056997,
+        "ms": 310.0666249956703,
+        "error": null
+      },
+      {
+        "id": "django__django-12325",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.500005136167446,
+        "ms": 257.05679100065026,
+        "error": null
+      },
+      {
+        "id": "django__django-12708",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.9999906947416638,
+        "ms": 266.41974999802187,
+        "error": null
+      },
+      {
+        "id": "django__django-13128",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.4999578921370401,
+        "ms": 203.80324999860022,
+        "error": null
+      },
+      {
+        "id": "django__django-13212",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.4959950051550412,
+        "ms": 206.59845900081564,
+        "error": null
+      },
+      {
+        "id": "django__django-13344",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.5000000975003298,
+        "ms": 313.5505840036785,
+        "error": null
+      },
+      {
+        "id": "django__django-13449",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.5066434429272013,
+        "ms": 574.9703750043409,
+        "error": null
+      },
+      {
+        "id": "django__django-13837",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.5000001346263094,
+        "ms": 327.1373329916969,
+        "error": null
+      },
+      {
+        "id": "django__django-14007",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.5019331669152528,
+        "ms": 320.85529099276755,
+        "error": null
+      },
+      {
+        "id": "django__django-14011",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.970171605947132,
+        "ms": 402.7698749996489,
+        "error": null
+      },
+      {
+        "id": "django__django-14631",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.5000000064154996,
+        "ms": 319.2773749906337,
+        "error": null
+      },
+      {
+        "id": "django__django-15128",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.7329386327630203,
+        "ms": 512.7615419914946,
+        "error": null
+      },
+      {
+        "id": "django__django-15268",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.49999994609345244,
+        "ms": 395.50208300352097,
+        "error": null
+      },
+      {
+        "id": "django__django-15503",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.5000000333067833,
+        "ms": 463.4247089998098,
+        "error": null
+      },
+      {
+        "id": "django__django-15629",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.500165691836859,
+        "ms": 473.4282080025878,
+        "error": null
+      },
+      {
+        "id": "django__django-15957",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.50029870470025,
+        "ms": 267.7153749973513,
+        "error": null
+      },
+      {
+        "id": "django__django-16263",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.49999967661215056,
+        "ms": 209.8463749862276,
+        "error": null
+      },
+      {
+        "id": "django__django-16560",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.0001403756645103186,
+        "ms": 257.809916001861,
+        "error": null
+      },
+      {
+        "id": "django__django-16631",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.500961937723499,
+        "ms": 264.7230840084376,
+        "error": null
+      },
+      {
+        "id": "pydata__xarray-3993",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 1.326565702464408e-06,
+        "ms": 275.60154200182296,
+        "error": null
+      },
+      {
+        "id": "pydata__xarray-6992",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.5304965449169556,
+        "ms": 409.8425410047639,
+        "error": null
+      },
+      {
+        "id": "pylint-dev__pylint-4551",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.4999358261770941,
+        "ms": 333.81470800668467,
+        "error": null
+      },
+      {
+        "id": "pylint-dev__pylint-8898",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.5003133622170536,
+        "ms": 592.4884580017533,
+        "error": null
+      },
+      {
+        "id": "pytest-dev__pytest-10356",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.6439769688061477,
+        "ms": 526.9310410076287,
+        "error": null
+      },
+      {
+        "id": "pytest-dev__pytest-5787",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.49516240136818973,
+        "ms": 527.1671660011634,
+        "error": null
+      },
+      {
+        "id": "pytest-dev__pytest-6197",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.5004698607289071,
+        "ms": 674.7793340036878,
+        "error": null
+      },
+      {
+        "id": "scikit-learn__scikit-learn-25102",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.5000040676489161,
+        "ms": 528.6636669916334,
+        "error": null
+      },
+      {
+        "id": "sphinx-doc__sphinx-11510",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.5013019231274515,
+        "ms": 608.3103749988368,
+        "error": null
+      },
+      {
+        "id": "sphinx-doc__sphinx-7590",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.47890519166856005,
+        "ms": 273.7067090056371,
+        "error": null
+      },
+      {
+        "id": "sphinx-doc__sphinx-8548",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.5002443700393535,
+        "ms": 208.74791700043716,
+        "error": null
+      },
+      {
+        "id": "sphinx-doc__sphinx-9229",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.5058924956253534,
+        "ms": 529.0998330019647,
+        "error": null
+      },
+      {
+        "id": "sphinx-doc__sphinx-9461",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.7024673993952134,
+        "ms": 535.34958299133,
+        "error": null
+      },
+      {
+        "id": "sympy__sympy-12489",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.5000016172328832,
+        "ms": 330.25508299760986,
+        "error": null
+      },
+      {
+        "id": "sympy__sympy-13852",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.8014304980475412,
+        "ms": 489.2232079873793,
+        "error": null
+      },
+      {
+        "id": "sympy__sympy-13878",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.6233510125776625,
+        "ms": 625.6718750082655,
+        "error": null
+      },
+      {
+        "id": "sympy__sympy-14248",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.5000176980020633,
+        "ms": 276.71787500730716,
+        "error": null
+      },
+      {
+        "id": "sympy__sympy-16597",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.5000023011364099,
+        "ms": 212.10533399425913,
+        "error": null
+      },
+      {
+        "id": "sympy__sympy-17630",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.5015172202495239,
+        "ms": 691.4653339918004,
+        "error": null
+      },
+      {
+        "id": "sympy__sympy-18199",
+        "source": "swe-verified",
+        "label": "complex",
+        "p_complex": 0.49998199384043834,
+        "ms": 215.69799999997485,
+        "error": null
+      },
+      {
+        "id": "astropy__astropy-7336",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.499999955868255,
+        "ms": 410.7935840002028,
+        "error": null
+      },
+      {
+        "id": "sympy__sympy-12096",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.49999983794919106,
+        "ms": 271.19674999266863,
+        "error": null
+      },
+      {
+        "id": "scikit-learn__scikit-learn-13439",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.4999999208337556,
+        "ms": 414.54229201190174,
+        "error": null
+      },
+      {
+        "id": "sphinx-doc__sphinx-9230",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.49997825054327527,
+        "ms": 422.8682090033544,
+        "error": null
+      },
+      {
+        "id": "sympy__sympy-16766",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 1.5375276904876898e-05,
+        "ms": 272.34529198904056,
+        "error": null
+      },
+      {
+        "id": "django__django-13297",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.499999383457019,
+        "ms": 402.96779200434685,
+        "error": null
+      },
+      {
+        "id": "scikit-learn__scikit-learn-14496",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.49917810938401946,
+        "ms": 540.537624998251,
+        "error": null
+      },
+      {
+        "id": "scikit-learn__scikit-learn-25232",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.4993542888040001,
+        "ms": 334.80362499540206,
+        "error": null
+      },
+      {
+        "id": "django__django-11239",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 7.700326833862242e-10,
+        "ms": 325.7141250069253,
+        "error": null
+      },
+      {
+        "id": "matplotlib__matplotlib-26113",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.5000330986592526,
+        "ms": 672.7976670081262,
+        "error": null
+      },
+      {
+        "id": "django__django-15380",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.500000803590344,
+        "ms": 415.58333300054073,
+        "error": null
+      },
+      {
+        "id": "django__django-17087",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.5000000033580013,
+        "ms": 324.2607909924118,
+        "error": null
+      },
+      {
+        "id": "sphinx-doc__sphinx-9591",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.4999988346451992,
+        "ms": 533.7077920121374,
+        "error": null
+      },
+      {
+        "id": "psf__requests-1724",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.50002587329423,
+        "ms": 582.1567920065718,
+        "error": null
+      },
+      {
+        "id": "scikit-learn__scikit-learn-13142",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.5019579399781828,
+        "ms": 776.8130829936126,
+        "error": null
+      },
+      {
+        "id": "django__django-16255",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.4999939334528923,
+        "ms": 418.38420800922904,
+        "error": null
+      },
+      {
+        "id": "django__django-16569",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 1.9515507001017625e-06,
+        "ms": 391.5582909976365,
+        "error": null
+      },
+      {
+        "id": "sympy__sympy-16886",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 6.938926095551458e-07,
+        "ms": 206.61162500618957,
+        "error": null
+      },
+      {
+        "id": "scikit-learn__scikit-learn-13328",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.4999988302378467,
+        "ms": 581.4503750007134,
+        "error": null
+      },
+      {
+        "id": "django__django-14792",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.999643260680861,
+        "ms": 402.7361249900423,
+        "error": null
+      },
+      {
+        "id": "sympy__sympy-19495",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.5004107615121648,
+        "ms": 516.916583001148,
+        "error": null
+      },
+      {
+        "id": "django__django-15127",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.5000394984640586,
+        "ms": 202.881958000944,
+        "error": null
+      },
+      {
+        "id": "django__django-14376",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.5000000012245327,
+        "ms": 308.2983750064159,
+        "error": null
+      },
+      {
+        "id": "django__django-15277",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.4988959360583066,
+        "ms": 516.7884580005193,
+        "error": null
+      },
+      {
+        "id": "django__django-11099",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 3.172897020172538e-11,
+        "ms": 263.0698749999283,
+        "error": null
+      },
+      {
+        "id": "django__django-11880",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.5025455871232227,
+        "ms": 315.12012500024866,
+        "error": null
+      },
+      {
+        "id": "sphinx-doc__sphinx-7454",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.4999982856440308,
+        "ms": 588.9208749867976,
+        "error": null
+      },
+      {
+        "id": "sympy__sympy-17655",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.5000004661968102,
+        "ms": 481.09466599998996,
+        "error": null
+      },
+      {
+        "id": "pydata__xarray-4356",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.4999775258657546,
+        "ms": 295.9345419949386,
+        "error": null
+      },
+      {
+        "id": "django__django-16139",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.49999960523484815,
+        "ms": 419.01195800164714,
+        "error": null
+      },
+      {
+        "id": "django__django-11555",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.9999414372267859,
+        "ms": 279.1617080074502,
+        "error": null
+      },
+      {
+        "id": "django__django-14999",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.4965528664923712,
+        "ms": 212.64887500728946,
+        "error": null
+      },
+      {
+        "id": "pydata__xarray-4075",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.49999999843977316,
+        "ms": 716.3584590016399,
+        "error": null
+      },
+      {
+        "id": "django__django-14539",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.49999350374398427,
+        "ms": 218.8213750050636,
+        "error": null
+      },
+      {
+        "id": "pytest-dev__pytest-5809",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.4998626869476897,
+        "ms": 317.744958010735,
+        "error": null
+      },
+      {
+        "id": "sphinx-doc__sphinx-7889",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.5013593635639992,
+        "ms": 331.4198339940049,
+        "error": null
+      },
+      {
+        "id": "pytest-dev__pytest-10081",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.49999997811545566,
+        "ms": 531.8905410094885,
+        "error": null
+      },
+      {
+        "id": "psf__requests-5414",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.500000143260284,
+        "ms": 451.7431249987567,
+        "error": null
+      },
+      {
+        "id": "psf__requests-1921",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 8.298308436498724e-07,
+        "ms": 254.26479100133292,
+        "error": null
+      },
+      {
+        "id": "matplotlib__matplotlib-26208",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.5165212798986887,
+        "ms": 562.5315420038532,
+        "error": null
+      },
+      {
+        "id": "psf__requests-1766",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.49992591551632803,
+        "ms": 262.98716699238867,
+        "error": null
+      },
+      {
+        "id": "django__django-15368",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.5000000414881381,
+        "ms": 316.0077500069747,
+        "error": null
+      },
+      {
+        "id": "sympy__sympy-24539",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.4999999796526759,
+        "ms": 309.80454199016094,
+        "error": null
+      },
+      {
+        "id": "scikit-learn__scikit-learn-14141",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.000599758629656459,
+        "ms": 198.16187499964144,
+        "error": null
+      },
+      {
+        "id": "django__django-13512",
+        "source": "swe-verified",
+        "label": "simple",
+        "p_complex": 0.49929990518819123,
+        "ms": 204.45600000675768,
+        "error": null
+      },
+      {
+        "id": "repair_parse_duration",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": 0.0017895092551713763,
+        "ms": 207.76441699126735,
+        "error": null
+      },
+      {
+        "id": "repair_merge_intervals",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": 0.0017895092551713763,
+        "ms": 154.0748330007773,
+        "error": null
+      },
+      {
+        "id": "repair_semver_compare",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": 0.0017895092551713763,
+        "ms": 153.6228330078302,
+        "error": null
+      },
+      {
+        "id": "repair_tokenize_kv",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": 0.0017895092551713763,
+        "ms": 157.271000003675,
+        "error": null
+      },
+      {
+        "id": "repair_word_wrap",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": 0.0017895092551713763,
+        "ms": 152.26833400083706,
+        "error": null
+      },
+      {
+        "id": "edit_cli_dry_run",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": 0.024720467727958804,
+        "ms": 200.29812499706168,
+        "error": null
+      },
+      {
+        "id": "edit_dequeue_validation",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": 0.18586134320409778,
+        "ms": 203.17637499829289,
+        "error": null
+      },
+      {
+        "id": "edit_record_to_json",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": 0.10499344048101475,
+        "ms": 199.30008400115184,
+        "error": null
+      },
+      {
+        "id": "edit_clean_text_strict",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": 0.059326258817129815,
+        "ms": 202.05183399957605,
+        "error": null
+      },
+      {
+        "id": "edit_point_repr",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": 0.06411276302204436,
+        "ms": 201.0352920042351,
+        "error": null
+      },
+      {
+        "id": "bugfix_paginate_off_by_one",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": 0.49999961223678463,
+        "ms": 204.02999999350868,
+        "error": null
+      },
+      {
+        "id": "bugfix_session_ttl_naive_tz",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": 0.4999300868349513,
+        "ms": 203.97841700469144,
+        "error": null
+      },
+      {
+        "id": "bugfix_add_tag_mutable_default",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": 0.499999727639558,
+        "ms": 204.25312500447035,
+        "error": null
+      },
+      {
+        "id": "bugfix_merge_config_precedence",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": 0.5000003851408283,
+        "ms": 208.70604101219214,
+        "error": null
+      },
+      {
+        "id": "bugfix_average_score_truncation",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": 0.4999903067849637,
+        "ms": 223.8694999978179,
+        "error": null
+      },
+      {
+        "id": "answer_audit_log_key",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": 0.995446570558428,
+        "ms": 227.88241700618528,
+        "error": null
+      },
+      {
+        "id": "answer_compute_fee",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": 0.995446570558428,
+        "ms": 172.72662500909064,
+        "error": null
+      },
+      {
+        "id": "answer_sqlite_import_module",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": 0.995446570558428,
+        "ms": 168.94075000891462,
+        "error": null
+      },
+      {
+        "id": "answer_default_port",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": 0.995446570558428,
+        "ms": 164.9517080077203,
+        "error": null
+      },
+      {
+        "id": "answer_exception_count",
+        "source": "s1",
+        "label": "simple",
+        "p_complex": 0.995446570558428,
+        "ms": 165.53820899571292,
+        "error": null
+      }
+    ]
+  }
+}

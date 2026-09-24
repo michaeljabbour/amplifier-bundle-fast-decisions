@@ -1,0 +1,61 @@
+{
+  "name": "pytest-dev__pytest-10356__plain__r1",
+  "instance_id": "pytest-dev__pytest-10356",
+  "repo": "pytest-dev/pytest",
+  "base_commit": "3c1534944cbd34e8a41bc9e76818018fadefc9a1",
+  "arm": "plain",
+  "rep": 1,
+  "model": "claude-fable-5-1",
+  "source_root": "/Users/michaeljabbour/dev/afast-orch-primary-20260924/baseline-main",
+  "started_at": "2026-09-24T22:27:52.666735+00:00",
+  "ended_at": "2026-09-24T22:29:42.867093+00:00",
+  "wall_time_ms": 109995.91308301024,
+  "exec_time_ms": 97505.821,
+  "exit_code": 0,
+  "timed_out": false,
+  "session_id": "904a9ccf-d654-4623-a3c5-2f267fa5ab40",
+  "native": {
+    "provider_requests": 13,
+    "provider_responses": 13,
+    "provider_retries": 0,
+    "provider_errors": 0,
+    "tool_results": 12,
+    "tool_names": {
+      "grep": 2,
+      "read_file": 2,
+      "edit_file": 2,
+      "bash": 6
+    },
+    "tool_failures_reported": 0,
+    "execution_completed": true,
+    "provider_response_duration_ms": 66456,
+    "usage": {
+      "input_tokens": 945811.0,
+      "output_tokens": 4794.0,
+      "cache_read_tokens": 945779.0,
+      "cache_write_tokens": 48821.0,
+      "cost_usd": 1.08672725
+    },
+    "usage_known_calls": {
+      "input_tokens": 13,
+      "output_tokens": 13,
+      "cache_read_tokens": 13,
+      "cache_write_tokens": 13,
+      "cost_usd": 13
+    },
+    "cost_evidence": "provider_reported_estimate_not_billing"
+  },
+  "models_served": [
+    {
+      "model": "claude-fable-5-1",
+      "thinking_enabled": true,
+      "thinking_budget": null,
+      "count": 13
+    }
+  ],
+  "cost_usd": 1.08672725,
+  "patch_bytes": 3845,
+  "empty_patch": false,
+  "infrastructure_failure": false,
+  "notes": []
+}

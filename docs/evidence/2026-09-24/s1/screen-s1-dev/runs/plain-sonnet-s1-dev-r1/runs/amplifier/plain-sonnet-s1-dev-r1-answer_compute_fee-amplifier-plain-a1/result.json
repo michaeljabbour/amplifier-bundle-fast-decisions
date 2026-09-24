@@ -1,0 +1,44 @@
+{
+ "name": "plain-sonnet-s1-dev-r1-answer_compute_fee-amplifier-plain-a1",
+ "task": "answer_compute_fee",
+ "family": "answer",
+ "split": "dev",
+ "kind": "answer",
+ "harness": "amplifier-plain",
+ "attempt": 1,
+ "model": "claude-sonnet-5",
+ "started_at": "2026-09-24T19:28:47.828083+00:00",
+ "ended_at": "2026-09-24T19:29:27.550576+00:00",
+ "wall_time_ms": 39720.692957998835,
+ "harness_duration_ms": null,
+ "exit_code": 0,
+ "timed_out": false,
+ "cost_usd": 0.21051780000000003,
+ "cost_source": "harness_reported",
+ "cost_billable": true,
+ "tokens": {
+  "input_tokens": 170697.0,
+  "output_tokens": 517.0,
+  "cache_read_tokens": 170691.0,
+  "cache_write_tokens": 40410.0,
+  "cost_usd": 0.21051780000000003
+ },
+ "num_turns": null,
+ "quality": {
+  "checks": 1,
+  "passed": 1,
+  "failed": 0,
+  "failure_labels": []
+ },
+ "protected_files_unchanged": {
+  "README.md": true
+ },
+ "outcome_passed": true,
+ "infrastructure_failure": false,
+ "notes": [],
+ "exec_time_ms": 11541.048,
+ "exec_time_source": "native_events_first_request_to_last_response",
+ "provider_requests": 3,
+ "concurrency_at_launch": 3,
+ "concurrency_max": 3
+}

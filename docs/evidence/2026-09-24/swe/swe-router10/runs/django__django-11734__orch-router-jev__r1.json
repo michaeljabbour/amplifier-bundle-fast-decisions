@@ -1,0 +1,59 @@
+{
+  "name": "django__django-11734__orch-router-jev__r1",
+  "instance_id": "django__django-11734",
+  "repo": "django/django",
+  "base_commit": "999891bd80b3d02dd916731a7a239e1036174885",
+  "arm": "orch-router-jev",
+  "rep": 1,
+  "model": "claude-fable-5-1",
+  "source_root": "/Users/michaeljabbour/dev/afast-orch-primary-20260924/swe-router10/source",
+  "started_at": "2026-09-24T20:51:25.424466+00:00",
+  "ended_at": "2026-09-24T20:53:41.253687+00:00",
+  "wall_time_ms": 134917.58166601358,
+  "exec_time_ms": 114548.68999999999,
+  "exit_code": 0,
+  "timed_out": false,
+  "session_id": "94a77b6f-ec3d-4c22-bf68-d273bcdd0882",
+  "native": {
+    "provider_requests": 6,
+    "provider_responses": 6,
+    "provider_retries": 0,
+    "provider_errors": 0,
+    "tool_results": 5,
+    "tool_names": {
+      "bash": 4,
+      "edit_file": 1
+    },
+    "tool_failures_reported": 0,
+    "execution_completed": true,
+    "provider_response_duration_ms": 103117,
+    "usage": {
+      "input_tokens": 411584.0,
+      "output_tokens": 7624.0,
+      "cache_read_tokens": 411566.0,
+      "cache_write_tokens": 48121.0,
+      "cost_usd": 1.085784
+    },
+    "usage_known_calls": {
+      "input_tokens": 6,
+      "output_tokens": 6,
+      "cache_read_tokens": 6,
+      "cache_write_tokens": 6,
+      "cost_usd": 6
+    },
+    "cost_evidence": "provider_reported_estimate_not_billing"
+  },
+  "models_served": [
+    {
+      "model": "claude-fable-5-1",
+      "thinking_enabled": true,
+      "thinking_budget": null,
+      "count": 6
+    }
+  ],
+  "cost_usd": 1.085784,
+  "patch_bytes": 637,
+  "empty_patch": false,
+  "infrastructure_failure": false,
+  "notes": []
+}

@@ -1,0 +1,68 @@
+{
+  "name": "django__django-14034__orch-router-jev__r1",
+  "instance_id": "django__django-14034",
+  "repo": "django/django",
+  "base_commit": "db1fc5cd3c5d36cdb5d0fe4404efd6623dd3e8fb",
+  "arm": "orch-router-jev",
+  "rep": 1,
+  "model": "claude-fable-5-1",
+  "source_root": "/Users/michaeljabbour/dev/afast-orch-primary-20260924/swe-router-reps/source",
+  "started_at": "2026-09-24T21:39:33.890313+00:00",
+  "ended_at": "2026-09-24T21:41:37.760060+00:00",
+  "wall_time_ms": 122682.42024999927,
+  "exec_time_ms": 110291.621,
+  "exit_code": 0,
+  "timed_out": false,
+  "session_id": "9adc38d9-3759-46bc-9656-0c8a095b7224",
+  "native": {
+    "provider_requests": 19,
+    "provider_responses": 19,
+    "provider_retries": 0,
+    "provider_errors": 0,
+    "tool_results": 18,
+    "tool_names": {
+      "grep": 2,
+      "read_file": 3,
+      "edit_file": 3,
+      "bash": 9,
+      "write_file": 1
+    },
+    "tool_failures_reported": 1,
+    "execution_completed": true,
+    "provider_response_duration_ms": 86075,
+    "usage": {
+      "input_tokens": 1373620.0,
+      "output_tokens": 6328.0,
+      "cache_read_tokens": 1373581.0,
+      "cache_write_tokens": 96527.0,
+      "cost_usd": 1.4258532499999996
+    },
+    "usage_known_calls": {
+      "input_tokens": 19,
+      "output_tokens": 19,
+      "cache_read_tokens": 19,
+      "cache_write_tokens": 19,
+      "cost_usd": 19
+    },
+    "cost_evidence": "provider_reported_estimate_not_billing"
+  },
+  "models_served": [
+    {
+      "model": "claude-sonnet-5",
+      "thinking_enabled": true,
+      "thinking_budget": 32000,
+      "count": 6
+    },
+    {
+      "model": "claude-fable-5-1",
+      "thinking_enabled": true,
+      "thinking_budget": null,
+      "count": 13
+    }
+  ],
+  "cost_usd": 1.4258532499999996,
+  "patch_bytes": 2231,
+  "empty_patch": false,
+  "infrastructure_failure": false,
+  "notes": []
+}

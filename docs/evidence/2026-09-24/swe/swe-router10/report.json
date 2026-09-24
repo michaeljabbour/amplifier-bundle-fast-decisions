@@ -1,0 +1,326 @@
+{
+  "summary": {
+    "plain": {
+      "runs": 10,
+      "resolved": 7,
+      "graded": 10,
+      "empty_patches": 0,
+      "infra_failures": 0,
+      "timeouts": 0,
+      "median_exec_s": 104.3,
+      "median_wall_s": 115.3,
+      "total_cost_usd": 12.33
+    },
+    "orch-router-jev": {
+      "runs": 10,
+      "resolved": 7,
+      "graded": 10,
+      "empty_patches": 0,
+      "infra_failures": 0,
+      "timeouts": 0,
+      "median_exec_s": 108.1,
+      "median_wall_s": 124.5,
+      "total_cost_usd": 11.94
+    },
+    "orch-router-local": {
+      "runs": 10,
+      "resolved": 6,
+      "graded": 10,
+      "empty_patches": 0,
+      "infra_failures": 0,
+      "timeouts": 0,
+      "median_exec_s": 80.9,
+      "median_wall_s": 93.9,
+      "total_cost_usd": 11.86
+    }
+  },
+  "paired": {
+    "orch-router-jev_vs_plain": {
+      "pairs": 10,
+      "geomean_exec_time_ratio": 0.897,
+      "geomean_cost_ratio": 0.94
+    },
+    "orch-router-local_vs_plain": {
+      "pairs": 10,
+      "geomean_exec_time_ratio": 0.751,
+      "geomean_cost_ratio": 0.885
+    }
+  },
+  "per_instance": {
+    "django__django-11532 r1": {
+      "orch-router-jev": {
+        "resolved": true,
+        "exec_s": 101.554,
+        "cost": 1.449,
+        "models": [
+          "claude-sonnet-5",
+          "claude-fable-5-1"
+        ]
+      },
+      "orch-router-local": {
+        "resolved": false,
+        "exec_s": 63.526,
+        "cost": 1.17,
+        "models": [
+          "claude-sonnet-5",
+          "claude-fable-5-1"
+        ]
+      },
+      "plain": {
+        "resolved": true,
+        "exec_s": 50.279,
+        "cost": 0.812,
+        "models": [
+          "claude-fable-5-1"
+        ]
+      }
+    },
+    "django__django-11734 r1": {
+      "orch-router-local": {
+        "resolved": false,
+        "exec_s": 206.714,
+        "cost": 1.92,
+        "models": [
+          "claude-fable-5-1"
+        ]
+      },
+      "plain": {
+        "resolved": false,
+        "exec_s": 187.857,
+        "cost": 1.641,
+        "models": [
+          "claude-fable-5-1"
+        ]
+      },
+      "orch-router-jev": {
+        "resolved": false,
+        "exec_s": 114.549,
+        "cost": 1.086,
+        "models": [
+          "claude-fable-5-1"
+        ]
+      }
+    },
+    "django__django-12125 r1": {
+      "plain": {
+        "resolved": true,
+        "exec_s": 193.464,
+        "cost": 1.767,
+        "models": [
+          "claude-fable-5-1"
+        ]
+      },
+      "orch-router-jev": {
+        "resolved": true,
+        "exec_s": 155.846,
+        "cost": 1.521,
+        "models": [
+          "claude-fable-5-1"
+        ]
+      },
+      "orch-router-local": {
+        "resolved": true,
+        "exec_s": 98.321,
+        "cost": 1.39,
+        "models": [
+          "claude-sonnet-5",
+          "claude-fable-5-1"
+        ]
+      }
+    },
+    "django__django-14034 r1": {
+      "plain": {
+        "resolved": false,
+        "exec_s": 132.854,
+        "cost": 1.459,
+        "models": [
+          "claude-fable-5-1"
+        ]
+      },
+      "orch-router-jev": {
+        "resolved": false,
+        "exec_s": 96.594,
+        "cost": 1.327,
+        "models": [
+          "claude-sonnet-5",
+          "claude-fable-5-1"
+        ]
+      },
+      "orch-router-local": {
+        "resolved": false,
+        "exec_s": 27.201,
+        "cost": 0.31,
+        "models": [
+          "claude-sonnet-5"
+        ]
+      }
+    },
+    "django__django-16100 r1": {
+      "orch-router-local": {
+        "resolved": true,
+        "exec_s": 27.998,
+        "cost": 0.854,
+        "models": [
+          "claude-sonnet-5",
+          "claude-fable-5-1"
+        ]
+      },
+      "plain": {
+        "resolved": true,
+        "exec_s": 59.421,
+        "cost": 0.786,
+        "models": [
+          "claude-fable-5-1"
+        ]
+      },
+      "orch-router-jev": {
+        "resolved": true,
+        "exec_s": 31.214,
+        "cost": 0.887,
+        "models": [
+          "claude-sonnet-5",
+          "claude-fable-5-1"
+        ]
+      }
+    },
+    "pydata__xarray-4687 r1": {
+      "orch-router-jev": {
+        "resolved": true,
+        "exec_s": 165.479,
+        "cost": 1.533,
+        "models": [
+          "claude-fable-5-1"
+        ]
+      },
+      "orch-router-local": {
+        "resolved": true,
+        "exec_s": 201.173,
+        "cost": 1.712,
+        "models": [
+          "claude-sonnet-5",
+          "claude-fable-5-1"
+        ]
+      },
+      "plain": {
+        "resolved": true,
+        "exec_s": 194.785,
+        "cost": 1.735,
+        "models": [
+          "claude-fable-5-1"
+        ]
+      }
+    },
+    "pylint-dev__pylint-7080 r1": {
+      "orch-router-local": {
+        "resolved": true,
+        "exec_s": 230.824,
+        "cost": 1.842,
+        "models": [
+          "claude-fable-5-1"
+        ]
+      },
+      "orch-router-jev": {
+        "resolved": true,
+        "exec_s": 230.37,
+        "cost": 1.627,
+        "models": [
+          "claude-fable-5-1"
+        ]
+      },
+      "plain": {
+        "resolved": true,
+        "exec_s": 225.979,
+        "cost": 1.63,
+        "models": [
+          "claude-fable-5-1"
+        ]
+      }
+    },
+    "pytest-dev__pytest-10356 r1": {
+      "plain": {
+        "resolved": false,
+        "exec_s": 43.378,
+        "cost": 0.812,
+        "models": [
+          "claude-fable-5-1"
+        ]
+      },
+      "orch-router-jev": {
+        "resolved": false,
+        "exec_s": 131.956,
+        "cost": 1.171,
+        "models": [
+          "claude-fable-5-1"
+        ]
+      },
+      "orch-router-local": {
+        "resolved": false,
+        "exec_s": 102.352,
+        "cost": 1.188,
+        "models": [
+          "claude-fable-5-1"
+        ]
+      }
+    },
+    "pytest-dev__pytest-7571 r1": {
+      "orch-router-local": {
+        "resolved": true,
+        "exec_s": 55.52,
+        "cost": 1.097,
+        "models": [
+          "claude-sonnet-5",
+          "claude-fable-5-1"
+        ]
+      },
+      "plain": {
+        "resolved": true,
+        "exec_s": 75.666,
+        "cost": 0.957,
+        "models": [
+          "claude-fable-5-1"
+        ]
+      },
+      "orch-router-jev": {
+        "resolved": true,
+        "exec_s": 52.575,
+        "cost": 1.079,
+        "models": [
+          "claude-sonnet-5",
+          "claude-fable-5-1"
+        ]
+      }
+    },
+    "sympy__sympy-16766 r1": {
+      "orch-router-local": {
+        "resolved": true,
+        "exec_s": 16.866,
+        "cost": 0.375,
+        "models": [
+          "claude-sonnet-5"
+        ]
+      },
+      "orch-router-jev": {
+        "resolved": true,
+        "exec_s": 17.969,
+        "cost": 0.263,
+        "models": [
+          "claude-sonnet-5"
+        ]
+      },
+      "plain": {
+        "resolved": true,
+        "exec_s": 36.993,
+        "cost": 0.727,
+        "models": [
+          "claude-fable-5-1"
+        ]
+      }
+    }
+  },
+  "label": "screen",
+  "evidence_limits": [
+    "Provider-reported cost is an estimate, not billing.",
+    "Fewer than 3 reps is a screen, never a finding (STUDY-DESIGN.md section 8).",
+    "exec time = first llm:request to last llm:response in the parent session."
+  ]
+}

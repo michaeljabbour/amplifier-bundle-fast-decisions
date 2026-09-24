@@ -1,0 +1,44 @@
+{
+ "name": "plain-s1-dev-r1-answer_compute_fee-amplifier-plain-a1",
+ "task": "answer_compute_fee",
+ "family": "answer",
+ "split": "dev",
+ "kind": "answer",
+ "harness": "amplifier-plain",
+ "attempt": 1,
+ "model": "claude-fable-5-1",
+ "started_at": "2026-09-24T19:25:42.748018+00:00",
+ "ended_at": "2026-09-24T19:26:13.521777+00:00",
+ "wall_time_ms": 30772.935583998333,
+ "harness_duration_ms": null,
+ "exit_code": 0,
+ "timed_out": false,
+ "cost_usd": 0.5823915000000001,
+ "cost_source": "harness_reported",
+ "cost_billable": true,
+ "tokens": {
+  "input_tokens": 169726.0,
+  "output_tokens": 765.0,
+  "cache_read_tokens": 169716.0,
+  "cache_write_tokens": 40129.0,
+  "cost_usd": 0.5823915000000001
+ },
+ "num_turns": null,
+ "quality": {
+  "checks": 1,
+  "passed": 1,
+  "failed": 0,
+  "failure_labels": []
+ },
+ "protected_files_unchanged": {
+  "README.md": true
+ },
+ "outcome_passed": true,
+ "infrastructure_failure": false,
+ "notes": [],
+ "exec_time_ms": 15798.529999999999,
+ "exec_time_source": "native_events_first_request_to_last_response",
+ "provider_requests": 3,
+ "concurrency_at_launch": 3,
+ "concurrency_max": 3
+}

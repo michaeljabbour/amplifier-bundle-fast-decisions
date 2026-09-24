@@ -1,0 +1,51 @@
+{
+    "total_instances": 10,
+    "submitted_instances": 10,
+    "completed_instances": 10,
+    "resolved_instances": 6,
+    "unresolved_instances": 4,
+    "empty_patch_instances": 0,
+    "error_instances": 0,
+    "completed_ids": [
+        "django__django-11532",
+        "django__django-11734",
+        "django__django-12125",
+        "django__django-14034",
+        "django__django-16100",
+        "pydata__xarray-4687",
+        "pylint-dev__pylint-7080",
+        "pytest-dev__pytest-10356",
+        "pytest-dev__pytest-7571",
+        "sympy__sympy-16766"
+    ],
+    "incomplete_ids": [],
+    "empty_patch_ids": [],
+    "submitted_ids": [
+        "django__django-11532",
+        "django__django-11734",
+        "django__django-12125",
+        "django__django-14034",
+        "django__django-16100",
+        "pydata__xarray-4687",
+        "pylint-dev__pylint-7080",
+        "pytest-dev__pytest-10356",
+        "pytest-dev__pytest-7571",
+        "sympy__sympy-16766"
+    ],
+    "resolved_ids": [
+        "django__django-12125",
+        "django__django-16100",
+        "pydata__xarray-4687",
+        "pylint-dev__pylint-7080",
+        "pytest-dev__pytest-7571",
+        "sympy__sympy-16766"
+    ],
+    "unresolved_ids": [
+        "django__django-11532",
+        "django__django-11734",
+        "django__django-14034",
+        "pytest-dev__pytest-10356"
+    ],
+    "error_ids": [],
+    "schema_version": 2
+}

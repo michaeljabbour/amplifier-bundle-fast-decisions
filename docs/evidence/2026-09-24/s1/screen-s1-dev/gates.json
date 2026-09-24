@@ -1,0 +1,28 @@
+{
+  "plain": {
+    "passed": true,
+    "flags": []
+  },
+  "plain-sonnet": {
+    "passed": true,
+    "flags": []
+  },
+  "orch-primary": {
+    "passed": true,
+    "flags": [
+      "confounded_with_plain_sonnet"
+    ],
+    "latency_within_budget_by_rep": [
+      null
+    ],
+    "latency_within_budget": null
+  },
+  "orch-primary-effort-only": {
+    "passed": true,
+    "flags": [],
+    "latency_within_budget_by_rep": [
+      null
+    ],
+    "latency_within_budget": null
+  }
+}

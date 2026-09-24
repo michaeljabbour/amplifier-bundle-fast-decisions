@@ -1,0 +1,61 @@
+{
+  "name": "pytest-dev__pytest-10356__orch-router-jev__r2",
+  "instance_id": "pytest-dev__pytest-10356",
+  "repo": "pytest-dev/pytest",
+  "base_commit": "3c1534944cbd34e8a41bc9e76818018fadefc9a1",
+  "arm": "orch-router-jev",
+  "rep": 2,
+  "model": "claude-fable-5-1",
+  "source_root": "/Users/michaeljabbour/dev/afast-orch-primary-20260924/swe-router-reps/source",
+  "started_at": "2026-09-24T21:42:49.117669+00:00",
+  "ended_at": "2026-09-24T21:45:23.582501+00:00",
+  "wall_time_ms": 154287.64824999962,
+  "exec_time_ms": 143417.464,
+  "exit_code": 0,
+  "timed_out": false,
+  "session_id": "19e95de3-fa28-40a1-b95d-0b1c96650bf3",
+  "native": {
+    "provider_requests": 15,
+    "provider_responses": 15,
+    "provider_retries": 0,
+    "provider_errors": 0,
+    "tool_results": 14,
+    "tool_names": {
+      "grep": 3,
+      "read_file": 2,
+      "edit_file": 3,
+      "bash": 6
+    },
+    "tool_failures_reported": 0,
+    "execution_completed": true,
+    "provider_response_duration_ms": 125077,
+    "usage": {
+      "input_tokens": 1104307.0,
+      "output_tokens": 4564.0,
+      "cache_read_tokens": 1104269.0,
+      "cache_write_tokens": 50407.0,
+      "cost_usd": 1.1347347500000002
+    },
+    "usage_known_calls": {
+      "input_tokens": 15,
+      "output_tokens": 15,
+      "cache_read_tokens": 15,
+      "cache_write_tokens": 15,
+      "cost_usd": 15
+    },
+    "cost_evidence": "provider_reported_estimate_not_billing"
+  },
+  "models_served": [
+    {
+      "model": "claude-fable-5-1",
+      "thinking_enabled": true,
+      "thinking_budget": null,
+      "count": 15
+    }
+  ],
+  "cost_usd": 1.1347347500000002,
+  "patch_bytes": 3598,
+  "empty_patch": false,
+  "infrastructure_failure": false,
+  "notes": []
+}

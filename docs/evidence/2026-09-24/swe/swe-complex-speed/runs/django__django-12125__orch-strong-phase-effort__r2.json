@@ -1,0 +1,58 @@
+{
+  "name": "django__django-12125__orch-strong-phase-effort__r2",
+  "instance_id": "django__django-12125",
+  "repo": "django/django",
+  "base_commit": "89d41cba392b759732ba9f1db4ff29ed47da6a56",
+  "arm": "orch-strong-phase-effort",
+  "rep": 2,
+  "model": "claude-fable-5-1",
+  "source_root": "/Users/michaeljabbour/dev/afast-orch-primary-20260924/swe-complex-speed/source",
+  "started_at": "2026-09-24T22:38:24.720027+00:00",
+  "ended_at": "2026-09-24T22:41:20.817331+00:00",
+  "wall_time_ms": 174988.71849999705,
+  "exec_time_ms": 162713.903,
+  "exit_code": 0,
+  "timed_out": false,
+  "session_id": "442d5a6a-730c-4dac-bd55-397e02224831",
+  "native": {
+    "provider_requests": 15,
+    "provider_responses": 15,
+    "provider_retries": 0,
+    "provider_errors": 0,
+    "tool_results": 14,
+    "tool_names": {
+      "bash": 14
+    },
+    "tool_failures_reported": 1,
+    "execution_completed": true,
+    "provider_response_duration_ms": 143402,
+    "usage": {
+      "input_tokens": 1113589.0,
+      "output_tokens": 9043.0,
+      "cache_read_tokens": 1113557.0,
+      "cache_write_tokens": 52354.0,
+      "cost_usd": 1.3852842499999998
+    },
+    "usage_known_calls": {
+      "input_tokens": 15,
+      "output_tokens": 15,
+      "cache_read_tokens": 15,
+      "cache_write_tokens": 15,
+      "cost_usd": 15
+    },
+    "cost_evidence": "provider_reported_estimate_not_billing"
+  },
+  "models_served": [
+    {
+      "model": "claude-fable-5-1",
+      "thinking_enabled": true,
+      "thinking_budget": null,
+      "count": 15
+    }
+  ],
+  "cost_usd": 1.3852842499999998,
+  "patch_bytes": 4455,
+  "empty_patch": false,
+  "infrastructure_failure": false,
+  "notes": []
+}

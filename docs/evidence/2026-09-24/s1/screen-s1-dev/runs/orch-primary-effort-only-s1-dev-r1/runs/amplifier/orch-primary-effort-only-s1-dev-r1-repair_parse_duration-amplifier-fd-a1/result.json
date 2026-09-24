@@ -1,0 +1,45 @@
+{
+ "name": "orch-primary-effort-only-s1-dev-r1-repair_parse_duration-amplifier-fd-a1",
+ "task": "repair_parse_duration",
+ "family": "repair",
+ "split": "dev",
+ "kind": "code",
+ "harness": "amplifier-fd",
+ "attempt": 1,
+ "model": "claude-fable-5-1",
+ "started_at": "2026-09-24T19:32:12.117434+00:00",
+ "ended_at": "2026-09-24T19:32:46.177772+00:00",
+ "wall_time_ms": 34059.90470800316,
+ "harness_duration_ms": null,
+ "exit_code": 0,
+ "timed_out": false,
+ "cost_usd": 1.0063925,
+ "cost_source": "harness_reported",
+ "cost_billable": true,
+ "tokens": {
+  "input_tokens": 207352.0,
+  "output_tokens": 926.0,
+  "cache_read_tokens": null,
+  "cache_write_tokens": 72651.0,
+  "cost_usd": 1.0063925
+ },
+ "num_turns": null,
+ "quality": {
+  "checks": 32,
+  "passed": 32,
+  "failed": 0,
+  "failure_labels": []
+ },
+ "protected_files_unchanged": {
+  "README.md": true,
+  "test_public.py": true
+ },
+ "outcome_passed": true,
+ "infrastructure_failure": false,
+ "notes": [],
+ "exec_time_ms": 21202.889,
+ "exec_time_source": "native_events_first_request_to_last_response",
+ "provider_requests": 4,
+ "concurrency_at_launch": 1,
+ "concurrency_max": 3
+}

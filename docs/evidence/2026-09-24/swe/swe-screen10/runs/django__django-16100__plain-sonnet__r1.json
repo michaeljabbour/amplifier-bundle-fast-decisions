@@ -1,0 +1,60 @@
+{
+  "name": "django__django-16100__plain-sonnet__r1",
+  "instance_id": "django__django-16100",
+  "repo": "django/django",
+  "base_commit": "c6350d594c359151ee17b0c4f354bb44f28ff69e",
+  "arm": "plain-sonnet",
+  "rep": 1,
+  "model": "claude-sonnet-5",
+  "started_at": "2026-09-24T20:04:40.608008+00:00",
+  "ended_at": "2026-09-24T20:06:29.258074+00:00",
+  "wall_time_ms": 107325.54470800096,
+  "exec_time_ms": 90701.451,
+  "exit_code": 0,
+  "timed_out": false,
+  "session_id": "35bd7070-7407-41ce-bee1-7e8fc04e7bff",
+  "native": {
+    "provider_requests": 8,
+    "provider_responses": 8,
+    "provider_retries": 0,
+    "provider_errors": 0,
+    "tool_results": 7,
+    "tool_names": {
+      "grep": 2,
+      "read_file": 1,
+      "edit_file": 1,
+      "bash": 3
+    },
+    "tool_failures_reported": 0,
+    "execution_completed": true,
+    "provider_response_duration_ms": 23306,
+    "usage": {
+      "input_tokens": 536454.0,
+      "output_tokens": 1654.0,
+      "cache_read_tokens": 536439.0,
+      "cache_write_tokens": 43727.0,
+      "cost_usd": 0.34976295
+    },
+    "usage_known_calls": {
+      "input_tokens": 8,
+      "output_tokens": 8,
+      "cache_read_tokens": 8,
+      "cache_write_tokens": 8,
+      "cost_usd": 8
+    },
+    "cost_evidence": "provider_reported_estimate_not_billing"
+  },
+  "models_served": [
+    {
+      "model": "claude-sonnet-5",
+      "thinking_enabled": true,
+      "thinking_budget": 32000,
+      "count": 8
+    }
+  ],
+  "cost_usd": 0.34976295,
+  "patch_bytes": 1618,
+  "empty_patch": false,
+  "infrastructure_failure": false,
+  "notes": []
+}
