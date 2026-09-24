@@ -1076,3 +1076,22 @@ Expected effect, to be measured:
 
 Repository-scale speedups must therefore come from Amplifier's overhead, not the model choice (section
 18.9, next): startup hooks, a 68–114k-token system prompt, and cache stability.
+
+### 18.9 Complex-task speed without a model swap (2026-09-24)
+
+S3, 10 instances x 2 reps, same wave:
+
+| Arm | Resolved | Time vs plain | Cost vs plain | Discordant pairs |
+|---|---|---|---|---|
+| plain | 14/20 | 1.00 | 1.00 | — |
+| shipped default (scope gate → strong, provider-default effort) | 13/20 | 1.00 | 0.98 | 1 plain-only (pylint r2); config identical to plain, so this is noise |
+| strong tier + phase effort (orient medium / explore low→held medium / implement high) | 12/20 | 0.81 (faster 14/20) | 0.87 | 2 plain-only (pylint-7080, both reps) |
+
+**The shipped default passes non-inferiority** on S3. Lower effort on repository-scale tasks trades
+~19% time for a quality risk: pylint-7080 was 0/2, against 3/3 in every other strong arm. It is
+shipped as an opt-in knob (`by_tier.strong: phase`), not a default. Beyond this, repository-scale
+speed must come from Amplifier's own overhead, not from the model or effort choice:
+- 5.8 s per session start in foundation `hooks-deprecation`, sub-sessions included (upstream patch
+  ready)
+- per-prompt hooks in heavy app compositions (up to 5 s)
+- a 68–114k-token prompt
