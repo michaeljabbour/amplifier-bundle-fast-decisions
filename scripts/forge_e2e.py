@@ -473,6 +473,10 @@ def _build_run(root, run_spec, config, sides):
     task = run_spec['task']
     workspace = _build_workspace(run, task)
     side = sides[run_spec['side']]
+    # Per-run events dir: the shared ~/.amplifier/fast-decisions/events grows
+    # past read_receipts' 100k-record window (files sorted by session-id name,
+    # not time), which silently dropped whole sessions from receipts.jsonl.
+    config = {**config, 'events_dir': str(run/'events')}
     profile = _side_profile(name, side, task, workspace, config)
     (run/'profile.md').write_text('---\n'+json.dumps(profile, indent=2)+'\n---\n')
     if side.get('composition') == 'composed':
@@ -811,7 +815,7 @@ def worker(root,name):
     # event names/fields that only the side under test emits (observed in HC00: no source event, no observation stats).
     # Done in a subprocess with PYTHONPATH=<side>/src so this process never swaps already-imported modules
     # (purging sys.modules here broke unrelated tests that patch amplifier_fast_decisions.operations).
-    events_dir = Path(manifest.get('events_dir', str(EVENTS)))
+    events_dir = run/'events' if (run/'events').is_dir() else Path(manifest.get('events_dir', str(EVENTS)))
     measured = extract_receipts(source_root, events_dir, sid, run) if sid else None
     kind = _task_kind(item['task'])
     if kind == 'answer':
