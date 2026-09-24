@@ -43,7 +43,7 @@ The shared capability is a Python object in the Python host. It is not a JSON-ca
 
 Core reference snapshot: `6d4cd217f83bb29b671b5c9d854aaa08be14db1b`.
 
-Streaming reference snapshot: `20aac7a9eb26034d230357f6aa6805f27c86df52`.
+Streaming reference snapshot: `4cc86dd4eae36b40af38b4e2e70b9045649d2903` (bumped from `20aac7a9` for v0.2 orchestrator-primary; see docs/ORCHESTRATOR-PRIMARY.md).
 
 The active loop module installs its wrapped `loop-streaming` at the pinned SHA above as a required dependency. Replacing the orchestrator means Foundation does not necessarily activate the displaced loop; relying on an optional extra or a warm module cache can fail on a fresh host. The former `upstream` extra remains accepted for compatibility. The root package's `amplifier` extra remains a local development convenience; do not independently upgrade core inside an existing app merely to try this bundle. Foundation is included from `main`; its transitive bundles and TypeSafe SDK are not locked here. Capture your resolved installation and core/loop commits after your first successful test before comparing performance.
 
