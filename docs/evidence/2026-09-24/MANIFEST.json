@@ -531,6 +531,8 @@
   "swe/swe-screen10/runs/sympy__sympy-16766__orch-primary__r1.json": "46e42e0cda0a514964f173c167ff720d72305480146c1eeff47f36063c4adfe7",
   "swe/swe-screen10/runs/sympy__sympy-16766__plain-sonnet__r1.json": "c01797a58b99c8a527df11b87b55cdbf8fbf8a953bf02fbc06f23d9a012a6143",
   "swe/swe-screen10/runs/sympy__sympy-16766__plain__r1.json": "eecedb07308d6d5d9d02af41af75db149727d2e974e0ad780bd5912f33d026d6",
-  "README.md": "8a2681aa85f26e8be58b889dcaa44950cf3c38a174a68d427aee4b65ca159b5d"
+  "README.md": "8a2681aa85f26e8be58b889dcaa44950cf3c38a174a68d427aee4b65ca159b5d",
+  ".DS_Store": "da93a46719a0fa43e20ab6d82c001ee240875494d0b8e8289aa407e4f572e17e",
+  "difficulty/difficulty-report-hosted-keepalive.json": "46f0c578c7b4f75acf02888e7b4632373af19aa7d9ae9a492fa25957e7af9d8b"
  }
 }

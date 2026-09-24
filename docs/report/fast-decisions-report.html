@@ -194,8 +194,8 @@
   <h3>Choosing who makes the call</h3>
   <p>To compare decision-makers, we showed each one pairs of real issues: one rated a quick fix by human experts and
   one rated an hour or more of work. <strong>Jev picks the harder one 83% of the time in about a fifth of a
-  second.</strong> A large open model running on this Mac does slightly better (85%) but takes one to two and a half
-  seconds. Mid-size local models land around 72–76%. The tiny model we started with was no better than a coin flip,
+  second.</strong> The same-size open model does slightly better (85%): on this Mac it takes one to two and a half seconds; hosted on a
+  shared RunPod gateway it takes about 0.6 seconds, and under 0.12 seconds when the gateway has seen the prompt before. Mid-size local models land around 72–76%. The tiny model we started with was no better than a coin flip,
   and no simple rule based on the wording of a request beat 60%.</p>
   <figure>
     <div class="fig"><div id="v-judges"></div></div>
@@ -459,7 +459,7 @@ const DATA = {
     ['Built-in rule', 60, 0.001, 'Instant, private'],
     ['Qwen3 0.6B, this Mac', 50, 0.06, 'Coin flip'] ],
 };
-window.HOSTED = null; // [accuracy %, typical seconds, note, caption sentence] or null
+window.HOSTED = [85, 0.63, 'Same-size model on a shared RunPod gateway: 50–120 ms when its prompt cache is warm; occasional stalls fall back to the built-in rule', 'The hosted point is the same-size model served from a shared RunPod gateway: median 0.63 s per decision with a different task every time, 50–120 ms when the gateway’s prompt cache is warm, with occasional multi-second stalls that the dispatcher bounds with a 3-second timeout. A dedicated server should be faster; we have not measured one.']; // [accuracy %, typical seconds, note, caption sentence] or null
 
 const tip = document.getElementById('tip');
 const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -565,9 +565,9 @@ function dataTable(id, sets) { const el = document.getElementById(id); if (!el) 
   s += `<line x1="${L}" x2="${W - R}" y1="${Y(50)}" y2="${Y(50)}" stroke="var(--ink-3)" stroke-width="1.2"/><text x="${W - R}" y="${Y(50) - 7}" text-anchor="end" font-size="12" fill="var(--ink-3)">coin flip</text>`;
   s += `<text x="${(L + W - R) / 2}" y="${H - 8}" text-anchor="middle" font-size="12.5" fill="var(--ink-3)">time per decision (log scale) →</text>`;
   s += `<text x="${L}" y="${T - 20}" font-size="12.5" fill="var(--ink-3)">↑ accuracy</text>`;
-  const offs = { 'Jev (hosted)': [-14, -12, 'end'], 'Large open model, this Mac': [-14, -12, 'end'], 'GLM 4.7 Flash, this Mac': [14, -8, 'start'],
+  const offs = { 'Jev (hosted)': [-14, -12, 'end'], 'Large open model, this Mac': [8, 26, 'end'], 'GLM 4.7 Flash, this Mac': [14, -8, 'start'],
     'Qwen3 4B, this Mac': [-14, -10, 'end'], 'Qwen3 8B, this Mac': [-14, 18, 'end'], 'Llama 3.1 8B, this Mac': [14, 18, 'start'],
-    'Built-in rule': [14, -10, 'start'], 'Qwen3 0.6B, this Mac': [14, -10, 'start'], 'Large open model, hosted': [-14, 20, 'end'] };
+    'Built-in rule': [14, -10, 'start'], 'Qwen3 0.6B, this Mac': [14, -10, 'start'], 'Large open model, hosted': [0, -18, 'middle'] };
   pts.forEach((p, i) => { const [label, acc, lat, note, hl] = p, cx = X(Math.max(lat, 0.001)), cy = Y(acc), o = offs[label] || [14, -10, 'start'];
     s += `<circle cx="${cx}" cy="${cy}" r="${hl ? 7 : 5.5}" fill="var(--series-1)" stroke="var(--paper-raised)" stroke-width="2"/>`;
     if (hl) s += `<circle cx="${cx}" cy="${cy}" r="11.5" fill="none" stroke="var(--ink)" stroke-width="1"/>`;
