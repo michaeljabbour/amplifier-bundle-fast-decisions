@@ -123,6 +123,8 @@ def _placeholder_action(model: str) -> Decision:
 
 
 async def ask_with_questions(backend: Any, request: DecisionRequest) -> DecisionResult:
+    if not all(isinstance(q, Question) for q in request.questions):
+        raise BackendUnavailable("Local question scorer requires typed Question objects")
     answers = {q.name: await backend.answer_question(request.state, q) for q in request.questions}
     if request.candidates:
         base = await backend.ask_candidates(replace(request, questions=()))
