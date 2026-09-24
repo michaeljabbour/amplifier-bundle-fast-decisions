@@ -1346,7 +1346,7 @@ def _percentile(values_sorted, pct):
 # `escalation_judged` and `phase_judged` receipts carry a `duration_ms` and
 # `backend` field from the same `_ask_judge_choice` call site, so they are
 # picked up by the generic per-kind loop below exactly like `scored`.
-_LATENCY_EVENT_KINDS = ('scored', 'fallback', 'escalation_judged', 'phase_judged')
+_LATENCY_EVENT_KINDS = ('scored', 'fallback', 'escalation_judged', 'phase_judged', 'difficulty_judged')
 
 
 def _run_mechanism_counts(run_dir):
@@ -1373,6 +1373,7 @@ def _run_mechanism_counts(run_dir):
     escalation_judged_by_decided = Counter()
     phase_judged_by_backend = Counter()
     phase_judged_agreement = Counter()
+    difficulty_judged = Counter()
     for e in events:
         kind = (e.get('event') or '').removeprefix('fast_decisions:')
         d = e.get('data') or {}
@@ -1396,6 +1397,8 @@ def _run_mechanism_counts(run_dir):
         elif kind == 'escalation_judged':
             escalation_judged_by_backend[d.get('backend')] += 1
             escalation_judged_by_decided[d.get('decided')] += 1
+        elif kind == 'difficulty_judged':
+            difficulty_judged[d.get('reason_code')] += 1
         elif kind == 'phase_judged':
             phase_judged_by_backend[d.get('backend')] += 1
             agreed = d.get('agreed_with_rules')
@@ -1411,6 +1414,8 @@ def _run_mechanism_counts(run_dir):
         'escalation_judged_by_decided': dict(escalation_judged_by_decided),
         'phase_judged_by_backend': dict(phase_judged_by_backend),
         'phase_judged_agreement': dict(phase_judged_agreement),
+        'difficulty_judged': dict(difficulty_judged),
+        'read_shortcut': loop_config.get('read_shortcut', True),
         'configured_backend': loop_config.get('backend'),
         'model_routing': loop_config.get('model_routing'),
         'effort_routing': loop_config.get('effort_routing'),
@@ -1450,8 +1455,12 @@ def _mechanism_report(experiment_dir, manifest):
     configured_backend = None
     model_routing = None
     effort_routing = None
+    difficulty_judged = Counter()
+    read_shortcut = True
     latencies_ms_by_backend = {}
     for c in per_run:
+        difficulty_judged.update(c.get('difficulty_judged', {}))
+        read_shortcut = read_shortcut and c.get('read_shortcut', True) is not False
         scored_by_backend.update(c['scored_by_backend'])
         fallback_count += c['fallback_count']
         routed_by_route.update(c['routed_by_route'])
@@ -1505,6 +1514,15 @@ def _mechanism_report(experiment_dir, manifest):
             engaged = False
             reasons.append(f"judge configured {configured_backend!r} (off) but scored={scored_total} "
                             "(the judge was supposed to be off and was not)")
+    elif not read_shortcut:
+        # Router-only configuration (read_shortcut: false): the judge's job is
+        # the turn-start difficulty decision, so engagement means the judge --
+        # not the length-rule fallback -- decided at least one turn.
+        judged = sum(n for code, n in difficulty_judged.items() if str(code).startswith('judge_'))
+        if judged == 0:
+            engaged = False
+            reasons.append(f"read_shortcut off and the judge decided 0 turns "
+                            f"(difficulty_judged={dict(difficulty_judged)})")
     elif configured_backend and configured_backend not in ('ollama', 'unavailable', 'none'):
         scored_on_backend = scored_by_backend.get(configured_backend, 0)
         if scored_on_backend == 0 or (scored_total == 0 and fallback_count > 0):
@@ -1558,6 +1576,7 @@ def _mechanism_report(experiment_dir, manifest):
 
     return {
         'runs_evaluated': len(per_run), 'configured_backend': configured_backend,
+        'difficulty_judged': dict(difficulty_judged),
         'model_routing_configured': bool(model_routing), 'model_routing_start_model': (model_routing or {}).get('start_model'),
         'scored_by_backend': dict(scored_by_backend), 'fallback_count': fallback_count,
         'routed_by_route': dict(routed_by_route),
