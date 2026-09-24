@@ -476,7 +476,7 @@ def _build_run(root, run_spec, config, sides):
     profile = _side_profile(name, side, task, workspace, config)
     (run/'profile.md').write_text('---\n'+json.dumps(profile, indent=2)+'\n---\n')
     if side.get('composition') == 'composed':
-        effective = composed_effective_config(side['source_root'], side.get('decision_overrides'))
+        effective = composed_effective_config(side['source_root'], profile['session']['orchestrator']['config'])
         if effective is not None:
             dump(run/'effective-loop-config.json', effective)
     prompt = run_spec.get('prompt') or _task_prompt(task) or config.get('prompt', PROMPT)
