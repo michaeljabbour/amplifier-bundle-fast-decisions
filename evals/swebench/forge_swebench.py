@@ -61,6 +61,8 @@ ARMS = {
         'backend': 'jev', 'model': 'jev-1.13.0', 'allow_external_state': True, 'read_shortcut': False,
         'timeout_ms': 3000, 'effort_routing': {'by_tier': {'cheap': 'medium', 'strong': None}},
         'model_routing': {'start_policy': 'judge'}}},
+    # The shipped default: router on, no judge configured (prompt-length rule).
+    'orch-router-rules': {'model': 'claude-fable-5-1', 'composed': True, 'overrides': {}},
     'orch-router-local': {'model': 'claude-fable-5-1', 'composed': True, 'overrides': {
         'backend': 'ollama', 'model': 'qwen:latest', 'read_shortcut': False,
         'timeout_ms': 8000, 'effort_routing': {'by_tier': {'cheap': 'medium', 'strong': None}},
