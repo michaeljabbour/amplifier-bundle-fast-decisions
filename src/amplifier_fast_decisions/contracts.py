@@ -108,7 +108,8 @@ def validate_effort_routing(effort_routing: Any) -> None:
         # with a start_policy): {"cheap": <effort|None>, "strong": <effort|None>}.
         # When the tier is known it REPLACES the phase effort for the whole
         # turn -- one effort per turn, so the provider's message cache is
-        # never invalidated by an effort change. None = provider default.
+        # never invalidated by an effort change. None = provider default;
+        # "phase" = this tier uses the phase map (with ``monotonic`` if set).
         "by_tier",
     }
     if unknown:
@@ -118,8 +119,8 @@ def validate_effort_routing(effort_routing: Any) -> None:
         if not isinstance(by_tier, dict) or set(by_tier) - {"cheap", "strong"}:
             raise ValueError("effort_routing.by_tier must map cheap/strong to an effort or null")
         for tier_effort in by_tier.values():
-            if tier_effort is not None and tier_effort not in ALLOWED_EFFORTS:
-                raise ValueError(f"effort_routing.by_tier values must be one of {sorted(ALLOWED_EFFORTS)} or null")
+            if tier_effort is not None and tier_effort != "phase" and tier_effort not in ALLOWED_EFFORTS:
+                raise ValueError(f"effort_routing.by_tier values must be one of {sorted(ALLOWED_EFFORTS)}, 'phase' or null")
     for key in ("max_explore_requests", "escalate_after_provider_errors"):
         value = effort_routing.get(key)
         if value is not None and (

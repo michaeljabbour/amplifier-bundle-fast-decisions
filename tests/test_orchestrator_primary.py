@@ -464,3 +464,8 @@ class ScopeGateTests(DifficultyRouterTests):
                 open(os.path.join(tmp, f"f{i}"), "w").close()
             self.assertEqual(workspace_file_count(tmp, 100), 40)
             self.assertGreater(workspace_file_count(tmp, 10), 10)
+
+
+class ByTierPhaseTests(unittest.TestCase):
+    def test_phase_value_is_valid(self):
+        Policy(effort_routing={"explore": "low", "by_tier": {"cheap": "medium", "strong": "phase"}, "monotonic": True})

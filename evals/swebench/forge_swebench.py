@@ -63,6 +63,11 @@ ARMS = {
         'model_routing': {'start_policy': 'judge'}}},
     # The shipped default: router on, no judge configured (prompt-length rule).
     'orch-router-rules': {'model': 'claude-fable-5-1', 'composed': True, 'overrides': {}},
+    # Complex-task speed lever (STUDY-DESIGN.md 18.9): the shipped default, but the
+    # strong tier keeps phase effort (orient medium / explore low / implement high)
+    # with the monotonic hold -- same model as plain, at most one cache step-up.
+    'orch-strong-phase-effort': {'model': 'claude-fable-5-1', 'composed': True, 'overrides': {
+        'effort_routing': {'by_tier': {'strong': 'phase'}, 'monotonic': True}}},
     'orch-router-local': {'model': 'claude-fable-5-1', 'composed': True, 'overrides': {
         'backend': 'ollama', 'model': 'qwen:latest', 'read_shortcut': False,
         'timeout_ms': 8000, 'effort_routing': {'by_tier': {'cheap': 'medium', 'strong': None}},

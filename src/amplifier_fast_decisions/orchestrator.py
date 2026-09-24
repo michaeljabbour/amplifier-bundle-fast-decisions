@@ -738,7 +738,8 @@ docs/UPSTREAM_CONTRACT.md.
             if phase == effort.PHASE_EXPLORE:
                 turn.explore_requests = explore_requests
             by_tier = effort_routing.get("by_tier")
-            if by_tier is not None and turn.start_tier in by_tier and not host_pinned:
+            if (by_tier is not None and turn.start_tier in by_tier and by_tier[turn.start_tier] != "phase"
+                    and not host_pinned):
                 applied_effort = by_tier[turn.start_tier]
                 reason_code = f"tier_{turn.start_tier}"
             elif effort_routing.get("monotonic") and applied_effort is not None:
