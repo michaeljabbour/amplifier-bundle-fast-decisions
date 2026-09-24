@@ -52,7 +52,7 @@ ARMS = {
     'plain-sonnet': {'model': 'claude-sonnet-5', 'composed': False},
     'orch-primary': {'model': 'claude-fable-5-1', 'composed': True},
 }
-PROMPT = """You are working in a git checkout of the {repo} repository at /workspace root (your current directory).
+PROMPT = """You are working in a git checkout of the {repo} repository (your current directory).
 Resolve the GitHub issue below by editing the repository's source code.
 
 Rules:
