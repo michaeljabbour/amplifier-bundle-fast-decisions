@@ -55,6 +55,14 @@ ARMS = {
     # Cache-aware effort (STUDY-DESIGN.md 18.4): the shipped config plus one change.
     'orch-primary-monotonic': {'model': 'claude-fable-5-1', 'composed': True,
                                'overrides': {'effort_routing': {'monotonic': True}}},
+    # Turn-start difficulty router (STUDY-DESIGN.md 18.7): one typed simple/complex
+    # question per turn picks the start tier; complex turns stay on the host model.
+    'orch-router-jev': {'model': 'claude-fable-5-1', 'composed': True, 'overrides': {
+        'backend': 'jev', 'model': 'jev-1.13.0', 'allow_external_state': True, 'read_shortcut': False,
+        'timeout_ms': 3000, 'effort_routing': {'monotonic': True}, 'model_routing': {'start_policy': 'judge'}}},
+    'orch-router-local': {'model': 'claude-fable-5-1', 'composed': True, 'overrides': {
+        'backend': 'ollama', 'model': 'qwen:latest', 'read_shortcut': False,
+        'timeout_ms': 8000, 'effort_routing': {'monotonic': True}, 'model_routing': {'start_policy': 'judge'}}},
 }
 PROMPT = """You are working in a git checkout of the {repo} repository (your current directory).
 Resolve the GitHub issue below by editing the repository's source code.
@@ -204,7 +212,7 @@ def cmd_prepare(args):
                 _dump(run_dir/'effective-loop-config.json', effective)
         (run_dir/'prompt.txt').write_text(PROMPT.format(repo=inst['repo'], problem_statement=inst['problem_statement']))
         runs[name] = {'instance_id': inst['instance_id'], 'repo': inst['repo'], 'base_commit': inst['base_commit'],
-                      'arm': arm, 'rep': rep, 'model': spec['model']}
+                      'arm': arm, 'rep': rep, 'model': spec['model'], 'source_root': side['source_root']}
     manifest = {'schema': 'forge-swebench-v1', 'created_at': _now(), 'dataset': DATASET,
                 'candidate_sha': _git('-C', str(source), 'rev-parse', 'HEAD').stdout.strip(),
                 'baseline_source': str(baseline), 'baseline_sha': forge_e2e.git_sha(baseline),
@@ -264,7 +272,13 @@ def cmd_agent(args):
     started_at, t0 = _now(), time.perf_counter()
     timed_out, exit_code, notes = False, None, []
     with open(run_dir/'amplifier-output.json', 'w') as out, open(run_dir/'amplifier-stderr.txt', 'w') as err:
-        proc = subprocess.Popen(argv, cwd=workspace, stdout=out, stderr=err, start_new_session=True)
+        # Same isolation as forge_e2e.worker: the side's own frozen source wins over whatever
+        # editable install of amplifier_fast_decisions the shared Amplifier tool env holds
+        # (activating a file:// module pip-installs it editable there; last install wins).
+        env = dict(os.environ)
+        if item.get('source_root'):
+            env['PYTHONPATH'] = str(Path(item['source_root'])/'src')
+        proc = subprocess.Popen(argv, cwd=workspace, stdout=out, stderr=err, start_new_session=True, env=env)
         try:
             exit_code = proc.wait(timeout=deadline)
         except subprocess.TimeoutExpired:
