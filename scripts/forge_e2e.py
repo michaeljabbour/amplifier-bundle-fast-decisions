@@ -426,6 +426,34 @@ def _composed_profile(name, side, task, workspace, config, upstream):
     }
 
 
+def _deep_merge(base, overlay):
+    merged = dict(base)
+    for key, value in overlay.items():
+        if isinstance(value, dict) and isinstance(merged.get(key), dict):
+            merged[key] = _deep_merge(merged[key], value)
+        else:
+            merged[key] = value
+    return merged
+
+
+def composed_effective_config(source_root, overrides=None):
+    """The loop-fast-decisions config a composed run actually gets: the frozen
+    source's shipped behaviors/fast-decisions.yaml orchestrator config, deep-
+    merged with explicit --fd-override values (the kernel's own merge rule).
+    Recorded next to profile.md so battery.py's series label and mechanism
+    checks describe the shipped defaults, not the (deliberately sparse)
+    profile. None when the source has no orchestrator-declaring behavior."""
+    import yaml
+    path = Path(source_root)/'behaviors'/'fast-decisions.yaml'
+    if not path.exists():
+        return None
+    data = yaml.safe_load(path.read_text()) or {}
+    shipped = ((data.get('session') or {}).get('orchestrator') or {}).get('config')
+    if not isinstance(shipped, dict):
+        return None
+    return _deep_merge(shipped, overrides or {})
+
+
 def _build_workspace(run_dir, task):
     workspace = run_dir/'workspace'
     (workspace/'.amplifier').mkdir(parents=True, exist_ok=True)
@@ -447,6 +475,10 @@ def _build_run(root, run_spec, config, sides):
     side = sides[run_spec['side']]
     profile = _side_profile(name, side, task, workspace, config)
     (run/'profile.md').write_text('---\n'+json.dumps(profile, indent=2)+'\n---\n')
+    if side.get('composition') == 'composed':
+        effective = composed_effective_config(side['source_root'], side.get('decision_overrides'))
+        if effective is not None:
+            dump(run/'effective-loop-config.json', effective)
     prompt = run_spec.get('prompt') or _task_prompt(task) or config.get('prompt', PROMPT)
     item = {
         'task': task, 'side': run_spec['side'], 'rep': run_spec.get('rep', 1),

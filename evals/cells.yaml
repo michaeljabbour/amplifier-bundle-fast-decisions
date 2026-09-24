@@ -337,6 +337,55 @@ cells:
     secondary_anchor: judge-local+effort-incumbent
     mechanism_gate: { scored_backend: hosted, min_scored: 1, require_effort_phases: ["explore:low"] }
 
+  # Orchestrator-primary (2026-09-24): the product as users compose it.
+  # `composition: composed` includes the frozen bundle root (foundation +
+  # behaviors/fast-decisions.yaml) and lets composition replace foundation's
+  # loop-streaming -- the profile never names the orchestrator module. The
+  # remaining fd keys DECLARE what the shipped behavior configures (verified
+  # against the recorded effective config by the series-label cross-check);
+  # only `overrides` change it. Any model_routed/effort_routed receipt is
+  # proof the swap happened (only loop-fast-decisions emits them).
+  orch-primary:
+    harnesses: [amplifier-fd]
+    fd: { composition: composed, backend: none, effort_profile: all_phase,
+          model_routing_profile: sonnet_start }
+    role: "orchestrator-primary product as shipped: routing-only default (no judge)"
+    purpose: "does composing bundle.md (orchestrator swap, routing-only) beat plain Amplifier at equal quality?"
+    anchor_cell: plain
+    secondary_anchor: plain-sonnet   # confound control: is it routing, or just the cheaper start model?
+    requires_cells: [plain-sonnet]
+    mechanism_gate:
+      max_scored: 0
+      model_routed_model: claude-sonnet-5
+      min_model_routed: 1
+      require_effort_phases: ["implement:high"]
+      flag_if_zero_escalations: confounded_with_plain_sonnet
+
+  orch-primary-effort-only:
+    harnesses: [amplifier-fd]
+    fd: { composition: composed, backend: none, effort_profile: all_phase,
+          overrides: { model_routing: null } }
+    role: "ablation: orchestrator-primary with model routing removed (effort routing only)"
+    purpose: "how much of orch-primary's effect is the sonnet start model vs phase effort routing?"
+    anchor_cell: plain
+    secondary_anchor: orch-primary
+    mechanism_gate: { max_scored: 0, require_effort_phases: ["implement:high"] }
+
+  orch-primary+jev:
+    harnesses: [amplifier-fd]
+    fd: { composition: composed, backend: jev, allow_external_state: true,
+          effort_profile: all_phase, model_routing_profile: sonnet_start }
+    role: "orchestrator-primary plus the Jev-judged read shortcut on top of routing"
+    purpose: "does adding the judged fast path to the routing-only default help, hurt (judge latency before slow calls), or do nothing?"
+    anchor_cell: plain
+    secondary_anchor: orch-primary
+    requires_cells: [plain-sonnet]
+    mechanism_gate:
+      scored_backend: jev
+      min_scored: 1
+      model_routed_model: claude-sonnet-5
+      min_model_routed: 1
+
   externals:
     harnesses: [claude, codex, opencode, amplifier-plain, amplifier-fd]
     fd: { backend: ollama, model: qwen3:0.6b, effort_profile: all_phase }   # = champion

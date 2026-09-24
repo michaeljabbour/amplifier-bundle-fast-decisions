@@ -1296,6 +1296,17 @@ def _profile_loop_config(run_dir):
     model_routing, effort_routing, etc. {} when profile.md is missing, malformed,
     or has no orchestrator config (e.g. the amplifier-plain side runs loop-streaming,
     which carries no decision config at all)."""
+    # --fd-composition composed: profile.md is deliberately sparse (the
+    # orchestrator config comes from composing the shipped bundle), so the
+    # effective config forge_e2e recorded at prepare time is authoritative.
+    effective = Path(run_dir)/'effective-loop-config.json'
+    if effective.exists():
+        try:
+            data = json.loads(effective.read_text())
+        except ValueError:
+            data = None
+        if isinstance(data, dict):
+            return data
     path = Path(run_dir)/'profile.md'
     if not path.exists():
         return {}

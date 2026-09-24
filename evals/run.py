@@ -260,6 +260,28 @@ def cell_to_argv(cell_id, cells_doc, suites_doc, suite_id, split, rep, *, out_ro
 
     if "amplifier-fd" in cell["harnesses"]:
         fd = cell.get("fd") or {}
+        composition = fd.get("composition", "explicit")
+        if composition not in ("explicit", "composed"):
+            raise EvalsError(2, f"unknown fd composition {composition!r} for cell {cell_id!r}")
+        if composition == "composed":
+            # The product as shipped: the bundle root is composed and its own
+            # behavior supplies backend/effort/routing. The cell's other fd
+            # keys are DECLARATIONS of what that bundle ships (checked by
+            # cross_check_series_label against the recorded effective config),
+            # not overrides -- only `overrides` (key -> value) is passed on.
+            argv += ["--fd-composition", "composed"]
+            backend = fd.get("backend")
+            if backend in ("jev", "hosted", "gateway") and not fd.get("allow_external_state"):
+                raise EvalsError(2, f"cell {cell_id!r}: fd backend {backend!r} requires allow_external_state: true")
+            if backend not in (None, "none"):
+                # The judge axis is the one exception: a non-default judge is
+                # layered onto the shipped bundle through the normal flag.
+                argv += ["--fd-backend", backend]
+            if fd.get("allow_external_state"):
+                argv += ["--allow-external-state"]
+            for key, value in (fd.get("overrides") or {}).items():
+                argv += ["--fd-override", f"{key}=" + (value if isinstance(value, str) else _compact_json(value))]
+            return argv
         backend = fd.get("backend")
         if backend == "ollama":
             argv += ["--fd-backend", "ollama"]
