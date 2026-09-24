@@ -26,24 +26,40 @@ session:
     source: git+https://github.com/michaeljabbour/amplifier-bundle-fast-decisions@main#subdirectory=modules/loop-fast-decisions
     config:
       mode: active
-      # Routing-only by default: the evidence (docs/EVIDENCE.md) attributes
-      # the speedup to effort/model routing, while the judged read shortcut
-      # rarely fires and a judge call sits in front of every slow request.
-      # Set backend: jev (+ allow_external_state: true) or ollama to enable
-      # the judged fast path on top.
+      # Turn-start difficulty router (evals/STUDY-DESIGN.md 18.7): one typed
+      # simple/complex question per turn picks model AND effort for the whole
+      # turn -- simple: cheap start model at one effort; complex: the host
+      # model at provider-default effort, exactly plain Amplifier. No
+      # mid-turn switches, so the prompt cache is never re-written.
+      # backend: none = the prompt-length rule decides (nothing leaves the
+      # machine). Upgrade the judge with the sanctioned per-user override in
+      # ~/.amplifier/settings.yaml -- measured AUC on SWE-bench difficulty:
+      # jev 0.83 @ ~0.2 s, local qwen:latest 0.85 @ ~1-2 s, rule 0.60:
+      #   overrides:
+      #     loop-fast-decisions:
+      #       config: {backend: jev, allow_external_state: true}
+      #       # or local: {backend: ollama, model: "qwen:latest", timeout_ms: 8000}
       backend: none
       allow_external_state: false
+      # The judged read shortcut stays off: it rarely fired in the studies and
+      # would put a scoring call in front of every slow request.
+      read_shortcut: false
+      timeout_ms: 3000
       allowed_tools: [fast_workspace]
       effort_routing:
         orient: medium
         explore: low
         implement: high
+        by_tier:
+          cheap: medium
+          strong: null
         max_explore_requests: 6
         escalate_after_provider_errors: 1
       model_routing:
         start_model: claude-sonnet-5
         # Only ever send the Anthropic start model to Anthropic providers.
         provider_match: anthropic
+        start_policy: judge
         max_requests_before_escalation: 6
         escalate_on_test_failure: true
         escalate_on_provider_error: true
