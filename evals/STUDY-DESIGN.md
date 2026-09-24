@@ -882,3 +882,112 @@ measurement becoming noise:
 `cells.yaml`'s `budget.max_parallel_timed_runs` is raised to `3` on this
 basis (previously pinned at `1` with a "never raise this" comment written
 before this section's validity conditions existed to justify raising it).
+
+## 18. Orchestrator-primary: factorial design, harder suites, power (2026-09-24)
+
+Context: [docs/ORCHESTRATOR-PRIMARY.md](../docs/ORCHESTRATOR-PRIMARY.md). The
+bundle now replaces the host orchestrator by composition, and its default is
+routing-only (no judge). The first screen (S1 dev, 1 rep,
+`~/dev/afast-orch-primary-20260924/screen-s1-dev`) showed:
+
+| Cell | vs | Time ratio (95% CI) | Cost ratio | Quality |
+|---|---|---|---|---|
+| orch-primary | plain | 0.48 [0.40, 0.57] | 0.79 | 12/12 vs 12/12 |
+| orch-primary | plain-sonnet | 0.81 [0.57, 1.03] | 1.83 | 12/12 vs 12/12 |
+| orch-primary-effort-only | plain | 0.77 [0.66, 0.89] | 1.11 | 12/12 vs 12/12 |
+
+These are screens (section 8), not findings. They surfaced three design
+problems that this section fixes.
+
+### 18.1 The start model is a confound, so the design is factorial
+
+Most of orch-primary's gain over `plain` belongs to the start model
+(`claude-sonnet-5`). `plain-sonnet` alone is 0.59x `plain`. On S1 the routed
+runs never escalated (`flag: confounded_with_plain_sonnet`), which makes
+orch-primary there equal to "plain-sonnet + effort routing". The question the
+product has to answer is not "faster than plain?" but **which component buys
+what**. Every orchestrator-primary study is therefore run as a factorial over
+the three mechanisms. The model is held fixed within each contrast.
+
+| Factor | Levels | Cells that isolate it |
+|---|---|---|
+| start model | fable, sonnet | `plain` vs `plain-sonnet` |
+| phase effort routing | off, on | `plain` vs `orch-primary-effort-only` (fable) |
+| escalation (sonnet start -> host model) | off, on | `plain-sonnet` vs `orch-primary` |
+
+The claims map onto the contrasts as follows. A "routing makes Amplifier
+faster" claim needs the effort contrast. A "cheap-first with escalation keeps
+quality" claim needs the escalation contrast **on a suite where quality
+varies**. Only the model contrast justifies saying "switching models is
+faster", and that is not a claim about this bundle.
+
+### 18.2 A ceiling suite cannot test quality, so SWE-bench is required
+
+On S1 every cell passed 12/12. Non-inferiority on S1 is vacuous: it cannot
+detect a quality cost from starting on a cheaper model. Quality claims for
+orchestrator-primary require S3 (SWE-bench Verified) with the official Docker
+grader: `evals/swebench/forge_swebench.py`. That script is a Forge-driven
+runner. Agents work in real checkouts and run tests through `.swe/run`
+inside the same instance image the grader uses, and the patch is graded by
+`swebench.harness.run_evaluation` (swebench 4.x). The quality endpoint is the
+resolved rate, with McNemar's exact test on paired resolved/unresolved
+outcomes per instance. It replaces the S1/S2 "successes - 1" margin there.
+
+### 18.3 Power: size the study for the contrast that matters
+
+Per-task log-ratio SDs measured in the screen give the pairs needed for 80%
+power (alpha 0.05, two-sided, paired):
+
+| Contrast | SD(log ratio) | To detect the observed effect | To detect 0.90x |
+|---|---|---|---|
+| orch-primary vs plain-sonnet | 0.54 | ~55 pairs (effect 0.81x) | ~210 pairs |
+| effort-only vs plain | 0.28 | ~10 pairs (effect 0.77x) | ~55 pairs |
+| orch-primary vs plain | 0.33 | ~2 pairs (effect 0.48x) | ~76 pairs |
+
+So:
+- The effort-routing effect on a fixed model is cheap to confirm: 12 tasks
+  x 3 reps on the S1 holdout, preregistered.
+- orch-primary vs plain-sonnet needs roughly 20 tasks x 3 reps. It is
+  underpowered on the 12-task dev split at 1 rep, and its CI (0.57-1.03)
+  crosses 1.
+- A 1-rep screen is never reported as a finding (section 8, unchanged).
+
+### 18.4 Cost accounting must include the cache
+
+The one SWE-bench check that escalated (django__django-13741) was the fastest
+arm but the most expensive: $1.33, against $0.98 for plain and $0.63 for
+plain-sonnet. A likely cause is that switching models mid-turn discards the
+prompt-cache prefix and writes it again on the new model. Reports therefore
+break cost into cache-write, cache-read, input and output tokens per model.
+Any escalation design change (e.g. escalating only at turn boundaries) is its
+own cell, measured against this one.
+
+### 18.5 Isolation invariants (each learned from a failed run)
+
+- **Per-run events dir.** Receipts are read from `run/events`, never from the
+  shared `~/.amplifier/fast-decisions/events`. The shared dir's 100k-record
+  window silently dropped whole sessions.
+- **No user app bundles in the workspace** (`settings.local.yaml: bundle.app: []`).
+  Record a hash of `~/.amplifier/settings.yaml` at campaign start and refuse
+  to continue if it changes. The native three-arm study died from a
+  mid-run settings change.
+- **Composition proof.** Composed cells never name the orchestrator module.
+  A `model_routed` or `effort_routed` receipt is the proof that composition
+  performed the swap, and `effective-loop-config.json` records the config.
+- **Completion is `result.json`, never a Forge observation.** Forge's
+  `run_command` returns after about 60 s while the process keeps running.
+- **Patches are captured through a private git index.** An agent-left
+  `.git/index.lock` once turned a real edit into an empty patch.
+
+### 18.6 Next runs, in order
+
+1. **S3 screen**: 10 instances x {plain, plain-sonnet, orch-primary} x 1 rep
+   (running). It tells us whether escalation preserves the resolved rate and
+   what it costs.
+2. **S1 holdout, preregistered**: {plain, orch-primary-effort-only} x 8
+   tasks x 5 reps. Confirms or kills the effort-routing effect on a fixed
+   model.
+3. **S3 dev, 3 reps, 20 instances**: {plain-sonnet, orch-primary, plus a
+   turn-boundary-escalation cell}. This is the escalation contrast at the
+   power 18.3 requires.
+4. **S3 holdout, preregistered**: the survivor of step 3 against its controls.
