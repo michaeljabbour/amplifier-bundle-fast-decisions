@@ -371,6 +371,21 @@ cells:
     secondary_anchor: orch-primary
     mechanism_gate: { max_scored: 0, require_effort_phases: ["implement:high"] }
 
+  orch-primary-monotonic:
+    harnesses: [amplifier-fd]
+    fd: { composition: composed, backend: none, effort_profile: all_phase,
+          model_routing_profile: sonnet_start, overrides: { effort_routing: { monotonic: true } } }
+    role: "orchestrator-primary with cache-aware effort: effort never steps down within a turn"
+    purpose: "phase flips change the thinking budget, which invalidates the Anthropic message cache (3x cache writes on SWE-bench sympy-16766); does holding effort recover cost without losing speed?"
+    anchor_cell: plain
+    secondary_anchor: orch-primary
+    requires_cells: [plain-sonnet]
+    mechanism_gate:
+      max_scored: 0
+      model_routed_model: claude-sonnet-5
+      min_model_routed: 1
+      require_effort_phases: ["implement:high"]
+
   orch-primary+jev:
     harnesses: [amplifier-fd]
     fd: { composition: composed, backend: jev, allow_external_state: true,

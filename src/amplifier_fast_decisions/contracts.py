@@ -95,6 +95,12 @@ def validate_effort_routing(effort_routing: Any) -> None:
         # deterministic classify_phase(). See orchestrator.py and
         # docs/ARCHITECTURE.md.
         "phase_judge",
+        # Cache-aware effort (opt-in): within a turn, never apply an effort
+        # below the highest already applied. On Anthropic, changing the
+        # thinking budget invalidates the cached message prefix, so phase
+        # flips (implement -> explore -> implement) each re-wrote the whole
+        # conversation cache -- measured as ~3x cache-write tokens.
+        "monotonic",
     }
     if unknown:
         raise ValueError(f"effort_routing has unknown keys: {sorted(unknown)}")
@@ -107,6 +113,9 @@ def validate_effort_routing(effort_routing: Any) -> None:
     phase_judge = effort_routing.get("phase_judge")
     if phase_judge is not None and not isinstance(phase_judge, bool):
         raise ValueError("effort_routing.phase_judge must be a bool")
+    monotonic = effort_routing.get("monotonic")
+    if monotonic is not None and not isinstance(monotonic, bool):
+        raise ValueError("effort_routing.monotonic must be a bool")
 
 
 # HC04 ("opt-in model routing with escalation"): the effort strings a host
@@ -700,6 +709,8 @@ class TurnState:
     # block or abstain) and this request fell back to the sequential
     # per-question path instead.
     batch_fallbacks: int = 0
+    # effort_routing.monotonic: the highest effort applied so far this turn.
+    max_effort_applied: str | None = None
 
 
 def candidate_read_identity(

@@ -621,6 +621,11 @@ docs/UPSTREAM_CONTRACT.md.
             )
             if phase == effort.PHASE_EXPLORE:
                 turn.explore_requests = explore_requests
+            if effort_routing.get("monotonic") and applied_effort is not None:
+                applied_effort, held = effort.hold_monotonic(applied_effort, turn.max_effort_applied)
+                if held:
+                    reason_code = effort.REASON_MONOTONIC_HOLD
+                turn.max_effort_applied = applied_effort
             if applied_effort is not None:
                 if isinstance(request, dict):
                     request["reasoning_effort"] = applied_effort

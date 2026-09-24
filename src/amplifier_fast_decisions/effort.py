@@ -224,3 +224,21 @@ def decide_effort(
         if max_explore is not None and explore_requests > max_explore:
             return None, REASON_ESCALATED_MAX_EXPLORE
     return effort, REASON_PHASE_POLICY
+
+
+EFFORT_RANK = {"low": 0, "medium": 1, "high": 2, "xhigh": 3, "max": 4}
+REASON_MONOTONIC_HOLD = "monotonic_hold"
+
+
+def hold_monotonic(effort: str | None, max_so_far: str | None) -> tuple[str | None, bool]:
+    """``(effort_to_apply, held)``: never step below ``max_so_far`` within a turn.
+
+    ``None`` (leave the provider default) passes through untouched -- the
+    monotonic rule only ever raises an explicit effort, it never invents one.
+    """
+    if effort is None or max_so_far is None:
+        return effort, False
+    if EFFORT_RANK.get(effort, 0) < EFFORT_RANK.get(max_so_far, 0):
+        return max_so_far, True
+    return effort, False
+

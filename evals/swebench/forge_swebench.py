@@ -52,6 +52,9 @@ ARMS = {
     'plain': {'model': 'claude-fable-5-1', 'composed': False},
     'plain-sonnet': {'model': 'claude-sonnet-5', 'composed': False},
     'orch-primary': {'model': 'claude-fable-5-1', 'composed': True},
+    # Cache-aware effort (STUDY-DESIGN.md 18.4): the shipped config plus one change.
+    'orch-primary-monotonic': {'model': 'claude-fable-5-1', 'composed': True,
+                               'overrides': {'effort_routing': {'monotonic': True}}},
 }
 PROMPT = """You are working in a git checkout of the {repo} repository (your current directory).
 Resolve the GitHub issue below by editing the repository's source code.
@@ -186,7 +189,8 @@ def cmd_prepare(args):
         workspace = _build_workspace(run_dir, inst)
         spec = ARMS[arm]
         if spec['composed']:
-            side = {'source_root': str(source), 'mode': 'active', 'composition': 'composed', 'decision_overrides': {}}
+            side = {'source_root': str(source), 'mode': 'active', 'composition': 'composed',
+                    'decision_overrides': dict(spec.get('overrides') or {})}
         else:
             side = {'source_root': str(baseline), 'mode': 'off'}
         config = {'limits': limits, 'events_dir': str(run_dir/'events'),

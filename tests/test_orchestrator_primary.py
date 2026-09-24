@@ -255,3 +255,45 @@ class ObservatoryOnceTests(unittest.IsolatedAsyncioTestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class MonotonicEffortTests(unittest.IsolatedAsyncioTestCase):
+    """effort_routing.monotonic: effort never steps down within a turn, so the
+    thinking budget (and with it the provider's message cache) is not churned
+    by orient -> explore -> implement -> explore phase flips."""
+
+    @staticmethod
+    def _request(messages):
+        return NS(messages=messages, tools=[], tool_choice="auto")
+
+    async def _efforts(self, monotonic):
+        policy = Policy(mode="off", effort_routing={"orient": "medium", "explore": "low",
+                                                    "implement": "high", "monotonic": monotonic})
+        _, runtime, events = setup_service(policy)
+        facade = RoutedProvider(DemoProvider(delay_ms=0), runtime, {}, demo_response)
+        user = {"role": "user", "content": "fix it"}
+        read = {"role": "assistant", "content": "", "tool_calls": [{"id": "r", "name": "read_file"}]}
+        write = {"role": "assistant", "content": "", "tool_calls": [{"id": "w", "name": "edit_file"}]}
+        result = {"role": "tool", "content": "ok"}
+        sequences = [[user], [user, read, result], [user, read, result, write, result]]
+        applied = []
+        for messages in sequences:
+            req = self._request(messages)
+            await facade.complete(req)
+            applied.append(getattr(req, "reasoning_effort", None))
+        reasons = [e["data"]["reason_code"] for e in events if e["event"].endswith("effort_routed")]
+        return applied, reasons
+
+    async def test_without_monotonic_effort_follows_phase(self):
+        applied, _ = await self._efforts(False)
+        self.assertEqual(applied, ["medium", "low", "high"])
+
+    async def test_monotonic_holds_the_highest_effort(self):
+        applied, reasons = await self._efforts(True)
+        self.assertEqual(applied, ["medium", "medium", "high"])
+        self.assertEqual(reasons[1], "monotonic_hold")
+
+    def test_validation(self):
+        Policy(effort_routing={"explore": "low", "monotonic": True})
+        with self.assertRaises(ValueError):
+            Policy(effort_routing={"explore": "low", "monotonic": "yes"})
