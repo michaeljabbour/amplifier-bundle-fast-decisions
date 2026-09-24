@@ -59,10 +59,12 @@ ARMS = {
     # question per turn picks the start tier; complex turns stay on the host model.
     'orch-router-jev': {'model': 'claude-fable-5-1', 'composed': True, 'overrides': {
         'backend': 'jev', 'model': 'jev-1.13.0', 'allow_external_state': True, 'read_shortcut': False,
-        'timeout_ms': 3000, 'effort_routing': {'monotonic': True}, 'model_routing': {'start_policy': 'judge'}}},
+        'timeout_ms': 3000, 'effort_routing': {'by_tier': {'cheap': 'medium', 'strong': None}},
+        'model_routing': {'start_policy': 'judge'}}},
     'orch-router-local': {'model': 'claude-fable-5-1', 'composed': True, 'overrides': {
         'backend': 'ollama', 'model': 'qwen:latest', 'read_shortcut': False,
-        'timeout_ms': 8000, 'effort_routing': {'monotonic': True}, 'model_routing': {'start_policy': 'judge'}}},
+        'timeout_ms': 8000, 'effort_routing': {'by_tier': {'cheap': 'medium', 'strong': None}},
+        'model_routing': {'start_policy': 'judge'}}},
 }
 PROMPT = """You are working in a git checkout of the {repo} repository (your current directory).
 Resolve the GitHub issue below by editing the repository's source code.

@@ -378,3 +378,42 @@ class DifficultyRouterTests(unittest.IsolatedAsyncioTestCase):
             Policy(model_routing={"start_model": "m", "complex_min_probability": 1.5})
         with self.assertRaises(ValueError):
             Policy(read_shortcut="no")
+
+
+class EffortByTierTests(DifficultyRouterTests):
+    """effort_routing.by_tier: one effort for the whole turn, chosen by the router's tier."""
+
+    async def _efforts(self, p_complex):
+        events = []
+        coordinator = DemoCoordinator()
+        emitter = Emitter(coordinator.session_id, callback=events.append)
+        policy = Policy(mode="off", read_shortcut=False,
+                        effort_routing={"orient": "medium", "explore": "low", "implement": "high",
+                                        "by_tier": {"cheap": "medium", "strong": None}},
+                        model_routing={"start_model": "claude-sonnet-5", "start_policy": "judge",
+                                       "max_requests_before_escalation": 6})
+        service = DecisionService(policy, self.FakeJudge(p_complex=p_complex), emitter, coordinator, [])
+        service.turn = TurnState("t")
+        facade = RoutedProvider(DemoProvider(delay_ms=0), Runtime(service), {}, demo_response, "anthropic")
+        user = {"role": "user", "content": "task"}
+        read = {"role": "assistant", "content": "", "tool_calls": [{"id": "r", "name": "read_file"}]}
+        write = {"role": "assistant", "content": "", "tool_calls": [{"id": "w", "name": "edit_file"}]}
+        result = {"role": "tool", "content": "ok"}
+        applied = []
+        for messages in ([user], [user, read, result], [user, read, result, write, result]):
+            req = NS(messages=messages, tools=[], tool_choice="auto")
+            await facade.complete(req)
+            applied.append(getattr(req, "reasoning_effort", None))
+        return applied
+
+    async def test_cheap_turn_holds_one_effort_across_phases(self):
+        self.assertEqual(await self._efforts(0.1), ["medium", "medium", "medium"])
+
+    async def test_strong_turn_leaves_provider_default(self):
+        self.assertEqual(await self._efforts(0.9), [None, None, None])
+
+    def test_validation(self):
+        with self.assertRaises(ValueError):
+            Policy(effort_routing={"by_tier": {"huge": "low"}})
+        with self.assertRaises(ValueError):
+            Policy(effort_routing={"by_tier": {"cheap": "turbo"}})

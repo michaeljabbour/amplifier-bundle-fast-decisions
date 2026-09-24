@@ -386,6 +386,20 @@ cells:
       min_model_routed: 1
       require_effort_phases: ["implement:high"]
 
+  orch-router-jev:
+    harnesses: [amplifier-fd]
+    fd: { composition: composed, backend: jev, allow_external_state: true, effort_profile: all_phase,
+          model_routing_profile: sonnet_start,
+          overrides: { read_shortcut: false, timeout_ms: 3000,
+                       effort_routing: { by_tier: { cheap: medium, strong: null } },
+                       model_routing: { start_policy: judge } } }
+    role: "turn-start difficulty router judged by Jev: simple turns cheap model + one effort, complex turns host model; no mid-turn switches"
+    purpose: "STUDY-DESIGN.md 18.7 -- fast on simple AND complex tasks, cache-stable"
+    anchor_cell: plain
+    secondary_anchor: plain-sonnet
+    requires_cells: [plain-sonnet]
+    mechanism_gate: { max_scored: 0 }
+
   orch-primary+jev:
     harnesses: [amplifier-fd]
     fd: { composition: composed, backend: jev, allow_external_state: true,

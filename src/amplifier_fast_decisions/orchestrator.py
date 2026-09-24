@@ -614,6 +614,10 @@ docs/UPSTREAM_CONTRACT.md.
         model_routing = service.policy.model_routing
         effort_applied_this_request = False
         phase = None
+        # Turn-start difficulty router: decided once, before effort and model
+        # routing, so both can follow the same per-turn tier.
+        if model_routing and turn.start_tier is None and model_routing.get("start_policy", "cheap") != "cheap":
+            turn.start_tier = await decide_start_tier(service, request, model_routing, decision_id)
         if effort_routing:
             phase = effort.classify_phase(request)
 
@@ -696,7 +700,11 @@ docs/UPSTREAM_CONTRACT.md.
             )
             if phase == effort.PHASE_EXPLORE:
                 turn.explore_requests = explore_requests
-            if effort_routing.get("monotonic") and applied_effort is not None:
+            by_tier = effort_routing.get("by_tier")
+            if by_tier is not None and turn.start_tier in by_tier and not host_pinned:
+                applied_effort = by_tier[turn.start_tier]
+                reason_code = f"tier_{turn.start_tier}"
+            elif effort_routing.get("monotonic") and applied_effort is not None:
                 applied_effort, held = effort.hold_monotonic(applied_effort, turn.max_effort_applied)
                 if held:
                     reason_code = effort.REASON_MONOTONIC_HOLD

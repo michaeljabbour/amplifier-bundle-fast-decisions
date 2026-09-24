@@ -104,9 +104,22 @@ def validate_effort_routing(effort_routing: Any) -> None:
         # flips (implement -> explore -> implement) each re-wrote the whole
         # conversation cache -- measured as ~3x cache-write tokens.
         "monotonic",
+        # Effort by the turn-start difficulty tier (requires model_routing
+        # with a start_policy): {"cheap": <effort|None>, "strong": <effort|None>}.
+        # When the tier is known it REPLACES the phase effort for the whole
+        # turn -- one effort per turn, so the provider's message cache is
+        # never invalidated by an effort change. None = provider default.
+        "by_tier",
     }
     if unknown:
         raise ValueError(f"effort_routing has unknown keys: {sorted(unknown)}")
+    by_tier = effort_routing.get("by_tier")
+    if by_tier is not None:
+        if not isinstance(by_tier, dict) or set(by_tier) - {"cheap", "strong"}:
+            raise ValueError("effort_routing.by_tier must map cheap/strong to an effort or null")
+        for tier_effort in by_tier.values():
+            if tier_effort is not None and tier_effort not in ALLOWED_EFFORTS:
+                raise ValueError(f"effort_routing.by_tier values must be one of {sorted(ALLOWED_EFFORTS)} or null")
     for key in ("max_explore_requests", "escalate_after_provider_errors"):
         value = effort_routing.get(key)
         if value is not None and (
