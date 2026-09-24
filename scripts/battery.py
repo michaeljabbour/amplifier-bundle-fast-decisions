@@ -354,7 +354,8 @@ def cmd_prepare(args):
         sides = {
             'amplifier-plain': {'source_root': baseline_source, 'mode': 'off'},
             'amplifier-fd': {'source_root': candidate_source, 'mode': 'active',
-                              'decision_overrides': fd_overrides},
+                              'decision_overrides': fd_overrides,
+                              'composition': getattr(args, 'fd_composition', None) or 'explicit'},
         }
         fe_config = {
             'runs': [{'name': r['name'], 'task': r['task'], 'side': r['harness'], 'rep': 1,
@@ -2055,6 +2056,10 @@ def main(argv=None):
     p.add_argument('--baseline-source')
     p.add_argument('--candidate-source')
     p.add_argument('--candidate-sha', help='Freeze the candidate snapshot at this git rev instead of HEAD')
+    p.add_argument('--fd-composition', choices=['explicit', 'composed'], default='explicit',
+                   help="amplifier-fd profile shape: 'explicit' (default) declares loop-fast-decisions with "
+                        "the DEFAULT_DECISION policy; 'composed' includes the bundle root as shipped and lets "
+                        "composition replace foundation's orchestrator (forge_e2e._composed_profile)")
     p.add_argument('--fd-backend', choices=['ollama', 'jev', 'hosted', 'gateway', 'laya'],
                     help="Decision backend override for the amplifier-fd side ('gateway' is a legacy alias for 'hosted')")
     p.add_argument('--allow-external-state', action='store_true',

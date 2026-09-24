@@ -99,6 +99,8 @@
     if (k === 'shadow_agreement') { title = 'Shadow comparison: ' + pretty(d.agreement); detail = 'Compared with the observed tool choice; no execution changed.'; source = 'Shadow comparison'; }
     if (k === 'role_proposed' || k === 'role_agreement') { title = 'Model-role ' + (k === 'role_proposed' ? 'suggestion' : 'comparison'); detail = 'Shadow only; provider selection is unchanged.'; source = 'Shadow comparison'; }
     if (d.reason_code === 'no_eligible_candidates') { title = 'No prepared action available'; detail = 'The request did not produce an eligible candidate.'; }
+    if (d.reason_code === 'judge_disabled') { title = 'Routed to model (routing-only)'; detail = 'No judge configured; effort and model routing still apply.'; }
+    if (d.reason_code === 'provider_not_matched') { title = 'Model routing skipped'; detail = 'This provider does not match model_routing.provider_match; its own model is used.'; }
     if (k === 'turn_start') { title = 'Hybrid turn started'; detail = backendName(d.backend) + ' · ' + d.mode; }
     if (k === 'turn_end') { title = 'Hybrid turn finished'; detail = (d.fast_total ?? 0) + ' fast submissions · ' + (d.slow_total ?? 0) + ' measured provider calls'; }
     if (k === 'observatory') { title = 'Viewer ' + (d.action || 'event'); detail = pretty(d.reason) || 'Viewer lifecycle metadata'; }

@@ -34,6 +34,7 @@ UNSUPPORTED_PREFIX = "fast-decisions:modules/"
 COMPOSITION_FILES = [
     ROOT / "bundle.md",
     ROOT / "behaviors" / "fast-decisions.yaml",
+    ROOT / "behaviors" / "fast-decisions-shadow.yaml",
     ROOT / "bundles" / "shadow.yaml",
     ROOT / "bundles" / "active.yaml",
     ROOT / "bundles" / "active-routing.yaml",
@@ -82,6 +83,42 @@ class MakeFasterContextTests(unittest.TestCase):
         data = _load_frontmatter(ROOT / "behaviors" / "fast-decisions.yaml")
         includes = (data.get("context") or {}).get("include") or []
         self.assertIn("fast-decisions:context/make-faster.md", includes)
+
+    def test_shadow_behavior_references_context_file(self):
+        data = _load_frontmatter(ROOT / "behaviors" / "fast-decisions-shadow.yaml")
+        includes = (data.get("context") or {}).get("include") or []
+        self.assertIn("fast-decisions:context/make-faster.md", includes)
+
+
+class OrchestratorPrimaryBehaviorOfflineTests(unittest.TestCase):
+    """behaviors/fast-decisions.yaml is the primary form: it replaces the
+    host orchestrator with loop-fast-decisions (routing-only by default)."""
+
+    def test_behavior_declares_orchestrator(self):
+        data = _load_frontmatter(ROOT / "behaviors" / "fast-decisions.yaml")
+        orchestrator = data["session"]["orchestrator"]
+        self.assertEqual(orchestrator["module"], "loop-fast-decisions")
+        config = orchestrator["config"]
+        self.assertEqual(config["mode"], "active")
+        self.assertEqual(config["backend"], "none")
+        self.assertIs(config["allow_external_state"], False)
+        self.assertEqual(config["model_routing"]["provider_match"], "anthropic")
+        # No explicit upstream block: the root's loop-streaming settings are
+        # inherited through composition and forwarded (upstream_config).
+        self.assertNotIn("upstream", config)
+        self.assertTrue(config["observatory"]["enabled"])
+
+    def test_behavior_orchestrator_config_is_a_valid_policy(self):
+        from amplifier_fast_decisions.contracts import Policy
+
+        data = _load_frontmatter(ROOT / "behaviors" / "fast-decisions.yaml")
+        policy = Policy.from_config(data["session"]["orchestrator"]["config"])
+        self.assertEqual(policy.mode, "active")
+        self.assertEqual(policy.effort_routing["implement"], "high")
+
+    def test_shadow_behavior_does_not_swap_orchestrator(self):
+        data = _load_frontmatter(ROOT / "behaviors" / "fast-decisions-shadow.yaml")
+        self.assertNotIn("session", data)
 
 
 class YamlSourceTests(unittest.TestCase):
@@ -190,7 +227,10 @@ class ActiveRoutingBundleOfflineTests(unittest.TestCase):
                 "escalate_on_provider_error": True,
             },
         )
-        self.assertEqual(data["includes"], [{"bundle": "fast-decisions:bundle.md"}])
+        self.assertEqual(data["includes"], [
+            {"bundle": "git+https://github.com/microsoft/amplifier-foundation@main"},
+            {"bundle": "fast-decisions:behaviors/fast-decisions-shadow"},
+        ])
 
     def test_active_routing_config_validates_against_policy(self):
         """The orchestrator config must be a valid Policy -- this catches a
@@ -251,9 +291,14 @@ class BundleLoadTests(unittest.TestCase):
         orchestrator = mount_plan["session"]["orchestrator"]
         self.assertEqual(
             orchestrator["module"],
-            "loop-streaming",
-            "root bundle.md must not replace foundation's orchestrator",
+            "loop-fast-decisions",
+            "root bundle.md must replace foundation's orchestrator",
         )
+        # Foundation's own loop-streaming setting survives the swap (it is
+        # forwarded to the wrapped loop by orchestrator.upstream_config).
+        from amplifier_fast_decisions.orchestrator import upstream_config
+
+        self.assertIs(upstream_config(orchestrator["config"]).get("extended_thinking"), True)
 
         tool_modules = {t["module"] for t in mount_plan.get("tools", [])}
         hook_modules = {h["module"] for h in mount_plan.get("hooks", [])}

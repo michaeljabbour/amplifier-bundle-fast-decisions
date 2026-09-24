@@ -46,9 +46,9 @@ def _active_orchestrator_config() -> dict:
 
 
 def _behavior_configs() -> tuple[dict, dict]:
-    """Return (hook_config, tool_config) from behaviors/fast-decisions.yaml."""
+    """Return (hook_config, tool_config) from behaviors/fast-decisions-shadow.yaml."""
     data = yaml.safe_load(
-        (ROOT / "behaviors" / "fast-decisions.yaml").read_text(encoding="utf-8")
+        (ROOT / "behaviors" / "fast-decisions-shadow.yaml").read_text(encoding="utf-8")
     )
     hook_config = data["hooks"][0]["config"]
     tool_config = data["tools"][0]["config"]

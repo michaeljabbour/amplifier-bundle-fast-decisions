@@ -11,4 +11,7 @@ bundle:
     have chosen without ever overriding the model.
 
 includes:
-  - bundle: fast-decisions:bundle.md
+  # foundation + the observer-only behavior (not bundle.md, whose behavior now
+  # carries its own orchestrator config that would deep-merge into this one).
+  - bundle: git+https://github.com/microsoft/amplifier-foundation@main
+  - bundle: fast-decisions:behaviors/fast-decisions-shadow

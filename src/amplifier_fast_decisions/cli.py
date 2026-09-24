@@ -591,9 +591,20 @@ def configure(args) -> int:
     workspace = Path(args.workspace).expanduser().resolve(strict=True)
     events_dir = str(Path(args.events).expanduser().resolve())
 
+    # Foundation + the observer-only behavior rather than bundle.md: the root
+    # bundle's behavior now carries its own orchestrator config, which would
+    # otherwise deep-merge into (active) or replace (shadow/off) this
+    # profile's intended orchestrator.
+    root_yaml = _load_module_bundle_yaml(root / "bundle.md")
+    foundation = next(
+        inc for inc in root_yaml["includes"] if "amplifier-foundation" in inc["bundle"]
+    )
     data = {
         "bundle": {"name": "fast-decisions-" + args.mode, "version": __version__},
-        "includes": [{"bundle": root.as_uri()}],
+        "includes": [
+            dict(foundation),
+            {"bundle": (root / "behaviors" / "fast-decisions-shadow.yaml").as_uri()},
+        ],
         "tools": [
             {"module": "tool-fast-workspace", "config": {"root": str(workspace)}}
         ],
@@ -622,7 +633,7 @@ def configure(args) -> int:
         # uses) with our overrides; compose()'s merge_module_lists deep-merges
         # by module id with the later (this profile's) declaration winning.
         behavior_yaml = _load_module_bundle_yaml(
-            root / "behaviors" / "fast-decisions.yaml"
+            root / "behaviors" / "fast-decisions-shadow.yaml"
         )
         hook_entry = next(
             h for h in behavior_yaml["hooks"] if h["module"] == "hooks-fast-decisions"

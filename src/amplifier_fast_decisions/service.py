@@ -99,6 +99,12 @@ class DecisionService:
 
         if self.policy.mode == "off":
             return await slow("mode_off")
+        if self.backend.name == "unavailable":
+            # Routing-only configuration (the orchestrator-primary default):
+            # no judge is configured, so skip candidate collection entirely
+            # instead of building state for a backend that can only raise
+            # (and would then trip the circuit breaker on every turn).
+            return await slow("judge_disabled")
         if not automatic_tools(request) or not tool_names(request):
             return await slow("no_automatic_tool_boundary")
         if (

@@ -1,50 +1,71 @@
 bundle:
   name: fast-decisions-behavior
-  version: 0.1.0
+  version: 0.2.0
   description: >-
-    Fast-decision telemetry hook plus the read-only fast_workspace tool.
-    The hook carries its own shadow config (mode: shadow by default): compose
-    this behavior onto any orchestrator to get shadow measurement -- no
-    orchestrator swap required. Orchestrator swaps (fast-path execution)
-    remain opt-in via bundles/active.yaml.
+    Orchestrator-primary fast-decisions: replaces the host's orchestrator with
+    loop-fast-decisions, which wraps the same upstream loop-streaming loop
+    (steering, approvals, compaction, cancellation, provider pin all stay
+    upstream's) and routes every provider call -- phase-specific reasoning
+    effort plus a cheaper start model that escalates on failure signals.
+    Also mounts the telemetry hook and the read-only fast_workspace tool, and
+    launches the observatory dashboard on session start.
+
+# Why a behavior carries session.orchestrator (deliberately, against the
+# usual "behaviors don't pick the orchestrator" convention): the only seam
+# that can change a turn is the provider call inside the orchestrator --
+# upstream never honors a hook's `modify` at tool:pre (see router.py and
+# docs/UPSTREAM_CONTRACT.md). Composed AFTER a root (bundle.md's include
+# order, or `amplifier bundle add --app`), the kernel's deep merge makes this
+# module win while the root's own loop-streaming settings (e.g. foundation's
+# extended_thinking) are forwarded to the wrapped loop. Delegated sub-sessions
+# inherit the parent's orchestrator, so routing applies to them too. Want
+# measurement without the swap? Compose behaviors/fast-decisions-shadow.yaml.
+session:
+  orchestrator:
+    module: loop-fast-decisions
+    source: git+https://github.com/michaeljabbour/amplifier-bundle-fast-decisions@main#subdirectory=modules/loop-fast-decisions
+    config:
+      mode: active
+      # Routing-only by default: the evidence (docs/EVIDENCE.md) attributes
+      # the speedup to effort/model routing, while the judged read shortcut
+      # rarely fires and a judge call sits in front of every slow request.
+      # Set backend: jev (+ allow_external_state: true) or ollama to enable
+      # the judged fast path on top.
+      backend: none
+      allow_external_state: false
+      allowed_tools: [fast_workspace]
+      effort_routing:
+        orient: medium
+        explore: low
+        implement: high
+        max_explore_requests: 6
+        escalate_after_provider_errors: 1
+      model_routing:
+        start_model: claude-sonnet-5
+        # Only ever send the Anthropic start model to Anthropic providers.
+        provider_match: anthropic
+        max_requests_before_escalation: 6
+        escalate_on_test_failure: true
+        escalate_on_provider_error: true
+      # Auto-observatory: on the top-level session's first session:start,
+      # reuse-or-spawn a detached `afast serve` and open it. Skipped for
+      # child sessions, when AFAST_OBSERVATORY=off or AMPLIFIER_NO_BROWSER=1,
+      # or without a TTY. Stop it with `afast serve --stop`.
+      observatory:
+        enabled: true
+        open_browser: always
+        port: 8765
 
 hooks:
   - module: hooks-fast-decisions
     source: git+https://github.com/michaeljabbour/amplifier-bundle-fast-decisions@main#subdirectory=modules/hooks-fast-decisions
     config:
+      # Native-event bridge + session presence for the dashboard. The
+      # orchestrator owns the decision policy; shadow scoring and the role
+      # router stand down automatically when it is mounted.
       mode: shadow
-      # deterministic: in-process, offline scorer (external=False) -- the
-      # shipped "shadow, external=false" rung actually measures something
-      # instead of only ever hitting the external_state_not_enabled
-      # fallback. Set backend: jev (and allow_external_state: true) to move
-      # to the next rung. See docs/design/redesign-2026-09-17.md P3.
       backend: deterministic
       allow_external_state: false
-      shadow_capacity: 64
-      shadow_state_source: context_mount
-      shadow_max_messages: 12
-      shadow_snapshot_budget_ms: 25
-      shadow_drain_ms: 2000
-      max_state_chars: 12000
-      max_questions: 8
-      # Shadow-only (see router.py: "modify" is never honored at tool:pre in
-      # the upstream loop, so this can never become active through this
-      # seam). Defaulting it on costs nothing beyond one resolver probe per
-      # session and turns a UAT/DTU session into a real proposal/agreement
-      # trail instead of a wall of role_router_disabled abstains. See
-      # docs/design/redesign-2026-09-17.md P4.
-      role_router: true
-      role_probe_timeout_ms: 2000
-      role_router_tools:
-        - delegate
-      # Auto-observatory: on this session's first session:start (top-level
-      # only -- a session with a parent_id is skipped), reuse-or-spawn a
-      # detached `afast serve` and open it in a browser. Skipped when
-      # AFAST_OBSERVATORY=off or AMPLIFIER_NO_BROWSER=1 is set, or when
-      # neither stdin nor stdout is a TTY (e.g. `amplifier run` in a
-      # pipe/CI). Never delays session start -- the spawn/health-check work
-      # runs in an owned background task. See docs/UAT.md and
-      # docs/PRIVACY.md ("Viewer").
       observatory:
         enabled: true
         open_browser: always

@@ -473,6 +473,11 @@ docs/UPSTREAM_CONTRACT.md.
     async def list_models(self):
         return await self._provider.list_models()
 
+    def _provider_matches(self, needle: str) -> bool:
+        needle = needle.lower()
+        names = (self._provider_key, getattr(self._provider, "name", None))
+        return any(isinstance(n, str) and needle in n.lower() for n in names)
+
     def parse_tool_calls(self, response):
         # Provider-specific parsing must not attempt to decode a Jev envelope.
         if id(response) in self._synthetic_responses:
@@ -744,8 +749,11 @@ docs/UPSTREAM_CONTRACT.md.
 
             requested_model = None
             requested_effort = None
+            provider_match = model_routing.get("provider_match")
             if turn.escalated:
                 reason_code = f"escalated_{turn.escalation_reason}"
+            elif provider_match and not self._provider_matches(provider_match):
+                reason_code = "provider_not_matched"
             else:
                 explicit_model = field_value(request, "model", None)
                 if explicit_model and not override_explicit:
@@ -1037,6 +1045,71 @@ def _import_upstream_loop(cache_root: "Path | None" = None):
         ) from exc
 
 
+# loop-streaming's own top-level config keys (amplifier_module_loop_streaming
+# StreamingOrchestrator.__init__ and execute paths), plus every ``goal_*`` key.
+# When this bundle replaces a root's loop-streaming through composition, the
+# kernel's deep merge leaves the root's loop-streaming settings (foundation
+# ships ``extended_thinking: true``) at the TOP level of this module's config.
+# They belong to the wrapped loop, so they are forwarded there; an explicit
+# ``upstream:`` block always wins. Decision-policy keys are never forwarded.
+UPSTREAM_CONFIG_KEYS = frozenset({
+    "max_iterations", "extended_thinking", "reasoning_effort", "budget_warn_ratio",
+    "stream_delay", "min_delay_between_calls_ms", "ephemeral_injection_mode",
+    "reminder_placement", "use_streaming",
+})
+
+
+def upstream_config(config: dict[str, Any]) -> dict[str, Any]:
+    inherited = {k: v for k, v in config.items()
+                 if k in UPSTREAM_CONFIG_KEYS or k.startswith("goal_")}
+    return {**inherited, **dict(config.get("upstream") or {})}
+
+
+def _register_upstream_capabilities(coordinator: Any, upstream: Any) -> list[str]:
+    """Register what loop-streaming's own mount() would have registered.
+
+    This module constructs the upstream loop directly (it never calls the
+    upstream ``mount``, which would mount a second orchestrator), so without
+    this the app-facing ``session.steer`` and ``conversation.provider_pin``
+    capabilities and the upstream observability event names would silently
+    disappear whenever this orchestrator replaces loop-streaming. Best-effort:
+    an upstream revision lacking one of them simply does not get it.
+    """
+    import sys as _sys
+    registered: list[str] = []
+    module = _sys.modules.get(type(upstream).__module__)
+    register_capability = getattr(coordinator, "register_capability", None)
+    if callable(register_capability):
+        steer = getattr(upstream, "steer", None)
+        if callable(steer):
+            register_capability("session.steer", steer)
+            registered.append("session.steer")
+        pin_cls = getattr(module, "ConversationProviderPin", None)
+        if pin_cls is not None:
+            try:
+                register_capability("conversation.provider_pin", pin_cls(upstream, coordinator))
+                registered.append("conversation.provider_pin")
+            except Exception:
+                pass
+    register_contributor = getattr(coordinator, "register_contributor", None)
+    if callable(register_contributor):
+        register_contributor("observability.events", "loop-streaming", lambda: [
+            "execution:start", "execution:end", "orchestrator:steering_injected",
+            "orchestrator:goal_progress", "orchestrator:budget_warning",
+            "orchestrator:provider_budget", "orchestrator:provider_overflow_recovery",
+        ])
+    return registered
+
+
+def _hook_continue():
+    try:
+        from amplifier_core.models import HookResult
+        return HookResult(action="continue")
+    except ImportError:
+        from types import SimpleNamespace
+        return SimpleNamespace(action="continue")
+
+
 class HybridOrchestrator:
     def __init__(self, config: dict[str, Any], coordinator: Any, runtime: Runtime,
                  *, upstream: Any = None, response_factory=action_response):
@@ -1046,9 +1119,49 @@ class HybridOrchestrator:
         self.response_factory = response_factory
         if upstream is None:
             StreamingOrchestrator = _import_upstream_loop()
-            # Upstream configuration is explicit; no accidental forwarding of Jev settings.
-            upstream = StreamingOrchestrator(dict(config.get("upstream", {})))
+            upstream = StreamingOrchestrator(upstream_config(config))
         self.upstream = upstream
+        # Lifecycle bookkeeping for the execution:end backfill (see execute()).
+        self._execution_started = False
+        self._execution_ended = False
+
+    async def _on_execution_start(self, event: str, data: dict):
+        self._execution_started = True
+        return _hook_continue()
+
+    async def _on_execution_end(self, event: str, data: dict):
+        self._execution_ended = True
+        return _hook_continue()
+
+    def register_lifecycle_hooks(self, hooks: Any) -> list[Any]:
+        """Observe the wrapped loop's execution:start/end so execute() can
+        backfill a missing execution:end. The orchestrator contract requires
+        execution:end on EVERY exit path; loop-streaming skips it on early
+        returns (deny, cancel) and on exceptions."""
+        register = getattr(hooks, "register", None)
+        if not callable(register):
+            return []
+        return [
+            register("execution:start", self._on_execution_start, priority=0,
+                     name="loop-fast-decisions:execution-start"),
+            register("execution:end", self._on_execution_end, priority=0,
+                     name="loop-fast-decisions:execution-end"),
+        ]
+
+    async def _backfill_execution_end(self, hooks: Any, response: Any, status: str) -> None:
+        if not self._execution_started or self._execution_ended:
+            return
+        emit = getattr(hooks, "emit", None)
+        if not callable(emit):
+            return
+        try:
+            await emit("execution:end", {
+                "response": response if isinstance(response, str) else "",
+                "status": {"ok": "completed"}.get(status, status),
+                "source": "loop-fast-decisions",
+            })
+        except Exception:
+            pass
 
     async def execute(self, prompt, context, providers, tools, hooks, **kwargs) -> str:
         async with self.runtime.lock:
@@ -1078,6 +1191,9 @@ class HybridOrchestrator:
             kwargs.setdefault("coordinator", self.coordinator)
             started = time.perf_counter()
             status = "error"
+            response = None
+            self._execution_started = False
+            self._execution_ended = False
             try:
                 response = await self.upstream.execute(prompt, context, wrapped_providers, wrapped_tools, hooks, **kwargs)
                 status = "ok"
@@ -1087,6 +1203,7 @@ class HybridOrchestrator:
                 await service.emit("cancelled", {"reason_code": "turn_cancelled"})
                 raise
             finally:
+                await self._backfill_execution_end(hooks, response, status)
                 await service.emit("turn_end", {"fast_total": service.turn.fast_total,
                     "status": status, "duration_ms": (time.perf_counter() - started) * 1000,
                     "slow_total": service.slow_total,
@@ -1116,10 +1233,41 @@ async def mount(coordinator, config: dict):
         raise
     except Exception:
         pass
+    registrations: list[Any] = []
+    observatory_tasks: list[asyncio.Task] = []
     try:
         orchestrator = HybridOrchestrator(config, coordinator, runtime)
         await coordinator.mount("orchestrator", orchestrator)
+        _register_upstream_capabilities(coordinator, orchestrator.upstream)
+        hooks = getattr(coordinator, "hooks", None)
+        if hooks is not None:
+            registrations.extend(orchestrator.register_lifecycle_hooks(hooks))
+            # Orchestrator-primary: the dashboard launches from here, so a
+            # root that composes only this orchestrator (no hook) still gets
+            # it. Installed at most once per session (the hook defers).
+            from .observer import install_auto_observatory
+            registration = install_auto_observatory(
+                coordinator, runtime, config, config.get("events_dir"), observatory_tasks)
+            if registration is not None:
+                registrations.append(registration)
     except Exception:
         await runtime.close()
         raise
-    return orchestrator.cleanup
+
+    async def cleanup():
+        for unregister in registrations:
+            if callable(unregister):
+                try:
+                    unregister()
+                except Exception:
+                    pass
+        for task in observatory_tasks:
+            if not task.done():
+                task.cancel()
+            try:
+                await task
+            except (asyncio.CancelledError, Exception):
+                pass
+        await orchestrator.cleanup()
+
+    return cleanup

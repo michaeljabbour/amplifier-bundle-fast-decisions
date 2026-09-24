@@ -49,7 +49,7 @@ PROMPT = ('Read README.md first, then repair the implementation to satisfy its f
           'Run the tests and explain your fix and validation. Do not inspect files outside this workspace.')
 
 # The upstream orchestrator the "off" (no fast-decisions routing) side runs.
-UPSTREAM_LOOP_SOURCE = 'git+https://github.com/microsoft/amplifier-module-loop-streaming@20aac7a9eb26034d230357f6aa6805f27c86df52'
+UPSTREAM_LOOP_SOURCE = 'git+https://github.com/microsoft/amplifier-module-loop-streaming@4cc86dd4eae36b40af38b4e2e70b9045649d2903'
 
 _UNSAFE_PATH_CHARS = re.compile(r'[^A-Za-z0-9._-]')
 _PATH_SAFE_RE = re.compile(r'^[A-Za-z0-9._/-]+$')
@@ -318,6 +318,8 @@ def _side_profile(name, side, task, workspace, config):
     upstream = {'max_iterations': config['limits']['max_iterations'], 'extended_thinking': config['limits']['extended_thinking']}
     source_root = Path(side['source_root'])
     decision = {**DEFAULT_DECISION, **side.get('decision_overrides', {})}
+    if side.get('composition') == 'composed':
+        return _composed_profile(name, side, task, workspace, config, upstream)
     if side['mode'] == 'active':
         # allow_external_state must come from `decision` (DEFAULT_DECISION, overridable via
         # side['decision_overrides']), never a hardcoded False here -- that silently dropped
@@ -327,7 +329,8 @@ def _side_profile(name, side, task, workspace, config):
         # fast_decisions:scored). See docs/EVENTS.md and battery.py's cmd_prepare.
         loop_config = {**decision, 'mode': 'active',
                         'allow_external_state': decision.get('allow_external_state', False),
-                        'events_dir': config['events_dir'], 'upstream': upstream}
+                        'events_dir': config['events_dir'], 'upstream': upstream,
+                        'observatory': {'enabled': False}}
         loop = {'module': 'loop-fast-decisions', 'source': (source_root/'modules/loop-fast-decisions').as_uri(), 'config': loop_config}
         hook_config = {**loop_config, 'session_label': f'Forge {task} / active', 'observatory': {'enabled': False}}
         hooks = [{'module': 'hooks-fast-decisions', 'source': (source_root/'modules/hooks-fast-decisions').as_uri(), 'config': hook_config}]
@@ -393,6 +396,34 @@ def _side_profile(name, side, task, workspace, config):
     if providers:
         profile['providers'] = providers
     return profile
+
+
+def _composed_profile(name, side, task, workspace, config, upstream):
+    """The product exactly as a user composes it: include the bundle root
+    (foundation + behaviors/fast-decisions.yaml) and let composition pick the
+    orchestrator. The profile never names an orchestrator module -- it only
+    repoints module sources at the frozen candidate tree and sets run-local
+    config (events dir, no dashboard, iteration limit) -- so a run whose
+    receipts show loop-fast-decisions proves the bundle itself replaced
+    foundation's loop-streaming. Decision policy is the shipped default plus
+    only explicit --fd-override values (DEFAULT_DECISION is NOT applied).
+    `upstream` limits go in at the top level, exercising the same forwarding
+    path a root's loop-streaming settings take (orchestrator.upstream_config)."""
+    source_root = Path(side['source_root'])
+    orchestrator_config = {**side.get('decision_overrides', {}), **upstream,
+                           'events_dir': config['events_dir'], 'observatory': {'enabled': False}}
+    return {
+        'bundle': {'name': BENCHMARK_BUNDLE_NAME, 'version': '0.1.0'},
+        'includes': [{'bundle': source_root.as_uri()}],
+        'session': {'orchestrator': {
+            'source': (source_root/'modules/loop-fast-decisions').as_uri(),
+            'config': orchestrator_config}},
+        'tools': [{'module': 'tool-fast-workspace', 'source': (source_root/'modules/tool-fast-workspace').as_uri(),
+                   'config': {'root': str(workspace)}}],
+        'hooks': [{'module': 'hooks-fast-decisions', 'source': (source_root/'modules/hooks-fast-decisions').as_uri(),
+                   'config': {'events_dir': config['events_dir'], 'session_label': f'Forge {task} / composed',
+                              'observatory': {'enabled': False}}}],
+    }
 
 
 def _build_workspace(run_dir, task):

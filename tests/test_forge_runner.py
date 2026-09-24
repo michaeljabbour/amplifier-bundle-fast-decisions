@@ -147,6 +147,48 @@ class SideProfileModeTests(unittest.TestCase):
         self.assertFalse(active['session']['orchestrator']['config']['allow_external_state'])
 
 
+class ComposedSideProfileTests(unittest.TestCase):
+    """--fd-composition composed: the shipped bundle root is included and the
+    profile never names an orchestrator module -- composition must swap it."""
+
+    def _profile(self, overrides=None):
+        import forge_e2e
+        cfg = {'limits': {'max_iterations': 30, 'extended_thinking': True}, 'events_dir': '/tmp/e',
+               'upstream_loop_source': 'git+x'}
+        side = {'source_root': '/tmp/s', 'mode': 'active', 'composition': 'composed',
+                'decision_overrides': overrides or {}}
+        return forge_e2e._side_profile('n', side, 'scheduler', '/tmp/w', cfg)
+
+    def test_includes_bundle_root_and_never_names_the_orchestrator(self):
+        profile = self._profile()
+        self.assertEqual(profile['includes'], [{'bundle': 'file:///tmp/s'}])
+        orchestrator = profile['session']['orchestrator']
+        self.assertNotIn('module', orchestrator)
+        self.assertEqual(orchestrator['source'], 'file:///tmp/s/modules/loop-fast-decisions')
+
+    def test_run_local_config_only(self):
+        config = self._profile()['session']['orchestrator']['config']
+        # Limits at the top level (forwarded upstream), dashboard off, no
+        # DEFAULT_DECISION policy (backend/model come from the shipped bundle).
+        self.assertEqual(config['max_iterations'], 30)
+        self.assertIs(config['extended_thinking'], True)
+        self.assertEqual(config['observatory'], {'enabled': False})
+        self.assertNotIn('backend', config)
+        self.assertNotIn('upstream', config)
+
+    def test_explicit_overrides_pass_through(self):
+        config = self._profile({'backend': 'jev', 'allow_external_state': True})['session']['orchestrator']['config']
+        self.assertEqual(config['backend'], 'jev')
+        self.assertTrue(config['allow_external_state'])
+
+    def test_explicit_active_side_disables_dashboard(self):
+        import forge_e2e
+        cfg = {'limits': {'max_iterations': 30, 'extended_thinking': True}, 'events_dir': '/tmp/e',
+               'upstream_loop_source': 'git+x'}
+        active = forge_e2e._side_profile('n', {'source_root': '/tmp/s', 'mode': 'active'}, 'scheduler', '/tmp/w', cfg)
+        self.assertEqual(active['session']['orchestrator']['config']['observatory'], {'enabled': False})
+
+
 class SideProfileAmplifierEffortTests(unittest.TestCase):
     """--amplifier-effort (battery.py prepare) must reach the profile's provider
     config identically on both amplifier sides (plain=off, fd=active)."""

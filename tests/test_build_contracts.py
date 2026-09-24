@@ -38,7 +38,7 @@ class BuildTests(unittest.TestCase):
     def test_active_loop_installs_its_wrapped_upstream(self):
         data = tomllib.loads((ROOT/'modules/loop-fast-decisions/pyproject.toml').read_text())
         self.assertIn(
-            'amplifier-module-loop-streaming @ git+https://github.com/microsoft/amplifier-module-loop-streaming@20aac7a9eb26034d230357f6aa6805f27c86df52',
+            'amplifier-module-loop-streaming @ git+https://github.com/microsoft/amplifier-module-loop-streaming@4cc86dd4eae36b40af38b4e2e70b9045649d2903',
             data['project']['dependencies'],
         )
 
@@ -59,7 +59,7 @@ class BuildTests(unittest.TestCase):
             configure(args)
             data=json.loads(output.read_text().split('---')[1])
             self.assertEqual(data['bundle']['name'],'fast-decisions-shadow')
-            self.assertTrue(data['includes'][0]['bundle'].startswith('file:///'))
+            self.assertTrue(data['includes'][-1]['bundle'].startswith('file:///'))
             self.assertEqual(data['tools'][0]['config']['root'],str(Path(temp).resolve(strict=True)))
     def test_active_requires_external_opt_in(self):
         with self.assertRaises(ValueError):

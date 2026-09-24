@@ -1,0 +1,64 @@
+bundle:
+  name: fast-decisions-shadow-behavior
+  version: 0.2.0
+  description: >-
+    Observer-only form: fast-decision telemetry hook plus the read-only
+    fast_workspace tool, WITHOUT the orchestrator swap. The hook carries its
+    own shadow config (mode: shadow by default): compose this behavior onto
+    any orchestrator to get shadow measurement only. The primary form,
+    behaviors/fast-decisions.yaml, replaces the orchestrator.
+
+hooks:
+  - module: hooks-fast-decisions
+    source: git+https://github.com/michaeljabbour/amplifier-bundle-fast-decisions@main#subdirectory=modules/hooks-fast-decisions
+    config:
+      mode: shadow
+      # deterministic: in-process, offline scorer (external=False) -- the
+      # shipped "shadow, external=false" rung actually measures something
+      # instead of only ever hitting the external_state_not_enabled
+      # fallback. Set backend: jev (and allow_external_state: true) to move
+      # to the next rung. See docs/design/redesign-2026-09-17.md P3.
+      backend: deterministic
+      allow_external_state: false
+      shadow_capacity: 64
+      shadow_state_source: context_mount
+      shadow_max_messages: 12
+      shadow_snapshot_budget_ms: 25
+      shadow_drain_ms: 2000
+      max_state_chars: 12000
+      max_questions: 8
+      # Shadow-only (see router.py: "modify" is never honored at tool:pre in
+      # the upstream loop, so this can never become active through this
+      # seam). Defaulting it on costs nothing beyond one resolver probe per
+      # session and turns a UAT/DTU session into a real proposal/agreement
+      # trail instead of a wall of role_router_disabled abstains. See
+      # docs/design/redesign-2026-09-17.md P4.
+      role_router: true
+      role_probe_timeout_ms: 2000
+      role_router_tools:
+        - delegate
+      # Auto-observatory: on this session's first session:start (top-level
+      # only -- a session with a parent_id is skipped), reuse-or-spawn a
+      # detached `afast serve` and open it in a browser. Skipped when
+      # AFAST_OBSERVATORY=off or AMPLIFIER_NO_BROWSER=1 is set, or when
+      # neither stdin nor stdout is a TTY (e.g. `amplifier run` in a
+      # pipe/CI). Never delays session start -- the spawn/health-check work
+      # runs in an owned background task. See docs/UAT.md and
+      # docs/PRIVACY.md ("Viewer").
+      observatory:
+        enabled: true
+        open_browser: always
+        port: 8765
+
+context:
+  include:
+    # "make my amplifier faster" / "speed up amplifier" trigger: hands off to
+    # the make-amplifier-faster recipe instead of installing anything directly.
+    - fast-decisions:context/make-faster.md
+
+tools:
+  - module: tool-fast-workspace
+    source: git+https://github.com/michaeljabbour/amplifier-bundle-fast-decisions@main#subdirectory=modules/tool-fast-workspace
+    config:
+      root: .
+      max_bytes: 32768

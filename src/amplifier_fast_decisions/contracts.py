@@ -133,6 +133,12 @@ MODEL_ROUTING_KEYS = frozenset(
         # signals fall back to DEFAULT_ESCALATION_WEIGHTS. See
         # orchestrator.py and docs/ARCHITECTURE.md.
         "escalation_weights",
+        # Orchestrator-primary safety: when set, start_model is applied only
+        # to providers whose mount key or name contains this substring
+        # (case-insensitive). Composed onto a root with several providers,
+        # this keeps an Anthropic model id from ever being sent to, say, an
+        # OpenAI or vLLM provider. None (default) applies to every provider.
+        "provider_match",
     }
 )
 
@@ -177,6 +183,9 @@ def validate_model_routing(model_routing: Any) -> None:
     start_model = model_routing.get("start_model")
     if not isinstance(start_model, str) or not start_model:
         raise ValueError("model_routing.start_model must be a non-empty string")
+    provider_match = model_routing.get("provider_match")
+    if provider_match is not None and (not isinstance(provider_match, str) or not provider_match):
+        raise ValueError("model_routing.provider_match must be a non-empty string")
     start_effort = model_routing.get("start_effort")
     if start_effort is not None and start_effort not in ALLOWED_EFFORTS:
         raise ValueError(

@@ -85,6 +85,14 @@ class Runtime:
         self.shadow_worker = ShadowWorker(service, shadow_capacity)
         self.shadow_drain_ms = shadow_drain_ms
         self._shadow_task: asyncio.Task | None = None
+        # True once loop-fast-decisions mounted against this runtime: the
+        # orchestrator is then on the real request path, so the hook's
+        # shadow scorer/role router would only duplicate (and pay for)
+        # decisions the orchestrator already makes or routes.
+        self.orchestrator_owned = False
+        # Set by the first module that installs the auto-observatory
+        # session:start handler, so orchestrator + hook never both launch it.
+        self.observatory_installed = False
 
     def start_shadow_worker(self) -> None:
         """Idempotent. The runtime's creator owns this task (mirrors runtime
@@ -165,6 +173,7 @@ def get_runtime(coordinator: Any, config: dict[str, Any], *, owner: bool = False
             # telemetry remain the one-per-session singleton regardless of
             # who built them first.
             existing.service.policy = Policy.from_config(config)
+            existing.orchestrator_owned = True
         return existing, False
     policy = Policy.from_config(config)
     session_id, parent = session_identity(coordinator)
@@ -173,6 +182,8 @@ def get_runtime(coordinator: Any, config: dict[str, Any], *, owner: bool = False
     recorder = JsonlRecorder(events_dir, session_id)
     emitter = Emitter(session_id, parent_session_id=parent, hooks=coordinator.hooks, recorder=recorder)
     backend_name = config.get("backend") or _env_backend_default() or "jev"
+    if backend_name == "none":  # readable alias: routing-only, no judge
+        backend_name = "unavailable"
     if backend_name not in {"jev", "unavailable", "deterministic", "ollama", "mlx", "hosted", "gateway", "laya"}:
         recorder.close()
         raise ValueError(
@@ -251,6 +262,7 @@ def get_runtime(coordinator: Any, config: dict[str, Any], *, owner: bool = False
     # session) owns the shadow worker's lifecycle: it starts the task here
     # and drains/cancels it in Runtime.close, which the same module's
     # cleanup calls (observer.py/orchestrator.py both do this today).
+    runtime.orchestrator_owned = owner
     runtime.start_shadow_worker()
     coordinator.register_capability(RUNTIME_CAPABILITY, runtime)
     coordinator.register_capability(SERVICE_CAPABILITY, service)

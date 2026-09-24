@@ -126,6 +126,11 @@ class ShadowScorer:
         """
         if self._runtime.service.policy.mode == "off":
             return
+        if getattr(self._runtime, "orchestrator_owned", False):
+            # loop-fast-decisions is on the real request path and already
+            # decides/routes every provider call; a shadow proposal here would
+            # only re-score the same state against the same backend.
+            return
         job = await self._snapshot()
         if job is None:
             return
@@ -227,6 +232,133 @@ class ShadowScorer:
             state_hash=digest(state),
             state_revision=0,
         )
+
+
+
+def install_auto_observatory(
+    coordinator: Any,
+    runtime: Any,
+    config: dict[str, Any],
+    events_dir: str | None,
+    tasks: list[asyncio.Task],
+) -> Any:
+    """Register the auto-observatory ``session:start`` handler, at most once
+    per session runtime.
+
+    On the top-level session's first ``session:start``, reuse-or-spawn a
+    detached ``afast serve`` and (optionally) open it in a browser. Fires
+    exactly once per session, never delays session start (the actual
+    spawn/health-check work happens in a background task appended to
+    ``tasks``, which the caller drains at cleanup), and never raises into the
+    hook chain.
+
+    Both hooks-fast-decisions and loop-fast-decisions call this; the first
+    caller (the orchestrator, by kernel mount order) wins and the second is a
+    no-op, so composing both never launches two viewers. Returns the hook
+    registration (an unregister callable) or ``None`` when already installed.
+    """
+    if getattr(runtime, "observatory_installed", False):
+        return None
+    runtime.observatory_installed = True
+    fired = False
+
+    async def on_session_start(event: str, data: dict) -> Any:
+        nonlocal fired
+        if fired:
+            return _continue_result()
+        fired = True
+
+        obs_config = dict(config.get("observatory") or {})
+        if not obs_config.get("enabled", True):
+            return _continue_result()
+
+        parent = data.get("parent_id") or data.get("parent_session_id")
+        if not parent:
+            try:
+                _, parent = session_identity(coordinator)
+            except Exception:
+                parent = None
+        if parent:
+            await runtime.service.emit(
+                "observatory", {"action": "skipped", "reason": "child_session"}
+            )
+            return _continue_result()
+
+        if (
+            os.environ.get("AFAST_OBSERVATORY") == "off"
+            or os.environ.get("AMPLIFIER_NO_BROWSER") == "1"
+        ):
+            await runtime.service.emit(
+                "observatory", {"action": "skipped", "reason": "env_disabled"}
+            )
+            return _continue_result()
+
+        try:
+            is_tty = sys.stdin.isatty() or sys.stdout.isatty()
+        except Exception:
+            is_tty = False
+        if not is_tty:
+            await runtime.service.emit(
+                "observatory", {"action": "skipped", "reason": "non_tty"}
+            )
+            return _continue_result()
+
+        port = obs_config.get("port", 8765)
+        open_mode = obs_config.get("open_browser", "always")
+        if open_mode not in ("always", "first", "never"):
+            open_mode = "always"
+        events_dir_value = (
+            events_dir
+            or os.getenv("AFAST_EVENTS_DIR")
+            or str(Path.home() / ".amplifier" / "fast-decisions" / "events")
+        )
+        state_file = obs_config.get("state_file") or str(DEFAULT_OBSERVATORY_STATE_FILE)
+
+        async def run_ensure() -> None:
+            try:
+                before = read_state(state_file)
+                was_alive = before is not None and viewer_is_alive(before)
+                url = await asyncio.to_thread(
+                    ensure_viewer, events_dir_value, port, state_file
+                )
+                if url is None:
+                    await runtime.service.emit(
+                        "observatory",
+                        {
+                            "action": "failed",
+                            "reason": "viewer_unreachable",
+                            "port": port,
+                        },
+                    )
+                    return
+                action = "reused" if was_alive else "started"
+                await runtime.service.emit(
+                    "observatory", {"action": action, "reason": "ok", "port": port}
+                )
+                should_open = open_mode == "always" or (
+                    open_mode == "first" and action == "started"
+                )
+                if should_open:
+                    await asyncio.to_thread(open_page, url)
+            except asyncio.CancelledError:
+                raise
+            except Exception:
+                try:
+                    await runtime.service.emit(
+                        "observatory",
+                        {
+                            "action": "failed",
+                            "reason": "unexpected_error",
+                            "port": port,
+                        },
+                    )
+                except Exception:
+                    pass
+
+        tasks.append(asyncio.create_task(run_ensure()))
+        return _continue_result()
+
+    return coordinator.hooks.register("session:start", on_session_start, priority=999)
 
 
 async def mount(coordinator, config: dict):
@@ -338,7 +470,7 @@ async def mount(coordinator, config: dict):
     router = RoleRouter(runtime, coordinator, config)
 
     async def on_role_pre(event: str, data: dict):
-        if runtime.service.policy.mode == "off":
+        if runtime.service.policy.mode == "off" or getattr(runtime, "orchestrator_owned", False):
             return _continue_result()
         tool = data.get("tool_name") or data.get("tool")
         if tool in router.tools:
@@ -366,115 +498,14 @@ async def mount(coordinator, config: dict):
         coordinator.hooks.register("tool:post", on_role_post, priority=999)
     )
 
-    # Auto-observatory: on the top-level session's first `session:start`,
-    # reuse-or-spawn a detached `afast serve` and (optionally) open it in a
-    # browser. Fires exactly once per session (guarded by
-    # ``observatory_fired``), never delays session start (the actual
-    # spawn/health-check work happens in an owned background task, drained
-    # in ``cleanup`` below, exactly like the shadow worker), and never
-    # raises into the hook chain.
+    # Auto-observatory (shared with loop-fast-decisions; whichever module
+    # mounts first installs it -- see install_auto_observatory).
     observatory_tasks: list[asyncio.Task] = []
-    observatory_fired = False
-
-    async def on_session_start(event: str, data: dict) -> Any:
-        nonlocal observatory_fired
-        if observatory_fired:
-            return _continue_result()
-        observatory_fired = True
-
-        obs_config = dict(config.get("observatory") or {})
-        if not obs_config.get("enabled", True):
-            return _continue_result()
-
-        parent = data.get("parent_id") or data.get("parent_session_id")
-        if not parent:
-            try:
-                _, parent = session_identity(coordinator)
-            except Exception:
-                parent = None
-        if parent:
-            await runtime.service.emit(
-                "observatory", {"action": "skipped", "reason": "child_session"}
-            )
-            return _continue_result()
-
-        if (
-            os.environ.get("AFAST_OBSERVATORY") == "off"
-            or os.environ.get("AMPLIFIER_NO_BROWSER") == "1"
-        ):
-            await runtime.service.emit(
-                "observatory", {"action": "skipped", "reason": "env_disabled"}
-            )
-            return _continue_result()
-
-        try:
-            is_tty = sys.stdin.isatty() or sys.stdout.isatty()
-        except Exception:
-            is_tty = False
-        if not is_tty:
-            await runtime.service.emit(
-                "observatory", {"action": "skipped", "reason": "non_tty"}
-            )
-            return _continue_result()
-
-        port = obs_config.get("port", 8765)
-        open_mode = obs_config.get("open_browser", "always")
-        if open_mode not in ("always", "first", "never"):
-            open_mode = "always"
-        events_dir_value = (
-            effective_config.get("events_dir")
-            or os.getenv("AFAST_EVENTS_DIR")
-            or str(Path.home() / ".amplifier" / "fast-decisions" / "events")
-        )
-        state_file = obs_config.get("state_file") or str(DEFAULT_OBSERVATORY_STATE_FILE)
-
-        async def run_ensure() -> None:
-            try:
-                before = read_state(state_file)
-                was_alive = before is not None and viewer_is_alive(before)
-                url = await asyncio.to_thread(
-                    ensure_viewer, events_dir_value, port, state_file
-                )
-                if url is None:
-                    await runtime.service.emit(
-                        "observatory",
-                        {
-                            "action": "failed",
-                            "reason": "viewer_unreachable",
-                            "port": port,
-                        },
-                    )
-                    return
-                action = "reused" if was_alive else "started"
-                await runtime.service.emit(
-                    "observatory", {"action": action, "reason": "ok", "port": port}
-                )
-                should_open = open_mode == "always" or (
-                    open_mode == "first" and action == "started"
-                )
-                if should_open:
-                    await asyncio.to_thread(open_page, url)
-            except asyncio.CancelledError:
-                raise
-            except Exception:
-                try:
-                    await runtime.service.emit(
-                        "observatory",
-                        {
-                            "action": "failed",
-                            "reason": "unexpected_error",
-                            "port": port,
-                        },
-                    )
-                except Exception:
-                    pass
-
-        observatory_tasks.append(asyncio.create_task(run_ensure()))
-        return _continue_result()
-
-    registrations.append(
-        coordinator.hooks.register("session:start", on_session_start, priority=999)
+    observatory_registration = install_auto_observatory(
+        coordinator, runtime, config, effective_config.get("events_dir"), observatory_tasks
     )
+    if observatory_registration is not None:
+        registrations.append(observatory_registration)
 
     async def cleanup():
         heartbeat_task.cancel()
