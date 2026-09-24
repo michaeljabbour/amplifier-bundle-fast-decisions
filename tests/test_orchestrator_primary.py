@@ -297,3 +297,84 @@ class MonotonicEffortTests(unittest.IsolatedAsyncioTestCase):
         Policy(effort_routing={"explore": "low", "monotonic": True})
         with self.assertRaises(ValueError):
             Policy(effort_routing={"explore": "low", "monotonic": "yes"})
+
+
+class DifficultyRouterTests(unittest.IsolatedAsyncioTestCase):
+    """model_routing.start_policy: decide the start tier once per turn."""
+
+    class FakeJudge:
+        name = "fake-judge"
+        external = False
+
+        def __init__(self, p_complex=None, fail=False):
+            self.p_complex, self.fail, self.calls = p_complex, fail, 0
+
+        async def ask(self, request):
+            from amplifier_fast_decisions.contracts import Answer, Decision, DecisionResult, SLOW
+            self.calls += 1
+            if self.fail:
+                raise RuntimeError("judge down")
+            probs = {"simple": 1 - self.p_complex, "complex": self.p_complex}
+            return DecisionResult(action=Decision(choice=SLOW, probabilities={SLOW: 1.0}),
+                                  answers={"task_difficulty": Answer(probabilities=probs)})
+
+        async def close(self):
+            pass
+
+    def _setup(self, routing, judge=None):
+        events = []
+        coordinator = DemoCoordinator()
+        emitter = Emitter(coordinator.session_id, callback=events.append)
+        policy = Policy(mode="off", model_routing=routing, read_shortcut=False)
+        service = DecisionService(policy, judge or ScriptedBackend(delay_ms=0), emitter, coordinator, [])
+        service.turn = TurnState("t")
+        return service, Runtime(service), events
+
+    async def _run(self, routing, prompt, judge=None, requests=3):
+        service, runtime, events = self._setup(routing, judge)
+        facade = RoutedProvider(DemoProvider(delay_ms=0), runtime, {}, demo_response, "anthropic-primary")
+        models = []
+        for _ in range(requests):
+            req = NS(messages=[{"role": "user", "content": prompt}], tools=[], tool_choice="auto")
+            await facade.complete(req)
+            models.append(getattr(req, "model", None))
+        judged = [e["data"] for e in events if e["event"].endswith("difficulty_judged")]
+        return models, judged, service.turn
+
+    ROUTING = {"start_model": "claude-sonnet-5", "provider_match": "anthropic",
+               "max_requests_before_escalation": 1}
+
+    async def test_default_policy_is_cheap_and_silent(self):
+        models, judged, _ = await self._run(dict(self.ROUTING, max_requests_before_escalation=6), "fix typo")
+        self.assertEqual(models, ["claude-sonnet-5"] * 3)
+        self.assertEqual(judged, [])
+
+    async def test_judge_complex_starts_strong_and_never_escalates_or_switches(self):
+        judge = self.FakeJudge(p_complex=0.9)
+        models, judged, turn = await self._run(dict(self.ROUTING, start_policy="judge"), "big bug", judge)
+        self.assertEqual(models, [None, None, None])      # host model throughout
+        self.assertEqual(judge.calls, 1)                  # decided once per turn
+        self.assertEqual(judged[0]["reason_code"], "judge_strong")
+        self.assertFalse(turn.escalated)
+
+    async def test_judge_simple_starts_cheap(self):
+        judge = self.FakeJudge(p_complex=0.1)
+        models, judged, _ = await self._run(dict(self.ROUTING, start_policy="judge",
+                                                 max_requests_before_escalation=6), "typo", judge)
+        self.assertEqual(models, ["claude-sonnet-5"] * 3)
+        self.assertEqual(judged[0]["reason_code"], "judge_cheap")
+
+    async def test_judge_failure_falls_back_to_rules(self):
+        judge = self.FakeJudge(fail=True)
+        long_prompt = "x" * 2500
+        models, judged, _ = await self._run(dict(self.ROUTING, start_policy="judge"), long_prompt, judge)
+        self.assertEqual(judged[0]["reason_code"], "rules_strong")
+        self.assertEqual(models[0], None)
+
+    def test_validation(self):
+        with self.assertRaises(ValueError):
+            Policy(model_routing={"start_model": "m", "start_policy": "vibes"})
+        with self.assertRaises(ValueError):
+            Policy(model_routing={"start_model": "m", "complex_min_probability": 1.5})
+        with self.assertRaises(ValueError):
+            Policy(read_shortcut="no")

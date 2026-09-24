@@ -99,6 +99,8 @@ class DecisionService:
 
         if self.policy.mode == "off":
             return await slow("mode_off")
+        if not self.policy.read_shortcut:
+            return await slow("read_shortcut_disabled")
         if self.backend.name == "unavailable":
             # Routing-only configuration (the orchestrator-primary default):
             # no judge is configured, so skip candidate collection entirely

@@ -135,6 +135,81 @@ def _first_user_text(request: Any) -> str:
     return ""
 
 
+def _turn_user_text(request: Any) -> str:
+    """Text of the LATEST real user message (this turn's prompt), skipping
+    tool-result carriers and messages that are only injected
+    ``<system-reminder>`` envelopes. ``""`` when none. Never raises."""
+    try:
+        messages = list(field_value(request, "messages") or [])
+    except Exception:
+        return ""
+    for message in reversed(messages):
+        if field_value(message, "role") != "user":
+            continue
+        content = field_value(message, "content")
+        if isinstance(content, list):
+            content = "".join(
+                text for block in content
+                if field_value(block, "type") in (None, "text")
+                and isinstance(text := field_value(block, "text"), str)
+            )
+        if not isinstance(content, str):
+            continue
+        stripped = re.sub(r"<system-reminder\b.*?</system-reminder>", "", content, flags=re.S).strip()
+        if stripped:
+            return stripped
+    return ""
+
+
+# Turn-start difficulty router question. Same wording as
+# evals/difficulty/probe.py (measured there: jev AUC 0.83 on SWE-bench
+# Verified difficulty labels) -- change both together.
+DIFFICULTY_INSTRUCTIONS = (
+    "Classify this software engineering task by how much work it takes an expert "
+    "engineer who is new to the codebase."
+)
+DIFFICULTY_CRITERIA = {
+    "simple": "A small, well-specified, localized change: the fix location is clear and it takes "
+              "minutes (a typo, a one-function bug, a documented contract, an obvious edge case).",
+    "complex": "Substantial work: the root cause must be investigated across an unfamiliar codebase, "
+               "several files or subsystems change, or the behavior is subtle; it takes an hour or more.",
+}
+_DIFFICULTY_STATE_CHARS = 2500
+
+
+async def decide_start_tier(service: Any, request: Any, model_routing: dict[str, Any],
+                            decision_id: str | None) -> str:
+    """``"cheap"`` or ``"strong"`` for this turn (called once, at its first
+    slow request). ``start_policy: cheap`` (default) keeps the pre-router
+    behavior and emits nothing. ``rules`` uses prompt length. ``judge`` asks
+    the configured backend one typed question and falls back to rules on
+    any abstain / block / error. Never raises (CancelledError propagates)."""
+    policy = model_routing.get("start_policy", "cheap")
+    if policy == "cheap":
+        return "cheap"
+    task = _turn_user_text(request)
+    min_chars = model_routing.get("complex_min_prompt_chars", 2000)
+    tier = "strong" if len(task) >= min_chars else "cheap"
+    decided_by, p_complex, duration_ms = "rules", None, 0.0
+    if policy == "judge" and task:
+        choice, probability, duration_ms = await _ask_judge_choice(
+            service, question_name="task_difficulty", instructions=DIFFICULTY_INSTRUCTIONS,
+            criteria=DIFFICULTY_CRITERIA, state={"task": task[:_DIFFICULTY_STATE_CHARS]},
+        )
+        if choice is not None and probability is not None:
+            p_complex = probability if choice == "complex" else 1.0 - probability
+            gate = model_routing.get("complex_min_probability", 0.5)
+            tier = "strong" if p_complex >= gate else "cheap"
+            decided_by = "judge"
+    await service.emit("difficulty_judged", {
+        "backend": service.backend.name, "choice": tier,
+        "probabilities": {"complex": p_complex} if p_complex is not None else None,
+        "duration_ms": duration_ms, "reason_code": f"{decided_by}_{tier}",
+        "state_chars": len(task), "mode": service.policy.mode,
+    }, decision_id)
+    return tier
+
+
 def _judge_state(
     request: Any, turn: TurnState, phase: str, max_state_chars: int
 ) -> dict[str, Any]:
@@ -208,7 +283,7 @@ def _escalation_judge_due(model_routing: dict[str, Any] | None, turn: TurnState)
     truth for both the HC08 batching pre-check and the sequential path
     below (which reuses this same function, so the two can never drift).
     """
-    if not model_routing or turn.escalated:
+    if not model_routing or turn.escalated or turn.start_tier == "strong":
         return False
     if model_routing.get("escalate_on_test_failure") and turn.test_failure_seen:
         return False
@@ -650,7 +725,12 @@ docs/UPSTREAM_CONTRACT.md.
 
             turn.slow_requests_seen += 1
             routing_phase = phase if phase is not None else effort.classify_phase(request)
-            if not turn.escalated:
+            if turn.start_tier is None:
+                turn.start_tier = await decide_start_tier(service, request, model_routing, decision_id)
+            # A turn judged complex starts on the host model and stays there:
+            # no start_model override, no mid-turn escalation.
+            strong_turn = turn.start_tier == "strong"
+            if not turn.escalated and not strong_turn:
                 if escalate_on_test_failure and turn.test_failure_seen:
                     turn.escalated, turn.escalation_reason = True, "test_failure"
                 elif max_requests is not None and turn.slow_requests_seen > max_requests:
@@ -757,6 +837,8 @@ docs/UPSTREAM_CONTRACT.md.
             provider_match = model_routing.get("provider_match")
             if turn.escalated:
                 reason_code = f"escalated_{turn.escalation_reason}"
+            elif strong_turn:
+                reason_code = "start_strong"
             elif provider_match and not self._provider_matches(provider_match):
                 reason_code = "provider_not_matched"
             else:

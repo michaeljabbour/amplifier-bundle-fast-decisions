@@ -58,6 +58,9 @@ EVENT_NAMES = tuple(
         # never authorizes or blocks anything -- observation only. See
         # orchestrator.py and docs/EVENTS.md.
         "tool_risk",
+        # Turn-start difficulty router (model_routing.start_policy): which
+        # tier the turn starts on, who decided, with what probability.
+        "difficulty_judged",
     )
 )
 
@@ -148,6 +151,16 @@ MODEL_ROUTING_KEYS = frozenset(
         # this keeps an Anthropic model id from ever being sent to, say, an
         # OpenAI or vLLM provider. None (default) applies to every provider.
         "provider_match",
+        # Turn-start difficulty router: "cheap" (default -- every turn starts
+        # on start_model, the pre-router behavior), "rules" (prompt length),
+        # or "judge" (one typed simple/complex question to the configured
+        # backend at the turn's first slow request, falling back to rules).
+        # A turn judged complex starts -- and stays -- on the host model:
+        # no start_model override and no mid-turn escalation (a mid-turn
+        # model switch re-writes the whole prompt cache).
+        "start_policy",
+        "complex_min_probability",
+        "complex_min_prompt_chars",
     }
 )
 
@@ -192,6 +205,15 @@ def validate_model_routing(model_routing: Any) -> None:
     start_model = model_routing.get("start_model")
     if not isinstance(start_model, str) or not start_model:
         raise ValueError("model_routing.start_model must be a non-empty string")
+    start_policy = model_routing.get("start_policy")
+    if start_policy is not None and start_policy not in ("cheap", "rules", "judge"):
+        raise ValueError("model_routing.start_policy must be cheap, rules or judge")
+    cmp_ = model_routing.get("complex_min_probability")
+    if cmp_ is not None and (isinstance(cmp_, bool) or not isinstance(cmp_, (int, float)) or not 0 < cmp_ < 1):
+        raise ValueError("model_routing.complex_min_probability must be in (0, 1)")
+    cmc = model_routing.get("complex_min_prompt_chars")
+    if cmc is not None and (isinstance(cmc, bool) or not isinstance(cmc, int) or cmc < 1):
+        raise ValueError("model_routing.complex_min_prompt_chars must be a positive integer")
     provider_match = model_routing.get("provider_match")
     if provider_match is not None and (not isinstance(provider_match, str) or not provider_match):
         raise ValueError("model_routing.provider_match must be a non-empty string")
@@ -571,6 +593,10 @@ class Policy:
     # authoritative. Default False -- inert, matching every other HC0x
     # seam. See orchestrator.py and docs/ARCHITECTURE.md.
     tool_risk_shadow: bool = False
+    # The judged read shortcut (DecisionService.choose). False keeps a judge
+    # backend available to the routers (e.g. start_policy: judge) without
+    # putting a candidate-scoring call in front of slow requests.
+    read_shortcut: bool = True
     version: str = "policy-v1"
 
     def __post_init__(self) -> None:
@@ -599,6 +625,8 @@ class Policy:
         validate_confidence_gates(self.confidence_gates)
         if not isinstance(self.tool_risk_shadow, bool):
             raise ValueError("tool_risk_shadow must be a bool")
+        if not isinstance(self.read_shortcut, bool):
+            raise ValueError("read_shortcut must be a bool")
 
     @classmethod
     def from_config(cls, config: dict[str, Any]) -> Policy:
@@ -711,6 +739,9 @@ class TurnState:
     batch_fallbacks: int = 0
     # effort_routing.monotonic: the highest effort applied so far this turn.
     max_effort_applied: str | None = None
+    # Turn-start difficulty router: "cheap" | "strong", decided once at the
+    # turn's first slow request (None until then / when routing is off).
+    start_tier: str | None = None
 
 
 def candidate_read_identity(
