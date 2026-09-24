@@ -571,15 +571,58 @@ class OpenAICompatBackend:
 
     async def _post_completion(self, body: dict, form: str) -> dict:
         full_body = {**body, **self._logprobs_variant(form)}
-        req = urllib.request.Request(
-            self._completions_url(),
-            data=json.dumps(full_body).encode("utf-8"),
-            method="POST", headers=self._headers(),
-        )
-        payload, status = await asyncio.to_thread(_mlx_urllib_call, req, self.timeout_ms / 1000)
+        payload, status = await asyncio.to_thread(
+            self._keepalive_post, self._completions_url(), json.dumps(full_body).encode("utf-8"))
         if status != 200:
             raise BackendUnavailable(f"{self.name} request failed: HTTP {status}")
         return payload
+
+    def _keepalive_post(self, url: str, data: bytes) -> tuple[dict, int]:
+        """POST over a pooled persistent connection (one TLS handshake per
+        pooled connection, not per call: a fresh handshake to a hosted judge
+        costs several hundred ms, several times the model's own ~0.1 s).
+        A reused connection that turns out stale is retried once on a fresh
+        one. Every failure becomes BackendUnavailable."""
+        import http.client
+        import queue as _queue
+        parsed = urlsplit(url)
+        path = parsed.path or "/"
+        pool = getattr(self, "_conn_pool", None)
+        if pool is None:
+            pool = self._conn_pool = _queue.SimpleQueue()
+        timeout_s = self.timeout_ms / 1000
+        for attempt in (1, 2):
+            try:
+                conn = pool.get_nowait()
+                reused = True
+            except _queue.Empty:
+                cls = http.client.HTTPSConnection if parsed.scheme == "https" else http.client.HTTPConnection
+                conn = cls(parsed.hostname, parsed.port, timeout=timeout_s)
+                reused = False
+            try:
+                conn.timeout = timeout_s
+                if conn.sock is not None:
+                    conn.sock.settimeout(timeout_s)
+                conn.request("POST", path, body=data, headers=self._headers())
+                response = conn.getresponse()
+                raw = response.read()
+                status = response.status
+            except (http.client.HTTPException, OSError) as exc:
+                conn.close()
+                if reused and attempt == 1:
+                    continue  # stale keep-alive connection: retry once on a fresh one
+                raise BackendUnavailable(f"request failed: {type(exc).__name__}") from exc
+            if response.will_close:
+                conn.close()
+            else:
+                pool.put(conn)
+            try:
+                return json.loads(raw.decode("utf-8")), status
+            except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+                if status != 200:
+                    return {}, status
+                raise BackendUnavailable("response was not valid JSON") from exc
+        raise BackendUnavailable("request failed")
 
     async def ask(self, request: DecisionRequest) -> DecisionResult:
         if request.questions:
@@ -587,8 +630,13 @@ class OpenAICompatBackend:
         return await self.ask_candidates(request)
 
     async def answer_question(self, state: Any, question: Question) -> Answer:
-        return average_answers(question, [await self._answer_once(state, question, reverse=r)
-                                          for r in (False, True)])
+        if self._logprobs_form is None:
+            # First call negotiates the server's logprobs request shape; after
+            # that both option orders go out concurrently (independent calls).
+            first = await self._answer_once(state, question, reverse=False)
+            return average_answers(question, [first, await self._answer_once(state, question, reverse=True)])
+        answers = await asyncio.gather(*(self._answer_once(state, question, reverse=r) for r in (False, True)))
+        return average_answers(question, list(answers))
 
     async def _answer_once(self, state: Any, question: Question, *, reverse: bool) -> Answer:
         prompt, labels = build_question_prompt(state, question, reverse=reverse)
@@ -596,6 +644,10 @@ class OpenAICompatBackend:
                 "messages": [{"role": "system", "content": QUESTION_SYSTEM},
                              {"role": "user", "content": prompt}]}
         body.update(self.extra_body)
+        if self._logprobs_form is not None:
+            # Shape already negotiated: no lock, so option orders run concurrently.
+            top = _mlx_top_logprobs(await self._post_completion(body, self._logprobs_form))
+            return answer_from_top_logprobs(question, top, labels)
         async with self._lock:
             forms = [self._logprobs_form] if self._logprobs_form else ["bool", "int"]
             last_exc: BackendUnavailable | None = None

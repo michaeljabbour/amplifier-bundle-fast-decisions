@@ -62,6 +62,13 @@ async def judge_rows(judge: str, rows: list[dict]) -> list[dict]:
     if judge == 'jev':
         from amplifier_fast_decisions.backends import JevBackend
         backend = JevBackend(model='jev-1.13.0', timeout_ms=10000)
+    elif judge.startswith('hosted:'):
+        # OpenAI-compatible host (e.g. vLLM behind LiteLLM on RunPod): URL from
+        # FAST_DECISIONS_HOSTED_URL, bearer token from FAST_DECISIONS_HOSTED_TOKEN.
+        import os
+        from amplifier_fast_decisions.local_backend import HostedBackend
+        backend = HostedBackend(model=judge.split(':', 1)[1], url=os.environ.get('FAST_DECISIONS_HOSTED_URL'),
+                                timeout_ms=20000)
     elif judge.startswith('ollama:'):
         from amplifier_fast_decisions.local_backend import OllamaBackend
         backend = OllamaBackend(model=judge.split(':', 1)[1], timeout_ms=20000)
