@@ -2,7 +2,7 @@
   "generated": "2026-09-24",
   "note": "Summaries only: no prompts, patches, final messages or secrets. Raw records: see DATA-INDEX.md.",
   "files": {
-    "README.md": "8b0c93bd9380e8309f2ddd3a3864c447cbda23b9ebad09c0cfca05a47418736c",
+    "README.md": "b82009656e1371488a9e4196ba02becd26f468e2ce3e0287a856101f6d12848e",
     "difficulty/dataset-index.json": "97c470628100bcce9158d7b3ba7dd709a7df9eb71a1c7b8721046419c684405d",
     "difficulty/difficulty-report-hosted-keepalive.json": "46f0c578c7b4f75acf02888e7b4632373af19aa7d9ae9a492fa25957e7af9d8b",
     "difficulty/difficulty-report-hosted.json": "a8c7db96f9bec4318449a7f2812ed968a11db6dfb8a4ffc696e85e48bba5d2a0",
@@ -11,6 +11,7 @@
     "difficulty/difficulty-report-qwen3.json": "855a2efded9e89ffbe4067e13ac3a703f0f760132d958d5dd716c706fb8ec22d",
     "difficulty/difficulty-report.json": "6b331945dc9d2d7590c16002eec10f0ba7960eff211e17b4a56fc3bdb1065d99",
     "difficulty/surface-feature-auc.json": "b5cb8d7ad14947633fa784f83e71bcb18360e8d284eda317f29c2877ab2a841b",
+    "followups/followups.json": "335e13dbfae2e80d3b33888a493c53cff00938b059c261b6a052657bab9cb887",
     "s1/prereg-s1-holdout/DESIGN-RECOMMENDATION.md": "aa3e16d05896ad37a5b40cc8f12e5da27ae2eef9f16c7c6904a41203b79805d0",
     "s1/prereg-s1-holdout/PREREGISTRATION.md": "865a671e31ce6e62bfbca5ccb171c579e876b9dd5792a13cee278155a238ec8b",
     "s1/prereg-s1-holdout/RESULTS.md": "b971b538a5ab5f25317c9bd4a4361e45f27ec3925f5441d0c24e8a785fe9c056",

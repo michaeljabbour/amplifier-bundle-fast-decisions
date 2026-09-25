@@ -1,0 +1,35 @@
+{
+  "date": "2026-09-24",
+  "note": "Follow-up measurements after the main study. Single machine (Apple silicon), provider anthropic. Small samples; see each 'n'.",
+  "model_speed": {
+    "method": "Anthropic Messages API, same prompt, max_tokens 600, 4 calls per model, median; measured once",
+    "n_per_model": 4,
+    "results": {
+      "claude-opus-5-5": {"median_s": 6.78, "tokens_per_s": 88, "output_tokens": 600},
+      "claude-sonnet-5": {"median_s": 5.29, "tokens_per_s": 113, "output_tokens": 600},
+      "claude-haiku-4-5": {"median_s": 6.24, "tokens_per_s": 96, "output_tokens": 600}
+    }
+  },
+  "list_prices_usd_per_mtok": {
+    "source": "Amplifier Anthropic provider price table (_cost.py, verified 2026-06-10)",
+    "columns": ["input", "output", "cache_read", "cache_write_5m"],
+    "claude-fable-5-1": [10.0, 50.0, 0.25, 12.5],
+    "claude-opus-5-5": [4.0, 20.0, 0.20, 5.0],
+    "claude-sonnet-5": [3.0, 15.0, 0.30, 3.75]
+  },
+  "trivial_prompt_wall_time": {
+    "method": "amplifier run --output-format json 'Reply with the single word: ok' in a 1-file scratch dir; fast-decisions orchestrator on; warm caches",
+    "without_four_addons_s": [18.3, 16.6],
+    "with_four_optimized_addons_s": [18.6, 18.4],
+    "addons": ["memory #9", "behavioral-plasticity #2", "design-loop #3", "preceptor #7"]
+  },
+  "surface_checks": {
+    "method": "one easy prompt per surface; routing read from fast_decisions receipts",
+    "cli_amplifier_run": {"judge": "jev", "judge_ms": 132, "choice": "cheap", "served": "claude-sonnet-5"},
+    "runtime_serve_studio_path": {"judge": "jev", "judge_ms": 126, "choice": "cheap", "served": "claude-sonnet-5", "host_model": "claude-opus-5-5"},
+    "tui": {"core_version": "1.6.0", "choice": "cheap", "served": "claude-sonnet-5"},
+    "tui_after_model_pick": {"picked": "claude-fable-5-1", "reason_code": "user_model_strong", "served": "host (claude-fable-5-1)"},
+    "startup_model_flag": "amplifier-runtime serve --model is indistinguishable from the configured default and stays routable (known limit)"
+  },
+  "upstream": {"hooks_deprecation_pr": "https://github.com/microsoft/amplifier-foundation/pull/413", "status": "open, optional suggestion"}
+}

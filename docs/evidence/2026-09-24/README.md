@@ -25,6 +25,7 @@ This folder holds no prompts, no patches, no assistant final messages and no sec
 | `swe/*/runs/*.json` | per-run result: times, cost, tokens, models served, patch size | time and cost ratios |
 | `difficulty/difficulty-report*.json` | judge probe: per-item p(complex), latency | fig. 6 |
 | `difficulty/surface-feature-auc.json` | AUC of simple surface features of the issue text (length, files named, code blocks, ...) on 410 held-out instances | "no surface feature beats length" |
+| `followups/followups.json` | Same-day follow-ups: model speed and list prices, trivial-prompt timings with/without the four add-ons, per-surface routing checks, upstream PR link | Report "Which default model benefits", start-up add-on paragraph, "Try it" |
 | `difficulty/dataset-index.json` | probe items: id, source, label, human difficulty (texts are public: SWE-bench Verified / S1) | fig. 6 |
 
 ## What is kept locally (not committed: contains full prompts and responses)
