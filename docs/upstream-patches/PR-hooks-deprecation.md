@@ -1,6 +1,6 @@
 # PR draft: microsoft/amplifier-foundation. `hooks-deprecation` scans only authored config
 
-**Status: drafted, independently reviewed (ACCEPT WITH CHANGES, all changes applied), not opened.**
+**Status: opened 2026-09-24 as an optional suggestion: https://github.com/microsoft/amplifier-foundation/pull/413 (independently reviewed; all changes applied).**
 The patch is `amplifier-foundation-hooks-deprecation-authored-only.patch`, against `origin/main` `ce876d5`
 (2026-09-24). Local branch: `/tmp/ampup/amplifier-foundation` @ `fix/deprecation-scan-allowlist` (`028e99e`).
 
