@@ -166,3 +166,8 @@ test('negative time saved reads as slower',()=>{
  const v=savingsView({files:1,host_model:'claude-opus-5-5',turns:{total:2,cheap:1,strong:1},cost:{saved_usd:1,cheap_turns_actual_usd:1,cheap_turns_on_host_usd:2},time:{available:true,saved_seconds:-9,cheap_turns_model_seconds:46,cheap_turns_on_host_seconds:37}});
  assert.match(v.time,/^−9 s \(slower\)$/); assert.match(v.timeDetail,/wrote more slowly/);
 });
+test('loop engine names are not shown as a harness',()=>{
+ const {harnessOf}=require('../src/amplifier_fast_decisions/static/app.js');
+ assert.equal(harnessOf({engine:'upstream-loop-streaming'}),'');
+ assert.equal(harnessOf({engine:'claude'}),'Claude Code');
+});

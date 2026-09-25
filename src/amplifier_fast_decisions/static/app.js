@@ -20,7 +20,9 @@
   const repoLabel = config => config.repo ? config.repo + (config.subdir ? '/' + config.subdir : '') : '';
   const sessionName = (config, id) => config.session_label || repoLabel(config) || config.workspace_name || id.slice(0, 8);
   const HARNESS = { claude: 'Claude Code', codex: 'Codex', copilot: 'GitHub Copilot', cursor: 'Cursor', gemini: 'Gemini CLI', grok: 'Grok', opencode: 'OpenCode', amplifier: 'Amplifier', other: 'Other tool' };
-  const harnessOf = config => config.harness || (config.engine ? HARNESS[config.engine] || config.engine : '');
+  // `engine` is the portable tool's caller label (claude, codex, ...); the loop also
+  // records its own engine name there, which is not a harness.
+  const harnessOf = config => config.harness || (config.engine && HARNESS[config.engine] ? HARNESS[config.engine] : '');
   function scriptedKeys(events) {
     return new Set(events.filter(e => e.decision_id && (e.synthetic || e.data.synthetic || (isScore(e) && e.data.backend === 'scripted-demo'))).map(decisionKey));
   }
