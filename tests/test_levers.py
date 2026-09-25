@@ -275,5 +275,215 @@ class LoopStopWiringTests(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(levers.Levers(policy, service, lambda: ("p", "test")).active)
 
 
+class ReviewProvider:
+    """Anthropic-style double for the review fixes: configurable name, latency,
+    reported output tokens and thinking capabilities; tracks overlap."""
+
+    def __init__(self, name="anthropic-primary", delay=0.0, output_tokens=1, caps=None, config=None):
+        self.name, self.delay, self.output_tokens = name, delay, output_tokens
+        self.default_model = OPUS
+        self.config = config or {}
+        self.requests, self.in_flight, self.max_in_flight = [], 0, 0
+        if caps is not None:
+            async def _caps(model):
+                return caps
+            self._get_request_capabilities = _caps
+
+    async def complete(self, request, **kwargs):
+        self.requests.append((request, kwargs))
+        self.in_flight += 1
+        self.max_in_flight = max(self.max_in_flight, self.in_flight)
+        try:
+            await asyncio.sleep(self.delay)
+        finally:
+            self.in_flight -= 1
+        usage = {"input_tokens": 100 * K, "output_tokens": self.output_tokens, "cache_read_tokens": 100 * K,
+                 "cache_write_tokens": 0}
+        return NS(content=[], tool_calls=None, finish_reason="end_turn", usage=NS(**usage), model=None)
+
+
+class Svc:
+    def __init__(self):
+        self.events = []
+
+    async def emit(self, kind, data, *args):
+        self.events.append((kind, data))
+
+
+COLD = {"input_tokens": 100 * K, "output_tokens": 5, "cache_read_tokens": 0, "cache_write_tokens": 100 * K}
+
+
+class ReviewFixTests(unittest.IsolatedAsyncioTestCase):
+    """Fixes M1-M6, O1-O3 from the keep-alive review; each has a must-not-fire case."""
+
+    def _levers(self, shared_warm=None, **cfg):
+        policy = Policy(mode="off", cache_keepalive={"interval_s": 0.1, "min_prefix_tokens": 1000, **cfg})
+        svc = Svc()
+        lv = levers.Levers(policy, svc, lambda: ("p", "test"), usage_fn=usage_fields, shared_warm=shared_warm)
+        return lv, svc
+
+    async def _capture(self, lv, provider, request=None, kwargs=None, usage=None, key="anthropic-primary"):
+        import time
+        request = request or NS(messages=[{"role": "user", "content": "go"}], max_output_tokens=None, metadata=None)
+        await lv.after_call(provider, request, kwargs or {}, usage or COLD, time.monotonic(), 1.0, provider_key=key)
+        return request
+
+    async def _wait(self, lv, seconds):
+        lv.tool_started(1, "bash")
+        await asyncio.sleep(seconds)
+        lv.tool_finished(1)
+
+    def _refreshes(self, svc):
+        return [d for k, d in svc.events if k == "cache_refresh"]
+
+    # M1
+    async def test_clone_never_streams_and_is_marked(self):
+        lv, _ = self._levers()
+        p = ReviewProvider()
+        req = NS(messages=[{"role": "user", "content": "go"}], max_output_tokens=None, metadata={"trace": "x"})
+        await self._capture(lv, p, request=req)
+        clone = lv._clone(lv.last)
+        self.assertIs(clone.metadata["stream"], False)
+        self.assertEqual(clone.metadata["fast_decisions"], "cache_keepalive")
+        self.assertEqual(clone.metadata["trace"], "x")
+        self.assertEqual(req.metadata, {"trace": "x"})   # original untouched
+
+    # M2a
+    async def test_manual_thinking_is_skipped_adaptive_only_is_not(self):
+        manual = NS(supports_thinking=True, requires_adaptive_thinking=False, thinking_always_on=False)
+        adaptive = NS(supports_thinking=True, requires_adaptive_thinking=True, thinking_always_on=False)
+        for caps, kwargs, expect in ((manual, {"extended_thinking": True}, 0),
+                                     (None, {"extended_thinking": True}, 0),      # capabilities unknown
+                                     (adaptive, {"extended_thinking": True}, 1),
+                                     (manual, {}, 1)):                            # thinking off: cap honored
+            lv, svc = self._levers(max_refreshes=1)
+            p = ReviewProvider(caps=caps)
+            await self._capture(lv, p, kwargs=kwargs)
+            await self._wait(lv, 0.25)
+            await lv.finish("ok")
+            self.assertEqual(len(p.requests), expect, (caps, kwargs))
+        lv, _ = self._levers()
+        await self._capture(lv, ReviewProvider(caps=manual, config={"reasoning_effort": "low"}))
+        self.assertEqual(lv.last["skip"], "manual_thinking")
+
+    # M2b
+    async def test_cap_exceeded_stops_the_episode(self):
+        lv, svc = self._levers()
+        p = ReviewProvider(output_tokens=900)
+        await self._capture(lv, p)
+        await self._wait(lv, 0.45)
+        await lv.finish("ok")
+        self.assertEqual([d["status"] for d in self._refreshes(svc)], ["cap_exceeded"])
+        self.assertEqual(len(p.requests), 1)
+
+    # M3
+    async def test_real_call_waits_for_in_flight_refresh_one_receipt(self):
+        policy = Policy(mode="off", read_shortcut=False,
+                        cache_keepalive={"interval_s": 0.1, "min_prefix_tokens": 1000})
+        service, runtime, events, _ = _service(policy)
+        lv = levers.Levers(policy, service, lambda: ("p", "test"), usage_fn=usage_fields, shared_warm=0)
+        service.turn = TurnState("t")
+        p = ReviewProvider(delay=0.3)
+        facade = RoutedProvider(p, runtime, {}, demo_response, "anthropic-primary", levers=lv)
+        req = NS(messages=[{"role": "user", "content": "go"}], tools=[], max_output_tokens=None)
+        p.delay = 0.0
+        await facade.complete(req)
+        p.delay = 0.3
+        lv.tool_started(1, "bash")
+        await asyncio.sleep(0.15)          # refresh in flight
+        self.assertTrue(lv._refreshing)
+        lv.tool_finished(1)                # tool ends mid-refresh
+        await facade.complete(NS(messages=req.messages + [{"role": "tool", "content": "ok"}], tools=[]))
+        await lv.finish("ok")
+        self.assertEqual(p.max_in_flight, 1)   # never concurrent
+        receipts = [e["data"] for e in events if e["event"] == efficiency.EVENT]
+        self.assertEqual(len(receipts), 1)
+        self.assertEqual(receipts[0]["actual"]["refresh_calls"], 1)
+
+    # M4
+    async def test_floor_applies_to_the_unshared_prefix(self):
+        for shared, expect in ((95 * K, 0), (50 * K, 1)):   # 100k prefix: 5k vs 50k unshared, floor 20k
+            lv, svc = self._levers(shared_warm=shared, min_prefix_tokens=20_000, max_refreshes=1)
+            p = ReviewProvider()
+            await self._capture(lv, p)
+            await self._wait(lv, 0.25)
+            await lv.finish("ok")
+            self.assertEqual(len(p.requests), expect, shared)
+
+    # M5
+    async def test_no_refresh_after_finish(self):
+        lv, svc = self._levers()
+        p = ReviewProvider()
+        await self._capture(lv, p)
+        await lv.finish("ok")
+        await self._wait(lv, 0.35)
+        await self._capture(lv, p)
+        self.assertEqual(p.requests, [])
+        self.assertIsNone(lv._task)
+
+    # M6
+    async def test_anthropic_only(self):
+        for name, key, model, expect in (("openai", "openai-primary", OPUS, 0),
+                                         ("anthropic", "anthropic-primary", "some-unpriced-model", 0),
+                                         ("anthropic", "anthropic-primary", OPUS, 1)):
+            lv, svc = self._levers(max_refreshes=1)
+            p = ReviewProvider(name=name)
+            p.default_model = model
+            await self._capture(lv, p, key=key)
+            await self._wait(lv, 0.25)
+            await lv.finish("ok")
+            self.assertEqual(len(p.requests), expect, (name, model))
+
+    # O1
+    async def test_finish_does_not_wait_long_and_survives_cancel(self):
+        import time
+        lv, svc = self._levers()
+        p = ReviewProvider(delay=10.0)
+        await self._capture(lv, p)
+        lv.tool_started(1, "bash")
+        await asyncio.sleep(0.2)
+        self.assertTrue(lv._refreshing)
+        t = time.monotonic()
+        await lv.finish("cancelled")
+        self.assertLess(time.monotonic() - t, 3.0)
+        # A cancel arriving during finish's bounded wait must not skip cleanup.
+        lv2, svc2 = self._levers()
+        p2 = ReviewProvider(delay=10.0)
+        await self._capture(lv2, p2)
+        lv2.tool_started(1, "bash")
+        await asyncio.sleep(0.2)
+        task = asyncio.ensure_future(lv2.finish("cancelled"))
+        await asyncio.sleep(0.05)
+        task.cancel()
+        try:
+            await task
+        except asyncio.CancelledError:
+            pass
+        await asyncio.sleep(0)
+        self.assertTrue(lv2._closed)
+        self.assertTrue(lv2._task.cancelled() or lv2._task.done())
+
+    # O2
+    async def test_messages_copied_at_capture(self):
+        lv, _ = self._levers()
+        msgs = [{"role": "user", "content": "go"}]
+        await self._capture(lv, ReviewProvider(), request=NS(messages=msgs, max_output_tokens=None, metadata=None))
+        msgs.append({"role": "assistant", "content": "MUTATED"})
+        self.assertEqual([m["content"] for m in lv._clone(lv.last).messages], ["go"])
+
+    # O3
+    async def test_side_calls_neither_capture_nor_settle(self):
+        lv, _ = self._levers()
+        p = ReviewProvider()
+        real = await self._capture(lv, p)
+        side = NS(messages=[{"role": "user", "content": "goal?"}], max_output_tokens=10, metadata={"stream": False})
+        lv.episode = {"model": OPUS, "prefix": 100 * K, "refreshes": [0.01], "tools": {"bash"}, "cache_used": 0.0,
+                      "anchor": 0.0}
+        await self._capture(lv, p, request=side)
+        self.assertIs(lv.last["request"], real)
+        self.assertIsNotNone(lv.episode)      # still open for the next real call
+        self.assertEqual(lv.calls, 1)
+
+
 if __name__ == "__main__":
     unittest.main()

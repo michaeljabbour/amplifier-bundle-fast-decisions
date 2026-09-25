@@ -82,9 +82,12 @@ lever and by project x lever over the stored events, deduplicated by `event_id`,
 Recompute independently by reading the event files and summing those three fields.
 
 Mechanisms emitting receipts today: `cheaper_model` (each cheaper-model step, the host's cache rebuild after a cheap
-turn as a loss, and judge time on judged turns kept on the host) and `prepared_action` (when the read shortcut is
-enabled). `cache_keepalive`, `launch_blocked`, `loop_stop` and `context_rightsize` are reported as "not active yet"
-until their mechanisms ship; each will emit the same receipt shape.
+turn as a loss, and judge time on judged turns kept on the host), `prepared_action` (when the read shortcut is
+enabled) and `cache_keepalive` (on by default in `behaviors/fast-decisions.yaml`: one receipt per long tool wait,
+refresh costs against the avoided cache re-write, confirmed from the next call's cache reads). `loop_stop` is built
+but off by default (its receipts did not yet reconcile with a measured A/B). `launch_blocked` and
+`context_rightsize` are reported as "not active yet" until their mechanisms ship; each will emit the same receipt
+shape.
 
 ## Status
 

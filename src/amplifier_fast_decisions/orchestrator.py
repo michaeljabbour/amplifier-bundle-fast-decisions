@@ -1058,6 +1058,10 @@ docs/UPSTREAM_CONTRACT.md.
             "provider_call_id": provider_call_id,
             "route": "slow", "destination": self._provider_key, "status": "running",
             "transport_measured": "provider-complete"}, decision_id)
+        if self._levers is not None:
+            # No keep-alive refresh may overlap a real call (and an in-flight
+            # one must be recorded before this call settles its episode).
+            await self._levers.quiesce()
         start = time.perf_counter()
         mono_start = time.monotonic()
         try:
@@ -1088,7 +1092,7 @@ docs/UPSTREAM_CONTRACT.md.
                                        time.perf_counter() - start, decision_id)
         if self._levers is not None:
             await self._levers.after_call(self._provider, request, kwargs, usage_fields(response), mono_start,
-                                          time.perf_counter() - start)
+                                          time.perf_counter() - start, provider_key=self._provider_key)
         return response
 
     def _eff_context(self, service: Any) -> dict:
@@ -1505,8 +1509,10 @@ class HybridOrchestrator:
 
     async def _on_tool_post(self, event: str, data: dict):
         """Deliver a pending loop-stop note with the next model request: the
-        upstream loop stores a tool:post context injection and adds it to
-        the next request (persisted at the conversation tail, cache-safe)."""
+        upstream loop stores an ephemeral tool:post context injection and adds
+        it to the next request. In loop-streaming's default "persist" mode an
+        ephemeral injection is written once at the conversation tail (so it
+        stays cached); in "tail" mode it is request-only."""
         levers = self._levers
         note = levers.take_note() if levers is not None else None
         if not note:

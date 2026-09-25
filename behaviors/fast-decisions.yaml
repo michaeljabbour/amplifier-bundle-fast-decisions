@@ -79,6 +79,23 @@ session:
         max_requests_before_escalation: null
         escalate_on_test_failure: false
         escalate_on_provider_error: true
+      # Cache keep-alive (levers.py): while a tool or helper runs past 270 s
+      # since the prompt cache was last used, re-send the last request
+      # unchanged with a 1-token output cap so the next call reads the cache
+      # instead of re-writing it. Anthropic only; skipped under manual
+      # extended thinking; at most 6 refreshes per wait; only when >= 20k
+      # unshared prefix tokens are at risk. Every wait leaves a
+      # cache_keepalive receipt. Measured (evals/levers-2026-09-25): a 330 s
+      # bash wait saved $0.16 per run, receipts within $0.0001 of measured.
+      # Turn off with cache_keepalive: {enabled: false}.
+      cache_keepalive:
+        enabled: true
+        interval_s: 270
+        max_refreshes: 6
+        min_prefix_tokens: 20000
+        max_output_tokens: 1
+      # Loop-stop nudges stay off: their receipts did not reconcile with a
+      # measured A/B (evals/levers-2026-09-25).
       # Auto-observatory: on the top-level session's first session:start,
       # reuse-or-spawn a detached `afast serve` and open it. Skipped for
       # child sessions, when AFAST_OBSERVATORY=off or AMPLIFIER_NO_BROWSER=1,

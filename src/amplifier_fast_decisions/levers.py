@@ -153,6 +153,47 @@ class LoopWatch:
         return note
 
 
+def _is_side_call(request: Any) -> bool:
+    meta = field_value(request, "metadata", None)
+    return isinstance(meta, dict) and meta.get("stream") is False
+
+
+def _thinking_requested(provider: Any, request: Any, kwargs: dict) -> bool:
+    """Mirror of the Anthropic provider's thinking switch: kwargs win, then
+    the provider config, then any reasoning effort."""
+    if "extended_thinking" in kwargs:
+        return bool(kwargs.get("extended_thinking"))
+    config = getattr(provider, "config", None)
+    config = config if isinstance(config, dict) else {}
+    if "extended_thinking" in config:
+        value = config.get("extended_thinking")
+        return value is True or str(value).strip().lower() in ("1", "true", "yes", "on")
+    effort = field_value(request, "reasoning_effort", None) or kwargs.get("reasoning_effort")
+    return bool(effort or config.get("reasoning_effort") or config.get("effort"))
+
+
+async def _output_cap_safe(provider: Any, model: str | None, request: Any, kwargs: dict) -> bool:
+    """True when the refresh's output cap will be honored. With thinking on,
+    the Anthropic provider raises max_tokens to budget + buffer unless the
+    model's thinking is adaptive-only (requires_adaptive_thinking, or always
+    on); a refresh could then generate a whole thinking budget. Dropping
+    thinking instead would invalidate the cached messages. Unknown -> unsafe."""
+    if not _thinking_requested(provider, request, kwargs):
+        return True
+    caps_fn = getattr(provider, "_get_request_capabilities", None)
+    if not callable(caps_fn) or not isinstance(model, str):
+        return False
+    try:
+        caps = caps_fn(model)
+        if asyncio.iscoroutine(caps) or isinstance(caps, asyncio.Future):
+            caps = await caps
+    except Exception:  # noqa: BLE001
+        return False
+    if getattr(caps, "supports_thinking", True) is False:
+        return True
+    return bool(getattr(caps, "requires_adaptive_thinking", False) or getattr(caps, "thinking_always_on", False))
+
+
 class Levers:
     """Per-execute state for both levers. Every public method never raises."""
 
@@ -189,6 +230,8 @@ class Levers:
         self.episode: dict | None = None
         self._task: asyncio.Task | None = None
         self._refreshing = False
+        # Set by finish(): no refresh (or new keep-alive task) after the turn.
+        self._closed = False
 
     @property
     def active(self) -> bool:
@@ -196,8 +239,13 @@ class Levers:
 
     # -- model calls ------------------------------------------------------
     async def after_call(self, provider: Any, request: Any, kwargs: dict, usage: dict, started: float,
-                         seconds: float) -> None:
+                         seconds: float, provider_key: str | None = None) -> None:
         try:
+            if self._closed or _is_side_call(request):
+                # Background side calls (goal evaluator, summaries) mark
+                # themselves stream=False: they are not the conversation's
+                # next step, so they neither settle nor replace the capture.
+                return
             model = kwargs.get("model") or getattr(provider, "default_model", None)
             model = model if isinstance(model, str) else None
             self.host_model = self.host_model or model
@@ -218,10 +266,27 @@ class Levers:
                 await self._settle(next_usage=usage, next_model=model, next_started=started)
             if self.keepalive_cfg:
                 prefix = int(usage.get("cache_read_tokens") or 0) + int(usage.get("cache_write_tokens") or 0)
-                self.last = {"provider": provider, "request": request, "kwargs": dict(kwargs), "model": model,
-                             "prefix": prefix, "anchor": started}
+                reason = self._ineligible(provider, provider_key, model)
+                if reason is None and not await _output_cap_safe(provider, model, request, kwargs):
+                    reason = "manual_thinking"
+                self.last = {"provider": provider, "request": request,
+                             "messages": list(field_value(request, "messages", []) or []),
+                             "kwargs": dict(kwargs), "model": model, "prefix": prefix, "anchor": started,
+                             "skip": reason}
         except Exception:  # noqa: BLE001 -- levers never break the loop
             return
+
+    def _ineligible(self, provider: Any, provider_key: str | None, model: str | None) -> str | None:
+        """Keep-alive is Anthropic-only: the 5-minute TTL and the cache-write
+        premium the receipt prices are Anthropic's, and other APIs may reject
+        a 1-token output cap."""
+        names = (provider_key, getattr(provider, "name", None))
+        if not any(isinstance(n, str) and "anthropic" in n.lower() for n in names):
+            return "not_anthropic"
+        r = _rates_for(model, self.rates)
+        if r is None or not r[3] > r[2]:
+            return "no_write_premium"
+        return None
 
     def avg_call(self) -> tuple[float | None, float | None]:
         if not self.priced:
@@ -230,7 +295,7 @@ class Levers:
 
     # -- tools ------------------------------------------------------------
     def tool_started(self, key: int, name: str) -> None:
-        if not self.keepalive_cfg:
+        if not self.keepalive_cfg or self._closed:
             return
         self.running[key] = name
         if self._task is None or self._task.done():
@@ -282,16 +347,20 @@ class Levers:
     async def _keepalive_loop(self) -> None:
         cfg = self.keepalive_cfg or {}
         interval = float(cfg["interval_s"])
-        while self.running:
+        while self.running and not self._closed:
             last = self.last
-            if last is None or last["prefix"] < int(cfg["min_prefix_tokens"]):
+            if last is None or last.get("skip"):
+                return
+            # Only the unshared part of the prefix is at risk (the receipt
+            # credits nothing for the shared-warm tools + system prompt).
+            if last["prefix"] - (self.shared_warm or 0) < int(cfg["min_prefix_tokens"]):
                 return
             episode = self.episode
             if episode is not None and len(episode["refreshes"]) >= int(cfg["max_refreshes"]):
                 return
             anchor = episode["anchor"] if episode is not None else last["anchor"]
             await asyncio.sleep(max(0.0, anchor + interval - time.monotonic()))
-            if not self.running:
+            if not self.running or self._closed:
                 return
             self._refreshing = True
             try:
@@ -302,24 +371,47 @@ class Levers:
                 return
         return
 
-    def _clone(self, request: Any) -> Any:
+    async def quiesce(self, timeout: float = 5.0) -> None:
+        """Before a real model call: let an in-flight refresh finish (bounded)
+        so its cost lands in the episode before the call settles it, then
+        stop the keep-alive task. Guarantees no refresh overlaps a real call."""
+        task = self._task
+        if task is None or task.done():
+            return
+        try:
+            if self._refreshing:
+                await asyncio.wait({task}, timeout=timeout)
+        finally:
+            if not task.done():
+                task.cancel()
+
+    def _clone(self, last: dict) -> Any:
+        """The captured request, byte-identical messages (copied at capture),
+        output capped, and never streamed: stream=False keeps the refresh off
+        the UI's stream events, and the fast_decisions marker lets request /
+        response observers tell it from a real step."""
+        request = last["request"]
         cap = int((self.keepalive_cfg or {}).get("max_output_tokens", 1))
-        messages = list(field_value(request, "messages", []) or [])
+        messages = list(last.get("messages") or field_value(request, "messages", []) or [])
+        original = field_value(request, "metadata", None)
+        metadata = {**(original if isinstance(original, dict) else {}), "stream": False,
+                    "fast_decisions": "cache_keepalive"}
+        update = {"messages": messages, "max_output_tokens": cap, "metadata": metadata}
         copier = getattr(request, "model_copy", None)
         if callable(copier):
-            return copier(update={"messages": messages, "max_output_tokens": cap})
+            return copier(update=update)
         import copy
         clone = copy.copy(request)
         if isinstance(clone, dict):
-            clone.update(messages=messages, max_output_tokens=cap)
+            clone.update(update)
         else:
-            setattr(clone, "messages", messages)
-            setattr(clone, "max_output_tokens", cap)
+            for key, value in update.items():
+                setattr(clone, key, value)
         return clone
 
     async def _refresh(self) -> bool:
         last = self.last
-        if last is None:
+        if last is None or self._closed:
             return False
         started = time.monotonic()
         if self.episode is None:
@@ -329,7 +421,7 @@ class Levers:
         episode["tools"].update(self.running.values())
         call_id = "keepalive_" + digest({"t": started})[:16]
         try:
-            response = await last["provider"].complete(self._clone(last["request"]), **last["kwargs"])
+            response = await last["provider"].complete(self._clone(last), **last["kwargs"])
         except asyncio.CancelledError:
             raise
         except Exception as exc:  # noqa: BLE001
@@ -346,10 +438,17 @@ class Levers:
                                          "cache_write": usage.get("cache_write_tokens") or 0}, self.rates)
         episode["refreshes"].append(cost)
         episode["anchor"] = started
+        cap = int((self.keepalive_cfg or {}).get("max_output_tokens", 1))
+        over = (usage.get("output_tokens") or 0) > cap
         await self.service.emit("cache_refresh", {
-            "provider_call_id": call_id, "model": last["model"], "status": "ok",
+            "provider_call_id": call_id, "model": last["model"], "status": "cap_exceeded" if over else "ok",
             "duration_ms": (time.monotonic() - started) * 1000, "tools": sorted(episode["tools"])[:8],
             **{k: v for k, v in usage.items() if k != "served_model"}, "cost_usd": cost})
+        if over:
+            # The output cap was not honored (e.g. thinking raised it): stop
+            # this episode and never refresh this capture again.
+            last["skip"] = "cap_exceeded"
+            return False
         return True
 
     async def _settle(self, *, next_usage: dict | None, next_model: str | None,
@@ -373,20 +472,19 @@ class Levers:
         """Turn end: stop refreshing, settle an open keep-alive episode (no
         later call reused it), and emit one loop_stop receipt for the turn if a
         note was delivered (measurable only when the turn ended normally)."""
-        try:
-            self.running.clear()
-            task = self._task
-            if task is not None and not task.done():
+        self._closed = True
+        self.running.clear()
+        task = self._task
+        if task is not None and not task.done():
+            try:
                 if self._refreshing:
-                    try:
-                        await asyncio.wait_for(asyncio.shield(task), timeout=30)
-                    except Exception:  # noqa: BLE001
-                        pass
-                task.cancel()
-                try:
-                    await task
-                except (asyncio.CancelledError, Exception):
-                    pass
+                    # A sent refresh is billed either way; wait briefly only
+                    # so its cost is recorded, never long.
+                    await asyncio.wait({task}, timeout=2.0)
+            except BaseException:  # noqa: BLE001 -- a second cancel must not skip cleanup
+                pass
+            task.cancel()
+        try:
             if self.episode is not None:
                 await self._settle(next_usage=None, next_model=None, next_started=None)
             if self.loop is not None and self.note_at is not None:
