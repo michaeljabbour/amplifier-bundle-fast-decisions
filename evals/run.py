@@ -1020,7 +1020,8 @@ NO_EFFECT_BAND = 0.03  # ratio within [0.97, 1.03] with enough evidence => "no-e
 def aggregate_task_pairs(comparisons, anchor_harness="amplifier-plain", candidate_harness="amplifier-fd"):
     """Regroup already-computed per-task numbers from a list of one cell's
     per-rep `comparison.json` dicts into {task: {candidate_exec_s: [...per rep],
-    candidate_passed: [...], anchor_exec_s: [...], anchor_passed: [...]}}.
+    candidate_passed: [...], anchor_exec_s: [...], anchor_passed: [...],
+    rep: [...]}}.
 
     Prefers `comparison['cross']['baselines'][anchor_harness]['per_task']`
     (the cross-campaign anchor comparison battery.py already computed via
@@ -1029,14 +1030,19 @@ def aggregate_task_pairs(comparisons, anchor_harness="amplifier-plain", candidat
     embeds its own amplifier-plain harness instead of using an anchor_cell).
     No new derivation happens here -- only regrouping numbers that already
     exist in the dicts battery.py wrote.
+
+    `rep` records the 1-based position within `comparisons` each entry came
+    from (comparisons is appended one dict per rep, in rep order -- see the
+    rep loop in cmd_run), so downstream critical-failure detection can name
+    the exact (task, rep) a candidate failure occurred at.
     """
     by_task = {}
 
     def _slot(task):
         return by_task.setdefault(task, {"candidate_exec_s": [], "candidate_passed": [],
-                                          "anchor_exec_s": [], "anchor_passed": []})
+                                          "anchor_exec_s": [], "anchor_passed": [], "rep": []})
 
-    for comp in comparisons or []:
+    for i, comp in enumerate(comparisons or [], start=1):
         if comp is None:
             continue
         cross = comp.get("cross")
@@ -1049,6 +1055,7 @@ def aggregate_task_pairs(comparisons, anchor_harness="amplifier-plain", candidat
                 slot["candidate_passed"].append(bool(row.get("candidate_passed")))
                 slot["anchor_exec_s"].append(row.get(f"{anchor_harness}_exec_s"))
                 slot["anchor_passed"].append(bool(row.get(f"{anchor_harness}_passed")))
+                slot["rep"].append(i)
         else:
             for task, row in (comp.get("per_task") or {}).items():
                 c = row.get(candidate_harness)
@@ -1061,6 +1068,7 @@ def aggregate_task_pairs(comparisons, anchor_harness="amplifier-plain", candidat
                 slot["candidate_passed"].append(bool(c.get("outcome_passed")))
                 slot["anchor_exec_s"].append((a_ms / 1000.0) if a_ms is not None else None)
                 slot["anchor_passed"].append(bool(a.get("outcome_passed")))
+                slot["rep"].append(i)
     return by_task
 
 
@@ -1105,6 +1113,80 @@ def quality_counts(task_pairs):
         if _majority_pass(series["anchor_passed"]):
             anchor_successes += 1
     return candidate_successes, anchor_successes, paired_task_count
+
+
+# ---------------------------------------------------------------------------
+# critical failures (STUDY-DESIGN.md section 8):
+#
+#   "Quality. Non-inferiority, not superiority: the fd arm's successes must
+#   be at least (plain's successes - 1) on the split, **and** zero critical
+#   failures. A critical failure is a protected file modified, an evaluator
+#   crash, or an independent check the fd arm failed that plain passed on
+#   the same task and rep. One critical failure disqualifies a cell
+#   regardless of its speed."
+#
+# Three kinds, in the order named above. No new measurement logic: every
+# signal read here (protected_files_unchanged, quality.failure_labels,
+# outcome_passed) is already produced by battery.py/forge_e2e.py and written
+# to disk; these functions only regroup/flag it.
+# ---------------------------------------------------------------------------
+
+def outcome_regression_failures(task_pairs):
+    """Third STUDY-DESIGN.md section 8 kind: for every (task, rep) pair
+    present in both arms, the anchor (plain) passed and the candidate (fd)
+    did not. Reads the same per-rep outcome_passed data aggregate_task_pairs
+    already collected -- no new derivation."""
+    failures = []
+    for task, series in task_pairs.items():
+        reps = series.get("rep") or list(range(1, len(series["candidate_passed"]) + 1))
+        for rep, candidate_passed, anchor_passed in zip(reps, series["candidate_passed"], series["anchor_passed"]):
+            if anchor_passed and not candidate_passed:
+                failures.append({"task": task, "rep": rep, "labels": ["candidate_failed_where_anchor_passed"]})
+    return failures
+
+
+def protected_file_and_crash_failures(campaign_root, candidate_experiments, candidate_harness="amplifier-fd"):
+    """First and second STUDY-DESIGN.md section 8 kinds: a protected file
+    modified, or an evaluator crash -- read directly from each rep's raw
+    normalized result via battery.py's own experiment loader (the most
+    direct source; comparison.json's per_task/cross tables don't carry
+    protected_files_unchanged or quality.failure_labels, only outcome_passed
+    and timing).
+
+    Best-effort and read-only: an experiment this can't load (e.g. a
+    --report-only pass against a copied campaign root that never repopulated
+    runs/manifest.json) is skipped rather than raised -- this supplements the
+    outcome-based check above, it is never the sole source of a verdict.
+    """
+    if not campaign_root or not candidate_experiments:
+        return []
+    import battery  # local import: see sign_test_p_from_log_ratios for why
+    failures = []
+    for rep, exp in enumerate(candidate_experiments, start=1):
+        if not exp:
+            continue
+        try:
+            experiment_dir = battery.experiment_dir_for(campaign_root, exp)
+            _manifest, assigned = battery._load_experiment_assigned(experiment_dir)
+        except (FileNotFoundError, KeyError, ValueError, OSError):
+            continue
+        for (task, harness), entry in assigned.items():
+            if harness != candidate_harness:
+                continue
+            result = entry.get("result") or {}
+            unchanged = result.get("protected_files_unchanged") or {}
+            violated = sorted(f for f, ok in unchanged.items() if not ok)
+            if violated:
+                failures.append({"task": task, "rep": rep,
+                                  "labels": [f"protected_file_modified:{f}" for f in violated]})
+            failure_labels = (result.get("quality") or {}).get("failure_labels") or []
+            crash_labels = [lbl for lbl in failure_labels
+                             if lbl.startswith(("check_answer_error:", "evaluate_error:"))
+                             or lbl == "evaluator_failed_or_timed_out"]
+            if crash_labels:
+                failures.append({"task": task, "rep": rep,
+                                  "labels": [f"evaluator_crash:{lbl}" for lbl in crash_labels]})
+    return failures
 
 
 def bootstrap_ci_log_ratio(log_ratios, n_resamples=BOOTSTRAP_RESAMPLES, seed=BOOTSTRAP_SEED):
@@ -1160,16 +1242,31 @@ def cost_ratio_from_cell_comparisons(candidate_comparisons, anchor_comparisons,
 
 
 def classify_verdict(*, reps, split, gate_passed, quality_non_inferior, ratio_point,
-                      ratio_ci_low, ratio_ci_high, sign_p, paired_task_count, cost_ratio):
+                      ratio_ci_low, ratio_ci_high, sign_p, paired_task_count, cost_ratio,
+                      critical_failure_count=0):
     """STUDY-DESIGN.md section 8 decision rules applied to one cell's
     aggregated-across-reps numbers. Never recomputes a statistic -- every
-    input here was already produced by battery.py or the pure helpers above."""
+    input here was already produced by battery.py or the pure helpers above.
+
+    `split == "holdout"` or `split` starting with `"holdout"` (e.g.
+    `holdout2`, a fresh holdout split added alongside the original) is
+    eligible for `confirmed`; `dev`/`m-dev` never are (section 8: "confirmed
+    -- the full bar above, on the **holdout** split").
+
+    Any critical failure (section 8: "One critical failure disqualifies a
+    cell regardless of its speed") forces a distinct non-passing label,
+    checked right after the mechanism gate and before the non-inferiority
+    label -- a disqualified cell is never reported as merely
+    "quality-regressed", and can never be "confirmed".
+    """
     if not gate_passed:
         return "gate-failed"
+    if critical_failure_count:
+        return "disqualified (critical failure)"
     if not quality_non_inferior:
         return "quality-regressed"
     enough_evidence = (reps >= MIN_REPS_FOR_CLAIM and paired_task_count >= MIN_PAIRED_TASKS_FOR_CLAIM
-                        and split == "holdout")
+                        and (split == "holdout" or split.startswith("holdout")))
     speedup_confirmed_by_ci = (ratio_ci_high is not None and ratio_ci_high < 1.0)
     sign_significant = (sign_p is not None and sign_p <= 0.05)
     cost_ok = (cost_ratio is None) or (cost_ratio <= 1.00)
@@ -1182,8 +1279,17 @@ def classify_verdict(*, reps, split, gate_passed, quality_non_inferior, ratio_po
 
 
 def build_cell_result(cell_id, anchor_id, comparisons, anchor_comparisons, gate_passed, split, reps,
-                       candidate_harness="amplifier-fd", anchor_harness="amplifier-plain"):
-    """Assemble one cell's verdict row for results.json/RESULTS.md."""
+                       candidate_harness="amplifier-fd", anchor_harness="amplifier-plain",
+                       campaign_root=None, candidate_experiments=None):
+    """Assemble one cell's verdict row for results.json/RESULTS.md.
+
+    `campaign_root`/`candidate_experiments` (the candidate cell's per-rep
+    experiment ids, same order as `comparisons`) are optional: when given,
+    they enable the protected-file/evaluator-crash critical-failure check
+    (see protected_file_and_crash_failures); when omitted (e.g. existing
+    callers/tests that only have comparison.json in hand), only the
+    outcome-regression critical-failure check runs.
+    """
     task_pairs = aggregate_task_pairs(comparisons, anchor_harness, candidate_harness)
     log_ratios = per_task_log_ratios(task_pairs)
     ratio_point, ci_low, ci_high = bootstrap_ci_log_ratio(log_ratios)
@@ -1192,10 +1298,15 @@ def build_cell_result(cell_id, anchor_id, comparisons, anchor_comparisons, gate_
     quality_non_inferior = candidate_successes >= (anchor_successes - 1)
     cost_ratio, unknown_cost_count = cost_ratio_from_cell_comparisons(
         comparisons, anchor_comparisons, candidate_harness, anchor_harness)
+    critical_failures = (
+        outcome_regression_failures(task_pairs)
+        + protected_file_and_crash_failures(campaign_root, candidate_experiments, candidate_harness)
+    )
     verdict = classify_verdict(
         reps=reps, split=split, gate_passed=gate_passed, quality_non_inferior=quality_non_inferior,
         ratio_point=ratio_point, ratio_ci_low=ci_low, ratio_ci_high=ci_high,
         sign_p=p_value, paired_task_count=paired_task_count, cost_ratio=cost_ratio,
+        critical_failure_count=len(critical_failures),
     )
     return {
         "cell": cell_id, "anchor": anchor_id, "reps": reps, "split": split, "gate_passed": gate_passed,
@@ -1205,6 +1316,7 @@ def build_cell_result(cell_id, anchor_id, comparisons, anchor_comparisons, gate_
         "cost_ratio": cost_ratio, "unknown_cost_count": unknown_cost_count,
         "quality": {"candidate_successes": candidate_successes, "anchor_successes": anchor_successes,
                     "non_inferior": quality_non_inferior},
+        "critical_failures": critical_failures,
         "verdict": verdict,
     }
 
@@ -1296,6 +1408,9 @@ def render_results_markdown(results):
             vp = row["vs_plain"]
             lines.append(f"  - {row['cell']} vs `{vp['anchor']}` (secondary): "
                          f"ratio={_fmt_ratio(vp['exec_time_ratio'])}")
+        for cf in row.get("critical_failures") or []:
+            lines.append(f"  - CRITICAL FAILURE: {row['cell']} task={cf['task']} rep={cf['rep']} "
+                         f"labels={', '.join(cf['labels'])}")
     lines.append("")
 
     if results.get("q3"):
@@ -1688,7 +1803,7 @@ def main(argv=None):
             split = manifest["invocation"]["split"]
             reps = manifest["invocation"]["reps"]
             cell_ids = [c["id"] for c in manifest["cells"]]
-            candidate_sha = manifest["candidate"]["frozen_git_sha"]
+            candidate_sha = manifest["candidate"].get("frozen_git_sha") or manifest["candidate"]["requested_sha"]
             baseline_source = manifest["baseline"]["source"]
             candidate_source = manifest["candidate"]["source"]
         else:
@@ -1953,6 +2068,7 @@ def main(argv=None):
             row = build_cell_result(
                 cid, anchor, comparisons_by_cell.get(cid, []), comparisons_by_cell.get(anchor, []),
                 gate_passed, split, reps,
+                campaign_root=campaign_root, candidate_experiments=per_cid_experiments.get(cid, []),
             )
             secondary_anchor = cell.get("secondary_anchor")
             if secondary_anchor:

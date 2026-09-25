@@ -622,6 +622,19 @@ class AggregateTaskPairsTests(unittest.TestCase):
         pairs = run.aggregate_task_pairs([None, {}])
         self.assertEqual(pairs, {})
 
+    def test_rep_numbers_track_position_including_none_gaps(self):
+        comp1 = {"cross": {"baselines": {"amplifier-plain": {"per_task": {
+            "t1": {"candidate_exec_s": 8.0, "candidate_passed": True,
+                   "amplifier-plain_exec_s": 10.0, "amplifier-plain_passed": True},
+        }}}}}
+        comp3 = {"cross": {"baselines": {"amplifier-plain": {"per_task": {
+            "t1": {"candidate_exec_s": 7.0, "candidate_passed": False,
+                   "amplifier-plain_exec_s": 9.0, "amplifier-plain_passed": True},
+        }}}}}
+        # rep 2 is None (e.g. an infra failure); rep numbers must still read 1 and 3.
+        pairs = run.aggregate_task_pairs([comp1, None, comp3])
+        self.assertEqual(pairs["t1"]["rep"], [1, 3])
+
 
 class PerTaskLogRatiosAndQualityTests(unittest.TestCase):
     def test_median_across_reps_then_log_ratio(self):
@@ -651,6 +664,97 @@ class PerTaskLogRatiosAndQualityTests(unittest.TestCase):
         self.assertEqual(cand, 1)   # t1 majority pass, t2 majority fail
         self.assertEqual(anchor, 1)  # t1 majority fail, t2 majority pass
         self.assertEqual(n, 2)
+
+
+class OutcomeRegressionFailuresTests(unittest.TestCase):
+    def test_flags_candidate_failed_where_anchor_passed(self):
+        task_pairs = {
+            "repair_roman_to_int": {
+                "candidate_passed": [True, False, False], "anchor_passed": [True, True, True],
+                "candidate_exec_s": [], "anchor_exec_s": [], "rep": [1, 2, 3],
+            },
+        }
+        failures = run.outcome_regression_failures(task_pairs)
+        self.assertEqual(len(failures), 2)
+        self.assertEqual([f["rep"] for f in failures], [2, 3])
+        for f in failures:
+            self.assertEqual(f["task"], "repair_roman_to_int")
+            self.assertEqual(f["labels"], ["candidate_failed_where_anchor_passed"])
+
+    def test_no_failure_when_both_pass_or_both_fail_or_candidate_alone_passes(self):
+        task_pairs = {
+            "t1": {"candidate_passed": [True, False], "anchor_passed": [True, False],
+                   "candidate_exec_s": [], "anchor_exec_s": [], "rep": [1, 2]},
+            "t2": {"candidate_passed": [True], "anchor_passed": [False],
+                   "candidate_exec_s": [], "anchor_exec_s": [], "rep": [1]},
+        }
+        self.assertEqual(run.outcome_regression_failures(task_pairs), [])
+
+    def test_falls_back_to_positional_rep_numbers_when_rep_key_absent(self):
+        task_pairs = {"t1": {"candidate_passed": [False], "anchor_passed": [True],
+                              "candidate_exec_s": [], "anchor_exec_s": []}}
+        failures = run.outcome_regression_failures(task_pairs)
+        self.assertEqual(failures, [{"task": "t1", "rep": 1, "labels": ["candidate_failed_where_anchor_passed"]}])
+
+
+class ProtectedFileAndCrashFailuresTests(unittest.TestCase):
+    def test_empty_without_campaign_root_or_experiments(self):
+        self.assertEqual(run.protected_file_and_crash_failures(None, ["exp-r1"]), [])
+        self.assertEqual(run.protected_file_and_crash_failures("/campaign", None), [])
+
+    def test_detects_protected_file_violation_and_evaluator_crash(self):
+        assigned = {
+            ("repair_roman_to_int", "amplifier-fd"): {"result": {
+                "protected_files_unchanged": {"protected.py": False, "readme.md": True},
+                "quality": {"failure_labels": []},
+            }},
+            ("other_task", "amplifier-fd"): {"result": {
+                "protected_files_unchanged": {"protected.py": True},
+                "quality": {"failure_labels": ["evaluate_error:boom"]},
+            }},
+            ("plain_task", "amplifier-plain"): {"result": {  # wrong harness, ignored
+                "protected_files_unchanged": {"protected.py": False},
+            }},
+        }
+        fake_battery = SimpleNamespace(
+            experiment_dir_for=lambda root, exp: Path(root) / exp,
+            _load_experiment_assigned=lambda experiment_dir: ({}, assigned),
+        )
+        with patch.dict(sys.modules, {"battery": fake_battery}):
+            failures = run.protected_file_and_crash_failures("/campaign", ["exp-r1"])
+        by_task = {f["task"]: f for f in failures if f["labels"][0].startswith("protected_file_modified")}
+        self.assertIn("protected_file_modified:protected.py", by_task["repair_roman_to_int"]["labels"])
+        crash = next(f for f in failures if f["task"] == "other_task" and "evaluator_crash" in f["labels"][0])
+        self.assertEqual(crash["rep"], 1)
+        self.assertIn("evaluator_crash:evaluate_error:boom", crash["labels"])
+
+    def test_ordinary_task_check_failure_label_is_not_mistaken_for_a_crash(self):
+        # battery_tasks.py's own check-failure labels (e.g. "<case-id>:expected-
+        # error-got-ok") contain the substring "error" but are NOT an evaluator
+        # crash -- only the two literal exception-wrapper prefixes battery.py's
+        # _evaluate_quality actually raises under (or the timeout sentinel) count.
+        assigned = {("repair_roman_to_int", "amplifier-fd"): {"result": {
+            "protected_files_unchanged": {},
+            "quality": {"failure_labels": ["rand-4:expected-error-got-ok", "answer_mismatch"]},
+        }}}
+        fake_battery = SimpleNamespace(
+            experiment_dir_for=lambda root, exp: Path(root) / exp,
+            _load_experiment_assigned=lambda experiment_dir: ({}, assigned),
+        )
+        with patch.dict(sys.modules, {"battery": fake_battery}):
+            failures = run.protected_file_and_crash_failures("/campaign", ["exp-r1"])
+        self.assertEqual(failures, [])
+
+    def test_unloadable_experiment_is_skipped_not_raised(self):
+        def _boom(experiment_dir):
+            raise FileNotFoundError("no manifest")
+        fake_battery = SimpleNamespace(
+            experiment_dir_for=lambda root, exp: Path(root) / exp,
+            _load_experiment_assigned=_boom,
+        )
+        with patch.dict(sys.modules, {"battery": fake_battery}):
+            failures = run.protected_file_and_crash_failures("/campaign", ["exp-r1", None])
+        self.assertEqual(failures, [])
 
 
 class BootstrapCiTests(unittest.TestCase):
@@ -728,6 +832,32 @@ class ClassifyVerdictTests(unittest.TestCase):
         kwargs = {**self.BASE, "ratio_point": 1.0, "ratio_ci_high": 1.05, "sign_p": 0.8}
         self.assertEqual(run.classify_verdict(**kwargs), "no-effect")
 
+    def test_confirmed_on_holdout2_split(self):
+        # holdout2 is a fresh holdout split (evals/suites.yaml) -- it must be
+        # eligible for "confirmed" exactly like "holdout", never like "dev".
+        kwargs = {**self.BASE, "split": "holdout2"}
+        self.assertEqual(run.classify_verdict(**kwargs), "confirmed")
+
+    def test_dev_split_never_confirmed_even_named_like_holdout2(self):
+        kwargs = {**self.BASE, "split": "dev"}
+        self.assertEqual(run.classify_verdict(**kwargs), "screen")
+
+    def test_m_dev_split_never_confirmed(self):
+        kwargs = {**self.BASE, "split": "m-dev"}
+        self.assertEqual(run.classify_verdict(**kwargs), "screen")
+
+    def test_critical_failure_disqualifies_even_with_full_bar(self):
+        kwargs = {**self.BASE, "critical_failure_count": 1}
+        self.assertEqual(run.classify_verdict(**kwargs), "disqualified (critical failure)")
+
+    def test_critical_failure_is_never_merely_quality_regressed(self):
+        kwargs = {**self.BASE, "critical_failure_count": 2, "quality_non_inferior": False}
+        self.assertEqual(run.classify_verdict(**kwargs), "disqualified (critical failure)")
+
+    def test_gate_failed_still_outranks_critical_failure(self):
+        kwargs = {**self.BASE, "critical_failure_count": 1, "gate_passed": False}
+        self.assertEqual(run.classify_verdict(**kwargs), "gate-failed")
+
 
 class BuildCellResultTests(unittest.TestCase):
     def test_end_to_end_confirmed(self):
@@ -744,6 +874,73 @@ class BuildCellResultTests(unittest.TestCase):
         self.assertAlmostEqual(row["exec_time_ratio"]["geomean"], 0.8)
         self.assertAlmostEqual(row["cost_ratio"], 0.8)
         self.assertEqual(row["quality"]["candidate_successes"], 10)
+        self.assertEqual(row["critical_failures"], [])
+
+    def test_end_to_end_disqualified_when_candidate_fails_where_anchor_passed(self):
+        # Same shape as test_end_to_end_confirmed, but on rep 2 one task's
+        # candidate fails while the anchor still passes -- STUDY-DESIGN.md
+        # section 8's third critical-failure kind. Must never be "confirmed".
+        def _per_task(rep):
+            table = {
+                f"t{i}": {"candidate_exec_s": 8.0, "candidate_passed": True,
+                          "amplifier-plain_exec_s": 10.0, "amplifier-plain_passed": True}
+                for i in range(10)
+            }
+            if rep == 2:
+                table["t0"] = {"candidate_exec_s": None, "candidate_passed": False,
+                               "amplifier-plain_exec_s": 10.0, "amplifier-plain_passed": True}
+            return table
+
+        comparisons = [
+            {"cross": {"baselines": {"amplifier-plain": {"per_task": _per_task(rep)}}},
+             "per_harness": {"amplifier-fd": {"mean_cost_known_usd": 0.4, "unknown_cost_count": 0}}}
+            for rep in (1, 2, 3)
+        ]
+        anchor_comparisons = [{"per_harness": {"amplifier-plain": {"mean_cost_known_usd": 0.5,
+                                                                    "unknown_cost_count": 0}}}] * 3
+        row = run.build_cell_result("judge-local+effort", "plain", comparisons, anchor_comparisons,
+                                     True, "holdout", 3)
+        self.assertEqual(row["verdict"], "disqualified (critical failure)")
+        self.assertEqual(len(row["critical_failures"]), 1)
+        self.assertEqual(row["critical_failures"][0]["task"], "t0")
+        self.assertEqual(row["critical_failures"][0]["rep"], 2)
+
+    def test_protected_file_and_crash_failures_feed_into_verdict(self):
+        comparisons = [{"cross": {"baselines": {"amplifier-plain": {"per_task": {
+            f"t{i}": {"candidate_exec_s": 8.0, "candidate_passed": True,
+                      "amplifier-plain_exec_s": 10.0, "amplifier-plain_passed": True}
+            for i in range(10)
+        }}}}, "per_harness": {"amplifier-fd": {"mean_cost_known_usd": 0.4, "unknown_cost_count": 0}}}] * 3
+        anchor_comparisons = [{"per_harness": {"amplifier-plain": {"mean_cost_known_usd": 0.5,
+                                                                    "unknown_cost_count": 0}}}] * 3
+        assigned = {("t0", "amplifier-fd"): {"result": {
+            "protected_files_unchanged": {"protected.py": False},
+            "quality": {"failure_labels": []},
+        }}}
+        with (
+            patch.object(battery, "experiment_dir_for", lambda root, exp: Path(root) / exp),
+            patch.object(battery, "_load_experiment_assigned", lambda experiment_dir: ({}, assigned)),
+        ):
+            row = run.build_cell_result(
+                "judge-local+effort", "plain", comparisons, anchor_comparisons, True, "holdout", 3,
+                campaign_root="/campaign", candidate_experiments=["exp-r1", "exp-r2", "exp-r3"],
+            )
+        self.assertEqual(row["verdict"], "disqualified (critical failure)")
+        self.assertTrue(any("protected_file_modified" in lbl
+                             for cf in row["critical_failures"] for lbl in cf["labels"]))
+
+    def test_no_campaign_root_means_no_protected_file_check_but_still_works(self):
+        comparisons = [{"cross": {"baselines": {"amplifier-plain": {"per_task": {
+            f"t{i}": {"candidate_exec_s": 8.0, "candidate_passed": True,
+                      "amplifier-plain_exec_s": 10.0, "amplifier-plain_passed": True}
+            for i in range(10)
+        }}}}, "per_harness": {"amplifier-fd": {"mean_cost_known_usd": 0.4, "unknown_cost_count": 0}}}] * 3
+        anchor_comparisons = [{"per_harness": {"amplifier-plain": {"mean_cost_known_usd": 0.5,
+                                                                    "unknown_cost_count": 0}}}] * 3
+        row = run.build_cell_result("judge-local+effort", "plain", comparisons, anchor_comparisons,
+                                     True, "holdout", 3)
+        self.assertEqual(row["critical_failures"], [])
+        self.assertEqual(row["verdict"], "confirmed")
 
 
 class Q3ComparisonTests(unittest.TestCase):
@@ -836,6 +1033,27 @@ class RenderResultsMarkdownTests(unittest.TestCase):
         self.assertIn("judge-local+effort", md)
         self.assertIn("screen", md)
         self.assertIn("n_tasks=10", md)
+
+    def test_disqualified_verdict_and_critical_failure_notes_are_rendered(self):
+        results = {
+            "suite": "s1", "split": "holdout2", "reps": 3,
+            "cells": [{
+                "cell": "orch-haiku-shaped", "anchor": "plain", "reps": 3, "split": "holdout2",
+                "gate_passed": True, "paired_task_count": 12,
+                "exec_time_ratio": {"geomean": 0.7, "ci95_low": 0.6, "ci95_high": 0.8, "sign_test_p": 0.01},
+                "cost_ratio": 0.8, "unknown_cost_count": 0,
+                "quality": {"candidate_successes": 11, "anchor_successes": 12, "non_inferior": True},
+                "critical_failures": [{"task": "repair_roman_to_int", "rep": 2,
+                                       "labels": ["candidate_failed_where_anchor_passed"]}],
+                "verdict": "disqualified (critical failure)",
+            }],
+            "q3": None, "evidence_limits": [],
+        }
+        md = run.render_results_markdown(results)
+        self.assertIn("disqualified (critical failure)", md)
+        self.assertIn("CRITICAL FAILURE", md)
+        self.assertIn("repair_roman_to_int", md)
+        self.assertIn("rep=2", md)
 
 
 class CampaignRootTests(unittest.TestCase):
