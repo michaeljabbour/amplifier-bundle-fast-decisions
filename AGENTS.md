@@ -1,5 +1,7 @@
 # AGENTS.md
 
+**Read `docs/GOAL.md` first: it states what this project must achieve and how success is measured.**
+
 Coding-agent instructions for this repo live in `docs/AGENT-HANDOFF.md` --
 read that file before making changes here.
 
