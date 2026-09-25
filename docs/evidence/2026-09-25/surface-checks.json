@@ -1,0 +1,115 @@
+{
+  "date": "2026-09-25",
+  "note": "one easy prompt per surface on the latest build; event summaries from the fast-decisions event log (no prompts)",
+  "surfaces": {
+    "CLI (amplifier run)": {
+      "session_prefix": "dd7d48b1",
+      "events": [
+        {
+          "event": "difficulty_judged",
+          "backend": "jev",
+          "choice": "cheap",
+          "reason_code": "judge_cheap"
+        },
+        {
+          "event": "model_routed",
+          "reason_code": "start_model",
+          "requested_model": "claude-sonnet-5"
+        },
+        {
+          "event": "slow_end",
+          "model": "claude-sonnet-5",
+          "host_model": "claude-opus-5-5",
+          "cost_usd": 0.41790975
+        },
+        {
+          "event": "model_routed",
+          "reason_code": "start_model",
+          "requested_model": "claude-sonnet-5"
+        },
+        {
+          "event": "slow_end",
+          "model": "claude-sonnet-5",
+          "host_model": "claude-opus-5-5",
+          "cost_usd": 0.03567225
+        }
+      ],
+      "config": {
+        "backend": "jev",
+        "harness": "Amplifier CLI",
+        "workspace_name": "fdtest",
+        "repo": null,
+        "branch": null
+      }
+    },
+    "amplifier-runtime serve (Studio engine)": {
+      "session_prefix": "ad8bcf2d",
+      "events": [
+        {
+          "event": "difficulty_judged",
+          "backend": "jev",
+          "choice": "cheap",
+          "reason_code": "judge_cheap"
+        },
+        {
+          "event": "model_routed",
+          "reason_code": "start_model",
+          "requested_model": "claude-sonnet-5"
+        },
+        {
+          "event": "slow_end",
+          "model": "claude-sonnet-5",
+          "host_model": "claude-opus-5-5",
+          "cost_usd": 0.3686535
+        },
+        {
+          "event": "model_routed",
+          "reason_code": "start_model",
+          "requested_model": "claude-sonnet-5"
+        },
+        {
+          "event": "slow_end",
+          "model": "claude-sonnet-5",
+          "host_model": "claude-opus-5-5",
+          "cost_usd": 0.0324834
+        }
+      ],
+      "config": {
+        "backend": "jev",
+        "harness": "Amplifier runtime",
+        "workspace_name": "fdtest",
+        "repo": null,
+        "branch": null
+      }
+    },
+    "TUI (amplifier-tui, core 1.6.0)": {
+      "session_prefix": "71553687",
+      "events": [
+        {
+          "event": "difficulty_judged",
+          "backend": "jev",
+          "choice": "cheap",
+          "reason_code": "judge_cheap"
+        },
+        {
+          "event": "model_routed",
+          "reason_code": "start_model",
+          "requested_model": "claude-sonnet-5"
+        },
+        {
+          "event": "slow_end",
+          "model": "claude-sonnet-5",
+          "host_model": "claude-opus-5-5",
+          "cost_usd": 0.03856185
+        }
+      ],
+      "config": {
+        "backend": "jev",
+        "harness": "Amplifier TUI",
+        "workspace_name": "fdtest",
+        "repo": null,
+        "branch": null
+      }
+    }
+  }
+}

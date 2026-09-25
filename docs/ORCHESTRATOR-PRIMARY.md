@@ -70,9 +70,9 @@ overrides:
       #   model: <name>, backend_label: <dashboard name>
 ```
 
-Measured trade-off to keep in mind: on the 12-task everyday screen (1 rep) Jev deciding ran at 0.61x
-time / 0.50x cost against 0.55x / 0.38x for the length rule, because Jev sent 3 of 12 tasks to the host
-model. Jev is the better judge of difficulty (AUC 0.83 vs 0.60); the length rule was cheaper on tasks
+Measured trade-off to keep in mind: on the 12 everyday tuning tasks the current Jev default ran at 0.56–0.57x
+time / 0.46–0.48x cost (two batches), against 0.55x / 0.38x for the length rule in an earlier batch, because Jev sent
+about one turn in four to the host model while the rule kept all of them on Sonnet. Jev is the better judge of difficulty (AUC 0.83 vs 0.60); the length rule was cheaper on tasks
 that were all easy. Re-measure on your own mix with `afast savings`.
 
 **Savings.** `afast savings [--since 7d] [--json]` and the observatory's savings panel estimate what
@@ -98,7 +98,7 @@ debiasing (`local_backend.py`). qwen3:0.6b cannot do this judgment (AUC 0.50).
 
 | Suite | Current default vs plain (same host): time | cost | quality |
 |---|---|---|---|
-| S1 holdout (8 × 3 reps, preregistered), host Fable 5.1 | 0.42x [0.35-0.49] | 0.50x | 24/24 vs 24/24 (confirmed) |
+| S1 holdout (8 × 3 reps, preregistered), host Fable 5.1 | 0.42x [0.35-0.50] | 0.50x | 24/24 vs 24/24 (confirmed) |
 | S1 holdout (8 × 3 reps, preregistered), host Opus 5.5 | 1.01x [0.86-1.17] | 0.98x | 24/24 vs 24/24 (no effect) |
 | S3 SWE-bench Verified (10 × 2 reps), scope gate → host model | 1.00x | 0.98x | 13/20 vs 14/20 |
 

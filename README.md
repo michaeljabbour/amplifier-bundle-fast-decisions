@@ -19,9 +19,9 @@ than replacing it.
 
 Everyday rows: the current default (Jev deciding, one decision per request) on 8 tasks never used for tuning, 3 runs
 each, against standard Amplifier with the same default model. The Fable result met all 6 criteria written down before
-the run (faster on 8 of 8 tasks, sign test p = 0.008, 95% interval 0.35–0.49); the Opus result failed the time
-criterion. On the 12 tuning tasks the default measured 0.56× / 0.48× (Fable) and 0.76–0.83× / 0.82–0.90× (Opus) in
-two batches. Ratios are geometric means of per-task ratios. Everyday setups ran back to back in the same batch; bug-fix
+the run (faster on 8 of 8 tasks, sign test p = 0.008, 95% interval 0.35–0.50); the Opus result failed the time
+and sign-test criteria. On the 12 tuning tasks the default measured 0.56–0.57× / 0.46–0.48× (Fable) and 0.76–0.83× / 0.82–0.90× (Opus) in
+two batches. Ratios are geometric means of per-task ratios. Everyday setups ran back to back in the same batch, always in the same order; bug-fix
 setups ran at the same time.
 
 **Who benefits.** Easy requests go to Claude Sonnet 5, so the gain depends on your default model. With an expensive

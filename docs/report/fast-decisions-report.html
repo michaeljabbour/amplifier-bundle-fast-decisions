@@ -135,7 +135,7 @@
   <p class="fine">Relative to standard Amplifier with the same default model, in the same batch: everyday-task setups
   ran back to back within about fifteen minutes, bug-fix setups ran at the same time. 0.42× means 42% of the time.
   Time and cost ratios are geometric means of per-task ratios. The everyday rows are the current default (Jev
-  deciding, one decision per request), three runs per task; on the twelve tuning tasks it measured 0.56× / 0.48×
+  deciding, one decision per request), three runs per task; on the twelve tuning tasks it measured 0.56–0.57× / 0.46–0.48×
   (Fable) and 0.76–0.83× / 0.82–0.90× (Opus) across two batches.</p>
 </section>
 
@@ -215,7 +215,7 @@
   quarter to two and a half seconds; hosted on a shared RunPod gateway it takes about 0.6 seconds typically, but in
   two runs 18–25% of decisions stalled for 5–24 seconds. Mid-size local models land around 69–76%. The tiny model we
   started with was no better than a coin flip, and no simple rule based on the wording of a request beat 60%. We ran
-  every decision-maker twice, a day apart; each landed within a point or two of its first result.</p>
+  every decision-maker twice, several hours apart; each landed within a point or two of its first result.</p>
   <figure>
     <div class="fig"><div id="v-judges"></div></div>
     <figcaption>Figure 6. How often each decision-maker picks the harder of two issues, against its speed, on 90 human-rated issues from SWE-bench
@@ -252,8 +252,8 @@
   <h2>Deciding once, keeping the memory</h2>
   <p>AI services remember the conversation so far so they can answer quickly. That memory only holds while the setup
   stays the same. Switch models or thinking levels partway through a task and the service rebuilds its memory from
-  scratch. In our runs a single rebuild re-sent up to about 60,000 words, and one task paid for about 175,000 words
-  of rebuilds in total.</p>
+  scratch. In the SymPy run below a single rebuild re-sent about 30,000 words, and one task paid for about 175,000 words
+  of memory writes in total.</p>
   <figure>
     <div class="fig"><div id="v-memory"></div></div>
     <figcaption>Figure 7. The same SymPy fix, done two ways, from its per-request records. Top: the first version
@@ -263,7 +263,7 @@
   <ul class="lead-list">
     <li><strong>One decision per request.</strong> The dispatcher picks the model and thinking level before the first
     step and changes them mid-request only if the faster model's service returns an error. In the current default's
-    first re-test batch: 96 decisions, zero mid-request switches. (An earlier build could also switch up after six steps.)</li>
+    first re-test batch: 48 decisions, zero mid-request switches. (An earlier build could also switch up after six steps.)</li>
     <li><strong>Large projects get the full model.</strong> When the session's folder holds more than 300 files (not
     counting .git, dependency and build folders), the request is treated as a real investigation, whatever the
     decision-maker says. That keeps large-project work on exactly the standard setup.</li>
@@ -289,7 +289,8 @@
   <p>We then trimmed four of the heaviest add-ons at the source, and each change was reviewed by a separate
   Amplifier session before merging. Three cut the text they add to every request (one from 2,153 to 1,146 tokens,
   another from about 2,900 to 1,350), and the memory add-on's look-ups got about three times faster (a search went
-  from 3.0 to 1.0 seconds on a copy of a real memory store) and no longer hold up the start of a session. With all
+  from 3.0 to 1.0 seconds on a copy of a real memory store); its change to stop holding up the start of a session
+  was not independently measured. With all
   four back on, a trivial request took 18.5 seconds against 17.5 seconds without them.</p>
   <p class="fine">Trivial-request times: two runs each (18.3 and 16.6 s without the four add-ons; 18.6 and 18.4 s with
   them), same machine and settings, after a warm-up run.</p>
@@ -350,16 +351,17 @@
   <p>Every setup was compared with standard Amplifier in the same batch, and against standard Amplifier simply
   switched to the cheaper model, which tells us whether savings come from dispatching or just from a cheaper model.
   Bug-fix setups ran at the same time; everyday-task setups ran back to back, always in the same order, about ten
-  minutes apart. Two batches an hour and a half apart gave the same result, but within-batch drift was not tested
-  directly. Charts that combine rows from different batches say so. Runs were isolated from each other and from this
-  machine's everyday settings, and an independent Amplifier session re-computed every number here from the stored
-  records.</p>
+  minutes apart. Two batches run back to back (the second started a minute after the first ended) gave the same result, but
+  within-batch drift was not tested directly. Charts that combine rows from different batches say so. Runs were isolated from each other and from this
+  machine's everyday settings, and independent Amplifier sessions re-computed the numbers from the stored records (audit records are stored with
+  the evidence).</p>
   <div class="verdict">
     <p><strong>The confirmation run: confirmed with an expensive default model, no effect with Opus 5.5.</strong></p>
     <p>Before starting it, we wrote down six pass criteria for eight unseen everyday tasks, each repeated three times,
-    for two default models. With Claude Fable 5.1 all six passed: time 0.42× (95% interval 0.35–0.49), cost 0.50×,
+    for two default models. (The criteria are our standing rule; the file's own timestamp, 03:35 UTC, is wrong: it was
+    created at 03:29:08 UTC, 14 seconds before the first run, and committed with the results.) With Claude Fable 5.1 all six passed: time 0.42× (95% interval 0.35–0.50), cost 0.50×,
     faster on all eight tasks (sign test p = 0.008), every run passing, every mechanism check green. With Claude Opus
-    5.5 the time criterion failed: 1.01× (0.86–1.17), cost 0.98×, faster on two of eight. An earlier confirmation run
+    5.5 the time and sign-test criteria failed: 1.01× (0.86–1.17), cost 0.98×, faster on two of eight. An earlier confirmation run
     of the built-in rule met five of its six criteria (0.61×, p = 0.07).</p>
   </div>
   <ul class="lead-list">
@@ -604,8 +606,8 @@ function dataTable(id, sets) { const el = document.getElementById(id); if (!el) 
   const el = document.getElementById('v-memory');
   const lanes = [
     { name: 'Switching mid-task', rows: [36.8, 37.1, 0.9, 39.5, 1.1], switches: [1, 3] },
-    { name: 'Deciding once', rows: [36.7, 0.3, 1.7, 1.5, 1.1], switches: [] } ];
-  const W = 980, laneH = 124, left = 270, colW = 128, base = 100, scale = 2.0;
+    { name: 'Deciding once', rows: [36.7, 0.7, 0.8, 1.4, 0.9, 0.7, 0.2], switches: [] } ];
+  const W = 980, laneH = 124, left = 270, colW = 100, base = 100, scale = 2.0;
   let s = `<svg viewBox="0 0 ${W} ${laneH * 2 + 30}" width="100%" role="img" aria-label="Memory rebuilds per step: switching versus deciding once">`;
   lanes.forEach((lane, li) => {
     const y0 = li * laneH, total = lane.rows.reduce((a, b) => a + b, 0) * 0.75;

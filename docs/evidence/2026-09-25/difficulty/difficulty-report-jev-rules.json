@@ -1,5 +1,5 @@
 {
-  "dataset": "/Users/michaeljabbour/dev/afast-ev/difficulty-dataset.jsonl",
+  "dataset": "~/dev/afast-ev/difficulty-dataset.jsonl",
   "question": "Classify this software engineering task by how much work it takes an expert engineer who is new to the codebase.",
   "results": [
     {

@@ -1,0 +1,5620 @@
+{
+  "date": "2026-09-25",
+  "method": "Live sessions' slow_end records with the provider's cost_usd and >30k cached-read tokens. Each call is priced at Sonnet 5 and Opus 5.5 list rates (input 3/4, output 15/20, cache read 0.30/0.20, cache write 3.75/5.00 USD per million tokens); the provider computes cost_usd from the model that actually served, so the closer price identifies the served model.",
+  "summary": {
+    "claude-sonnet-5 -> closer to sonnet-5": 18,
+    "provider-default -> closer to opus-5-5": 356
+  },
+  "calls": [
+    {
+      "recorded_model": "claude-sonnet-5",
+      "host_model": null,
+      "cost_usd": 0.033499,
+      "priced_as_sonnet_5": 0.033499,
+      "priced_as_opus_5_5": 0.024556,
+      "closer_to": "sonnet-5",
+      "tokens": {
+        "input": 100544,
+        "output": 63,
+        "cache_read": 100542,
+        "cache_write": 636
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "claude-sonnet-5",
+      "host_model": null,
+      "cost_usd": 0.031072,
+      "priced_as_sonnet_5": 0.031072,
+      "priced_as_opus_5_5": 0.021194,
+      "closer_to": "sonnet-5",
+      "tokens": {
+        "input": 101180,
+        "output": 11,
+        "cache_read": 101178,
+        "cache_write": 146
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "claude-sonnet-5",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.205972,
+      "priced_as_sonnet_5": 0.205972,
+      "priced_as_opus_5_5": 0.264704,
+      "closer_to": "sonnet-5",
+      "tokens": {
+        "input": 49630,
+        "output": 4,
+        "cache_read": 49628,
+        "cache_write": 50938
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "claude-sonnet-5",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.038562,
+      "priced_as_sonnet_5": 0.038562,
+      "priced_as_opus_5_5": 0.032349,
+      "closer_to": "sonnet-5",
+      "tokens": {
+        "input": 95334,
+        "output": 4,
+        "cache_read": 95332,
+        "cache_write": 2639
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.045007,
+      "priced_as_sonnet_5": 0.05071,
+      "priced_as_opus_5_5": 0.045007,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 113034,
+        "output": 372,
+        "cache_read": 113030,
+        "cache_write": 2989
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.063027,
+      "priced_as_sonnet_5": 0.064673,
+      "priced_as_opus_5_5": 0.063027,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 116021,
+        "output": 602,
+        "cache_read": 116019,
+        "cache_write": 5555
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.032568,
+      "priced_as_sonnet_5": 0.042662,
+      "priced_as_opus_5_5": 0.032568,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 121576,
+        "output": 72,
+        "cache_read": 121574,
+        "cache_write": 1361
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.078955,
+      "priced_as_sonnet_5": 0.077657,
+      "priced_as_opus_5_5": 0.078955,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 122937,
+        "output": 1325,
+        "cache_read": 122935,
+        "cache_write": 5572
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.065164,
+      "priced_as_sonnet_5": 0.068149,
+      "priced_as_opus_5_5": 0.065164,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 128509,
+        "output": 601,
+        "cache_read": 128507,
+        "cache_write": 5487
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.094737,
+      "priced_as_sonnet_5": 0.091152,
+      "priced_as_opus_5_5": 0.094737,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 133996,
+        "output": 2741,
+        "cache_read": 133994,
+        "cache_write": 2622
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.046826,
+      "priced_as_sonnet_5": 0.055612,
+      "priced_as_opus_5_5": 0.046826,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 136618,
+        "output": 225,
+        "cache_read": 136616,
+        "cache_write": 2999
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.032326,
+      "priced_as_sonnet_5": 0.045187,
+      "priced_as_opus_5_5": 0.032326,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 139617,
+        "output": 131,
+        "cache_read": 139615,
+        "cache_write": 355
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.039397,
+      "priced_as_sonnet_5": 0.050543,
+      "priced_as_opus_5_5": 0.039397,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 139972,
+        "output": 270,
+        "cache_read": 139970,
+        "cache_write": 1199
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.033817,
+      "priced_as_sonnet_5": 0.046538,
+      "priced_as_opus_5_5": 0.033817,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 141171,
+        "output": 167,
+        "cache_read": 141169,
+        "cache_write": 447
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.041951,
+      "priced_as_sonnet_5": 0.052706,
+      "priced_as_opus_5_5": 0.041951,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 141618,
+        "output": 616,
+        "cache_read": 141616,
+        "cache_write": 260
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.042868,
+      "priced_as_sonnet_5": 0.053433,
+      "priced_as_opus_5_5": 0.042868,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 141878,
+        "output": 485,
+        "cache_read": 141876,
+        "cache_write": 957
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.037115,
+      "priced_as_sonnet_5": 0.049261,
+      "priced_as_opus_5_5": 0.037115,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 142835,
+        "output": 183,
+        "cache_read": 142833,
+        "cache_write": 976
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.03375,
+      "priced_as_sonnet_5": 0.046884,
+      "priced_as_opus_5_5": 0.03375,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 143811,
+        "output": 182,
+        "cache_read": 143809,
+        "cache_write": 268
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.040378,
+      "priced_as_sonnet_5": 0.051895,
+      "priced_as_opus_5_5": 0.040378,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 144079,
+        "output": 192,
+        "cache_read": 144077,
+        "cache_write": 1543
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.043617,
+      "priced_as_sonnet_5": 0.054556,
+      "priced_as_opus_5_5": 0.043617,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 145622,
+        "output": 657,
+        "cache_read": 145620,
+        "cache_write": 269
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.040236,
+      "priced_as_sonnet_5": 0.05206,
+      "priced_as_opus_5_5": 0.040236,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 145891,
+        "output": 325,
+        "cache_read": 145889,
+        "cache_write": 910
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.038268,
+      "priced_as_sonnet_5": 0.050721,
+      "priced_as_opus_5_5": 0.038268,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 146801,
+        "output": 158,
+        "cache_read": 146799,
+        "cache_write": 1148
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.052907,
+      "priced_as_sonnet_5": 0.061873,
+      "priced_as_opus_5_5": 0.052907,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 147949,
+        "output": 619,
+        "cache_read": 147947,
+        "cache_write": 2186
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.04357,
+      "priced_as_sonnet_5": 0.055197,
+      "priced_as_opus_5_5": 0.04357,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 150135,
+        "output": 278,
+        "cache_read": 150133,
+        "cache_write": 1595
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.057674,
+      "priced_as_sonnet_5": 0.066014,
+      "priced_as_opus_5_5": 0.057674,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 151730,
+        "output": 1098,
+        "cache_read": 151728,
+        "cache_write": 1072
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.048878,
+      "priced_as_sonnet_5": 0.059578,
+      "priced_as_opus_5_5": 0.048878,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 152802,
+        "output": 476,
+        "cache_read": 152800,
+        "cache_write": 1758
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.058375,
+      "priced_as_sonnet_5": 0.066965,
+      "priced_as_opus_5_5": 0.058375,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 154560,
+        "output": 1183,
+        "cache_read": 154558,
+        "cache_write": 759
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.066699,
+      "priced_as_sonnet_5": 0.073322,
+      "priced_as_opus_5_5": 0.066699,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 155321,
+        "output": 1232,
+        "cache_read": 155317,
+        "cache_write": 2196
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.053974,
+      "priced_as_sonnet_5": 0.064107,
+      "priced_as_opus_5_5": 0.053974,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 157517,
+        "output": 317,
+        "cache_read": 157513,
+        "cache_write": 3223
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.039355,
+      "priced_as_sonnet_5": 0.053627,
+      "priced_as_opus_5_5": 0.039355,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 160738,
+        "output": 230,
+        "cache_read": 160736,
+        "cache_write": 520
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.040914,
+      "priced_as_sonnet_5": 0.054874,
+      "priced_as_opus_5_5": 0.040914,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 161258,
+        "output": 153,
+        "cache_read": 161256,
+        "cache_write": 1119
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.043283,
+      "priced_as_sonnet_5": 0.056819,
+      "priced_as_opus_5_5": 0.043283,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 162377,
+        "output": 159,
+        "cache_read": 162375,
+        "cache_write": 1524
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.070508,
+      "priced_as_sonnet_5": 0.077466,
+      "priced_as_opus_5_5": 0.070508,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 163901,
+        "output": 695,
+        "cache_read": 163899,
+        "cache_write": 4764
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.050306,
+      "priced_as_sonnet_5": 0.063029,
+      "priced_as_opus_5_5": 0.050306,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 168665,
+        "output": 207,
+        "cache_read": 168663,
+        "cache_write": 2485
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.063998,
+      "priced_as_sonnet_5": 0.07367,
+      "priced_as_opus_5_5": 0.063998,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 171150,
+        "output": 1018,
+        "cache_read": 171148,
+        "cache_write": 1880
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.051114,
+      "priced_as_sonnet_5": 0.064289,
+      "priced_as_opus_5_5": 0.051114,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 173030,
+        "output": 197,
+        "cache_read": 173028,
+        "cache_write": 2512
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.057601,
+      "priced_as_sonnet_5": 0.069532,
+      "priced_as_opus_5_5": 0.057601,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 175542,
+        "output": 512,
+        "cache_read": 175540,
+        "cache_write": 2449
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.066126,
+      "priced_as_sonnet_5": 0.076293,
+      "priced_as_opus_5_5": 0.066126,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 177991,
+        "output": 1179,
+        "cache_read": 177989,
+        "cache_write": 1388
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.058313,
+      "priced_as_sonnet_5": 0.070642,
+      "priced_as_opus_5_5": 0.058313,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 179379,
+        "output": 523,
+        "cache_read": 179377,
+        "cache_write": 2394
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.069927,
+      "priced_as_sonnet_5": 0.079711,
+      "priced_as_opus_5_5": 0.069927,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 181773,
+        "output": 1036,
+        "cache_read": 181771,
+        "cache_write": 2569
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.055636,
+      "priced_as_sonnet_5": 0.069378,
+      "priced_as_opus_5_5": 0.055636,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 184342,
+        "output": 544,
+        "cache_read": 184340,
+        "cache_write": 1576
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.052286,
+      "priced_as_sonnet_5": 0.067102,
+      "priced_as_opus_5_5": 0.052286,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 185918,
+        "output": 387,
+        "cache_read": 185916,
+        "cache_write": 1471
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.056525,
+      "priced_as_sonnet_5": 0.070502,
+      "priced_as_opus_5_5": 0.056525,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 187389,
+        "output": 323,
+        "cache_read": 187387,
+        "cache_write": 2516
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.047869,
+      "priced_as_sonnet_5": 0.064387,
+      "priced_as_opus_5_5": 0.047869,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 189905,
+        "output": 337,
+        "cache_read": 189903,
+        "cache_write": 628
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.046479,
+      "priced_as_sonnet_5": 0.063439,
+      "priced_as_opus_5_5": 0.046479,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 190533,
+        "output": 285,
+        "cache_read": 190531,
+        "cache_write": 533
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.067556,
+      "priced_as_sonnet_5": 0.079326,
+      "priced_as_opus_5_5": 0.067556,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 191066,
+        "output": 321,
+        "cache_read": 191064,
+        "cache_write": 4583
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.062602,
+      "priced_as_sonnet_5": 0.076299,
+      "priced_as_opus_5_5": 0.062602,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 195649,
+        "output": 408,
+        "cache_read": 195647,
+        "cache_write": 3061
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.058595,
+      "priced_as_sonnet_5": 0.073752,
+      "priced_as_opus_5_5": 0.058595,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 198710,
+        "output": 620,
+        "cache_read": 198708,
+        "cache_write": 1289
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.058882,
+      "priced_as_sonnet_5": 0.074161,
+      "priced_as_opus_5_5": 0.058882,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 199999,
+        "output": 464,
+        "cache_read": 199997,
+        "cache_write": 1919
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.091396,
+      "priced_as_sonnet_5": 0.098835,
+      "priced_as_opus_5_5": 0.091396,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 201918,
+        "output": 2111,
+        "cache_read": 201916,
+        "cache_write": 1757
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.067348,
+      "priced_as_sonnet_5": 0.081062,
+      "priced_as_opus_5_5": 0.067348,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 203675,
+        "output": 768,
+        "cache_read": 203673,
+        "cache_write": 2249
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.061895,
+      "priced_as_sonnet_5": 0.07731,
+      "priced_as_opus_5_5": 0.061895,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 205926,
+        "output": 491,
+        "cache_read": 205922,
+        "cache_write": 2175
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.067772,
+      "priced_as_sonnet_5": 0.082044,
+      "priced_as_opus_5_5": 0.067772,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 208099,
+        "output": 1027,
+        "cache_read": 208097,
+        "cache_write": 1121
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.056997,
+      "priced_as_sonnet_5": 0.07413,
+      "priced_as_opus_5_5": 0.056997,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 209220,
+        "output": 345,
+        "cache_read": 209218,
+        "cache_write": 1649
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.051141,
+      "priced_as_sonnet_5": 0.069986,
+      "priced_as_opus_5_5": 0.051141,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 210869,
+        "output": 152,
+        "cache_read": 210867,
+        "cache_write": 1184
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.079503,
+      "priced_as_sonnet_5": 0.091435,
+      "priced_as_opus_5_5": 0.079503,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 212053,
+        "output": 1234,
+        "cache_read": 212051,
+        "cache_write": 2481
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.052329,
+      "priced_as_sonnet_5": 0.071427,
+      "priced_as_opus_5_5": 0.052329,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 214534,
+        "output": 110,
+        "cache_read": 214532,
+        "cache_write": 1443
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.060893,
+      "priced_as_sonnet_5": 0.078066,
+      "priced_as_opus_5_5": 0.060893,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 215977,
+        "output": 193,
+        "cache_read": 215975,
+        "cache_write": 2766
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.051961,
+      "priced_as_sonnet_5": 0.071782,
+      "priced_as_opus_5_5": 0.051961,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 218743,
+        "output": 243,
+        "cache_read": 218741,
+        "cache_write": 669
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.069595,
+      "priced_as_sonnet_5": 0.085108,
+      "priced_as_opus_5_5": 0.069595,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 219412,
+        "output": 964,
+        "cache_read": 219410,
+        "cache_write": 1285
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.059902,
+      "priced_as_sonnet_5": 0.078031,
+      "priced_as_opus_5_5": 0.059902,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 220697,
+        "output": 255,
+        "cache_read": 220695,
+        "cache_write": 2131
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.059733,
+      "priced_as_sonnet_5": 0.078224,
+      "priced_as_opus_5_5": 0.059733,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 222828,
+        "output": 594,
+        "cache_read": 222826,
+        "cache_write": 656
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.053319,
+      "priced_as_sonnet_5": 0.073512,
+      "priced_as_opus_5_5": 0.053319,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 223484,
+        "output": 247,
+        "cache_read": 223482,
+        "cache_write": 735
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.060276,
+      "priced_as_sonnet_5": 0.07884,
+      "priced_as_opus_5_5": 0.060276,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 224219,
+        "output": 686,
+        "cache_read": 224217,
+        "cache_write": 341
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.06926,
+      "priced_as_sonnet_5": 0.085628,
+      "priced_as_opus_5_5": 0.06926,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 224560,
+        "output": 1027,
+        "cache_read": 224558,
+        "cache_write": 760
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.067007,
+      "priced_as_sonnet_5": 0.084053,
+      "priced_as_opus_5_5": 0.067007,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 225320,
+        "output": 823,
+        "cache_read": 225318,
+        "cache_write": 1095
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.062731,
+      "priced_as_sonnet_5": 0.08101,
+      "priced_as_opus_5_5": 0.062731,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 226415,
+        "output": 535,
+        "cache_read": 226413,
+        "cache_write": 1348
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.06332,
+      "priced_as_sonnet_5": 0.081654,
+      "priced_as_opus_5_5": 0.06332,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 227763,
+        "output": 513,
+        "cache_read": 227761,
+        "cache_write": 1500
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.057495,
+      "priced_as_sonnet_5": 0.077511,
+      "priced_as_opus_5_5": 0.057495,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 229263,
+        "output": 228,
+        "cache_read": 229261,
+        "cache_write": 1415
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.059293,
+      "priced_as_sonnet_5": 0.079071,
+      "priced_as_opus_5_5": 0.059293,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 230678,
+        "output": 457,
+        "cache_read": 230676,
+        "cache_write": 802
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.051784,
+      "priced_as_sonnet_5": 0.073559,
+      "priced_as_opus_5_5": 0.051784,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 231480,
+        "output": 72,
+        "cache_read": 231478,
+        "cache_write": 808
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.05868,
+      "priced_as_sonnet_5": 0.078853,
+      "priced_as_opus_5_5": 0.05868,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 232288,
+        "output": 441,
+        "cache_read": 232286,
+        "cache_write": 679
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.059031,
+      "priced_as_sonnet_5": 0.079218,
+      "priced_as_opus_5_5": 0.059031,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 232967,
+        "output": 490,
+        "cache_read": 232965,
+        "cache_write": 526
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.062591,
+      "priced_as_sonnet_5": 0.081967,
+      "priced_as_opus_5_5": 0.062591,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 233493,
+        "output": 644,
+        "cache_read": 233491,
+        "cache_write": 601
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.059614,
+      "priced_as_sonnet_5": 0.079825,
+      "priced_as_opus_5_5": 0.059614,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 234096,
+        "output": 283,
+        "cache_read": 234092,
+        "cache_write": 1424
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.069271,
+      "priced_as_sonnet_5": 0.087281,
+      "priced_as_opus_5_5": 0.069271,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 235518,
+        "output": 921,
+        "cache_read": 235516,
+        "cache_write": 748
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.063179,
+      "priced_as_sonnet_5": 0.082824,
+      "priced_as_opus_5_5": 0.063179,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 236268,
+        "output": 337,
+        "cache_read": 236264,
+        "cache_write": 1834
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.082813,
+      "priced_as_sonnet_5": 0.097824,
+      "priced_as_opus_5_5": 0.082813,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 238100,
+        "output": 341,
+        "cache_read": 238098,
+        "cache_write": 5673
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.109102,
+      "priced_as_sonnet_5": 0.118392,
+      "priced_as_opus_5_5": 0.109102,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 243773,
+        "output": 2897,
+        "cache_read": 243771,
+        "cache_write": 480
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.090003,
+      "priced_as_sonnet_5": 0.10414,
+      "priced_as_opus_5_5": 0.090003,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 244253,
+        "output": 859,
+        "cache_read": 244251,
+        "cache_write": 4793
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.087567,
+      "priced_as_sonnet_5": 0.103032,
+      "priced_as_opus_5_5": 0.087567,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 249046,
+        "output": 1610,
+        "cache_read": 249044,
+        "cache_write": 1110
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.097469,
+      "priced_as_sonnet_5": 0.110625,
+      "priced_as_opus_5_5": 0.097469,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 250156,
+        "output": 1904,
+        "cache_read": 250154,
+        "cache_write": 1870
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.079518,
+      "priced_as_sonnet_5": 0.097442,
+      "priced_as_opus_5_5": 0.079518,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 252026,
+        "output": 717,
+        "cache_read": 252024,
+        "cache_write": 2953
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.061458,
+      "priced_as_sonnet_5": 0.08434,
+      "priced_as_opus_5_5": 0.061458,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 254979,
+        "output": 281,
+        "cache_read": 254977,
+        "cache_write": 967
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.059617,
+      "priced_as_sonnet_5": 0.083104,
+      "priced_as_opus_5_5": 0.059617,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 255946,
+        "output": 220,
+        "cache_read": 255944,
+        "cache_write": 804
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.064378,
+      "priced_as_sonnet_5": 0.086795,
+      "priced_as_opus_5_5": 0.064378,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 256750,
+        "output": 565,
+        "cache_read": 256748,
+        "cache_write": 344
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.094059,
+      "priced_as_sonnet_5": 0.109108,
+      "priced_as_opus_5_5": 0.094059,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 257096,
+        "output": 1833,
+        "cache_read": 257092,
+        "cache_write": 1193
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "claude-sonnet-5",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.037379,
+      "priced_as_sonnet_5": 0.037379,
+      "priced_as_opus_5_5": 0.032663,
+      "closer_to": "sonnet-5",
+      "tokens": {
+        "input": 85878,
+        "output": 113,
+        "cache_read": 85876,
+        "cache_write": 2644
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "claude-sonnet-5",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.029629,
+      "priced_as_sonnet_5": 0.029629,
+      "priced_as_opus_5_5": 0.021802,
+      "closer_to": "sonnet-5",
+      "tokens": {
+        "input": 88522,
+        "output": 11,
+        "cache_read": 88520,
+        "cache_write": 774
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.036104,
+      "priced_as_sonnet_5": 0.043681,
+      "priced_as_opus_5_5": 0.036104,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 110692,
+        "output": 237,
+        "cache_read": 110688,
+        "cache_write": 1842
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.030419,
+      "priced_as_sonnet_5": 0.039694,
+      "priced_as_opus_5_5": 0.030419,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 112532,
+        "output": 94,
+        "cache_read": 112530,
+        "cache_write": 1205
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.06902,
+      "priced_as_sonnet_5": 0.068825,
+      "priced_as_opus_5_5": 0.06902,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 113737,
+        "output": 146,
+        "cache_read": 113735,
+        "cache_write": 8669
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.048314,
+      "priced_as_sonnet_5": 0.054596,
+      "priced_as_opus_5_5": 0.048314,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 122406,
+        "output": 141,
+        "cache_read": 122404,
+        "cache_write": 4201
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.050174,
+      "priced_as_sonnet_5": 0.056621,
+      "priced_as_opus_5_5": 0.050174,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 126607,
+        "output": 604,
+        "cache_read": 126605,
+        "cache_write": 2553
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.389093,
+      "priced_as_sonnet_5": 0.300025,
+      "priced_as_opus_5_5": 0.389093,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 54702,
+        "output": 230,
+        "cache_read": 54700,
+        "cache_write": 74709
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.0433,
+      "priced_as_sonnet_5": 0.051848,
+      "priced_as_opus_5_5": 0.0433,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 129160,
+        "output": 353,
+        "cache_read": 129158,
+        "cache_write": 2080
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.064936,
+      "priced_as_sonnet_5": 0.068387,
+      "priced_as_opus_5_5": 0.064936,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 131240,
+        "output": 1398,
+        "cache_read": 131238,
+        "cache_write": 2144
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.073374,
+      "priced_as_sonnet_5": 0.075038,
+      "priced_as_opus_5_5": 0.073374,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 133384,
+        "output": 1238,
+        "cache_read": 133382,
+        "cache_write": 4386
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.043482,
+      "priced_as_sonnet_5": 0.053276,
+      "priced_as_opus_5_5": 0.043482,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 137770,
+        "output": 208,
+        "cache_read": 137768,
+        "cache_write": 2352
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.040357,
+      "priced_as_sonnet_5": 0.051286,
+      "priced_as_opus_5_5": 0.040357,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 140122,
+        "output": 487,
+        "cache_read": 140120,
+        "cache_write": 517
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.050795,
+      "priced_as_sonnet_5": 0.059192,
+      "priced_as_opus_5_5": 0.050795,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 140639,
+        "output": 715,
+        "cache_read": 140637,
+        "cache_write": 1672
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.044795,
+      "priced_as_sonnet_5": 0.054942,
+      "priced_as_opus_5_5": 0.044795,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 142311,
+        "output": 450,
+        "cache_read": 142309,
+        "cache_write": 1465
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.043653,
+      "priced_as_sonnet_5": 0.054306,
+      "priced_as_opus_5_5": 0.043653,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 143776,
+        "output": 457,
+        "cache_read": 143774,
+        "cache_write": 1150
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.047733,
+      "priced_as_sonnet_5": 0.057538,
+      "priced_as_opus_5_5": 0.047733,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 144926,
+        "output": 485,
+        "cache_read": 144924,
+        "cache_write": 1808
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.047879,
+      "priced_as_sonnet_5": 0.057919,
+      "priced_as_opus_5_5": 0.047879,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 146734,
+        "output": 107,
+        "cache_read": 146732,
+        "cache_write": 3277
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.101885,
+      "priced_as_sonnet_5": 0.098915,
+      "priced_as_opus_5_5": 0.101885,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 150011,
+        "output": 162,
+        "cache_read": 150009,
+        "cache_write": 13727
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.095735,
+      "priced_as_sonnet_5": 0.096362,
+      "priced_as_opus_5_5": 0.095735,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 163738,
+        "output": 825,
+        "cache_read": 163736,
+        "cache_write": 9296
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.061719,
+      "priced_as_sonnet_5": 0.072244,
+      "priced_as_opus_5_5": 0.061719,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 173034,
+        "output": 498,
+        "cache_read": 173032,
+        "cache_write": 3429
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.054375,
+      "priced_as_sonnet_5": 0.067251,
+      "priced_as_opus_5_5": 0.054375,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 176463,
+        "output": 99,
+        "cache_read": 176461,
+        "cache_write": 3419
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.063659,
+      "priced_as_sonnet_5": 0.074726,
+      "priced_as_opus_5_5": 0.063659,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 179882,
+        "output": 492,
+        "cache_read": 179880,
+        "cache_write": 3567
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.074947,
+      "priced_as_sonnet_5": 0.083728,
+      "priced_as_opus_5_5": 0.074947,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 183449,
+        "output": 396,
+        "cache_read": 183447,
+        "cache_write": 6066
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.062111,
+      "priced_as_sonnet_5": 0.07501,
+      "priced_as_opus_5_5": 0.062111,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 189515,
+        "output": 561,
+        "cache_read": 189513,
+        "cache_write": 2596
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.057325,
+      "priced_as_sonnet_5": 0.07181,
+      "priced_as_opus_5_5": 0.057325,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 192111,
+        "output": 444,
+        "cache_read": 192109,
+        "cache_write": 2003
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.055965,
+      "priced_as_sonnet_5": 0.071091,
+      "priced_as_opus_5_5": 0.055965,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 194114,
+        "output": 96,
+        "cache_read": 194112,
+        "cache_write": 3043
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.065809,
+      "priced_as_sonnet_5": 0.07893,
+      "priced_as_opus_5_5": 0.065809,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 197157,
+        "output": 601,
+        "cache_read": 197155,
+        "cache_write": 2870
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.053453,
+      "priced_as_sonnet_5": 0.070094,
+      "priced_as_opus_5_5": 0.053453,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 200027,
+        "output": 383,
+        "cache_read": 200025,
+        "cache_write": 1156
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.048534,
+      "priced_as_sonnet_5": 0.066578,
+      "priced_as_opus_5_5": 0.048534,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 201183,
+        "output": 202,
+        "cache_read": 201181,
+        "cache_write": 850
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.050564,
+      "priced_as_sonnet_5": 0.068228,
+      "priced_as_opus_5_5": 0.050564,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 202033,
+        "output": 346,
+        "cache_read": 202031,
+        "cache_write": 646
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.049173,
+      "priced_as_sonnet_5": 0.067282,
+      "priced_as_opus_5_5": 0.049173,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 202679,
+        "output": 237,
+        "cache_read": 202677,
+        "cache_write": 778
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.056419,
+      "priced_as_sonnet_5": 0.072832,
+      "priced_as_opus_5_5": 0.056419,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 203457,
+        "output": 670,
+        "cache_read": 203455,
+        "cache_write": 464
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.067192,
+      "priced_as_sonnet_5": 0.080982,
+      "priced_as_opus_5_5": 0.067192,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 203921,
+        "output": 954,
+        "cache_read": 203919,
+        "cache_write": 1464
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.075775,
+      "priced_as_sonnet_5": 0.087638,
+      "priced_as_opus_5_5": 0.075775,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 205385,
+        "output": 891,
+        "cache_read": 205383,
+        "cache_write": 3374
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.067729,
+      "priced_as_sonnet_5": 0.082111,
+      "priced_as_opus_5_5": 0.067729,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 208759,
+        "output": 596,
+        "cache_read": 208757,
+        "cache_write": 2810
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.063226,
+      "priced_as_sonnet_5": 0.079155,
+      "priced_as_opus_5_5": 0.063226,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 211569,
+        "output": 754,
+        "cache_read": 211567,
+        "cache_write": 1165
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.068469,
+      "priced_as_sonnet_5": 0.083262,
+      "priced_as_opus_5_5": 0.068469,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 212734,
+        "output": 798,
+        "cache_read": 212732,
+        "cache_write": 1991
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.057043,
+      "priced_as_sonnet_5": 0.07499,
+      "priced_as_opus_5_5": 0.057043,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 214725,
+        "output": 459,
+        "cache_read": 214723,
+        "cache_write": 982
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.050919,
+      "priced_as_sonnet_5": 0.070545,
+      "priced_as_opus_5_5": 0.050919,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 215707,
+        "output": 246,
+        "cache_read": 215705,
+        "cache_write": 570
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.051753,
+      "priced_as_sonnet_5": 0.071256,
+      "priced_as_opus_5_5": 0.051753,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 216277,
+        "output": 300,
+        "cache_read": 216275,
+        "cache_write": 498
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.066533,
+      "priced_as_sonnet_5": 0.082415,
+      "priced_as_opus_5_5": 0.066533,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 216775,
+        "output": 558,
+        "cache_read": 216773,
+        "cache_write": 2402
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.048618,
+      "priced_as_sonnet_5": 0.06934,
+      "priced_as_opus_5_5": 0.048618,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 219177,
+        "output": 76,
+        "cache_read": 219175,
+        "cache_write": 651
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.150988,
+      "priced_as_sonnet_5": 0.146215,
+      "priced_as_opus_5_5": 0.150988,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 219828,
+        "output": 3590,
+        "cache_read": 219826,
+        "cache_write": 7043
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.145252,
+      "priced_as_sonnet_5": 0.142969,
+      "priced_as_opus_5_5": 0.145252,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 226871,
+        "output": 1114,
+        "cache_read": 226869,
+        "cache_write": 15518
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.076625,
+      "priced_as_sonnet_5": 0.093827,
+      "priced_as_opus_5_5": 0.076625,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 242389,
+        "output": 231,
+        "cache_read": 242387,
+        "cache_write": 4704
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.086376,
+      "priced_as_sonnet_5": 0.101846,
+      "priced_as_opus_5_5": 0.086376,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 247093,
+        "output": 857,
+        "cache_read": 247091,
+        "cache_write": 3962
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.071354,
+      "priced_as_sonnet_5": 0.091173,
+      "priced_as_opus_5_5": 0.071354,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 251055,
+        "output": 655,
+        "cache_read": 251053,
+        "cache_write": 1607
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.07028,
+      "priced_as_sonnet_5": 0.090609,
+      "priced_as_opus_5_5": 0.07028,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 252662,
+        "output": 445,
+        "cache_read": 252660,
+        "cache_write": 2168
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.063414,
+      "priced_as_sonnet_5": 0.085784,
+      "priced_as_opus_5_5": 0.063414,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 254830,
+        "output": 315,
+        "cache_read": 254828,
+        "cache_write": 1228
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.077999,
+      "priced_as_sonnet_5": 0.096908,
+      "priced_as_opus_5_5": 0.077999,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 256058,
+        "output": 479,
+        "cache_read": 256056,
+        "cache_write": 3440
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.074012,
+      "priced_as_sonnet_5": 0.094434,
+      "priced_as_opus_5_5": 0.074012,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 259498,
+        "output": 496,
+        "cache_read": 259496,
+        "cache_write": 2437
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.062225,
+      "priced_as_sonnet_5": 0.085958,
+      "priced_as_opus_5_5": 0.062225,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 261935,
+        "output": 296,
+        "cache_read": 261933,
+        "cache_write": 782
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.099396,
+      "priced_as_sonnet_5": 0.113954,
+      "priced_as_opus_5_5": 0.099396,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 262717,
+        "output": 2100,
+        "cache_read": 262715,
+        "cache_write": 969
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.070365,
+      "priced_as_sonnet_5": 0.092326,
+      "priced_as_opus_5_5": 0.070365,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 263686,
+        "output": 254,
+        "cache_read": 263684,
+        "cache_write": 2508
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.061586,
+      "priced_as_sonnet_5": 0.086119,
+      "priced_as_opus_5_5": 0.061586,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 266194,
+        "output": 276,
+        "cache_read": 266192,
+        "cache_write": 564
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.059879,
+      "priced_as_sonnet_5": 0.084923,
+      "priced_as_opus_5_5": 0.059879,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 266758,
+        "output": 217,
+        "cache_read": 266756,
+        "cache_write": 436
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.074416,
+      "priced_as_sonnet_5": 0.095891,
+      "priced_as_opus_5_5": 0.074416,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 267194,
+        "output": 978,
+        "cache_read": 267192,
+        "cache_write": 282
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.115088,
+      "priced_as_sonnet_5": 0.126437,
+      "priced_as_opus_5_5": 0.115088,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 267476,
+        "output": 2564,
+        "cache_read": 267474,
+        "cache_write": 2061
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.076835,
+      "priced_as_sonnet_5": 0.098057,
+      "priced_as_opus_5_5": 0.076835,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 269537,
+        "output": 298,
+        "cache_read": 269535,
+        "cache_write": 3392
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.063403,
+      "priced_as_sonnet_5": 0.088492,
+      "priced_as_opus_5_5": 0.063403,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 272929,
+        "output": 355,
+        "cache_read": 272927,
+        "cache_write": 342
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.074782,
+      "priced_as_sonnet_5": 0.097077,
+      "priced_as_opus_5_5": 0.074782,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 273271,
+        "output": 892,
+        "cache_read": 273269,
+        "cache_write": 456
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.082608,
+      "priced_as_sonnet_5": 0.103015,
+      "priced_as_opus_5_5": 0.082608,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 273727,
+        "output": 918,
+        "cache_read": 273725,
+        "cache_write": 1899
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.108688,
+      "priced_as_sonnet_5": 0.122859,
+      "priced_as_opus_5_5": 0.108688,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 275626,
+        "output": 2366,
+        "cache_read": 275624,
+        "cache_write": 1247
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.085507,
+      "priced_as_sonnet_5": 0.105661,
+      "priced_as_opus_5_5": 0.085507,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 276873,
+        "output": 519,
+        "cache_read": 276871,
+        "cache_write": 3949
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.070297,
+      "priced_as_sonnet_5": 0.094846,
+      "priced_as_opus_5_5": 0.070297,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 280822,
+        "output": 437,
+        "cache_read": 280820,
+        "cache_write": 1077
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.077322,
+      "priced_as_sonnet_5": 0.100276,
+      "priced_as_opus_5_5": 0.077322,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 281899,
+        "output": 854,
+        "cache_read": 281897,
+        "cache_write": 771
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.108882,
+      "priced_as_sonnet_5": 0.124061,
+      "priced_as_opus_5_5": 0.108882,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 282670,
+        "output": 2373,
+        "cache_read": 282668,
+        "cache_write": 976
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.390977,
+      "priced_as_sonnet_5": 0.335779,
+      "priced_as_opus_5_5": 0.390977,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 283646,
+        "output": 16076,
+        "cache_read": 283644,
+        "cache_write": 2544
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.147206,
+      "priced_as_sonnet_5": 0.153332,
+      "priced_as_opus_5_5": 0.147206,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 286190,
+        "output": 464,
+        "cache_read": 286188,
+        "cache_write": 16136
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.074873,
+      "priced_as_sonnet_5": 0.101503,
+      "priced_as_opus_5_5": 0.074873,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 302326,
+        "output": 550,
+        "cache_read": 302324,
+        "cache_write": 680
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.078014,
+      "priced_as_sonnet_5": 0.103961,
+      "priced_as_opus_5_5": 0.078014,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 303006,
+        "output": 611,
+        "cache_read": 303004,
+        "cache_write": 1037
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.106236,
+      "priced_as_sonnet_5": 0.125283,
+      "priced_as_opus_5_5": 0.106236,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 304043,
+        "output": 2026,
+        "cache_read": 304041,
+        "cache_write": 980
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.084317,
+      "priced_as_sonnet_5": 0.108991,
+      "priced_as_opus_5_5": 0.084317,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 305023,
+        "output": 499,
+        "cache_read": 305021,
+        "cache_write": 2665
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.093,
+      "priced_as_sonnet_5": 0.115903,
+      "priced_as_opus_5_5": 0.093,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 307688,
+        "output": 1423,
+        "cache_read": 307686,
+        "cache_write": 599
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.296141,
+      "priced_as_sonnet_5": 0.230311,
+      "priced_as_opus_5_5": 0.296141,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 54704,
+        "output": 4,
+        "cache_read": 54700,
+        "cache_write": 57021
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "claude-sonnet-5",
+      "host_model": null,
+      "cost_usd": 0.036063,
+      "priced_as_sonnet_5": 0.036063,
+      "priced_as_opus_5_5": 0.027276,
+      "closer_to": "sonnet-5",
+      "tokens": {
+        "input": 104043,
+        "output": 137,
+        "cache_read": 104041,
+        "cache_write": 744
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "claude-sonnet-5",
+      "host_model": null,
+      "cost_usd": 0.033557,
+      "priced_as_sonnet_5": 0.033557,
+      "priced_as_opus_5_5": 0.023785,
+      "closer_to": "sonnet-5",
+      "tokens": {
+        "input": 104787,
+        "output": 89,
+        "cache_read": 104785,
+        "cache_write": 208
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "claude-sonnet-5",
+      "host_model": null,
+      "cost_usd": 0.0468,
+      "priced_as_sonnet_5": 0.0468,
+      "priced_as_opus_5_5": 0.041402,
+      "closer_to": "sonnet-5",
+      "tokens": {
+        "input": 104995,
+        "output": 96,
+        "cache_read": 104993,
+        "cache_write": 3695
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": null,
+      "cost_usd": 0.04446,
+      "priced_as_sonnet_5": 0.049862,
+      "priced_as_opus_5_5": 0.04446,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 110113,
+        "output": 353,
+        "cache_read": 110111,
+        "cache_write": 3074
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": null,
+      "cost_usd": 0.056195,
+      "priced_as_sonnet_5": 0.059124,
+      "priced_as_opus_5_5": 0.056195,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 113187,
+        "output": 835,
+        "cache_read": 113185,
+        "cache_write": 3370
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": null,
+      "cost_usd": 0.032504,
+      "priced_as_sonnet_5": 0.041861,
+      "priced_as_opus_5_5": 0.032504,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 116557,
+        "output": 175,
+        "cache_read": 116555,
+        "cache_write": 1137
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": null,
+      "cost_usd": 0.040396,
+      "priced_as_sonnet_5": 0.047951,
+      "priced_as_opus_5_5": 0.040396,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 117694,
+        "output": 304,
+        "cache_read": 117692,
+        "cache_write": 2154
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": null,
+      "cost_usd": 0.042652,
+      "priced_as_sonnet_5": 0.049966,
+      "priced_as_opus_5_5": 0.042652,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 119848,
+        "output": 824,
+        "cache_read": 119846,
+        "cache_write": 439
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": null,
+      "cost_usd": 0.037965,
+      "priced_as_sonnet_5": 0.046517,
+      "priced_as_opus_5_5": 0.037965,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 120287,
+        "output": 477,
+        "cache_read": 120285,
+        "cache_write": 872
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": null,
+      "cost_usd": 0.032624,
+      "priced_as_sonnet_5": 0.042642,
+      "priced_as_opus_5_5": 0.032624,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 121159,
+        "output": 288,
+        "cache_read": 121157,
+        "cache_write": 525
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": null,
+      "cost_usd": 0.045744,
+      "priced_as_sonnet_5": 0.052561,
+      "priced_as_opus_5_5": 0.045744,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 121684,
+        "output": 354,
+        "cache_read": 121682,
+        "cache_write": 2864
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": null,
+      "cost_usd": 0.035882,
+      "priced_as_sonnet_5": 0.045594,
+      "priced_as_opus_5_5": 0.035882,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 124548,
+        "output": 212,
+        "cache_read": 124546,
+        "cache_write": 1345
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": null,
+      "cost_usd": 0.044886,
+      "priced_as_sonnet_5": 0.052548,
+      "priced_as_opus_5_5": 0.044886,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 125893,
+        "output": 432,
+        "cache_read": 125891,
+        "cache_write": 2212
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": null,
+      "cost_usd": 0.035284,
+      "priced_as_sonnet_5": 0.045678,
+      "priced_as_opus_5_5": 0.035284,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 128105,
+        "output": 148,
+        "cache_read": 128103,
+        "cache_write": 1339
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": null,
+      "cost_usd": 0.029811,
+      "priced_as_sonnet_5": 0.041775,
+      "priced_as_opus_5_5": 0.029811,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 129444,
+        "output": 126,
+        "cache_read": 129442,
+        "cache_write": 279
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": null,
+      "cost_usd": 0.046577,
+      "priced_as_sonnet_5": 0.054391,
+      "priced_as_opus_5_5": 0.046577,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 129723,
+        "output": 612,
+        "cache_read": 129721,
+        "cache_write": 1677
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": null,
+      "cost_usd": 0.044723,
+      "priced_as_sonnet_5": 0.053252,
+      "priced_as_opus_5_5": 0.044723,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 131400,
+        "output": 376,
+        "cache_read": 131398,
+        "cache_write": 2183
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": null,
+      "cost_usd": 0.038899,
+      "priced_as_sonnet_5": 0.049212,
+      "priced_as_opus_5_5": 0.038899,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 133583,
+        "output": 466,
+        "cache_read": 133581,
+        "cache_write": 571
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": null,
+      "cost_usd": 0.033858,
+      "priced_as_sonnet_5": 0.045517,
+      "priced_as_opus_5_5": 0.033858,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 134154,
+        "output": 206,
+        "cache_read": 134152,
+        "cache_write": 580
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": null,
+      "cost_usd": 0.034264,
+      "priced_as_sonnet_5": 0.045908,
+      "priced_as_opus_5_5": 0.034264,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 134734,
+        "output": 131,
+        "cache_read": 134732,
+        "cache_write": 938
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": null,
+      "cost_usd": 0.049927,
+      "priced_as_sonnet_5": 0.057796,
+      "priced_as_opus_5_5": 0.049927,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 135672,
+        "output": 594,
+        "cache_read": 135670,
+        "cache_write": 2181
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": null,
+      "cost_usd": 0.058468,
+      "priced_as_sonnet_5": 0.064529,
+      "priced_as_opus_5_5": 0.058468,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 137853,
+        "output": 103,
+        "cache_read": 137851,
+        "cache_write": 5766
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": null,
+      "cost_usd": 0.120456,
+      "priced_as_sonnet_5": 0.111885,
+      "priced_as_opus_5_5": 0.120456,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 143619,
+        "output": 3148,
+        "cache_read": 143617,
+        "cache_write": 5753
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": null,
+      "cost_usd": 0.053027,
+      "priced_as_sonnet_5": 0.062176,
+      "priced_as_opus_5_5": 0.053027,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 149372,
+        "output": 170,
+        "cache_read": 149370,
+        "cache_write": 3949
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": null,
+      "cost_usd": 0.065607,
+      "priced_as_sonnet_5": 0.072203,
+      "priced_as_opus_5_5": 0.065607,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 153321,
+        "output": 1136,
+        "cache_read": 153319,
+        "cache_write": 2443
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": null,
+      "cost_usd": 0.040375,
+      "priced_as_sonnet_5": 0.053646,
+      "priced_as_opus_5_5": 0.040375,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 155764,
+        "output": 107,
+        "cache_read": 155762,
+        "cache_write": 1415
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": null,
+      "cost_usd": 0.057453,
+      "priced_as_sonnet_5": 0.066667,
+      "priced_as_opus_5_5": 0.057453,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 157179,
+        "output": 765,
+        "cache_read": 157177,
+        "cache_write": 2142
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": null,
+      "cost_usd": 0.046877,
+      "priced_as_sonnet_5": 0.059055,
+      "priced_as_opus_5_5": 0.046877,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 159321,
+        "output": 340,
+        "cache_read": 159319,
+        "cache_write": 1641
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": null,
+      "cost_usd": 0.05149,
+      "priced_as_sonnet_5": 0.062761,
+      "priced_as_opus_5_5": 0.05149,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 160962,
+        "output": 654,
+        "cache_read": 160960,
+        "cache_write": 1242
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": null,
+      "cost_usd": 0.040528,
+      "priced_as_sonnet_5": 0.054727,
+      "priced_as_opus_5_5": 0.040528,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 162204,
+        "output": 191,
+        "cache_read": 162202,
+        "cache_write": 852
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": null,
+      "cost_usd": 0.050704,
+      "priced_as_sonnet_5": 0.062486,
+      "priced_as_opus_5_5": 0.050704,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 163056,
+        "output": 488,
+        "cache_read": 163054,
+        "cache_write": 1665
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": null,
+      "cost_usd": 0.039812,
+      "priced_as_sonnet_5": 0.054567,
+      "priced_as_opus_5_5": 0.039812,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 164721,
+        "output": 191,
+        "cache_read": 164719,
+        "cache_write": 608
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": null,
+      "cost_usd": 0.071058,
+      "priced_as_sonnet_5": 0.078093,
+      "priced_as_opus_5_5": 0.071058,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 165329,
+        "output": 162,
+        "cache_read": 165327,
+        "cache_write": 6949
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": null,
+      "cost_usd": 0.172573,
+      "priced_as_sonnet_5": 0.155271,
+      "priced_as_opus_5_5": 0.172573,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 172278,
+        "output": 3485,
+        "cache_read": 172276,
+        "cache_write": 13682
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": null,
+      "cost_usd": 0.059185,
+      "priced_as_sonnet_5": 0.072282,
+      "priced_as_opus_5_5": 0.059185,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 185960,
+        "output": 157,
+        "cache_read": 185958,
+        "cache_write": 3769
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": null,
+      "cost_usd": 0.052713,
+      "priced_as_sonnet_5": 0.067994,
+      "priced_as_opus_5_5": 0.052713,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 189729,
+        "output": 638,
+        "cache_read": 189727,
+        "cache_write": 400
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": null,
+      "cost_usd": 0.052888,
+      "priced_as_sonnet_5": 0.068185,
+      "priced_as_opus_5_5": 0.052888,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 190129,
+        "output": 405,
+        "cache_read": 190127,
+        "cache_write": 1351
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": null,
+      "cost_usd": 0.045749,
+      "priced_as_sonnet_5": 0.063033,
+      "priced_as_opus_5_5": 0.045749,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 191480,
+        "output": 249,
+        "cache_read": 191478,
+        "cache_write": 493
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": null,
+      "cost_usd": 0.048077,
+      "priced_as_sonnet_5": 0.064854,
+      "priced_as_opus_5_5": 0.048077,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 191973,
+        "output": 130,
+        "cache_read": 191971,
+        "cache_write": 1415
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": null,
+      "cost_usd": 0.06357,
+      "priced_as_sonnet_5": 0.076686,
+      "priced_as_opus_5_5": 0.06357,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 193388,
+        "output": 468,
+        "cache_read": 193386,
+        "cache_write": 3105
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": null,
+      "cost_usd": 0.048751,
+      "priced_as_sonnet_5": 0.066037,
+      "priced_as_opus_5_5": 0.048751,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 196493,
+        "output": 235,
+        "cache_read": 196491,
+        "cache_write": 949
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": null,
+      "cost_usd": 0.051856,
+      "priced_as_sonnet_5": 0.068508,
+      "priced_as_opus_5_5": 0.051856,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 197442,
+        "output": 337,
+        "cache_read": 197440,
+        "cache_write": 1124
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": null,
+      "cost_usd": 0.049501,
+      "priced_as_sonnet_5": 0.06691,
+      "priced_as_opus_5_5": 0.049501,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 198566,
+        "output": 144,
+        "cache_read": 198564,
+        "cache_write": 1380
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": null,
+      "cost_usd": 0.059242,
+      "priced_as_sonnet_5": 0.074423,
+      "priced_as_opus_5_5": 0.059242,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 199946,
+        "output": 493,
+        "cache_read": 199944,
+        "cache_write": 1877
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": null,
+      "cost_usd": 0.056787,
+      "priced_as_sonnet_5": 0.072864,
+      "priced_as_opus_5_5": 0.056787,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 201823,
+        "output": 438,
+        "cache_read": 201821,
+        "cache_write": 1531
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": null,
+      "cost_usd": 0.048158,
+      "priced_as_sonnet_5": 0.066622,
+      "priced_as_opus_5_5": 0.048158,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 203354,
+        "output": 208,
+        "cache_read": 203352,
+        "cache_write": 664
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": null,
+      "cost_usd": 0.077276,
+      "priced_as_sonnet_5": 0.08856,
+      "priced_as_opus_5_5": 0.077276,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 204018,
+        "output": 693,
+        "cache_read": 204016,
+        "cache_write": 4521
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": null,
+      "cost_usd": 0.077555,
+      "priced_as_sonnet_5": 0.089447,
+      "priced_as_opus_5_5": 0.077555,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 208539,
+        "output": 1178,
+        "cache_read": 208537,
+        "cache_write": 2456
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": null,
+      "cost_usd": 0.060787,
+      "priced_as_sonnet_5": 0.077239,
+      "priced_as_opus_5_5": 0.060787,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 210995,
+        "output": 552,
+        "cache_read": 210993,
+        "cache_write": 1508
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": null,
+      "cost_usd": 0.052253,
+      "priced_as_sonnet_5": 0.071065,
+      "priced_as_opus_5_5": 0.052253,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 212503,
+        "output": 282,
+        "cache_read": 212501,
+        "cache_write": 821
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": null,
+      "cost_usd": 0.087242,
+      "priced_as_sonnet_5": 0.09743,
+      "priced_as_opus_5_5": 0.087242,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 213324,
+        "output": 1743,
+        "cache_read": 213322,
+        "cache_write": 1942
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": null,
+      "cost_usd": 0.070591,
+      "priced_as_sonnet_5": 0.085233,
+      "priced_as_opus_5_5": 0.070591,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 215266,
+        "output": 283,
+        "cache_read": 215264,
+        "cache_write": 4374
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": null,
+      "cost_usd": 0.059421,
+      "priced_as_sonnet_5": 0.077511,
+      "priced_as_opus_5_5": 0.059421,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 219640,
+        "output": 653,
+        "cache_read": 219638,
+        "cache_write": 485
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": null,
+      "cost_usd": 0.078273,
+      "priced_as_sonnet_5": 0.091723,
+      "priced_as_opus_5_5": 0.078273,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 220125,
+        "output": 1416,
+        "cache_read": 220123,
+        "cache_write": 1184
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": null,
+      "cost_usd": 0.071769,
+      "priced_as_sonnet_5": 0.087023,
+      "priced_as_opus_5_5": 0.071769,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 221309,
+        "output": 846,
+        "cache_read": 221307,
+        "cache_write": 2116
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": null,
+      "cost_usd": 0.064983,
+      "priced_as_sonnet_5": 0.08225,
+      "priced_as_opus_5_5": 0.064983,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 223425,
+        "output": 406,
+        "cache_read": 223423,
+        "cache_write": 2434
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": null,
+      "cost_usd": 0.076814,
+      "priced_as_sonnet_5": 0.091489,
+      "priced_as_opus_5_5": 0.076814,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 225859,
+        "output": 1370,
+        "cache_read": 225857,
+        "cache_write": 847
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": null,
+      "cost_usd": 0.063064,
+      "priced_as_sonnet_5": 0.081303,
+      "priced_as_opus_5_5": 0.063064,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 226706,
+        "output": 491,
+        "cache_read": 226704,
+        "cache_write": 1579
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": null,
+      "cost_usd": 0.066105,
+      "priced_as_sonnet_5": 0.083821,
+      "priced_as_opus_5_5": 0.066105,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 228285,
+        "output": 802,
+        "cache_read": 228283,
+        "cache_write": 880
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": null,
+      "cost_usd": 0.066791,
+      "priced_as_sonnet_5": 0.084467,
+      "priced_as_opus_5_5": 0.066791,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 229165,
+        "output": 787,
+        "cache_read": 229163,
+        "cache_write": 1042
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": null,
+      "cost_usd": 0.062229,
+      "priced_as_sonnet_5": 0.081202,
+      "priced_as_opus_5_5": 0.062229,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 230207,
+        "output": 480,
+        "cache_read": 230205,
+        "cache_write": 1316
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": null,
+      "cost_usd": 0.068272,
+      "priced_as_sonnet_5": 0.085932,
+      "priced_as_opus_5_5": 0.068272,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 231523,
+        "output": 965,
+        "cache_read": 231521,
+        "cache_write": 532
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": null,
+      "cost_usd": 0.063069,
+      "priced_as_sonnet_5": 0.082109,
+      "priced_as_opus_5_5": 0.063069,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 232055,
+        "output": 534,
+        "cache_read": 232053,
+        "cache_write": 1194
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": null,
+      "cost_usd": 0.063939,
+      "priced_as_sonnet_5": 0.083107,
+      "priced_as_opus_5_5": 0.063939,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 234356,
+        "output": 449,
+        "cache_read": 234354,
+        "cache_write": 1616
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": null,
+      "cost_usd": 0.098847,
+      "priced_as_sonnet_5": 0.109531,
+      "priced_as_opus_5_5": 0.098847,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 235972,
+        "output": 2227,
+        "cache_read": 235970,
+        "cache_write": 1421
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": null,
+      "cost_usd": 0.082221,
+      "priced_as_sonnet_5": 0.097275,
+      "priced_as_opus_5_5": 0.082221,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 237393,
+        "output": 1039,
+        "cache_read": 237391,
+        "cache_write": 2791
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": null,
+      "cost_usd": 0.097629,
+      "priced_as_sonnet_5": 0.109249,
+      "priced_as_opus_5_5": 0.097629,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 240184,
+        "output": 2205,
+        "cache_read": 240182,
+        "cache_write": 1097
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": null,
+      "cost_usd": 0.080789,
+      "priced_as_sonnet_5": 0.096783,
+      "priced_as_opus_5_5": 0.080789,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 241281,
+        "output": 1049,
+        "cache_read": 241279,
+        "cache_write": 2309
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": null,
+      "cost_usd": 0.063756,
+      "priced_as_sonnet_5": 0.084355,
+      "priced_as_opus_5_5": 0.063756,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 243590,
+        "output": 457,
+        "cache_read": 243588,
+        "cache_write": 1178
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": null,
+      "cost_usd": 0.065156,
+      "priced_as_sonnet_5": 0.085582,
+      "priced_as_opus_5_5": 0.065156,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 244768,
+        "output": 664,
+        "cache_read": 244766,
+        "cache_write": 583
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": null,
+      "cost_usd": 0.079548,
+      "priced_as_sonnet_5": 0.096463,
+      "priced_as_opus_5_5": 0.079548,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 245351,
+        "output": 1272,
+        "cache_read": 245349,
+        "cache_write": 1006
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": null,
+      "cost_usd": 0.085029,
+      "priced_as_sonnet_5": 0.100725,
+      "priced_as_opus_5_5": 0.085029,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 246357,
+        "output": 1438,
+        "cache_read": 246355,
+        "cache_write": 1398
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": null,
+      "cost_usd": 0.078604,
+      "priced_as_sonnet_5": 0.096116,
+      "priced_as_opus_5_5": 0.078604,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 247755,
+        "output": 1068,
+        "cache_read": 247753,
+        "cache_write": 1537
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": null,
+      "cost_usd": 0.060636,
+      "priced_as_sonnet_5": 0.08287,
+      "priced_as_opus_5_5": 0.060636,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 249292,
+        "output": 113,
+        "cache_read": 249290,
+        "cache_write": 1702
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": null,
+      "cost_usd": 0.072109,
+      "priced_as_sonnet_5": 0.091731,
+      "priced_as_opus_5_5": 0.072109,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 250996,
+        "output": 875,
+        "cache_read": 250992,
+        "cache_write": 879
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": null,
+      "cost_usd": 0.068622,
+      "priced_as_sonnet_5": 0.089247,
+      "priced_as_opus_5_5": 0.068622,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 251873,
+        "output": 564,
+        "cache_read": 251871,
+        "cache_write": 1392
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": null,
+      "cost_usd": 0.235356,
+      "priced_as_sonnet_5": 0.214506,
+      "priced_as_opus_5_5": 0.235356,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 253265,
+        "output": 9014,
+        "cache_read": 253263,
+        "cache_write": 883
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": null,
+      "cost_usd": 0.130982,
+      "priced_as_sonnet_5": 0.136359,
+      "priced_as_opus_5_5": 0.130982,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 254148,
+        "output": 1738,
+        "cache_read": 254146,
+        "cache_write": 9077
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "claude-sonnet-5",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.227606,
+      "priced_as_sonnet_5": 0.227606,
+      "priced_as_opus_5_5": 0.292534,
+      "closer_to": "sonnet-5",
+      "tokens": {
+        "input": 54706,
+        "output": 4,
+        "cache_read": 54704,
+        "cache_write": 56301
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.299881,
+      "priced_as_sonnet_5": 0.233116,
+      "priced_as_opus_5_5": 0.299881,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 54704,
+        "output": 173,
+        "cache_read": 54700,
+        "cache_write": 57093
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-haiku-4-5-20251001",
+      "cost_usd": 0.004871,
+      "priced_as_sonnet_5": 0.014613,
+      "priced_as_opus_5_5": 0.01213,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 36778,
+        "output": 115,
+        "cache_read": 36773,
+        "cache_write": 491
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-haiku-4-5-20251001",
+      "cost_usd": 0.00635,
+      "priced_as_sonnet_5": 0.01905,
+      "priced_as_opus_5_5": 0.017948,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 37269,
+        "output": 485,
+        "cache_read": 37264,
+        "cache_write": 155
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-haiku-4-5-20251001",
+      "cost_usd": 0.004816,
+      "priced_as_sonnet_5": 0.014447,
+      "priced_as_opus_5_5": 0.011779,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 37424,
+        "output": 67,
+        "cache_read": 37419,
+        "cache_write": 587
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-haiku-4-5-20251001",
+      "cost_usd": 0.004393,
+      "priced_as_sonnet_5": 0.013179,
+      "priced_as_opus_5_5": 0.009971,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 38011,
+        "output": 84,
+        "cache_read": 38006,
+        "cache_write": 134
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-haiku-4-5-20251001",
+      "cost_usd": 0.00677,
+      "priced_as_sonnet_5": 0.020311,
+      "priced_as_opus_5_5": 0.019453,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 38145,
+        "output": 498,
+        "cache_read": 38140,
+        "cache_write": 369
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-haiku-4-5-20251001",
+      "cost_usd": 0.004952,
+      "priced_as_sonnet_5": 0.014856,
+      "priced_as_opus_5_5": 0.012107,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 38514,
+        "output": 79,
+        "cache_read": 38509,
+        "cache_write": 561
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-haiku-4-5-20251001",
+      "cost_usd": 0.006698,
+      "priced_as_sonnet_5": 0.020095,
+      "priced_as_opus_5_5": 0.018979,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 39075,
+        "output": 511,
+        "cache_read": 39070,
+        "cache_write": 185
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-haiku-4-5-20251001",
+      "cost_usd": 0.005119,
+      "priced_as_sonnet_5": 0.015358,
+      "priced_as_opus_5_5": 0.012626,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 39260,
+        "output": 94,
+        "cache_read": 39255,
+        "cache_write": 575
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-haiku-4-5-20251001",
+      "cost_usd": 0.004807,
+      "priced_as_sonnet_5": 0.01442,
+      "priced_as_opus_5_5": 0.011261,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 39835,
+        "output": 110,
+        "cache_read": 39830,
+        "cache_write": 215
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-haiku-4-5-20251001",
+      "cost_usd": 0.00475,
+      "priced_as_sonnet_5": 0.014249,
+      "priced_as_opus_5_5": 0.010989,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 40050,
+        "output": 90,
+        "cache_read": 40045,
+        "cache_write": 232
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-haiku-4-5-20251001",
+      "cost_usd": 0.004911,
+      "priced_as_sonnet_5": 0.014734,
+      "priced_as_opus_5_5": 0.01159,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 40282,
+        "output": 133,
+        "cache_read": 40277,
+        "cache_write": 171
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-haiku-4-5-20251001",
+      "cost_usd": 0.005305,
+      "priced_as_sonnet_5": 0.015914,
+      "priced_as_opus_5_5": 0.01313,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 40453,
+        "output": 117,
+        "cache_read": 40448,
+        "cache_write": 536
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-haiku-4-5-20251001",
+      "cost_usd": 0.005415,
+      "priced_as_sonnet_5": 0.016244,
+      "priced_as_opus_5_5": 0.013462,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 40989,
+        "output": 220,
+        "cache_read": 40984,
+        "cache_write": 169
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-haiku-4-5-20251001",
+      "cost_usd": 0.005717,
+      "priced_as_sonnet_5": 0.01715,
+      "priced_as_opus_5_5": 0.014636,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 41158,
+        "output": 244,
+        "cache_read": 41153,
+        "cache_write": 301
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-haiku-4-5-20251001",
+      "cost_usd": 0.005155,
+      "priced_as_sonnet_5": 0.015466,
+      "priced_as_opus_5_5": 0.012331,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 41459,
+        "output": 128,
+        "cache_read": 41454,
+        "cache_write": 292
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-haiku-4-5-20251001",
+      "cost_usd": 0.006843,
+      "priced_as_sonnet_5": 0.02053,
+      "priced_as_opus_5_5": 0.019024,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 41751,
+        "output": 256,
+        "cache_read": 41746,
+        "cache_write": 1107
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-haiku-4-5-20251001",
+      "cost_usd": 0.00523,
+      "priced_as_sonnet_5": 0.015691,
+      "priced_as_opus_5_5": 0.012351,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 42858,
+        "output": 112,
+        "cache_read": 42853,
+        "cache_write": 304
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-haiku-4-5-20251001",
+      "cost_usd": 0.004971,
+      "priced_as_sonnet_5": 0.014912,
+      "priced_as_opus_5_5": 0.011251,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 43162,
+        "output": 87,
+        "cache_read": 43157,
+        "cache_write": 172
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-haiku-4-5-20251001",
+      "cost_usd": 0.005553,
+      "priced_as_sonnet_5": 0.016659,
+      "priced_as_opus_5_5": 0.013546,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 43334,
+        "output": 84,
+        "cache_read": 43329,
+        "cache_write": 636
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-haiku-4-5-20251001",
+      "cost_usd": 0.005679,
+      "priced_as_sonnet_5": 0.017037,
+      "priced_as_opus_5_5": 0.013923,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 43970,
+        "output": 86,
+        "cache_read": 43965,
+        "cache_write": 678
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-haiku-4-5-20251001",
+      "cost_usd": 0.007079,
+      "priced_as_sonnet_5": 0.021238,
+      "priced_as_opus_5_5": 0.019389,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 44648,
+        "output": 355,
+        "cache_read": 44643,
+        "cache_write": 668
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "claude-sonnet-5",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.227685,
+      "priced_as_sonnet_5": 0.227685,
+      "priced_as_opus_5_5": 0.292639,
+      "closer_to": "sonnet-5",
+      "tokens": {
+        "input": 54706,
+        "output": 4,
+        "cache_read": 54704,
+        "cache_write": 56322
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "claude-sonnet-5",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.032475,
+      "priced_as_sonnet_5": 0.032475,
+      "priced_as_opus_5_5": 0.023706,
+      "closer_to": "sonnet-5",
+      "tokens": {
+        "input": 97968,
+        "output": 11,
+        "cache_read": 97966,
+        "cache_write": 777
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.296201,
+      "priced_as_sonnet_5": 0.230356,
+      "priced_as_opus_5_5": 0.296201,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 54704,
+        "output": 4,
+        "cache_read": 54700,
+        "cache_write": 57033
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.299241,
+      "priced_as_sonnet_5": 0.232636,
+      "priced_as_opus_5_5": 0.299241,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 54704,
+        "output": 130,
+        "cache_read": 54700,
+        "cache_write": 57137
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.292291,
+      "priced_as_sonnet_5": 0.227423,
+      "priced_as_opus_5_5": 0.292291,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 54704,
+        "output": 70,
+        "cache_read": 54700,
+        "cache_write": 55987
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.034808,
+      "priced_as_sonnet_5": 0.042709,
+      "priced_as_opus_5_5": 0.034808,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 110691,
+        "output": 246,
+        "cache_read": 110687,
+        "cache_write": 1547
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.038805,
+      "priced_as_sonnet_5": 0.045939,
+      "priced_as_opus_5_5": 0.038805,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 112236,
+        "output": 94,
+        "cache_read": 112234,
+        "cache_write": 2894
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.069029,
+      "priced_as_sonnet_5": 0.069041,
+      "priced_as_opus_5_5": 0.069029,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 115130,
+        "output": 537,
+        "cache_read": 115128,
+        "cache_write": 7051
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.051784,
+      "priced_as_sonnet_5": 0.057165,
+      "priced_as_opus_5_5": 0.051784,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 122181,
+        "output": 306,
+        "cache_read": 122179,
+        "cache_write": 4244
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.048858,
+      "priced_as_sonnet_5": 0.055607,
+      "priced_as_opus_5_5": 0.048858,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 126425,
+        "output": 449,
+        "cache_read": 126423,
+        "cache_write": 2917
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.046911,
+      "priced_as_sonnet_5": 0.054584,
+      "priced_as_opus_5_5": 0.046911,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 129342,
+        "output": 227,
+        "cache_read": 129340,
+        "cache_write": 3299
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.070926,
+      "priced_as_sonnet_5": 0.07309,
+      "priced_as_opus_5_5": 0.070926,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 132641,
+        "output": 379,
+        "cache_read": 132639,
+        "cache_write": 7362
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.044303,
+      "priced_as_sonnet_5": 0.054228,
+      "priced_as_opus_5_5": 0.044303,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 140003,
+        "output": 329,
+        "cache_read": 140001,
+        "cache_write": 1943
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.044392,
+      "priced_as_sonnet_5": 0.054585,
+      "priced_as_opus_5_5": 0.044392,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 141946,
+        "output": 301,
+        "cache_read": 141944,
+        "cache_write": 1995
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.043631,
+      "priced_as_sonnet_5": 0.054314,
+      "priced_as_opus_5_5": 0.043631,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 143941,
+        "output": 266,
+        "cache_read": 143939,
+        "cache_write": 1903
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.042581,
+      "priced_as_sonnet_5": 0.053812,
+      "priced_as_opus_5_5": 0.042581,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 145844,
+        "output": 124,
+        "cache_read": 145842,
+        "cache_write": 2185
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.046068,
+      "priced_as_sonnet_5": 0.056755,
+      "priced_as_opus_5_5": 0.046068,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 148029,
+        "output": 385,
+        "cache_read": 148027,
+        "cache_write": 1751
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.080034,
+      "priced_as_sonnet_5": 0.082492,
+      "priced_as_opus_5_5": 0.080034,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 149780,
+        "output": 988,
+        "cache_read": 149778,
+        "cache_write": 6062
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.061121,
+      "priced_as_sonnet_5": 0.069217,
+      "priced_as_opus_5_5": 0.061121,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 155842,
+        "output": 864,
+        "cache_read": 155840,
+        "cache_write": 2533
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.045128,
+      "priced_as_sonnet_5": 0.057602,
+      "priced_as_opus_5_5": 0.045128,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 158375,
+        "output": 222,
+        "cache_read": 158373,
+        "cache_write": 1801
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.045533,
+      "priced_as_sonnet_5": 0.058176,
+      "priced_as_opus_5_5": 0.045533,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 160176,
+        "output": 451,
+        "cache_read": 160174,
+        "cache_write": 894
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.044197,
+      "priced_as_sonnet_5": 0.057308,
+      "priced_as_opus_5_5": 0.044197,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 161070,
+        "output": 271,
+        "cache_read": 161068,
+        "cache_write": 1311
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.045294,
+      "priced_as_sonnet_5": 0.058327,
+      "priced_as_opus_5_5": 0.045294,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 162381,
+        "output": 300,
+        "cache_read": 162379,
+        "cache_write": 1362
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.068571,
+      "priced_as_sonnet_5": 0.07599,
+      "priced_as_opus_5_5": 0.068571,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 163743,
+        "output": 1461,
+        "cache_read": 163741,
+        "cache_write": 1319
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.05393,
+      "priced_as_sonnet_5": 0.065207,
+      "priced_as_opus_5_5": 0.05393,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 165062,
+        "output": 378,
+        "cache_read": 165060,
+        "cache_write": 2670
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.060794,
+      "priced_as_sonnet_5": 0.070755,
+      "priced_as_opus_5_5": 0.060794,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 167732,
+        "output": 1055,
+        "cache_read": 167730,
+        "cache_write": 1228
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.05276,
+      "priced_as_sonnet_5": 0.064913,
+      "priced_as_opus_5_5": 0.05276,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 168960,
+        "output": 463,
+        "cache_read": 168958,
+        "cache_write": 1940
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.044328,
+      "priced_as_sonnet_5": 0.05888,
+      "priced_as_opus_5_5": 0.044328,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 170900,
+        "output": 242,
+        "cache_read": 170898,
+        "cache_write": 1060
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.052935,
+      "priced_as_sonnet_5": 0.065495,
+      "priced_as_opus_5_5": 0.052935,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 171960,
+        "output": 709,
+        "cache_read": 171958,
+        "cache_write": 871
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.058294,
+      "priced_as_sonnet_5": 0.069645,
+      "priced_as_opus_5_5": 0.058294,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 172831,
+        "output": 800,
+        "cache_read": 172829,
+        "cache_write": 1544
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.068188,
+      "priced_as_sonnet_5": 0.077297,
+      "priced_as_opus_5_5": 0.068188,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 174375,
+        "output": 1107,
+        "cache_read": 174373,
+        "cache_write": 2233
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.057704,
+      "priced_as_sonnet_5": 0.069769,
+      "priced_as_opus_5_5": 0.057704,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 176608,
+        "output": 534,
+        "cache_read": 176606,
+        "cache_write": 2339
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.077317,
+      "priced_as_sonnet_5": 0.08483,
+      "priced_as_opus_5_5": 0.077317,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 178947,
+        "output": 1535,
+        "cache_read": 178945,
+        "cache_write": 2164
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.054595,
+      "priced_as_sonnet_5": 0.068112,
+      "priced_as_opus_5_5": 0.054595,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 181111,
+        "output": 510,
+        "cache_read": 181109,
+        "cache_write": 1633
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.042116,
+      "priced_as_sonnet_5": 0.058999,
+      "priced_as_opus_5_5": 0.042116,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 182744,
+        "output": 110,
+        "cache_read": 182742,
+        "cache_write": 672
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.115901,
+      "priced_as_sonnet_5": 0.114438,
+      "priced_as_opus_5_5": 0.115901,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 183416,
+        "output": 2390,
+        "cache_read": 183414,
+        "cache_write": 6282
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.099207,
+      "priced_as_sonnet_5": 0.10286,
+      "priced_as_opus_5_5": 0.099207,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 189698,
+        "output": 1018,
+        "cache_read": 189696,
+        "cache_write": 8180
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.054363,
+      "priced_as_sonnet_5": 0.070454,
+      "priced_as_opus_5_5": 0.054363,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 197878,
+        "output": 350,
+        "cache_read": 197876,
+        "cache_write": 1556
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.070984,
+      "priced_as_sonnet_5": 0.083153,
+      "priced_as_opus_5_5": 0.070984,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 199434,
+        "output": 1023,
+        "cache_read": 199432,
+        "cache_write": 2126
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.05618,
+      "priced_as_sonnet_5": 0.072368,
+      "priced_as_opus_5_5": 0.05618,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 201560,
+        "output": 380,
+        "cache_read": 201558,
+        "cache_write": 1652
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.056825,
+      "priced_as_sonnet_5": 0.0731,
+      "priced_as_opus_5_5": 0.056825,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 203212,
+        "output": 558,
+        "cache_read": 203210,
+        "cache_write": 1003
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.064936,
+      "priced_as_sonnet_5": 0.079334,
+      "priced_as_opus_5_5": 0.064936,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 204215,
+        "output": 792,
+        "cache_read": 204213,
+        "cache_write": 1649
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.05562,
+      "priced_as_sonnet_5": 0.072595,
+      "priced_as_opus_5_5": 0.05562,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 205864,
+        "output": 388,
+        "cache_read": 205862,
+        "cache_write": 1336
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.056178,
+      "priced_as_sonnet_5": 0.073213,
+      "priced_as_opus_5_5": 0.056178,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 207200,
+        "output": 448,
+        "cache_read": 207198,
+        "cache_write": 1154
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.064463,
+      "priced_as_sonnet_5": 0.0796,
+      "priced_as_opus_5_5": 0.064463,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 208354,
+        "output": 489,
+        "cache_read": 208352,
+        "cache_write": 2601
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.053234,
+      "priced_as_sonnet_5": 0.071568,
+      "priced_as_opus_5_5": 0.053234,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 210955,
+        "output": 242,
+        "cache_read": 210953,
+        "cache_write": 1239
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.064011,
+      "priced_as_sonnet_5": 0.079837,
+      "priced_as_opus_5_5": 0.064011,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 212194,
+        "output": 780,
+        "cache_read": 212192,
+        "cache_write": 1193
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.072685,
+      "priced_as_sonnet_5": 0.086522,
+      "priced_as_opus_5_5": 0.072685,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 213387,
+        "output": 1062,
+        "cache_read": 213385,
+        "cache_write": 1752
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.10802,
+      "priced_as_sonnet_5": 0.113286,
+      "priced_as_opus_5_5": 0.10802,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 215139,
+        "output": 2865,
+        "cache_read": 215137,
+        "cache_write": 1537
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.071363,
+      "priced_as_sonnet_5": 0.086023,
+      "priced_as_opus_5_5": 0.071363,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 216676,
+        "output": 554,
+        "cache_read": 216674,
+        "cache_write": 3388
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.054805,
+      "priced_as_sonnet_5": 0.074113,
+      "priced_as_opus_5_5": 0.054805,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 220064,
+        "output": 316,
+        "cache_read": 220062,
+        "cache_write": 893
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.059799,
+      "priced_as_sonnet_5": 0.077993,
+      "priced_as_opus_5_5": 0.059799,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 220957,
+        "output": 579,
+        "cache_read": 220955,
+        "cache_write": 804
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.05756,
+      "priced_as_sonnet_5": 0.076434,
+      "priced_as_opus_5_5": 0.05756,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 221761,
+        "output": 293,
+        "cache_read": 221759,
+        "cache_write": 1468
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.087923,
+      "priced_as_sonnet_5": 0.099427,
+      "priced_as_opus_5_5": 0.087923,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 223229,
+        "output": 1962,
+        "cache_read": 223227,
+        "cache_write": 806
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.37247,
+      "priced_as_sonnet_5": 0.312957,
+      "priced_as_opus_5_5": 0.37247,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 224035,
+        "output": 15785,
+        "cache_read": 224033,
+        "cache_write": 2391
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.126593,
+      "priced_as_sonnet_5": 0.128908,
+      "priced_as_opus_5_5": 0.126593,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 226426,
+        "output": 104,
+        "cache_read": 226424,
+        "cache_write": 15844
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.080642,
+      "priced_as_sonnet_5": 0.096821,
+      "priced_as_opus_5_5": 0.080642,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 242270,
+        "output": 1566,
+        "cache_read": 242268,
+        "cache_write": 172
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "claude-sonnet-5",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.032483,
+      "priced_as_sonnet_5": 0.032483,
+      "priced_as_opus_5_5": 0.02372,
+      "closer_to": "sonnet-5",
+      "tokens": {
+        "input": 97960,
+        "output": 11,
+        "cache_read": 97958,
+        "cache_write": 780
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "claude-sonnet-5",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.031967,
+      "priced_as_sonnet_5": 0.031967,
+      "priced_as_opus_5_5": 0.024921,
+      "closer_to": "sonnet-5",
+      "tokens": {
+        "input": 88515,
+        "output": 63,
+        "cache_read": 88513,
+        "cache_write": 1190
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "claude-sonnet-5",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.029924,
+      "priced_as_sonnet_5": 0.029924,
+      "priced_as_opus_5_5": 0.021959,
+      "closer_to": "sonnet-5",
+      "tokens": {
+        "input": 89705,
+        "output": 11,
+        "cache_read": 89703,
+        "cache_write": 758
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-haiku-4-5-20251001",
+      "cost_usd": 0.004934,
+      "priced_as_sonnet_5": 0.014802,
+      "priced_as_opus_5_5": 0.012341,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 36984,
+        "output": 114,
+        "cache_read": 36979,
+        "cache_write": 529
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-haiku-4-5-20251001",
+      "cost_usd": 0.005565,
+      "priced_as_sonnet_5": 0.016694,
+      "priced_as_opus_5_5": 0.014757,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 37513,
+        "output": 306,
+        "cache_read": 37508,
+        "cache_write": 223
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-haiku-4-5-20251001",
+      "cost_usd": 0.004719,
+      "priced_as_sonnet_5": 0.014158,
+      "priced_as_opus_5_5": 0.011331,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 37736,
+        "output": 84,
+        "cache_read": 37731,
+        "cache_write": 417
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-haiku-4-5-20251001",
+      "cost_usd": 0.004567,
+      "priced_as_sonnet_5": 0.013702,
+      "priced_as_opus_5_5": 0.01064,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 38153,
+        "output": 82,
+        "cache_read": 38148,
+        "cache_write": 270
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-haiku-4-5-20251001",
+      "cost_usd": 0.006568,
+      "priced_as_sonnet_5": 0.019704,
+      "priced_as_opus_5_5": 0.018589,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 38423,
+        "output": 478,
+        "cache_read": 38418,
+        "cache_write": 265
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-haiku-4-5-20251001",
+      "cost_usd": 0.005557,
+      "priced_as_sonnet_5": 0.016671,
+      "priced_as_opus_5_5": 0.014492,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 38688,
+        "output": 105,
+        "cache_read": 38683,
+        "cache_write": 927
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-haiku-4-5-20251001",
+      "cost_usd": 0.004832,
+      "priced_as_sonnet_5": 0.014497,
+      "priced_as_opus_5_5": 0.011407,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 39615,
+        "output": 131,
+        "cache_read": 39610,
+        "cache_write": 169
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-haiku-4-5-20251001",
+      "cost_usd": 0.006082,
+      "priced_as_sonnet_5": 0.018245,
+      "priced_as_opus_5_5": 0.016371,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 39784,
+        "output": 243,
+        "cache_read": 39779,
+        "cache_write": 707
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-haiku-4-5-20251001",
+      "cost_usd": 0.005308,
+      "priced_as_sonnet_5": 0.015924,
+      "priced_as_opus_5_5": 0.013799,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 37174,
+        "output": 85,
+        "cache_read": 37169,
+        "cache_write": 929
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-haiku-4-5-20251001",
+      "cost_usd": 0.004716,
+      "priced_as_sonnet_5": 0.014148,
+      "priced_as_opus_5_5": 0.011245,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 38103,
+        "output": 121,
+        "cache_read": 38098,
+        "cache_write": 237
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-haiku-4-5-20251001",
+      "cost_usd": 0.006542,
+      "priced_as_sonnet_5": 0.019627,
+      "priced_as_opus_5_5": 0.018502,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 38340,
+        "output": 387,
+        "cache_read": 38335,
+        "cache_write": 615
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-haiku-4-5-20251001",
+      "cost_usd": 0.006081,
+      "priced_as_sonnet_5": 0.018244,
+      "priced_as_opus_5_5": 0.016535,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 38955,
+        "output": 268,
+        "cache_read": 38950,
+        "cache_write": 673
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-haiku-4-5-20251001",
+      "cost_usd": 0.004921,
+      "priced_as_sonnet_5": 0.014763,
+      "priced_as_opus_5_5": 0.01176,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 39628,
+        "output": 107,
+        "cache_read": 39623,
+        "cache_write": 335
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-haiku-4-5-20251001",
+      "cost_usd": 0.004696,
+      "priced_as_sonnet_5": 0.014087,
+      "priced_as_opus_5_5": 0.010792,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 39963,
+        "output": 92,
+        "cache_read": 39958,
+        "cache_write": 188
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-haiku-4-5-20251001",
+      "cost_usd": 0.004786,
+      "priced_as_sonnet_5": 0.014358,
+      "priced_as_opus_5_5": 0.011114,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 40151,
+        "output": 98,
+        "cache_read": 40146,
+        "cache_write": 221
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-haiku-4-5-20251001",
+      "cost_usd": 0.004693,
+      "priced_as_sonnet_5": 0.014079,
+      "priced_as_opus_5_5": 0.010698,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 40372,
+        "output": 77,
+        "cache_read": 40367,
+        "cache_write": 213
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-haiku-4-5-20251001",
+      "cost_usd": 0.004663,
+      "priced_as_sonnet_5": 0.013989,
+      "priced_as_opus_5_5": 0.010536,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 40585,
+        "output": 86,
+        "cache_read": 40580,
+        "cache_write": 136
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-haiku-4-5-20251001",
+      "cost_usd": 0.005729,
+      "priced_as_sonnet_5": 0.017187,
+      "priced_as_opus_5_5": 0.014773,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 40721,
+        "output": 299,
+        "cache_read": 40716,
+        "cache_write": 126
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-haiku-4-5-20251001",
+      "cost_usd": 0.005608,
+      "priced_as_sonnet_5": 0.016824,
+      "priced_as_opus_5_5": 0.014263,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 40847,
+        "output": 167,
+        "cache_read": 40842,
+        "cache_write": 547
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-haiku-4-5-20251001",
+      "cost_usd": 0.004938,
+      "priced_as_sonnet_5": 0.014813,
+      "priced_as_opus_5_5": 0.011473,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 41394,
+        "output": 91,
+        "cache_read": 41389,
+        "cache_write": 271
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-haiku-4-5-20251001",
+      "cost_usd": 0.004875,
+      "priced_as_sonnet_5": 0.014624,
+      "priced_as_opus_5_5": 0.011167,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 41665,
+        "output": 77,
+        "cache_read": 41660,
+        "cache_write": 255
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-haiku-4-5-20251001",
+      "cost_usd": 0.005943,
+      "priced_as_sonnet_5": 0.017828,
+      "priced_as_opus_5_5": 0.015388,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 41920,
+        "output": 320,
+        "cache_read": 41915,
+        "cache_write": 117
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-haiku-4-5-20251001",
+      "cost_usd": 0.005879,
+      "priced_as_sonnet_5": 0.017638,
+      "priced_as_opus_5_5": 0.015111,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 42037,
+        "output": 195,
+        "cache_read": 42032,
+        "cache_write": 557
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-haiku-4-5-20251001",
+      "cost_usd": 0.00508,
+      "priced_as_sonnet_5": 0.01524,
+      "priced_as_opus_5_5": 0.011803,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 42594,
+        "output": 89,
+        "cache_read": 42589,
+        "cache_write": 297
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-haiku-4-5-20251001",
+      "cost_usd": 0.004974,
+      "priced_as_sonnet_5": 0.014921,
+      "priced_as_opus_5_5": 0.011317,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 42891,
+        "output": 73,
+        "cache_read": 42886,
+        "cache_write": 252
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-haiku-4-5-20251001",
+      "cost_usd": 0.006095,
+      "priced_as_sonnet_5": 0.018285,
+      "priced_as_opus_5_5": 0.015753,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 43143,
+        "output": 327,
+        "cache_read": 43138,
+        "cache_write": 113
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-haiku-4-5-20251001",
+      "cost_usd": 0.006041,
+      "priced_as_sonnet_5": 0.018124,
+      "priced_as_opus_5_5": 0.015515,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 43256,
+        "output": 199,
+        "cache_read": 43251,
+        "cache_write": 573
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-haiku-4-5-20251001",
+      "cost_usd": 0.005234,
+      "priced_as_sonnet_5": 0.015701,
+      "priced_as_opus_5_5": 0.01217,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 43829,
+        "output": 93,
+        "cache_read": 43824,
+        "cache_write": 305
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-haiku-4-5-20251001",
+      "cost_usd": 0.005157,
+      "priced_as_sonnet_5": 0.01547,
+      "priced_as_opus_5_5": 0.011801,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 44134,
+        "output": 81,
+        "cache_read": 44129,
+        "cache_write": 267
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-haiku-4-5-20251001",
+      "cost_usd": 0.006266,
+      "priced_as_sonnet_5": 0.018798,
+      "priced_as_opus_5_5": 0.016184,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 44401,
+        "output": 334,
+        "cache_read": 44396,
+        "cache_write": 121
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-haiku-4-5-20251001",
+      "cost_usd": 0.006164,
+      "priced_as_sonnet_5": 0.018493,
+      "priced_as_opus_5_5": 0.015753,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 44522,
+        "output": 197,
+        "cache_read": 44517,
+        "cache_write": 578
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-haiku-4-5-20251001",
+      "cost_usd": 0.005332,
+      "priced_as_sonnet_5": 0.015996,
+      "priced_as_opus_5_5": 0.012309,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 45100,
+        "output": 87,
+        "cache_read": 45095,
+        "cache_write": 306
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-haiku-4-5-20251001",
+      "cost_usd": 0.005601,
+      "priced_as_sonnet_5": 0.016804,
+      "priced_as_opus_5_5": 0.013325,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 45406,
+        "output": 101,
+        "cache_read": 45401,
+        "cache_write": 441
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-haiku-4-5-20251001",
+      "cost_usd": 0.006295,
+      "priced_as_sonnet_5": 0.018886,
+      "priced_as_opus_5_5": 0.016013,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 45847,
+        "output": 242,
+        "cache_read": 45842,
+        "cache_write": 397
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-haiku-4-5-20251001",
+      "cost_usd": 0.005598,
+      "priced_as_sonnet_5": 0.016793,
+      "priced_as_opus_5_5": 0.013143,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 46244,
+        "output": 106,
+        "cache_read": 46239,
+        "cache_write": 351
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-haiku-4-5-20251001",
+      "cost_usd": 0.005239,
+      "priced_as_sonnet_5": 0.015717,
+      "priced_as_opus_5_5": 0.011638,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 46595,
+        "output": 72,
+        "cache_read": 46590,
+        "cache_write": 172
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-haiku-4-5-20251001",
+      "cost_usd": 0.005424,
+      "priced_as_sonnet_5": 0.016271,
+      "priced_as_opus_5_5": 0.012342,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 46767,
+        "output": 114,
+        "cache_read": 46762,
+        "cache_write": 138
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-haiku-4-5-20251001",
+      "cost_usd": 0.006148,
+      "priced_as_sonnet_5": 0.018443,
+      "priced_as_opus_5_5": 0.01521,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 46905,
+        "output": 246,
+        "cache_read": 46900,
+        "cache_write": 178
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-haiku-4-5-20251001",
+      "cost_usd": 0.005733,
+      "priced_as_sonnet_5": 0.017198,
+      "priced_as_opus_5_5": 0.013516,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 47083,
+        "output": 114,
+        "cache_read": 47078,
+        "cache_write": 360
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-haiku-4-5-20251001",
+      "cost_usd": 0.00572,
+      "priced_as_sonnet_5": 0.01716,
+      "priced_as_opus_5_5": 0.013393,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 47443,
+        "output": 154,
+        "cache_read": 47438,
+        "cache_write": 161
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-haiku-4-5-20251001",
+      "cost_usd": 0.005444,
+      "priced_as_sonnet_5": 0.016331,
+      "priced_as_opus_5_5": 0.012255,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 47604,
+        "output": 77,
+        "cache_read": 47599,
+        "cache_write": 235
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-haiku-4-5-20251001",
+      "cost_usd": 0.006585,
+      "priced_as_sonnet_5": 0.019754,
+      "priced_as_opus_5_5": 0.016772,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 47839,
+        "output": 330,
+        "cache_read": 47834,
+        "cache_write": 117
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-haiku-4-5-20251001",
+      "cost_usd": 0.006605,
+      "priced_as_sonnet_5": 0.019815,
+      "priced_as_opus_5_5": 0.01683,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 47956,
+        "output": 220,
+        "cache_read": 47951,
+        "cache_write": 564
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-haiku-4-5-20251001",
+      "cost_usd": 0.005746,
+      "priced_as_sonnet_5": 0.01724,
+      "priced_as_opus_5_5": 0.013283,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 48520,
+        "output": 77,
+        "cache_read": 48515,
+        "cache_write": 404
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-haiku-4-5-20251001",
+      "cost_usd": 0.005711,
+      "priced_as_sonnet_5": 0.017132,
+      "priced_as_opus_5_5": 0.013059,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 48924,
+        "output": 124,
+        "cache_read": 48919,
+        "cache_write": 155
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-haiku-4-5-20251001",
+      "cost_usd": 0.005537,
+      "priced_as_sonnet_5": 0.016612,
+      "priced_as_opus_5_5": 0.012335,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 49079,
+        "output": 74,
+        "cache_read": 49074,
+        "cache_write": 204
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "provider-default",
+      "host_model": "claude-haiku-4-5-20251001",
+      "cost_usd": 0.008025,
+      "priced_as_sonnet_5": 0.024076,
+      "priced_as_opus_5_5": 0.022246,
+      "closer_to": "opus-5-5",
+      "tokens": {
+        "input": 49283,
+        "output": 590,
+        "cache_read": 49278,
+        "cache_write": 114
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "claude-sonnet-5",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.227636,
+      "priced_as_sonnet_5": 0.227636,
+      "priced_as_opus_5_5": 0.292574,
+      "closer_to": "sonnet-5",
+      "tokens": {
+        "input": 54706,
+        "output": 4,
+        "cache_read": 54704,
+        "cache_write": 56309
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "claude-sonnet-5",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.035672,
+      "priced_as_sonnet_5": 0.035672,
+      "priced_as_opus_5_5": 0.025358,
+      "closer_to": "sonnet-5",
+      "tokens": {
+        "input": 111027,
+        "output": 11,
+        "cache_read": 111025,
+        "cache_write": 585
+      },
+      "day": "2026-09-25"
+    },
+    {
+      "recorded_model": "claude-sonnet-5",
+      "host_model": "claude-opus-5-5",
+      "cost_usd": 0.227583,
+      "priced_as_sonnet_5": 0.227583,
+      "priced_as_opus_5_5": 0.292504,
+      "closer_to": "sonnet-5",
+      "tokens": {
+        "input": 54706,
+        "output": 4,
+        "cache_read": 54704,
+        "cache_write": 56295
+      },
+      "day": "2026-09-25"
+    }
+  ]
+}

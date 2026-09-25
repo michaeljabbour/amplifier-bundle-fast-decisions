@@ -2,10 +2,11 @@
   "note": "sha256 of every file in this folder",
   "generated": "2026-09-25",
   "files": {
-    "README.md": "bc03586e10ca9f943e7e3aecf32688349b0a23c903695a6e7866a439559ba2d7",
-    "difficulty/difficulty-report-hosted.json": "2b4650903953cd3b701bbe8555f9a1781d8f52457fa342aeb39dbdf919fa1d81",
-    "difficulty/difficulty-report-jev-rules.json": "87454b598b03b2fbb96d53237deea882c88a7aa3f8187fdc31f60c3d536c74a0",
-    "difficulty/difficulty-report-local.json": "6eadf6751d837150652c8cd2365d74f8f9648d3a6c5b986d7c319d90fe108cea",
+    "README.md": "5bc6f0dbbfa219df55e8ca1db6178d3ef68741240b46bd60af1eabb16c6c9812",
+    "difficulty/difficulty-report-hosted.json": "54a06345cd40e89cbe651fea7fd438fb0612e156b7748be27868d8bcbed72a2b",
+    "difficulty/difficulty-report-jev-rules.json": "ba174c90d5b24ea485675772a69ad70863d13d1bd3e93edea6f5f9d836b8f4e3",
+    "difficulty/difficulty-report-local.json": "618111182247d8c0719c3e2d6e0a82b7948cf7667e933d20ab7994991ae15b12",
+    "routing-cost-check.json": "1880e9c586ac1baf84561e12a7df552e89d1ce1b646631035d1bfe696d3fc791",
     "s1/prereg2-s1-holdout/DESIGN-RECOMMENDATION.md": "aa3e16d05896ad37a5b40cc8f12e5da27ae2eef9f16c7c6904a41203b79805d0",
     "s1/prereg2-s1-holdout/PREREGISTRATION.md": "03590e737c7ed692ecc4eafa5d1dae8f284ad276169be086453b266c4f1661fb",
     "s1/prereg2-s1-holdout/RESULTS.md": "0ad6df4a7cedae73821f1ec660f6a3d026132e69b93ab77c0b52b687b953e328",
@@ -163,7 +164,7 @@
     "s1/reval-s1-dev/comparisons/plain-sonnet-s1-dev-r2.json": "1871bf3ca5ac196eadd5abbeae7970aa6b39e4b1e83de96b91d3d41ec594e891",
     "s1/reval-s1-dev/gates.json": "beb7e299e02cdb69d33a13cfcae170a823732e2489833affb6db5938a22e400c",
     "s1/reval-s1-dev/manifest.json": "3babfba2bf39e90d738c41e91e5b8c8d485ff7a2b5545a43bdbc6e455b3e3289",
-    "s1/reval-s1-dev/mechanism-summary.json": "ebe43e19cc729974b9017d32d41e5dac4ca67d124a3b3e6687546746987c5096",
+    "s1/reval-s1-dev/mechanism-summary.json": "78abb7847fdf4730cd8ed9625084b04bf7d635c7950ddebb8070d66e2859e4cc",
     "s1/reval-s1-dev/results.json": "fac93a609e2b5677042d0e63d67ac284d504602c79f9a93db514029351242ed7",
     "s1/reval-s1-dev/runs/orch-default-opus-s1-dev-r1/runs/amplifier/orch-default-opus-s1-dev-r1-answer_audit_log_key-amplifier-fd-a1/result.json": "4e5a3530d70d6c238ace1504e44791dad01536063d89b841a4cb5dfc8853bfd9",
     "s1/reval-s1-dev/runs/orch-default-opus-s1-dev-r1/runs/amplifier/orch-default-opus-s1-dev-r1-answer_compute_fee-amplifier-fd-a1/result.json": "8476847b0adc7dab249edd3eed6e585bca79588499cf22cba0ad980672b01c83",
@@ -287,7 +288,7 @@
     "s1/reval-s1-dev/runs/plain-sonnet-s1-dev-r2/runs/amplifier/plain-sonnet-s1-dev-r2-repair_parse_duration-amplifier-plain-a1/result.json": "2e2b579184f63e067a3253629a1707b59212aec26219c4a5b9e66b2b1bdb0962",
     "s1/reval-s1-dev/runs/plain-sonnet-s1-dev-r2/runs/amplifier/plain-sonnet-s1-dev-r2-repair_semver_compare-amplifier-plain-a1/result.json": "8221a542fa9d82d6ae11da5efb9f6a2dd37e069acbc1a3a8eced3948b6e19ade",
     "s1/reval-s1-dev-batch2/DESIGN-RECOMMENDATION.md": "119097cd6ed55a9291afa756d61b673d807607dac87e6f1579cb6d7913e8d4df",
-    "s1/reval-s1-dev-batch2/NOTE.md": "e5b56ca14f54ce8d124251200199ee454315de5848c66b4291f0f05dcaeb6282",
+    "s1/reval-s1-dev-batch2/NOTE.md": "9d9cad21dd8107e47e79015f8b6cb339a5a674151ca09ec545495a1ccd6cba5e",
     "s1/reval-s1-dev-batch2/RESULTS.md": "d976c0efe90a876372187469c3bf39a25994dfcbaaeb081c4e5844f56a144f4f",
     "s1/reval-s1-dev-batch2/cells.resolved.json": "65d36eb22d5f645534dd5c851bce0f76f58e93a34757aeda39152b75adf828d2",
     "s1/reval-s1-dev-batch2/comparisons/orch-default-opus-s1-dev-r1.json": "6a5a0c84f68d5a36339934025d481ed09e25c92dc94228d5b1884e7f3dd7910d",
@@ -358,6 +359,7 @@
     "s1/reval-s1-dev-batch2/runs/plain-sonnet-s1-dev-r1/runs/amplifier/plain-sonnet-s1-dev-r1-repair_merge_intervals-amplifier-plain-a1/result.json": "da1de7118747f8608c75e6d848d6705c67290a8f862cdfba41e46256c915783b",
     "s1/reval-s1-dev-batch2/runs/plain-sonnet-s1-dev-r1/runs/amplifier/plain-sonnet-s1-dev-r1-repair_parse_duration-amplifier-plain-a1/result.json": "82ce0fbb328f2dbade4ff61d36f17b9430a7ed81b6d965e443ced2b7f1c06aa9",
     "s1/reval-s1-dev-batch2/runs/plain-sonnet-s1-dev-r1/runs/amplifier/plain-sonnet-s1-dev-r1-repair_semver_compare-amplifier-plain-a1/result.json": "4e014e815374006f4b9ba0efccf07a8bfe13e093f7af6198d32866c62031834e",
-    "startup/startup-profile.json": "1b4ee3b32a151789d65b2e1bf914a05a296f8b2ad96dd58fc2d5afa4ba559c59"
+    "startup/startup-profile.json": "1b4ee3b32a151789d65b2e1bf914a05a296f8b2ad96dd58fc2d5afa4ba559c59",
+    "surface-checks.json": "f7b54eeec5dc8757c4973fe8dfbde0a424bf2125c86b2340d9b8e4e50f172a24"
   }
 }
