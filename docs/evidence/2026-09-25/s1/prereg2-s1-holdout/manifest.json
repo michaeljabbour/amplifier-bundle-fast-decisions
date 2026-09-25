@@ -1,0 +1,184 @@
+{
+  "schema": "fast-decisions-evals/manifest/v1",
+  "created_at_utc": "2026-09-25T03:55:11Z",
+  "invocation": {
+    "argv": [
+      "--suite",
+      "s1",
+      "--split",
+      "holdout",
+      "--cells",
+      "plain,plain-sonnet,orch-default,plain-opus,orch-default-opus",
+      "--reps",
+      "3",
+      "--candidate-sha",
+      "52e0d29d82c46c01e0b96bcb12c609eb4130a6a0",
+      "--baseline-source",
+      "~/dev/afast-orch-primary-20260924/baseline-main",
+      "--installed-cache",
+      "~/dev/afast-orch-primary-20260924/baseline-main",
+      "--history-index",
+      "~/dev/afast-orch-primary-20260924/history-index.json",
+      "--host-python",
+      "~/.local/share/uv/tools/amplifier/bin/python",
+      "--events-dir",
+      "~/.amplifier/fast-decisions/events",
+      "--allow-external-state",
+      "--parallel",
+      "3",
+      "--out",
+      "~/dev/afast-orch-primary-20260924/prereg2-s1-holdout"
+    ],
+    "suite": "s1",
+    "split": "holdout",
+    "reps": 3
+  },
+  "suite": {
+    "label": "S1 synthetic battery (20 tasks, 4 families)",
+    "task_source": "battery",
+    "deadline_seconds": 600,
+    "splits": {
+      "dev": {
+        "tasks_flag": "dev",
+        "expected_task_count": 12
+      },
+      "holdout": {
+        "tasks_flag": "holdout",
+        "expected_task_count": 8
+      }
+    },
+    "required_toolchains": [
+      "python3"
+    ]
+  },
+  "candidate": {
+    "source": "~/dev/amplifier-bundle-fast-decisions",
+    "requested_sha": "52e0d29d82c46c01e0b96bcb12c609eb4130a6a0"
+  },
+  "baseline": {
+    "source": "~/dev/afast-orch-primary-20260924/baseline-main"
+  },
+  "cells": [
+    {
+      "id": "plain",
+      "experiments": [
+        "plain-s1-holdout-r1",
+        "plain-s1-holdout-r2",
+        "plain-s1-holdout-r3"
+      ],
+      "seeds": [
+        20260920,
+        20260921,
+        20260922
+      ],
+      "gate": {
+        "passed": true,
+        "flags": []
+      },
+      "excluded_from_claims": false
+    },
+    {
+      "id": "plain-sonnet",
+      "experiments": [
+        "plain-sonnet-s1-holdout-r1",
+        "plain-sonnet-s1-holdout-r2",
+        "plain-sonnet-s1-holdout-r3"
+      ],
+      "seeds": [
+        20260920,
+        20260921,
+        20260922
+      ],
+      "gate": {
+        "passed": true,
+        "flags": []
+      },
+      "excluded_from_claims": false
+    },
+    {
+      "id": "orch-default",
+      "experiments": [
+        "orch-default-s1-holdout-r1",
+        "orch-default-s1-holdout-r2",
+        "orch-default-s1-holdout-r3"
+      ],
+      "seeds": [
+        20260920,
+        20260921,
+        20260922
+      ],
+      "gate": {
+        "passed": true,
+        "flags": [],
+        "latency_within_budget_by_rep": [
+          true,
+          true,
+          true
+        ],
+        "latency_within_budget": true
+      },
+      "excluded_from_claims": false
+    },
+    {
+      "id": "plain-opus",
+      "experiments": [
+        "plain-opus-s1-holdout-r1",
+        "plain-opus-s1-holdout-r2",
+        "plain-opus-s1-holdout-r3"
+      ],
+      "seeds": [
+        20260920,
+        20260921,
+        20260922
+      ],
+      "gate": {
+        "passed": true,
+        "flags": []
+      },
+      "excluded_from_claims": false
+    },
+    {
+      "id": "orch-default-opus",
+      "experiments": [
+        "orch-default-opus-s1-holdout-r1",
+        "orch-default-opus-s1-holdout-r2",
+        "orch-default-opus-s1-holdout-r3"
+      ],
+      "seeds": [
+        20260920,
+        20260921,
+        20260922
+      ],
+      "gate": {
+        "passed": true,
+        "flags": [],
+        "latency_within_budget_by_rep": [
+          true,
+          true,
+          true
+        ],
+        "latency_within_budget": true
+      },
+      "excluded_from_claims": false
+    }
+  ],
+  "budget": {
+    "per_launch_usd": 12.0,
+    "estimated_total_usd": 1800.0,
+    "max_benchmark_worker_launches": 2400,
+    "max_infrastructure_retries_per_run": 1,
+    "max_parallel_timed_runs": 3,
+    "wall_hours": 24
+  },
+  "verification": {
+    "prompt_hashes": "prompt-verification.json",
+    "preflight": "preflight.json"
+  },
+  "tool_shas": {
+    "battery.py": "422ef9e12fe27cb6dd118631c1c8e51296251ffe02c6162a3e6ce4792253d38b",
+    "battery_tasks.py": "e0b902ba24887372c8674263ce411b0a363bec093d2cc290db88268dc364df5b",
+    "polyglot_tasks.py": "62ac12eae2747d97a33b0546981764e7797175b84749b17f103b9283e1a61271",
+    "battery_report.py": "0cdbbcb41703f9aa564db1db88a08837de7835077a8a814e919de8fe3aaf92e0",
+    "forge_workloads.py": "f5111afe10286634edde75a3539425ed0ea7206c5c11aebe33003c974fcf08a2"
+  }
+}

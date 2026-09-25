@@ -1,0 +1,46 @@
+{
+  "name": "plain-sonnet-s1-holdout-r3-repair_tokenize_kv-amplifier-plain-a1",
+  "task": "repair_tokenize_kv",
+  "family": "repair",
+  "split": "holdout",
+  "kind": "code",
+  "harness": "amplifier-plain",
+  "attempt": 1,
+  "model": "claude-sonnet-5",
+  "started_at": "2026-09-25T03:40:59.417247+00:00",
+  "ended_at": "2026-09-25T03:41:41.920183+00:00",
+  "wall_time_ms": 42501.899208000395,
+  "harness_duration_ms": null,
+  "exit_code": 0,
+  "timed_out": false,
+  "cost_usd": 0.2775732,
+  "cost_source": "harness_reported",
+  "cost_billable": true,
+  "tokens": {
+    "input_tokens": 243847.0,
+    "output_tokens": 3216.0,
+    "cache_read_tokens": 243839.0,
+    "cache_write_tokens": 41642.0,
+    "cost_usd": 0.2775732
+  },
+  "num_turns": null,
+  "final_message": null,
+  "quality": {
+    "checks": 32,
+    "passed": 32,
+    "failed": 0,
+    "failure_labels": []
+  },
+  "protected_files_unchanged": {
+    "README.md": true,
+    "test_public.py": true
+  },
+  "outcome_passed": true,
+  "infrastructure_failure": false,
+  "notes": [],
+  "exec_time_ms": 31183.253,
+  "exec_time_source": "native_events_first_request_to_last_response",
+  "provider_requests": 4,
+  "concurrency_at_launch": 3,
+  "concurrency_max": 3
+}

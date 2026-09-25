@@ -1,0 +1,225 @@
+{
+  "per_harness": {
+    "amplifier-plain": {
+      "n": 8,
+      "success_rate": 1.0,
+      "deadline_failures": 0,
+      "mean_penalized_ms": 12737.251375,
+      "median_penalized_ms": 13367.867,
+      "mean_exec_ms": 12737.251375,
+      "median_exec_ms": 13367.867,
+      "mean_wall_ms": 24357.69966137559,
+      "median_wall_ms": 25515.340707992436,
+      "mean_cost_known_usd": 0.24720330000000001,
+      "unknown_cost_count": 0,
+      "cost_per_success_usd": 0.24720330000000001,
+      "tokens": {
+        "input_tokens": 1634397.0,
+        "output_tokens": 6047.0,
+        "cache_read_tokens": 1634307.0,
+        "cache_write_tokens": 305893.0,
+        "cost_usd": 1.9776264
+      }
+    }
+  },
+  "per_task": {
+    "answer_default_port": {
+      "task": "answer_default_port",
+      "amplifier-plain": {
+        "penalized_ms": 7422.313,
+        "outcome_passed": true,
+        "cost_usd": 0.231034
+      },
+      "fastest_passing_harness": "amplifier-plain"
+    },
+    "answer_exception_count": {
+      "task": "answer_exception_count",
+      "amplifier-plain": {
+        "penalized_ms": 8878.583,
+        "outcome_passed": true,
+        "cost_usd": 0.2349646
+      },
+      "fastest_passing_harness": "amplifier-plain"
+    },
+    "bugfix_average_score_truncation": {
+      "task": "bugfix_average_score_truncation",
+      "amplifier-plain": {
+        "penalized_ms": 11952.738,
+        "outcome_passed": true,
+        "cost_usd": 0.23472840000000003
+      },
+      "fastest_passing_harness": "amplifier-plain"
+    },
+    "bugfix_merge_config_precedence": {
+      "task": "bugfix_merge_config_precedence",
+      "amplifier-plain": {
+        "penalized_ms": 7549.89,
+        "outcome_passed": true,
+        "cost_usd": 0.2268022
+      },
+      "fastest_passing_harness": "amplifier-plain"
+    },
+    "edit_clean_text_strict": {
+      "task": "edit_clean_text_strict",
+      "amplifier-plain": {
+        "penalized_ms": 14324.113000000001,
+        "outcome_passed": true,
+        "cost_usd": 0.2549196
+      },
+      "fastest_passing_harness": "amplifier-plain"
+    },
+    "edit_point_repr": {
+      "task": "edit_point_repr",
+      "amplifier-plain": {
+        "penalized_ms": 16288.136000000002,
+        "outcome_passed": true,
+        "cost_usd": 0.26994359999999995
+      },
+      "fastest_passing_harness": "amplifier-plain"
+    },
+    "repair_tokenize_kv": {
+      "task": "repair_tokenize_kv",
+      "amplifier-plain": {
+        "penalized_ms": 22114.371,
+        "outcome_passed": true,
+        "cost_usd": 0.28233880000000006
+      },
+      "fastest_passing_harness": "amplifier-plain"
+    },
+    "repair_word_wrap": {
+      "task": "repair_word_wrap",
+      "amplifier-plain": {
+        "penalized_ms": 13367.867,
+        "outcome_passed": true,
+        "cost_usd": 0.2428952
+      },
+      "fastest_passing_harness": "amplifier-plain"
+    }
+  },
+  "per_family": {
+    "answer": {
+      "amplifier-plain": {
+        "n": 2,
+        "successes": 2,
+        "penalized_ms": [
+          7422.313,
+          8878.583
+        ]
+      }
+    },
+    "bugfix": {
+      "amplifier-plain": {
+        "n": 2,
+        "successes": 2,
+        "penalized_ms": [
+          11952.738,
+          7549.89
+        ]
+      }
+    },
+    "edit": {
+      "amplifier-plain": {
+        "n": 2,
+        "successes": 2,
+        "penalized_ms": [
+          14324.113000000001,
+          16288.136000000002
+        ]
+      }
+    },
+    "repair": {
+      "amplifier-plain": {
+        "n": 2,
+        "successes": 2,
+        "penalized_ms": [
+          22114.371,
+          13367.867
+        ]
+      }
+    }
+  },
+  "amplifier_fd_vs_plain": null,
+  "cross": null,
+  "dev": {},
+  "holdout": {
+    "answer_exception_count": {
+      "task": "answer_exception_count",
+      "amplifier-plain": {
+        "penalized_ms": 8878.583,
+        "outcome_passed": true,
+        "cost_usd": 0.2349646
+      },
+      "fastest_passing_harness": "amplifier-plain"
+    },
+    "bugfix_average_score_truncation": {
+      "task": "bugfix_average_score_truncation",
+      "amplifier-plain": {
+        "penalized_ms": 11952.738,
+        "outcome_passed": true,
+        "cost_usd": 0.23472840000000003
+      },
+      "fastest_passing_harness": "amplifier-plain"
+    },
+    "bugfix_merge_config_precedence": {
+      "task": "bugfix_merge_config_precedence",
+      "amplifier-plain": {
+        "penalized_ms": 7549.89,
+        "outcome_passed": true,
+        "cost_usd": 0.2268022
+      },
+      "fastest_passing_harness": "amplifier-plain"
+    },
+    "repair_tokenize_kv": {
+      "task": "repair_tokenize_kv",
+      "amplifier-plain": {
+        "penalized_ms": 22114.371,
+        "outcome_passed": true,
+        "cost_usd": 0.28233880000000006
+      },
+      "fastest_passing_harness": "amplifier-plain"
+    },
+    "edit_clean_text_strict": {
+      "task": "edit_clean_text_strict",
+      "amplifier-plain": {
+        "penalized_ms": 14324.113000000001,
+        "outcome_passed": true,
+        "cost_usd": 0.2549196
+      },
+      "fastest_passing_harness": "amplifier-plain"
+    },
+    "answer_default_port": {
+      "task": "answer_default_port",
+      "amplifier-plain": {
+        "penalized_ms": 7422.313,
+        "outcome_passed": true,
+        "cost_usd": 0.231034
+      },
+      "fastest_passing_harness": "amplifier-plain"
+    },
+    "repair_word_wrap": {
+      "task": "repair_word_wrap",
+      "amplifier-plain": {
+        "penalized_ms": 13367.867,
+        "outcome_passed": true,
+        "cost_usd": 0.2428952
+      },
+      "fastest_passing_harness": "amplifier-plain"
+    },
+    "edit_point_repr": {
+      "task": "edit_point_repr",
+      "amplifier-plain": {
+        "penalized_ms": 16288.136000000002,
+        "outcome_passed": true,
+        "cost_usd": 0.26994359999999995
+      },
+      "fastest_passing_harness": "amplifier-plain"
+    }
+  },
+  "mechanism": null,
+  "amplifier_fd_series_label": null,
+  "evidence_limits": [
+    "n_tasks=8",
+    "single_repetition_per_task_per_harness",
+    "models_not_necessarily_matched_across_harnesses"
+  ]
+}

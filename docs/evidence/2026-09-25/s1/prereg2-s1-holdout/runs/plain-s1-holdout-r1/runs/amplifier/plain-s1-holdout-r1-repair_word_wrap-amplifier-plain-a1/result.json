@@ -1,0 +1,46 @@
+{
+  "name": "plain-s1-holdout-r1-repair_word_wrap-amplifier-plain-a1",
+  "task": "repair_word_wrap",
+  "family": "repair",
+  "split": "holdout",
+  "kind": "code",
+  "harness": "amplifier-plain",
+  "attempt": 1,
+  "model": "claude-fable-5-1",
+  "started_at": "2026-09-25T03:30:33.180075+00:00",
+  "ended_at": "2026-09-25T03:31:24.331541+00:00",
+  "wall_time_ms": 51150.41762498731,
+  "harness_duration_ms": null,
+  "exit_code": 0,
+  "timed_out": false,
+  "cost_usd": 0.62240475,
+  "cost_source": "harness_reported",
+  "cost_billable": true,
+  "tokens": {
+    "input_tokens": 241051.0,
+    "output_tokens": 1408.0,
+    "cache_read_tokens": 241039.0,
+    "cache_write_tokens": 39330.0,
+    "cost_usd": 0.62240475
+  },
+  "num_turns": null,
+  "final_message": null,
+  "quality": {
+    "checks": 32,
+    "passed": 32,
+    "failed": 0,
+    "failure_labels": []
+  },
+  "protected_files_unchanged": {
+    "README.md": true,
+    "test_public.py": true
+  },
+  "outcome_passed": true,
+  "infrastructure_failure": false,
+  "notes": [],
+  "exec_time_ms": 39443.100999999995,
+  "exec_time_source": "native_events_first_request_to_last_response",
+  "provider_requests": 4,
+  "concurrency_at_launch": 3,
+  "concurrency_max": 3
+}

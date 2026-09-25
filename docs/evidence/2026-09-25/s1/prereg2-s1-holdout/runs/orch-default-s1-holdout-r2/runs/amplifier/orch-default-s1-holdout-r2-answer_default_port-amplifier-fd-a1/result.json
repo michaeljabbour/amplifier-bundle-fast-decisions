@@ -1,0 +1,45 @@
+{
+  "name": "orch-default-s1-holdout-r2-answer_default_port-amplifier-fd-a1",
+  "task": "answer_default_port",
+  "family": "answer",
+  "split": "holdout",
+  "kind": "answer",
+  "harness": "amplifier-fd",
+  "attempt": 1,
+  "model": "claude-fable-5-1",
+  "started_at": "2026-09-25T03:43:34.737103+00:00",
+  "ended_at": "2026-09-25T03:44:01.711034+00:00",
+  "wall_time_ms": 26973.459500004537,
+  "harness_duration_ms": null,
+  "exit_code": 0,
+  "timed_out": false,
+  "cost_usd": 0.5786905,
+  "cost_source": "harness_reported",
+  "cost_billable": true,
+  "tokens": {
+    "input_tokens": 169872.0,
+    "output_tokens": 711.0,
+    "cache_read_tokens": 169862.0,
+    "cache_write_tokens": 40046.0,
+    "cost_usd": 0.5786905
+  },
+  "num_turns": null,
+  "final_message": null,
+  "quality": {
+    "checks": 1,
+    "passed": 1,
+    "failed": 0,
+    "failure_labels": []
+  },
+  "protected_files_unchanged": {
+    "README.md": true
+  },
+  "outcome_passed": true,
+  "infrastructure_failure": false,
+  "notes": [],
+  "exec_time_ms": 14762.185000000001,
+  "exec_time_source": "native_events_first_request_to_last_response",
+  "provider_requests": 3,
+  "concurrency_at_launch": 3,
+  "concurrency_max": 3
+}

@@ -1,0 +1,46 @@
+{
+  "name": "orch-default-s1-holdout-r1-repair_word_wrap-amplifier-fd-a1",
+  "task": "repair_word_wrap",
+  "family": "repair",
+  "split": "holdout",
+  "kind": "code",
+  "harness": "amplifier-fd",
+  "attempt": 1,
+  "model": "claude-sonnet-5",
+  "started_at": "2026-09-25T03:42:36.196848+00:00",
+  "ended_at": "2026-09-25T03:43:02.143112+00:00",
+  "wall_time_ms": 25945.622415994876,
+  "harness_duration_ms": null,
+  "exit_code": 0,
+  "timed_out": false,
+  "cost_usd": 0.254037,
+  "cost_source": "harness_reported",
+  "cost_billable": true,
+  "tokens": {
+    "input_tokens": 312100.0,
+    "output_tokens": 857.0,
+    "cache_read_tokens": 312090.0,
+    "cache_write_tokens": 39340.0,
+    "cost_usd": 0.254037
+  },
+  "num_turns": null,
+  "final_message": null,
+  "quality": {
+    "checks": 32,
+    "passed": 32,
+    "failed": 0,
+    "failure_labels": []
+  },
+  "protected_files_unchanged": {
+    "README.md": true,
+    "test_public.py": true
+  },
+  "outcome_passed": true,
+  "infrastructure_failure": false,
+  "notes": [],
+  "exec_time_ms": 13686.309,
+  "exec_time_source": "native_events_first_request_to_last_response",
+  "provider_requests": 5,
+  "concurrency_at_launch": 3,
+  "concurrency_max": 3
+}
