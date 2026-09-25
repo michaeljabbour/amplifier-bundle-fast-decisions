@@ -24,7 +24,30 @@
   const synthetic = (e, keys) => !!(e.synthetic || e.data.synthetic || (e.decision_id && !['health', 'observatory'].includes(kind(e)) && keys.has(decisionKey(e))));
   const issue = e => (e.data.phase === 'advisory_result' && e.data.success === false) || ['provider:error', 'provider:retry'].includes(native(e)) || ['error', 'cancelled'].includes(e.data.status) || kind(e) === 'fallback';
   const useful = e => kind(e) !== 'health' || native(e) || e.data.reason_code || ['configuration', 'session_closed', 'advisory_result'].includes(e.data.phase);
-  const backendName = b => ({ 'scripted-demo': 'Scripted scorer', deterministic: 'Scripted scorer', 'ollama-token': 'Local model', ollama: 'Local model', jev: 'Jev', unavailable: 'No scorer' }[b] || b || 'Backend not recorded');
+  // Operator-set display names (e.g. a Jev-compatible server), learned from
+  // each session's configuration event.
+  const backendLabels = new Map();
+  const noteLabel = e => { if (e && e.data && e.data.phase === 'configuration' && typeof e.data.backend_label === 'string' && e.data.backend_label) backendLabels.set(e.session_id, e.data.backend_label); };
+  const labelOf = e => backendLabels.get(e.session_id) || (e.data && typeof e.data.backend_label === 'string' ? e.data.backend_label : '');
+  const backendName = (b, label) => label || ({ 'scripted-demo': 'Scripted scorer', deterministic: 'Scripted scorer', 'ollama-token': 'Local model', ollama: 'Local model', jev: 'Jev', unavailable: 'No scorer' }[b] || b || 'Backend not recorded');
+  const money = v => (v >= 100 ? '$' + Math.round(v) : '$' + v.toFixed(2));
+  const minutes = s => (s >= 3600 ? (s / 3600).toFixed(1) + ' h' : s >= 60 ? Math.round(s / 60) + ' min' : Math.round(s) + ' s');
+  function savingsView(r) {
+    const t = r.turns || {}, c = r.cost || {}, tm = r.time || {};
+    if (!t.total) return { scope: 'No routed turns recorded yet', cost: '—', costDetail: 'Appears once the orchestrator routes turns.', time: '—', timeDetail: '', turns: '0', turnsDetail: '', note: 'Estimates cover only turns the orchestrator routes to the cheaper model.' };
+    const view = {
+      scope: 'All recorded sessions · ' + r.files + ' session files',
+      cost: money(c.saved_usd || 0),
+      costDetail: money(c.cheap_turns_actual_usd || 0) + ' spent vs ' + money(c.cheap_turns_on_host_usd || 0) + ' on ' + (r.host_model || 'the host model'),
+      time: tm.available ? minutes(tm.saved_seconds || 0) : 'Not yet',
+      timeDetail: tm.available ? minutes(tm.cheap_turns_model_seconds || 0) + ' vs ' + minutes(tm.cheap_turns_on_host_seconds || 0) + ' at host-model speed' : 'Needs more measured requests on both models',
+      turns: t.cheap + ' of ' + t.total,
+      turnsDetail: (t.judge_calls ? t.judge_calls + ' judged by the decision-maker; ' : '') + t.strong + ' kept on the host model',
+      note: 'Estimates: the same recorded work priced and timed at host-model rates. Host-model turns are unchanged, so they save nothing. Tool time, start-up and decision-maker calls are not counted.',
+    };
+    if (c.requests_without_cache_data) view.note += ' ' + c.requests_without_cache_data + ' older requests lack cache data, so their dollars are overstated.';
+    return view;
+  }
   function configFor(events, id) {
     return events.filter(e => e.session_id === id && carriesConfig(e)).reduce((config, e) => ({ ...config, ...e.data }), {});
   }
@@ -85,10 +108,10 @@
     const k = kind(e), d = e.data, n = native(e);
     let title = pretty(k), detail = d.reason_code ? pretty(d.reason_code) : d.status || 'Recorded metadata', source = 'Runtime record', tone = 'runtime';
     if (n) { title = ({ 'execution:start': 'Turn started', 'execution:end': 'Turn finished', 'session:end': 'Session ended', 'provider:request': 'Provider request', 'provider:retry': 'Provider retry', 'provider:error': 'Provider error', 'tool:pre': 'Tool proposed', 'tool:post': 'Tool result observed', 'context:compaction': 'Context compaction observed', 'llm:response': 'Provider response observed' }[n] || n); detail = [d.tool || d.provider, d.exception_type, d.retry_attempt ? 'Attempt ' + d.retry_attempt : '', d.status_code ? 'HTTP ' + d.status_code : ''].filter(Boolean).join(' · ') || 'Reported by an Amplifier hook'; source = 'Native hook observation'; }
-    if (d.phase === 'configuration') { title = 'Bundle mounted'; detail = backendName(d.backend) + ' · ' + (d.mode || 'Mode not recorded') + (d.workspace_name ? ' · ' + d.workspace_name : ''); source = 'Runtime configuration'; }
+    if (d.phase === 'configuration') { title = 'Bundle mounted'; detail = backendName(d.backend, labelOf(e)) + ' · ' + (d.mode || 'Mode not recorded') + (d.workspace_name ? ' · ' + d.workspace_name : ''); source = 'Runtime configuration'; }
     if (d.phase === 'session_closed') { title = 'Telemetry session closed'; detail = 'The bundle observer was unmounted.'; }
     if (k === 'requested') { title = 'Decision requested'; detail = (d.candidate_count ?? '?') + ' prepared candidates'; source = 'Decision service'; tone = 'decision'; }
-    if (isScore(e)) { title = k === 'shadow_proposed' ? 'Shadow proposal scored' : 'Decision scored'; detail = d.model || backendName(d.backend); source = simulated ? 'Scripted score' : 'Model score'; tone = 'decision'; }
+    if (isScore(e)) { title = k === 'shadow_proposed' ? 'Shadow proposal scored' : 'Decision scored'; detail = d.model || backendName(d.backend, labelOf(e)); source = simulated ? 'Scripted score' : 'Model score'; tone = 'decision'; }
     if (d.mode === 'advisory' && isScore(e)) { title = 'Advisory decision scored'; source = 'Portable Smart Tool'; }
     if (d.phase === 'advisory_result') { title = 'Advisory result returned'; detail = 'Caller owns execution and policy; no bypass claimed.'; source = 'Portable Smart Tool'; }
     if (k === 'routed') { title = d.route === 'fast' ? 'Fast action submitted' : 'Reasoning provider selected'; detail = pretty(d.reason_code); source = 'Routing decision'; tone = 'decision'; }
@@ -99,10 +122,10 @@
     if (k === 'shadow_agreement') { title = 'Shadow comparison: ' + pretty(d.agreement); detail = 'Compared with the observed tool choice; no execution changed.'; source = 'Shadow comparison'; }
     if (k === 'role_proposed' || k === 'role_agreement') { title = 'Model-role ' + (k === 'role_proposed' ? 'suggestion' : 'comparison'); detail = 'Shadow only; provider selection is unchanged.'; source = 'Shadow comparison'; }
     if (d.reason_code === 'no_eligible_candidates') { title = 'No prepared action available'; detail = 'The request did not produce an eligible candidate.'; }
-    if (k === 'difficulty_judged') { const pc = d.probabilities && typeof d.probabilities.complex === 'number' ? ' · p(complex) ' + d.probabilities.complex.toFixed(2) : ''; title = 'Turn routed: ' + (d.choice === 'strong' ? 'complex → host model' : 'simple → cheap model'); detail = (String(d.reason_code || '').startsWith('judge_') ? 'Judged by ' + backendName(d.backend) : 'Length rule (no judge)') + pc; source = 'Difficulty router'; }
+    if (k === 'difficulty_judged') { const pc = d.probabilities && typeof d.probabilities.complex === 'number' ? ' · p(complex) ' + d.probabilities.complex.toFixed(2) : ''; title = 'Turn routed: ' + (d.choice === 'strong' ? 'complex → host model' : 'simple → cheap model'); detail = (String(d.reason_code || '').startsWith('judge_') ? 'Judged by ' + backendName(d.backend, labelOf(e)) : 'Length rule (no judge)') + pc; source = 'Difficulty router'; }
     if (d.reason_code === 'judge_disabled') { title = 'Routed to model (routing-only)'; detail = 'No judge configured; effort and model routing still apply.'; }
     if (d.reason_code === 'provider_not_matched') { title = 'Model routing skipped'; detail = 'This provider does not match model_routing.provider_match; its own model is used.'; }
-    if (k === 'turn_start') { title = 'Hybrid turn started'; detail = backendName(d.backend) + ' · ' + d.mode; }
+    if (k === 'turn_start') { title = 'Hybrid turn started'; detail = backendName(d.backend, labelOf(e)) + ' · ' + d.mode; }
     if (k === 'turn_end') { title = 'Hybrid turn finished'; detail = (d.fast_total ?? 0) + ' fast submissions · ' + (d.slow_total ?? 0) + ' measured provider calls'; }
     if (k === 'observatory') { title = 'Viewer ' + (d.action || 'event'); detail = pretty(d.reason) || 'Viewer lifecycle metadata'; }
     if (issue(e)) tone = 'error';
@@ -132,7 +155,7 @@
     // proposed
     let proposed = { title: 'No FD judgment recorded', detail: 'Tool activity only' };
     if (roleProposed && !score) proposed = { title: roleProposed.data.proposed_model_role ? 'Role: ' + roleProposed.data.proposed_model_role : 'Role router abstained', detail: pretty(roleProposed.data.reason_code) };
-    else if (score) proposed = { title: choice ? label(choice) : 'No choice recorded', id: !!choice && !names.has(choice), detail: (score.data.model || backendName(score.data.backend)) + (request ? ' · ' + (request.data.candidate_count ?? '?') + ' candidates' : ''), probability };
+    else if (score) proposed = { title: choice ? label(choice) : 'No choice recorded', id: !!choice && !names.has(choice), detail: (score.data.model || backendName(score.data.backend, labelOf(score))) + (request ? ' · ' + (request.data.candidate_count ?? '?') + ' candidates' : ''), probability };
     else if (fallback) proposed = { title: fallback.data.reason_code === 'no_eligible_candidates' ? 'No prepared action' : 'Fallback', detail: pretty(fallback.data.reason_code) };
     else if (request) proposed = { title: 'Awaiting score', detail: (request.data.candidate_count ?? '?') + ' candidates' };
     // happened
@@ -182,7 +205,7 @@
       branch: fast ? 'fast' : slow ? 'slow' : 'unknown',
       receipt: last('tool_end') || last('slow_end') || last('shadow_agreement') || group.at(-1) };
   }
-  if (typeof module !== 'undefined') module.exports = { kind, valid, scriptedKeys, synthetic, sessionsFor, metrics, describe, decisionPath, summarize, sessionName, circuitFor };
+  if (typeof module !== 'undefined') module.exports = { kind, valid, scriptedKeys, synthetic, sessionsFor, metrics, describe, decisionPath, summarize, sessionName, circuitFor, savingsView };
   if (typeof document === 'undefined') return;
 
   // ---------- browser render layer ----------
@@ -209,7 +232,7 @@
 
   function ingest(batch, force = false) {
     arrivals = new Set(source === 'live' && historyReady && following ? batch.filter(e => !seen.has(e.event_id)).map(e => e.event_id) : []);
-    for (const e of batch) if (valid(e) && !seen.has(e.event_id)) { seen.add(e.event_id); events.push(e); }
+    for (const e of batch) if (valid(e) && !seen.has(e.event_id)) { seen.add(e.event_id); events.push(e); noteLabel(e); }
     events.sort((a, b) => stamp(a) - stamp(b) || (a.session_id === b.session_id ? (a.seq || 0) - (b.seq || 0) : 0));
     if (events.length > 20000) { events = events.slice(-20000); seen = new Set(events.map(e => e.event_id)); }
     if (force || batch.length || source !== 'live' || Date.now() - renderedAt > 5000) render();
@@ -240,7 +263,7 @@
       top.append(make('span', 'session-name' + (named ? '' : ' unnamed'), s.name), make('span', 'session-age', age(stamp(s.latest))));
       const meta = make('span', 'session-meta');
       if (named) meta.append(make('span', 'session-id', shortId(s.id)));
-      meta.append(make('span', 'session-config', s.config.mode ? backendName(s.config.backend) + ' · ' + s.config.mode : 'Configuration not recorded'));
+      meta.append(make('span', 'session-config', s.config.mode ? backendName(s.config.backend, s.config.backend_label) + ' · ' + s.config.mode : 'Configuration not recorded'));
       button.append(top, meta, make('span', 'session-state ' + (s.stateKind || ''), s.state));
       button.onclick = () => selectSession(s.id); return button;
     }
@@ -286,10 +309,10 @@
     ];
     $('eventFacts').replaceChildren();
     for (const [label, value, mono] of facts) { const row = make('div'); row.append(make('dt', '', label), make('dd', mono ? 'mono' : '', value)); $('eventFacts').append(row); }
-    put('sessionConfig', cfg.mode ? backendName(cfg.backend) + ' in ' + cfg.mode + ' mode. ' + (cfg.backend === 'scripted-demo' ? 'Scores are scripted; no model is connected to this scorer.' : cfg.mode === 'shadow' ? 'Proposals do not change execution.' : cfg.mode === 'advisory' ? 'Portable suggestion only; caller owns execution.' : 'Fast selections still pass native approval.') : 'No configuration event is available for this session.');
+    put('sessionConfig', cfg.mode ? backendName(cfg.backend, cfg.backend_label) + ' in ' + cfg.mode + ' mode. ' + (cfg.backend === 'scripted-demo' ? 'Scores are scripted; no model is connected to this scorer.' : cfg.mode === 'shadow' ? 'Proposals do not change execution.' : cfg.mode === 'advisory' ? 'Portable suggestion only; caller owns execution.' : 'Fast selections still pass native approval.') : 'No configuration event is available for this session.');
     $('distribution').hidden = !score; $('probabilities').replaceChildren();
     if (score) {
-      put('scoreMeaning', synthetic(score, keys) ? 'Scripted values. These did not come from a model.' : score.data.probability_kind === 'token_mass_with_abstention_residual' ? 'Uncalibrated token scores from ' + (score.data.model || backendName(score.data.backend)) + '. They do not measure correctness.' : 'Backend-reported scores; not independent evidence of correctness.');
+      put('scoreMeaning', synthetic(score, keys) ? 'Scripted values. These did not come from a model.' : score.data.probability_kind === 'token_mass_with_abstention_residual' ? 'Uncalibrated token scores from ' + (score.data.model || backendName(score.data.backend, labelOf(score))) + '. They do not measure correctness.' : 'Backend-reported scores; not independent evidence of correctness.');
       const names = new Map((request?.data.candidates || []).map(c => [c.id, c.label])); names.set('reason', 'Use reasoning model');
       for (const [id, p] of Object.entries(score.data.probabilities || {}).filter(([, p]) => Number.isFinite(p)).sort((a, b) => b[1] - a[1])) {
         const row = make('div', 'prob-row' + (id === score.data.choice ? ' chosen' : '') + (id === 'reason' ? ' reason' : '')), caption = make('div', 'prob-label'), track = make('div', 'prob-track'), fill = make('div', 'prob-fill');
@@ -348,7 +371,7 @@
     bind('circuitHost', path.host);
     put('circuitHostNote', path.host ? describe(path.host).title : 'Permissions stay upstream');
     put('circuitStateNote', path.request ? (path.request.data.candidate_count ?? '?') + ' prepared candidates' : 'No request recorded');
-    put('circuitJudgeNote', path.score ? (path.score.data.model || backendName(path.score.data.backend)) : 'No score recorded');
+    put('circuitJudgeNote', path.score ? (path.score.data.model || backendName(path.score.data.backend, labelOf(path.score))) : 'No score recorded');
     put('circuitFastNote', path.fast ? (path.fast.data.status === 'submitted_to_upstream' ? 'Submitted to host' : 'Selected; not confirmed') : 'No fast route recorded');
     put('circuitSlowNote', path.slow ? (path.slow.data.model || path.slow.data.provider || (kind(path.slow) === 'routed' ? 'Selected; not yet invoked' : 'Invocation recorded')) : 'No invocation recorded');
     put('circuitProposed', s?.proposed.title || 'No proposal recorded');
@@ -445,7 +468,7 @@
     const cfg = session ? configFor(events, session) : null;
     const current = session ? sessions.find(s => s.id === session) : null;
     put('viewTitle', session ? sessionName(cfg, session) : 'All sessions');
-    put('viewSubtitle', session ? [cfg.mode ? backendName(cfg.backend) + ' · ' + cfg.mode + ' mode' : 'Configuration not recorded', current?.state, shortId(session) !== sessionName(cfg, session) ? session : ''].filter(Boolean).join(' · ') : 'Runtime activity from ' + sessions.filter(s => !s.parent && s.reporting).length + ' session(s) currently reporting.');
+    put('viewSubtitle', session ? [cfg.mode ? backendName(cfg.backend, cfg.backend_label) + ' · ' + cfg.mode + ' mode' : 'Configuration not recorded', current?.state, shortId(session) !== sessionName(cfg, session) ? session : ''].filter(Boolean).join(' · ') : 'Runtime activity from ' + sessions.filter(s => !s.parent && s.reporting).length + ' session(s) currently reporting.');
     put('syntheticCount', hidden ? '(' + hidden + ($('includeSynthetic').checked ? ' shown)' : ' hidden)') : '');
     const display = scoped.filter(e => ($('includeSynthetic').checked || !synthetic(e, keys)) && useful(e) && (category === 'decisions' ? ['requested', 'scored', 'routed', 'shadow_proposed', 'shadow_observed', 'shadow_agreement', 'role_proposed', 'role_agreement', 'fallback'].includes(kind(e)) : category === 'errors' ? issue(e) : true));
     const rows = display.slice(-250).reverse(); $('feed').replaceChildren();
@@ -495,6 +518,27 @@
     history.replaceState(null, '', location.pathname + location.search);
     connectionError = ''; schedule(0);
   });
+  let lastSavingsPoll = 0;
+  async function pollSavings() {
+    if (Date.now() - lastSavingsPoll < 60000 || source !== 'live') return;
+    lastSavingsPoll = Date.now();
+    try {
+      const response = await fetch('/api/savings', { credentials: 'same-origin', headers: token ? { Authorization: 'Bearer ' + token } : {}, signal: AbortSignal.timeout(20000) });
+      if (!response.ok || source !== 'live') return;
+      renderSavings(await response.json());
+    } catch (_) { /* the panel keeps its last values */ }
+  }
+  function renderSavings(r) {
+    const view = savingsView(r);
+    $('savingsPanel').hidden = false;
+    put('savingsScope', view.scope);
+    put('savingsCost', view.cost); put('savingsCostDetail', view.costDetail);
+    put('savingsTime', view.time); put('savingsTimeDetail', view.timeDetail);
+    put('savingsTurns', view.turns); put('savingsTurnsDetail', view.turnsDetail);
+    put('savingsNote', view.note);
+    const days = (r.by_day || []).slice(-30), peak = Math.max(0, ...days.map(d => d.saved_usd || 0));
+    $('savingsDays').replaceChildren(...days.map(d => { const bar = make('i'); bar.style.height = peak > 0 ? Math.max(2, Math.round(40 * Math.max(0, d.saved_usd) / peak)) + 'px' : '2px'; bar.title = d.day + ': $' + (d.saved_usd || 0).toFixed(2) + ' · ' + d.cheap_turns + ' cheaper / ' + d.strong_turns + ' host'; return bar; }));
+  }
   async function pollStudy() {
     if (Date.now() - lastStudyPoll < 5000 || source !== 'live') return;
     lastStudyPoll = Date.now();
@@ -532,7 +576,7 @@
       const repaint = !lastPoll || !!connectionError || hasMore !== !!payload.has_more;
       epoch = payload.epoch; cursor = payload.cursor; retained = payload.retained; invalidLines = payload.invalid_lines || 0; hasMore = !!payload.has_more; lastPoll = Date.now(); connectionError = ''; $('reconnectPanel').hidden = true; ingest(payload.events || [], repaint);
       if (!hasMore) historyReady = true;
-      void pollStudy();
+      void pollStudy(); void pollSavings();
     } catch (error) { if (source !== 'live' || generation !== pollGeneration) return; connectionError = error.name === 'TimeoutError' ? 'The viewer did not respond within 5 seconds. Retrying…' : error instanceof TypeError ? 'Cannot reach the local viewer. Retrying…' : error.message; render(); }
     if (source === 'live' && generation === pollGeneration) schedule(connectionError ? 2000 : hasMore ? 0 : 500);
   }

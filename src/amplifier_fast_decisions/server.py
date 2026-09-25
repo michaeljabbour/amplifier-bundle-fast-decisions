@@ -204,6 +204,10 @@ class Handler(BaseHTTPRequestHandler):
                 except ValueError:
                     return self._json(400, {"error": "Invalid cursor"})
                 return self._json(200, self.server.index.get(after, limit))
+            if parsed.path == "/api/savings":
+                from .savings import summarize as savings_summary
+                events_dir = self.server.index.directory
+                return self._json(200, savings_summary(events_dir, cache_path=events_dir.parent / "savings-cache.json"))
             if parsed.path == "/api/health":
                 return self._json(200, {"read_only": True, "transport": "poll-500ms", "version": "0.1.0"})
             if parsed.path == "/api/measure":

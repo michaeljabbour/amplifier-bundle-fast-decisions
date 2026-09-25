@@ -48,20 +48,37 @@ thinking/effort parameters change. The previous cheap-first policy re-wrote a 37
 every escalation and every effort flip. On SWE-bench that made it 1.2x plain's time and 1.4x plain's
 cost (`evals/STUDY-DESIGN.md` 18.7).
 
-**Who judges.** The shipped config is `backend: none`: a prompt-length rule decides (AUC 0.60) and
-nothing leaves the machine. Upgrade through Amplifier's sanctioned per-user override in
+**Who judges.** The shipped config is `backend: jev` (hosted TypeSafe Jev, AUC 0.83 at ~0.16 s) with
+`allow_external_state: true`: the first 2,500 characters of the turn's request go to the Jev endpoint.
+Without `TYPESAFE_API_KEY`, or on any Jev error or timeout, the turn uses the prompt-length rule
+(AUC 0.60) and nothing leaves the machine. Change it through Amplifier's sanctioned per-user override in
 `~/.amplifier/settings.yaml`. No bundle edit is needed:
 
 ```yaml
 overrides:
   loop-fast-decisions:
     config:
-      backend: jev                  # TypeSafe Jev (needs TYPESAFE_API_KEY), AUC 0.83 at ~0.2 s
-      allow_external_state: true    # explicit consent: the task text goes to the judge
+      backend: none                 # length rule only; nothing leaves the machine
+      allow_external_state: false
       # local alternatives (Ollama, nothing leaves the machine):
       #   backend: ollama, model: "qwen3:8b",    timeout_ms: 3000   # AUC 0.72 at ~0.36 s
-      #   backend: ollama, model: "qwen:latest", timeout_ms: 8000   # AUC 0.85 at ~1-2.5 s
+      #   backend: ollama, model: "qwen:latest", timeout_ms: 8000   # AUC 0.85 at ~2.5 s
+      # another Jev System One-compatible server:
+      #   backend: jev, jev_url_env: MY_URL_VAR, jev_key_env: MY_KEY_VAR,
+      #   model: <name>, backend_label: <dashboard name>
 ```
+
+Measured trade-off to keep in mind: on the 12-task everyday screen (1 rep) Jev deciding ran at 0.61x
+time / 0.50x cost against 0.55x / 0.38x for the length rule, because Jev sent 3 of 12 tasks to the host
+model. Jev is the better judge of difficulty (AUC 0.83 vs 0.60); the length rule was cheaper on tasks
+that were all easy. Re-measure on your own mix with `afast savings`.
+
+**Savings.** `afast savings [--since 7d] [--json]` and the observatory's savings panel estimate what
+routing saved: every cheaper-model turn's recorded tokens priced at host-model rates (the provider's
+own `cost_usd` is the actual when recorded), and its model time scaled by the measured host/start
+generation-rate ratio once both models have 20+ measured requests. Host-model turns run the standard
+setup and save nothing. These are estimates, not matched comparisons; the eval suites remain the
+evidence for net savings and quality.
 
 The AUCs are measured by `evals/difficulty/probe.py` on SWE-bench Verified human difficulty labels.
 Local judges answer typed questions from first-token letter mass, with a chat prefill and permutation

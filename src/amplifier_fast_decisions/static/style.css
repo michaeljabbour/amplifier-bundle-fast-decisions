@@ -403,3 +403,15 @@ pre { font: 11px/1.55 var(--mono); white-space: pre-wrap; overflow-wrap: anywher
 @media (prefers-reduced-motion: reduce) {
   *, .arriving, .flow-card.arriving, .session-state.working::before, .runtime-pulse.working .live-dot, .verdict.live::before, .flow-arrow.pending { animation: none !important; transition: none !important; }
 }
+
+.savings-panel { border: 1px solid var(--line); border-radius: 10px; padding: 14px; margin: 12px 0 16px; }
+.savings-heading { display: flex; align-items: baseline; gap: 12px; }
+.savings-heading h2 { font-size: 14px; margin: 0; }
+.savings-heading span, .savings-note, .savings-grid small { color: var(--muted); font-size: 12px; }
+.savings-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; margin-top: 10px; }
+.savings-grid > div { padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; }
+.savings-grid span, .savings-grid strong, .savings-grid small { display: block; }
+.savings-grid strong { font-size: 20px; margin: 2px 0; }
+.savings-days { display: flex; align-items: flex-end; gap: 3px; height: 40px; margin-top: 12px; }
+.savings-days > i { flex: 1; min-width: 4px; max-width: 18px; background: #65ddb4; border-radius: 2px 2px 0 0; opacity: .85; }
+.savings-note { margin: 8px 0 0; }

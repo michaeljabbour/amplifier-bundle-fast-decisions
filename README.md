@@ -87,8 +87,15 @@ demo and the optional Jev test.
   Phase and escalation asks due together are batched into one judge call.
 - **Receipts:** every decision emits versioned `fast_decisions:*` events --
   proposed, happened, why -- read by the observatory and `afast bench`.
-- **Privacy default:** nothing leaves the machine; an external backend is
-  constructed only after an explicit `allow_external_state` opt-in.
+- **Privacy default:** the observer-only (shadow) behavior sends nothing off the
+  machine. The orchestrator behavior (`behaviors/fast-decisions.yaml`) asks hosted
+  Jev one difficulty question per turn, sending the first 2,500 characters of the
+  request, when `TYPESAFE_API_KEY` is set; override to `backend: none` to keep
+  everything local (see [docs/PRIVACY.md](docs/PRIVACY.md)).
+- **Savings estimate:** `afast savings` (and the observatory's savings panel)
+  prices and times each cheaper-model turn at host-model rates from recorded events.
+- **Rubric scoring:** `afast rubric` scores (input, output) pairs against weighted
+  yes/no questions with Jev, in the common rubric-scorer request format.
 
 Mechanism detail and non-goals: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 

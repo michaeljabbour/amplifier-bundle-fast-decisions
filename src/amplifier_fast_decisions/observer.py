@@ -37,6 +37,13 @@ __amplifier_module_type__ = "hook"
 _HEARTBEAT_INTERVAL_SECONDS = 15
 
 
+def _backend_label(backend) -> str | None:
+    """A configured display name for the backend (e.g. a Jev-compatible
+    server), or None. Operator-set config, never derived from state."""
+    label = getattr(backend, "label", None)
+    return label.strip()[:64] or None if isinstance(label, str) else None
+
+
 def workspace_name(config: dict | None = None) -> str | None:
     """Basename of the session's working directory, for the viewer's session list.
 
@@ -403,6 +410,7 @@ async def mount(coordinator, config: dict):
         "phase": "configuration",
         "mode": runtime.service.policy.mode,
         "backend": runtime.service.backend.name,
+        "backend_label": _backend_label(runtime.service.backend),
         "allow_external_state": runtime.service.policy.allow_external_state,
         "policy_version": runtime.service.policy.version,
         "event_source": "native-hook-bridge",

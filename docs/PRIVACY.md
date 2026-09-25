@@ -2,6 +2,16 @@
 
 ## Three different data paths
 
+**Orchestrator default (`behaviors/fast-decisions.yaml`).** The turn-start difficulty router ships with
+`backend: jev` and `allow_external_state: true`: when `TYPESAFE_API_KEY` is set, each top-level and
+delegated turn sends one typed question with the first 2,500 characters of the turn's user request to the
+Jev endpoint. Without the key, or on any Jev error or timeout, the turn falls back to the local length rule
+and nothing is sent. In workspaces over `cheap_max_workspace_files` the turn starts on the host model
+without asking. To keep everything local, set `backend: none` (or a local Ollama judge) with
+`allow_external_state: false` in `overrides.loop-fast-decisions.config`. `afast rubric` sends the input
+and output text you give it to the same endpoint. The observer-only behavior
+(`behaviors/fast-decisions-shadow.yaml`) keeps the external path off, as described below.
+
 1. **TypeSafe:** external requests are disabled by default. Opt-in sends the bounded current task snapshot, prepared candidate descriptions, and any contributed judgment questions (`fast_decisions.questions`) -- all batched into a single request. The state projection excludes system/developer messages, private thinking blocks, images and executable argument objects. Public user/tool/assistant text can contain confidential information. Labels, rationales and question instructions can also contain sensitive details. This applies identically to shadow measurement running in `hooks-fast-decisions`: with `allow_external_state: false` (the shipped default) no TypeSafe/Jev client is ever constructed for shadow scoring; the snapshot it reads comes from the mounted context manager, bounded by `shadow_max_messages` and `max_state_chars`, same bounds and same opt-in gate as the active path. The shadow-only model-role router (`role_router`, on by default in `behaviors/fast-decisions.yaml`) sends no additional state to TypeSafe -- it reads the `model_role_resolver` capability locally to enumerate live roles and never contacts an external backend itself.
 2. **Local observatory:** stores allowlisted metadata, probability distributions, model/tool names, hashes, IDs and timing. It excludes raw prompts, arguments, tool outputs, exception messages and private reasoning. Metadata can still be sensitive. Review it before exporting.
 3. **Other Amplifier modules:** their existing tracing/logging policies are unchanged. This bundle cannot promise that unrelated native loggers redact all content.

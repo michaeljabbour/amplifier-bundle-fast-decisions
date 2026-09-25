@@ -44,8 +44,25 @@ def action_response(candidate: Candidate, tool_call_id: str):
 
 
 def usage_fields(response: Any) -> dict:
+    """Token counts, cached-token counts and the provider's own cost figure
+    (``cost_usd``, None when the provider has no rate data), plus the model
+    that actually served the request. Feeds the savings estimate."""
     usage = field_value(response, "usage", {}) or {}
-    return {k: field_value(usage, k) for k in ("input_tokens", "output_tokens", "total_tokens")}
+    fields = {k: field_value(usage, k) for k in ("input_tokens", "output_tokens", "total_tokens")}
+    for key in ("cache_read_tokens", "cache_write_tokens"):
+        value = field_value(usage, key)
+        if isinstance(value, int) and not isinstance(value, bool):
+            fields[key] = value
+    cost = field_value(usage, "cost_usd")
+    if cost is not None and not isinstance(cost, bool):
+        try:
+            fields["cost_usd"] = round(float(cost), 8)
+        except (TypeError, ValueError):
+            pass
+    served = field_value(response, "model")
+    if isinstance(served, str) and served:
+        fields["served_model"] = served[:80]
+    return fields
 
 
 # HC04 ("opt-in model routing with escalation"): test-failure detection.

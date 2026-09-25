@@ -190,7 +190,16 @@ def get_runtime(coordinator: Any, config: dict[str, Any], *, owner: bool = False
             "Backend must be jev, deterministic, ollama, mlx, hosted (alias gateway), laya, or unavailable"
         )
     if backend_name == "jev":
-        backend = JevBackend(model=config.get("model"), timeout_ms=policy.timeout_ms)
+        # jev_url / jev_url_env / jev_key_env point the Jev client at any
+        # other Jev System One-compatible server; backend_label names it.
+        backend = JevBackend(
+            model=config.get("model"),
+            timeout_ms=policy.timeout_ms,
+            base_url=config.get("jev_url"),
+            base_url_env=config.get("jev_url_env"),
+            api_key_env=config.get("jev_key_env"),
+            label=config.get("backend_label"),
+        )
     elif backend_name == "mlx":
         from .local_backend import MlxBackend, mlx_base_url
 

@@ -243,11 +243,33 @@ class JevBackend:
     external = True
 
     def __init__(
-        self, *, model: str | None = None, timeout_ms: int = 750, client: Any = None
+        self,
+        *,
+        model: str | None = None,
+        timeout_ms: int = 750,
+        client: Any = None,
+        base_url: str | None = None,
+        base_url_env: str | None = None,
+        api_key_env: str | None = None,
+        label: str | None = None,
     ):
         self.model = model or os.getenv("TYPESAFE_DEFAULT_MODEL") or DEFAULT_JEV_MODEL
         self.timeout_ms = timeout_ms
         self._client = client
+        # Any other server that implements the Jev System One API (POST
+        # {base}/v1/systemone) can stand in for hosted Jev: ``base_url``
+        # and ``api_key_env`` point at it, ``label`` names it in receipts
+        # and the dashboard. The TypeSafe SDK only reads TYPESAFE_* env
+        # vars, so a configured endpoint always takes the stdlib transport.
+        # ``base_url_env`` names an env var holding the URL, so the address
+        # can live next to the key instead of in settings; it is read per
+        # call and a missing value is BackendUnavailable (the caller falls
+        # back), never a mount failure.
+        self.base_url = base_url.rstrip("/") if base_url else None
+        self.base_url_env = base_url_env
+        self.api_key_env = api_key_env or "TYPESAFE_API_KEY"
+        self.label = label
+        self._endpoint_override = bool(base_url or base_url_env or api_key_env)
         # Which transport actually served the most recent ``ask()`` call --
         # "sdk" or "urllib". None until the first call. A plain attribute
         # (not a DecisionResult field, which has a fixed, versioned shape);
@@ -276,6 +298,16 @@ class JevBackend:
         self._conn_target: tuple[bool, str, int] | None = None
         self._conn_lock = threading.Lock()
 
+    def _base_url(self) -> str:
+        if self.base_url:
+            return self.base_url
+        if self.base_url_env:
+            url = os.getenv(self.base_url_env)
+            if not url:
+                raise BackendUnavailable(f"{self.base_url_env} is missing")
+            return url.rstrip("/")
+        return os.getenv("TYPESAFE_BASE_URL", "https://api.typesafe.ai").rstrip("/")
+
     def _get_client(self):
         if self._client is None:
             if not os.getenv("TYPESAFE_API_KEY"):
@@ -298,7 +330,7 @@ class JevBackend:
         # An already-injected client (test seam, or a caller managing its
         # own auth) always takes the SDK path -- it is presumed already
         # authenticated, so no TYPESAFE_API_KEY re-check happens here.
-        if self._client is not None or _sdk_available():
+        if self._client is not None or (_sdk_available() and not self._endpoint_override):
             return await self._ask_sdk(request)
         return await self._ask_urllib(request)
 
@@ -333,9 +365,9 @@ class JevBackend:
         ``typesafe_sdk`` package is not installed in the host environment.
         Produces the exact same normalized ``DecisionResult`` shape as the
         SDK path -- callers never need to know which transport ran."""
-        api_key = os.getenv("TYPESAFE_API_KEY")
+        api_key = os.getenv(self.api_key_env)
         if not api_key:
-            raise BackendUnavailable("TYPESAFE_API_KEY is missing")
+            raise BackendUnavailable(f"{self.api_key_env} is missing")
         questions, option_set_hash = _build_questions(request)
         model = self.model or DEFAULT_JEV_MODEL
         body = {
@@ -343,7 +375,7 @@ class JevBackend:
             "model": model,
             "questions": questions,
         }
-        base_url = os.getenv("TYPESAFE_BASE_URL", "https://api.typesafe.ai").rstrip("/")
+        base_url = self._base_url()
         headers = {
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json",
@@ -472,7 +504,7 @@ class JevBackend:
         simply pay the handshake itself, exactly as it did before warmup
         existed."""
         try:
-            if self._client is not None or _sdk_available():
+            if self._client is not None or (_sdk_available() and not self._endpoint_override):
                 # Constructs and caches the client if not already built.
                 # Whether the underlying ``typesafe_sdk`` client itself
                 # opens a connection eagerly at construction, or lazily on
@@ -480,10 +512,10 @@ class JevBackend:
                 # here (see docs/MODEL-SETUP.md).
                 self._get_client()
                 return
-            api_key = os.getenv("TYPESAFE_API_KEY")
+            api_key = os.getenv(self.api_key_env)
             if not api_key:
                 return
-            base_url = os.getenv("TYPESAFE_BASE_URL", "https://api.typesafe.ai").rstrip("/")
+            base_url = self._base_url()
             headers = {
                 "Authorization": f"Bearer {api_key}",
                 "Content-Type": "application/json",

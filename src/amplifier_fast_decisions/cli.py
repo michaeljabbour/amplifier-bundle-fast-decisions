@@ -682,6 +682,78 @@ def configure(args) -> int:
     return 0
 
 
+def _read_rubric_requests(text: str) -> list[dict]:
+    text = text.strip()
+    if not text:
+        return []
+    if text[0] in "[{":
+        try:
+            loaded = json.loads(text)
+            return loaded if isinstance(loaded, list) else [loaded]
+        except json.JSONDecodeError:
+            pass
+    return [json.loads(line) for line in text.splitlines() if line.strip()]
+
+
+def rubric_command(args) -> int:
+    from .backends import JevBackend
+    from .rubric import score_many
+
+    text = sys.stdin.read() if args.requests == "-" else Path(args.requests).read_text(encoding="utf-8")
+    requests = _read_rubric_requests(text)
+    if not os.getenv("TYPESAFE_API_KEY"):
+        print("afast rubric: TYPESAFE_API_KEY is not set", file=sys.stderr)
+        return 2
+    backend = JevBackend(model=args.model, timeout_ms=args.timeout_ms)
+
+    async def run():
+        try:
+            return await score_many(backend, requests)
+        finally:
+            await backend.close()
+
+    results = asyncio.run(run())
+    print(json.dumps(results, indent=2))
+    return 1 if any("error" in r for r in results) else 0
+
+
+def _since_day(value: str | None) -> str | None:
+    if not value:
+        return None
+    if value.endswith("d") and value[:-1].isdigit():
+        from datetime import timedelta
+        return (datetime.now(UTC) - timedelta(days=int(value[:-1]))).date().isoformat()
+    datetime.strptime(value, "%Y-%m-%d")
+    return value
+
+
+def savings_command(args) -> int:
+    from .savings import DEFAULT_HOST_MODEL, summarize
+
+    events = Path(args.events).expanduser()
+    report = summarize(events, host_model=args.host_model or DEFAULT_HOST_MODEL, since=_since_day(args.since),
+                       cache_path=events.parent / "savings-cache.json")
+    if args.json:
+        print(json.dumps(report, indent=2))
+        return 0
+    t, c, tm = report["turns"], report["cost"], report["time"]
+    print(f"Turns routed: {t['total']} ({t['cheap']} to the cheaper model, {t['strong']} kept on the host model)")
+    if t["total"]:
+        print(f"Estimated cost saved: ${c['saved_usd']:.2f} "
+              f"(cheaper-model turns cost ${c['cheap_turns_actual_usd']:.2f}; on {report['host_model']}: "
+              f"${c['cheap_turns_on_host_usd']:.2f})")
+        if tm["available"]:
+            print(f"Estimated model time saved: {tm['saved_seconds'] / 60:.1f} min "
+                  f"(cheaper-model turns {tm['cheap_turns_model_seconds'] / 60:.1f} min; on the host model "
+                  f"{tm['cheap_turns_on_host_seconds'] / 60:.1f} min)")
+        else:
+            print("Estimated model time saved: not yet available (" + tm["reason"] + ")")
+        if c["requests_without_cache_data"]:
+            print(f"Note: {c['requests_without_cache_data']} older requests lack cache data; their dollars are overstated.")
+    print("Estimates only: " + report["method"])
+    return 0
+
+
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(
         prog="afast",
@@ -800,8 +872,33 @@ def main(argv=None) -> int:
         required=True,
         help="JSONL file of {'decision_id': ..., 'correct': bool} rows",
     )
+    rubric = commands.add_parser(
+        "rubric",
+        help="Score (input, output) pairs against a yes/no rubric with Jev",
+        description=(
+            "Score rubric requests with Jev noul questions (one batched call per request). "
+            "Input: a JSON object, a JSON array, or JSONL of "
+            "{scoring_spec: [{question, label?, weight?}], llm_input, llm_output, aggregation_method?}. "
+            "Needs TYPESAFE_API_KEY; sends the input and output text to the Jev endpoint."
+        ),
+    )
+    rubric.add_argument("requests", help="Path to the request file, or - for stdin")
+    rubric.add_argument("--model", default=None, help="Jev model (default: TYPESAFE_DEFAULT_MODEL or the pinned default)")
+    rubric.add_argument("--timeout-ms", type=int, default=10000)
+    savings = commands.add_parser(
+        "savings",
+        help="Estimated time and cost saved by turn routing, from recorded events",
+    )
+    savings.add_argument("--events", default=str(DEFAULT_EVENTS))
+    savings.add_argument("--since", default=None, help="YYYY-MM-DD, or Nd for the last N days")
+    savings.add_argument("--host-model", default=None, help="Host model id (default claude-fable-5-1)")
+    savings.add_argument("--json", action="store_true")
     args = parser.parse_args(argv)
     try:
+        if args.command == "savings":
+            return savings_command(args)
+        if args.command == "rubric":
+            return rubric_command(args)
         if args.command == "doctor":
             return doctor(args.require_amplifier)
         if args.command == "configure":

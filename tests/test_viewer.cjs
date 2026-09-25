@@ -114,3 +114,14 @@ test('circuit distinguishes a recorded provider route from an invocation and pre
  assert.equal(circuitFor([observed]).host,observed);
  assert.equal(circuitFor([observed]).branch,'unknown');
 });
+test('configured backend label names the decision-maker',()=>{
+ const cfg=event('health',{phase:'configuration',backend:'jev',backend_label:'Other scorer',mode:'active'});
+ assert.match(describe(cfg).detail,/^Other scorer · active/);
+ assert.match(describe(event('health',{phase:'configuration',backend:'jev',mode:'active'})).detail,/^Jev · active/);
+});
+test('savings view explains empty and estimated states',()=>{
+ const {savingsView}=require('../src/amplifier_fast_decisions/static/app.js');
+ assert.equal(savingsView({turns:{total:0}}).cost,'—');
+ const v=savingsView({files:3,host_model:'claude-fable-5-1',turns:{total:10,cheap:7,strong:3,judge_calls:10},cost:{saved_usd:12.5,cheap_turns_actual_usd:5,cheap_turns_on_host_usd:17.5,requests_without_cache_data:2},time:{available:false}});
+ assert.equal(v.cost,'$12.50');assert.equal(v.turns,'7 of 10');assert.equal(v.time,'Not yet');assert.match(v.note,/2 older requests/);
+});

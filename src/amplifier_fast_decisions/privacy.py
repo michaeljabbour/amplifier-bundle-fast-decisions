@@ -48,6 +48,12 @@ SAFE_FIELDS = {
     "input_tokens",
     "output_tokens",
     "total_tokens",
+    # Provider-reported usage for the savings estimate: cached-token counts,
+    # the provider's own cost figure, and the model that actually served.
+    "cache_read_tokens",
+    "cache_write_tokens",
+    "cost_usd",
+    "served_model",
     "tool",
     "tool_call_id",
     "status",
@@ -78,6 +84,8 @@ SAFE_FIELDS = {
     "event_count",
     "phase",
     "session_label",
+    # Operator-configured display name of the decision backend.
+    "backend_label",
     "warmup",
     "state_revision",
     # Basename of the session's working directory (observer.workspace_name):

@@ -100,8 +100,8 @@ class OrchestratorPrimaryBehaviorOfflineTests(unittest.TestCase):
         self.assertEqual(orchestrator["module"], "loop-fast-decisions")
         config = orchestrator["config"]
         self.assertEqual(config["mode"], "active")
-        self.assertEqual(config["backend"], "none")
-        self.assertIs(config["allow_external_state"], False)
+        self.assertEqual(config["backend"], "jev")
+        self.assertIs(config["allow_external_state"], True)
         self.assertEqual(config["model_routing"]["provider_match"], "anthropic")
         self.assertEqual(config["model_routing"]["start_policy"], "judge")
         self.assertEqual(config["model_routing"]["cheap_max_workspace_files"], 300)
