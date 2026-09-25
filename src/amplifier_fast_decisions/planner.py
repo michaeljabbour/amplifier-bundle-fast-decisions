@@ -82,9 +82,10 @@ def plan_turn(
     now: float,
     config: dict[str, Any],
     rates: dict[str, tuple[float, float, float, float]],
+    p_continue: float = 0.0,
 ) -> dict[str, Any]:
     """Decide the model for one easy turn (spec:
-    docs/proposals/TURN-PLANNER.md).
+    docs/proposals/TURN-PLANNER.md, "Lookahead" section).
 
     ``state`` maps a model id to ``{"last_used_at": float, "cached_tokens": int}``,
     updated by the caller after every real provider response -- this
@@ -92,7 +93,31 @@ def plan_turn(
     ``model_routing.planner`` dict (``objective``, ``cost_tolerance``,
     ``cache_ttl_seconds``, ``expected_calls``, ``output_tokens_per_call``,
     ``priors``); ``candidates`` are the cheap models to consider alongside
-    the host.
+    the host. ``p_continue`` is the caller-resolved probability that a
+    LATER turn in this session runs on the host (see
+    ``contracts.DEFAULT_PLANNER_CONTINUE_PROBABILITY`` and
+    ``orchestrator._session_kind`` for how it is chosen) -- this function
+    only consumes the number, it never decides session kind itself.
+
+    One-step lookahead (the greedy per-turn choice is myopic: picking a
+    cheap candidate whose cache write is cheaper THIS turn can force a
+    full cold cache write on the host on some LATER turn, instead of the
+    single cold write the host would have paid THIS turn if chosen now).
+    For every candidate option ``m`` (never the host, whose lookahead is
+    always 0), using the HOST option's OWN ``cold`` this turn
+    (``cold_host``) and the host's own rates/prior:
+
+        lookahead_cost = p_continue * cold_host * (write_host - read_host)
+        lookahead_time = p_continue * cold_host / 100000 * cold_s_per_100k_host
+
+    (``cost`` divides by 1e6 as elsewhere.) These are recorded as their own
+    ``lookahead_cost``/``lookahead_time`` fields on each option (``0.0`` for
+    the host) so receipts show the term explicitly; the ``speed``/``cost``/
+    ``balanced`` rules below compare ``cost + lookahead_cost`` and
+    ``time + lookahead_time`` -- the TOTALS -- never the bare fields alone.
+    When the host is already warm this turn (``cold_host == 0``), every
+    lookahead term is exactly 0 -- there is no stale cache to eventually
+    pay for.
 
     Returns::
 
@@ -100,7 +125,8 @@ def plan_turn(
             "ctx": ctx,
             "objective": objective,
             "host": host,
-            "options": [{"model", "warm", "cold", "cost", "time"}, ...],
+            "options": [{"model", "warm", "cold", "cost", "time",
+                         "lookahead_cost", "lookahead_time"}, ...],
             "choice": <model id> | None,
             "abstained": bool,
         }
@@ -142,6 +168,19 @@ def plan_turn(
             "choice": None,
             "abstained": True,
         }
+    host_option["lookahead_cost"] = 0.0
+    host_option["lookahead_time"] = 0.0
+
+    # host_option is not None here, so its rate/prior are guaranteed to
+    # exist too (that is exactly what _option looked up to build it) --
+    # asserted, not just assumed, so a future refactor that breaks this
+    # invariant fails loudly instead of silently mis-costing lookahead.
+    host_rate = _rates_for(host, rates)
+    host_prior = _prior_for(host, priors)
+    assert host_rate is not None and host_prior is not None
+    write_host, read_host = host_rate[3], host_rate[2]
+    cold_s_per_100k_host = host_prior.get("cold_s_per_100k", 0.0)
+    cold_host = host_option["cold"]
 
     options = [host_option]
     seen = {host}
@@ -151,21 +190,29 @@ def plan_turn(
         seen.add(candidate)
         option = option_for(candidate)
         if option is not None:
+            option["lookahead_cost"] = p_continue * cold_host * (write_host - read_host) / 1_000_000
+            option["lookahead_time"] = p_continue * cold_host / 100_000 * cold_s_per_100k_host
             options.append(option)
 
-    host_cost = host_option["cost"]
+    def total_cost(opt: dict[str, Any]) -> float:
+        return opt["cost"] + opt["lookahead_cost"]
+
+    def total_time(opt: dict[str, Any]) -> float:
+        return opt["time"] + opt["lookahead_time"]
+
+    host_total_cost = total_cost(host_option)
 
     if objective == "speed":
-        best = min(opt["time"] for opt in options)
-        winners = [opt["model"] for opt in options if opt["time"] == best]
+        best = min(total_time(opt) for opt in options)
+        winners = [opt["model"] for opt in options if total_time(opt) == best]
     elif objective == "cost":
-        best = min(opt["cost"] for opt in options)
-        winners = [opt["model"] for opt in options if opt["cost"] == best]
+        best = min(total_cost(opt) for opt in options)
+        winners = [opt["model"] for opt in options if total_cost(opt) == best]
     else:  # balanced
-        budget = host_cost * (1 + cost_tolerance)
-        eligible = [opt for opt in options if opt["model"] == host or opt["cost"] <= budget]
-        best = min(opt["time"] for opt in eligible)
-        winners = [opt["model"] for opt in eligible if opt["time"] == best]
+        budget = host_total_cost * (1 + cost_tolerance)
+        eligible = [opt for opt in options if opt["model"] == host or total_cost(opt) <= budget]
+        best = min(total_time(opt) for opt in eligible)
+        winners = [opt["model"] for opt in eligible if total_time(opt) == best]
 
     choice = host if host in winners else winners[0]
 

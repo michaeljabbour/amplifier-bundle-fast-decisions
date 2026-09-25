@@ -17,13 +17,19 @@ from typing import Any
 from amplifier_fast_decisions import planner
 from amplifier_fast_decisions.backends import ScriptedBackend
 from amplifier_fast_decisions.contracts import (
+    DEFAULT_PLANNER_CONTINUE_PROBABILITY,
     DEFAULT_PLANNER_PRIORS,
     Policy,
     TurnState,
     effective_planner_config,
 )
 from amplifier_fast_decisions.demo import DemoCoordinator, DemoProvider, demo_response
-from amplifier_fast_decisions.orchestrator import RoutedProvider, _estimate_ctx, _request_chars
+from amplifier_fast_decisions.orchestrator import (
+    RoutedProvider,
+    _estimate_ctx,
+    _request_chars,
+    _session_kind,
+)
 from amplifier_fast_decisions.runtime import Runtime, load_planner_state, save_planner_state
 from amplifier_fast_decisions.savings import DEFAULT_RATES
 from amplifier_fast_decisions.service import DecisionService
@@ -576,25 +582,41 @@ class PlannerOrchestratorTests(unittest.IsolatedAsyncioTestCase):
 class PlannerMultiTurnHandComputedTests(unittest.IsolatedAsyncioTestCase):
     async def test_opus_host_four_turn_sequence(self):
         """Hand-computed sequence on an Opus host, balanced objective,
-        Sonnet as the only candidate (default DEFAULT_PLANNER_PRIORS):
+        Sonnet as the only candidate (default DEFAULT_PLANNER_PRIORS and
+        DEFAULT_PLANNER_CONTINUE_PROBABILITY), a root (non-sub) session:
 
-        - turn1 (easy, fresh, ctx=60k): both cold -- Sonnet is cheaper AND
-          faster (0.2897 vs 0.3419 USD, 10.05s vs 12.72s) -> chosen: SONNET.
+        - turn1 (easy, fresh, ctx=60k, session_kind=first_turn, p=0.25):
+          both cold. Sonnet's BASE numbers are still cheaper and faster
+          (0.2897 USD / 10.05s vs Opus's 0.3419 USD / 12.72s) -- but with
+          the one-step lookahead, choosing Sonnet risks a full cold
+          rewrite of Opus's cache on some later turn:
+              lookahead_cost = 0.25 * 60000 * (5.0 - 0.2) / 1e6 = 0.072
+          Sonnet's TOTAL cost (0.2897 + 0.072 = 0.36171) now EXCEEDS
+          balanced's budget (Opus's own cost * 1.05 = 0.3419 * 1.05 =
+          0.35895) -- Sonnet is no longer eligible -> chosen: OPUS (host,
+          reason_code planner_host). This is the fix for the live-smoke
+          regression: the OLD myopic (no-lookahead) choice was SONNET here,
+          which then paid a full cold write on Opus anyway at turn2 (a hard
+          turn) -- TWO cold writes instead of one.
         - turn2 (hard, ctx=75k): the difficulty router sends it straight to
-          the host (Opus); the planner is never consulted. This warms Opus's
-          cache to 75k tokens.
-        - turn3 (easy, ctx=90k): Opus is now warm (cold=15k, cost 0.1469)
-          while Sonnet is cold at 90k (cost 0.2224) -- outside balanced's 5%
-          cost-tolerance budget (0.1469 * 1.05 = 0.1542) -- so only Opus is
-          eligible -> chosen: OPUS (host, via the planner, reason_code
-          planner_host).
-        - turn4 (easy, ctx=100k): Opus stays warm (cold=10k, cost 0.1299);
-          Sonnet is still cold at 100k (cost 0.2690), again outside budget
-          (0.1299 * 1.05 = 0.1364) -> chosen: OPUS again.
+          the host (Opus); the planner is never consulted. This warms
+          Opus's cache to 75k tokens. planner_state is now non-empty, so
+          every later turn's session_kind is later_turn (p=0.8).
+        - turn3 (easy, ctx=90k, later_turn, p=0.8): Opus is warm
+          (cold=15k, cost 0.1469) while Sonnet is cold at 90k (base cost
+          0.2224 PLUS lookahead 0.8*15000*4.8/1e6=0.0576 = 0.2800 total)
+          -- outside balanced's 5% cost-tolerance budget
+          (0.1469 * 1.05 = 0.15425) either way -- so only Opus is eligible
+          -> chosen: OPUS (host, via the planner, reason_code planner_host).
+        - turn4 (easy, ctx=100k, later_turn, p=0.8): Opus stays warm
+          (cold=10k, cost 0.1299); Sonnet is still cold at 100k (base
+          0.2690 + lookahead 0.8*10000*4.8/1e6=0.0384 = 0.3074 total),
+          again outside budget (0.1299 * 1.05 = 0.13640) -> chosen: OPUS
+          again.
 
-        This demonstrates the mechanism the spec names explicitly: a host
-        kept warm by intervening hard turns can out-compete a cheap
-        candidate that never gets to build its own cache.
+        Net effect of the fix: Opus is chosen on EVERY turn of this
+        sequence -- the host never pays more than the one cold write it
+        would have paid anyway, and the planner never creates a second one.
         """
         policy = Policy(
             mode="off",
@@ -621,12 +643,13 @@ class PlannerMultiTurnHandComputedTests(unittest.IsolatedAsyncioTestCase):
         # _estimate_ctx's "+ this turn's new user message" term at exactly
         # 0, so ctx stays precisely at the hand-computed value below --
         # the incremental-ctx addition itself has its own dedicated test
-        # (EstimateCtxTests).
+        # (EstimateCtxTests). Root session (no parent_session_id), nothing
+        # recorded yet -> session_kind == first_turn.
         service.turn = TurnState("t1")
         runtime.planner_last_ctx = 60000
         req1 = request([user("")])
         await facade.complete(req1)
-        self.assertEqual(req1.model, SONNET)
+        self.assertFalse(hasattr(req1, "model"))  # host chosen -- no override
 
         # turn2: hard (long prompt) ctx 75k -- runs on the host, untouched.
         service.turn = TurnState("t2")
@@ -651,14 +674,26 @@ class PlannerMultiTurnHandComputedTests(unittest.IsolatedAsyncioTestCase):
         routed = [e for e in events if e["event"].endswith("model_routed")]
         self.assertEqual(
             [r["data"]["reason_code"] for r in routed],
-            ["planner_balanced", "start_strong", "planner_host", "planner_host"],
+            ["planner_host", "start_strong", "planner_host", "planner_host"],
         )
         planned = [e for e in events if e["event"].endswith("turn_planned")]
         self.assertEqual(len(planned), 3)  # turn2 never invokes the planner
-        self.assertEqual([p["data"]["choice"] for p in planned], [SONNET, OPUS, OPUS])
+        self.assertEqual([p["data"]["choice"] for p in planned], [OPUS, OPUS, OPUS])
+        self.assertEqual(
+            [p["data"]["session_kind"] for p in planned],
+            ["first_turn", "later_turn", "later_turn"],
+        )
+        self.assertEqual([p["data"]["p_continue"] for p in planned], [0.25, 0.8, 0.8])
+        # Base costs (the "cost" field) are unaffected by lookahead --
+        # only the separate lookahead_cost/lookahead_time fields are new.
         self.assertAlmostEqual(planned[0]["data"]["options"][1]["cost"], 0.289714, places=5)
+        self.assertAlmostEqual(planned[0]["data"]["options"][1]["lookahead_cost"], 0.072, places=4)
         self.assertAlmostEqual(planned[1]["data"]["options"][0]["cost"], 0.1469, places=4)
         self.assertAlmostEqual(planned[2]["data"]["options"][0]["cost"], 0.1299, places=4)
+        # Host options never carry a lookahead penalty.
+        for p in planned:
+            self.assertEqual(p["data"]["options"][0]["lookahead_cost"], 0.0)
+            self.assertEqual(p["data"]["options"][0]["lookahead_time"], 0.0)
 
 
 # ---------------------------------------------------------------------------
@@ -897,6 +932,206 @@ class PlannerPersistenceOrchestratorTests(unittest.IsolatedAsyncioTestCase):
             on_disk_state, on_disk_ctx = load_planner_state(tmp, session_id)
             self.assertEqual(on_disk_ctx, 76318)
             self.assertEqual(on_disk_state[SONNET]["cached_tokens"], 76318)
+
+
+# ---------------------------------------------------------------------------
+# Lookahead (planner.plan_turn's one-step lookahead term)
+# ---------------------------------------------------------------------------
+
+
+class LookaheadTests(unittest.TestCase):
+    def test_root_first_turn_p025_prefers_host_over_myopically_cheaper_candidate(self):
+        """Opus host, fresh ROOT session (session kind: first_turn,
+        p_continue=0.25), ctx=70000, both cold. Sonnet's BASE numbers are
+        cheaper and faster (cost 0.336289 vs Opus's 0.3969; time 10.115 vs
+        12.915), but its lookahead penalty --
+        ``0.25 * 70000 * (5.0 - 0.2) / 1e6 == 0.084`` -- pushes its TOTAL
+        cost to 0.420289, which exceeds balanced's budget
+        (``0.3969 * 1.05 == 0.416745``). Sonnet is therefore not eligible
+        -> chosen: OPUS (the host)."""
+        plan = planner.plan_turn(
+            OPUS, [SONNET], {}, 70000, 0.0, config(), DEFAULT_RATES, p_continue=0.25
+        )
+        by_model = {o["model"]: o for o in plan["options"]}
+        self.assertAlmostEqual(by_model[SONNET]["cost"], 0.336289, places=5)
+        self.assertAlmostEqual(by_model[SONNET]["lookahead_cost"], 0.084, places=5)
+        self.assertAlmostEqual(by_model[SONNET]["cost"] + by_model[SONNET]["lookahead_cost"], 0.420289, places=5)
+        self.assertAlmostEqual(by_model[OPUS]["cost"] * 1.05, 0.416745, places=5)
+        self.assertEqual(by_model[OPUS]["lookahead_cost"], 0.0)
+        self.assertEqual(plan["choice"], OPUS)
+
+    def test_sub_session_p006_still_prefers_the_cheaper_candidate(self):
+        """Same inputs as above but sub_session's much lower p_continue
+        (0.06) keeps Sonnet's lookahead penalty small --
+        ``0.06 * 70000 * 4.8 / 1e6 == 0.02016`` -- so its total cost
+        (0.336289 + 0.02016 == 0.356449) stays under budget (0.416745),
+        and it wins on time (10.1969s total vs Opus's 12.915s)."""
+        plan = planner.plan_turn(
+            OPUS, [SONNET], {}, 70000, 0.0, config(), DEFAULT_RATES, p_continue=0.06
+        )
+        by_model = {o["model"]: o for o in plan["options"]}
+        self.assertAlmostEqual(by_model[SONNET]["lookahead_cost"], 0.02016, places=5)
+        self.assertLess(
+            by_model[SONNET]["cost"] + by_model[SONNET]["lookahead_cost"],
+            by_model[OPUS]["cost"] * 1.05,
+        )
+        self.assertEqual(plan["choice"], SONNET)
+
+    def test_later_turn_with_host_already_warm_lookahead_is_zero(self):
+        """Opus host, LATER turn, Opus already warm (cold=10000 this
+        turn), Sonnet cold at 100000, p_continue=0.8 (later_turn).
+        Lookahead uses the HOST's cold THIS turn (10000), not Sonnet's:
+        ``0.8 * 10000 * 4.8 / 1e6 == 0.0384``. Still nowhere near enough
+        to make Sonnet competitive against a warm Opus -> chosen: OPUS."""
+        state = {OPUS: {"last_used_at": 0.0, "cached_tokens": 90000}}
+        plan = planner.plan_turn(
+            OPUS, [SONNET], state, 100000, 10.0, config(), DEFAULT_RATES, p_continue=0.8
+        )
+        by_model = {o["model"]: o for o in plan["options"]}
+        self.assertTrue(by_model[OPUS]["warm"])
+        self.assertAlmostEqual(by_model[SONNET]["lookahead_cost"], 0.0384, places=4)
+        self.assertEqual(plan["choice"], OPUS)
+
+    def test_fable_host_later_turn_both_warm_lookahead_vanishes(self):
+        """Fable host, LATER turn, BOTH Fable and Sonnet already warm
+        (cold=0 for both) at ctx=30000, p_continue=0.8. Because the HOST's
+        own cold this turn is 0, every lookahead term is exactly 0
+        regardless of p_continue -- there is no stale cache to eventually
+        pay for. Sonnet's (unpenalized) cost 0.046489 is under budget
+        (0.056 * 1.05 == 0.0588) and its time (9.66s) beats Fable's
+        (18.9s) -> chosen: SONNET."""
+        state = {
+            FABLE: {"last_used_at": 0.0, "cached_tokens": 40000},
+            SONNET: {"last_used_at": 0.0, "cached_tokens": 35000},
+        }
+        plan = planner.plan_turn(
+            FABLE, [SONNET], state, 30000, 10.0, config(), DEFAULT_RATES, p_continue=0.8
+        )
+        by_model = {o["model"]: o for o in plan["options"]}
+        self.assertEqual(by_model[FABLE]["cold"], 0)
+        self.assertEqual(by_model[SONNET]["lookahead_cost"], 0.0)
+        self.assertEqual(by_model[SONNET]["lookahead_time"], 0.0)
+        self.assertAlmostEqual(by_model[SONNET]["cost"], 0.046489, places=5)
+        self.assertEqual(plan["choice"], SONNET)
+
+    def test_default_p_continue_is_zero_preserves_pre_lookahead_behavior(self):
+        """Omitting p_continue entirely (backward-compatible default 0.0)
+        reproduces the pre-lookahead choice for the very first documented
+        scenario (fresh session, both cold -> Sonnet)."""
+        plan = planner.plan_turn(OPUS, [SONNET], {}, 60000, 0.0, config(), DEFAULT_RATES)
+        self.assertEqual(plan["choice"], SONNET)
+        by_model = {o["model"]: o for o in plan["options"]}
+        self.assertEqual(by_model[SONNET]["lookahead_cost"], 0.0)
+
+    def test_host_option_always_carries_zero_lookahead(self):
+        for p in (0.0, 0.06, 0.25, 0.8, 1.0):
+            plan = planner.plan_turn(OPUS, [SONNET], {}, 60000, 0.0, config(), DEFAULT_RATES, p_continue=p)
+            host_option = next(o for o in plan["options"] if o["model"] == OPUS)
+            self.assertEqual(host_option["lookahead_cost"], 0.0)
+            self.assertEqual(host_option["lookahead_time"], 0.0)
+
+
+# ---------------------------------------------------------------------------
+# continue_probability config validation + effective_planner_config merge
+# ---------------------------------------------------------------------------
+
+
+class ContinueProbabilityValidationTests(unittest.TestCase):
+    def test_absent_is_valid_and_defaults_apply(self):
+        merged = effective_planner_config({"start_model": SONNET, "planner": {"enabled": True}})
+        self.assertEqual(merged["continue_probability"], DEFAULT_PLANNER_CONTINUE_PROBABILITY)
+
+    def test_must_be_dict(self):
+        with self.assertRaises(ValueError):
+            Policy(
+                model_routing={
+                    "start_model": SONNET,
+                    "planner": {"enabled": True, "continue_probability": 0.5},
+                }
+            )
+
+    def test_unknown_key_raises(self):
+        with self.assertRaises(ValueError):
+            Policy(
+                model_routing={
+                    "start_model": SONNET,
+                    "planner": {"enabled": True, "continue_probability": {"bogus": 0.5}},
+                }
+            )
+
+    def test_out_of_range_value_raises(self):
+        with self.assertRaises(ValueError):
+            Policy(
+                model_routing={
+                    "start_model": SONNET,
+                    "planner": {"enabled": True, "continue_probability": {"first_turn": 1.5}},
+                }
+            )
+        with self.assertRaises(ValueError):
+            Policy(
+                model_routing={
+                    "start_model": SONNET,
+                    "planner": {"enabled": True, "continue_probability": {"later_turn": -0.1}},
+                }
+            )
+
+    def test_individual_key_override_merges_with_defaults(self):
+        merged = effective_planner_config({
+            "start_model": SONNET,
+            "planner": {"enabled": True, "continue_probability": {"first_turn": 0.9}},
+        })
+        self.assertEqual(merged["continue_probability"]["first_turn"], 0.9)
+        self.assertEqual(
+            merged["continue_probability"]["later_turn"],
+            DEFAULT_PLANNER_CONTINUE_PROBABILITY["later_turn"],
+        )
+
+    def test_valid_full_override_accepted(self):
+        Policy(
+            model_routing={
+                "start_model": SONNET,
+                "planner": {
+                    "enabled": True,
+                    "continue_probability": {"sub_session": 0.0, "first_turn": 1.0, "later_turn": 1.0},
+                },
+            }
+        )
+
+
+# ---------------------------------------------------------------------------
+# Session-kind detection (orchestrator._session_kind)
+# ---------------------------------------------------------------------------
+
+
+class SessionKindTests(unittest.TestCase):
+    def _runtime(self, *, parent_session_id=None, session_id="root-session-abc"):
+        return Runtime(
+            DecisionService(Policy(mode="off"), ScriptedBackend(delay_ms=0), Emitter("s"), DemoCoordinator(), []),
+            session_id=session_id,
+            parent_session_id=parent_session_id,
+        )
+
+    def test_explicit_parent_id_wins(self):
+        runtime = self._runtime(parent_session_id="root-abc", session_id="child-xyz")
+        self.assertEqual(_session_kind(runtime), "sub_session")
+
+    def test_naming_convention_fallback_when_no_explicit_parent(self):
+        runtime = self._runtime(parent_session_id=None, session_id="a1b2c3_code-reviewer")
+        self.assertEqual(_session_kind(runtime), "sub_session")
+
+    def test_plain_uuid_like_session_id_is_not_a_sub_session(self):
+        runtime = self._runtime(parent_session_id=None, session_id="a1b2c3d4e5f6")
+        self.assertNotEqual(_session_kind(runtime), "sub_session")
+
+    def test_root_session_first_turn_when_planner_state_empty(self):
+        runtime = self._runtime()
+        self.assertEqual(runtime.planner_state, {})
+        self.assertEqual(_session_kind(runtime), "first_turn")
+
+    def test_root_session_later_turn_once_planner_state_populated(self):
+        runtime = self._runtime()
+        runtime.planner_state[OPUS] = {"last_used_at": time.time(), "cached_tokens": 1000}
+        self.assertEqual(_session_kind(runtime), "later_turn")
 
 
 if __name__ == "__main__":

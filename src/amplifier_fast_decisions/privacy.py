@@ -230,6 +230,13 @@ SAFE_FIELDS = {
     "objective",
     "ctx",
     "options",
+    # Turn planner lookahead (opt-in): the resolved continuation
+    # probability used to price the risk of leaving the host cache
+    # stale, and the session-kind label it came from -- both small,
+    # already-derived scalars (see contracts.DEFAULT_PLANNER_CONTINUE_PROBABILITY),
+    # never raw session content.
+    "p_continue",
+    "session_kind",
 }
 
 

@@ -158,7 +158,8 @@ def session_identity(coordinator: Any) -> tuple[str, str | None]:
 class Runtime:
     def __init__(self, service: DecisionService, recorder: JsonlRecorder | None = None, *,
                  shadow_capacity: int = 64, shadow_drain_ms: int = 2000,
-                 events_dir: str | None = None, session_id: str | None = None):
+                 events_dir: str | None = None, session_id: str | None = None,
+                 parent_session_id: str | None = None):
         self.service = service
         self.recorder = recorder
         self.lock = asyncio.Lock()
@@ -194,8 +195,12 @@ class Runtime:
         # session. _planner_state_loaded guards a single lazy load attempt
         # per process, made only the first time the planner actually runs
         # this turn (orchestrator.RoutedProvider.complete), not at mount.
-        self._events_dir = events_dir
-        self._session_id = session_id
+        # parent_session_id (None for a root session) is the same signal
+        # session_identity() reads -- exposed here for the lookahead's
+        # session-kind detection (orchestrator._session_kind).
+        self.events_dir = events_dir
+        self.session_id = session_id
+        self.parent_session_id = parent_session_id
         self._planner_state_loaded = False
 
     def ensure_planner_state_loaded(self) -> None:
@@ -212,7 +217,7 @@ class Runtime:
         self._planner_state_loaded = True
         if self.planner_state or self.planner_last_ctx is not None:
             return
-        state, last_ctx = load_planner_state(self._events_dir, self._session_id)
+        state, last_ctx = load_planner_state(self.events_dir, self.session_id)
         if state:
             self.planner_state = state
         if last_ctx is not None:
@@ -225,7 +230,7 @@ class Runtime:
         inert unless the planner is actually configured with session
         context available)."""
         save_planner_state(
-            self._events_dir, self._session_id, self.planner_state, self.planner_last_ctx
+            self.events_dir, self.session_id, self.planner_state, self.planner_last_ctx
         )
 
     def start_shadow_worker(self) -> None:
@@ -401,7 +406,8 @@ def get_runtime(coordinator: Any, config: dict[str, Any], *, owner: bool = False
     service = DecisionService(policy, backend, emitter, coordinator, config.get("candidates"))
     runtime = Runtime(service, recorder, shadow_capacity=config.get("shadow_capacity", 64),
                        shadow_drain_ms=config.get("shadow_drain_ms", 2000),
-                       events_dir=events_dir, session_id=session_id)
+                       events_dir=events_dir, session_id=session_id,
+                       parent_session_id=parent)
     # The runtime's creator (whichever module calls get_runtime first this
     # session) owns the shadow worker's lifecycle: it starts the task here
     # and drains/cancels it in Runtime.close, which the same module's

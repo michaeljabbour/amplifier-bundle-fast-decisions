@@ -283,6 +283,45 @@ def _estimate_ctx(request: Any, runtime: Runtime) -> int:
     return _request_chars(request) // 4
 
 
+# Lookahead (opt-in, see planner.plan_turn "Lookahead" and
+# docs/proposals/TURN-PLANNER.md): a sub-session id, per Amplifier's
+# convention, is the root session id with a suffix identifying the
+# delegated agent -- an underscore followed by an agent-name-like token
+# (letters/digits/hyphen). This is a FALLBACK only: an explicit parent
+# session id (Runtime.parent_session_id, the same signal
+# runtime.session_identity() reads) is authoritative whenever present. A
+# session id that happens to contain such an underscore for unrelated
+# reasons is not a false-positive risk this fallback can fully rule out --
+# hence "fallback", never the primary signal.
+_SUB_SESSION_ID_SUFFIX_RE = re.compile(r"_[A-Za-z][A-Za-z0-9-]*$")
+
+
+def _session_kind(runtime: Runtime) -> str:
+    """``"sub_session"`` | ``"first_turn"`` | ``"later_turn"`` for the turn
+    planner's lookahead term (``model_routing.planner.continue_probability``).
+
+    Session kind takes priority over turn count: a sub-session almost
+    never gets a second turn (94% in this user's own measured sessions --
+    see docs/proposals/TURN-PLANNER.md), so it is classified ``sub_session``
+    regardless of whether THIS happens to be its first turn. Otherwise,
+    ``runtime.planner_state`` (per-model cache state, recorded from every
+    real provider response regardless of tier -- see
+    ``RoutedProvider.complete``) being empty means no prior turn in this
+    session has completed a provider call yet: ``first_turn``. Once
+    populated (even by a single prior turn, in this process or a previous
+    one via ``ensure_planner_state_loaded``), every subsequent turn is
+    ``later_turn``.
+    """
+    if runtime.parent_session_id:
+        return "sub_session"
+    session_id = runtime.session_id or ""
+    if _SUB_SESSION_ID_SUFFIX_RE.search(session_id):
+        return "sub_session"
+    if not runtime.planner_state:
+        return "first_turn"
+    return "later_turn"
+
+
 def _is_test_tool(tool_key: str) -> bool:
     return tool_key in _TEST_TOOL_NAMES or "test" in tool_key
 
@@ -1190,9 +1229,17 @@ docs/UPSTREAM_CONTRACT.md.
                         host_model = getattr(self._provider, "default_model", None) or start_model
                         plan_candidates = list(planner_config["candidates"]) or [start_model]
                         ctx = _estimate_ctx(request, self._runtime)
+                        # Lookahead (opt-in): session kind is read from
+                        # Runtime BEFORE this turn's own cache update lands
+                        # (below, after the real provider response), so it
+                        # reflects only prior turns. See _session_kind and
+                        # docs/proposals/TURN-PLANNER.md "Lookahead".
+                        session_kind = _session_kind(self._runtime)
+                        p_continue = planner_config["continue_probability"].get(session_kind, 0.0)
                         plan = turn_planner.plan_turn(
                             host_model, plan_candidates, self._runtime.planner_state,
                             ctx, time.time(), planner_config, DEFAULT_RATES,
+                            p_continue=p_continue,
                         )
                         turn.planner_plan = plan
                         if not plan["abstained"]:
@@ -1200,6 +1247,7 @@ docs/UPSTREAM_CONTRACT.md.
                                 "objective": plan["objective"], "ctx": plan["ctx"],
                                 "options": plan["options"], "choice": plan["choice"],
                                 "host_model": host_model[:80],
+                                "session_kind": session_kind, "p_continue": p_continue,
                                 "provider_call_id": provider_call_id, "mode": service.policy.mode,
                             }, decision_id)
                     plan = turn.planner_plan if planner_config is not None else None

@@ -239,6 +239,25 @@ DEFAULT_PLANNER_PRIORS: dict[str, dict[str, float]] = {
     "claude-sonnet-5": {"latency_s": 2.4, "calls_factor": 1.15, "cold_s_per_100k": 0.65},
     "claude-haiku-4-5": {"latency_s": 2.2, "calls_factor": 1.35, "cold_s_per_100k": 0.4},
 }
+# Lookahead (opt-in, see planner.plan_turn): the probability that a LATER
+# turn in this session runs on the host, used to price the risk of
+# leaving the host's cache stale by choosing a candidate this turn.
+# Measured from this user's own last 14 days of local sessions
+# (~/.amplifier/projects/*/sessions/*/events.jsonl, prompt:submit and
+# llm:response events): of all provider calls, sub-session first turns
+# were 74%, root first turns 7%, root later turns 12%, sub-session later
+# turns 6%; 94% of sub-sessions and 77% of root sessions ended after one
+# turn. "sub_session" is deliberately the lowest -- a sub-session almost
+# never gets a second turn, so its host cache is very unlikely to ever
+# need to catch up; "later_turn" is the highest -- a session already past
+# its first turn is disproportionately likely (77% ended at one turn, so
+# surviving past it means the remaining ~23% is heavily multi-turn) to
+# keep going. See docs/proposals/TURN-PLANNER.md "Lookahead".
+DEFAULT_PLANNER_CONTINUE_PROBABILITY: dict[str, float] = {
+    "sub_session": 0.06,
+    "first_turn": 0.25,
+    "later_turn": 0.8,
+}
 DEFAULT_PLANNER_CONFIG: dict[str, Any] = {
     "enabled": False,
     "objective": "balanced",
@@ -248,10 +267,12 @@ DEFAULT_PLANNER_CONFIG: dict[str, Any] = {
     "expected_calls": 3.5,
     "output_tokens_per_call": 170,
     "priors": DEFAULT_PLANNER_PRIORS,
+    "continue_probability": DEFAULT_PLANNER_CONTINUE_PROBABILITY,
 }
 PLANNER_KEYS = frozenset(DEFAULT_PLANNER_CONFIG)
 PLANNER_OBJECTIVES = frozenset({"speed", "cost", "balanced"})
 PLANNER_PRIOR_KEYS = frozenset({"latency_s", "calls_factor", "cold_s_per_100k"})
+PLANNER_CONTINUE_PROBABILITY_KEYS = frozenset(DEFAULT_PLANNER_CONTINUE_PROBABILITY)
 
 
 def validate_planner(planner: Any) -> None:
@@ -327,6 +348,20 @@ def validate_planner(planner: Any) -> None:
                     raise ValueError(
                         f"model_routing.planner.priors.{model_id}.{key} must be a non-negative number"
                     )
+    continue_probability = planner.get("continue_probability")
+    if continue_probability is not None:
+        if not isinstance(continue_probability, dict):
+            raise ValueError("model_routing.planner.continue_probability must be a dict")
+        unknown_kinds = set(continue_probability) - PLANNER_CONTINUE_PROBABILITY_KEYS
+        if unknown_kinds:
+            raise ValueError(
+                f"model_routing.planner.continue_probability has unknown keys: {sorted(unknown_kinds)}"
+            )
+        for key, value in continue_probability.items():
+            if isinstance(value, bool) or not isinstance(value, (int, float)) or not 0 <= value <= 1:
+                raise ValueError(
+                    f"model_routing.planner.continue_probability.{key} must be a number in [0, 1]"
+                )
 
 
 def effective_planner_config(model_routing: dict[str, Any] | None) -> dict[str, Any] | None:
@@ -336,10 +371,11 @@ def effective_planner_config(model_routing: dict[str, Any] | None) -> dict[str, 
     inert in that case, matching every other HC0x seam.
 
     Defaults come from ``DEFAULT_PLANNER_CONFIG`` (including
-    ``DEFAULT_PLANNER_PRIORS``). A caller-supplied ``priors`` entry for a
-    given model id fully replaces that model's default prior (no
-    per-field merge); priors for model ids the config does not name keep
-    their default.
+    ``DEFAULT_PLANNER_PRIORS`` and ``DEFAULT_PLANNER_CONTINUE_PROBABILITY``).
+    A caller-supplied ``priors`` entry for a given model id, or a
+    ``continue_probability`` entry for a given session kind, fully
+    replaces that one default value (no per-field merge below that);
+    anything the config does not name keeps its default.
     """
     if not model_routing:
         return None
@@ -348,6 +384,10 @@ def effective_planner_config(model_routing: dict[str, Any] | None) -> dict[str, 
         return None
     merged = {**DEFAULT_PLANNER_CONFIG, **planner}
     merged["priors"] = {**DEFAULT_PLANNER_PRIORS, **(planner.get("priors") or {})}
+    merged["continue_probability"] = {
+        **DEFAULT_PLANNER_CONTINUE_PROBABILITY,
+        **(planner.get("continue_probability") or {}),
+    }
     return merged
 
 
