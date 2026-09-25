@@ -209,6 +209,30 @@ class SummarizeTests(unittest.TestCase):
         self.assertEqual(r["recent"]["last_cheap_turn_at"], "2026-09-25T01:00:00Z")
         self.assertEqual(r["recent"]["turns_since_by_reason"], {"scope_strong": 2})
 
+    def test_by_project_and_per_host_time(self):
+        cfg = lambda repo: {"event": "fast_decisions:health", "turn_id": None, "timestamp": "2026-09-25T09:00:00Z",
+                            "data": {"phase": "configuration", "repo": repo}}
+        fast = lambda t, host: [_event("difficulty_judged", t, {"choice": "cheap", "reason_code": "judge_cheap"}),
+                                _event("slow_end", t, {"status": "ok", "model": "claude-sonnet-5", "host_model": host,
+                                                       "input_tokens": 1, "output_tokens": 1000, "duration_ms": 10_000})]
+        slow = lambda t, host, ms: [_event("difficulty_judged", t, {"choice": "strong", "reason_code": "scope_strong"}),
+                                    _event("slow_end", t, {"status": "ok", "model": "provider-default", "host_model": host,
+                                                           "input_tokens": 1, "output_tokens": 1000, "duration_ms": ms})]
+        with tempfile.TemporaryDirectory() as d:
+            a = [cfg("repo-a")]; b = [cfg("repo-b")]
+            for i in range(savings.MIN_RATE_SAMPLES):
+                a += fast(f"a{i}", "claude-opus-5-5") + slow(f"as{i}", "claude-opus-5-5", 20_000)
+                b += slow(f"bs{i}", "claude-opus-5-5", 20_000)
+            _write(d, "a.jsonl", a); _write(d, "b.jsonl", b)
+            r = savings.summarize(d)
+        names = {p["project"]: p for p in r["by_project"]}
+        self.assertEqual(names["repo-a"]["cheap_turns"], savings.MIN_RATE_SAMPLES)
+        self.assertEqual(names["repo-b"]["cheap_turns"], 0)
+        self.assertEqual(names["repo-b"]["by_reason"], {"scope_strong": savings.MIN_RATE_SAMPLES * 2 // 2})
+        self.assertEqual(r["time"]["hosts_timed"], ["claude-opus-5-5"])
+        self.assertAlmostEqual(r["time"]["saved_seconds"], 200.0)
+        self.assertEqual(list(r["cheap_turn_hosts"]), ["claude-opus-5-5"])
+
     def test_empty_or_missing_directory(self):
         r = savings.summarize("/nonexistent/afast-events")
         self.assertEqual(r["turns"]["total"], 0)

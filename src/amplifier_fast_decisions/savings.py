@@ -46,7 +46,7 @@ DEFAULT_RATES: dict[str, tuple[float, float, float, float]] = {
 DEFAULT_HOST_MODEL = "claude-fable-5-1"
 MIN_RATE_OUTPUT = 200
 MIN_RATE_SAMPLES = 20
-CACHE_VERSION = 4
+CACHE_VERSION = 5
 _JUDGED = '"fast_decisions:difficulty_judged"'
 _SLOW_END = '"fast_decisions:slow_end"'
 
@@ -83,7 +83,7 @@ def _empty_day() -> dict:
     return {"cheap_turns": 0, "strong_turns": 0, "judge_calls": 0, "by_reason": {},
             "cheap_requests": 0, "cheap_seconds": 0.0, "actual_usd": 0.0,
             "counterfactual_usd": 0.0, "unpriced_requests": 0, "no_cache_data_requests": 0,
-            "provider_costed_requests": 0, "switch_penalty_usd": 0.0,
+            "provider_costed_requests": 0, "switch_penalty_usd": 0.0, "cheap_seconds_by_host": {},
             "input": 0, "output": 0, "cache_read": 0, "cache_write": 0}
 
 
@@ -93,12 +93,22 @@ def scan_file(path: Path, *, host_model: str | None = None, rates: dict | None =
     rates = rates or DEFAULT_RATES
     turns: dict[str, dict] = {}
     requests: list[dict] = []
+    project: str | None = None
     try:
         handle = path.open(encoding="utf-8", errors="replace")
     except OSError:
         return {"days": {}, "rate": {}}
     with handle:
         for line in handle:
+            if '"configuration"' in line and project is None:
+                try:
+                    cfg = json.loads(line).get("data") or {}
+                except json.JSONDecodeError:
+                    cfg = {}
+                if cfg.get("phase") == "configuration":
+                    name = cfg.get("repo") or cfg.get("workspace_name")
+                    project = str(name)[:120] if name else None
+                continue
             if _JUDGED not in line and _SLOW_END not in line:
                 continue
             try:
@@ -169,6 +179,8 @@ def scan_file(path: Path, *, host_model: str | None = None, rates: dict | None =
         bucket = days[req["day"] or info["day"]]
         bucket["cheap_requests"] += 1
         bucket["cheap_seconds"] += seconds
+        host_for_time = data.get("host_model") or host_model
+        bucket["cheap_seconds_by_host"][host_for_time] = bucket["cheap_seconds_by_host"].get(host_for_time, 0.0) + seconds
         for key, value in tokens.items():
             bucket[key] += value
         if "cache_read_tokens" not in data and "cost_usd" not in data:
@@ -189,19 +201,23 @@ def scan_file(path: Path, *, host_model: str | None = None, rates: dict | None =
         bucket["actual_usd"] += actual
         bucket["counterfactual_usd"] += counterfactual
     recent = sorted(((t["ts"], t["tier"], t["reason"]) for t in turns.values() if t.get("ts")), reverse=True)[:200]
-    return {"days": dict(days), "rate": {m: list(v) for m, v in rate.items()}, "hosts": dict(hosts),
+    return {"days": dict(days), "rate": {m: list(v) for m, v in rate.items()}, "hosts": dict(hosts), "project": project,
             "turns_recent": [list(r) for r in recent]}
+
+
+def _add_bucket(into: dict, bucket: dict) -> None:
+    for key, value in bucket.items():
+        if isinstance(value, dict):
+            target = into.setdefault(key, {})
+            for k, n in value.items():
+                target[k] = target.get(k, 0) + n
+        else:
+            into[key] = into.get(key, 0) + value
 
 
 def _merge(total: dict, part: dict) -> None:
     for day, bucket in part["days"].items():
-        into = total["days"].setdefault(day, _empty_day())
-        for key, value in bucket.items():
-            if key == "by_reason":
-                for reason, n in value.items():
-                    into["by_reason"][reason] = into["by_reason"].get(reason, 0) + n
-            else:
-                into[key] += value
+        _add_bucket(total["days"].setdefault(day, _empty_day()), bucket)
     total.setdefault("turns_recent", []).extend(part.get("turns_recent", []))
     for model, n in part.get("hosts", {}).items():
         total.setdefault("hosts", {})
@@ -249,6 +265,7 @@ def summarize(events_dir: str | Path, *, host_model: str | None = None, cheap_mo
     cached = _load_cache(cache_file)
     fresh: dict[str, Any] = {}
     total: dict = {"days": {}, "rate": {}}
+    projects: dict[str, dict] = {}
     files = sorted(root.glob("*.jsonl")) if root.is_dir() else []
     key_suffix = f"|{host_model or 'auto'}"
     for path in files:
@@ -265,17 +282,18 @@ def summarize(events_dir: str | Path, *, host_model: str | None = None, cheap_mo
             part = scan_file(path, host_model=host_model, rates=rates)
         fresh[key] = {"sig": signature, "part": part}
         _merge(total, part)
+        proj = part.get("project") or "(unknown)"
+        pagg = projects.setdefault(proj, {"sessions": 0, **_empty_day()})
+        pagg["sessions"] += 1
+        for day, bucket in part["days"].items():
+            if day and (since is None or day >= since):
+                _add_bucket(pagg, bucket)
     _save_cache(cache_file, fresh)
 
     days = {d: b for d, b in total["days"].items() if d and (since is None or d >= since)}
     agg = _empty_day()
     for bucket in days.values():
-        for key, value in bucket.items():
-            if key == "by_reason":
-                for reason, n in value.items():
-                    agg["by_reason"][reason] = agg["by_reason"].get(reason, 0) + n
-            else:
-                agg[key] += value
+        _add_bucket(agg, bucket)
 
     def rate_of(model):
         seconds, output, samples = total["rate"].get(model, (0.0, 0, 0))
@@ -290,8 +308,21 @@ def summarize(events_dir: str | Path, *, host_model: str | None = None, cheap_mo
         candidates = [m for m in total["rate"] if m != host_model and _rates_for(m, rates)]
         cheap_model = max(candidates, key=lambda m: total["rate"][m][2]) if candidates else None
     cheap_rate, cheap_samples = rate_of(cheap_model) if cheap_model else (None, 0)
-    time_ok = bool(host_rate and cheap_rate and host_samples >= MIN_RATE_SAMPLES and cheap_samples >= MIN_RATE_SAMPLES)
-    ratio = (host_rate / cheap_rate) if (time_ok and host_rate and cheap_rate) else None
+    # Time is estimated per usual model: each cheap turn's seconds scaled by
+    # the rate of the host that turn would otherwise have used. Hosts without
+    # enough measured requests are left out (and reported), not guessed.
+    timed_s = on_host_s = untimed_s = 0.0
+    hosts_timed = []
+    for h, secs in agg["cheap_seconds_by_host"].items():
+        h_rate, h_samples = rate_of(h)
+        if cheap_rate and cheap_samples >= MIN_RATE_SAMPLES and h_rate and h_samples >= MIN_RATE_SAMPLES:
+            timed_s += secs
+            on_host_s += secs * h_rate / cheap_rate
+            hosts_timed.append(h)
+        else:
+            untimed_s += secs
+    time_ok = timed_s > 0
+    ratio = (on_host_s / timed_s) if time_ok else None
 
     saved_usd = agg["counterfactual_usd"] - agg["actual_usd"] - agg["switch_penalty_usd"]
     recent = sorted((tuple(r) for r in total.get("turns_recent", []) if not since or r[0][:10] >= since), reverse=True)
@@ -304,7 +335,7 @@ def summarize(events_dir: str | Path, *, host_model: str | None = None, cheap_mo
         by_day.append({
             "day": day, "cheap_turns": b["cheap_turns"], "strong_turns": b["strong_turns"],
             "saved_usd": round(b["counterfactual_usd"] - b["actual_usd"] - b["switch_penalty_usd"], 4),
-            "saved_seconds": round(b["cheap_seconds"] * (ratio - 1), 1) if ratio else None,
+            "saved_seconds": round(b["cheap_seconds"] * (ratio - 1), 1) if ratio else None,  # approximate: pooled ratio
         })
     return {
         "generated_at": datetime.now(UTC).isoformat(),
@@ -312,6 +343,7 @@ def summarize(events_dir: str | Path, *, host_model: str | None = None, cheap_mo
         "files": len(files),
         "since": since,
         "host_model": host_model,
+        "cheap_turn_hosts": dict(sorted(((h, round(v, 1)) for h, v in agg["cheap_seconds_by_host"].items()), key=lambda x: -x[1])),
         "host_model_source": "recorded" if recorded_hosts else "default",
         "cheap_model": cheap_model,
         "turns": {"total": turns_total, "cheap": agg["cheap_turns"], "strong": agg["strong_turns"],
@@ -331,9 +363,11 @@ def summarize(events_dir: str | Path, *, host_model: str | None = None, cheap_mo
                  "requests_without_cache_data": agg["no_cache_data_requests"]},
         "time": {
             "available": time_ok,
-            "cheap_turns_model_seconds": round(agg["cheap_seconds"], 1),
-            "cheap_turns_on_host_seconds": round(agg["cheap_seconds"] * ratio, 1) if ratio else None,
-            "saved_seconds": round(agg["cheap_seconds"] * (ratio - 1), 1) if ratio else None,
+            "cheap_turns_model_seconds": round(timed_s, 1),
+            "cheap_turns_on_host_seconds": round(on_host_s, 1) if time_ok else None,
+            "saved_seconds": round(on_host_s - timed_s, 1) if time_ok else None,
+            "hosts_timed": hosts_timed,
+            "untimed_cheap_seconds": round(untimed_s, 1),
             "host_s_per_output_token": round(host_rate, 5) if host_rate else None,
             "cheap_s_per_output_token": round(cheap_rate, 5) if cheap_rate else None,
             "rate_samples": {"host": host_samples, "cheap": cheap_samples},
@@ -341,6 +375,12 @@ def summarize(events_dir: str | Path, *, host_model: str | None = None, cheap_mo
         },
         "tokens": {k: agg[k] for k in ("input", "output", "cache_read", "cache_write")},
         "by_day": by_day,
+        "by_project": sorted(({"project": name, "sessions": v["sessions"], "cheap_turns": v["cheap_turns"],
+                               "strong_turns": v["strong_turns"],
+                               "saved_usd": round(v["counterfactual_usd"] - v["actual_usd"] - v["switch_penalty_usd"], 4),
+                               "by_reason": v["by_reason"]}
+                              for name, v in projects.items() if v["cheap_turns"] + v["strong_turns"]),
+                             key=lambda r: -(r["cheap_turns"] + r["strong_turns"])),
         "recent": {"last_cheap_turn_at": last_cheap, "turns_since_by_reason": dict(since_last),
                    "turns_since": sum(since_last.values())},
         "method": ("Cheap turns only; strong turns run the host setup unchanged. Cost: the same recorded tokens "

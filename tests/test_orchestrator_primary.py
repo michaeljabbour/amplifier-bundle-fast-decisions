@@ -374,6 +374,31 @@ class DifficultyRouterTests(_DifficultyHarness):
         self.assertEqual(judged[0]["reason_code"], "rules_strong")
         self.assertEqual(models[0], None)
 
+    async def test_cheaper_host_is_never_routed_up(self):
+        # A Haiku-hosted helper session: Sonnet would cost more and run slower.
+        judge = self.FakeJudge(p_complex=0.05)
+        service, runtime, events = self._setup(dict(self.ROUTING, start_policy="judge",
+                                                    max_requests_before_escalation=None), judge)
+        provider = DemoProvider(delay_ms=0)
+        provider.default_model = "claude-haiku-4-5-20251001"
+        facade = RoutedProvider(provider, runtime, {}, demo_response, "anthropic-primary")
+        req = NS(messages=[{"role": "user", "content": "typo"}], tools=[], tool_choice="auto")
+        await facade.complete(req)
+        self.assertIsNone(getattr(req, "model", None))
+        routed = [e["data"] for e in events if e["event"].endswith("model_routed")]
+        self.assertEqual(routed[0]["reason_code"], "host_already_cheaper")
+
+    async def test_more_expensive_host_still_routes(self):
+        judge = self.FakeJudge(p_complex=0.05)
+        service, runtime, events = self._setup(dict(self.ROUTING, start_policy="judge",
+                                                    max_requests_before_escalation=None), judge)
+        provider = DemoProvider(delay_ms=0)
+        provider.default_model = "claude-opus-5-5"
+        facade = RoutedProvider(provider, runtime, {}, demo_response, "anthropic-primary")
+        req = NS(messages=[{"role": "user", "content": "typo"}], tools=[], tool_choice="auto")
+        await facade.complete(req)
+        self.assertEqual(req.model, "claude-sonnet-5")
+
     async def test_ui_model_pick_is_respected(self):
         # amplifier-runtime marks an in-session model pick in session_state.
         judge = self.FakeJudge(p_complex=0.1)

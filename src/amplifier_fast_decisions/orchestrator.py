@@ -956,6 +956,10 @@ docs/UPSTREAM_CONTRACT.md.
                 reason_code = "start_strong"
             elif provider_match and not self._provider_matches(provider_match):
                 reason_code = "provider_not_matched"
+            elif not self._start_model_is_cheaper(start_model):
+                # e.g. a Haiku-hosted helper session: "routing down" to Sonnet
+                # would cost more and run slower, so keep the host.
+                reason_code = "host_already_cheaper"
             else:
                 explicit_model = field_value(request, "model", None)
                 if explicit_model and not override_explicit:
@@ -1025,6 +1029,20 @@ docs/UPSTREAM_CONTRACT.md.
             **usage_fields(response), "latency_kind": "provider_complete_wall_time",
             "transport_measured": "provider-complete"}, decision_id)
         return response
+
+    def _start_model_is_cheaper(self, start_model: Any) -> bool:
+        """True unless the wrapped provider's default model is known to be no
+        more expensive than ``start_model`` (list input and output prices).
+        Unknown models keep the previous behavior (route)."""
+        from .savings import DEFAULT_RATES, _rates_for
+
+        host = getattr(self._provider, "default_model", None)
+        if not isinstance(host, str) or not isinstance(start_model, str) or host == start_model:
+            return host != start_model
+        host_rates, start_rates = _rates_for(host, DEFAULT_RATES), _rates_for(start_model, DEFAULT_RATES)
+        if not host_rates or not start_rates:
+            return True
+        return start_rates[0] < host_rates[0] and start_rates[1] < host_rates[1]
 
     def _host_model_field(self) -> dict:
         """The wrapped provider's configured default model -- the model a

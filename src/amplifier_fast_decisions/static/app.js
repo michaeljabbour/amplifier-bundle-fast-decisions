@@ -60,16 +60,23 @@
   const money = v => (v < 0 ? '−' : '') + (Math.abs(v) >= 100 ? '$' + Math.round(Math.abs(v)) : '$' + Math.abs(v).toFixed(2));
   const minutes = s => (s >= 3600 ? (s / 3600).toFixed(1) + ' h' : s >= 60 ? Math.round(s / 60) + ' min' : Math.round(s) + ' s');
   const ageOf = t => { const n = Math.max(0, Math.floor((Date.now() - t) / 1000)); return n < 60 ? n + 's ago' : n < 3600 ? Math.floor(n / 60) + 'm ago' : n < 86400 ? Math.floor(n / 3600) + 'h ago' : Math.floor(n / 86400) + 'd ago'; };
+  const shortModel = m => String(m || '').replace(/^claude-/, '').replace(/-\d{8}$/, '');
+  const hostLabel = r => { const hs = Object.keys(r.cheap_turn_hosts || {}); return hs.length > 1 ? 'each session\'s usual model (' + hs.slice(0, 3).map(shortModel).join(', ') + ')' : hs.length === 1 ? hs[0] : (r.host_model || 'the host model'); };
+  function projectRows(r) {
+    return (r.by_project || []).slice(0, 6).map(p => ({ name: p.project, turns: p.cheap_turns + ' of ' + (p.cheap_turns + p.strong_turns) + ' on the faster model',
+      saved: money(p.saved_usd || 0), why: (p.by_reason && p.by_reason.scope_strong) ? p.by_reason.scope_strong + ' kept by the large-project rule' : '' }));
+  }
   function savingsView(r) {
     const t = r.turns || {}, c = r.cost || {}, tm = r.time || {};
     if (!t.total) return { scope: 'No routed turns recorded yet', cost: '—', costDetail: 'Appears once the orchestrator routes turns.', time: '—', timeDetail: '', turns: '0', turnsDetail: '', note: 'Estimates cover only turns the orchestrator routes to the cheaper model.' };
     const view = {
       scope: 'All recorded sessions · ' + r.files + ' session files',
       cost: (c.saved_usd || 0) < 0 ? money(c.saved_usd) + ' (costs more)' : money(c.saved_usd || 0),
-      costDetail: money(c.cheap_turns_actual_usd || 0) + ' spent vs ' + money(c.cheap_turns_on_host_usd || 0) + ' on ' + (r.host_model || 'the host model'),
+      costDetail: money(c.cheap_turns_actual_usd || 0) + ' spent vs ' + money(c.cheap_turns_on_host_usd || 0) + ' on ' + hostLabel(r),
       time: tm.available ? ((tm.saved_seconds || 0) < 0 ? '−' + minutes(-tm.saved_seconds) + ' (slower)' : minutes(tm.saved_seconds || 0)) : 'Not yet',
       timeDetail: tm.available ? minutes(tm.cheap_turns_model_seconds || 0) + ' on the faster model vs ' + minutes(tm.cheap_turns_on_host_seconds || 0) + ' at your usual model\'s measured speed' + ((tm.saved_seconds || 0) < 0 ? ' — on your requests the "faster" model wrote more slowly' : '') : 'Needs more measured requests on both models',
       turns: t.cheap + ' of ' + t.total,
+      projects: projectRows(r),
       turnsDetail: (t.judge_calls ? t.judge_calls + ' judged by the decision-maker; ' : '') + t.strong + ' kept on the host model',
       note: 'Estimates: the same recorded work priced and timed at host-model rates. Host-model turns are unchanged, so they save nothing. Tool time, start-up and decision-maker calls are not counted.',
     };
@@ -596,6 +603,8 @@
     put('savingsTime', view.time); put('savingsTimeDetail', view.timeDetail);
     put('savingsTurns', view.turns); put('savingsTurnsDetail', view.turnsDetail);
     put('savingsNote', view.note);
+    const list = $('savingsProjects');
+    if (list) list.replaceChildren(...(view.projects || []).map(p => { const row = make('div', 'savings-project'); row.append(make('b', '', p.name), make('span', '', p.turns), make('span', '', p.saved), make('small', '', p.why)); return row; }));
     const days = (r.by_day || []).slice(-30), peak = Math.max(0, ...days.map(d => d.saved_usd || 0));
     $('savingsDays').replaceChildren(...days.map(d => { const bar = make('i'); bar.style.height = peak > 0 ? Math.max(2, Math.round(40 * Math.max(0, d.saved_usd) / peak)) + 'px' : '2px'; bar.title = d.day + ': $' + (d.saved_usd || 0).toFixed(2) + ' · ' + d.cheap_turns + ' cheaper / ' + d.strong_turns + ' host'; return bar; }));
   }

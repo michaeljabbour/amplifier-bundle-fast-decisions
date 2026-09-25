@@ -176,3 +176,9 @@ test('savings panel explains why totals are flat',()=>{
  const v=savingsView({files:1,host_model:'claude-opus-5-5',turns:{total:5,cheap:1,strong:4},cost:{saved_usd:1,cheap_turns_actual_usd:1,cheap_turns_on_host_usd:2},time:{available:false},recent:{last_cheap_turn_at:new Date(Date.now()-3*3600e3).toISOString(),turns_since:4,turns_since_by_reason:{scope_strong:4}}});
  assert.match(v.note,/Last request on the faster model 3h ago\. Since then 4 requests stayed on your usual model \(4 in large projects/);
 });
+test('savings names each session usual model and lists projects',()=>{
+ const {savingsView}=require('../src/amplifier_fast_decisions/static/app.js');
+ const v=savingsView({files:3,host_model:'claude-sonnet-5',cheap_turn_hosts:{'claude-opus-5-5':10,'claude-haiku-4-5-20251001':5},turns:{total:3,cheap:2,strong:1},cost:{saved_usd:1,cheap_turns_actual_usd:1,cheap_turns_on_host_usd:2},time:{available:false},by_project:[{project:'teaserkit',sessions:2,cheap_turns:2,strong_turns:1,saved_usd:-2.46,by_reason:{}},{project:'big-repo',sessions:1,cheap_turns:0,strong_turns:4,saved_usd:0,by_reason:{scope_strong:4}}]});
+ assert.match(v.costDetail,/each session's usual model \(opus-5-5, haiku-4-5\)/);
+ assert.equal(v.projects[0].saved,'−$2.46'); assert.match(v.projects[1].why,/4 kept by the large-project rule/);
+});
