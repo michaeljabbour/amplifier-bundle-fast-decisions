@@ -107,6 +107,10 @@ def answer_from_top_logprobs(question: Question, top: list, labels: dict[str, st
         key = token.strip() or token
         folded[key] = folded.get(key, 0.0) + math.exp(logprob)
     merged = [{"token": key, "logprob": math.log(min(mass, 1.0))} for key, mass in folded.items()]
+    # With more than two options a label absent from the (top-20) list would
+    # silently score exactly 0; abstain instead of guessing.
+    if len(labels) > 2 and any(letter not in folded for letter in labels):
+        raise BackendUnavailable("An option letter fell outside the returned top tokens")
     probabilities = score_tokens({"logprobs": [{"top_logprobs": merged}]}, labels)
     probabilities.pop(SLOW, None)
     mass = sum(probabilities.values())
@@ -291,27 +295,11 @@ class OllamaBackend:
 
     async def _answer_once(self, state: Any, question: Question, *, reverse: bool) -> Answer:
         prompt, labels = build_question_prompt(state, question, reverse=reverse)
-        # Chat with an assistant prefill ("Answer:") so reasoning-inclined
-        # models (qwen3:4b/8b answer "We ..."/"First ..." otherwise) must emit
-        # the option letter next. Falls back to /api/generate when a model
-        # returns no token logprobs on the chat endpoint.
-        chat_body = {"model": self.model, "stream": False, "think": False, "logprobs": True,
-                     "top_logprobs": 20, "keep_alive": "10m",
-                     "options": {"temperature": 0, "num_predict": 1, "num_ctx": 4096},
-                     "messages": [{"role": "system", "content": QUESTION_SYSTEM},
-                                  {"role": "user", "content": prompt},
-                                  {"role": "assistant", "content": "Answer:"}]}
-        self._ensure_client()
-        async with asyncio.timeout(self.timeout_ms / 1000):
-            async with self._lock:
-                response = await self._client.post(self.url.replace("/api/generate", "/api/chat"), json=chat_body)
-                payload = response.json() if response.status_code == 200 else {}
-        records = payload.get("logprobs") if payload.get("model") == self.model else None
-        if isinstance(records, list) and len(records) == 1:
-            try:
-                return answer_from_top_logprobs(question, records[0].get("top_logprobs") or [], labels)
-            except BackendUnavailable:
-                pass  # fall through to the generate endpoint
+        # Ask plainly first (/api/generate ends at the model's own generation
+        # prompt with thinking off): measured equal-or-better AUC on qwen3:8b,
+        # qwen:latest, llama3.1:8b and glm-4.7-flash, and no empty-logprob
+        # replies. Thinking-only builds (whose template always opens <think>)
+        # answer prose there; only then fall back to a chat "Answer:" prefill.
         body = {"model": self.model, "system": QUESTION_SYSTEM, "prompt": prompt,
                 "think": False, "stream": False, "logprobs": True, "top_logprobs": 20,
                 "keep_alive": "10m", "options": {"temperature": 0, "num_predict": 1, "num_ctx": 4096}}
@@ -319,11 +307,27 @@ class OllamaBackend:
         async with asyncio.timeout(self.timeout_ms / 1000):
             async with self._lock:
                 response = await self._client.post(self.url, json=body)
+                payload = response.json() if response.status_code == 200 else {}
+        records = payload.get("logprobs") if payload.get("model") == self.model and payload.get("done") is True else None
+        if isinstance(records, list) and len(records) == 1:
+            try:
+                return answer_from_top_logprobs(question, records[0].get("top_logprobs") or [], labels)
+            except BackendUnavailable:
+                pass  # not an option letter: try the prefilled chat form
+        chat_body = {"model": self.model, "stream": False, "think": False, "logprobs": True,
+                     "top_logprobs": 20, "keep_alive": "10m",
+                     "options": {"temperature": 0, "num_predict": 1, "num_ctx": 4096},
+                     "messages": [{"role": "system", "content": QUESTION_SYSTEM},
+                                  {"role": "user", "content": prompt},
+                                  {"role": "assistant", "content": "Answer:"}]}
+        async with asyncio.timeout(self.timeout_ms / 1000):
+            async with self._lock:
+                response = await self._client.post(self.url.replace("/api/generate", "/api/chat"), json=chat_body)
                 if response.status_code != 200:
                     raise BackendUnavailable("Local decision request failed")
                 payload = response.json()
-        if payload.get("model") != self.model or payload.get("done") is not True:
-            raise BackendUnavailable("Unexpected model or incomplete local decision")
+        if payload.get("model") != self.model:
+            raise BackendUnavailable("Unexpected model in local decision")
         records = payload.get("logprobs")
         if not isinstance(records, list) or len(records) != 1:
             raise BackendUnavailable("Expected exactly one scored token")
@@ -364,6 +368,21 @@ class OllamaBackend:
         decision.validate(set(labels.values()) | {SLOW})
         return DecisionResult(action=decision, model=self.model,
                               input_tokens=decision.input_tokens, output_tokens=1)
+
+    async def warmup(self) -> None:
+        """One request with the SAME options as real decisions (num_ctx etc.), with a generous timeout, so a
+        model (re)load -- ~0.6-3 s when the server had the model resident with a different context size --
+        is absorbed before any budgeted decision runs. Errors are swallowed; the suite runner logs them."""
+        req = urllib.request.Request(
+            f"{self.base_url}/api/chat",
+            data=json.dumps({"model": self.model, "stream": False, "think": False, "keep_alive": "10m",
+                             "messages": [{"role": "user", "content": "warm"}],
+                             "options": {"temperature": 0, "num_predict": 1, "num_ctx": 4096}}).encode("utf-8"),
+            method="POST", headers={"Content-Type": "application/json"})
+        try:
+            await asyncio.to_thread(lambda: urllib.request.urlopen(req, timeout=60).read())
+        except Exception:  # noqa: BLE001 -- warm-up is best effort
+            return
 
     async def close(self):
         if self._client is not None:
@@ -482,20 +501,6 @@ def _mlx_top_logprobs(payload: dict) -> list:
     return top[0]
 
 
-    async def warmup(self) -> None:
-        """One request with the SAME options as real decisions (num_ctx etc.), with a generous timeout, so a
-        model (re)load -- ~0.6-3 s when the server had the model resident with a different context size --
-        is absorbed before any budgeted decision runs. Errors are swallowed; the suite runner logs them."""
-        req = urllib.request.Request(
-            f"{self.base_url}/api/chat",
-            data=json.dumps({"model": self.model, "stream": False, "think": False, "keep_alive": "10m",
-                             "messages": [{"role": "user", "content": "warm"}],
-                             "options": {"temperature": 0, "num_predict": 1, "num_ctx": 4096}}).encode("utf-8"),
-            method="POST", headers={"Content-Type": "application/json"})
-        try:
-            await asyncio.to_thread(lambda: urllib.request.urlopen(req, timeout=60).read())
-        except Exception:  # noqa: BLE001 -- warm-up is best effort
-            return
 
 class OpenAICompatBackend:
     """Shared client for any OpenAI-compatible ``/v1/chat/completions`` host

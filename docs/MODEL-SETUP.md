@@ -458,3 +458,8 @@ Automatic provider bypass remains the Amplifier adapter described above. The
 [Teamwork portability design](design/teamwork-portable-tool.md) discusses deeper
 harness integration; universal call interception and context retention are not
 implemented by installing a discovery skill.
+
+## Local judge notes (2026-09-25)
+
+- Ollama's `qwen3:4b` tag is the thinking-only Qwen3-4B-Thinking build (its template always opens `<think>`); it returns no usable option letter on about 1 in 5 prompts. Use `qwen3:8b` or an instruct build instead.
+- The Ollama judge asks with `/api/generate` (no prefill) first and falls back to a chat `Answer:` prefill only when the plain reply is not an option letter.

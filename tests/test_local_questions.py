@@ -76,5 +76,54 @@ class OllamaQuestionTests(unittest.IsolatedAsyncioTestCase):
         self.assertAlmostEqual(result.answers["urgent"].noul, 0.7)
 
 
+
+class ProseThenLetterClient:
+    """/api/generate answers prose (a thinking-only build); /api/chat with the prefill answers a letter."""
+
+    def __init__(self, model):
+        self.model, self.urls = model, []
+
+    async def post(self, url, json):
+        self.urls.append(url)
+        top = ([{"token": "Okay", "logprob": math.log(0.9)}, {"token": "A", "logprob": math.log(0.01)}]
+               if url.endswith("/api/generate") else
+               [{"token": " B", "logprob": math.log(0.8)}, {"token": " A", "logprob": math.log(0.2)}])
+        payload = {"model": self.model, "done": True, "logprobs": [{"top_logprobs": top}]}
+        return SimpleNamespace(status_code=200, content=b"{}", json=lambda: payload)
+
+    async def aclose(self):
+        pass
+
+
+class OllamaRequestShapeTests(unittest.IsolatedAsyncioTestCase):
+    async def test_plain_generate_is_asked_first(self):
+        backend = OllamaBackend(model="m", client=FakeClient("m", 0.2, 0.8))
+        await backend.ask(DecisionRequest(state={"task": "x"}, candidates=(), questions=(CHOICE,)))
+        # Both option orders answered by the plain request: no chat prefill sent.
+        self.assertTrue(all("prompt" in c and "messages" not in c for c in backend._client.calls))
+
+    async def test_prefilled_chat_is_the_fallback_for_prose(self):
+        client = ProseThenLetterClient("m")
+        backend = OllamaBackend(model="m", client=client)
+        result = await backend.ask(DecisionRequest(state={"task": "x"}, candidates=(), questions=(CHOICE,)))
+        self.assertEqual(client.urls, ["http://127.0.0.1:11434/api/generate", "http://127.0.0.1:11434/api/chat"] * 2)
+        # forward: B=complex 0.8; reverse: B=simple 0.8 -> complex 0.2 ... averaged 0.5
+        self.assertIn("complex", result.answers["difficulty"].probabilities)
+
+    def test_warmup_is_an_ollama_method(self):
+        self.assertTrue(callable(getattr(OllamaBackend, "warmup", None)))
+
+
+class ManyOptionTests(unittest.TestCase):
+    def test_missing_label_abstains_with_more_than_two_options(self):
+        labels = {"A": "x", "B": "y", "C": "z"}
+        top = [{"token": "A", "logprob": math.log(0.6)}, {"token": "B", "logprob": math.log(0.3)}]
+        three = Question(name="k", type="choice", instructions="Which?", criteria={"x": "1", "y": "2", "z": "3"})
+        with self.assertRaises(BackendUnavailable):
+            answer_from_top_logprobs(three, top, labels)
+        top.append({"token": "C", "logprob": math.log(0.05)})
+        self.assertAlmostEqual(sum(answer_from_top_logprobs(three, top, labels).probabilities.values()), 1.0)
+
+
 if __name__ == "__main__":
     unittest.main()
