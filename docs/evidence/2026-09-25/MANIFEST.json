@@ -2,7 +2,7 @@
   "note": "sha256 of every file in this folder",
   "generated": "2026-09-25",
   "files": {
-    "README.md": "5bc6f0dbbfa219df55e8ca1db6178d3ef68741240b46bd60af1eabb16c6c9812",
+    "README.md": "3a37bd875a7e4b6c0b9c4774e52dd9151b329d6411090a74a08c761886d35ea7",
     "difficulty/difficulty-report-hosted.json": "54a06345cd40e89cbe651fea7fd438fb0612e156b7748be27868d8bcbed72a2b",
     "difficulty/difficulty-report-jev-rules.json": "ba174c90d5b24ea485675772a69ad70863d13d1bd3e93edea6f5f9d836b8f4e3",
     "difficulty/difficulty-report-local.json": "618111182247d8c0719c3e2d6e0a82b7948cf7667e933d20ab7994991ae15b12",
