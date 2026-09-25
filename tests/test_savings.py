@@ -31,6 +31,10 @@ class PriceTests(unittest.TestCase):
         self.assertAlmostEqual(savings.price("claude-sonnet-5-20260101", tokens, savings.DEFAULT_RATES), 18.0)
         self.assertIsNone(savings.price("gpt-x", tokens, savings.DEFAULT_RATES))
 
+    def test_cache_writes_use_the_cache_write_rate(self):
+        tokens = {"input": 0, "output": 0, "cache_read": 0, "cache_write": 1_000_000}
+        self.assertAlmostEqual(savings.price("claude-sonnet-5", tokens, savings.DEFAULT_RATES), 3.75)
+
 
 class SummarizeTests(unittest.TestCase):
     def test_cheap_turn_saved_and_strong_turn_counts_nothing(self):
@@ -117,6 +121,58 @@ class SummarizeTests(unittest.TestCase):
         self.assertAlmostEqual(r["cost"]["cheap_turns_actual_usd"], 0.30)
         self.assertAlmostEqual(r["cost"]["cheap_turns_on_host_usd"], 0.20)
         self.assertAlmostEqual(r["cost"]["saved_usd"], -0.10)
+
+    def test_each_request_is_priced_at_its_own_recorded_host(self):
+        # Two host models in one file: each request's counterfactual uses the
+        # host it recorded, not the file's majority host.
+        req = {"status": "ok", "model": "claude-sonnet-5", "input_tokens": 1_000_000, "output_tokens": 0,
+               "cache_read_tokens": 0}
+        with tempfile.TemporaryDirectory() as d:
+            _write(d, "s.jsonl", [
+                _event("difficulty_judged", "t", {"choice": "cheap", "reason_code": "judge_cheap"}),
+                _event("slow_end", "t", dict(req, host_model="claude-opus-5-5")),
+                _event("slow_end", "t", dict(req, host_model="claude-opus-5-5")),
+                _event("slow_end", "t", dict(req, host_model="claude-fable-5-1")),
+            ])
+            r = savings.summarize(d)
+        # opus-5-5 input $4/M twice + fable-5-1 input $10/M once
+        self.assertAlmostEqual(r["cost"]["cheap_turns_on_host_usd"], 18.0)
+
+    def test_request_without_host_uses_the_file_host(self):
+        # An older cheap-turn record lacks host_model; the file's recorded host
+        # (from another request) prices it, not the global default.
+        with tempfile.TemporaryDirectory() as d:
+            _write(d, "s.jsonl", [
+                _event("difficulty_judged", "c", {"choice": "cheap", "reason_code": "judge_cheap"}),
+                _event("slow_end", "c", {"status": "ok", "model": "claude-sonnet-5", "input_tokens": 1_000_000,
+                                         "output_tokens": 0, "cache_read_tokens": 0}),
+                _event("difficulty_judged", "s", {"choice": "strong", "reason_code": "judge_strong"}),
+                _event("slow_end", "s", {"status": "ok", "model": "provider-default", "host_model": "claude-opus-5-5",
+                                         "input_tokens": 10, "output_tokens": 10}),
+            ])
+            r = savings.summarize(d)
+        self.assertAlmostEqual(r["cost"]["cheap_turns_on_host_usd"], 4.0)
+
+    def test_served_model_is_what_gets_priced(self):
+        # The provider served haiku although sonnet was requested: actual cost
+        # is haiku's rate.
+        with tempfile.TemporaryDirectory() as d:
+            _write(d, "s.jsonl", [
+                _event("difficulty_judged", "t", {"choice": "cheap", "reason_code": "judge_cheap"}),
+                _event("slow_end", "t", {"status": "ok", "model": "claude-sonnet-5", "served_model": "claude-haiku-4-5",
+                                         "input_tokens": 1_000_000, "output_tokens": 0, "cache_read_tokens": 0}),
+            ])
+            r = savings.summarize(d)
+        self.assertAlmostEqual(r["cost"]["cheap_turns_actual_usd"], 1.0)
+
+    def test_cache_is_invalidated_when_a_session_file_grows(self):
+        with tempfile.TemporaryDirectory() as d:
+            path = _write(d, "a.jsonl", [_event("difficulty_judged", "t1", {"choice": "cheap", "reason_code": "rules_cheap"})])
+            cache = Path(d) / "cache" / "savings.json"
+            self.assertEqual(savings.summarize(d, cache_path=cache)["turns"]["cheap"], 1)
+            with path.open("a") as handle:
+                handle.write(json.dumps(_event("difficulty_judged", "t2", {"choice": "cheap", "reason_code": "rules_cheap"})) + "\n")
+            self.assertEqual(savings.summarize(d, cache_path=cache)["turns"]["cheap"], 2)
 
     def test_empty_or_missing_directory(self):
         r = savings.summarize("/nonexistent/afast-events")

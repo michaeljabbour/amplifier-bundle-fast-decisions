@@ -95,6 +95,39 @@ class EnsureViewerTests(unittest.TestCase):
         self.assertEqual(observatory.build_id(), observatory.build_id())
         self.assertEqual(len(observatory.build_id()), 12)
 
+    def test_stale_viewer_is_never_returned_after_replacement(self):
+        # The replacement spawn does not come up: the stale viewer's state
+        # must be gone, not re-read and handed back as if it were current.
+        with tempfile.TemporaryDirectory() as tmp:
+            state_file = Path(tmp) / "serve.json"
+            observatory.write_state_atomic(
+                state_file, {"pid": 4242, "port": 8765, "url": "http://old/", "build": "stale0000000"})
+            with mock.patch.object(observatory.os, "kill"):
+                url = observatory.ensure_viewer(tmp, 8765, state_file, spawner=lambda argv: None,
+                                                alive=lambda state: True, sleep=lambda seconds: None,
+                                                deadline_s=0.3)
+            self.assertIsNone(url)
+            self.assertIsNone(observatory.read_state(state_file))
+
+    def test_build_id_changes_when_any_dashboard_asset_changes(self):
+        import shutil
+
+        package = Path(observatory.__file__).resolve().parent
+        with tempfile.TemporaryDirectory() as tmp:
+            copy = Path(tmp) / "pkg"
+            shutil.copytree(package / "static", copy / "static")
+            for name in ("server.py", "savings.py", "operations.py"):
+                shutil.copy(package / name, copy / name)
+            fake_module = str(copy / "observatory.py")
+            with mock.patch.object(observatory, "__file__", fake_module):
+                base = observatory.build_id()
+                for asset in ("static/app.js", "static/index.html", "static/style.css", "server.py", "savings.py"):
+                    original = (copy / asset).read_bytes()
+                    (copy / asset).write_bytes(original + b"\n/* changed */\n")
+                    self.assertNotEqual(observatory.build_id(), base, asset)
+                    (copy / asset).write_bytes(original)
+                self.assertEqual(observatory.build_id(), base)
+
     def test_spawns_when_no_state_file_and_becomes_alive(self):
         with tempfile.TemporaryDirectory() as tmp:
             state_file = Path(tmp) / "serve.json"
@@ -470,7 +503,10 @@ class SessionStartWiringTests(unittest.IsolatedAsyncioTestCase):
                 "amplifier_fast_decisions.observer.read_state", return_value=None
             ),
         ):
-            await self._mount_and_start(obs_config={"open_browser": "never"})
+            events = await self._mount_and_start(obs_config={"open_browser": "never"})
+        # The viewer was started (so an open WOULD have happened under
+        # "always"); only the open itself is suppressed.
+        self.assertEqual(events[0]["action"], "started")
         opener.assert_not_called()
 
     async def test_open_browser_first_only_opens_on_start_not_reuse(self):

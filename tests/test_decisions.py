@@ -1,6 +1,7 @@
 from __future__ import annotations
 import asyncio
 import dataclasses
+import json
 import tempfile
 from pathlib import Path
 from types import SimpleNamespace as NS
@@ -76,6 +77,18 @@ class PrivacyTests(unittest.TestCase):
         output=safe_data({'prompt':'SECRET','arguments':{'token':'SECRET'},'output':'SECRET',
                           'thinking':'SECRET','route':'fast','reason_code':'prepared_action'})
         self.assertEqual(output,{'route':'fast','reason_code':'prepared_action'})
+    def test_allowed_string_values_are_still_scrubbed(self):
+        # An allow-listed field is kept, but a secret inside its value is not.
+        output=safe_data({'reason_code':'api_key=abcdefghijklmnop','exception_type':'Bearer abcdefghijklmnop',
+                          'probabilities':{'sk-abcdefghijklmnopqrst':0.5}})
+        self.assertNotIn('abcdefghijklmnop',json.dumps(output))
+        self.assertEqual(set(output),{'reason_code','exception_type','probabilities'})
+    def test_savings_usage_fields_survive_the_allow_list(self):
+        # The savings estimate reads these from recorded slow_end events; a
+        # field dropped here silently disappears from every event on disk.
+        usage={'cost_usd':0.0123,'host_model':'claude-opus-5-5','served_model':'claude-sonnet-5',
+               'cache_read_tokens':1000,'cache_write_tokens':50,'input_tokens':1200,'output_tokens':300}
+        self.assertEqual(safe_data(usage),usage)
     def test_state_excludes_system_and_private_thinking(self):
         req=request(messages=[{'role':'system','content':'SYSTEM_SECRET'},
             {'role':'assistant','content':[{'type':'thinking','thinking':'PRIVATE'},{'type':'text','text':'Public summary'}]},

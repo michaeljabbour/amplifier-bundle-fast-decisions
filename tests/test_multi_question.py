@@ -241,6 +241,22 @@ class BatchingProducesOneCallTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(backend.calls, 1)
         self.assertEqual([e for e in events if e["event"].endswith("decided_batch")], [])
 
+    async def test_batching_continues_past_six_requests_without_a_max(self):
+        """No max_requests_before_escalation: the escalation judge stays due on
+        every later request, so every one after the first is batched -- the
+        pre-check must not invent a request cap."""
+        policy = Policy(**BATCHING_POLICY_KWARGS)
+        keep = {"phase_classification": {"orient": 0.05, "explore": 0.05, "implement": 0.9},
+                "escalation_judge": {"escalate": 0.1, "continue_cheap": 0.9}}
+        backend = RecordingJudgeBackend([keep], define_ask_many=True)
+        service, runtime, events = setup_service(policy=policy, backend=backend)
+        facade = RoutedProvider(DemoProvider(delay_ms=0), runtime, {}, demo_response)
+        for _ in range(9):
+            await facade.complete(request(explore_messages()))
+        self.assertFalse(service.turn.escalated)
+        self.assertEqual(len([e for e in events if e["event"].endswith("decided_batch")]), 8)
+        self.assertEqual(backend.calls, 9)
+
 
 class BatchingJevOneRequestTests(unittest.IsolatedAsyncioTestCase):
     class _FakeSDKClient:

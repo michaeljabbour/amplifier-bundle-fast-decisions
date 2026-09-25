@@ -397,8 +397,6 @@ class RoutedProviderIntegrationTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(req.model, "pinned-model")
 
 
-if __name__ == "__main__":
-    unittest.main()
 
 
 
@@ -543,3 +541,6 @@ class UpstreamLoopImportTests(unittest.TestCase):
                 sys.modules.pop("amplifier_module_loop_streaming", None)
                 if saved is not None:
                     sys.modules["amplifier_module_loop_streaming"] = saved
+
+if __name__ == "__main__":
+    unittest.main()

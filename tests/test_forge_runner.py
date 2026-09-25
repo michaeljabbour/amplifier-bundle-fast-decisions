@@ -110,7 +110,6 @@ class ForgeControllerTests(unittest.TestCase):
             self.assertEqual(captured['env']['PYTHONPATH'], str(side_source/'src'))
 
 
-if __name__=='__main__':unittest.main()
 
 
 class SideProfileModeTests(unittest.TestCase):
@@ -414,3 +413,7 @@ class RunWorkspaceTestsTests(unittest.TestCase):
                 passed, runner, _summary = forge_e2e.run_workspace_tests(workspace)
             self.assertTrue(passed)
             self.assertEqual(runner, 'unittest')
+
+
+if __name__ == "__main__":
+    unittest.main()
