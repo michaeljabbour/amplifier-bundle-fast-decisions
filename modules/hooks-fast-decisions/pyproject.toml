@@ -5,7 +5,9 @@ build-backend = "setuptools.build_meta"
 name = "amplifier-module-hooks-fast-decisions"
 version = "0.1.0"
 requires-python = ">=3.11"
-dependencies = []
+dependencies = [
+  "amplifier-fast-decisions @ git+https://github.com/michaeljabbour/amplifier-bundle-fast-decisions@main",
+]
 [project.entry-points."amplifier.modules"]
 hooks-fast-decisions = "amplifier_module_hooks_fast_decisions:mount"
 [tool.setuptools.packages.find]

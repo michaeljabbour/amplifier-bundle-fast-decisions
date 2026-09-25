@@ -5,7 +5,9 @@ build-backend = "setuptools.build_meta"
 name = "amplifier-module-tool-fast-workspace"
 version = "0.1.0"
 requires-python = ">=3.11"
-dependencies = []
+dependencies = [
+  "amplifier-fast-decisions @ git+https://github.com/michaeljabbour/amplifier-bundle-fast-decisions@main",
+]
 [project.entry-points."amplifier.modules"]
 tool-fast-workspace = "amplifier_module_tool_fast_workspace:mount"
 [tool.setuptools.packages.find]

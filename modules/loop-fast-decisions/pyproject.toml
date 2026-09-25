@@ -6,6 +6,7 @@ name = "amplifier-module-loop-fast-decisions"
 version = "0.1.0"
 requires-python = ">=3.11"
 dependencies = [
+  "amplifier-fast-decisions @ git+https://github.com/michaeljabbour/amplifier-bundle-fast-decisions@main",
   "amplifier-module-loop-streaming @ git+https://github.com/microsoft/amplifier-module-loop-streaming@4cc86dd4eae36b40af38b4e2e70b9045649d2903",
 ]
 [project.optional-dependencies]
