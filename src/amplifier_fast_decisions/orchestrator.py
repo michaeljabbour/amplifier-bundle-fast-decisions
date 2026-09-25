@@ -43,6 +43,26 @@ def action_response(candidate: Candidate, tool_call_id: str):
     )
 
 
+def step_fields(response: Any) -> dict:
+    """What this model call produced: how many tool calls, which tools (names
+    only), and whether it ended the turn. The per-step router and the
+    dashboard use this to tell routine continuations from real reasoning."""
+    calls = field_value(response, "tool_calls", None) or []
+    names = []
+    for call in calls if isinstance(calls, (list, tuple)) else []:
+        name = field_value(call, "name", None)
+        if isinstance(name, str) and name:
+            names.append(name[:64])
+    fields = {"tool_calls": len(names)}
+    if names:
+        fields["tools"] = names[:16]
+    reason = field_value(response, "finish_reason", None)
+    if isinstance(reason, str) and reason:
+        fields["finish_reason"] = reason[:32]
+    fields["step_kind"] = "tool_call" if names else "final_answer"
+    return fields
+
+
 def usage_fields(response: Any) -> dict:
     """Token counts, cached-token counts and the provider's own cost figure
     (``cost_usd``, None when the provider has no rate data), plus the model
@@ -1026,7 +1046,7 @@ docs/UPSTREAM_CONTRACT.md.
         await service.emit("slow_end", {"provider": self._provider_key, "model": model, **self._host_model_field(),
             "provider_call_id": provider_call_id,
             "status": "ok", "duration_ms": (time.perf_counter() - start) * 1000,
-            **usage_fields(response), "latency_kind": "provider_complete_wall_time",
+            **usage_fields(response), **step_fields(response), "latency_kind": "provider_complete_wall_time",
             "transport_measured": "provider-complete"}, decision_id)
         return response
 

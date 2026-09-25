@@ -55,6 +55,12 @@ SAFE_FIELDS = {
     "cost_usd",
     "served_model",
     "host_model",
+    # Per-step outcome of a model call: tool-call count, tool names only,
+    # finish reason, and a coarse step kind -- never arguments or results.
+    "tool_calls",
+    "tools",
+    "finish_reason",
+    "step_kind",
     "tool",
     "tool_call_id",
     "status",
