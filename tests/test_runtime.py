@@ -10,6 +10,7 @@ import asyncio
 import tempfile
 import threading
 import unittest
+from unittest import mock
 
 from amplifier_fast_decisions.backends import JevBackend, ScriptedBackend, UnavailableBackend
 from amplifier_fast_decisions.contracts import Policy
@@ -168,12 +169,25 @@ class BackendWarmupSchedulingTests(unittest.IsolatedAsyncioTestCase):
                 failed.set()
                 raise RuntimeError("boom")
 
+        loop = asyncio.get_running_loop()
+        real_create_task, scheduled = loop.create_task, []
+
+        def spy(coro, *args, **kwargs):
+            task = real_create_task(coro, *args, **kwargs)
+            scheduled.append(task)
+            return task
+
         # Must not raise synchronously from the scheduling call itself.
-        _schedule_backend_warmup(FakeBackend())
+        with mock.patch.object(loop, "create_task", spy):
+            _schedule_backend_warmup(FakeBackend())
         # ...and the background task's failure must not surface anywhere
         # that would crash the event loop or this test.
         await asyncio.wait_for(failed.wait(), timeout=1)
-        await asyncio.sleep(0)  # let the task's except-block finish
+        self.assertEqual(len(scheduled), 1)
+        await asyncio.wait(scheduled, timeout=1)
+        # The task completed without an exception: the failure was swallowed
+        # inside it (an unswallowed one would only be logged, never raised).
+        self.assertIsNone(scheduled[0].exception())
 
     async def test_backend_without_warmup_is_skipped(self):
         class FakeBackend:
@@ -215,8 +229,16 @@ class BackendWarmupNoRunningLoopTests(unittest.TestCase):
                 raise RuntimeError("boom")
 
         # Must return immediately without raising; the failure happens on
-        # the background daemon thread and is swallowed there.
-        _schedule_backend_warmup(FakeBackend())
+        # the background daemon thread and is swallowed there. A thread's
+        # uncaught exception never reaches this test on its own, so capture
+        # it through threading.excepthook and join the thread.
+        uncaught = []
+        before = set(threading.enumerate())
+        with mock.patch.object(threading, "excepthook", side_effect=uncaught.append):
+            _schedule_backend_warmup(FakeBackend())
+            for thread in set(threading.enumerate()) - before:
+                thread.join(timeout=2)
+        self.assertEqual(uncaught, [])
 
 
 if __name__ == "__main__":

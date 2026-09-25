@@ -312,8 +312,6 @@ class MlxDoctorCheckTests(unittest.TestCase):
         self.assertFalse(check["ok"])
 
 
-if __name__ == "__main__":
-    unittest.main()
 
 
 class ContentShapeTests(unittest.TestCase):
@@ -341,3 +339,7 @@ class MassToleranceTests(unittest.TestCase):
         from amplifier_fast_decisions.local_backend import score_tokens
         with self.assertRaises(BackendUnavailable):
             score_tokens({"logprobs": [{"top_logprobs": [{"token": "A", "logprob": -0.01}, {"token": "B", "logprob": -0.02}]}]}, {"A": "read", "B": "list"})
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -429,8 +429,6 @@ class CellsYamlGatewayCellTests(unittest.TestCase):
         self.assertIn("--allow-external-state", argv)
 
 
-if __name__ == "__main__":
-    unittest.main()
 
 
 class ExtraBodyTests(unittest.TestCase):
@@ -447,3 +445,7 @@ class ExtraBodyTests(unittest.TestCase):
         custom = GatewayBackend(model="m", url="https://example.invalid/v1", api_key="k", extra_body={})
         cbody = custom._prepare_request(_request())[0]
         self.assertNotIn("chat_template_kwargs", cbody)
+
+
+if __name__ == "__main__":
+    unittest.main()

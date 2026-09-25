@@ -86,17 +86,38 @@ class JevCompatibleEndpointTests(unittest.TestCase):
         self.assertEqual(backend.last_transport, "urllib")
 
     def test_missing_url_env_is_unavailable_not_a_crash(self):
-        with mock.patch.dict(os.environ, {"MY_KEY": "k"}):
+        # Must fail on the missing variable itself -- never fall back to the
+        # hosted default URL (which would send the custom key elsewhere).
+        with mock.patch.dict(os.environ, {"MY_KEY": "k"}), \
+                mock.patch.object(JevBackend, "_post_keepalive",
+                                  side_effect=AssertionError("must not send a request")):
             os.environ.pop("MISSING_URL", None)
             backend = JevBackend(base_url_env="MISSING_URL", api_key_env="MY_KEY")
-            with self.assertRaises(BackendUnavailable):
+            with self.assertRaisesRegex(BackendUnavailable, "MISSING_URL is missing"):
                 self._ask(backend)
+
+    def test_custom_key_env_alone_skips_the_sdk(self):
+        # api_key_env without base_url: still the stdlib transport (the SDK
+        # only reads TYPESAFE_API_KEY), authenticated with the custom key.
+        env = {"MY_KEY": "k-custom", "TYPESAFE_BASE_URL": self.url}
+        with mock.patch.dict(os.environ, env), mock.patch.object(backends, "_sdk_available", return_value=True):
+            os.environ.pop("TYPESAFE_API_KEY", None)
+            backend = JevBackend(api_key_env="MY_KEY", timeout_ms=5000)
+            self._ask(backend)
+        self.assertEqual(backend.last_transport, "urllib")
+        self.assertEqual(_Handler.seen[0]["auth"], "Bearer k-custom")
 
     def test_missing_custom_key_is_unavailable(self):
         os.environ.pop("NO_SUCH_KEY", None)
         backend = JevBackend(base_url=self.url, api_key_env="NO_SUCH_KEY")
         with self.assertRaisesRegex(BackendUnavailable, "NO_SUCH_KEY"):
             self._ask(backend)
+
+    def test_base_url_path_prefix_is_kept(self):
+        with mock.patch.dict(os.environ, {"MY_KEY": "k"}):
+            backend = JevBackend(base_url=self.url + "/api/", api_key_env="MY_KEY", timeout_ms=5000)
+            self._ask(backend)
+        self.assertEqual(_Handler.seen[0]["path"], "/api/v1/systemone")
 
     def test_default_backend_keeps_typesafe_env(self):
         backend = JevBackend()
@@ -187,8 +208,6 @@ class ObserverLabelTests(unittest.TestCase):
         self.assertIsNone(_backend_label(object()))
 
 
-if __name__ == "__main__":
-    unittest.main()
 
 
 class SessionContextTests(unittest.TestCase):
@@ -226,3 +245,7 @@ class SessionWorkingDirTests(unittest.TestCase):
         self.assertEqual(session_working_dir(SimpleNamespace(coordinator=none)), os.getcwd())
         broken = SimpleNamespace(get_capability=lambda name: (_ for _ in ()).throw(RuntimeError()))
         self.assertEqual(session_working_dir(SimpleNamespace(coordinator=broken)), os.getcwd())
+
+
+if __name__ == "__main__":
+    unittest.main()

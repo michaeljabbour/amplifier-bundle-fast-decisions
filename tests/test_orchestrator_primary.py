@@ -253,8 +253,6 @@ class ObservatoryOnceTests(unittest.IsolatedAsyncioTestCase):
             await runtime.close()
 
 
-if __name__ == "__main__":
-    unittest.main()
 
 
 class MonotonicEffortTests(unittest.IsolatedAsyncioTestCase):
@@ -299,8 +297,9 @@ class MonotonicEffortTests(unittest.IsolatedAsyncioTestCase):
             Policy(effort_routing={"explore": "low", "monotonic": "yes"})
 
 
-class DifficultyRouterTests(unittest.IsolatedAsyncioTestCase):
-    """model_routing.start_policy: decide the start tier once per turn."""
+class _DifficultyHarness(unittest.IsolatedAsyncioTestCase):
+    """Shared fixtures for the start-tier router tests. Holds no tests itself,
+    so subclasses do not re-run another class's tests under a new name."""
 
     class FakeJudge:
         name = "fake-judge"
@@ -343,6 +342,10 @@ class DifficultyRouterTests(unittest.IsolatedAsyncioTestCase):
 
     ROUTING = {"start_model": "claude-sonnet-5", "provider_match": "anthropic",
                "max_requests_before_escalation": 1}
+
+
+class DifficultyRouterTests(_DifficultyHarness):
+    """model_routing.start_policy: decide the start tier once per turn."""
 
     async def test_default_policy_is_cheap_and_silent(self):
         models, judged, _ = await self._run(dict(self.ROUTING, max_requests_before_escalation=6), "fix typo")
@@ -413,7 +416,7 @@ class DifficultyRouterTests(unittest.IsolatedAsyncioTestCase):
             Policy(read_shortcut="no")
 
 
-class EffortByTierTests(DifficultyRouterTests):
+class EffortByTierTests(_DifficultyHarness):
     """effort_routing.by_tier: one effort for the whole turn, chosen by the router's tier."""
 
     async def _efforts(self, p_complex):
@@ -452,7 +455,7 @@ class EffortByTierTests(DifficultyRouterTests):
             Policy(effort_routing={"by_tier": {"cheap": "turbo"}})
 
 
-class ScopeGateTests(DifficultyRouterTests):
+class ScopeGateTests(_DifficultyHarness):
     """model_routing.cheap_max_workspace_files: repository-scale workspaces start strong."""
 
     async def _in_workspace(self, n_files, p_complex):
@@ -502,3 +505,115 @@ class ScopeGateTests(DifficultyRouterTests):
 class ByTierPhaseTests(unittest.TestCase):
     def test_phase_value_is_valid(self):
         Policy(effort_routing={"explore": "low", "by_tier": {"cheap": "medium", "strong": "phase"}, "monotonic": True})
+
+
+class _KwargsProvider(DemoProvider):
+    """Records what the wrapped provider actually receives: the installed
+    Anthropic provider reads the per-request model from kwargs, not from
+    request.model, so kwargs is the receipt that matters."""
+
+    def __init__(self, default_model=None, usage=None, served_model=None):
+        super().__init__(delay_ms=0)
+        self.default_model = default_model
+        self.kwargs_seen = []
+        self._usage = usage
+        self._served_model = served_model
+
+    async def complete(self, request, **kwargs):
+        self.kwargs_seen.append(dict(kwargs))
+        response = await super().complete(request, **kwargs)
+        if self._usage is not None:
+            response.usage = self._usage
+        if self._served_model is not None:
+            response.model = self._served_model
+        return response
+
+
+class RoutingReceiptTests(_DifficultyHarness):
+    """What the provider is really called with, and what the slow_end receipt
+    records for the savings estimate (added by the mutation audit)."""
+
+    async def _complete(self, routing, prompt="typo", judge=None, provider=None, requests=1, **req_fields):
+        service, runtime, events = self._setup(routing, judge)
+        provider = provider or _KwargsProvider()
+        facade = RoutedProvider(provider, runtime, {}, demo_response, "anthropic-primary")
+        reqs = []
+        for _ in range(requests):
+            req = NS(messages=[{"role": "user", "content": prompt}], tools=[], tool_choice="auto", **req_fields)
+            await facade.complete(req)
+            reqs.append(req)
+        return provider, events, reqs, service.turn
+
+    async def test_cheap_turn_passes_start_model_to_provider_kwargs(self):
+        provider, _, _, _ = await self._complete(dict(self.ROUTING, max_requests_before_escalation=6))
+        self.assertEqual(provider.kwargs_seen[0].get("model"), "claude-sonnet-5")
+
+    async def test_strong_turn_passes_no_model_override(self):
+        provider, _, reqs, _ = await self._complete(dict(self.ROUTING, start_policy="judge"),
+                                                    judge=self.FakeJudge(p_complex=0.9))
+        self.assertNotIn("model", provider.kwargs_seen[0])
+        self.assertIsNone(getattr(reqs[0], "model", None))
+
+    async def test_complex_min_probability_is_the_gate(self):
+        # p(complex)=0.9 is below a 0.95 gate: the turn stays cheap.
+        _, events, _, turn = await self._complete(
+            dict(self.ROUTING, start_policy="judge", complex_min_probability=0.95,
+                 max_requests_before_escalation=6), judge=self.FakeJudge(p_complex=0.9))
+        judged = [e["data"] for e in events if e["event"].endswith("difficulty_judged")]
+        self.assertEqual(judged[0]["reason_code"], "judge_cheap")
+        self.assertEqual(turn.start_tier, "cheap")
+
+    async def test_rules_threshold_is_inclusive(self):
+        routing = dict(self.ROUTING, start_policy="rules", complex_min_prompt_chars=50,
+                       max_requests_before_escalation=6)
+        _, at, _, _ = await self._complete(routing, prompt="x" * 50)
+        _, below, _, _ = await self._complete(routing, prompt="x" * 49)
+        reason = lambda evs: [e["data"]["reason_code"] for e in evs if e["event"].endswith("difficulty_judged")]
+        self.assertEqual(reason(at), ["rules_strong"])
+        self.assertEqual(reason(below), ["rules_cheap"])
+
+    async def test_no_max_requests_means_no_escalation(self):
+        routing = {"start_model": "claude-sonnet-5", "provider_match": "anthropic"}
+        provider, events, _, turn = await self._complete(routing, requests=9)
+        self.assertFalse(turn.escalated)
+        self.assertEqual([k.get("model") for k in provider.kwargs_seen], ["claude-sonnet-5"] * 9)
+        reasons = {e["data"]["reason_code"] for e in events if e["event"].endswith("model_routed")}
+        self.assertEqual(reasons, {"start_model"})
+
+    async def test_slow_end_records_host_model_and_provider_usage(self):
+        usage = NS(input_tokens=1200, output_tokens=300, total_tokens=1500,
+                   cache_read_tokens=1000, cache_write_tokens=50, cost_usd=0.0123)
+        provider = _KwargsProvider(default_model="claude-opus-5-5", usage=usage, served_model="claude-sonnet-5-20260101")
+        _, events, _, _ = await self._complete(dict(self.ROUTING, max_requests_before_escalation=6), provider=provider)
+        end = [e["data"] for e in events if e["event"].endswith("slow_end")][-1]
+        self.assertEqual(end["host_model"], "claude-opus-5-5")
+        self.assertEqual(end["served_model"], "claude-sonnet-5-20260101")
+        self.assertEqual(end["cache_read_tokens"], 1000)
+        self.assertEqual(end["cache_write_tokens"], 50)
+        self.assertAlmostEqual(end["cost_usd"], 0.0123)
+        self.assertEqual(end["input_tokens"], 1200)
+
+    async def test_host_pinned_effort_is_not_overridden_by_tier(self):
+        events = []
+        coordinator = DemoCoordinator()
+        emitter = Emitter(coordinator.session_id, callback=events.append)
+        policy = Policy(mode="off", read_shortcut=False,
+                        effort_routing={"orient": "medium", "by_tier": {"cheap": "low", "strong": None}},
+                        model_routing={"start_model": "claude-sonnet-5", "start_policy": "judge",
+                                       "max_requests_before_escalation": 6})
+        service = DecisionService(policy, self.FakeJudge(p_complex=0.1), emitter, coordinator, [])
+        service.turn = TurnState("t")
+        facade = RoutedProvider(DemoProvider(delay_ms=0), Runtime(service), {}, demo_response, "anthropic")
+        req = NS(messages=[{"role": "user", "content": "task"}], tools=[], tool_choice="auto",
+                 reasoning_effort="high")
+        await facade.complete(req)
+        self.assertEqual(service.turn.start_tier, "cheap")
+        self.assertEqual(req.reasoning_effort, "high")
+
+    def test_zero_workspace_file_limit_is_rejected(self):
+        with self.assertRaises(ValueError):
+            Policy(model_routing={"start_model": "m", "cheap_max_workspace_files": 0})
+
+
+if __name__ == "__main__":
+    unittest.main()

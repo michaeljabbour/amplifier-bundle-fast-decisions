@@ -130,6 +130,11 @@ test('negative savings read as costing more',()=>{
  const v=savingsView({files:1,host_model:'claude-opus-5-5',turns:{total:1,cheap:1,strong:0},cost:{saved_usd:-0.1,cheap_turns_actual_usd:0.3,cheap_turns_on_host_usd:0.2},time:{available:false}});
  assert.equal(v.cost,'−$0.10 (costs more)');
 });
+test('savings time shows the time saved, not the time spent',()=>{
+ const {savingsView}=require('../src/amplifier_fast_decisions/static/app.js');
+ const v=savingsView({files:1,host_model:'claude-opus-5-5',turns:{total:4,cheap:4,strong:0},cost:{saved_usd:1},time:{available:true,saved_seconds:600,cheap_turns_model_seconds:1200,cheap_turns_on_host_seconds:1800}});
+ assert.equal(v.time,'10 min');assert.equal(v.timeDetail,'20 min vs 30 min at host-model speed');
+});
 test('provider calls show which model ran and why',()=>{
  const {summarize}=require('../src/amplifier_fast_decisions/static/app.js');
  const j=event('difficulty_judged',{backend:'jev',choice:'cheap',reason_code:'judge_cheap',probabilities:{complex:0.01}},'d1','s',{turn_id:'t1'});

@@ -441,6 +441,11 @@ class JevBackend:
             raise BackendUnavailable(f"TYPESAFE_BASE_URL has no host: {base_url!r}")
         port = parts.port or (443 if is_https else 80)
         target = (is_https, host, port)
+        # Keep any path prefix in the base URL (a Jev-compatible server
+        # mounted under /api, say): /api + /v1/systemone.
+        prefix = parts.path.rstrip("/")
+        if prefix and not path.startswith(prefix + "/"):
+            path = prefix + path
 
         def _open_new() -> tuple[http.client.HTTPConnection, float]:
             start = time.monotonic()

@@ -433,8 +433,6 @@ class CheckpointTests(unittest.TestCase):
             self.assertIn('next-1', continue_md)
 
 
-if __name__ == '__main__':
-    unittest.main()
 
 
 class LaunchFailureTests(unittest.TestCase):
@@ -478,3 +476,6 @@ class SupervisorOffsetTests(unittest.TestCase):
             totals = campaign._budget_totals(root)
             self.assertAlmostEqual(totals['supervisor_usd'], 15.0)
             self.assertAlmostEqual(totals['supervisor_offset'], 40.0)
+
+if __name__ == '__main__':
+    unittest.main()

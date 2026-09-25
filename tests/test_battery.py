@@ -1786,8 +1786,6 @@ class ForgeE2ELegacyStillWorksTests(unittest.TestCase):
         self.assertEqual(set(files), {'README.md', 'solution.py', 'test_public.py'})
 
 
-if __name__ == '__main__':
-    unittest.main()
 
 
 class CodexConfigModelTests(unittest.TestCase):
@@ -2026,3 +2024,6 @@ class CrossCampaignEvaluateTests(unittest.TestCase):
             })
             comparison = battery.cmd_evaluate(SimpleNamespace(root=str(candidate_root), experiment='cand1'))
             self.assertIsNone(comparison['cross'])
+
+if __name__ == '__main__':
+    unittest.main()
