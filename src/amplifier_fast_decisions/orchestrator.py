@@ -22,13 +22,16 @@ from .contracts import (
     TurnState,
     canonical,
     effective_gate,
+    effective_planner_config,
     field_value,
     digest,
     candidate_read_identity,
 )
 from . import effort
+from . import planner as turn_planner
 from .backends import ask_many as backend_ask_many
 from .runtime import Runtime, get_runtime
+from .savings import DEFAULT_RATES
 from . import provenance
 
 __amplifier_module_type__ = "orchestrator"
@@ -194,6 +197,84 @@ def _shape_easy_turn_request(
     if not updates:
         return request, guidance_applied, hidden
     return _copy_with_updates(request, updates), guidance_applied, hidden
+
+
+# Turn planner (model_routing.planner, opt-in): small helpers shared by
+# the legacy plain start_model assignment and the planner's own choice --
+# both apply a chosen model/effort to the SAME request/kwargs shape, so
+# the mutation logic lives once here instead of twice inline. See
+# planner.py and docs/proposals/TURN-PLANNER.md.
+def _apply_model_override(request: Any, kwargs: dict[str, Any], model: str) -> None:
+    """Set the routed model on both ``request.model``/``request["model"]``
+    and ``kwargs["model"]`` -- the installed Anthropic provider reads the
+    effective model from kwargs, never from request.model alone (see
+    docs/ARCHITECTURE.md). Mutates request/kwargs in place, matching the
+    pre-existing HC04 behavior.
+    """
+    if isinstance(request, dict):
+        request["model"] = model
+    else:
+        setattr(request, "model", model)
+    kwargs["model"] = model
+
+
+def _apply_start_effort(
+    request: Any, start_effort: str | None, effort_applied_this_request: bool
+) -> str | None:
+    """Apply ``start_effort`` to ``request.reasoning_effort`` unless
+    something already set it this request (an HC03 phase effort or a host
+    pin) -- mirrors the pre-existing HC04 behavior. Returns the effort
+    actually applied, or ``None`` when left unchanged.
+    """
+    if (
+        start_effort is not None
+        and not effort_applied_this_request
+        and field_value(request, "reasoning_effort", None) is None
+    ):
+        if isinstance(request, dict):
+            request["reasoning_effort"] = start_effort
+        else:
+            setattr(request, "reasoning_effort", start_effort)
+        return start_effort
+    return None
+
+
+def _request_chars(request: Any) -> int:
+    """Best-effort character count of this request's system + tool +
+    message text -- the turn planner's cold-start ``ctx`` estimate, used
+    only until a real provider response in this session gives an actual
+    prompt-token count. Never raises.
+    """
+    total = 0
+    try:
+        messages = field_value(request, "messages") or []
+        for message in messages:
+            content = field_value(message, "content")
+            if isinstance(content, str):
+                total += len(content)
+            elif isinstance(content, list):
+                for block in content:
+                    text = field_value(block, "text")
+                    if isinstance(text, str):
+                        total += len(text)
+        tools = field_value(request, "tools")
+        if tools:
+            total += len(canonical(tools))
+    except Exception:  # noqa: BLE001 -- best-effort estimate, never raises
+        return total
+    return total
+
+
+def _estimate_ctx(request: Any, runtime: Runtime) -> int:
+    """The turn planner's ``ctx`` input (spec: docs/proposals/TURN-PLANNER.md):
+    the provider-reported prompt size of the most recent real provider
+    response in this session (``runtime.planner_last_ctx``, any model) when
+    available, else a characters/4 estimate of THIS request's system +
+    tools + messages.
+    """
+    if runtime.planner_last_ctx is not None:
+        return runtime.planner_last_ctx
+    return _request_chars(request) // 4
 
 
 def _is_test_tool(tool_key: str) -> bool:
@@ -835,6 +916,12 @@ docs/UPSTREAM_CONTRACT.md.
         model_routing = service.policy.model_routing
         effort_applied_this_request = False
         phase = None
+        # Turn planner (opt-in): whether THIS request's routing decision was
+        # "planner chose the host" (reason_code planner_host) -- gates HC12's
+        # easy-turn shaping below, which must not apply to a request that is
+        # actually running on the host. Always defined, matching the pattern
+        # of effort_applied_this_request above.
+        planner_chose_host_this_request = False
         # Turn-start difficulty router: decided once, before effort and model
         # routing, so both can follow the same per-turn tier.
         if model_routing and turn.start_tier is None and model_routing.get("start_policy", "cheap") != "cheap":
@@ -1078,29 +1165,56 @@ docs/UPSTREAM_CONTRACT.md.
                 if explicit_model and not override_explicit:
                     reason_code = "host_pinned"
                 else:
-                    requested_model = start_model
-                    if isinstance(request, dict):
-                        request["model"] = start_model
-                    else:
-                        setattr(request, "model", start_model)
-                    # The verified installed Anthropic provider reads the
-                    # per-request model from kwargs (`kwargs.get("model", ...)`),
-                    # never from request.model -- see docs/ARCHITECTURE.md.
-                    # Setting request.model alone would be a receipt that
-                    # lies about what was actually served.
-                    kwargs["model"] = start_model
-                    if (
-                        start_effort is not None
-                        and not effort_applied_this_request
-                        and field_value(request, "reasoning_effort", None) is None
-                    ):
-                        requested_effort = start_effort
-                        if isinstance(request, dict):
-                            request["reasoning_effort"] = start_effort
+                    # Turn planner (model_routing.planner, opt-in): decides
+                    # ONCE per turn, at this exact decision point -- easy,
+                    # unescalated, provider-matched, unpinned -- the same
+                    # point that used to unconditionally assign start_model.
+                    # See planner.py and docs/proposals/TURN-PLANNER.md.
+                    planner_config = effective_planner_config(model_routing)
+                    if planner_config is not None and not turn.planner_decided:
+                        turn.planner_decided = True
+                        host_model = getattr(self._provider, "default_model", None) or start_model
+                        plan_candidates = list(planner_config["candidates"]) or [start_model]
+                        ctx = _estimate_ctx(request, self._runtime)
+                        plan = turn_planner.plan_turn(
+                            host_model, plan_candidates, self._runtime.planner_state,
+                            ctx, time.time(), planner_config, DEFAULT_RATES,
+                        )
+                        turn.planner_plan = plan
+                        if not plan["abstained"]:
+                            await service.emit("turn_planned", {
+                                "objective": plan["objective"], "ctx": plan["ctx"],
+                                "options": plan["options"], "choice": plan["choice"],
+                                "host_model": host_model[:80],
+                                "provider_call_id": provider_call_id, "mode": service.policy.mode,
+                            }, decision_id)
+                    plan = turn.planner_plan if planner_config is not None else None
+                    if plan is not None and not plan["abstained"]:
+                        if plan["choice"] == plan["host"]:
+                            # Behaves exactly like a hard turn: no model
+                            # override, host effort. HC12 easy-turn shaping
+                            # (below) must not apply to this request either.
+                            reason_code = "planner_host"
+                            planner_chose_host_this_request = True
                         else:
-                            setattr(request, "reasoning_effort", start_effort)
-                    turn.model_routed_requests += 1
-                    reason_code = "start_model"
+                            requested_model = plan["choice"]
+                            _apply_model_override(request, kwargs, requested_model)
+                            requested_effort = _apply_start_effort(
+                                request, start_effort, effort_applied_this_request
+                            )
+                            turn.model_routed_requests += 1
+                            reason_code = f"planner_{plan['objective']}"
+                    else:
+                        # Planner absent, disabled, or abstained (the host
+                        # has no price or prior) -- today's behaviour,
+                        # byte-for-byte: the plain start_model assignment.
+                        requested_model = start_model
+                        _apply_model_override(request, kwargs, start_model)
+                        requested_effort = _apply_start_effort(
+                            request, start_effort, effort_applied_this_request
+                        )
+                        turn.model_routed_requests += 1
+                        reason_code = "start_model"
             await service.emit("model_routed", {
                 "phase": routing_phase, "requested_model": requested_model,
                 "requested_effort": requested_effort, "reason_code": reason_code,
@@ -1117,8 +1231,13 @@ docs/UPSTREAM_CONTRACT.md.
         # start_tier is decided once and never changes. A shaped COPY is
         # built (call_request); `request` itself, and every message/content
         # object it references, are left untouched. See _shape_easy_turn_request.
+        # Turn planner (opt-in): EXCEPT when the planner chose the host for
+        # THIS request (reason_code planner_host, above) -- that request is
+        # actually running on the host, so easy-turn shaping (written for a
+        # cheap model's ceremony) must not apply, even though turn.start_tier
+        # still reads "cheap". See docs/proposals/TURN-PLANNER.md.
         call_request = request
-        if model_routing and turn.start_tier == "cheap":
+        if model_routing and turn.start_tier == "cheap" and not planner_chose_host_this_request:
             easy_turn_guidance = model_routing.get("easy_turn_guidance")
             easy_turn_hide_tools = model_routing.get("easy_turn_hide_tools") or ()
             if easy_turn_guidance or easy_turn_hide_tools:
@@ -1156,10 +1275,34 @@ docs/UPSTREAM_CONTRACT.md.
                 "duration_ms": (time.perf_counter() - start) * 1000,
                 "transport_measured": "provider-complete"}, decision_id)
             raise
+        usage = usage_fields(response)
+        # Turn planner (opt-in): record per-model cache state from every
+        # real provider response's usage -- last_used_at and the reported
+        # total prompt size (input + cache_read + cache_write), keyed by
+        # the model that actually served this request. Inert (no attribute
+        # read, nothing recorded) unless model_routing.planner is enabled,
+        # matching every other HC0x seam. Updated regardless of which
+        # reason_code routed this request (host, start_model, or a planner
+        # choice) -- an accurate cache state needs every model's real
+        # usage, not just the planner's own picks. See planner.py.
+        planner_config = effective_planner_config(model_routing)
+        if planner_config is not None:
+            served = usage.get("served_model") or model
+            input_tokens = usage.get("input_tokens")
+            if isinstance(served, str) and served and isinstance(input_tokens, int):
+                total_prompt = (
+                    input_tokens
+                    + usage.get("cache_read_tokens", 0)
+                    + usage.get("cache_write_tokens", 0)
+                )
+                entry = self._runtime.planner_state.setdefault(served, {})
+                entry["last_used_at"] = time.time()
+                entry["cached_tokens"] = total_prompt
+                self._runtime.planner_last_ctx = total_prompt
         await service.emit("slow_end", {"provider": self._provider_key, "model": model, **self._host_model_field(),
             "provider_call_id": provider_call_id,
             "status": "ok", "duration_ms": (time.perf_counter() - start) * 1000,
-            **usage_fields(response), "latency_kind": "provider_complete_wall_time",
+            **usage, "latency_kind": "provider_complete_wall_time",
             "transport_measured": "provider-complete"}, decision_id)
         return response
 

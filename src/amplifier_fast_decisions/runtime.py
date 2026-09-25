@@ -93,6 +93,18 @@ class Runtime:
         # Set by the first module that installs the auto-observatory
         # session:start handler, so orchestrator + hook never both launch it.
         self.observatory_installed = False
+        # Turn planner (model_routing.planner, opt-in): per-session,
+        # per-model cache state -- {model: {"last_used_at": float,
+        # "cached_tokens": int}} -- fed from every real provider
+        # response's usage while the planner is configured (see
+        # orchestrator.RoutedProvider.complete); read (never written) by
+        # planner.plan_turn(). planner_last_ctx is the most recently
+        # reported total prompt size (any model), the turn planner's
+        # ctx estimate for the NEXT request when available. Both stay
+        # empty/None -- and unread -- unless model_routing.planner is
+        # enabled. See planner.py and docs/proposals/TURN-PLANNER.md.
+        self.planner_state: dict[str, dict[str, Any]] = {}
+        self.planner_last_ctx: int | None = None
 
     def start_shadow_worker(self) -> None:
         """Idempotent. The runtime's creator owns this task (mirrors runtime

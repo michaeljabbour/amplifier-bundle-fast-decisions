@@ -221,6 +221,15 @@ SAFE_FIELDS = {
     # `mode` (already listed above) are reused verbatim.
     "guidance_chars",
     "hidden_tools",
+    # Turn planner (opt-in): the objective used, the estimated prompt-token
+    # context size, the per-option {model, warm, cold, cost, time} table,
+    # and the chosen model id -- all small numeric/label scalars derived
+    # from token counts already recorded elsewhere (never raw messages,
+    # tool arguments or model output). `host_model`, `provider_call_id`,
+    # `mode` (already listed above) are reused verbatim.
+    "objective",
+    "ctx",
+    "options",
 }
 
 
