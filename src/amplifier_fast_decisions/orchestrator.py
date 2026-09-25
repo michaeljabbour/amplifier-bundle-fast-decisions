@@ -222,13 +222,22 @@ def workspace_file_count(root: str, limit: int) -> int:
 
 
 async def decide_start_tier(service: Any, request: Any, model_routing: dict[str, Any],
-                            decision_id: str | None) -> str:
+                            decision_id: str | None, user_model: str | None = None) -> str:
     """``"cheap"`` or ``"strong"`` for this turn (called once, at its first
     slow request). ``start_policy: cheap`` (default) keeps the pre-router
     behavior and emits nothing. ``rules`` uses prompt length. ``judge`` asks
     the configured backend one typed question and falls back to rules on
     any abstain / block / error. Never raises (CancelledError propagates)."""
     policy = model_routing.get("start_policy", "cheap")
+    if user_model:
+        # The user explicitly picked a model for this session (a UI model
+        # picker): every turn runs on it -- no cheap start, no escalation.
+        await service.emit("difficulty_judged", {
+            "backend": service.backend.name, "choice": "strong", "probabilities": None,
+            "duration_ms": 0.0, "reason_code": "user_model_strong", "model": user_model[:80],
+            "mode": service.policy.mode,
+        }, decision_id)
+        return "strong"
     if policy == "cheap":
         return "cheap"
     task = _turn_user_text(request)
@@ -564,6 +573,9 @@ async def _ask_tool_risk(
     return answers
 
 
+_UNSEEN = object()
+
+
 class RoutedProvider:
     """Preserve the Provider protocol while intercepting complete() boundaries.
 
@@ -583,6 +595,28 @@ docs/UPSTREAM_CONTRACT.md.
         self._response_factory = response_factory
         self._provider_key = provider_key or getattr(provider, "name", "unknown")
         self._synthetic_responses: dict[int, Any] = {}
+        # The provider's default model as first seen; a later change means the
+        # user switched models mid-session (e.g. a UI model picker).
+        self._initial_default_model: Any = _UNSEEN
+
+    def _user_selected_model(self, service: Any) -> str | None:
+        """The model the user explicitly chose for this session, or None.
+
+        Two signals: amplifier-runtime records an in-session pick as the
+        ``ui.model_override`` session-state marker, and any mid-session
+        change of the wrapped provider's ``default_model`` is a user switch.
+        A model set before the session starts (settings, ``--model``) is
+        indistinguishable from the configured default and stays routable."""
+        current = getattr(self._provider, "default_model", None)
+        if self._initial_default_model is _UNSEEN:
+            self._initial_default_model = current
+        state = getattr(getattr(service, "coordinator", None), "session_state", None)
+        marker = state.get("ui.model_override") if isinstance(state, dict) else None
+        if isinstance(marker, dict) and marker.get("model"):
+            return str(marker["model"])
+        if isinstance(current, str) and current and current != self._initial_default_model:
+            return current
+        return None
 
     def __getattr__(self, name: str):
         if name == "stream":
@@ -671,7 +705,8 @@ docs/UPSTREAM_CONTRACT.md.
         # Turn-start difficulty router: decided once, before effort and model
         # routing, so both can follow the same per-turn tier.
         if model_routing and turn.start_tier is None and model_routing.get("start_policy", "cheap") != "cheap":
-            turn.start_tier = await decide_start_tier(service, request, model_routing, decision_id)
+            turn.start_tier = await decide_start_tier(service, request, model_routing, decision_id,
+                                                         user_model=self._user_selected_model(service))
         if effort_routing:
             phase = effort.classify_phase(request)
 
@@ -789,7 +824,8 @@ docs/UPSTREAM_CONTRACT.md.
             turn.slow_requests_seen += 1
             routing_phase = phase if phase is not None else effort.classify_phase(request)
             if turn.start_tier is None:
-                turn.start_tier = await decide_start_tier(service, request, model_routing, decision_id)
+                turn.start_tier = await decide_start_tier(service, request, model_routing, decision_id,
+                                                         user_model=self._user_selected_model(service))
             # A turn judged complex starts on the host model and stays there:
             # no start_model override, no mid-turn escalation.
             strong_turn = turn.start_tier == "strong"

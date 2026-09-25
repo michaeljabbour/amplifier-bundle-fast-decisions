@@ -371,6 +371,39 @@ class DifficultyRouterTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(judged[0]["reason_code"], "rules_strong")
         self.assertEqual(models[0], None)
 
+    async def test_ui_model_pick_is_respected(self):
+        # amplifier-runtime marks an in-session model pick in session_state.
+        judge = self.FakeJudge(p_complex=0.1)
+        service, runtime, events = self._setup(dict(self.ROUTING, start_policy="judge",
+                                                    max_requests_before_escalation=6), judge)
+        service.coordinator.session_state = {"ui.model_override": {"provider": "anthropic", "model": "claude-opus-5-5"}}
+        facade = RoutedProvider(DemoProvider(delay_ms=0), runtime, {}, demo_response, "anthropic-primary")
+        req = NS(messages=[{"role": "user", "content": "typo"}], tools=[], tool_choice="auto")
+        await facade.complete(req)
+        judged = [e["data"] for e in events if e["event"].endswith("difficulty_judged")]
+        self.assertIsNone(getattr(req, "model", None))       # the user's model, untouched
+        self.assertEqual(judged[0]["reason_code"], "user_model_strong")
+        self.assertEqual(judged[0]["model"], "claude-opus-5-5")
+        self.assertEqual(judge.calls, 0)                      # no judge call spent
+
+    async def test_mid_session_default_model_change_is_respected(self):
+        judge = self.FakeJudge(p_complex=0.1)
+        service, runtime, events = self._setup(dict(self.ROUTING, start_policy="judge",
+                                                    max_requests_before_escalation=6), judge)
+        provider = DemoProvider(delay_ms=0)
+        provider.default_model = "claude-opus-5-5"
+        facade = RoutedProvider(provider, runtime, {}, demo_response, "anthropic-primary")
+        first = NS(messages=[{"role": "user", "content": "typo"}], tools=[], tool_choice="auto")
+        await facade.complete(first)
+        self.assertEqual(first.model, "claude-sonnet-5")      # configured default: routable
+        provider.default_model = "claude-fable-5-1"           # user switched models
+        service.turn = TurnState("t2")
+        second = NS(messages=[{"role": "user", "content": "typo"}], tools=[], tool_choice="auto")
+        await facade.complete(second)
+        self.assertIsNone(getattr(second, "model", None))
+        judged = [e["data"] for e in events if e["event"].endswith("difficulty_judged")]
+        self.assertEqual([j["reason_code"] for j in judged], ["judge_cheap", "user_model_strong"])
+
     def test_validation(self):
         with self.assertRaises(ValueError):
             Policy(model_routing={"start_model": "m", "start_policy": "vibes"})
