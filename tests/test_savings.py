@@ -118,6 +118,30 @@ class SummarizeTests(unittest.TestCase):
         self.assertAlmostEqual(r["cost"]["cheap_turns_on_host_usd"], 0.20)
         self.assertAlmostEqual(r["cost"]["saved_usd"], -0.10)
 
+    def test_alternating_turns_do_not_overstate_savings(self):
+        # Turn 1 host (warms the host cache), turn 2 cheap (writes 1M tokens to
+        # the cheap model's cache), turn 3 host (rebuilds its cache: 1M writes).
+        ev = [
+            _event("difficulty_judged", "t1", {"choice": "strong", "reason_code": "judge_strong"}, ts="2026-09-24T10:00:00Z"),
+            _event("slow_end", "t1", {"status": "ok", "model": "provider-default", "host_model": "claude-opus-5-5",
+                                      "input_tokens": 0, "cache_write_tokens": 1_000_000, "output_tokens": 0}, ts="2026-09-24T10:00:01Z"),
+            _event("difficulty_judged", "t2", {"choice": "cheap", "reason_code": "judge_cheap"}, ts="2026-09-24T10:01:00Z"),
+            _event("slow_end", "t2", {"status": "ok", "model": "claude-sonnet-5", "host_model": "claude-opus-5-5",
+                                      "input_tokens": 0, "cache_read_tokens": 0, "cache_write_tokens": 1_000_000,
+                                      "output_tokens": 0}, ts="2026-09-24T10:01:01Z"),
+            _event("difficulty_judged", "t3", {"choice": "strong", "reason_code": "judge_strong"}, ts="2026-09-24T10:02:00Z"),
+            _event("slow_end", "t3", {"status": "ok", "model": "provider-default", "host_model": "claude-opus-5-5",
+                                      "input_tokens": 0, "cache_write_tokens": 1_000_000, "output_tokens": 0}, ts="2026-09-24T10:02:01Z"),
+        ]
+        with tempfile.TemporaryDirectory() as d:
+            _write(d, "s.jsonl", ev)
+            r = savings.summarize(d)
+        c = r["cost"]
+        self.assertAlmostEqual(c["cheap_turns_actual_usd"], 3.75)     # Sonnet cache write
+        self.assertAlmostEqual(c["cheap_turns_on_host_usd"], 0.20)    # host would have READ it
+        self.assertAlmostEqual(c["switch_penalty_usd"], 4.80)         # Opus rebuild: 5.00 - 0.20
+        self.assertAlmostEqual(c["saved_usd"], 0.20 - 3.75 - 4.80)    # routing cost money here
+
     def test_empty_or_missing_directory(self):
         r = savings.summarize("/nonexistent/afast-events")
         self.assertEqual(r["turns"]["total"], 0)

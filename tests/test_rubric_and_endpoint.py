@@ -214,3 +214,15 @@ class SessionContextTests(unittest.TestCase):
             self.assertEqual(info, {"repo": "my-repo", "subdir": "src/pkg", "branch": "feature/x"})
             self.assertNotIn(d, str(info))
             self.assertEqual(repo_context(Path(d)), {} if not (Path(d) / ".git").exists() else repo_context(Path(d)))
+
+
+class SessionWorkingDirTests(unittest.TestCase):
+    def test_scope_gate_reads_the_session_working_dir(self):
+        from types import SimpleNamespace
+        from amplifier_fast_decisions.orchestrator import session_working_dir
+        coord = SimpleNamespace(get_capability=lambda name: "/work/big-repo" if name == "session.working_dir" else None)
+        self.assertEqual(session_working_dir(SimpleNamespace(coordinator=coord)), "/work/big-repo")
+        none = SimpleNamespace(get_capability=lambda name: None)
+        self.assertEqual(session_working_dir(SimpleNamespace(coordinator=none)), os.getcwd())
+        broken = SimpleNamespace(get_capability=lambda name: (_ for _ in ()).throw(RuntimeError()))
+        self.assertEqual(session_working_dir(SimpleNamespace(coordinator=broken)), os.getcwd())

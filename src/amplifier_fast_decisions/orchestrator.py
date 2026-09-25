@@ -221,6 +221,22 @@ def workspace_file_count(root: str, limit: int) -> int:
     return count
 
 
+def session_working_dir(service: Any) -> str:
+    """The session's working directory: the kernel's ``session.working_dir``
+    capability (set per session by the CLI, amplifier-runtime and Studio),
+    falling back to the process cwd."""
+    coordinator = getattr(service, "coordinator", None)
+    getter = getattr(coordinator, "get_capability", None)
+    if callable(getter):
+        try:
+            value = getter("session.working_dir")
+        except Exception:  # noqa: BLE001
+            value = None
+        if isinstance(value, (str, os.PathLike)) and str(value):
+            return str(value)
+    return os.getcwd()
+
+
 async def decide_start_tier(service: Any, request: Any, model_routing: dict[str, Any],
                             decision_id: str | None, user_model: str | None = None) -> str:
     """``"cheap"`` or ``"strong"`` for this turn (called once, at its first
@@ -243,7 +259,7 @@ async def decide_start_tier(service: Any, request: Any, model_routing: dict[str,
     task = _turn_user_text(request)
     scope_limit = model_routing.get("cheap_max_workspace_files")
     if scope_limit is not None:
-        files = await asyncio.to_thread(workspace_file_count, os.getcwd(), scope_limit)
+        files = await asyncio.to_thread(workspace_file_count, session_working_dir(service), scope_limit)
         if files > scope_limit:
             await service.emit("difficulty_judged", {
                 "backend": service.backend.name, "choice": "strong", "probabilities": None,

@@ -1,0 +1,492 @@
+{
+  "date": "2026-09-25",
+  "addon_prs": [
+    {
+      "merge": "feb96dbedd89543cf717fbe65f76b9085a745be9",
+      "mergedAt": "2026-09-25T00:59:30Z",
+      "number": 3,
+      "state": "MERGED",
+      "title": "perf: cut design-loop per-request prompt footprint (~2.9k -> ~1.35k tokens)",
+      "url": "https://github.com/michaeljabbour/amplifier-bundle-design-loop/pull/3"
+    },
+    {
+      "merge": "60a56f3b36c81912b54d17719a1e98320de64eb6",
+      "mergedAt": "2026-09-25T00:59:36Z",
+      "number": 2,
+      "state": "MERGED",
+      "title": "perf: trim startup and per-request footprint of the conductor",
+      "url": "https://github.com/michaeljabbour/amplifier-bundle-behavioral-plasticity/pull/2"
+    },
+    {
+      "merge": "03a5c3f67bc784090cc7c93df3327d50f27157ee",
+      "mergedAt": "2026-09-25T00:59:46Z",
+      "number": 7,
+      "state": "MERGED",
+      "title": "perf: cut per-request tokens ~47% and take heavy hook work off the critical path",
+      "url": "https://github.com/michaeljabbour/amplifier-bundle-preceptor/pull/7"
+    },
+    {
+      "merge": "b6bd3798606b8cb5e3e3715eeab9cfdf5b98659f",
+      "mergedAt": "2026-09-25T01:43:54Z",
+      "number": 9,
+      "state": "MERGED",
+      "title": "perf: startup latency \u2014 briefing off the critical path, fast daemon reads, kernel race fix (2.0.2)",
+      "url": "https://github.com/michaeljabbour/amplifier-bundle-memory/pull/9"
+    }
+  ],
+  "addon_pr_numbers_quoted": {
+    "design-loop#3": "per-request footprint ~2.9k -> ~1.35k tokens (chars/4 estimate; PR title and body)",
+    "behavioral-plasticity#2": "about 485 tokens/request less (review verified 504 before a 19-token add-back)",
+    "preceptor#7": "per-request total 2153 -> 1146 tokens (~47% less; review verified 2153 -> 1076 before a ~70-token revert)",
+    "memory#9": "warm wing search 3.02 s -> 1.04 s; read_diary 1.31 s -> 0.37 s; first search after daemon start 3.00 s -> 1.78 s (review-measured on a 178 MB store copy); session-start blocking of 7.8-9.2 s NOT independently verified"
+  },
+  "addon_reviews": "reviews/addon-*-review.md (independent Amplifier sessions; verdict on line 1)",
+  "upstream_pr": {
+    "number": 413,
+    "state": "OPEN",
+    "title": "Optional: hooks-deprecation only scans hand-written .amplifier config",
+    "url": "https://github.com/microsoft/amplifier-foundation/pull/413"
+  },
+  "upstream_review": "reviews/upstream-hooks-deprecation-review.md",
+  "qwen_latest_ollama_show": "Model\n    architecture        qwen3_5    \n    parameters          27.4B      \n    context length      262144     \n    embedding length    5120       \n    quantization        int8       \n    requires            0.19.0     \n\n  Capabilities\n    completion     \n    vision         \n    tools          \n    thinking       \n        levels     false, true    \n        default    true           \n\n  Parameters\n    temperature    0.6      \n    top_k          20       \n    top_p          0.95     \n    num_ctx        32768",
+  "qwen_latest_size_gb_from_ollama_list": 29,
+  "fig7_per_request_cache_write_tokens": {
+    "source": "Amplifier session logs (llm:response usage.cache_write_tokens) for the runs below",
+    "sympy-16766 first version (swe-screen10 orch-primary r1, session b15ccd09)": [
+      36753,
+      37100,
+      938,
+      39478,
+      1060
+    ],
+    "sympy-16766 decide once (swe-complex-speed orch-router-rules r1, session d5dcbe3a)": [
+      36697,
+      721,
+      816,
+      1438,
+      895,
+      676,
+      211
+    ],
+    "sympy-16766 standard (swe-complex-speed plain r1, session 8fd776b0)": [
+      36684,
+      240,
+      4500,
+      775,
+      1364,
+      898,
+      374,
+      2350,
+      394,
+      1168,
+      317,
+      676
+    ],
+    "words_per_token_used_in_report": 0.75
+  },
+  "trivial_prompt_by_app_bundle": {
+    "source": "bundle-attribution/results.jsonl: one trivial 'amplifier run' per app bundle added alone on top of foundation, 2 attempts",
+    "rows": [
+      {
+        "app": "(foundation only)",
+        "attempt": 1,
+        "wall_s": 12.3,
+        "exit": 0,
+        "start_to_prompt_s": 6.921219,
+        "prompt_tokens": 14811
+      },
+      {
+        "app": "(foundation only)",
+        "attempt": 2,
+        "wall_s": 12.9,
+        "exit": 0,
+        "start_to_prompt_s": 7.016257,
+        "prompt_tokens": 23309
+      },
+      {
+        "app": "foundation-capabilities",
+        "attempt": 1,
+        "wall_s": 14.5,
+        "exit": 0,
+        "start_to_prompt_s": 5.428721,
+        "prompt_tokens": 41851
+      },
+      {
+        "app": "foundation-capabilities",
+        "attempt": 2,
+        "wall_s": 13.9,
+        "exit": 0,
+        "start_to_prompt_s": 6.573657,
+        "prompt_tokens": 65093
+      },
+      {
+        "app": "digital-twin-universe",
+        "attempt": 1,
+        "wall_s": 13.8,
+        "exit": 0,
+        "start_to_prompt_s": 7.659465,
+        "prompt_tokens": 15229
+      },
+      {
+        "app": "digital-twin-universe",
+        "attempt": 2,
+        "wall_s": 11.9,
+        "exit": 0,
+        "start_to_prompt_s": 6.528396,
+        "prompt_tokens": 23933
+      },
+      {
+        "app": "team-knowledge-base",
+        "attempt": 1,
+        "wall_s": 15.3,
+        "exit": 0,
+        "start_to_prompt_s": 6.093521,
+        "prompt_tokens": 27949
+      },
+      {
+        "app": "team-knowledge-base",
+        "attempt": 2,
+        "wall_s": 15.6,
+        "exit": 0,
+        "start_to_prompt_s": 6.067932,
+        "prompt_tokens": 28303
+      },
+      {
+        "app": "made-support",
+        "attempt": 1,
+        "wall_s": 13.6,
+        "exit": 0,
+        "start_to_prompt_s": 6.683581,
+        "prompt_tokens": 18246
+      },
+      {
+        "app": "made-support",
+        "attempt": 2,
+        "wall_s": 14.8,
+        "exit": 0,
+        "start_to_prompt_s": 8.487388,
+        "prompt_tokens": 29296
+      },
+      {
+        "app": "memory",
+        "attempt": 1,
+        "wall_s": 19.1,
+        "exit": 0,
+        "start_to_prompt_s": 13.321812,
+        "prompt_tokens": 18322
+      },
+      {
+        "app": "memory",
+        "attempt": 2,
+        "wall_s": 18.6,
+        "exit": 0,
+        "start_to_prompt_s": 12.801592,
+        "prompt_tokens": 27937
+      },
+      {
+        "app": "behavioral-plasticity-app",
+        "attempt": 1,
+        "wall_s": 17.6,
+        "exit": 0,
+        "start_to_prompt_s": 11.744681,
+        "prompt_tokens": 19769
+      },
+      {
+        "app": "behavioral-plasticity-app",
+        "attempt": 2,
+        "wall_s": 16.8,
+        "exit": 0,
+        "start_to_prompt_s": 11.12632,
+        "prompt_tokens": 29768
+      },
+      {
+        "app": "attractor-app",
+        "attempt": 1,
+        "wall_s": 14.2,
+        "exit": 0,
+        "start_to_prompt_s": 7.318429,
+        "prompt_tokens": 16279
+      },
+      {
+        "app": "attractor-app",
+        "attempt": 2,
+        "wall_s": 12.7,
+        "exit": 0,
+        "start_to_prompt_s": 7.107338,
+        "prompt_tokens": 25270
+      },
+      {
+        "app": "conformance",
+        "attempt": 1,
+        "wall_s": 13.6,
+        "exit": 0,
+        "start_to_prompt_s": 7.678568,
+        "prompt_tokens": 15403
+      },
+      {
+        "app": "conformance",
+        "attempt": 2,
+        "wall_s": 12.2,
+        "exit": 0,
+        "start_to_prompt_s": 6.958133,
+        "prompt_tokens": 24022
+      },
+      {
+        "app": "design-loop",
+        "attempt": 1,
+        "wall_s": 13.5,
+        "exit": 0,
+        "start_to_prompt_s": 6.623956,
+        "prompt_tokens": 20194
+      },
+      {
+        "app": "design-loop",
+        "attempt": 2,
+        "wall_s": 13.6,
+        "exit": 0,
+        "start_to_prompt_s": 6.792242,
+        "prompt_tokens": 33119
+      },
+      {
+        "app": "evaluation",
+        "attempt": 1,
+        "wall_s": 12.1,
+        "exit": 0,
+        "start_to_prompt_s": 6.753915,
+        "prompt_tokens": 23294
+      },
+      {
+        "app": "evaluation",
+        "attempt": 2,
+        "wall_s": 10.7,
+        "exit": 0,
+        "start_to_prompt_s": 5.31296,
+        "prompt_tokens": 23312
+      },
+      {
+        "app": "impeccable",
+        "attempt": 1,
+        "wall_s": 14.8,
+        "exit": 0,
+        "start_to_prompt_s": 8.416674,
+        "prompt_tokens": 15875
+      },
+      {
+        "app": "impeccable",
+        "attempt": 2,
+        "wall_s": 11.5,
+        "exit": 0,
+        "start_to_prompt_s": 6.342242,
+        "prompt_tokens": 25047
+      },
+      {
+        "app": "llm-wiki",
+        "attempt": 1,
+        "wall_s": 15.0,
+        "exit": 0,
+        "start_to_prompt_s": 8.255548,
+        "prompt_tokens": 23296
+      },
+      {
+        "app": "llm-wiki",
+        "attempt": 2,
+        "wall_s": 12.2,
+        "exit": 0,
+        "start_to_prompt_s": 6.437407,
+        "prompt_tokens": 23310
+      },
+      {
+        "app": "unknowns",
+        "attempt": 1,
+        "wall_s": 13.1,
+        "exit": 0,
+        "start_to_prompt_s": 7.352007,
+        "prompt_tokens": 15889
+      },
+      {
+        "app": "unknowns",
+        "attempt": 2,
+        "wall_s": 11.5,
+        "exit": 0,
+        "start_to_prompt_s": 5.650239,
+        "prompt_tokens": 24858
+      },
+      {
+        "app": "amplifier-online",
+        "attempt": 1,
+        "wall_s": 12.5,
+        "exit": 0,
+        "start_to_prompt_s": 6.77822,
+        "prompt_tokens": 15861
+      },
+      {
+        "app": "amplifier-online",
+        "attempt": 2,
+        "wall_s": 12.1,
+        "exit": 0,
+        "start_to_prompt_s": 6.700257,
+        "prompt_tokens": 24534
+      },
+      {
+        "app": "team-pulse",
+        "attempt": 1,
+        "wall_s": 12.7,
+        "exit": 0,
+        "start_to_prompt_s": 6.865352,
+        "prompt_tokens": 24504
+      },
+      {
+        "app": "team-pulse",
+        "attempt": 2,
+        "wall_s": 15.4,
+        "exit": 0,
+        "start_to_prompt_s": 8.612376,
+        "prompt_tokens": 25708
+      },
+      {
+        "app": "ergonomics",
+        "attempt": 1,
+        "wall_s": 13.0,
+        "exit": 0,
+        "start_to_prompt_s": 7.112758,
+        "prompt_tokens": 15978
+      },
+      {
+        "app": "ergonomics",
+        "attempt": 2,
+        "wall_s": 11.7,
+        "exit": 0,
+        "start_to_prompt_s": 6.000821,
+        "prompt_tokens": 25382
+      },
+      {
+        "app": "mj",
+        "attempt": 1,
+        "wall_s": 13.1,
+        "exit": 0,
+        "start_to_prompt_s": 7.496239,
+        "prompt_tokens": 17668
+      },
+      {
+        "app": "mj",
+        "attempt": 2,
+        "wall_s": 11.9,
+        "exit": 0,
+        "start_to_prompt_s": 6.588362,
+        "prompt_tokens": 26783
+      },
+      {
+        "app": "preceptor",
+        "attempt": 1,
+        "wall_s": 13.0,
+        "exit": 0,
+        "start_to_prompt_s": 6.111919,
+        "prompt_tokens": 16897
+      },
+      {
+        "app": "preceptor",
+        "attempt": 2,
+        "wall_s": 15.7,
+        "exit": 0,
+        "start_to_prompt_s": 9.380409,
+        "prompt_tokens": 26745
+      },
+      {
+        "app": "the-usual-app",
+        "attempt": 1,
+        "wall_s": 11.9,
+        "exit": 0,
+        "start_to_prompt_s": 5.954714,
+        "prompt_tokens": 16559
+      },
+      {
+        "app": "the-usual-app",
+        "attempt": 2,
+        "wall_s": 16.5,
+        "exit": 0,
+        "start_to_prompt_s": 9.28033,
+        "prompt_tokens": 25385
+      },
+      {
+        "app": "runpod",
+        "attempt": 1,
+        "wall_s": 11.9,
+        "exit": 0,
+        "start_to_prompt_s": 6.270929,
+        "prompt_tokens": 15688
+      },
+      {
+        "app": "runpod",
+        "attempt": 2,
+        "wall_s": 13.8,
+        "exit": 0,
+        "start_to_prompt_s": 7.951431,
+        "prompt_tokens": 24408
+      },
+      {
+        "app": "converge",
+        "attempt": 1,
+        "wall_s": 12.2,
+        "exit": 0,
+        "start_to_prompt_s": 5.770992,
+        "prompt_tokens": 24023
+      },
+      {
+        "app": "converge",
+        "attempt": 2,
+        "wall_s": 11.3,
+        "exit": 0,
+        "start_to_prompt_s": 5.563,
+        "prompt_tokens": 37244
+      },
+      {
+        "app": "teamwork",
+        "attempt": 1,
+        "wall_s": 11.9,
+        "exit": 0,
+        "start_to_prompt_s": 5.98306,
+        "prompt_tokens": 23947
+      },
+      {
+        "app": "teamwork",
+        "attempt": 2,
+        "wall_s": 14.4,
+        "exit": 0,
+        "start_to_prompt_s": 8.393238,
+        "prompt_tokens": 24222
+      },
+      {
+        "app": "fast-decisions",
+        "attempt": 1,
+        "wall_s": 13.7,
+        "exit": 0,
+        "start_to_prompt_s": 6.098441,
+        "prompt_tokens": 59584
+      },
+      {
+        "app": "fast-decisions",
+        "attempt": 2,
+        "wall_s": 15.0,
+        "exit": 0,
+        "start_to_prompt_s": 6.757193,
+        "prompt_tokens": 92180
+      },
+      {
+        "app": "tech-bro-idealist",
+        "attempt": 1,
+        "wall_s": 12.0,
+        "exit": 0,
+        "start_to_prompt_s": 6.466171,
+        "prompt_tokens": 15534
+      },
+      {
+        "app": "tech-bro-idealist",
+        "attempt": 2,
+        "wall_s": 11.3,
+        "exit": 0,
+        "start_to_prompt_s": 5.539164,
+        "prompt_tokens": 24738
+      }
+    ]
+  }
+}

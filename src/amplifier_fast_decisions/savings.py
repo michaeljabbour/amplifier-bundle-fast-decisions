@@ -45,7 +45,7 @@ DEFAULT_RATES: dict[str, tuple[float, float, float, float]] = {
 DEFAULT_HOST_MODEL = "claude-fable-5-1"
 MIN_RATE_OUTPUT = 200
 MIN_RATE_SAMPLES = 20
-CACHE_VERSION = 2
+CACHE_VERSION = 3
 _JUDGED = '"fast_decisions:difficulty_judged"'
 _SLOW_END = '"fast_decisions:slow_end"'
 
@@ -82,7 +82,7 @@ def _empty_day() -> dict:
     return {"cheap_turns": 0, "strong_turns": 0, "judge_calls": 0, "by_reason": {},
             "cheap_requests": 0, "cheap_seconds": 0.0, "actual_usd": 0.0,
             "counterfactual_usd": 0.0, "unpriced_requests": 0, "no_cache_data_requests": 0,
-            "provider_costed_requests": 0,
+            "provider_costed_requests": 0, "switch_penalty_usd": 0.0,
             "input": 0, "output": 0, "cache_read": 0, "cache_write": 0}
 
 
@@ -113,7 +113,7 @@ def scan_file(path: Path, *, host_model: str | None = None, rates: dict | None =
                 turns[turn] = {"tier": data.get("choice"), "reason": str(data.get("reason_code") or "unknown"),
                                "day": day}
             elif event.get("event") == "fast_decisions:slow_end" and data.get("status") == "ok":
-                requests.append({"turn": turn, "day": day, "data": data})
+                requests.append({"turn": turn, "day": day, "data": data, "ts": str(event.get("timestamp", ""))})
     days: dict[str, dict] = defaultdict(_empty_day)
     rate: dict[str, list] = defaultdict(lambda: [0.0, 0, 0])  # model -> [seconds, output tokens, samples]
     hosts: dict[str, int] = defaultdict(int)  # recorded host models, for auto-detection
@@ -129,6 +129,19 @@ def scan_file(path: Path, *, host_model: str | None = None, rates: dict | None =
         bucket["by_reason"][info["reason"]] = bucket["by_reason"].get(info["reason"], 0) + 1
         if info["reason"].startswith("judge_"):
             bucket["judge_calls"] += 1
+    # Turn order within the session: after the first turn the host model
+    # would already have the conversation cached, so a cheap turn's cache
+    # writes count as host cache READS in the counterfactual; and a host turn
+    # right after a cheap turn pays a cache rebuild caused by the switch.
+    requests.sort(key=lambda r: r["ts"])
+    order: list[str] = []
+    for req in requests:
+        if req["turn"] and req["turn"] not in order:
+            order.append(req["turn"])
+    previous_tier = {t: (turns.get(order[i - 1]) or {}).get("tier") if i else None for i, t in enumerate(order)}
+    first_request_of_turn = {}
+    for req in requests:
+        first_request_of_turn.setdefault(req["turn"], id(req))
     for req in requests:
         data = req["data"]
         info = turns.get(req["turn"])
@@ -144,6 +157,12 @@ def scan_file(path: Path, *, host_model: str | None = None, rates: dict | None =
             entry[0] += seconds
             entry[1] += tokens["output"]
             entry[2] += 1
+        if info and info["tier"] != "cheap" and previous_tier.get(req["turn"]) == "cheap" \
+                and first_request_of_turn.get(req["turn"]) == id(req) and tokens["cache_write"]:
+            host_rates = _rates_for(data.get("host_model") or host_model, rates)
+            if host_rates:
+                penalty = tokens["cache_write"] * (host_rates[3] - host_rates[2]) / 1_000_000
+                days[req["day"] or info["day"]]["switch_penalty_usd"] += penalty
         if not info or info["tier"] != "cheap":
             continue
         bucket = days[req["day"] or info["day"]]
@@ -157,7 +176,12 @@ def scan_file(path: Path, *, host_model: str | None = None, rates: dict | None =
         if isinstance(cost, (int, float)) and not isinstance(cost, bool):
             bucket["provider_costed_requests"] += 1
         actual = float(cost) if isinstance(cost, (int, float)) and not isinstance(cost, bool) else price(model, tokens, rates)
-        counterfactual = price(data.get("host_model") or host_model, tokens, rates)
+        cf_tokens = tokens
+        if previous_tier.get(req["turn"]) is not None and tokens["cache_write"]:
+            # The host would have read this context from its warm cache.
+            cf_tokens = dict(tokens, cache_read=tokens["cache_read"] + tokens["cache_write"],
+                             input=tokens["input"] + tokens["cache_write"], cache_write=0)
+        counterfactual = price(data.get("host_model") or host_model, cf_tokens, rates)
         if actual is None or counterfactual is None:
             bucket["unpriced_requests"] += 1
             continue
@@ -265,14 +289,14 @@ def summarize(events_dir: str | Path, *, host_model: str | None = None, cheap_mo
     time_ok = bool(host_rate and cheap_rate and host_samples >= MIN_RATE_SAMPLES and cheap_samples >= MIN_RATE_SAMPLES)
     ratio = (host_rate / cheap_rate) if (time_ok and host_rate and cheap_rate) else None
 
-    saved_usd = agg["counterfactual_usd"] - agg["actual_usd"]
+    saved_usd = agg["counterfactual_usd"] - agg["actual_usd"] - agg["switch_penalty_usd"]
     turns_total = agg["cheap_turns"] + agg["strong_turns"]
     by_day = []
     for day in sorted(days):
         b = days[day]
         by_day.append({
             "day": day, "cheap_turns": b["cheap_turns"], "strong_turns": b["strong_turns"],
-            "saved_usd": round(b["counterfactual_usd"] - b["actual_usd"], 4),
+            "saved_usd": round(b["counterfactual_usd"] - b["actual_usd"] - b["switch_penalty_usd"], 4),
             "saved_seconds": round(b["cheap_seconds"] * (ratio - 1), 1) if ratio else None,
         })
     return {
@@ -291,6 +315,8 @@ def summarize(events_dir: str | Path, *, host_model: str | None = None, cheap_mo
                  "saved_usd": round(saved_usd, 4),
                  "saved_pct_of_cheap_turns": round(saved_usd / agg["counterfactual_usd"], 3) if agg["counterfactual_usd"] else None,
                  "unpriced_requests": agg["unpriced_requests"],
+                 # Host-model cache rebuilds after a cheap turn, charged to routing.
+                 "switch_penalty_usd": round(agg["switch_penalty_usd"], 4),
                  "provider_costed_requests": agg["provider_costed_requests"],
                  # Older records lack cached-token counts and the provider's
                  # cost, so their tokens are all priced as fresh input, which
@@ -310,6 +336,8 @@ def summarize(events_dir: str | Path, *, host_model: str | None = None, cheap_mo
         "by_day": by_day,
         "method": ("Cheap turns only; strong turns run the host setup unchanged. Cost: the same recorded tokens "
                    "priced at host-model rates vs actual. Time: cheap-turn model time scaled by the measured "
-                   "host/start generation-rate ratio. Estimates: the host model would not produce identical "
+                   "host/start generation-rate ratio. After a session's first turn the host is assumed to have the "
+                   "conversation cached, and host cache rebuilds right after a cheap turn are charged to routing. "
+                   "Estimates: the host model would not produce identical "
                    "tokens or steps. Tool time, start-up and judge calls are not counted."),
     }

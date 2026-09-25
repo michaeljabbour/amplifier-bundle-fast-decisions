@@ -68,6 +68,14 @@ def harness_name(config: dict | None = None) -> str:
     return _SURFACES.get(exe, "Amplifier")
 
 
+def _session_dir(coordinator) -> Path | None:
+    try:
+        value = coordinator.get_capability("session.working_dir")
+    except Exception:  # noqa: BLE001
+        return None
+    return Path(value) if isinstance(value, (str, os.PathLike)) and str(value) else None
+
+
 def repo_context(start: Path | None = None) -> dict:
     """``{"repo", "subdir", "branch"}`` for the session's git checkout, read
     from ``.git`` without running git. Only names -- the repository folder
@@ -475,7 +483,7 @@ async def mount(coordinator, config: dict):
         "session_label": config.get("session_label") if isinstance(config.get("session_label"), str) else None,
         "workspace_name": workspace_name(config),
         "harness": harness_name(config),
-        **repo_context(),
+        **repo_context(_session_dir(coordinator)),
     })
 
     async def heartbeat():

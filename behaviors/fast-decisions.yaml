@@ -5,8 +5,8 @@ bundle:
     Orchestrator-primary fast-decisions: replaces the host's orchestrator with
     loop-fast-decisions, which wraps the same upstream loop-streaming loop
     (steering, approvals, compaction, cancellation, provider pin all stay
-    upstream's) and routes every provider call -- phase-specific reasoning
-    effort plus a cheaper start model that escalates on failure signals.
+    upstream's) and decides once per turn whether it is easy (cheaper start
+    model, one effort level) or hard (the host model, unchanged).
     Also mounts the telemetry hook and the read-only fast_workspace tool, and
     launches the observatory dashboard on session start.
 
