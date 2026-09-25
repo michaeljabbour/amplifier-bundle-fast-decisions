@@ -12,6 +12,7 @@ reps_defaults:
   dev: 3
   holdout: 5
   holdout2: 5
+  m-dev: 3
 
 suites:
   s1:
@@ -22,6 +23,19 @@ suites:
       dev:      { tasks_flag: dev,      expected_task_count: 12 }
       holdout:  { tasks_flag: holdout,  expected_task_count: 8 }
       holdout2: { tasks_flag: holdout2, expected_task_count: 12 }
+    required_toolchains: [python3]
+
+  # s1m (2026-09-25): multi-turn scenario battery. Each task is one Amplifier
+  # session, 4 turns, --resume'd between them -- measuring per-turn routing
+  # (model switches mid-session) and its prompt-cache cost, which no
+  # single-turn S1 task can. Scenarios are built ONLY from existing S1 dev
+  # tasks (scripts/battery_tasks.py's scn_dev_1..3); no new fixture content.
+  s1m:
+    label: "S1M multi-turn scenarios (3 scenarios, 4 turns each, built from S1 dev tasks)"
+    task_source: battery           # battery.py --task-source battery
+    deadline_seconds: 600          # per-turn deadline (battery.py prepare's --deadline-seconds)
+    splits:
+      m-dev: { tasks_flag: m-dev, expected_task_count: 3 }
     required_toolchains: [python3]
 
   s2:
