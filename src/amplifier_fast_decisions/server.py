@@ -204,6 +204,11 @@ class Handler(BaseHTTPRequestHandler):
                 except ValueError:
                     return self._json(400, {"error": "Invalid cursor"})
                 return self._json(200, self.server.index.get(after, limit))
+            if parsed.path == "/api/efficiency":
+                from .efficiency import summarize as efficiency_summary
+                query = parse_qs(parsed.query)
+                include_test = query.get("include_test", ["0"])[0] in ("1", "true")
+                return self._json(200, efficiency_summary(self.server.index.directory, include_test=include_test))
             if parsed.path == "/api/savings":
                 from .savings import summarize as savings_summary
                 events_dir = self.server.index.directory

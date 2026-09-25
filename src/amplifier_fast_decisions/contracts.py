@@ -61,6 +61,9 @@ EVENT_NAMES = tuple(
         # Turn-start difficulty router (model_routing.start_policy): which
         # tier the turn starts on, who decided, with what probability.
         "difficulty_judged",
+        # Efficiency receipts (docs/GOAL.md): one per optimization decision,
+        # with the baseline and the savings fixed at decision time.
+        "efficiency",
     )
 )
 
@@ -764,6 +767,10 @@ class TurnState:
     # Turn-start difficulty router: "cheap" | "strong", decided once at the
     # turn's first slow request (None until then / when routing is off).
     start_tier: str | None = None
+    # Who decided the start tier (e.g. "jev:task_difficulty", "rule:scope_gate")
+    # and how long the judge took, for efficiency receipts.
+    start_mechanism: str | None = None
+    judge_seconds: float = 0.0
 
 
 def candidate_read_identity(

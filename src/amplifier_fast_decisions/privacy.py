@@ -61,6 +61,20 @@ SAFE_FIELDS = {
     "tools",
     "finish_reason",
     "step_kind",
+    # Efficiency receipts: lever, mechanism, decision, baseline/actual sides
+    # (model, calls, cost, seconds), fixed deltas, estimation method, project
+    # name and traffic class -- no prompts, arguments or results.
+    "lever",
+    "mechanism",
+    "decision",
+    "baseline",
+    "actual",
+    "method",
+    "calls_saved",
+    "usd_saved",
+    "seconds_saved",
+    "project",
+    "traffic",
     "tool",
     "tool_call_id",
     "status",

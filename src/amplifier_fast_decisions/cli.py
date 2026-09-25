@@ -727,6 +727,29 @@ def _since_day(value: str | None) -> str | None:
     return value
 
 
+def efficiency_command(args) -> int:
+    from .efficiency import LEVER_LABELS, summarize
+
+    report = summarize(args.events, include_test=args.include_test, since=_since_day(args.since))
+    if args.json:
+        print(json.dumps(report, indent=2))
+        return 0
+    t = report["totals"]
+    print(f"Efficiency receipts: {t['receipts']} ({'including' if args.include_test else 'excluding'} test traffic; "
+          f"{report['excluded_test_receipts']} test receipts excluded)")
+    print(f"Total: {t['calls_saved']} model calls, ${t['usd_saved']:.4f}, {t['seconds_saved']:.1f} s saved "
+          "(negative = cost more)")
+    for lever, v in report["by_lever"].items():
+        print(f"  {LEVER_LABELS[lever]:<34} {v['receipts']:>5} receipts  {v['calls_saved']:>5} calls  "
+              f"${v['usd_saved']:>9.4f}  {v['seconds_saved']:>8.1f} s")
+    for project, levers in report["by_project"].items():
+        tot = {k: sum(v[k] for v in levers.values()) for k in ("receipts", "calls_saved", "usd_saved", "seconds_saved")}
+        print(f"  project {project}: {tot['receipts']} receipts, {tot['calls_saved']} calls, ${tot['usd_saved']:.4f}, "
+              f"{tot['seconds_saved']:.1f} s")
+    print(report["method"])
+    return 0
+
+
 def savings_command(args) -> int:
     from .savings import summarize
 
@@ -885,6 +908,14 @@ def main(argv=None) -> int:
     rubric.add_argument("requests", help="Path to the request file, or - for stdin")
     rubric.add_argument("--model", default=None, help="Jev model (default: TYPESAFE_DEFAULT_MODEL or the pinned default)")
     rubric.add_argument("--timeout-ms", type=int, default=10000)
+    eff = commands.add_parser(
+        "efficiency",
+        help="Efficiency receipts summed by lever and project (production traffic only by default)",
+    )
+    eff.add_argument("--events", default=str(DEFAULT_EVENTS))
+    eff.add_argument("--since", default=None, help="YYYY-MM-DD, or Nd for the last N days")
+    eff.add_argument("--include-test", action="store_true", help="Also count test/dev/benchmark traffic")
+    eff.add_argument("--json", action="store_true")
     savings = commands.add_parser(
         "savings",
         help="Estimated time and cost saved by turn routing, from recorded events",
@@ -895,6 +926,8 @@ def main(argv=None) -> int:
     savings.add_argument("--json", action="store_true")
     args = parser.parse_args(argv)
     try:
+        if args.command == "efficiency":
+            return efficiency_command(args)
         if args.command == "savings":
             return savings_command(args)
         if args.command == "rubric":

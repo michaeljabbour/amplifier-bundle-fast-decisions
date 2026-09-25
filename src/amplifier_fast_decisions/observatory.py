@@ -111,7 +111,7 @@ def viewer_is_alive(state: dict[str, Any], *, timeout: float = 0.5) -> bool:
         return False
 
 
-_BUILD_FILES = ("server.py", "savings.py", "operations.py", "static/app.js", "static/index.html", "static/style.css")
+_BUILD_FILES = ("server.py", "savings.py", "efficiency.py", "operations.py", "static/app.js", "static/index.html", "static/style.css")
 
 
 def build_id() -> str:

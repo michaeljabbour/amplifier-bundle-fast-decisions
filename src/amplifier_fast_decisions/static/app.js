@@ -66,6 +66,27 @@
     return (r.by_project || []).slice(0, 6).map(p => ({ name: p.project, turns: p.cheap_turns + ' of ' + (p.cheap_turns + p.strong_turns) + ' on the faster model',
       saved: money(p.saved_usd || 0), why: (p.by_reason && p.by_reason.scope_strong) ? p.by_reason.scope_strong + ' kept by the large-project rule' : '' }));
   }
+  const signedMoney = v => (v > 0 ? '' : '') + money(v);
+  const signedTime = v => (v < 0 ? '−' + minutes(-v) + ' (slower)' : minutes(v));
+  function efficiencyView(r) {
+    const t = (r && r.totals) || { receipts: 0 };
+    const levers = Object.entries((r && r.by_lever) || {}).map(([k, v]) => ({ key: k, name: v.label || k, receipts: v.receipts,
+      calls: v.calls_saved, usd: money(v.usd_saved || 0), secs: signedTime(v.seconds_saved || 0), active: v.receipts > 0 }));
+    const projects = Object.entries((r && r.by_project) || {}).map(([name, lv]) => {
+      const sum = k => Object.values(lv).reduce((a, v) => a + (v[k] || 0), 0);
+      return { name, receipts: sum('receipts'), calls: sum('calls_saved'), usd: money(sum('usd_saved')), secs: signedTime(sum('seconds_saved')) };
+    }).sort((a, b) => b.receipts - a.receipts);
+    return {
+      cost: t.receipts ? money(t.usd_saved || 0) : '—', time: t.receipts ? signedTime(t.seconds_saved || 0) : '—',
+      calls: t.receipts ? String(t.calls_saved) : '—',
+      costDetail: t.receipts ? t.receipts + ' receipts' + (t.usd_unknown ? ' · ' + t.usd_unknown + ' without a cost baseline' : '') : 'No efficiency receipts yet',
+      timeDetail: t.receipts && t.seconds_unknown ? t.seconds_unknown + ' without a time baseline' : 'vs the same steps on the default model',
+      callsDetail: 'model calls avoided (negative = added)',
+      levers, projects,
+      note: 'Every number is a plain sum of stored receipts (fast_decisions:efficiency); each receipt fixed its baseline and savings when the decision was made. ' +
+        ((r && r.excluded_test_receipts) ? r.excluded_test_receipts + ' test/benchmark receipts excluded. ' : '') + 'Recompute with: afast efficiency --json',
+    };
+  }
   function savingsView(r) {
     const t = r.turns || {}, c = r.cost || {}, tm = r.time || {};
     if (!t.total) return { scope: 'No routed turns recorded yet', cost: '—', costDetail: 'Appears once the orchestrator routes turns.', time: '—', timeDetail: '', turns: '0', turnsDetail: '', note: 'Estimates cover only turns the orchestrator routes to the cheaper model.' };
@@ -267,7 +288,7 @@
       branch: fast ? 'fast' : slow ? 'slow' : 'unknown',
       receipt: last('tool_end') || last('slow_end') || last('shadow_agreement') || group.at(-1) };
   }
-  if (typeof module !== 'undefined') module.exports = { kind, valid, scriptedKeys, synthetic, sessionsFor, metrics, describe, decisionPath, summarize, sessionName, circuitFor, savingsView, harnessOf };
+  if (typeof module !== 'undefined') module.exports = { kind, valid, scriptedKeys, synthetic, sessionsFor, metrics, describe, decisionPath, summarize, sessionName, circuitFor, savingsView, harnessOf, efficiencyView };
   if (typeof document === 'undefined') return;
 
   // ---------- browser render layer ----------
@@ -585,6 +606,21 @@
     history.replaceState(null, '', location.pathname + location.search);
     connectionError = ''; schedule(0);
   });
+  let lastEfficiencyPoll = 0;
+  async function pollEfficiency() {
+    if (Date.now() - lastEfficiencyPoll < 30000 || source !== 'live') return;
+    lastEfficiencyPoll = Date.now();
+    try {
+      const response = await fetch('/api/efficiency', { credentials: 'same-origin', headers: token ? { Authorization: 'Bearer ' + token } : {}, signal: AbortSignal.timeout(20000) });
+      if (!response.ok || source !== 'live') return;
+      const v = efficiencyView(await response.json());
+      put('effCost', v.cost); put('effCostDetail', v.costDetail); put('effTime', v.time); put('effTimeDetail', v.timeDetail);
+      put('effCalls', v.calls); put('effCallsDetail', v.callsDetail); put('effNote', v.note);
+      const row = (cells) => { const r = make('div', 'savings-project'); cells.forEach((c, i) => r.append(make(i ? 'span' : 'b', '', c))); return r; };
+      $('effLevers').replaceChildren(row(['Lever', 'Receipts · calls', 'Cost', 'Time']), ...v.levers.map(l => row([l.name, l.active ? l.receipts + ' · ' + l.calls + ' calls' : 'not active yet', l.active ? l.usd : '—', l.active ? l.secs : '—'])));
+      $('effProjects').replaceChildren(...(v.projects.length ? [row(['Project', 'Receipts · calls', 'Cost', 'Time'])] : []), ...v.projects.map(p => row([p.name, p.receipts + ' · ' + p.calls + ' calls', p.usd, p.secs])));
+    } catch (_) { /* keep last values */ }
+  }
   let lastSavingsPoll = 0;
   async function pollSavings() {
     if (Date.now() - lastSavingsPoll < 60000 || source !== 'live') return;
@@ -645,7 +681,7 @@
       const repaint = !lastPoll || !!connectionError || hasMore !== !!payload.has_more;
       epoch = payload.epoch; cursor = payload.cursor; retained = payload.retained; invalidLines = payload.invalid_lines || 0; hasMore = !!payload.has_more; lastPoll = Date.now(); connectionError = ''; $('reconnectPanel').hidden = true; ingest(payload.events || [], repaint);
       if (!hasMore) historyReady = true;
-      void pollStudy(); void pollSavings();
+      void pollStudy(); void pollSavings(); void pollEfficiency();
     } catch (error) { if (source !== 'live' || generation !== pollGeneration) return; connectionError = error.name === 'TimeoutError' ? 'The viewer did not respond within 5 seconds. Retrying…' : error instanceof TypeError ? 'Cannot reach the local viewer. Retrying…' : error.message; render(); }
     if (source === 'live' && generation === pollGeneration) schedule(connectionError ? 2000 : hasMore ? 0 : 500);
   }

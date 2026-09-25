@@ -182,3 +182,14 @@ test('savings names each session usual model and lists projects',()=>{
  assert.match(v.costDetail,/each session's usual model \(opus-5-5, haiku-4-5\)/);
  assert.equal(v.projects[0].saved,'−$2.46'); assert.match(v.projects[1].why,/4 kept by the large-project rule/);
 });
+test('efficiency ledger shows totals, every lever and projects from receipts',()=>{
+ const {efficiencyView}=require('../src/amplifier_fast_decisions/static/app.js');
+ const lv=(n,r,c,u,s)=>({label:n,receipts:r,calls_saved:c,usd_saved:u,seconds_saved:s});
+ const v=efficiencyView({totals:{receipts:3,calls_saved:1,usd_saved:0.42,seconds_saved:-12,usd_unknown:1,seconds_unknown:0},
+  by_lever:{prepared_action:lv('Calls skipped by prepared actions',1,1,0.12,4),cheaper_model:lv('Steps on a cheaper model',2,0,0.3,-16),loop_stop:lv('Loops stopped early',0,0,0,0)},
+  by_project:{teaserkit:{cheaper_model:lv('',2,0,0.3,-16)}},excluded_test_receipts:5});
+ assert.equal(v.cost,'$0.42'); assert.equal(v.time,'−12 s (slower)'); assert.equal(v.calls,'1');
+ assert.equal(v.levers.find(l=>l.key==='loop_stop').active,false);
+ assert.equal(v.projects[0].name,'teaserkit'); assert.match(v.note,/5 test\/benchmark receipts excluded/);
+ assert.equal(efficiencyView({totals:{receipts:0}}).cost,'—');
+});

@@ -64,6 +64,18 @@
       <div class="kpi bad" title="Provider retries, errors, fallbacks and failed executions"><span>Retries / errors</span><strong id="errorCount">0</strong></div>
       <div class="kpi" title="95th percentile of the decision-maker's time per decision"><span>Judge p95</span><strong id="scorerP95">—</strong></div>
     </section>
+    <section id="efficiencyPanel" class="savings-panel" aria-label="Efficiency ledger">
+      <div class="savings-heading"><h2>Efficiency ledger</h2><span id="effScope">Production traffic · from per-decision receipts</span></div>
+      <div class="savings-grid">
+        <div><span>Cost saved</span><strong id="effCost">—</strong><small id="effCostDetail"></small></div>
+        <div><span>Time saved</span><strong id="effTime">—</strong><small id="effTimeDetail"></small></div>
+        <div><span>Model calls saved</span><strong id="effCalls">—</strong><small id="effCallsDetail"></small></div>
+      </div>
+      <div id="effLevers" class="savings-projects" aria-label="By efficiency lever"></div>
+      <div id="effProjects" class="savings-projects" aria-label="By project"></div>
+      <p id="effNote" class="savings-note"></p>
+    </section>
+    <details class="measurement-notes" id="legacySavings"><summary>Earlier estimate (before receipts)</summary>
     <section id="savingsPanel" class="savings-panel" aria-label="Estimated savings" hidden>
       <div class="savings-heading"><h2>Estimated savings</h2><span id="savingsScope"></span></div>
       <div class="savings-grid">
@@ -75,6 +87,7 @@
       <div id="savingsProjects" class="savings-projects" aria-label="Savings by project"></div>
       <p id="savingsNote" class="savings-note"></p>
     </section>
+    </details>
     <details class="measurement-notes"><summary>What these measurements tell us</summary>
     <section class="impact-evidence" aria-label="Impact evidence">
       <div><span>Poor tool calls diverted</span><strong>Not measured</strong><small>Bypassing a model call does not establish that a bad tool call was prevented.</small></div>

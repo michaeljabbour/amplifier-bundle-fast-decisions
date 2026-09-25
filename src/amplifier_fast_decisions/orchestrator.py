@@ -13,6 +13,7 @@ import time
 from typing import Any
 from uuid import uuid4
 
+from . import efficiency
 from .contracts import (
     Candidate,
     DecisionRequest,
@@ -241,6 +242,13 @@ def workspace_file_count(root: str, limit: int) -> int:
     return count
 
 
+def _note_start(service: Any, mechanism: str, judge_seconds: float) -> None:
+    turn = getattr(service, "turn", None)
+    if turn is not None:
+        turn.start_mechanism = mechanism
+        turn.judge_seconds = float(judge_seconds or 0.0)
+
+
 def session_working_dir(service: Any) -> str:
     """The session's working directory: the kernel's ``session.working_dir``
     capability (set per session by the CLI, amplifier-runtime and Studio),
@@ -273,6 +281,7 @@ async def decide_start_tier(service: Any, request: Any, model_routing: dict[str,
             "duration_ms": 0.0, "reason_code": "user_model_strong", "model": user_model[:80],
             "mode": service.policy.mode,
         }, decision_id)
+        _note_start(service, "user:model_pick", 0.0)
         return "strong"
     if policy == "cheap":
         return "cheap"
@@ -286,6 +295,7 @@ async def decide_start_tier(service: Any, request: Any, model_routing: dict[str,
                 "duration_ms": 0.0, "reason_code": "scope_strong", "state_chars": len(task),
                 "candidate_count": files, "mode": service.policy.mode,
             }, decision_id)
+            _note_start(service, "rule:scope_gate", 0.0)
             return "strong"
     min_chars = model_routing.get("complex_min_prompt_chars", 2000)
     tier = "strong" if len(task) >= min_chars else "cheap"
@@ -306,6 +316,8 @@ async def decide_start_tier(service: Any, request: Any, model_routing: dict[str,
         "duration_ms": duration_ms, "reason_code": f"{decided_by}_{tier}",
         "state_chars": len(task), "mode": service.policy.mode,
     }, decision_id)
+    _note_start(service, (f"{service.backend.name}:task_difficulty" if decided_by == "judge" else "rule:prompt_length"),
+                duration_ms / 1000 if policy == "judge" and task else 0.0)
     return tier
 
 
@@ -634,6 +646,11 @@ docs/UPSTREAM_CONTRACT.md.
         # The provider's default model as first seen; a later change means the
         # user switched models mid-session (e.g. a UI model picker).
         self._initial_default_model: Any = _UNSEEN
+        # Efficiency-receipt bookkeeping for this session (docs/GOAL.md).
+        self._eff: dict[str, Any] = {"project": None, "traffic": None, "turn_id": None, "cur_tier": None,
+                                     "prev_tier": None, "cur_mech": None, "prev_mech": None,
+                                     "judge_charged": False, "host_calls_this_turn": 0, "host_last": None,
+                                     "host_sum_usd": 0.0, "host_sum_s": 0.0, "host_n": 0}
 
     def _user_selected_model(self, service: Any) -> str | None:
         """The model the user explicitly chose for this session, or None.
@@ -685,6 +702,7 @@ docs/UPSTREAM_CONTRACT.md.
 
     async def complete(self, request, **kwargs):
         service = self._runtime.service
+        step_started = time.perf_counter()
         candidate = await service.choose(request, self._tools)
         turn = service.turn
         assert turn is not None
@@ -722,12 +740,14 @@ docs/UPSTREAM_CONTRACT.md.
                     "arguments_hash": digest(candidate.arguments), "claimed": False,
                 }
                 self._synthetic_responses[id(response)] = response
+                await self._receipt_prepared_action(service, turn, candidate.tool, time.perf_counter() - step_started)
                 return response
         turn.fast_streak = 0
         service.slow_total += 1
         model = field_value(request, "model") or "provider-default"
         decision_id = service.last_decision_id
         provider_call_id = "provider_" + uuid4().hex
+        efficiency_routed_model = None
         # HC03 ("phase-specific effort routing", opt-in): entirely skipped
         # -- no attribute touched, no event emitted -- when the policy has
         # no effort_routing configured. See effort.py and docs/EVENTS.md.
@@ -986,6 +1006,7 @@ docs/UPSTREAM_CONTRACT.md.
                     reason_code = "host_pinned"
                 else:
                     requested_model = start_model
+                    efficiency_routed_model = start_model
                     if isinstance(request, dict):
                         request["model"] = start_model
                     else:
@@ -1048,7 +1069,86 @@ docs/UPSTREAM_CONTRACT.md.
             "status": "ok", "duration_ms": (time.perf_counter() - start) * 1000,
             **usage_fields(response), **step_fields(response), "latency_kind": "provider_complete_wall_time",
             "transport_measured": "provider-complete"}, decision_id)
+        await self._receipt_model_call(service, turn, response, efficiency_routed_model,
+                                       time.perf_counter() - start, decision_id)
         return response
+
+    def _eff_context(self, service: Any) -> dict:
+        st = self._eff
+        if st["project"] is None:
+            wd = session_working_dir(service)
+            try:
+                from .observer import repo_context
+                ctx = repo_context(Path(wd))
+            except Exception:  # noqa: BLE001
+                ctx = {}
+            st["project"] = ctx.get("repo") or Path(wd).name or "(unknown)"
+            st["traffic"] = efficiency.classify_traffic(wd)
+        return st
+
+    def _eff_turn(self, st: dict, turn: Any) -> None:
+        if turn is not None and st["turn_id"] != turn.id:
+            st["prev_tier"], st["cur_tier"] = st["cur_tier"], turn.start_tier
+            st["prev_mech"], st["cur_mech"] = st["cur_mech"], turn.start_mechanism
+            st["turn_id"], st["judge_charged"], st["host_calls_this_turn"] = turn.id, False, 0
+        elif turn is not None:
+            st["cur_tier"], st["cur_mech"] = turn.start_tier, turn.start_mechanism
+
+    async def _receipt_model_call(self, service: Any, turn: Any, response: Any, routed_model: Any,
+                                  seconds: float, decision_id: Any) -> None:
+        """Efficiency receipts for one completed model call. Never raises."""
+        try:
+            st = self._eff_context(service)
+            self._eff_turn(st, turn)
+            usage = usage_fields(response)
+            host = getattr(self._provider, "default_model", None)
+            host = host if isinstance(host, str) else None
+            mech = (turn.start_mechanism if turn is not None else None) or "router"
+            judge_s = float(getattr(turn, "judge_seconds", 0.0) or 0.0)
+            common = {"project": st["project"], "traffic": st["traffic"]}
+            receipts = []
+            if isinstance(routed_model, str):
+                warm = st["host_last"] is not None and time.monotonic() - st["host_last"] < 300
+                receipts.append(efficiency.cheaper_model_step(
+                    usage=usage, seconds=seconds, served_model=routed_model, host_model=host,
+                    host_cache_warm=warm, mechanism=mech,
+                    judge_seconds=0.0 if st["judge_charged"] else judge_s, **common))
+                st["judge_charged"] = True
+            else:
+                if judge_s and not st["judge_charged"] and turn is not None and turn.start_tier == "strong":
+                    receipts.append(efficiency.judge_overhead(mechanism=mech, judge_seconds=judge_s,
+                                                              host_model=host, **common))
+                    st["judge_charged"] = True
+                if (st["host_calls_this_turn"] == 0 and st["prev_tier"] == "cheap"
+                        and (usage.get("cache_write_tokens") or 0) > 0):
+                    receipts.append(efficiency.host_rebuild_after_cheap(
+                        usage=usage, seconds=seconds, host_model=host,
+                        mechanism=st["prev_mech"] or mech, **common))
+                st["host_calls_this_turn"] += 1
+                st["host_last"] = time.monotonic()
+                cost = usage.get("cost_usd")
+                if isinstance(cost, (int, float)) and not isinstance(cost, bool):
+                    st["host_sum_usd"] += float(cost)
+                    st["host_sum_s"] += seconds
+                    st["host_n"] += 1
+            for data in receipts:
+                await service.emit("efficiency", data, decision_id)
+        except Exception:  # noqa: BLE001 -- receipts must never break the loop
+            return
+
+    async def _receipt_prepared_action(self, service: Any, turn: Any, tool: Any, seconds: float) -> None:
+        try:
+            st = self._eff_context(service)
+            n = st["host_n"]
+            host = getattr(self._provider, "default_model", None)
+            data = efficiency.prepared_action(
+                tool=str(tool), decision_seconds=seconds, host_model=host if isinstance(host, str) else None,
+                avg_host_call_usd=(st["host_sum_usd"] / n) if n else None,
+                avg_host_call_seconds=(st["host_sum_s"] / n) if n else None,
+                mechanism=f"{service.backend.name}:next_action", project=st["project"], traffic=st["traffic"])
+            await service.emit("efficiency", data, service.last_decision_id)
+        except Exception:  # noqa: BLE001
+            return
 
     def _start_model_is_cheaper(self, start_model: Any) -> bool:
         """True unless the wrapped provider's default model is known to be no
