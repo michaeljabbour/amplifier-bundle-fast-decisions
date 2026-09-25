@@ -41,6 +41,14 @@ effort_profiles:
   all_phase_judged: { orient: medium, explore: low, implement: high, phase_judge: true }
 
 model_routing_profiles:
+  # The shipped default since 2026-09-24 (decide once): the turn-start router
+  # picks the tier, a judged-easy turn stays on the start model, only a
+  # provider error moves it up. start_policy/scope gate come from the behavior.
+  sonnet_once:
+    start_model: claude-sonnet-5
+    max_requests_before_escalation: null
+    escalate_on_test_failure: false
+    escalate_on_provider_error: true
   sonnet_start:
     start_model: claude-sonnet-5
     max_requests_before_escalation: 6
@@ -424,6 +432,39 @@ cells:
       min_scored: 1
       model_routed_model: claude-sonnet-5
       min_model_routed: 1
+
+  # 2026-09-25 re-validation of the corrected shipped default (Jev judge, scope
+  # gate, decide once), on the study host (Fable) and on Opus 5.5.
+  orch-default:
+    harnesses: [amplifier-fd]
+    fd: { composition: composed, backend: jev, allow_external_state: true, effort_profile: all_phase,
+          model_routing_profile: sonnet_once }
+    role: "the shipped default after the decide-once fix: Jev judge, scope gate, no mid-turn escalation"
+    purpose: "re-validate the headline with exactly what users install"
+    anchor_cell: plain
+    secondary_anchor: plain-sonnet
+    requires_cells: [plain-sonnet]
+    mechanism_gate: { max_scored: 0 }
+
+  plain-opus:
+    label_suffix: "plain [model=claude-opus-5-5]"
+    harnesses: [amplifier-plain]
+    amplifier_model: claude-opus-5-5
+    fd: null
+    role: "anchor for the Opus 5.5 host comparison"
+    mechanism_gate: { no_fd_receipts: true }
+
+  orch-default-opus:
+    harnesses: [amplifier-fd]
+    amplifier_model: claude-opus-5-5
+    fd: { composition: composed, backend: jev, allow_external_state: true, effort_profile: all_phase,
+          model_routing_profile: sonnet_once }
+    role: "the shipped default with Opus 5.5 as the host model"
+    purpose: "does routing easy turns to Sonnet 5 still pay when the host is Opus 5.5 (cheaper cache reads than Sonnet)?"
+    anchor_cell: plain-opus
+    secondary_anchor: plain-sonnet
+    requires_cells: [plain-opus, plain-sonnet]
+    mechanism_gate: { max_scored: 0 }
 
   externals:
     harnesses: [claude, codex, opencode, amplifier-plain, amplifier-fd]
