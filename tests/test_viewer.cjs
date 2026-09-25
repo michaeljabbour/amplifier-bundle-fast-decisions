@@ -133,7 +133,7 @@ test('negative savings read as costing more',()=>{
 test('savings time shows the time saved, not the time spent',()=>{
  const {savingsView}=require('../src/amplifier_fast_decisions/static/app.js');
  const v=savingsView({files:1,host_model:'claude-opus-5-5',turns:{total:4,cheap:4,strong:0},cost:{saved_usd:1},time:{available:true,saved_seconds:600,cheap_turns_model_seconds:1200,cheap_turns_on_host_seconds:1800}});
- assert.equal(v.time,'10 min');assert.equal(v.timeDetail,'20 min vs 30 min at host-model speed');
+ assert.equal(v.time,'10 min');assert.equal(v.timeDetail,"20 min on the faster model vs 30 min at your usual model's measured speed");
 });
 test('provider calls show which model ran and why',()=>{
  const {summarize}=require('../src/amplifier_fast_decisions/static/app.js');
@@ -152,4 +152,17 @@ test('sessions are named by repo and show their harness',()=>{
  assert.equal(sessionName({workspace_name:'tmp'},'abcdef123'),'tmp');
  assert.equal(harnessOf({harness:'Amplifier TUI'}),'Amplifier TUI');
  assert.equal(harnessOf({engine:'codex'}),'Codex');
+});
+test('scoring column shows who decided each request',()=>{
+ const {summarize}=require('../src/amplifier_fast_decisions/static/app.js');
+ const judged=[event('difficulty_judged',{backend:'jev',choice:'cheap',reason_code:'judge_cheap',probabilities:{complex:0.12},duration_ms:140},'d1'),event('routed',{route:'slow'},'d1')];
+ const a=summarize(judged,false,{}).scoring; assert.match(a.label,/Jev · 12% hard/); assert.notEqual(a.value,'—');
+ const big=[event('difficulty_judged',{backend:'jev',choice:'strong',reason_code:'scope_strong',candidate_count:326},'d2'),event('routed',{route:'slow'},'d2')];
+ const b=summarize(big,false,{}).scoring; assert.equal(b.value,'rule'); assert.match(b.label,/large project/);
+ const plain=[event('routed',{route:'slow'},'d3')]; assert.equal(summarize(plain,false,{}).scoring.label,'no score');
+});
+test('negative time saved reads as slower',()=>{
+ const {savingsView}=require('../src/amplifier_fast_decisions/static/app.js');
+ const v=savingsView({files:1,host_model:'claude-opus-5-5',turns:{total:2,cheap:1,strong:1},cost:{saved_usd:1,cheap_turns_actual_usd:1,cheap_turns_on_host_usd:2},time:{available:true,saved_seconds:-9,cheap_turns_model_seconds:46,cheap_turns_on_host_seconds:37}});
+ assert.match(v.time,/^−9 s \(slower\)$/); assert.match(v.timeDetail,/wrote more slowly/);
 });

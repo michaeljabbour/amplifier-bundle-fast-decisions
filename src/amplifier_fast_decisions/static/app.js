@@ -64,8 +64,8 @@
       scope: 'All recorded sessions · ' + r.files + ' session files',
       cost: (c.saved_usd || 0) < 0 ? money(c.saved_usd) + ' (costs more)' : money(c.saved_usd || 0),
       costDetail: money(c.cheap_turns_actual_usd || 0) + ' spent vs ' + money(c.cheap_turns_on_host_usd || 0) + ' on ' + (r.host_model || 'the host model'),
-      time: tm.available ? minutes(tm.saved_seconds || 0) : 'Not yet',
-      timeDetail: tm.available ? minutes(tm.cheap_turns_model_seconds || 0) + ' vs ' + minutes(tm.cheap_turns_on_host_seconds || 0) + ' at host-model speed' : 'Needs more measured requests on both models',
+      time: tm.available ? ((tm.saved_seconds || 0) < 0 ? '−' + minutes(-tm.saved_seconds) + ' (slower)' : minutes(tm.saved_seconds || 0)) : 'Not yet',
+      timeDetail: tm.available ? minutes(tm.cheap_turns_model_seconds || 0) + ' on the faster model vs ' + minutes(tm.cheap_turns_on_host_seconds || 0) + ' at your usual model\'s measured speed' + ((tm.saved_seconds || 0) < 0 ? ' — on your requests the "faster" model wrote more slowly' : '') : 'Needs more measured requests on both models',
       turns: t.cheap + ' of ' + t.total,
       turnsDetail: (t.judge_calls ? t.judge_calls + ' judged by the decision-maker; ' : '') + t.strong + ' kept on the host model',
       note: 'Estimates: the same recorded work priced and timed at host-model rates. Host-model turns are unchanged, so they save nothing. Tool time, start-up and decision-maker calls are not counted.',
@@ -224,7 +224,17 @@
     else verdict = inFlight ? { label: 'In flight', tone: 'live' } : { label: 'Observed only', tone: 'muted', note: 'The monitoring hook recorded this call; no Fast Decisions evaluation is linked to it' };
     if (!verdict.note) verdict.note = group.some(e => kind(e).startsWith('shadow_')) ? 'Shadow comparison · execution unchanged' : 'Recorded runtime path · no fast bypass claimed';
     const mode = simulated ? 'Scripted' : advisory ? 'Advisory' : group.some(e => kind(e).startsWith('shadow_') || kind(e).startsWith('role_')) ? 'Shadow' : routed || request ? 'Active' : group.some(e => native(e)) ? 'Native' : 'Runtime';
-    return { proposed, happened, verdict, inFlight, mode, score, request, latency: score?.data.duration_ms };
+    // Scoring column: an action score's latency, else the per-request routing
+    // decision -- who decided, how fast, and with what confidence.
+    let scoring = { value: Number.isFinite(score?.data.duration_ms) ? fmt(score.data.duration_ms) : '—', label: score ? 'scoring' : 'no score' };
+    if (!score && judgment) {
+      const jd = judgment.data, rc = String(jd.reason_code || ''), pc = jd.probabilities && typeof jd.probabilities.complex === 'number' ? jd.probabilities.complex : null;
+      if (rc.startsWith('judge_')) scoring = { value: Number.isFinite(jd.duration_ms) ? fmt(jd.duration_ms) : '—', label: backendName(jd.backend, labelOf(judgment)) + (pc !== null ? ' · ' + Math.round(pc * 100) + '% hard' : '') };
+      else if (rc === 'scope_strong') scoring = { value: 'rule', label: 'large project · no judge call' };
+      else if (rc === 'user_model_strong') scoring = { value: 'you', label: 'your model pick' };
+      else if (rc.startsWith('rules_')) scoring = { value: 'rule', label: 'length rule' + (jd.backend && jd.backend !== 'unavailable' ? ' (judge unavailable)' : '') };
+    }
+    return { proposed, happened, verdict, inFlight, mode, score, request, latency: score?.data.duration_ms, scoring };
   }
   // Circuit edges require route/invocation evidence. A score, shadow agreement,
   // or advisory result alone never lights an execution path.
@@ -464,7 +474,7 @@
       const arrow = make('span', 'flow-arrow' + (s.inFlight ? ' pending' : ''), s.inFlight ? '…' : '→');
       const happenedCell = cell(s.happened.title, '', s.happened.detail), happened = happenedCell.node; happenedCell.detail();
       const verdictCell = make('span', 'verdict-cell'); const verdict = make('span', 'verdict ' + toneClass(s.verdict.tone), s.verdict.label); verdict.title = s.verdict.note; verdictCell.append(verdict);
-      const latency = make('span', 'flow-latency', Number.isFinite(s.latency) ? fmt(s.latency) : '—'); latency.append(make('small', '', Number.isFinite(s.latency) ? 'scoring' : 'no score'));
+      const latency = make('span', 'flow-latency', s.scoring.value); latency.append(make('small', '', s.scoring.label));
       line.append(when, sessionWrap, proposed, arrow, happened, verdictCell, latency);
       const focusEvent = s.score || latest;
       const inspect = make('button', 'flow-inspect', 'Inspect');
