@@ -1964,6 +1964,45 @@ class ScenarioExecMetricsTests(unittest.TestCase):
         self.assertIsNone(turn2['exec_time_ms'])
         self.assertEqual(turn2['model_counts'], {})
 
+    def test_background_naming_call_excluded_from_exec_time_but_cost_kept(self):
+        """Reproduces the real 2026-09-25 mt-smoke shape: turn 2's real
+        response finishes, then a background session-naming call (haiku,
+        purpose='session-naming') fires and finishes just before ended_at.
+        Its cost must still be added to cost_usd; its time must not inflate
+        exec_time_ms/provider_requests, and its model must not appear in
+        model_counts -- it gets its own background_calls entry instead."""
+        events = [
+            {'event': 'llm:request', 'ts': '2026-01-01T00:00:00+00:00', 'data': {'model': 'model-a'}},
+            {'event': 'llm:response', 'ts': '2026-01-01T00:00:05+00:00', 'data': {'usage': {'cost_usd': 0.05}}},
+            {'event': 'llm:request', 'ts': '2026-01-01T00:00:06+00:00',
+             'data': {'model': 'claude-haiku-4-5-20251001', 'purpose': 'session-naming',
+                      'origin_module': 'hooks-session-naming'}},
+            {'event': 'llm:response', 'ts': '2026-01-01T00:00:07+00:00',
+             'data': {'purpose': 'session-naming', 'origin_module': 'hooks-session-naming',
+                      'usage': {'cost_usd': 0.003}}},
+        ]
+        with tempfile.TemporaryDirectory() as tmp:
+            fake_home, run_dir = self._make_session(tmp, events)
+            result = {
+                'harness': 'amplifier-fd', 'wall_time_ms': 99999.0,
+                'turns': [{'index': 1, 'subtask': 'a', 'started_at': '2026-01-01T00:00:00+00:00',
+                           'ended_at': '2026-01-01T00:00:08+00:00', 'skipped': False}],
+            }
+            with patch('battery.Path.home', return_value=fake_home):
+                annotated = battery._with_exec_time(result, run_dir)
+        turn = annotated['turns'][0]
+        # exec_time_ms is the REAL response window (0s -> 5s), not stretched to 7s by the background call.
+        self.assertAlmostEqual(turn['exec_time_ms'], 5000.0)
+        self.assertEqual(turn['provider_requests'], 1)
+        self.assertEqual(turn['model_counts'], {'model-a': 1})
+        # Cost of the background call is still counted -- the user paid for it.
+        self.assertAlmostEqual(turn['cost_usd'], 0.053)
+        self.assertEqual(len(turn['background_calls']), 1)
+        bg = turn['background_calls'][0]
+        self.assertEqual(bg['purpose'], 'session-naming')
+        self.assertEqual(bg['model'], 'claude-haiku-4-5-20251001')
+        self.assertEqual(bg['origin_module'], 'hooks-session-naming')
+
     def test_single_turn_result_is_unaffected_by_the_scenario_branch(self):
         """A result with no 'turns' key must take the exact pre-existing
         whole-session-window code path (byte-identical single-turn behavior)."""

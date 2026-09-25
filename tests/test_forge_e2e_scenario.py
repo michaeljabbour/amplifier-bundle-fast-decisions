@@ -209,6 +209,84 @@ class ScenarioTurnSequencingTests(unittest.TestCase):
             self.assertEqual(sleeps, [5, 5, 5])
 
 
+class BackgroundNamingCallRegressionTests(unittest.TestCase):
+    """Reproduces the real 2026-09-25 mt-smoke bug: on a resumed turn,
+    Amplifier's session-naming hook makes an extra background llm:request
+    (claude-haiku-4-5, purpose='session-naming') AFTER the turn's real
+    answer, landing inside the turn's own [started_at, ended_at] window.
+    Window-based final_message extraction picks up that later (wrong)
+    response; stdout-based extraction (the fix) does not, because the CLI's
+    stdout JSON's 'response' field is captured before the naming hook ever runs.
+    """
+
+    def test_stdout_wins_over_a_later_background_response_in_the_same_window(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root, run, workspace, _source = _setup_scenario_run(tmp)
+            fake_home = Path(root).parent / "home"
+            slug = str(workspace.resolve()).replace("/", "-").replace("\\", "-").replace(":", "")
+            sessions_dir = fake_home / ".amplifier/projects" / slug / "sessions"
+            sid = "sess-abc123"
+            state = {"turn": 0}
+            real_popen = forge_e2e.subprocess.Popen
+
+            def fake_popen(command, cwd=None, env=None, stdout=None, **kwargs):
+                if not (isinstance(command, list) and command[:2] == ["amplifier", "run"]):
+                    return real_popen(command, cwd=cwd, env=env, stdout=stdout, **kwargs)
+                state["turn"] += 1
+                t = state["turn"]
+                sess_dir = sessions_dir / sid
+                sess_dir.mkdir(parents=True, exist_ok=True)
+                real_answer = "ANSWER: AUD-ORDER-7781" if t == 2 else f"DONE: turn {t} complete"
+                events = [
+                    {"event": "llm:request", "ts": _now_iso(), "data": {"model": "model-a"}},
+                    {"event": "llm:response", "ts": _now_iso(),
+                     "data": {"raw": {"content": [{"type": "text", "text": real_answer}]},
+                              "usage": {"cost_usd": 0.01}}},
+                ]
+                if t == 2:
+                    # The background naming call: fires AFTER the real answer,
+                    # same turn window, wrong content, distinguishable only by
+                    # its 'purpose'/'origin_module'/model.
+                    events += [
+                        {"event": "llm:request", "ts": _now_iso(),
+                         "data": {"model": "claude-haiku-4-5-20251001", "purpose": "session-naming",
+                                  "origin_module": "hooks-session-naming"}},
+                        {"event": "llm:response", "ts": _now_iso(),
+                         "data": {"purpose": "session-naming", "origin_module": "hooks-session-naming",
+                                  "raw": {"content": [{"type": "text",
+                                                        "text": '```json\n{"description": "not the answer"}\n```'}]},
+                                  "usage": {"cost_usd": 0.003}}},
+                    ]
+                with (sess_dir / "events.jsonl").open("a") as f:
+                    for e in events:
+                        f.write(json.dumps(e) + "\n")
+                # The fix: write the CLEAN stdout JSON blob (what --output-format
+                # json actually produces) to the file forge_e2e redirected stdout to.
+                if hasattr(stdout, "write"):
+                    stdout.write(json.dumps({"status": "success", "response": real_answer,
+                                              "session_id": sid}))
+                    stdout.flush()
+                return _FakeProcess(0)
+
+            with patch("forge_e2e.Path.home", return_value=fake_home), \
+                 patch.object(forge_e2e.subprocess, "Popen", fake_popen), \
+                 patch.object(forge_e2e.time, "sleep", lambda *_a, **_k: None), \
+                 patch.object(forge_e2e.urllib.request, "urlopen") as fake_urlopen, \
+                 patch.object(forge_e2e, "extract_receipts", lambda *a, **k: None), \
+                 patch.object(forge_e2e, "_unregister_benchmark_bundle", lambda *a, **k: None):
+                fake_urlopen.return_value.__enter__.return_value = SimpleNamespace()
+                with patch("json.load", return_value={}):
+                    forge_e2e.worker(root, "run1")
+
+            result = json.loads((run / "result.json").read_text())
+            turn2 = result["turns"][1]
+            self.assertEqual(turn2["final_message"], "ANSWER: AUD-ORDER-7781")
+            self.assertEqual(turn2["final_message_source"], "stdout_response")
+            # And grading actually passes turn 2 now (it would fail on the
+            # polluted window-only extraction -- no ANSWER: line in the JSON blob).
+            self.assertTrue(turn2["turn_passed"], turn2)
+
+
 class WindowedFinalMessageTests(unittest.TestCase):
     """Unit tests for _extract_final_message_window against a synthetic
     events.jsonl mixing several turns' events together (as a real --resume'd

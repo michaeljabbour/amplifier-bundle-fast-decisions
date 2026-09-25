@@ -599,7 +599,16 @@ def _parse_opencode(stdout, model=None):
 # run
 # --------------------------------------------------------------------------
 
-def _evaluate_quality(task_name, task_kind, workspace, final_message, turns=None):
+def _evaluate_quality(task_name, task_kind, workspace, final_message, turns=None, events_path=None):
+    """`events_path` (scenario kind only, optional): the session's
+    events.jsonl, used to RE-DERIVE each turn's final_message from a
+    background-call-excluded window (forge_e2e._extract_final_message_window)
+    rather than trusting the stored value -- this is what lets `reevaluate`
+    retroactively fix a scenario run whose final_message was captured before
+    the background-call exclusion existed, with zero model calls. Falls back
+    to the stored `t['final_message']` when re-derivation is unavailable
+    (no events_path) or yields nothing (e.g. the window genuinely has no
+    non-background response, matching the original capture)."""
     if task_kind == 'scenario':
         battery_tasks = _load_battery_tasks()
         task = battery_tasks.TASKS[task_name]
@@ -613,8 +622,14 @@ def _evaluate_quality(task_name, task_kind, workspace, final_message, turns=None
                 parts.append((turn_label, {'checks': 1, 'passed': 0, 'failed': 1,
                                             'failure_labels': ['turn_skipped_after_earlier_failure']}))
                 continue
+            turn_final_message = t.get('final_message')
+            if events_path is not None:
+                rederived = forge_e2e._extract_final_message_window(
+                    events_path.parent, t.get('started_at'), t.get('ended_at'))
+                if rederived is not None:
+                    turn_final_message = rederived
             try:
-                q = battery_tasks.evaluate_scenario_turn(subtask_name, Path(workspace)/turn_label, t.get('final_message'))
+                q = battery_tasks.evaluate_scenario_turn(subtask_name, Path(workspace)/turn_label, turn_final_message)
             except Exception as exc:  # noqa: BLE001 -- a turn evaluator must never crash the runner
                 q = {'checks': 1, 'passed': 0, 'failed': 1, 'failure_labels': [f'turn_evaluate_error:{exc}']}
             parts.append((turn_label, q))
@@ -765,22 +780,44 @@ def _amplifier_events_path(run_dir, session_id):
     return Path.home()/'.amplifier/projects'/slug/'sessions'/session_id/'events.jsonl'
 
 
+# A request/response pair whose `data.purpose` is one of these is an
+# out-of-band background call the running session makes on its own (never
+# requested by, or blocking, the user's actual turn) -- verified against real
+# events.jsonl from the 2026-09-25 s1m smoke (mt-smoke campaign): exactly one
+# such call per resumed turn, `purpose='session-naming'`,
+# `origin_module='hooks-session-naming'`, model claude-haiku-4-5-20251001,
+# firing during cleanup AFTER the turn's real response is already recorded.
+# It must not inflate exec_time_ms/provider_requests/model_counts (not on the
+# user's critical path), but its cost is real spend and stays in cost_usd.
+BACKGROUND_CALL_PURPOSES = {'session-naming'}
+
+
 def _window_metrics(events_path, start_iso, end_iso):
-    """(exec_time_ms, provider_requests, cost_usd, model_counts) for the events
-    in `events_path` whose `ts` falls within [start_iso, end_iso] (either bound
-    None means unbounded on that side). cost_usd is summed from llm:response
-    usage.cost_usd (None entries treated as 0, matching forge_e2e.native_summary's
-    'sum what's known' convention -- this is a provider-reported estimate, not a
-    billing record, same caveat as everywhere else in this file). model_counts
-    counts llm:request events by their 'model' field. exec_time_ms is first
-    llm:request ts -> last llm:response ts within the window; None if either
-    boundary event is missing from the window.
+    """(exec_time_ms, provider_requests, cost_usd, model_counts, background_calls)
+    for the events in `events_path` whose `ts` falls within [start_iso, end_iso]
+    (either bound None means unbounded on that side).
+
+    A request/response pair tagged with a BACKGROUND_CALL_PURPOSES `purpose`
+    (see that constant) is excluded from exec_time_ms, provider_requests, and
+    model_counts -- it is not on the user's critical path -- but its
+    llm:response usage.cost_usd is still added to cost_usd (the user pays for
+    it regardless), and it is appended to `background_calls` instead
+    ({'purpose', 'model', 'origin_module', 'ts'} per call).
+
+    cost_usd is summed from llm:response usage.cost_usd (None entries treated
+    as 0, matching forge_e2e.native_summary's 'sum what's known' convention --
+    this is a provider-reported estimate, not a billing record, same caveat as
+    everywhere else in this file). model_counts counts non-background
+    llm:request events by their 'model' field. exec_time_ms is first
+    non-background llm:request ts -> last non-background llm:response ts
+    within the window; None if either boundary event is missing.
     """
     start = _parse_iso(start_iso)
     end = _parse_iso(end_iso)
     first_request, last_response, request_count = None, None, 0
     cost_usd, cost_known = 0.0, False
     model_counts = Counter()
+    background_calls = []
     try:
         lines = Path(events_path).read_text().splitlines()
     except OSError:
@@ -801,7 +838,12 @@ def _window_metrics(events_path, start_iso, end_iso):
                 continue
         etype = ev.get('type') or ev.get('event')
         data = ev.get('data') or {}
+        is_background = data.get('purpose') in BACKGROUND_CALL_PURPOSES
         if etype == 'llm:request':
+            if is_background:
+                background_calls.append({'purpose': data.get('purpose'), 'model': data.get('model'),
+                                          'origin_module': data.get('origin_module'), 'ts': ev.get('ts')})
+                continue
             request_count += 1
             if first_request is None and ts is not None:
                 first_request = ts
@@ -809,7 +851,7 @@ def _window_metrics(events_path, start_iso, end_iso):
             if model is not None:
                 model_counts[model] += 1
         elif etype == 'llm:response':
-            if ts is not None:
+            if not is_background and ts is not None:
                 last_response = ts
             v = (data.get('usage') or {}).get('cost_usd')
             if v is not None:
@@ -823,7 +865,7 @@ def _window_metrics(events_path, start_iso, end_iso):
     if first_request is not None and last_response is not None:
         candidate = (last_response-first_request).total_seconds()*1000
         ms = candidate if candidate >= 0 else None
-    return ms, requests, (cost_usd if cost_known else None), dict(model_counts)
+    return ms, requests, (cost_usd if cost_known else None), dict(model_counts), background_calls
 
 
 def _amplifier_exec_metrics(result, run_dir):
@@ -851,23 +893,25 @@ def _amplifier_exec_metrics(result, run_dir):
         for t in turns:
             if t.get('skipped'):
                 continue
-            ms, requests, _cost, _models = _window_metrics(events_path, t.get('started_at'), t.get('ended_at'))
+            ms, requests, _cost, _models, _bg = _window_metrics(events_path, t.get('started_at'), t.get('ended_at'))
             if ms is not None:
                 total_ms += ms
                 any_ms = True
             if requests is not None:
                 total_requests += requests
         return (total_ms if any_ms else None), (total_requests or None)
-    ms, requests, _cost, _models = _window_metrics(events_path, None, None)
+    ms, requests, _cost, _models, _bg = _window_metrics(events_path, None, None)
     return ms, requests
 
 
 def _annotate_scenario_turns(result, run_dir):
     """New `turns` list (does not mutate `result`) with each turn dict gaining
-    `exec_time_ms`, `provider_requests`, `cost_usd`, and `model_counts` (a
+    `exec_time_ms`, `provider_requests`, `cost_usd`, `model_counts` (a
     {model: llm:request count} dict -- there is no single 'the model' once
-    per-turn routing can switch models mid-scenario). Turns skip this
-    annotation (all four fields None/{} ) when skipped or when the session's
+    per-turn routing can switch models mid-scenario), and `background_calls`
+    (out-of-band calls like session-naming excluded from the three fields
+    above; see BACKGROUND_CALL_PURPOSES / _window_metrics). Turns skip this
+    annotation (all fields None/{}/[] ) when skipped or when the session's
     events.jsonl can't be resolved."""
     turns = result.get('turns')
     if not isinstance(turns, list) or not turns:
@@ -882,13 +926,16 @@ def _annotate_scenario_turns(result, run_dir):
             t.setdefault('provider_requests', None)
             t.setdefault('cost_usd', None)
             t.setdefault('model_counts', {})
+            t.setdefault('background_calls', [])
             out.append(t)
             continue
-        ms, requests, cost, models = _window_metrics(events_path, t.get('started_at'), t.get('ended_at'))
+        ms, requests, cost, models, background_calls = _window_metrics(
+            events_path, t.get('started_at'), t.get('ended_at'))
         t['exec_time_ms'] = ms
         t['provider_requests'] = requests
         t['cost_usd'] = cost
         t['model_counts'] = models
+        t['background_calls'] = background_calls
         out.append(t)
     return out
 
@@ -2125,7 +2172,15 @@ def cmd_reevaluate(args):
         result = _latest_result(experiment_dir, manifest, name)
         workspace = run_dir/'workspace'
         task = forge_workloads.get_task(item['task'])
-        quality = _evaluate_quality(item['task'], task.kind, workspace, result.get('final_message'), result.get('turns'))
+        events_path = None
+        if task.kind == 'scenario':
+            session_id = _resolve_session_id(result, run_dir)
+            if session_id:
+                candidate = _amplifier_events_path(run_dir, session_id)
+                if candidate.exists():
+                    events_path = candidate
+        quality = _evaluate_quality(item['task'], task.kind, workspace, result.get('final_message'),
+                                     result.get('turns'), events_path)
         files = forge_workloads.task_files(item['task'])
         protected = {f: (workspace/f).exists() and (workspace/f).read_text() == files.get(f, '')
                      for f in forge_workloads.task_protected(item['task'])}

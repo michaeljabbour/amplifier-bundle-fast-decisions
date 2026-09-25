@@ -256,6 +256,16 @@ def _task_kind(task):
     return getattr(entry, 'kind', 'code') if entry is not None else 'code'
 
 
+# A response whose data.purpose is one of these is an out-of-band background
+# call the running session makes on its own (e.g. the session-naming hook's
+# haiku call during cleanup, AFTER the turn's real answer) -- never the
+# user-facing final message. Mirrors battery.py's BACKGROUND_CALL_PURPOSES
+# (same real-world evidence: 2026-09-25 mt-smoke campaign). Kept as a
+# separate constant (not imported from battery.py) because forge_e2e must
+# not depend on battery.py -- battery.py already imports forge_e2e.
+_BACKGROUND_CALL_PURPOSES = {'session-naming'}
+
+
 def _extract_final_message(session_dir, workspace):
     """Best-effort extraction of the assistant's final response text.
 
@@ -275,7 +285,10 @@ def _extract_final_message(session_dir, workspace):
                     continue
                 if e.get('event') != 'llm:response':
                     continue
-                raw = (e.get('data') or {}).get('raw') or {}
+                data = e.get('data') or {}
+                if data.get('purpose') in _BACKGROUND_CALL_PURPOSES:
+                    continue
+                raw = data.get('raw') or {}
                 content = raw.get('content')
                 if not isinstance(content, list):
                     continue
@@ -307,9 +320,14 @@ def _extract_final_message_window(session_dir, start_iso, end_iso):
     """Like `_extract_final_message`, but only considers `llm:response` events
     whose `ts` falls within [start_iso, end_iso] -- used to attribute one
     turn's final message within a multi-turn (--resume) scenario session,
-    whose events.jsonl otherwise mixes every turn together. Returns None if
-    no in-window text is found (callers may fall back to the whole-session
-    extractor for the last turn).
+    whose events.jsonl otherwise mixes every turn together. Also excludes any
+    response tagged with a _BACKGROUND_CALL_PURPOSES purpose (e.g. the
+    session-naming hook's own response, which can land inside a turn's window
+    AFTER the turn's real answer -- see BACKGROUND_CALL_PURPOSES in
+    battery.py for the real-world evidence). Returns None if no in-window,
+    non-background text is found (callers may fall back to the whole-session
+    extractor for the last turn, or to a stdout-captured response -- see
+    _parse_amplifier_stdout_response, the preferred source when available).
     """
     if session_dir is None:
         return None
@@ -326,13 +344,16 @@ def _extract_final_message_window(session_dir, start_iso, end_iso):
             continue
         if e.get('event') != 'llm:response':
             continue
+        data = e.get('data') or {}
+        if data.get('purpose') in _BACKGROUND_CALL_PURPOSES:
+            continue
         ts = _parse_iso_ts(e.get('ts'))
         if ts is not None:
             if start is not None and ts < start:
                 continue
             if end is not None and ts > end:
                 continue
-        raw = (e.get('data') or {}).get('raw') or {}
+        raw = data.get('raw') or {}
         content = raw.get('content')
         if not isinstance(content, list):
             continue
@@ -341,6 +362,43 @@ def _extract_final_message_window(session_dir, start_iso, end_iso):
         if texts:
             last_text = '\n'.join(texts)
     return last_text
+
+
+def _parse_amplifier_stdout_response(text):
+    """Best-effort extraction of `--output-format json`'s clean stdout blob's
+    `response` field. Amplifier redirects ALL diagnostic/progress console
+    output to stderr whenever output_format is 'json' (see
+    amplifier_app_cli.main.execute_single), so real stdout should be exactly
+    one JSON object shaped like {"status": "success", "response": "...",
+    "session_id": ..., ...} -- untouched by anything that happens after the
+    turn's real response (e.g. the session-naming background call, which
+    runs during cleanup and never touches this value). Returns None if
+    `text` is empty, unparseable, or has no usable string 'response' field
+    (e.g. an error-shaped JSON object, or the turn crashed/timed out before
+    ever writing to stdout) -- callers fall back to events-window scanning.
+    """
+    if not text or not text.strip():
+        return None
+    try:
+        parsed = json.loads(text)
+    except ValueError:
+        # Defensive: the CLI should never print more than one JSON value to
+        # stdout in json mode, but if extra bytes ever land here, the last
+        # line that parses as JSON is still the best available signal.
+        parsed = None
+        for line in reversed(text.splitlines()):
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                parsed = json.loads(line)
+            except ValueError:
+                continue
+            break
+    if not isinstance(parsed, dict):
+        return None
+    response = parsed.get('response')
+    return response if isinstance(response, str) else None
 
 
 def _run_scenario_turns(root, name, manifest, item, task, workspace, sessions, env, run):
@@ -384,36 +442,57 @@ def _run_scenario_turns(root, name, manifest, item, task, workspace, sessions, e
         before = set(sessions.iterdir()) if sessions.exists() else set()
         started_at = datetime.now(timezone.utc).isoformat()
         started = time.perf_counter()
-        process = subprocess.Popen(command, cwd=workspace, env=env)
-        dump(run/'running.json', {'started_at': started_at, 'name': name, 'controller_pid': os.getpid(),
-                                   'pid': process.pid, 'attempt': item.get('attempt', 1),
-                                   'deadline_seconds': deadline_seconds, 'turn': i, 'tty': sys.stdout.isatty()})
-        print('FORGE_E2E_STARTED '+name, flush=True)
-        timed_out = False
-        try:
-            code = process.wait(timeout=deadline_seconds)
-        except subprocess.TimeoutExpired:
-            timed_out = True
-            process.terminate()
+        # `--output-format json` redirects Amplifier's OWN diagnostic/progress
+        # output to stderr, so stdout is exactly one JSON object with a clean
+        # 'response' field -- capture it to a per-turn file (never a pipe:
+        # avoids any risk of a full-buffer deadlock across a long-running,
+        # possibly-terminated-and-killed turn). This is the only reliable way
+        # to get THIS turn's real answer: on a --resume'd turn, events.jsonl
+        # also contains the session-naming background call's own llm:response
+        # (fires during cleanup, AFTER the real answer), which can land after
+        # the real response within the turn's own [started_at, ended_at]
+        # window and get mistaken for the final message by window scanning.
+        stdout_path = run/f'turn{i}-stdout.txt'
+        with stdout_path.open('w') as stdout_fh:
+            process = subprocess.Popen(command, cwd=workspace, env=env, stdout=stdout_fh)
+            dump(run/'running.json', {'started_at': started_at, 'name': name, 'controller_pid': os.getpid(),
+                                       'pid': process.pid, 'attempt': item.get('attempt', 1),
+                                       'deadline_seconds': deadline_seconds, 'turn': i, 'tty': sys.stdout.isatty()})
+            print('FORGE_E2E_STARTED '+name, flush=True)
+            timed_out = False
             try:
-                code = process.wait(timeout=15)
+                code = process.wait(timeout=deadline_seconds)
             except subprocess.TimeoutExpired:
-                process.kill()
-                code = process.wait()
+                timed_out = True
+                process.terminate()
+                try:
+                    code = process.wait(timeout=15)
+                except subprocess.TimeoutExpired:
+                    process.kill()
+                    code = process.wait()
         elapsed_ms = (time.perf_counter()-started)*1000
         ended_at = datetime.now(timezone.utc).isoformat()
         if i == 1:
             found = [p for p in sessions.iterdir() if p not in before and (p/'events.jsonl').exists()] if sessions.exists() else []
             sid = found[0].name if len(found) == 1 else None
         session_dir = (sessions/sid) if sid else None
-        final_message = _extract_final_message_window(session_dir, started_at, ended_at)
+        try:
+            stdout_text = stdout_path.read_text()
+        except OSError:
+            stdout_text = ''
+        final_message = _parse_amplifier_stdout_response(stdout_text)
+        final_message_source = 'stdout_response' if final_message is not None else None
+        if final_message is None:
+            final_message = _extract_final_message_window(session_dir, started_at, ended_at)
+            final_message_source = 'events_window' if final_message is not None else None
         if final_message is None and i == len(task.subtasks):
             final_message = _extract_final_message(session_dir, workspace)
+            final_message_source = 'events_whole_session' if final_message is not None else None
         turn_ok = (code == 0) and not timed_out and (sid is not None)
         turns.append({'index': i, 'subtask': subtask_name, 'started_at': started_at, 'ended_at': ended_at,
                        'exit_code': code, 'timed_out': timed_out, 'elapsed_ms': elapsed_ms,
                        'final_message': final_message[:4000] if isinstance(final_message, str) else final_message,
-                       'skipped': False})
+                       'final_message_source': final_message_source, 'skipped': False})
         if not turn_ok:
             failed = True
     return turns, sid
