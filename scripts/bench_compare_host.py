@@ -49,6 +49,12 @@ def run(args):
     env = dict(os.environ)
     env['PYTHONPATH'] = str(root/'src')
     env['AFAST_OBSERVATORY'] = 'off'
+    # AMPLIFIER_MEMORY_CAPTURE=off: this launches the real `amplifier run`
+    # CLI, which inherits os.environ (and with it whatever memory bundle is
+    # installed) -- without this every paired-comparison run below writes a
+    # memory capture per tool call. amplifier-bundle-memory's automation_gate
+    # module honors this var; harmless no-op on older/no memory bundle.
+    env['AMPLIFIER_MEMORY_CAPTURE'] = 'off'
     cases = [('extract-a', 'Juniper', 'amber'), ('extract-b', 'Zircon', 'indigo')]
     manifest = {'schema_version':'paired-runs-v1', 'pairs':[]}
     for i, (task, codename, channel) in enumerate(cases):

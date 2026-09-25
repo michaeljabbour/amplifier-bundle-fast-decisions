@@ -109,7 +109,54 @@ class ForgeControllerTests(unittest.TestCase):
 
             self.assertEqual(captured['env']['PYTHONPATH'], str(side_source/'src'))
 
+    def test_worker_sets_amplifier_memory_capture_off(self):
+        """The real `amplifier run` CLI inherits os.environ (and with it
+        whatever memory bundle is installed for the launching user) --
+        AMPLIFIER_MEMORY_CAPTURE=off stops every worker run from writing a
+        capture per tool call into that personal memory store."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            side_source = root/'side-source'
+            (side_source/'src'/'amplifier_fast_decisions').mkdir(parents=True)
+            (side_source/'src'/'amplifier_fast_decisions'/'mod.py').write_text('x = 1\\n')
+            tree_sha = forge_e2e.tree_sha256(side_source/'src'/'amplifier_fast_decisions')
+            run = root/'one'
+            workspace = run/'workspace'
+            (workspace/'.amplifier').mkdir(parents=True)
+            (workspace/'README.md').write_text(forge_e2e.SPECS['scheduler'])
+            (workspace/'solution.py').write_text(forge_e2e.STARTERS['scheduler'])
+            (workspace/'test_public.py').write_text(forge_e2e.PUBLIC['scheduler'])
+            (run/'profile.md').write_text('---\\n{}\\n---\\n')
+            workspace_hash = forge_e2e.hash_files(workspace)
+            manifest = {
+                'runs': {'one': {'task': 'scheduler', 'side': 'fast', 'workspace_hash': workspace_hash, 'attempt': 1}},
+                'sides': {'fast': {'source_root': str(side_source), 'mode': 'active',
+                                    'source_git_sha': None, 'source_tree_sha256': tree_sha}},
+                'provider': 'anthropic', 'model': 'claude-fable-5-1', 'prompt': 'do it',
+                'events_dir': str(root/'events'),
+                'limits': {'timeout_seconds': 5},
+            }
+            (root/'manifest.json').write_text(json.dumps(manifest))
 
+            captured = {}
+
+            class FakeProcess:
+                pid = 4242
+                def wait(self, timeout=None):
+                    return 0
+
+            def fake_popen(command, cwd=None, env=None):
+                captured['env'] = env
+                return FakeProcess()
+
+            with patch.object(forge_e2e.subprocess, 'Popen', fake_popen), \
+                 patch.object(forge_e2e.urllib.request, 'urlopen') as fake_urlopen, \
+                 patch.object(forge_e2e.subprocess, 'run', lambda *a, **k: SimpleNamespace(returncode=0, stdout='{"checks":0,"passed":0,"failed":0,"failure_labels":[]}')):
+                fake_urlopen.return_value.__enter__.return_value = SimpleNamespace()
+                with patch('json.load', return_value={}):
+                    forge_e2e.worker(root, 'one')
+
+            self.assertEqual(captured['env']['AMPLIFIER_MEMORY_CAPTURE'], 'off')
 
 
 class SideProfileModeTests(unittest.TestCase):
