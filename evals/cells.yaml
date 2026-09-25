@@ -592,6 +592,17 @@ cells:
     requires_cells: [plain-opus]
     mechanism_gate: { max_scored: 0, model_routed_model: claude-sonnet-5, min_model_routed: 1 }
 
+  orch-haiku-shaped-fable:
+    harnesses: [amplifier-fd]
+    fd: { composition: composed, backend: jev, allow_external_state: true, effort_profile: all_phase,
+          model_routing_profile: sonnet_once,
+          overrides: { model_routing: { start_model: claude-haiku-4-5-20251001, easy_turn_guidance: "This request was judged small. Work directly: read what you need in one step, make independent tool calls together in a single response, skip planning and checklist tools, verify once, then give a short answer.", easy_turn_hide_tools: [todo] } } }
+    role: "cost preset on the Fable 5.1 host: Haiku easy tier + guidance + todo hidden"
+    purpose: "cost-first preset on an expensive host"
+    anchor_cell: plain
+    requires_cells: [plain]
+    mechanism_gate: { max_scored: 0, model_routed_model: claude-haiku-4-5-20251001, min_model_routed: 1 }
+
   externals:
     harnesses: [claude, codex, opencode, amplifier-plain, amplifier-fd]
     fd: { backend: ollama, model: qwen3:0.6b, effort_profile: all_phase }   # = champion
