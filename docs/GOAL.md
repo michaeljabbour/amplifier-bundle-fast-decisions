@@ -35,8 +35,12 @@ benchmarks with fresh held-out tasks, alternating run order, and the answering m
 | Wall time per request | **≤ 0.70×** |
 | Quality | Task pass rate and SWE-bench resolved count within run-to-run noise (non-inferiority as in `evals/STUDY-DESIGN.md` §8) |
 
-Plus: the dashboard's savings numbers must match recomputation from stored records, per project, and exclude
-test/benchmark traffic.
+**Every efficiency must be registered on the dashboard.** Each per-step decision leaves a receipt (what was
+decided, by which judge or rule, and what it saved), and the dashboard shows, per project and per lever (calls
+skipped by prepared actions, cache kept warm, cheaper-model steps, blocked launches, loop stops, context
+right-sizing), the calls, dollars and seconds saved -- or lost -- against the counterfactual of the same step on the
+default model. These numbers must match recomputation from the stored records and exclude test/benchmark traffic.
+An efficiency that is not visible and recomputable on the dashboard does not count toward the goal.
 
 ## Method
 
