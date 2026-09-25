@@ -44,6 +44,64 @@ def _backend_label(backend) -> str | None:
     return label.strip()[:64] or None if isinstance(label, str) else None
 
 
+_SURFACES = {
+    "amplifier": "Amplifier CLI",
+    "amplifier-tui": "Amplifier TUI",
+    "amplifier-runtime": "Amplifier runtime",
+    "amplifierd": "Amplifier daemon",
+    "amplifier-app-studio": "Amplifier Studio",
+}
+
+
+def harness_name(config: dict | None = None) -> str:
+    """Which Amplifier surface is running this session, from the launching
+    executable's name (never its path). ``harness`` in config overrides."""
+    configured = (config or {}).get("harness")
+    if isinstance(configured, str) and configured.strip():
+        return configured.strip()[:40]
+    try:
+        exe = Path(sys.argv[0]).name if sys.argv and sys.argv[0] else ""
+    except Exception:  # noqa: BLE001
+        exe = ""
+    if exe in ("-m", "-c", "python", "python3") or exe.startswith("python"):
+        exe = ""
+    return _SURFACES.get(exe, "Amplifier")
+
+
+def repo_context(start: Path | None = None) -> dict:
+    """``{"repo", "subdir", "branch"}`` for the session's git checkout, read
+    from ``.git`` without running git. Only names -- the repository folder
+    name, at most two path components below it, and the branch -- never an
+    absolute path. Empty when the directory is not inside a git checkout."""
+    try:
+        here = (start or Path.cwd()).resolve()
+    except OSError:
+        return {}
+    for depth, candidate in enumerate([here, *here.parents]):
+        if depth > 30:
+            break
+        git = candidate / ".git"
+        if not git.exists():
+            continue
+        info: dict = {"repo": candidate.name[:120]}
+        rel = here.relative_to(candidate).parts
+        if rel:
+            info["subdir"] = "/".join(rel[:2])[:120]
+        try:
+            gitdir = git
+            if git.is_file():  # worktree / submodule: "gitdir: <path>"
+                text = git.read_text(encoding="utf-8", errors="replace").strip()
+                if text.startswith("gitdir:"):
+                    gitdir = (candidate / text.split(":", 1)[1].strip()).resolve()
+            head = (gitdir / "HEAD").read_text(encoding="utf-8", errors="replace").strip()
+            if head.startswith("ref: refs/heads/"):
+                info["branch"] = head[len("ref: refs/heads/"):][:80]
+        except OSError:
+            pass
+        return info
+    return {}
+
+
 def workspace_name(config: dict | None = None) -> str | None:
     """Basename of the session's working directory, for the viewer's session list.
 
@@ -416,6 +474,8 @@ async def mount(coordinator, config: dict):
         "event_source": "native-hook-bridge",
         "session_label": config.get("session_label") if isinstance(config.get("session_label"), str) else None,
         "workspace_name": workspace_name(config),
+        "harness": harness_name(config),
+        **repo_context(),
     })
 
     async def heartbeat():

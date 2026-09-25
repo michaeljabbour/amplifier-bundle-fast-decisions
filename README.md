@@ -1,189 +1,130 @@
 # Fast Decisions
 
-Fast Decisions is a decision layer for coding-agent harnesses. Rather than send
-every step of a session to a large generative model, it hands the small, bounded
-decisions -- which file to read, how much reasoning effort a phase needs, whether
-a turn still fits on a cheaper model -- to a fast judge: a tiny local classifier
-you run yourself, or [Jev](https://typesafe.ai). The judge substitutes a prepared
-read-only action for a full LLM turn, routes thinking effort by phase, and can
-start a turn on a cheap model that escalates on evidence. Amplifier is the
-first-class integration; Claude Code, Codex and OpenCode call the same service as
-a portable [Smart Tool](docs/SMART-TOOL.md).
+Fast Decisions makes Amplifier faster by asking one quick question at the start of every request: *is this easy
+or hard?* Easy requests go to a faster, cheaper model (Claude Sonnet 5). Hard ones, and all work inside large
+projects, stay on your usual model. The decision is made once per request, so the AI service's memory of the
+conversation is never thrown away mid-request.
 
-Experimental v0.1.0, MIT licensed, benchmark evidence in
-[docs/EVIDENCE.md](docs/EVIDENCE.md); no result here is a production SLA, and this
-is not an official Microsoft or TypeSafe release. **A fast judgment is not a
-permission grant, and a proposed action is not an executed action**: the
-orchestrator composes the upstream streaming loop rather than replacing it, and
-permissions, approvals and execution stay upstream.
+Experimental, MIT licensed. Not an official Microsoft or TypeSafe release, and no number here is a guarantee.
+Approvals, permissions and tool execution are unchanged: Fast Decisions wraps Amplifier's standard loop rather
+than replacing it.
 
-## Results at a glance
+## What it does (measured)
 
-40 aider-polyglot exercises, one repetition each, same machine (2026-09-20):
+| Kind of work | Time | Cost | Quality |
+|---|---|---|---|
+| Everyday coding tasks | 0.55–0.61× | 0.38–0.40× | Every task passed |
+| Real bug fixes in large projects (SWE-bench Verified) | 1.00× | 0.98× | 13 of 20 fixed vs. 14 of 20 (same setup as standard) |
 
-| Configuration | Passed | Median working time |
-|---|---|---|
-| Amplifier, plain | 40/40 | 100 s |
-| Amplifier + fast-decisions, local judge | 40/40 | 51 s |
-| Amplifier + fast-decisions, judge + routing | 40/40 | 26 s |
-| Amplifier, plain, on `claude-sonnet-5` (control) | 39/40 | 128 s |
-| Codex | 37/40 | 35 s |
-| Claude Code | 35/40 | 28 s |
-| OpenCode | 24/40 | 28 s |
+Compared with standard Amplifier on the same tasks, run at the same time. Ratios are geometric means of per-task
+ratios. Everyday tasks: 12 tuning tasks (0.55× / 0.38×, one run each) and 8 unseen tasks run three times each
+(0.61× / 0.40×). The unseen-task result met 5 of its 6 preregistered criteria; the significance test fell short
+(p = 0.07), so it is not yet confirmed.
 
-One repetition, screen-grade; repetition-confirmed results pending. The
-plain-on-sonnet control is slower and no more correct than the routed
-configuration, so the gain is not attributable to the cheaper model alone.
-Protocol: [evals/STUDY-DESIGN.md](evals/STUDY-DESIGN.md); full numbers and limits:
-[docs/EVIDENCE.md](docs/EVIDENCE.md); earlier 20-prompt battery:
-[docs/BATTERY-2026-09-18.md](docs/BATTERY-2026-09-18.md).
+**These runs used an expensive default model (Claude Fable 5.1).** With Claude Opus 5.5 as your default, Sonnet is
+about 1.3× faster at writing but reads cached conversation at a higher price, so expect mostly a speed gain:
+short requests save a little, long ones can cost slightly more. `afast savings` (below) measures it on your own
+work.
 
-## Quick start
+Full results: [report](docs/report/fast-decisions-report.html) (plain language) ·
+[RESULTS-2026-09-24.md](docs/RESULTS-2026-09-24.md) · [study protocol](evals/STUDY-DESIGN.md) §18 ·
+[raw summaries with checksums](docs/evidence/2026-09-24/).
 
-**Amplifier (CLI, TUI and Studio).** One command, run once:
+## Install
+
+One command. It applies to the Amplifier command line, the Amplifier terminal app and Studio, because all three
+read `~/.amplifier/settings.yaml`, and to every helper session they start:
 
 ```bash
 amplifier bundle add --app "git+https://github.com/michaeljabbour/amplifier-bundle-fast-decisions@main#subdirectory=behaviors/fast-decisions.yaml"
 ```
 
-That registers fast-decisions as an app bundle in `~/.amplifier/settings.yaml`. The `amplifier`
-CLI and every app built on `amplifier-runtime` (the TUI, Studio) read that file, so all of them
-compose it onto every session and sub-session. No per-app setup. Then:
-
-- **Judge (optional, recommended):** put `TYPESAFE_API_KEY=...` in `~/.amplifier/keys.env` so hosted
-  Jev decides each turn. Without it, a local prompt-length rule decides and nothing leaves the machine.
-- **Updating:** `amplifier update` picks up new versions. If you had installed an earlier version,
-  run it once after the command above so the cached copy is refreshed.
-- **Check it works:** run any prompt, then `afast savings` (or open the dashboard it launches): each
-  turn shows up as routed to the cheaper model or kept on your host model.
-- **Keep one fast-decisions entry.** Remove older entries (`bundles/active.yaml`,
-  `bundles/active-routing.yaml`, or a `file://` checkout) with `amplifier bundle remove --app <uri>`.
-  Put this entry last in the list if another app bundle also sets the orchestrator: later entries win.
-- **Turn it off per project:** `overrides.loop-fast-decisions.config: {backend: none}` in that project's
-  `.amplifier/settings.yaml` keeps everything local; removing the app entry restores plain Amplifier.
-
-**Which host model benefits.** Easy turns move to `claude-sonnet-5`. The savings are largest when your
-default model is an expensive one (the published results used `claude-fable-5-1`). If your default is
-`claude-opus-5-5`, Sonnet is about 1.3x faster at generating text but reads cached context at a higher
-price, so long turns can cost slightly more. `afast savings` measures this on your own history and
-shows a negative number when that happens.
-
-**Any other harness.** The decision service is a callable Smart Tool, verified
-from Claude Code, Codex, OpenCode and Amplifier ([docs/SMART-TOOL.md](docs/SMART-TOOL.md)):
-
-```bash
-uvx --from git+https://github.com/michaeljabbour/amplifier-bundle-fast-decisions amplifier-fast-decisions --help
-```
-
-To measure before switching anything, install the app behavior instead: shadow
-measurement, orchestrator untouched. See
-[docs/GETTING-STARTED.md](docs/GETTING-STARTED.md), which also covers the no-key
-demo and the optional Jev test.
+- **Decision-maker:** add `TYPESAFE_API_KEY=...` to `~/.amplifier/keys.env` and Jev decides each request.
+  Without a key, a built-in rule decides and nothing leaves your machine.
+- **Upgrading from an earlier version:** run `amplifier update` once, and remove any older fast-decisions entry
+  (`amplifier bundle remove --app <old-uri>`). Keep this entry last in your app list: later entries win.
+- **Check it:** run a prompt, then
+  `uvx --from git+https://github.com/michaeljabbour/amplifier-bundle-fast-decisions afast savings`.
+  A dashboard also opens at the start of a session (`afast serve --stop` closes it).
+- **Your choice wins:** picking a model yourself during a session keeps every request on that model (verified in
+  the terminal app; Studio uses the same engine).
+- **Turn it off:** remove the app entry. To keep it but stay fully local, see *Who decides* below.
 
 ## How it works
 
-- At an eligible `Provider.complete()` boundary the judge may return a
-  **prepared tool-call envelope** instead of calling the generative provider;
-  the upstream loop handles that envelope normally.
-- Prepared actions are **read/list only** under an explicit workspace root --
-  never arbitrary commands or free-form tool arguments.
-- **Effort by phase:** orient / explore / implement each get their own
-  reasoning-effort setting, set by deterministic rules or by the judge.
-- **Cheap-first model routing:** a turn starts pinned to a cheaper model and
-  escalates on failure signals -- test failures, provider errors, request count,
-  or a judge decision.
-- **Confidence gates:** each judged decision has a probability floor and a margin
-  requirement, scaled by what being wrong costs; below the gate it routes slow.
-  Phase and escalation asks due together are batched into one judge call.
-- **Receipts:** every decision emits versioned `fast_decisions:*` events --
-  proposed, happened, why -- read by the observatory and `afast bench`.
-- **Privacy default:** the observer-only (shadow) behavior sends nothing off the
-  machine. The orchestrator behavior (`behaviors/fast-decisions.yaml`) asks hosted
-  Jev one difficulty question per turn, sending the first 2,500 characters of the
-  request, when `TYPESAFE_API_KEY` is set; override to `backend: none` to keep
-  everything local (see [docs/PRIVACY.md](docs/PRIVACY.md)).
-- **Savings estimate:** `afast savings` (and the observatory's savings panel)
-  prices and times each cheaper-model turn at host-model rates from recorded events.
-- **Rubric scoring:** `afast rubric` scores (input, output) pairs against weighted
-  yes/no questions with Jev, in the common rubric-scorer request format.
+1. **One decision per request.** Before the first model call, the decision-maker judges the request easy or hard.
+   That picks the model and thinking level for the whole request; nothing switches halfway (only a provider error
+   on the faster model moves the request to your usual model).
+2. **Large projects always get your usual model.** In a folder with more than 300 files, the request runs exactly
+   as standard Amplifier would, whatever the decision-maker says. On real bug fixes, starting on the cheaper model
+   lost fixes (19 of 30 vs. 23 of 30) and switching up later did not recover them.
+3. **Everything is recorded.** Each decision, who made it, and each model call's tokens and cost go to a local
+   log (no prompts or file contents) that the dashboard and `afast savings` read.
 
-Mechanism detail and non-goals: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+Design detail: [docs/ORCHESTRATOR-PRIMARY.md](docs/ORCHESTRATOR-PRIMARY.md).
 
-## Judges
+## Who decides
 
-Select with `backend` in config or `FAST_DECISIONS_JUDGE` in the environment;
-profile config wins. Measured figures are one run per judge on the checked-in
-decision suites ([docs/EVIDENCE.md](docs/EVIDENCE.md)); agreement is against suite
-labels, not independent correctness.
+Measured on 90 real issues rated by human experts (SWE-bench Verified): how often each decision-maker picks the
+harder of two issues, and how long it takes. 50% is a coin flip.
 
-| Judge | What it is | Measured | State leaving the machine |
+| Decision-maker | Picks the harder issue | Time per decision | Data leaves your machine |
 |---|---|---|---|
-| **Local** | Ollama (default, `qwen3:0.6b`), Apple MLX (Apple Silicon), or Laya (typed-decision classifier) | Ollama 0.75-0.80 @ ~23 ms; Laya 0.60-0.63 @ ~10 ms; MLX 8-bit 0.70-0.88 @ ~105 ms | None -- loopback only |
-| **Hosted** | Any OpenAI-compatible endpoint you control that returns `top_logprobs`; a tiny-Qwen deployment package is in [`deploy/hosted-judge/`](deploy/hosted-judge/) | Same model as the local judge; latency is your network | The bounded decision state, gated by `allow_external_state` |
-| **Jev** | [typesafe.ai](https://typesafe.ai)'s hosted judge (external service) | 1.00 @ ~190 ms with keep-alive | Same bounded decision state, gated by `allow_external_state` |
+| **Jev** (hosted by TypeSafe) · default | 83% | ~0.16 s | The first 2,500 characters of the request |
+| Built-in rule · used without a key or if Jev fails | 60% | instant | No |
+| Qwen 27B-class model on your Mac (Ollama `qwen:latest`) | 85% | ~2.45 s | No |
+| Qwen3 8B on your Mac (Ollama `qwen3:8b`) | 72% | ~0.36 s | No |
+| A 27B model on a shared hosted server (RunPod) | 85% | median 0.63 s; 1 in 4 took 5–22 s | To your server |
 
-Setup and tuning: [docs/MODEL-SETUP.md](docs/MODEL-SETUP.md). Per-backend data
-paths: [docs/PRIVACY.md](docs/PRIVACY.md).
+Switch in `~/.amplifier/settings.yaml` (no bundle edit):
 
-## Configuration
+```yaml
+overrides:
+  loop-fast-decisions:
+    config:
+      backend: none                 # built-in rule only; nothing leaves the machine
+      allow_external_state: false
+      # or a local model:  backend: ollama, model: "qwen3:8b", timeout_ms: 3000
+```
 
-Copy [`.env.example`](.env.example) to `.env` and edit:
+On the 12 everyday tasks, Jev deciding ran at 0.61× time and 0.50× cost against 0.55× and 0.38× for the built-in
+rule, because Jev kept 3 of 12 tasks on the usual model. Jev judges difficulty better; the rule was cheaper on a
+set of all-easy tasks. Setup details: [docs/MODEL-SETUP.md](docs/MODEL-SETUP.md) · data paths:
+[docs/PRIVACY.md](docs/PRIVACY.md).
 
-| Variable | Default | Meaning |
-|---|---|---|
-| `FAST_DECISIONS_JUDGE` | `local` | `local` / `hosted` / `jev` / `deterministic` |
-| `FAST_DECISIONS_LOCAL_HOST` / `_MODEL` | `ollama` / `qwen3:0.6b` | Local judge host (`ollama`, `mlx`, `laya`) and its model; `mlx`/`laya` also take a loopback `_MLX_URL` / `_LAYA_URL` |
-| `FAST_DECISIONS_HOSTED_URL` / `_MODEL` / `_TOKEN` | unset | Hosted judge endpoint, model, and API token (token from the environment only, never logged) |
-| `FAST_DECISIONS_ALLOW_EXTERNAL_STATE` | `false` | Must be true before any external backend is contacted |
-| `TYPESAFE_API_KEY` | unset | Required only for the Jev backend |
-| `AFAST_EVENTS_DIR` | `~/.amplifier/fast-decisions/events` | Where decision telemetry is recorded and read |
+## Also included
 
-Every policy key a bundle or profile can set -- modes, deadlines, budgets, effort
-routing, model routing, confidence gates -- is in
-[docs/CONFIGURATION.md](docs/CONFIGURATION.md).
+- **Savings estimate:** `afast savings [--since 7d] [--json]` and the dashboard's savings panel price and time each
+  cheaper-model request as if your usual model had done it. Estimates, labeled as such; a negative number means
+  routing cost more.
+- **Quality grader:** `afast rubric requests.jsonl` scores answers against weighted yes/no questions using Jev.
+- **Watch-only mode:** `behaviors/fast-decisions-shadow.yaml` records what would have been decided without
+  changing anything.
+- **Other assistants:** Claude Code, Codex and OpenCode can call the same decision service as a tool; it suggests,
+  it doesn't change how they run ([docs/SMART-TOOL.md](docs/SMART-TOOL.md)).
 
-## Observatory
+## Limits
 
-A loopback-only viewer of the decision ledger: one row per
-decision, showing what the judge proposed, what the recorded events say
-happened, and a labelled verdict -- metadata only, no prompts, tool contents or
-private reasoning. `afast serve` starts (or reuses) it, `afast serve --stop`
-stops it. Event semantics, and what a row does not establish:
-[docs/EVENTS.md](docs/EVENTS.md).
+- Tested on one Apple-silicon Mac with the Anthropic provider. Other providers, models and machines may differ.
+- The routing checks are confirmed end to end in the Amplifier command line, `amplifier-runtime serve` (the engine
+  Studio uses) and the terminal app. Studio's window itself was not driven.
+- A model set before a session starts (in settings or with `--model`) looks the same as your default, so it can
+  still be routed; a model picked during the session is always respected.
+- Ten bug-fix issues and eight unseen everyday tasks are small samples. See
+  [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md) before relying on this in production.
 
 ## Development
 
 ```bash
 uv pip install -e '.[test]'
-python3 -m unittest discover -s tests -v          # test suite
-python3 -m amplifier_fast_decisions doctor        # environment health check
-afast bench suite suites/v1.jsonl --json          # offline decision suite
+python3 -m unittest discover -s tests -v     # test suite
+python3 -m amplifier_fast_decisions doctor   # environment check
 ```
 
-Benchmark cells live in [`evals/`](evals/README.md), metric definitions in
-[docs/BENCH.md](docs/BENCH.md), diagnostics/receipts/trace replay and the developer
-map in [docs/DIAGNOSTICS.md](docs/DIAGNOSTICS.md). Also
-[CONTRIBUTING.md](CONTRIBUTING.md) and [SECURITY.md](SECURITY.md).
-
-## Compatibility and current limits
-
-**Read this before production use:** [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md).
-
-- Active decisions run at the upstream `complete()` boundary. A provider's
-  optional `.stream` transport is preserved, defers to the original provider,
-  and has no fast path.
-- Real Rust-backed sessions, live Jev accuracy/latency, Foundation loading,
-  approval/steering combinations and your provider set were not exercised in the
-  build sandbox; test them on your machine.
-- Only prepared actions are accelerated: free-form tool argument synthesis,
-  autonomous stopping, distributed telemetry aggregation and native Rust
-  inference are not implemented. Confidence thresholds are uncalibrated
-  experimental settings, not safety guarantees.
-- Deterministic logic handles eligibility, budget and fallback checks; it does not
-  execute application actions. The observer-only behavior reports native hook
-  metadata, not fabricated decisions or tool durations.
-- The source pins identify indexed source snapshots, not a locked, tested
-  dependency graph; Foundation's transitive dependencies stay floating.
+Evaluations: [evals/](evals/README.md) · metrics: [docs/BENCH.md](docs/BENCH.md) · events:
+[docs/EVENTS.md](docs/EVENTS.md) · all settings: [docs/CONFIGURATION.md](docs/CONFIGURATION.md) · earlier studies
+of the previous design: [docs/EVIDENCE.md](docs/EVIDENCE.md) · [CONTRIBUTING.md](CONTRIBUTING.md) ·
+[SECURITY.md](SECURITY.md).
 
 ## License
 

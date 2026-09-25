@@ -130,3 +130,21 @@ test('negative savings read as costing more',()=>{
  const v=savingsView({files:1,host_model:'claude-opus-5-5',turns:{total:1,cheap:1,strong:0},cost:{saved_usd:-0.1,cheap_turns_actual_usd:0.3,cheap_turns_on_host_usd:0.2},time:{available:false}});
  assert.equal(v.cost,'−$0.10 (costs more)');
 });
+test('provider calls show which model ran and why',()=>{
+ const {summarize}=require('../src/amplifier_fast_decisions/static/app.js');
+ const j=event('difficulty_judged',{backend:'jev',choice:'cheap',reason_code:'judge_cheap',probabilities:{complex:0.01}},'d1','s',{turn_id:'t1'});
+ const cheap=[j,event('model_routed',{reason_code:'start_model',requested_model:'claude-sonnet-5'},'d1','s',{turn_id:'t1'}),event('routed',{route:'slow',reason_code:'read_shortcut_disabled'},'d1','s',{turn_id:'t1'}),event('slow_end',{status:'ok',model:'claude-sonnet-5',host_model:'claude-opus-5-5',duration_ms:900},'d1','s',{turn_id:'t1'})];
+ const a=summarize(cheap,false,{});
+ assert.equal(a.verdict.label,'Faster model');assert.match(a.happened.title,/Faster model · claude-sonnet-5/);assert.equal(a.proposed.title,'Easy → faster model');assert.match(a.proposed.detail,/1% hard/);
+ const up=[event('model_routed',{reason_code:'escalated_max_requests'},'d2','s'),event('routed',{route:'slow'},'d2','s'),event('slow_end',{status:'ok',model:'provider-default',host_model:'claude-opus-5-5'},'d2','s')];
+ const b=summarize(up,false,{});assert.equal(b.verdict.label,'Switched up');assert.match(b.happened.title,/Usual model · claude-opus-5-5/);
+ const big=[event('difficulty_judged',{backend:'jev',choice:'strong',reason_code:'scope_strong',candidate_count:314},'d3','s'),event('model_routed',{reason_code:'start_strong'},'d3','s'),event('routed',{route:'slow'},'d3','s'),event('slow_end',{status:'ok',model:'provider-default',host_model:'claude-opus-5-5'},'d3','s')];
+ const c=summarize(big,false,{});assert.equal(c.verdict.label,'Usual model');assert.match(c.proposed.detail,/Large project.*314 files/);
+});
+test('sessions are named by repo and show their harness',()=>{
+ const {sessionName,harnessOf}=require('../src/amplifier_fast_decisions/static/app.js');
+ assert.equal(sessionName({repo:'amplifier-bundle-fast-decisions',subdir:'src',workspace_name:'src'},'abcdef123'),'amplifier-bundle-fast-decisions/src');
+ assert.equal(sessionName({workspace_name:'tmp'},'abcdef123'),'tmp');
+ assert.equal(harnessOf({harness:'Amplifier TUI'}),'Amplifier TUI');
+ assert.equal(harnessOf({engine:'codex'}),'Codex');
+});

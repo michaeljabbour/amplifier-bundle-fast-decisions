@@ -189,3 +189,28 @@ class ObserverLabelTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class SessionContextTests(unittest.TestCase):
+    def test_harness_from_executable_name(self):
+        from amplifier_fast_decisions import observer
+        with mock.patch.object(observer.sys, "argv", ["/Users/x/.local/bin/amplifier-tui"]):
+            self.assertEqual(observer.harness_name(), "Amplifier TUI")
+        with mock.patch.object(observer.sys, "argv", ["/opt/bin/python3", "-m", "x"]):
+            self.assertEqual(observer.harness_name(), "Amplifier")
+        self.assertEqual(observer.harness_name({"harness": "Studio"}), "Studio")
+
+    def test_repo_context_reads_git_without_paths(self):
+        import tempfile
+        from pathlib import Path
+        from amplifier_fast_decisions.observer import repo_context
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d) / "my-repo"
+            (root / ".git").mkdir(parents=True)
+            (root / ".git" / "HEAD").write_text("ref: refs/heads/feature/x\n")
+            deep = root / "src" / "pkg" / "inner"
+            deep.mkdir(parents=True)
+            info = repo_context(deep)
+            self.assertEqual(info, {"repo": "my-repo", "subdir": "src/pkg", "branch": "feature/x"})
+            self.assertNotIn(d, str(info))
+            self.assertEqual(repo_context(Path(d)), {} if not (Path(d) / ".git").exists() else repo_context(Path(d)))

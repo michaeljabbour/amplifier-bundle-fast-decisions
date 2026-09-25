@@ -36,6 +36,7 @@ CAPABILITIES = {
     'select': ('model-backed', 'Suggest one caller-supplied read/list target, or abstain.'),
 }
 
+HARNESSES = frozenset({'amplifier', 'claude', 'codex', 'copilot', 'cursor', 'gemini', 'grok', 'opencode', 'other'})
 SKILL_HOSTS = {'codex': '.agents', 'claude': '.claude', 'amplifier': '.amplifier'}
 
 
@@ -125,7 +126,7 @@ def describe() -> dict[str, Any]:
                 'context': {'type': 'string', 'maxLength': 1800},
                 'session_id': {'type': 'string', 'pattern': '^[A-Za-z0-9_-]{1,128}$'},
                 'parent_session_id': {'type': 'string', 'pattern': '^[A-Za-z0-9_-]{1,128}$'},
-                'harness': {'type': 'string', 'enum': ['claude', 'codex', 'amplifier', 'other']},
+                'harness': {'type': 'string', 'enum': sorted(HARNESSES)},
                 'candidates': {'type': 'array', 'minItems': 1, 'maxItems': 12,
                     'items': {'type': 'object', 'additionalProperties': False,
                         'required': ['id', 'operation', 'path'], 'properties': {
@@ -269,7 +270,7 @@ def _validated(payload: Any) -> tuple[DecisionRequest, str, str | None, str]:
     if any(not isinstance(v, str) or not re.fullmatch(r'[A-Za-z0-9_-]{1,128}', v) for v in [session] + ([parent] if parent is not None else [])) or parent == session:
         raise ValueError('Invalid session identity')
     harness = payload.get('harness', 'other')
-    if harness not in {'claude', 'codex', 'amplifier', 'other'}:
+    if harness not in HARNESSES:
         raise ValueError('Unsupported harness label')
     rows = payload.get('candidates')
     if not isinstance(rows, list) or not 1 <= len(rows) <= 12:

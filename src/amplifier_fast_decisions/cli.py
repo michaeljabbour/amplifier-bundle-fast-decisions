@@ -34,7 +34,7 @@ from .bench import (
 from .bench.calibration import calibration_report, joined_pairs
 from .bench.suite import DeterministicSuiteBackend, ForbiddenLabelSource
 from .demo import run_demo
-from .observatory import read_state, remove_state, viewer_is_alive, write_state_atomic
+from .observatory import build_id, read_state, remove_state, viewer_is_alive, write_state_atomic
 from .server import STATIC, EventIndex, ViewerServer
 
 DEFAULT_EVENTS = Path.home() / ".amplifier" / "fast-decisions" / "events"
@@ -962,6 +962,7 @@ def main(argv=None) -> int:
                     "study_dir": str(Path(args.study).expanduser().resolve()) if getattr(args, 'study', None) else None,
                     "started_at": datetime.now(UTC).isoformat(),
                     "version": __version__,
+                    "build": build_id(),
                 },
             )
         print("Read-only local viewer: " + server.url, flush=True)

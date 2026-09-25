@@ -92,6 +92,12 @@ SAFE_FIELDS = {
     # Basename of the session's working directory (observer.workspace_name):
     # a single path component for the viewer's session list, never a path.
     "workspace_name",
+    # Session context for the viewer: the launching surface's name, the git
+    # repository folder name, <= 2 components below it, and the branch.
+    "harness",
+    "repo",
+    "subdir",
+    "branch",
     "candidate_revision",
     "upstream_complete_calls",
     "output_path_redacted",

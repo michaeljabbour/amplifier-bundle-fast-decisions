@@ -57,7 +57,8 @@ class EnsureViewerTests(unittest.TestCase):
             state_file = Path(tmp) / "serve.json"
             observatory.write_state_atomic(
                 state_file,
-                {"pid": 1, "port": 8765, "url": "http://127.0.0.1:8765/#token=abc"},
+                {"pid": 1, "port": 8765, "url": "http://127.0.0.1:8765/#token=abc",
+                 "build": observatory.build_id()},
             )
             spawner = mock.Mock()
             url = observatory.ensure_viewer(
@@ -70,6 +71,29 @@ class EnsureViewerTests(unittest.TestCase):
             )
             self.assertEqual(url, "http://127.0.0.1:8765/#token=abc")
             spawner.assert_not_called()
+
+    def test_replaces_a_live_viewer_from_another_build(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            state_file = Path(tmp) / "serve.json"
+            observatory.write_state_atomic(
+                state_file, {"pid": 1, "port": 8765, "url": "http://old/", "build": "stale0000000"})
+            spawned = []
+
+            def spawner(argv):
+                spawned.append(argv)
+                observatory.write_state_atomic(
+                    state_file, {"pid": 2, "port": 8765, "url": "http://new/", "build": observatory.build_id()})
+
+            with mock.patch.object(observatory.os, "kill") as kill:
+                url = observatory.ensure_viewer(tmp, 8765, state_file, spawner=spawner,
+                                                alive=lambda state: True, sleep=lambda seconds: None)
+            self.assertEqual(url, "http://new/")
+            self.assertEqual(len(spawned), 1)
+            kill.assert_not_called()          # pid 1 is never signalled
+
+    def test_build_id_is_stable_and_short(self):
+        self.assertEqual(observatory.build_id(), observatory.build_id())
+        self.assertEqual(len(observatory.build_id()), 12)
 
     def test_spawns_when_no_state_file_and_becomes_alive(self):
         with tempfile.TemporaryDirectory() as tmp:

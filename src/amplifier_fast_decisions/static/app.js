@@ -14,10 +14,13 @@
   const fmt = n => Number.isFinite(n) ? (n >= 1000 ? (n / 1000).toFixed(2) + ' s' : (n > 0 && n < 1 ? n.toFixed(1) : Math.round(n)) + ' ms') : '—';
   const pretty = s => String(s || '').replaceAll('_', ' ');
   const valid = e => e && e.schema_version === '1.0' && typeof e.event_id === 'string' && typeof e.session_id === 'string' && typeof e.event === 'string' && e.event.startsWith('fast_decisions:') && e.data && typeof e.data === 'object' && !Array.isArray(e.data);
-  const carriesConfig = e => e.data.phase === 'configuration' || kind(e) === 'turn_start' || e.data.mode === 'advisory' || typeof e.data.session_label === 'string' || typeof e.data.workspace_name === 'string';
+  const carriesConfig = e => e.data.phase === 'configuration' || kind(e) === 'turn_start' || e.data.mode === 'advisory' || typeof e.data.session_label === 'string' || typeof e.data.workspace_name === 'string' || typeof e.data.repo === 'string';
   // Display name for a session: an explicit label wins, then the working-directory
   // basename reported by the hook (never a full path), then the short id.
-  const sessionName = (config, id) => config.session_label || config.workspace_name || id.slice(0, 8);
+  const repoLabel = config => config.repo ? config.repo + (config.subdir ? '/' + config.subdir : '') : '';
+  const sessionName = (config, id) => config.session_label || repoLabel(config) || config.workspace_name || id.slice(0, 8);
+  const HARNESS = { claude: 'Claude Code', codex: 'Codex', copilot: 'GitHub Copilot', cursor: 'Cursor', gemini: 'Gemini CLI', grok: 'Grok', opencode: 'OpenCode', amplifier: 'Amplifier', other: 'Other tool' };
+  const harnessOf = config => config.harness || (config.engine ? HARNESS[config.engine] || config.engine : '');
   function scriptedKeys(events) {
     return new Set(events.filter(e => e.decision_id && (e.synthetic || e.data.synthetic || (isScore(e) && e.data.backend === 'scripted-demo'))).map(decisionKey));
   }
@@ -29,6 +32,28 @@
   const backendLabels = new Map();
   const noteLabel = e => { if (e && e.data && e.data.phase === 'configuration' && typeof e.data.backend_label === 'string' && e.data.backend_label) backendLabels.set(e.session_id, e.data.backend_label); };
   const labelOf = e => backendLabels.get(e.session_id) || (e.data && typeof e.data.backend_label === 'string' ? e.data.backend_label : '');
+  // The once-per-request routing decision, by turn: every model call in the
+  // turn follows it, so rows for later calls can show why they ran where.
+  const turnJudgments = new Map();
+  const noteTurn = e => { if (e && kind(e) === 'difficulty_judged' && e.turn_id) turnJudgments.set(e.turn_id, e); };
+  const JUDGE_REASON = { scope_strong: 'Large project · kept on your usual model', user_model_strong: 'Your model pick', judge_cheap: 'Judged easy', judge_strong: 'Judged hard', rules_cheap: 'Short request (built-in rule)', rules_strong: 'Long request (built-in rule)' };
+  function judgmentView(j, backendLabel) {
+    if (!j) return null;
+    const d = j.data, pc = d.probabilities && typeof d.probabilities.complex === 'number' ? d.probabilities.complex : null;
+    const who = String(d.reason_code || '').startsWith('judge_') ? backendName(d.backend, backendLabel) : String(d.reason_code || '').startsWith('rules_') ? 'Built-in rule' : d.reason_code === 'scope_strong' ? 'Large-project rule' : d.reason_code === 'user_model_strong' ? 'You' : backendName(d.backend, backendLabel);
+    return { title: d.choice === 'cheap' ? 'Easy → faster model' : 'Hard → usual model', detail: (JUDGE_REASON[d.reason_code] || pretty(d.reason_code)) + ' · ' + who + (pc !== null ? ' · ' + Math.round(pc * 100) + '% hard' : '') + (d.reason_code === 'scope_strong' && Number.isFinite(d.candidate_count) ? ' · ' + d.candidate_count + ' files' : ''), choice: d.choice, probability: pc === null ? NaN : (d.choice === 'cheap' ? 1 - pc : pc) };
+  }
+  // Which model a provider call ran on, from its receipts.
+  function modelView(group) {
+    const end = group.findLast(e => kind(e) === 'slow_end') || group.findLast(e => kind(e) === 'slow_start');
+    const mr = group.findLast(e => kind(e) === 'model_routed');
+    if (!end && !mr) return null;
+    const model = end?.data.model && end.data.model !== 'provider-default' ? end.data.model : (mr?.data.requested_model || null);
+    const reason = mr?.data.reason_code || '';
+    const faster = reason === 'start_model' || (!!model && !!mr?.data.requested_model && model === mr.data.requested_model && !String(reason).startsWith('escalated'));
+    const usual = end?.data.host_model || 'your usual model';
+    return { faster, model: faster ? model : usual, switched: String(reason).startsWith('escalated'), reason };
+  }
   const backendName = (b, label) => label || ({ 'scripted-demo': 'Scripted scorer', deterministic: 'Scripted scorer', 'ollama-token': 'Local model', ollama: 'Local model', jev: 'Jev', unavailable: 'No scorer' }[b] || b || 'Backend not recorded');
   const money = v => (v < 0 ? '−' : '') + (Math.abs(v) >= 100 ? '$' + Math.round(Math.abs(v)) : '$' + Math.abs(v).toFixed(2));
   const minutes = s => (s >= 3600 ? (s / 3600).toFixed(1) + ' h' : s >= 60 ? Math.round(s / 60) + ' min' : Math.round(s) + ' s');
@@ -84,8 +109,13 @@
     const executions = events.filter(e => kind(e) === 'tool_end' && (e.data.success === true || e.data.status === 'ok'));
     const nativePosts = events.filter(e => native(e) === 'tool:post');
     const postSessions = new Set(nativePosts.map(e => e.session_id));
-    const durations = scores.map(e => e.data.duration_ms).filter(Number.isFinite).sort((a, b) => a - b);
+    const judged = events.filter(e => kind(e) === 'difficulty_judged');
+    const durations = scores.concat(judged.filter(e => String(e.data.reason_code || '').startsWith('judge_'))).map(e => e.data.duration_ms).filter(Number.isFinite).sort((a, b) => a - b);
+    const routedCalls = events.filter(e => kind(e) === 'model_routed');
     return {
+      judged: judged.length, cheapCalls: routedCalls.filter(e => e.data.reason_code === 'start_model').length,
+      hostCalls: routedCalls.filter(e => e.data.reason_code !== 'start_model').length,
+      switched: routedCalls.filter(e => String(e.data.reason_code || '').startsWith('escalated')).length,
       scores: scores.length, fast: fast.size, fastExecuted: executions.filter(e => fast.has(decisionKey(e))).length,
       tools: nativePosts.length + executions.filter(e => !postSessions.has(e.session_id)).length,
       bypassed: new Set(events.filter(e => kind(e) === 'routed' && e.data.route === 'fast' && e.data.status === 'submitted_to_upstream').map(decisionKey)).size,
@@ -108,7 +138,7 @@
     const k = kind(e), d = e.data, n = native(e);
     let title = pretty(k), detail = d.reason_code ? pretty(d.reason_code) : d.status || 'Recorded metadata', source = 'Runtime record', tone = 'runtime';
     if (n) { title = ({ 'execution:start': 'Turn started', 'execution:end': 'Turn finished', 'session:end': 'Session ended', 'provider:request': 'Provider request', 'provider:retry': 'Provider retry', 'provider:error': 'Provider error', 'tool:pre': 'Tool proposed', 'tool:post': 'Tool result observed', 'context:compaction': 'Context compaction observed', 'llm:response': 'Provider response observed' }[n] || n); detail = [d.tool || d.provider, d.exception_type, d.retry_attempt ? 'Attempt ' + d.retry_attempt : '', d.status_code ? 'HTTP ' + d.status_code : ''].filter(Boolean).join(' · ') || 'Reported by an Amplifier hook'; source = 'Native hook observation'; }
-    if (d.phase === 'configuration') { title = 'Bundle mounted'; detail = backendName(d.backend, labelOf(e)) + ' · ' + (d.mode || 'Mode not recorded') + (d.workspace_name ? ' · ' + d.workspace_name : ''); source = 'Runtime configuration'; }
+    if (d.phase === 'configuration') { title = 'Bundle mounted'; detail = [d.harness, backendName(d.backend, labelOf(e)), d.mode || 'Mode not recorded', repoLabel(d) || d.workspace_name, d.branch ? '⎇ ' + d.branch : ''].filter(Boolean).join(' · '); source = 'Runtime configuration'; }
     if (d.phase === 'session_closed') { title = 'Telemetry session closed'; detail = 'The bundle observer was unmounted.'; }
     if (k === 'requested') { title = 'Decision requested'; detail = (d.candidate_count ?? '?') + ' prepared candidates'; source = 'Decision service'; tone = 'decision'; }
     if (isScore(e)) { title = k === 'shadow_proposed' ? 'Shadow proposal scored' : 'Decision scored'; detail = d.model || backendName(d.backend, labelOf(e)); source = simulated ? 'Scripted score' : 'Model score'; tone = 'decision'; }
@@ -122,7 +152,7 @@
     if (k === 'shadow_agreement') { title = 'Shadow comparison: ' + pretty(d.agreement); detail = 'Compared with the observed tool choice; no execution changed.'; source = 'Shadow comparison'; }
     if (k === 'role_proposed' || k === 'role_agreement') { title = 'Model-role ' + (k === 'role_proposed' ? 'suggestion' : 'comparison'); detail = 'Shadow only; provider selection is unchanged.'; source = 'Shadow comparison'; }
     if (d.reason_code === 'no_eligible_candidates') { title = 'No prepared action available'; detail = 'The request did not produce an eligible candidate.'; }
-    if (k === 'difficulty_judged') { const pc = d.probabilities && typeof d.probabilities.complex === 'number' ? ' · p(complex) ' + d.probabilities.complex.toFixed(2) : ''; title = 'Turn routed: ' + (d.choice === 'strong' ? 'complex → host model' : 'simple → cheap model'); detail = (String(d.reason_code || '').startsWith('judge_') ? 'Judged by ' + backendName(d.backend, labelOf(e)) : 'Length rule (no judge)') + pc; source = 'Difficulty router'; }
+    if (k === 'difficulty_judged') { const jv = judgmentView(e, labelOf(e)); title = 'Request routed: ' + jv.title; detail = jv.detail; source = 'Difficulty router'; }
     if (d.reason_code === 'judge_disabled') { title = 'Routed to model (routing-only)'; detail = 'No judge configured; effort and model routing still apply.'; }
     if (d.reason_code === 'provider_not_matched') { title = 'Model routing skipped'; detail = 'This provider does not match model_routing.provider_match; its own model is used.'; }
     if (k === 'turn_start') { title = 'Hybrid turn started'; detail = backendName(d.backend, labelOf(e)) + ' · ' + d.mode; }
@@ -142,6 +172,9 @@
     const toolEnd = last('tool_end'), slowEnd = last('slow_end'), observed = last('shadow_observed') || nat('tool:pre');
     const roleProposed = last('role_proposed'), roleAgreement = last('role_agreement');
     const advisory = group.some(e => e.data.mode === 'advisory' || e.data.phase === 'advisory_result');
+    const judgment = group.find(e => kind(e) === 'difficulty_judged') || turnJudgments.get(group.find(e => e.turn_id)?.turn_id);
+    const jv = judgmentView(judgment, judgment ? labelOf(judgment) : '');
+    const mv = modelView(group);
     const names = new Map((request?.data.candidates || []).map(c => [c.id, c.label]));
     names.set('reason', 'Defer to reasoning model');
     const label = id => names.get(id) || id; // a raw candidate id stays verbatim (rendered monospace)
@@ -158,9 +191,11 @@
     else if (score) proposed = { title: choice ? label(choice) : 'No choice recorded', id: !!choice && !names.has(choice), detail: (score.data.model || backendName(score.data.backend, labelOf(score))) + (request ? ' · ' + (request.data.candidate_count ?? '?') + ' candidates' : ''), probability };
     else if (fallback) proposed = { title: fallback.data.reason_code === 'no_eligible_candidates' ? 'No prepared action' : 'Fallback', detail: pretty(fallback.data.reason_code) };
     else if (request) proposed = { title: 'Awaiting score', detail: (request.data.candidate_count ?? '?') + ' candidates' };
+    if (!score && !roleProposed && jv) proposed = { title: jv.title, detail: jv.detail, probability: jv.probability };
     // happened
     let happened = { title: '—', detail: '' };
     if (routed?.data.route === 'fast') happened = { title: 'Fast action → ' + (routed.data.destination || routed.data.selected_candidate || 'tool'), detail: toolEnd ? (!toolOK ? 'execution ' + (toolEnd.data.status || 'outcome unknown') : 'executed' + (Number.isFinite(toolEnd.data.duration_ms) ? ' in ' + fmt(toolEnd.data.duration_ms) : '')) : routed.data.status === 'submitted_to_upstream' ? 'submitted to upstream · no execution recorded' : pretty(routed.data.status) };
+    else if (routed && mv) happened = { title: (mv.faster ? 'Faster model · ' : 'Usual model · ') + mv.model, detail: (providerOK && Number.isFinite(slowEnd.data.duration_ms) ? 'answered in ' + fmt(slowEnd.data.duration_ms) : slowEnd ? 'provider ' + (slowEnd.data.status || 'outcome unknown') : inFlight ? 'running…' : 'no completion recorded') + (mv.switched ? ' · switched mid-request' : '') };
     else if (routed) happened = { title: 'Reasoning provider' + (slowEnd?.data.provider || routed.data.destination ? ' · ' + (slowEnd?.data.provider || routed.data.destination) : ''), detail: (providerOK && Number.isFinite(slowEnd.data.duration_ms) ? 'answered in ' + fmt(slowEnd.data.duration_ms) + ' · ' : '') + pretty(routed.data.reason_code) };
     else if (advisory) happened = { title: 'Suggestion returned to caller', detail: 'no execution or bypass claimed' };
     else if (observed) happened = { title: 'LLM called ' + (observed.data.tool || 'a tool'), detail: nat('tool:post') ? 'result observed' : inFlight ? 'running…' : 'no result observed' };
@@ -178,6 +213,7 @@
           : { label: 'Fast · ' + (toolEnd.data.status === 'cancelled' ? 'cancelled' : toolEnd.data.success === false || toolEnd.data.status === 'error' ? 'failed' : 'outcome unknown'), tone: 'bad', note: bypassNote + ' · successful execution not recorded' }
         : { label: submitted ? 'Fast · submitted' : 'Fast · selected', tone: submitted ? 'ok' : 'info', note: bypassNote + ' · no completed tool recorded' };
     }
+    else if (routed && mv) verdict = mv.switched ? { label: 'Switched up', tone: 'warn', note: 'Moved to your usual model mid-request (' + pretty(mv.reason) + ')' } : mv.faster ? { label: 'Faster model', tone: 'ok', note: (jv ? jv.detail : 'Routed to the faster model') + (providerOK ? ' · provider answered' : '') } : { label: 'Usual model', tone: 'info', note: (jv ? jv.detail : 'Standard setup') + (providerOK ? ' · provider answered' : '') };
     else if (routed) verdict = { label: 'Reasoning model', tone: 'info', note: pretty(routed.data.reason_code) + (providerOK ? ' · provider answered' : slowEnd ? ' · provider ' + (slowEnd.data.status || 'outcome unknown') : ' · no provider completion recorded') };
     else if (fallback && fallback.data.reason_code === 'no_eligible_candidates') verdict = { label: 'No candidate', tone: 'muted', note: 'No eligible prepared action · provider path unchanged' };
     else if (fallback) verdict = { label: 'Fallback', tone: fallback.data.exception_type ? 'bad' : 'warn', note: pretty(fallback.data.reason_code) + ' · deferred to the provider' };
@@ -194,7 +230,7 @@
   // or advisory result alone never lights an execution path.
   function circuitFor(group) {
     const last = k => group.findLast(e => kind(e) === k);
-    const route = last('routed'), score = last('scored') || last('shadow_proposed');
+    const route = last('routed'), score = last('scored') || last('shadow_proposed') || last('difficulty_judged') || turnJudgments.get(group.find(e => e.turn_id)?.turn_id);
     const advisory = group.some(e => e.data.mode === 'advisory' || e.data.phase === 'advisory_result');
     const shadow = group.some(e => kind(e).startsWith('shadow_') || kind(e).startsWith('role_'));
     const provider = last('slow_end') || last('slow_start');
@@ -205,7 +241,7 @@
       branch: fast ? 'fast' : slow ? 'slow' : 'unknown',
       receipt: last('tool_end') || last('slow_end') || last('shadow_agreement') || group.at(-1) };
   }
-  if (typeof module !== 'undefined') module.exports = { kind, valid, scriptedKeys, synthetic, sessionsFor, metrics, describe, decisionPath, summarize, sessionName, circuitFor, savingsView };
+  if (typeof module !== 'undefined') module.exports = { kind, valid, scriptedKeys, synthetic, sessionsFor, metrics, describe, decisionPath, summarize, sessionName, circuitFor, savingsView, harnessOf };
   if (typeof document === 'undefined') return;
 
   // ---------- browser render layer ----------
@@ -232,7 +268,7 @@
 
   function ingest(batch, force = false) {
     arrivals = new Set(source === 'live' && historyReady && following ? batch.filter(e => !seen.has(e.event_id)).map(e => e.event_id) : []);
-    for (const e of batch) if (valid(e) && !seen.has(e.event_id)) { seen.add(e.event_id); events.push(e); noteLabel(e); }
+    for (const e of batch) if (valid(e) && !seen.has(e.event_id)) { seen.add(e.event_id); events.push(e); noteLabel(e); noteTurn(e); }
     events.sort((a, b) => stamp(a) - stamp(b) || (a.session_id === b.session_id ? (a.seq || 0) - (b.seq || 0) : 0));
     if (events.length > 20000) { events = events.slice(-20000); seen = new Set(events.map(e => e.event_id)); }
     if (force || batch.length || source !== 'live' || Date.now() - renderedAt > 5000) render();
@@ -258,13 +294,17 @@
     function row(s, child = false) {
       const button = make('button', 'session-row' + (s.id === session ? ' selected' : '') + (child ? ' child' : ''));
       button.setAttribute('aria-pressed', String(s.id === session)); button.title = s.id; button.dataset.sessionId = s.id;
-      const named = !!(s.config.session_label || s.config.workspace_name);
+      const named = !!(s.config.session_label || s.config.repo || s.config.workspace_name);
       const top = make('span', 'session-top');
       top.append(make('span', 'session-name' + (named ? '' : ' unnamed'), s.name), make('span', 'session-age', age(stamp(s.latest))));
       const meta = make('span', 'session-meta');
       if (named) meta.append(make('span', 'session-id', shortId(s.id)));
       meta.append(make('span', 'session-config', s.config.mode ? backendName(s.config.backend, s.config.backend_label) + ' · ' + s.config.mode : 'Configuration not recorded'));
-      button.append(top, meta, make('span', 'session-state ' + (s.stateKind || ''), s.state));
+      const context = [harnessOf(s.config), s.config.branch ? '⎇ ' + s.config.branch : ''].filter(Boolean).join(' · ');
+      button.append(top);
+      if (context) button.append(make('span', 'session-context', context));
+      button.append(meta, make('span', 'session-state ' + (s.stateKind || ''), s.state));
+      button.title = [sessionName(s.config, s.id), harnessOf(s.config), s.config.branch, s.id].filter(Boolean).join(' · ');
       button.onclick = () => selectSession(s.id); return button;
     }
     function group(s, level = 0, visited = new Set()) {
@@ -371,9 +411,9 @@
     bind('circuitHost', path.host);
     put('circuitHostNote', path.host ? describe(path.host).title : 'Permissions stay upstream');
     put('circuitStateNote', path.request ? (path.request.data.candidate_count ?? '?') + ' prepared candidates' : 'No request recorded');
-    put('circuitJudgeNote', path.score ? (path.score.data.model || backendName(path.score.data.backend, labelOf(path.score))) : 'No score recorded');
+    put('circuitJudgeNote', path.score ? (kind(path.score) === 'difficulty_judged' ? judgmentView(path.score, labelOf(path.score)).title : (path.score.data.model || backendName(path.score.data.backend, labelOf(path.score)))) : 'No score recorded');
     put('circuitFastNote', path.fast ? (path.fast.data.status === 'submitted_to_upstream' ? 'Submitted to host' : 'Selected; not confirmed') : 'No fast route recorded');
-    put('circuitSlowNote', path.slow ? (path.slow.data.model || path.slow.data.provider || (kind(path.slow) === 'routed' ? 'Selected; not yet invoked' : 'Invocation recorded')) : 'No invocation recorded');
+    put('circuitSlowNote', path.slow ? ((path.slow.data.model === 'provider-default' ? (path.slow.data.host_model || 'Your usual model') : path.slow.data.model) || path.slow.data.provider || (kind(path.slow) === 'routed' ? 'Selected; not yet invoked' : 'Invocation recorded')) : 'No invocation recorded');
     put('circuitProposed', s?.proposed.title || 'No proposal recorded');
     put('circuitHappened', s?.happened.title === '—' ? 'No outcome recorded' : s?.happened.title || 'No outcome recorded');
     put('circuitOutcomeNote', s?.happened.detail || '');
@@ -459,7 +499,8 @@
     const sessions = renderSessions($('includeSynthetic').checked ? base : realBase, keys);
     const scoped = scopeData(base), hidden = scoped.filter(e => synthetic(e, keys)).length;
     const real = scoped.filter(e => !synthetic(e, keys)), m = metrics(real);
-    put('modelCount', m.scores); put('fastCount', m.fast); put('toolCount', m.tools); put('errorCount', m.issues); put('fastExecuted', m.fastExecuted); put('scorerP95', fmt(m.p95));
+    put('modelCount', m.scores + m.judged); put('fastCount', m.cheapCalls); put('usualCount', m.hostCalls); put('switchedCount', m.switched); put('toolCount', m.tools); put('errorCount', m.issues); put('fastExecuted', m.fastExecuted); put('scorerP95', fmt(m.p95));
+    document.querySelector('.kpis')?.classList.toggle('has-shortcut', m.fast > 0 || m.bypassed > 0);
     put('matchCount', m.comparisons.length ? m.comparisons.filter(e => e.data.agreement === 'match').length + '/' + m.comparisons.length : '—');
     $('errorCount').closest('.kpi').classList.toggle('has-issues', m.issues > 0);
     put('impactDetail', m.fastExecuted ? m.fastExecuted + ' tool execution' + (m.fastExecuted === 1 ? '' : 's') + ' confirmed after a fast submission.' : m.fast ? 'Fast actions were submitted; no completed fast-path execution is recorded.' : 'No executed fast path in this window; shadow proposals never change execution.');

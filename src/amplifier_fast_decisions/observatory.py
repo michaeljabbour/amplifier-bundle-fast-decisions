@@ -111,6 +111,40 @@ def viewer_is_alive(state: dict[str, Any], *, timeout: float = 0.5) -> bool:
         return False
 
 
+_BUILD_FILES = ("server.py", "savings.py", "operations.py", "static/app.js", "static/index.html", "static/style.css")
+
+
+def build_id() -> str:
+    """Short content hash of the viewer's own code. Recorded in the state
+    file by ``afast serve``; a running viewer from a different build is
+    replaced instead of reused, so upgrades reach the dashboard."""
+    import hashlib
+
+    digest = hashlib.sha256()
+    root = Path(__file__).resolve().parent
+    for name in _BUILD_FILES:
+        try:
+            digest.update(name.encode() + b"\0" + (root / name).read_bytes())
+        except OSError:
+            digest.update(name.encode() + b"\0missing")
+    return digest.hexdigest()[:12]
+
+
+def _stop_stale(state: dict[str, Any], state_path: Path, *, sleep: Callable[[float], None]) -> None:
+    """Terminate an outdated viewer (best effort) and clear its state."""
+    import signal
+
+    pid = state.get("pid")
+    if isinstance(pid, int) and pid > 1 and pid != os.getpid() and _pid_alive(pid):
+        with contextlib.suppress(OSError):
+            os.kill(pid, signal.SIGTERM)
+        for _ in range(10):
+            if not _pid_alive(pid):
+                break
+            sleep(0.1)
+    remove_state(state_path)
+
+
 def _default_spawner(argv: list[str]) -> None:
     _DEFAULT_LOG_DIR.mkdir(parents=True, exist_ok=True, mode=0o700)
     log_path = _DEFAULT_LOG_DIR / "serve.log"
@@ -148,8 +182,12 @@ def ensure_viewer(
         state_path = Path(state_file).expanduser()
         existing = read_state(state_path)
         if existing is not None and is_alive(existing):
-            url = existing.get("url")
-            return url if isinstance(url, str) else None
+            if existing.get("build") == build_id():
+                url = existing.get("url")
+                return url if isinstance(url, str) else None
+            # A viewer from an older (or newer) build: replace it so the
+            # dashboard matches the installed code.
+            _stop_stale(existing, state_path, sleep=sleep_fn)
 
         argv = [
             sys.executable,
