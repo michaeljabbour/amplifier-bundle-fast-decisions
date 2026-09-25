@@ -201,14 +201,18 @@ CACHE_TTL_S = 300.0  # Anthropic prompt cache: 5-minute TTL, refreshed on use
 
 def cache_keepalive(*, model: str | None, prefix_tokens: int, refresh_costs: list, tools: list[str],
                     gap_s: float | None, next_cache_read: int | None, next_model: str | None, project: str | None,
-                    traffic: str, mechanism: str = "rule:tool_wait", ttl_s: float = CACHE_TTL_S,
-                    rates: dict | None = None) -> dict:
+                    traffic: str, shared_warm_tokens: int = 0, mechanism: str = "rule:tool_wait",
+                    ttl_s: float = CACHE_TTL_S, rates: dict | None = None) -> dict:
     """Receipt for one keep-alive episode (one or more refreshes during one wait).
 
     Baseline (the same next step without keep-alive, same model): the next
     real call re-writes the cached prefix (``prefix_tokens`` x cache-write
     price) when the time since the cache was last used (``gap_s``) reached the
-    TTL, or reads it (x cache-read price) when it did not. Actual: every
+    TTL, or reads it (x cache-read price) when it did not. The leading
+    ``shared_warm_tokens`` (what the session's first call already read from
+    cache, i.e. a prefix other sessions keep warm: tools and the static system
+    prompt) are assumed to stay warm without keep-alive and are priced as reads
+    on both sides. Actual: every
     refresh's cost plus the next call's price for those prefix tokens as
     observed -- the part it read from cache at the read price, the rest at the
     write price. With no later call on the same model nothing reused the
@@ -221,6 +225,7 @@ def cache_keepalive(*, model: str | None, prefix_tokens: int, refresh_costs: lis
     known = [c for c in refresh_costs if isinstance(c, (int, float)) and not isinstance(c, bool)]
     refresh_usd = float(sum(known)) if len(known) == n else None
     prefix = max(0, int(prefix_tokens or 0))
+    shared = min(max(0, int(shared_warm_tokens or 0)), prefix)
     extra = {"refresh_calls": n, "prefix_tokens": prefix, "tools": sorted(set(tools))[:8]}
     if next_model is None or next_cache_read is None:
         base, actual = 0.0, refresh_usd
@@ -234,15 +239,15 @@ def cache_keepalive(*, model: str | None, prefix_tokens: int, refresh_costs: lis
         if r is None:
             base = actual = None
         else:
-            base = prefix * (r[3] if expired else r[2]) / 1e6
+            base = ((prefix - shared) * (r[3] if expired else r[2]) + shared * r[2]) / 1e6
             actual = None if refresh_usd is None else refresh_usd + (read * r[2] + (prefix - read) * r[3]) / 1e6
         confirmed = prefix > 0 and read >= 0.95 * prefix
         decision = ("keepalive_not_needed" if not expired else
                     "kept_cache_warm" if confirmed else "keepalive_missed")
-        method = (f"list prices; prefix = last call's cached tokens; next call read {read}/{prefix} "
+        method = (f"list prices; prefix = last call's cached tokens ({shared} shared-warm); next call read {read}/{prefix} "
                   f"({'confirmed' if confirmed else 'not confirmed'}); gap {round(gap_s or 0)}s vs ttl {int(ttl_s)}s")
     return receipt(lever="cache_keepalive", mechanism=mechanism, decision=decision,
-                   baseline=_side(model, 0, base, None, prefix_tokens=prefix),
+                   baseline=_side(model, 0, base, None, prefix_tokens=prefix, shared_warm_tokens=shared),
                    actual=_side(model, n, actual, None, **extra), method=method, project=project, traffic=traffic)
 
 

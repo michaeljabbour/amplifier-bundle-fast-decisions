@@ -34,6 +34,12 @@ JOB = """#!/bin/sh
 ( sleep {secs}; echo "job finished: 42" > result.txt ) >/dev/null 2>&1 &
 echo "job started"
 """
+BUILD = """#!/bin/sh
+# Fake build: one progress line every 15 s for 180 s.
+i=0
+while [ $i -lt 12 ]; do i=$((i+1)); echo "step $i/12 compiling..."; sleep 15; done
+echo "BUILD OK: 12 targets"
+"""
 CHECK = """#!/bin/sh
 echo "acquiring build lock..."
 echo "error: build lock is held by another process (pid 4242); it is usually released within a minute, retry shortly" >&2
@@ -49,6 +55,16 @@ TASKS = {
     "poll": {"files": {"start_job.sh": JOB.format(secs=150)}, "prompt": (
         "Run ./start_job.sh (it starts a background job that creates result.txt when it is done). "
         "Wait for the job to finish, then reply with the exact contents of result.txt."), "levers": ("loop_stop",)},
+    # Polling a long background build with short checks (the measured real pattern: `sleep 28 && tail log`).
+    "monitor": {"files": {"build.sh": BUILD}, "prompt": (
+        "Start ./build.sh in the background (nohup, output to build.log); it takes about 3 minutes. Check "
+        "build.log every 20-30 seconds with a short command (each command must finish in under 30 seconds), "
+        "and when the build is done reply with the last line of build.log."), "levers": ("loop_stop",)},
+    # Retrying the same failure one attempt per command.
+    "retry": {"files": {"check.sh": CHECK}, "prompt": (
+        "Run ./check.sh. It fails while a build lock is held by another process; retry it, one attempt per "
+        "command, until it passes. Do not edit check.sh or kill processes. Reply with its final output."),
+        "levers": ("loop_stop",)},
     # The same failure every time.
     "fail": {"files": {"check.sh": CHECK}, "prompt": (
         "Run ./check.sh until it succeeds; the lock it reports is transient. Do not edit check.sh or kill "

@@ -1493,6 +1493,7 @@ class HybridOrchestrator:
         self._execution_ended = False
         # This turn's keep-alive / loop-stop state (None when both are off).
         self._levers: Levers | None = None
+        self._shared_warm: int | None = None
 
     async def _on_execution_start(self, event: str, data: dict):
         self._execution_started = True
@@ -1571,7 +1572,8 @@ class HybridOrchestrator:
                 "model_routing_enabled": bool(service.policy.model_routing)})
             # Provider keys and defaults are unchanged. Upstream pins and selections apply.
             workspace_tool = tools.get("fast_workspace")
-            levers = Levers(service.policy, service, lambda: project_and_traffic(service), usage_fn=usage_fields)
+            levers = Levers(service.policy, service, lambda: project_and_traffic(service), usage_fn=usage_fields,
+                            shared_warm=self._shared_warm)
             levers = levers if levers.active else None
             self._levers = levers
             wrapped_tools = {
@@ -1597,6 +1599,7 @@ class HybridOrchestrator:
             finally:
                 if levers is not None:
                     await levers.finish(status)
+                    self._shared_warm = levers.shared_warm
                     self._levers = None
                 await self._backfill_execution_end(hooks, response, status)
                 await service.emit("turn_end", {"fast_total": service.turn.fast_total,

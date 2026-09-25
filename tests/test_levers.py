@@ -37,6 +37,13 @@ class KeepaliveReceiptTests(unittest.TestCase):
         self.assertIsNone(r["seconds_saved"])
         self.assertIn("confirmed", r["method"])
 
+    def test_shared_warm_prefix_is_not_claimed(self):
+        # Measured live: 31,857 of 68,170 prefix tokens stayed warm without keep-alive (tools + static system).
+        r = self._r(prefix_tokens=68_170, next_cache_read=68_170, refresh_costs=[0.01367], shared_warm_tokens=31_857)
+        self.assertAlmostEqual(r["baseline"]["cost_usd"], (36_313 * 5.0 + 31_857 * 0.2) / 1e6, places=6)
+        self.assertAlmostEqual(r["usd_saved"], 0.160634, places=5)
+        self.assertEqual(r["baseline"]["shared_warm_tokens"], 31_857)
+
     def test_missed_keepalive_is_a_loss(self):
         r = self._r(next_cache_read=10 * K)
         self.assertEqual(r["decision"], "keepalive_missed")

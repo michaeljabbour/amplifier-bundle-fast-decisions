@@ -150,7 +150,8 @@ class Levers:
     """Per-execute state for both levers. Every public method never raises."""
 
     def __init__(self, policy: Any, service: Any, context: Callable[[], tuple[str, str]],
-                 rates: dict | None = None, usage_fn: Callable[[Any], dict] | None = None):
+                 rates: dict | None = None, usage_fn: Callable[[Any], dict] | None = None,
+                 shared_warm: int | None = None):
         ka, ls = getattr(policy, "cache_keepalive", None), getattr(policy, "loop_stop", None)
         self.keepalive_cfg = {**KEEPALIVE_DEFAULTS, **ka} if _enabled(ka) else None
         self.loop = LoopWatch(ls) if _enabled(ls) else None
@@ -159,6 +160,10 @@ class Levers:
         self.usage_fn = usage_fn
         self.rates = rates or DEFAULT_RATES
         self.ttl_s = efficiency.CACHE_TTL_S
+        # Cache tokens the session's first model call read (written by other
+        # sessions: tools + static system prompt). Kept across turns by the
+        # orchestrator; None until the session's first call is seen.
+        self.shared_warm = shared_warm
         # Last real model call (for keep-alive) and this turn's call averages.
         self.last: dict | None = None
         self.calls = 0
@@ -184,6 +189,8 @@ class Levers:
             model = model if isinstance(model, str) else None
             self.host_model = self.host_model or model
             self.calls += 1
+            if self.shared_warm is None:
+                self.shared_warm = int(usage.get("cache_read_tokens") or 0)
             cost = _num(usage.get("cost_usd"))
             if cost is None:
                 cost = price(model, {"input": usage.get("input_tokens") or 0, "output": usage.get("output_tokens") or 0,
@@ -323,7 +330,8 @@ class Levers:
             tools=sorted(episode["tools"]), gap_s=gap,
             next_cache_read=None if next_usage is None else int(next_usage.get("cache_read_tokens") or 0),
             next_model=next_model if next_usage is not None else None,
-            project=project, traffic=traffic, ttl_s=self.ttl_s, rates=self.rates)
+            project=project, traffic=traffic, shared_warm_tokens=self.shared_warm or 0, ttl_s=self.ttl_s,
+            rates=self.rates)
         await self.service.emit("efficiency", data)
 
     # -- turn end ---------------------------------------------------------
