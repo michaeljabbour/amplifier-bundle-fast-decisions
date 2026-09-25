@@ -11,8 +11,8 @@
   in a turn with no edit in between, consecutive tool failures, and ``sleep``
   used as a timer; queue a short note for the next model request (delivered as
   a ``tool:post`` context injection) instead of stopping anything. One
-  ``loop_stop`` receipt per note at turn end, with the further pattern calls
-  measured after the note.
+  ``loop_stop`` receipt per turn from the first note on, with the model calls
+  measured after the note against the real-session remaining-call baseline.
 
 Measured motivation: docs/evidence/2026-09-25/step-opportunity/summary.json.
 Neither lever records prompts, arguments or results: receipts carry tool
@@ -82,9 +82,12 @@ class LoopWatch:
     def _intervene(self, kind: str, tool: str, note: str, sig: str | None = None) -> None:
         self.pending.append(note)
         self.interventions.append({"kind": kind, "tool": tool, "sig": sig, "further": 0, "active": True,
-                                   "delivered": False})
+                                   "delivered": False, "calls": set()})
 
-    def observe(self, tool: str, input: Any, success: bool | None) -> None:
+    def observe(self, tool: str, input: Any, success: bool | None, call_index: int = 0) -> None:
+        """``call_index`` identifies the model call that issued this tool call
+        (parallel tool calls share one), so continuation is counted in model
+        calls, not tool calls."""
         command = _command(input) if tool == "bash" else ""
         is_edit = tool in EDIT_TOOLS or bool(command and _BASH_EDIT.search(command))
         sig = tool + ":" + digest(input if isinstance(input, dict) else {"_": str(input)})
@@ -95,18 +98,22 @@ class LoopWatch:
         for iv in self.interventions:
             if not iv["active"]:
                 continue
+            hit = False
             if iv["kind"] == "repeat":
                 if is_edit:
                     iv["active"] = False
-                elif sig == iv["sig"]:
-                    iv["further"] += 1
+                else:
+                    hit = sig == iv["sig"]
             elif iv["kind"] == "failures":
                 if failed:
-                    iv["further"] += 1
+                    hit = True
                 else:
                     iv["active"] = False
-            elif iv["kind"] == "sleep_timer" and is_timer:
+            elif iv["kind"] == "sleep_timer":
+                hit = is_timer
+            if hit:
                 iv["further"] += 1
+                iv["calls"].add(call_index)
         # Detect.
         if is_edit:
             self.counts.clear()
@@ -170,6 +177,12 @@ class Levers:
         self.sum_usd = 0.0
         self.sum_s = 0.0
         self.priced = 0
+        # (cost, seconds) of every real model call this turn, in order, and the
+        # call count when the first loop note was delivered.
+        self.call_log: list[tuple[float | None, float]] = []
+        self.note_at: int | None = None
+        self.note_kinds: list[str] = []
+        self.note_tools: list[str] = []
         self.host_model: str | None = None
         # Keep-alive runtime.
         self.running: dict[int, str] = {}
@@ -196,6 +209,7 @@ class Levers:
                 cost = price(model, {"input": usage.get("input_tokens") or 0, "output": usage.get("output_tokens") or 0,
                                      "cache_read": usage.get("cache_read_tokens") or 0,
                                      "cache_write": usage.get("cache_write_tokens") or 0}, self.rates)
+            self.call_log.append((cost, seconds))
             if cost is not None:
                 self.sum_usd += cost
                 self.sum_s += seconds
@@ -235,14 +249,34 @@ class Levers:
             return
         try:
             before = len(self.loop.interventions)
-            self.loop.observe(tool, input, success)
+            self.loop.observe(tool, input, success, call_index=len(self.call_log))
             for iv in self.loop.interventions[before:]:
                 await self.service.emit("loop_note", {"reason_code": "loop_" + iv["kind"], "tool": iv["tool"]})
         except Exception:  # noqa: BLE001
             return
 
     def take_note(self) -> str | None:
-        return self.loop.take_note() if self.loop else None
+        if self.loop is None:
+            return None
+        pending = [iv for iv in self.loop.interventions if not iv["delivered"]]
+        note = self.loop.take_note()
+        if note:
+            if self.note_at is None:
+                self.note_at = len(self.call_log)
+            for iv in pending:
+                if iv["kind"] not in self.note_kinds:
+                    self.note_kinds.append(iv["kind"])
+                self.note_tools.append(iv["tool"])
+        return note
+
+    def marginal_call(self) -> tuple[float | None, float | None]:
+        """Mean cost and seconds of this turn's calls after its first (the
+        first carries the cold cache write), or of the first when alone."""
+        rows = [(c, s) for c, s in self.call_log[1:] if c is not None] or \
+               [(c, s) for c, s in self.call_log[:1] if c is not None]
+        if not rows:
+            return None, None
+        return sum(c for c, _ in rows) / len(rows), sum(s for _, s in rows) / len(rows)
 
     # -- keep-alive -------------------------------------------------------
     async def _keepalive_loop(self) -> None:
@@ -337,8 +371,8 @@ class Levers:
     # -- turn end ---------------------------------------------------------
     async def finish(self, status: str = "ok") -> None:
         """Turn end: stop refreshing, settle an open keep-alive episode (no
-        later call reused it), and emit one receipt per delivered loop note.
-        The continuation is measurable only when the turn ended normally."""
+        later call reused it), and emit one loop_stop receipt for the turn if a
+        note was delivered (measurable only when the turn ended normally)."""
         try:
             self.running.clear()
             task = self._task
@@ -355,21 +389,27 @@ class Levers:
                     pass
             if self.episode is not None:
                 await self._settle(next_usage=None, next_model=None, next_started=None)
-            if self.loop is not None:
+            if self.loop is not None and self.note_at is not None:
                 project, traffic = self.context()
-                avg_usd, avg_s = self.avg_call()
+                delivered = [iv for iv in self.loop.interventions if iv["delivered"]]
+                idx = sorted(set().union(*(iv["calls"] for iv in delivered)))
+                # call_index is the number of calls made when the tool ran: the
+                # issuing call is call_log[index - 1].
+                rows = [self.call_log[i - 1] for i in idx if 0 < i <= len(self.call_log)]
                 r = _rates_for(self.host_model, self.rates)
-                note_usd = None if r is None else NOTE_TOKENS * r[3] / 1e6
-                for iv in self.loop.interventions:
-                    if not iv["delivered"]:
-                        continue  # never reached the model: no decision acted on
-                    data = efficiency.loop_stop(
-                        kind=iv["kind"], tool=iv["tool"],
-                        expected_further_calls=int(self.loop.expected.get(iv["kind"], 0)),
-                        observed_further_calls=iv["further"] if status == "ok" else None,
-                        avg_call_usd=avg_usd, avg_call_seconds=avg_s,
-                        note_usd=note_usd, host_model=self.host_model,
-                        source=EXPECTED_SOURCE, project=project, traffic=traffic)
-                    await self.service.emit("efficiency", data)
+                marginal_usd, marginal_s = self.marginal_call()
+                first = self.note_kinds[0] if self.note_kinds else "loop"
+                measured = status == "ok"
+                costs = [c for c, _ in rows]
+                data = efficiency.loop_stop(
+                    kinds=self.note_kinds, tools=self.note_tools,
+                    expected_further_calls=int(self.loop.expected.get(first, 0)),
+                    observed_calls=len(rows) if measured else None,
+                    observed_usd=(sum(costs) if all(c is not None for c in costs) else None) if measured else None,
+                    observed_seconds=sum(t for _, t in rows) if measured else None,
+                    marginal_call_usd=marginal_usd, marginal_call_seconds=marginal_s,
+                    note_usd=None if r is None else NOTE_TOKENS * len(self.note_kinds) * r[3] / 1e6,
+                    host_model=self.host_model, source=EXPECTED_SOURCE, project=project, traffic=traffic)
+                await self.service.emit("efficiency", data)
         except Exception:  # noqa: BLE001
             return

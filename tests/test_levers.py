@@ -67,19 +67,21 @@ class KeepaliveReceiptTests(unittest.TestCase):
 
 class LoopReceiptTests(unittest.TestCase):
     def test_measured_and_unmeasured(self):
-        r = efficiency.loop_stop(kind="sleep_timer", tool="bash", expected_further_calls=6, observed_further_calls=1,
-                                 avg_call_usd=0.3, avg_call_seconds=5.0, note_usd=0.001, host_model=OPUS,
-                                 source="s", project="p", traffic="test")
-        self.assertEqual(r["calls_saved"], 5)
-        self.assertAlmostEqual(r["usd_saved"], 6 * 0.3 - (0.3 + 0.001))
-        self.assertAlmostEqual(r["seconds_saved"], 25.0)
-        self.assertIn("observed 1", r["method"])
-        u = efficiency.loop_stop(kind="failures", tool="bash", expected_further_calls=1, observed_further_calls=None,
-                                 avg_call_usd=None, avg_call_seconds=None, note_usd=None, host_model=None,
-                                 source="s", project="p", traffic="test")
+        r = efficiency.loop_stop(kinds=["sleep_timer", "repeat"], tools=["bash"], expected_further_calls=6,
+                                 observed_calls=2, observed_usd=0.05, observed_seconds=8.0, marginal_call_usd=0.03,
+                                 marginal_call_seconds=4.0, note_usd=0.001, host_model=OPUS, source="s",
+                                 project="p", traffic="test")
+        self.assertEqual((r["mechanism"], r["decision"]), ("rule:sleep_timer", "nudged_sleep_timer+repeat"))
+        self.assertEqual(r["calls_saved"], 4)
+        self.assertAlmostEqual(r["usd_saved"], 6 * 0.03 - (0.05 + 0.001))
+        self.assertAlmostEqual(r["seconds_saved"], 24.0 - 8.0)
+        u = efficiency.loop_stop(kinds=["failures"], tools=["bash"], expected_further_calls=1, observed_calls=None,
+                                 observed_usd=None, observed_seconds=None, marginal_call_usd=None,
+                                 marginal_call_seconds=None, note_usd=None, host_model=None, source="s",
+                                 project="p", traffic="test")
         self.assertEqual(u["calls_saved"], 1)
         self.assertIsNone(u["usd_saved"])
-        self.assertIn("unmeasurable", u["method"])
+        self.assertIn("unobservable", u["method"])
 
 
 class DetectionTests(unittest.TestCase):
@@ -244,7 +246,7 @@ class LoopStopWiringTests(unittest.IsolatedAsyncioTestCase):
 
         with tempfile.TemporaryDirectory() as tmp:
             config = {"backend": "none", "events_dir": tmp, "mode": "off", "read_shortcut": False,
-                      "loop_stop": {"enabled": True}}
+                      "loop_stop": {"enabled": True, "expected_further_calls": {"sleep_timer": 6}}}
             runtime, _ = get_runtime(coordinator, config, owner=True)
             events = []
             runtime.service.emitter.callback = events.append
@@ -259,16 +261,13 @@ class LoopStopWiringTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("sleep", seen_notes[0])
         self.assertIn("identical", seen_notes[1])
         receipts = [e["data"] for e in events if e["event"] == efficiency.EVENT and e["data"]["lever"] == "loop_stop"]
-        # 4 identical sleep calls: sleep_timer fires at the 2nd, repeat at the 3rd (both delivered).
-        kinds = sorted(r["decision"] for r in receipts)
-        self.assertEqual(kinds, ["nudged_repeat", "nudged_sleep_timer"])
-        sleep_r = next(r for r in receipts if r["decision"] == "nudged_sleep_timer")
-        self.assertEqual(sleep_r["actual"]["calls"], 2)       # 3rd and 4th sleep after the note
-        self.assertEqual(sleep_r["baseline"]["calls"], 6)
-        self.assertEqual(sleep_r["calls_saved"], 4)
-        repeat_r = next(r for r in receipts if r["decision"] == "nudged_repeat")
-        self.assertEqual((repeat_r["baseline"]["calls"], repeat_r["actual"]["calls"]), (0, 1))
-        self.assertLess(repeat_r["usd_saved"], 0)
+        # One receipt per turn: sleep_timer fired first (2nd call), repeat joined at the 3rd;
+        # calls 3 and 4 continued the pattern after the note (the 5th call ended the turn).
+        self.assertEqual(len(receipts), 1)
+        r = receipts[0]
+        self.assertEqual((r["mechanism"], r["decision"]), ("rule:sleep_timer", "nudged_sleep_timer+repeat"))
+        self.assertEqual((r["baseline"]["calls"], r["actual"]["calls"], r["calls_saved"]), (6, 2, 4))
+        self.assertTrue(r["actual"]["measured"])
 
     async def test_off_by_default_is_inert(self):
         policy = Policy(mode="off")

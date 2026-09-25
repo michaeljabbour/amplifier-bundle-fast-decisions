@@ -251,33 +251,43 @@ def cache_keepalive(*, model: str | None, prefix_tokens: int, refresh_costs: lis
                    actual=_side(model, n, actual, None, **extra), method=method, project=project, traffic=traffic)
 
 
-def loop_stop(*, kind: str, tool: str, expected_further_calls: int, observed_further_calls: int | None,
-              avg_call_usd: float | None, avg_call_seconds: float | None, note_usd: float | None,
+def loop_stop(*, kinds: list[str], tools: list[str], expected_further_calls: int,
+              observed_calls: int | None, observed_usd: float | None, observed_seconds: float | None,
+              marginal_call_usd: float | None, marginal_call_seconds: float | None, note_usd: float | None,
               host_model: str | None, source: str, project: str | None, traffic: str) -> dict:
-    """Receipt for one loop-stop nudge (a short note to the model, never a hard stop).
+    """Receipt for a turn's loop-stop nudge (a short note to the model, never a hard stop).
 
-    Baseline: ``expected_further_calls`` more model calls continuing the
-    pattern -- the measured continuation of the same pattern in real sessions
-    without intervention (``source``). Actual: the pattern calls observed
-    after the note until the turn ended, plus the note's own token cost.
-    Calls are priced at this turn's average model call. When the continuation
-    could not be observed (``observed_further_calls`` None) calls_saved comes
-    from the observed stop and the method says so."""
-    measured = observed_further_calls is not None
-    further = int(observed_further_calls) if measured else 0
-    per_usd = _num(avg_call_usd)
-    per_s = _num(avg_call_seconds)
+    One receipt per turn, from the first note on (later notes in the same turn
+    join it, so a call matching two patterns is never counted twice).
+    Baseline: ``expected_further_calls`` model calls continuing the first
+    pattern -- its mean continuation in real sessions without a note
+    (``source``) -- priced at this turn's marginal call (mean of its calls
+    after the first, which carries the cold cache write). Actual: the distinct
+    model calls observed after the note that continued any noted pattern,
+    until the turn ended, at their provider-reported cost, plus the note's
+    own tokens. Calls that replace the pattern (a different way to wait or
+    retry) are not counted, so this can overstate; the method says what was
+    measured. When the rest of the turn could not be
+    observed (cancelled or failed turn) ``observed_calls`` is None: calls_saved
+    then comes from the observed stop and the method says so."""
+    measured = observed_calls is not None
+    per_usd, per_s = _num(marginal_call_usd), _num(marginal_call_seconds)
     base_usd = None if per_usd is None else expected_further_calls * per_usd
-    act_usd = None if per_usd is None else further * per_usd + (_num(note_usd) or 0.0)
     base_s = None if per_s is None else expected_further_calls * per_s
-    act_s = None if per_s is None else further * per_s
-    method = (f"expected {expected_further_calls} further calls ({source}); "
-              + (f"observed {further} after the note until turn end" if measured
-                 else "continuation unmeasurable: calls_saved from the observed stop")
-              + "; priced at this turn's average model call")
-    return receipt(lever="loop_stop", mechanism="rule:" + kind, decision="nudged_" + kind,
+    if measured:
+        calls = int(observed_calls)
+        act_usd = None if _num(observed_usd) is None else _num(observed_usd) + (_num(note_usd) or 0.0)
+        act_s = _num(observed_seconds)
+    else:
+        calls, act_usd, act_s = 0, None, None
+    first = kinds[0] if kinds else "loop"
+    method = (f"expected {expected_further_calls} further '{first}' calls ({source}), "
+              "priced at this turn's marginal call; "
+              + ("observed pattern calls after the note until turn end, at provider cost" if measured
+                 else "rest of turn unobservable: calls_saved from the observed stop"))
+    return receipt(lever="loop_stop", mechanism="rule:" + first, decision="nudged_" + "+".join(kinds or ["loop"]),
                    baseline=_side(host_model, expected_further_calls, base_usd, base_s),
-                   actual=_side(host_model, further, act_usd, act_s, tool=str(tool)[:64], measured=measured),
+                   actual=_side(host_model, calls, act_usd, act_s, tools=sorted(set(tools))[:8], measured=measured),
                    method=method, project=project, traffic=traffic)
 
 

@@ -573,13 +573,15 @@ LOOP_STOP_KEYS = frozenset({"enabled", "repeat_threshold", "failure_threshold", 
                             "expected_further_calls"})
 KEEPALIVE_DEFAULTS = {"enabled": True, "interval_s": 270.0, "max_refreshes": 6, "min_prefix_tokens": 20_000,
                       "max_output_tokens": 1}
-# Expected further pattern calls after the trigger point WITHOUT a note: the
-# mean continuation in the owner's real sessions of 2026-09-25 (47 session
-# files, turn-scoped; exact repeat: 7 episodes, mean 0.14; >=3 consecutive
-# failures: 12 episodes, mean 0.75; sleep-as-timer from the 2nd timer call:
-# 15 episodes, mean 6.27), rounded to whole calls.
+# Expected further model calls continuing the pattern after a rule fires,
+# WITHOUT a note -- the baseline of a loop_stop receipt: the mean continuation
+# in the owner's real sessions of 2026-09-25 (50 session files, turn-scoped;
+# exact repeat at the 3rd identical call: 7 episodes, mean 0.14; 3rd
+# consecutive failure: 13 episodes, mean 0.77; 2nd sleep-as-timer call: 15
+# episodes, mean 6.3), rounded to whole calls. Not the calls remaining in the
+# turn: those (median 26.5) are mostly useful work, not loop.
 EXPECTED_FURTHER_CALLS = {"repeat": 0, "failures": 1, "sleep_timer": 6}
-EXPECTED_SOURCE = "mean continuation in real sessions 2026-09-25"
+EXPECTED_SOURCE = "mean pattern continuation, real sessions 2026-09-25"
 LOOP_STOP_DEFAULTS = {"enabled": True, "repeat_threshold": 3, "failure_threshold": 3, "sleep_threshold": 2,
                       "min_sleep_s": 5.0, "expected_further_calls": EXPECTED_FURTHER_CALLS}
 
