@@ -237,10 +237,11 @@ def diagnose(*, events_dir: str | Path = DEFAULT_EVENTS, session_id: str | None 
             # Never send a viewer token to an arbitrary origin or redirect.
             if url.scheme != 'http' or url.hostname != '127.0.0.1' or url.username or url.password or not url.port:
                 raise ValueError('Invalid viewer origin')
+            # Ordinary local launches serve without a token; tunneled/shared
+            # viewers carry one in the URL fragment.
             token = parse_qs(url.fragment).get('token', [None])[0]
-            if not token:
-                raise ValueError('Missing viewer token')
-            health = _get_json(f'http://127.0.0.1:{url.port}/api/health', {'Authorization': 'Bearer ' + token})
+            headers = {'Authorization': 'Bearer ' + token} if token else {}
+            health = _get_json(f'http://127.0.0.1:{url.port}/api/health', headers)
             viewer['status'] = 'connected' if health.get('read_only') is True else 'invalid_health'
             viewer['events_directory_matches'] = Path(state['events_dir']).expanduser().resolve() == Path(events_dir).expanduser().resolve()
         except FileNotFoundError:

@@ -87,6 +87,19 @@ class OperationsTests(unittest.TestCase):
             self.assertEqual(absent['activity']['scope']['sessions'],0)
             self.assertFalse((root/'missing').exists())
 
+    def test_tokenless_local_viewer_reports_connected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            state=Path(tmp)/'state.json'
+            state.write_text(json.dumps({'url':'http://127.0.0.1:55540/','events_dir':tmp}))
+            calls=[]
+            def get(url, headers=None):
+                calls.append((url, headers))
+                return {'read_only': True} if url.endswith('/api/health') else {'models': []}
+            with patch('amplifier_fast_decisions.operations._get_json', get):
+                result=diagnose(events_dir=tmp,state_file=state)
+            self.assertEqual(result['viewer']['status'],'connected')
+            self.assertEqual([h for u,h in calls if u.endswith('/api/health')], [{}])
+
     def test_remote_viewer_url_never_receives_credentials(self):
         with tempfile.TemporaryDirectory() as tmp:
             state=Path(tmp)/'state.json'
