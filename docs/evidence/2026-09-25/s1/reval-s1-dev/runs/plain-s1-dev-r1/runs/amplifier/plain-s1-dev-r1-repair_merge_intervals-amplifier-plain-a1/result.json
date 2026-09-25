@@ -1,0 +1,46 @@
+{
+  "name": "plain-s1-dev-r1-repair_merge_intervals-amplifier-plain-a1",
+  "task": "repair_merge_intervals",
+  "family": "repair",
+  "split": "dev",
+  "kind": "code",
+  "harness": "amplifier-plain",
+  "attempt": 1,
+  "model": "claude-fable-5-1",
+  "started_at": "2026-09-25T02:53:58.156533+00:00",
+  "ended_at": "2026-09-25T02:54:45.096221+00:00",
+  "wall_time_ms": 46939.169084012974,
+  "harness_duration_ms": null,
+  "exit_code": 0,
+  "timed_out": false,
+  "cost_usd": 0.68399775,
+  "cost_source": "harness_reported",
+  "cost_billable": true,
+  "tokens": {
+    "input_tokens": 312939.0,
+    "output_tokens": 1992.0,
+    "cache_read_tokens": 312921.0,
+    "cache_write_tokens": 40479.0,
+    "cost_usd": 0.68399775
+  },
+  "num_turns": null,
+  "final_message": null,
+  "quality": {
+    "checks": 33,
+    "passed": 33,
+    "failed": 0,
+    "failure_labels": []
+  },
+  "protected_files_unchanged": {
+    "README.md": true,
+    "test_public.py": true
+  },
+  "outcome_passed": true,
+  "infrastructure_failure": false,
+  "notes": [],
+  "exec_time_ms": 35694.82,
+  "exec_time_source": "native_events_first_request_to_last_response",
+  "provider_requests": 5,
+  "concurrency_at_launch": 3,
+  "concurrency_max": 3
+}

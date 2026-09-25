@@ -1,0 +1,30 @@
+{
+  "orch-default": {
+    "difficulty_judged_reasons": {
+      "judge_cheap": 36,
+      "judge_strong": 12
+    },
+    "model_routed_reasons": {
+      "start_model": 160,
+      "start_strong": 34
+    },
+    "provider_calls_by_model": {
+      "claude-sonnet-5 (host claude-fable-5-1)": 160,
+      "provider-default (host claude-fable-5-1)": 34
+    }
+  },
+  "orch-default-opus": {
+    "difficulty_judged_reasons": {
+      "judge_cheap": 38,
+      "judge_strong": 10
+    },
+    "model_routed_reasons": {
+      "start_model": 156,
+      "start_strong": 28
+    },
+    "provider_calls_by_model": {
+      "claude-sonnet-5 (host claude-opus-5-5)": 156,
+      "provider-default (host claude-opus-5-5)": 28
+    }
+  }
+}

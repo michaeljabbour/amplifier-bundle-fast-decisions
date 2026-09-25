@@ -1,0 +1,45 @@
+{
+  "name": "plain-opus-s1-dev-r2-edit_dequeue_validation-amplifier-plain-a2",
+  "task": "edit_dequeue_validation",
+  "family": "edit",
+  "split": "dev",
+  "kind": "code",
+  "harness": "amplifier-plain",
+  "attempt": 2,
+  "model": "claude-opus-5-5",
+  "started_at": "2026-09-25T03:12:27.605339+00:00",
+  "ended_at": "2026-09-25T03:12:55.593463+00:00",
+  "wall_time_ms": 27987.434958005906,
+  "harness_duration_ms": null,
+  "exit_code": 0,
+  "timed_out": false,
+  "cost_usd": 0.27008,
+  "cost_source": "harness_reported",
+  "cost_billable": true,
+  "tokens": {
+    "input_tokens": 307571.0,
+    "output_tokens": 849.0,
+    "cache_read_tokens": 307555.0,
+    "cache_write_tokens": 38305.0,
+    "cost_usd": 0.27008
+  },
+  "num_turns": null,
+  "final_message": null,
+  "quality": {
+    "checks": 3,
+    "passed": 3,
+    "failed": 0,
+    "failure_labels": []
+  },
+  "protected_files_unchanged": {
+    "README.md": true
+  },
+  "outcome_passed": true,
+  "infrastructure_failure": false,
+  "notes": [],
+  "exec_time_ms": 16957.552,
+  "exec_time_source": "native_events_first_request_to_last_response",
+  "provider_requests": 5,
+  "concurrency_at_launch": 3,
+  "concurrency_max": 3
+}
