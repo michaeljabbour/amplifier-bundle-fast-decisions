@@ -3,18 +3,25 @@ schema: fast-decisions-evals/suites/v1
 # Decision (2026-09-20b), see STUDY-DESIGN.md section 12: reps default to 3 on
 # --split dev (selection) and 5 on --split holdout (confirmation), for both s1
 # and s2. --reps on the CLI always overrides this.
+#
+# holdout2 (2026-09-25): a fresh 12-task S1 holdout split (3 per family),
+# added in scripts/battery_tasks.py to replace the original 8-task `holdout`
+# split after it was spent (used twice). Same confirmation-style reps
+# default as `holdout`. `holdout` itself is left untouched.
 reps_defaults:
   dev: 3
   holdout: 5
+  holdout2: 5
 
 suites:
   s1:
-    label: "S1 synthetic battery (20 tasks, 4 families)"
+    label: "S1 synthetic battery (32 tasks, 4 families)"
     task_source: battery           # battery.py --task-source battery
     deadline_seconds: 600
     splits:
-      dev:     { tasks_flag: dev,     expected_task_count: 12 }
-      holdout: { tasks_flag: holdout, expected_task_count: 8 }
+      dev:      { tasks_flag: dev,      expected_task_count: 12 }
+      holdout:  { tasks_flag: holdout,  expected_task_count: 8 }
+      holdout2: { tasks_flag: holdout2, expected_task_count: 12 }
     required_toolchains: [python3]
 
   s2:

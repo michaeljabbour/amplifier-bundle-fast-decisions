@@ -1418,7 +1418,7 @@ def design_recommendation_text(results, cells_doc):
 def build_arg_parser():
     p = argparse.ArgumentParser(prog="evals/run.py")
     p.add_argument("--suite", choices=["s1", "s2"])
-    p.add_argument("--split", choices=["dev", "holdout"])
+    p.add_argument("--split", choices=["dev", "holdout", "holdout2"])
     p.add_argument("--cells")
     p.add_argument("--reps", type=int, default=None,
                     help="default: 5 on --split holdout, else 3 (Decision 2026-09-20b, "

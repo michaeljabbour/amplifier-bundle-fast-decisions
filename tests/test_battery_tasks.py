@@ -26,22 +26,24 @@ def _materialize(files: dict, extra: dict | None = None) -> Path:
 
 
 class TestRegistryShape(unittest.TestCase):
-    def test_exactly_twenty_tasks_five_per_family(self):
-        self.assertEqual(len(bt.TASKS), 20)
+    def test_exactly_thirtytwo_tasks_eight_per_family(self):
+        # 20 original (dev + holdout) + 12 fresh holdout2 tasks (3/family).
+        self.assertEqual(len(bt.TASKS), 32)
         counts = {}
         for t in bt.TASKS.values():
             counts[t.family] = counts.get(t.family, 0) + 1
-        self.assertEqual(counts, {"repair": 5, "edit": 5, "bugfix": 5, "answer": 5})
+        self.assertEqual(counts, {"repair": 8, "edit": 8, "bugfix": 8, "answer": 8})
 
-    def test_three_dev_two_holdout_per_family(self):
+    def test_three_dev_two_holdout_three_holdout2_per_family(self):
         by_family_split = {}
         for t in bt.TASKS.values():
-            by_family_split.setdefault(t.family, {"dev": 0, "holdout": 0})
-            self.assertIn(t.split, ("dev", "holdout"), t.name)
+            by_family_split.setdefault(t.family, {"dev": 0, "holdout": 0, "holdout2": 0})
+            self.assertIn(t.split, ("dev", "holdout", "holdout2"), t.name)
             by_family_split[t.family][t.split] += 1
         for family, counts in by_family_split.items():
             self.assertEqual(counts["dev"], 3, family)
             self.assertEqual(counts["holdout"], 2, family)
+            self.assertEqual(counts["holdout2"], 3, family)
 
     def test_unique_names(self):
         names = [t.name for t in bt.TASKS.values()]
@@ -67,11 +69,13 @@ class TestRegistryShape(unittest.TestCase):
         self.assertEqual(set(bt.families()), {"repair", "edit", "bugfix", "answer"})
         dev = bt.split("dev")
         holdout = bt.split("holdout")
+        holdout2 = bt.split("holdout2")
         allnames = bt.split("all")
         self.assertEqual(len(dev), 12)
         self.assertEqual(len(holdout), 8)
-        self.assertEqual(set(dev) | set(holdout), set(allnames))
-        self.assertEqual(len(allnames), 20)
+        self.assertEqual(len(holdout2), 12)
+        self.assertEqual(set(dev) | set(holdout) | set(holdout2), set(allnames))
+        self.assertEqual(len(allnames), 32)
         with self.assertRaises(ValueError):
             bt.split("nonsense")
 
@@ -83,7 +87,10 @@ class TestCodeTasks(unittest.TestCase):
     fails for the unmodified starter (bugfix family)."""
 
     def test_all_code_tasks(self):
-        code_tasks = [t for t in bt.TASKS.values() if t.kind == "code"]
+        # holdout2 code tasks are covered by tests/test_battery_tasks_holdout2.py
+        # instead: their reference/wrong solutions live only in that test file,
+        # never in bt.REFERENCE_SOLUTIONS (so an agent workspace can't read them).
+        code_tasks = [t for t in bt.TASKS.values() if t.kind == "code" and t.split != "holdout2"]
         self.assertEqual(len(code_tasks), 15)
         for task in code_tasks:
             with self.subTest(task=task.name):

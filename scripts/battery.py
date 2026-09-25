@@ -285,7 +285,7 @@ def cmd_prepare(args):
         battery_tasks = None
     else:
         battery_tasks = _load_battery_tasks()
-        if args.tasks in ('all', 'dev', 'holdout'):
+        if args.tasks in ('all', 'dev', 'holdout', 'holdout2'):
             task_names = list(battery_tasks.split(args.tasks))
         elif args.tasks:
             task_names = [t.strip() for t in args.tasks.split(',') if t.strip()]
@@ -1485,6 +1485,22 @@ def _provider_calls_from_native_events(result, run_dir):
     return calls
 
 
+def _native_cost_by_model(result, run_dir):
+    """{model: summed provider-reported cost_usd} over native llm:response
+    events. {} when unavailable; never raises."""
+    totals = Counter()
+    for ev in _native_events(result, run_dir):
+        if (ev.get('event') or ev.get('type')) != 'llm:response':
+            continue
+        d = ev.get('data') or {}
+        usage = d.get('usage') if isinstance(d.get('usage'), dict) else {}
+        try:
+            totals[d.get('model') or 'unknown'] += float(usage.get('cost_usd') or 0)
+        except (TypeError, ValueError):
+            continue
+    return {k: round(v, 6) for k, v in totals.items()}
+
+
 def _routing_summary(result, run_dir):
     """`routing` block for one run's result.json: {'available': True,
     'turn_decisions', 'provider_calls', 'served_model_counts'} when derivable
@@ -1495,15 +1511,22 @@ def _routing_summary(result, run_dir):
     source yields anything -- never raises, never crashes result writing."""
     try:
         from_receipts = _routing_from_receipts(run_dir)
+        native_calls = _provider_calls_from_native_events(result, run_dir)
+        # What the provider itself reported per response (receipts only know
+        # the requested model; a host call shows up there as 'provider-default').
+        native = {
+            'native_served_model_counts': dict(Counter(c['served_model'] for c in native_calls if c.get('served_model'))),
+            'native_cost_usd_by_model': _native_cost_by_model(result, run_dir),
+        }
         if from_receipts is not None:
-            return {'available': True, **from_receipts}
-        provider_calls = _provider_calls_from_native_events(result, run_dir)
+            return {'available': True, **from_receipts, **native}
+        provider_calls = native_calls
         if not provider_calls:
             return {'available': False,
                     'reason': 'no fast_decisions receipts.jsonl and no native llm:response events'}
         served_model_counts = Counter(c['served_model'] for c in provider_calls if c.get('served_model'))
         return {'available': True, 'turn_decisions': [], 'provider_calls': provider_calls,
-                'served_model_counts': dict(served_model_counts)}
+                'served_model_counts': dict(served_model_counts), **native}
     except Exception as exc:  # noqa: BLE001 -- routing is diagnostic; must never break result writing
         return {'available': False, 'reason': f'routing_summary_error: {exc}'}
 
