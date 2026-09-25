@@ -1553,5 +1553,159 @@ class InitOrAdoptCampaignBudgetMappingTests(unittest.TestCase):
         self.assertEqual(campaign._get(proposal, "budgets.estimated_total_usd", 150.0), 150.0)
 
 
+class CellOrderForRepTests(unittest.TestCase):
+    """Unit tests for the pure `cell_order_for_rep` helper -- section 7
+    amendment (confound fix): removes the 'every batch runs cells in
+    cells.yaml declared order, plain always first' confound."""
+
+    CELL_IDS = ["plain", "plain-sonnet", "judge-local+effort"]
+
+    def test_declared_mode_reproduces_declared_order(self):
+        order = run.cell_order_for_rep(self.CELL_IDS, 1, mode="declared", base_seed=20260919)
+        self.assertEqual(order, self.CELL_IDS)
+        # declared mode ignores rep -- always the same
+        order2 = run.cell_order_for_rep(self.CELL_IDS, 7, mode="declared", base_seed=20260919)
+        self.assertEqual(order2, self.CELL_IDS)
+
+    def test_shuffle_is_deterministic_for_a_fixed_seed_and_rep(self):
+        a = run.cell_order_for_rep(self.CELL_IDS, 2, mode="shuffle", base_seed=20260919)
+        b = run.cell_order_for_rep(self.CELL_IDS, 2, mode="shuffle", base_seed=20260919)
+        self.assertEqual(a, b)
+        self.assertEqual(sorted(a), sorted(self.CELL_IDS))
+
+    def test_shuffle_order_is_not_always_identical_across_reps(self):
+        orders = [run.cell_order_for_rep(self.CELL_IDS, rep, mode="shuffle", base_seed=20260919)
+                  for rep in (1, 2, 3, 4, 5)]
+        self.assertGreater(len(set(tuple(o) for o in orders)), 1,
+                            "shuffled per-rep order should vary across reps for >=3 cells")
+        for order in orders:
+            self.assertEqual(sorted(order), sorted(self.CELL_IDS))
+
+
+class RepMajorSchedulingTests(unittest.TestCase):
+    """Integration tests for main()'s rep-major loop: every rep runs every
+    requested cell once (in shuffled or declared order) before any cell's
+    `evaluate` step for that rep, so an anchor_cell's raw run+reevaluate is
+    always on disk before a dependent cell reads it as a baseline."""
+
+    def _fake_invoke(self, reevaluated, evaluate_calls):
+        def fake_invoke(tool, argv):
+            if tool == "campaign" and argv[0] == "init":
+                root = Path(argv[argv.index("--root") + 1])
+                root.mkdir(parents=True, exist_ok=True)
+                (root / "protocol.json").write_text("{}")
+                return {"initialized": str(root)}
+            if tool == "campaign" and argv[:2] == ["budget", "status"]:
+                return {"remaining": 1000.0}
+            if tool == "battery" and argv[0] == "prepare":
+                flags = {}
+                it = iter(argv[1:])
+                for a in it:
+                    if a.startswith("--"):
+                        flags[a] = next(it, True)
+                exp_dir = battery.experiment_dir_for(Path(flags["--root"]), flags["--experiment"])
+                exp_dir.mkdir(parents=True, exist_ok=True)
+                (exp_dir / "proposal.json").write_text(json.dumps({
+                    "tasks": ["t1"], "claude_permission_mode": "bypassPermissions",
+                    "commands": {}, "task_source": None, "candidate_source_snapshot": None,
+                    "frozen_run_schedule": [],
+                }))
+                return {"prepared": str(exp_dir)}
+            if tool == "battery" and argv[0] == "run":
+                return {"experiment": argv[argv.index("--experiment") + 1]}
+            if tool == "battery" and argv[0] == "reevaluate":
+                exp = argv[argv.index("--experiment") + 1]
+                reevaluated.add(exp)
+                return {"experiment": exp, "changed": []}
+            if tool == "battery" and argv[0] == "evaluate":
+                exp = argv[argv.index("--experiment") + 1]
+                evaluate_calls.append(exp)
+                if "--baseline-experiment" in argv:
+                    baseline_exp = argv[argv.index("--baseline-experiment") + 1]
+                    if baseline_exp not in reevaluated:
+                        raise AssertionError(
+                            f"evaluate({exp}) read anchor {baseline_exp} before its run+reevaluate")
+                if exp.startswith("plain-"):
+                    mechanism = None
+                else:
+                    mechanism = {
+                        "mechanism_engaged": True, "mechanism_reason": None,
+                        "scored_by_backend": {"ollama": 1}, "fallback_count": 0,
+                        "routed_by_route": {}, "effort_routed_by_phase_effort": {"implement:high": 1},
+                        "model_routed_requested_models": {}, "model_routed_escalations_by_reason": {},
+                    }
+                return {"experiment": exp, "mechanism": mechanism, "amplifier_fd_series_label": None}
+            if tool == "battery_report":
+                return {"report": str(Path(argv[argv.index("--out") + 1]))}
+            raise AssertionError(f"unexpected invoke_tool call: {tool} {argv}")
+        return fake_invoke
+
+    def test_anchor_run_precedes_candidate_evaluate_regardless_of_launch_order(self):
+        reevaluated = set()
+        evaluate_calls = []
+        orig_invoke = run.invoke_tool
+        orig_verify = run.run_verification
+        run.invoke_tool = self._fake_invoke(reevaluated, evaluate_calls)
+        run.run_verification = lambda *a, **k: (True, {"checks": {}}, {"ok": True, "tasks": {}})
+        try:
+            with tempfile.TemporaryDirectory() as tmp:
+                out = str(Path(tmp) / "out")
+                rc = run.main([
+                    "--suite", "s1", "--split", "dev", "--cells", "plain,judge-local+effort",
+                    "--reps", "3", "--out", out, "--baseline-source", "/b",
+                    "--candidate-source", "/c", "--candidate-sha", "deadbeef",
+                    "--installed-cache", "/ic", "--history-index", "/hi", "--events-dir", "/ev",
+                ])
+                self.assertEqual(rc, 0)
+                # every rep's evaluate actually ran (no exception raised by the
+                # anchor-ordering assertion embedded in the fake above)
+                self.assertEqual(len(evaluate_calls), 6)  # 2 cells x 3 reps
+                manifest = json.loads((Path(out) / "manifest.json").read_text())
+        finally:
+            run.invoke_tool = orig_invoke
+            run.run_verification = orig_verify
+
+        cell_order = manifest["invocation"]["cell_order"]
+        self.assertEqual(cell_order["mode"], "shuffle")
+        for rep in ("1", "2", "3"):
+            self.assertEqual(set(cell_order["per_rep"][rep]), {"plain", "judge-local+effort"})
+
+        timing = manifest["timing"]
+        for cid in ("plain", "judge-local+effort"):
+            for rep in ("1", "2", "3"):
+                entry = timing[cid][rep]
+                self.assertIsNotNone(entry["started_at"])
+                self.assertIsNotNone(entry["ended_at"])
+
+    def test_declared_cell_order_flag_reproduces_old_declared_order(self):
+        reevaluated = set()
+        evaluate_calls = []
+        orig_invoke = run.invoke_tool
+        orig_verify = run.run_verification
+        run.invoke_tool = self._fake_invoke(reevaluated, evaluate_calls)
+        run.run_verification = lambda *a, **k: (True, {"checks": {}}, {"ok": True, "tasks": {}})
+        try:
+            with tempfile.TemporaryDirectory() as tmp:
+                out = str(Path(tmp) / "out")
+                rc = run.main([
+                    "--suite", "s1", "--split", "dev", "--cells", "plain,judge-local+effort",
+                    "--reps", "2", "--out", out, "--baseline-source", "/b",
+                    "--candidate-source", "/c", "--candidate-sha", "deadbeef",
+                    "--installed-cache", "/ic", "--history-index", "/hi", "--events-dir", "/ev",
+                    "--cell-order", "declared",
+                ])
+                self.assertEqual(rc, 0)
+                manifest = json.loads((Path(out) / "manifest.json").read_text())
+        finally:
+            run.invoke_tool = orig_invoke
+            run.run_verification = orig_verify
+
+        cell_order = manifest["invocation"]["cell_order"]
+        self.assertEqual(cell_order["mode"], "declared")
+        declared = run.resolve_cell_ids("plain,judge-local+effort", _load_test_cells())
+        for rep in ("1", "2"):
+            self.assertEqual(cell_order["per_rep"][rep], declared)
+
+
 if __name__ == "__main__":
     unittest.main()

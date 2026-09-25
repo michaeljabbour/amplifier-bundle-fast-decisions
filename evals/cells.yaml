@@ -39,6 +39,9 @@ effort_profiles:
   # all_phase -- the judge classifies the phase instead of (with fallback
   # to) the deterministic classifier.
   all_phase_judged: { orient: medium, explore: low, implement: high, phase_judge: true }
+  # 2026-09-25 iron-triangle tuning (dev split only): the shipped profile with
+  # the cheap tier's effort lowered from medium to low.
+  all_phase_cheap_low: { orient: medium, explore: low, implement: high, by_tier: { cheap: low } }
 
 model_routing_profiles:
   # The shipped default since 2026-09-24 (decide once): the turn-start router
@@ -46,6 +49,19 @@ model_routing_profiles:
   # provider error moves it up. start_policy/scope gate come from the behavior.
   sonnet_once:
     start_model: claude-sonnet-5
+    max_requests_before_escalation: null
+    escalate_on_test_failure: false
+    escalate_on_provider_error: true
+  # 2026-09-25 iron-triangle tuning: same decide-once policy, other cheap tiers.
+  haiku_once:
+    start_model: claude-haiku-4-5-20251001
+    max_requests_before_escalation: null
+    escalate_on_test_failure: false
+    escalate_on_provider_error: true
+  # Same model as an Opus 5.5 host: an easy turn changes only effort (no model
+  # switch, so the host's prompt cache is reused).
+  opus_once:
+    start_model: claude-opus-5-5
     max_requests_before_escalation: null
     escalate_on_test_failure: false
     escalate_on_provider_error: true
@@ -465,6 +481,52 @@ cells:
     secondary_anchor: plain-sonnet
     requires_cells: [plain-opus, plain-sonnet]
     mechanism_gate: { max_scored: 0 }
+
+  # 2026-09-25 iron-triangle tuning on the Opus 5.5 host (dev split only; the
+  # winner is confirmed on a fresh preregistered holdout, never on these tasks).
+  orch-haiku-opus:
+    harnesses: [amplifier-fd]
+    amplifier_model: claude-opus-5-5
+    fd: { composition: composed, backend: jev, allow_external_state: true, effort_profile: all_phase,
+          model_routing_profile: haiku_once }
+    role: "Jev decide-once, easy turns on Haiku 4.5 (medium effort), Opus 5.5 host"
+    purpose: "is a cheap tier that is strictly faster and cheaper than the host the lever on Opus?"
+    anchor_cell: plain-opus
+    requires_cells: [plain-opus]
+    mechanism_gate: { max_scored: 0, model_routed_model: claude-haiku-4-5-20251001, min_model_routed: 1 }
+
+  orch-haiku-low-opus:
+    harnesses: [amplifier-fd]
+    amplifier_model: claude-opus-5-5
+    fd: { composition: composed, backend: jev, allow_external_state: true, effort_profile: all_phase_cheap_low,
+          model_routing_profile: haiku_once }
+    role: "Jev decide-once, easy turns on Haiku 4.5 at low effort, Opus 5.5 host"
+    purpose: "Haiku cheap tier with less thinking"
+    anchor_cell: plain-opus
+    requires_cells: [plain-opus]
+    mechanism_gate: { max_scored: 0, model_routed_model: claude-haiku-4-5-20251001, min_model_routed: 1 }
+
+  orch-opuslow-opus:
+    harnesses: [amplifier-fd]
+    amplifier_model: claude-opus-5-5
+    fd: { composition: composed, backend: jev, allow_external_state: true, effort_profile: all_phase_cheap_low,
+          model_routing_profile: opus_once }
+    role: "Jev decide-once, easy turns stay on Opus 5.5 at low effort (no model switch)"
+    purpose: "effort-only routing on the host: keeps the prompt cache"
+    anchor_cell: plain-opus
+    requires_cells: [plain-opus]
+    mechanism_gate: { max_scored: 0, model_routed_model: claude-opus-5-5, min_model_routed: 1 }
+
+  orch-sonnetlow-opus:
+    harnesses: [amplifier-fd]
+    amplifier_model: claude-opus-5-5
+    fd: { composition: composed, backend: jev, allow_external_state: true, effort_profile: all_phase_cheap_low,
+          model_routing_profile: sonnet_once }
+    role: "Jev decide-once, easy turns on Sonnet 5 at low effort, Opus 5.5 host"
+    purpose: "the shipped cheap tier with less thinking"
+    anchor_cell: plain-opus
+    requires_cells: [plain-opus]
+    mechanism_gate: { max_scored: 0, model_routed_model: claude-sonnet-5, min_model_routed: 1 }
 
   externals:
     harnesses: [claude, codex, opencode, amplifier-plain, amplifier-fd]

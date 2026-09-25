@@ -669,11 +669,14 @@ def verify_tool_shas(recorded, current):
 
 
 def build_manifest(*, argv, suite_id, split, reps, suite_doc, candidate, baseline,
-                    cells_report, budget_report, tool_shas):
-    return {
+                    cells_report, budget_report, tool_shas, cell_order=None, timing=None):
+    invocation = {"argv": list(argv), "suite": suite_id, "split": split, "reps": reps}
+    if cell_order is not None:
+        invocation["cell_order"] = cell_order
+    manifest = {
         "schema": SCHEMA_MANIFEST,
         "created_at_utc": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-        "invocation": {"argv": list(argv), "suite": suite_id, "split": split, "reps": reps},
+        "invocation": invocation,
         "suite": suite_doc,
         "candidate": candidate,
         "baseline": baseline,
@@ -682,6 +685,9 @@ def build_manifest(*, argv, suite_id, split, reps, suite_doc, candidate, baselin
         "verification": {"prompt_hashes": "prompt-verification.json", "preflight": "preflight.json"},
         "tool_shas": tool_shas,
     }
+    if timing is not None:
+        manifest["timing"] = timing
+    return manifest
 
 
 REQUIRED_MANIFEST_KEYS = ("schema", "created_at_utc", "invocation", "suite", "candidate",
@@ -692,7 +698,29 @@ def validate_manifest_shape(manifest):
     missing = [k for k in REQUIRED_MANIFEST_KEYS if k not in manifest]
     if missing:
         raise EvalsError(4, f"manifest missing required keys: {missing}")
+    cell_order = manifest.get("invocation", {}).get("cell_order")
+    if cell_order is not None:
+        if "mode" not in cell_order or "per_rep" not in cell_order:
+            raise EvalsError(4, f"manifest invocation.cell_order missing 'mode'/'per_rep': {cell_order}")
     return True
+
+
+def _utcnow_str():
+    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+
+
+def cell_order_for_rep(cell_ids, rep, *, mode, base_seed):
+    """section 7 amendment (confound fix): declared order is reproducible via
+    `mode='declared'`; the default `mode='shuffle'` derives a per-rep order
+    from `random.Random(f"{base_seed}:{rep}")` so every rep runs every
+    requested cell once, in an order that varies across reps but is fully
+    reproducible from (cell_ids, rep, base_seed)."""
+    if mode == "declared":
+        return list(cell_ids)
+    rng = random.Random(f"{base_seed}:{rep}")
+    order = list(cell_ids)
+    rng.shuffle(order)
+    return order
 
 
 # ---------------------------------------------------------------------------
@@ -1414,6 +1442,11 @@ def build_arg_parser():
     p.add_argument("--host-python", default=sys.executable)
     p.add_argument("--events-dir")
     p.add_argument("--base-seed", type=int, default=20260919)
+    p.add_argument("--cell-order", choices=["shuffle", "declared"], default="shuffle",
+                    help="'shuffle' (default): each rep runs every requested cell once, in an "
+                         "order shuffled via random.Random(f'{base_seed}:{rep}') -- removes the "
+                         "same-order-every-batch confound (declared order, 'plain' always first). "
+                         "'declared' reproduces the old cells.yaml-declared-order behavior.")
     p.add_argument("--allow-external-state", action="store_true")
     p.add_argument("--dry-run", action="store_true")
     p.add_argument("--resume", action="store_true")
@@ -1495,13 +1528,19 @@ def _evaluate_comparison(campaign_root, exp, evaluate_argv):
     return summary
 
 
-def run_one_experiment(*, cell_id, cells_doc, suites_doc, suite_id, split, rep, out_dir,
-                        campaign_root, base_seed, baseline_source, candidate_source, candidate_sha,
-                        polyglot_root, installed_cache, host_python, events_dir,
-                        backfill_exec=False, which=None, doctor_runner=None, parallel=1):
-    """prepare (skip if resuming unchanged) -> verify -> run -> reevaluate -> evaluate -> gate,
-    for one (cell, suite, split, rep). Returns a dict describing what happened; raises
-    EvalsError(4) pre-launch, never after `battery.py run` has been invoked."""
+def launch_experiment(*, cell_id, cells_doc, suites_doc, suite_id, split, rep, out_dir,
+                       campaign_root, base_seed, baseline_source, candidate_source, candidate_sha,
+                       polyglot_root, installed_cache, host_python, events_dir,
+                       backfill_exec=False, which=None, doctor_runner=None, parallel=1):
+    """prepare (skip if resuming unchanged) -> verify -> run -> reevaluate, for one
+    (cell, suite, split, rep). Returns {"experiment": exp, "argv": argv}; raises
+    EvalsError(4) pre-launch, EvalsError(3) on a budget-headroom pause, and never
+    after `battery.py run` has been invoked. Deliberately stops short of `evaluate`:
+    with cell order shuffled per rep (see cell_order_for_rep), a cell's
+    `anchor_cell`/`secondary_anchor` may not have been launched yet when this cell's
+    turn comes up within the same rep -- only its OWN run+reevaluate is required
+    here. `evaluate_experiment` (below) does the anchor-dependent comparison, once
+    every cell requested for this rep has completed this phase."""
     import battery
     cells_doc_cells = cells_doc["cells"]
     cell = cells_doc_cells[cell_id]
@@ -1572,6 +1611,18 @@ def run_one_experiment(*, cell_id, cells_doc, suites_doc, suite_id, split, rep, 
     invoke_tool("battery", ["reevaluate", "--root", str(campaign_root), "--experiment", exp,
                             "--reason", "post-run rescore"])
 
+    return {"experiment": exp, "argv": argv}
+
+
+def evaluate_experiment(*, cell_id, cells_doc, suite_id, split, rep, campaign_root, exp, argv):
+    """evaluate (against anchor_cell's already-launched run, if any) -> gate ->
+    series-label cross-check, for one (cell, suite, split, rep). Callers must only
+    invoke this once every cell requested for this rep has completed
+    `launch_experiment` -- an anchor's run+reevaluate must already be on disk."""
+    cell = cells_doc["cells"][cell_id]
+    defaults = cells_doc.get("defaults", {})
+    campaign_root = Path(campaign_root)
+
     anchor = cell.get("anchor_cell")
     evaluate_argv = ["evaluate", "--root", str(campaign_root), "--experiment", exp]
     if anchor:
@@ -1591,6 +1642,30 @@ def run_one_experiment(*, cell_id, cells_doc, suites_doc, suite_id, split, rep, 
             cross_check_series_label(declared, recorded_label)
 
     return {"experiment": exp, "argv": argv, "gate": gate, "comparison": comparison}
+
+
+def run_one_experiment(*, cell_id, cells_doc, suites_doc, suite_id, split, rep, out_dir,
+                        campaign_root, base_seed, baseline_source, candidate_source, candidate_sha,
+                        polyglot_root, installed_cache, host_python, events_dir,
+                        backfill_exec=False, which=None, doctor_runner=None, parallel=1):
+    """prepare (skip if resuming unchanged) -> verify -> run -> reevaluate -> evaluate -> gate,
+    for one (cell, suite, split, rep), run declared-order/single-cell style (no cell
+    ordering concerns). Returns a dict describing what happened; raises EvalsError(4)
+    pre-launch, never after `battery.py run` has been invoked. Composes
+    `launch_experiment` + `evaluate_experiment`; main()'s rep-major loop calls those
+    two phases directly instead, splitting them across every cell in a rep."""
+    launched = launch_experiment(
+        cell_id=cell_id, cells_doc=cells_doc, suites_doc=suites_doc, suite_id=suite_id,
+        split=split, rep=rep, out_dir=out_dir, campaign_root=campaign_root, base_seed=base_seed,
+        baseline_source=baseline_source, candidate_source=candidate_source, candidate_sha=candidate_sha,
+        polyglot_root=polyglot_root, installed_cache=installed_cache, host_python=host_python,
+        events_dir=events_dir, backfill_exec=backfill_exec, which=which, doctor_runner=doctor_runner,
+        parallel=parallel,
+    )
+    return evaluate_experiment(
+        cell_id=cell_id, cells_doc=cells_doc, suite_id=suite_id, split=split, rep=rep,
+        campaign_root=campaign_root, exp=launched["experiment"], argv=launched["argv"],
+    )
 
 
 def main(argv=None):
@@ -1670,60 +1745,77 @@ def main(argv=None):
 
         cells_report = []
         gates_report = {}
-        comparisons_by_cell = {}
+        comparisons_by_cell = {cid: [] for cid in cell_ids}
         any_gate_failed = False
         candidate_snapshot = {"source": candidate_source, "requested_sha": candidate_sha}
         baseline_report = {"source": baseline_source}
 
+        # section 7 amendment: REP-MAJOR scheduling. Every rep runs every
+        # requested cell once, in an order shuffled per rep (default) or in
+        # cells.yaml's declared order (--cell-order declared) -- removes the
+        # confound where every batch ran cells in the same declared order
+        # every time, with 'plain' always first (see docs/evidence/...NOTE.md).
+        cell_order_mode = args.cell_order
+        cell_order_by_rep = {
+            rep: cell_order_for_rep(cell_ids, rep, mode=cell_order_mode, base_seed=args.base_seed)
+            for rep in range(1, reps + 1)
+        }
+        timing_report = {cid: {} for cid in cell_ids}
+        per_cid_experiments = {cid: [] for cid in cell_ids}
+        per_cid_seeds = {cid: [] for cid in cell_ids}
+        per_cid_gate = {cid: {"passed": True, "flags": []} for cid in cell_ids}
+
+        def _cell_order_manifest_field():
+            return {"mode": cell_order_mode,
+                    "per_rep": {str(r): cell_order_by_rep[r] for r in cell_order_by_rep}}
+
         def _write_partial_state(reason):
-            """Exit-3 (budget/launch-cap refused) partial state: write whatever
-            manifest/gates exist so far, with placeholder entries for cells not
-            yet reached, so --resume can pick up the whole batch later."""
-            done_ids = {c["id"] for c in cells_report}
-            partial_cells_report = list(cells_report)
-            for rcid in cell_ids:
-                if rcid in done_ids:
-                    continue
-                partial_cells_report.append({
-                    "id": rcid, "experiments": [], "seeds": [],
-                    "gate": {"passed": False, "flags": []}, "excluded_from_claims": True,
-                })
+            """Exit-3 (budget/launch-cap refused, or a mid-rep failure) partial
+            state: write whatever manifest/gates exist so far. Every cell is
+            marked excluded_from_claims -- rep-major scheduling means no cell
+            has ALL its reps evaluated once any rep fails partway through
+            (earlier reps ARE fully on disk for every cell, but --resume, not
+            this partial manifest, is what recovers them) -- so --resume can
+            pick up the whole batch later."""
+            partial_cells_report = [{
+                "id": rcid, "experiments": per_cid_experiments[rcid], "seeds": per_cid_seeds[rcid],
+                "gate": per_cid_gate[rcid], "excluded_from_claims": True,
+            } for rcid in cell_ids]
             tool_shas = compute_tool_shas()
             manifest = build_manifest(
                 argv=(argv or sys.argv[1:]), suite_id=suite_id, split=split, reps=reps,
                 suite_doc=suites_doc["suites"][suite_id], candidate=candidate_snapshot,
                 baseline=baseline_report, cells_report=partial_cells_report,
                 budget_report=cells_doc.get("budget", {}), tool_shas=tool_shas,
+                cell_order=_cell_order_manifest_field(), timing=timing_report,
             )
             _write_json(out_dir / "manifest.json", manifest)
-            _write_json(out_dir / "gates.json", gates_report)
+            _write_json(out_dir / "gates.json", {rcid: per_cid_gate[rcid] for rcid in cell_ids})
             payload = {"out": str(out_dir), "cells": cell_ids, "exit": 3, "reason": f"budget_refused: {reason}"}
             _print_result(payload)
 
-        for cid in cell_ids:
-            cell = cells_doc["cells"][cid]
-            experiments = []
-            seeds = []
-            cell_gate = {"passed": True, "flags": []}
-            comparisons_by_cell[cid] = []
-            for rep in range(1, reps + 1):
-                seeds.append(args.base_seed + rep)
+        for rep in range(1, reps + 1):
+            order = cell_order_by_rep[rep]
+
+            # Phase A: launch (prepare/verify/run/reevaluate) every requested
+            # cell for this rep, in the (possibly shuffled) order, before any
+            # cell's evaluate step runs for this rep. `evaluate` for a cell
+            # with an anchor_cell/secondary_anchor only reads the anchor's raw
+            # run+reevaluate results (never the anchor's own comparison.json),
+            # so running every cell's launch phase first -- regardless of
+            # shuffle order -- is sufficient for the anchor dependency.
+            launched_by_cid = {}
+            for cid in order:
+                per_cid_seeds[cid].append(args.base_seed + rep)
+                timing_report[cid][str(rep)] = {"started_at": _utcnow_str(), "ended_at": None}
                 try:
                     if args.report_only:
                         exp = experiment_name(cid, suite_id, split, rep)
                         invoke_tool("battery", ["reevaluate", "--root", str(campaign_root), "--experiment", exp,
                                                 "--reason", "report-only rescore"])
-                        evaluate_argv = ["evaluate", "--root", str(campaign_root), "--experiment", exp]
-                        anchor = cell.get("anchor_cell")
-                        if anchor:
-                            anchor_exp = experiment_name(anchor, suite_id, split, rep)
-                            evaluate_argv += ["--baseline-root", str(campaign_root),
-                                              "--baseline-experiment", anchor_exp]
-                        comparison = _evaluate_comparison(campaign_root, exp, evaluate_argv)
-                        gate = gate_eval(cell["mechanism_gate"], comparison.get("mechanism"))
-                        result = {"experiment": exp, "gate": gate, "comparison": comparison}
+                        launched_by_cid[cid] = {"experiment": exp, "argv": None}
                     else:
-                        result = run_one_experiment(
+                        launched_by_cid[cid] = launch_experiment(
                             cell_id=cid, cells_doc=cells_doc, suites_doc=suites_doc, suite_id=suite_id,
                             split=split, rep=rep, out_dir=out_dir, base_seed=args.base_seed,
                             baseline_source=baseline_source, candidate_source=candidate_source,
@@ -1734,16 +1826,30 @@ def main(argv=None):
                         )
                 except EvalsError as e:
                     if e.code == 3:
-                        gates_report[cid] = cell_gate
-                        cells_report.append({
-                            "id": cid, "experiments": experiments, "seeds": seeds,
-                            "gate": cell_gate, "excluded_from_claims": True,
-                        })
                         _write_partial_state(e.reason)
                         return 3
                     raise
-                experiments.append(result["experiment"])
+                timing_report[cid][str(rep)]["ended_at"] = _utcnow_str()
+
+            # Phase B: evaluate (anchor-dependent comparison) + gate. Iterated
+            # in declared cell_ids order for a stable/reproducible manifest
+            # and report -- every cell's phase-A dependency for this rep is
+            # already satisfied at this point regardless of launch order.
+            for cid in cell_ids:
+                launched = launched_by_cid[cid]
+                try:
+                    result = evaluate_experiment(
+                        cell_id=cid, cells_doc=cells_doc, suite_id=suite_id, split=split, rep=rep,
+                        campaign_root=campaign_root, exp=launched["experiment"], argv=launched["argv"],
+                    )
+                except EvalsError as e:
+                    if e.code == 3:
+                        _write_partial_state(e.reason)
+                        return 3
+                    raise
+                per_cid_experiments[cid].append(result["experiment"])
                 comparisons_by_cell[cid].append(result.get("comparison"))
+                cell_gate = per_cid_gate[cid]
                 if not result["gate"]["passed"]:
                     cell_gate["passed"] = False
                     any_gate_failed = True
@@ -1751,6 +1857,9 @@ def main(argv=None):
                 if "latency_within_budget" in result["gate"]:
                     cell_gate.setdefault("latency_within_budget_by_rep", []).append(
                         result["gate"]["latency_within_budget"])
+
+        for cid in cell_ids:
+            cell_gate = per_cid_gate[cid]
             if "latency_within_budget_by_rep" in cell_gate:
                 per_rep = cell_gate["latency_within_budget_by_rep"]
                 # None means "no latency figure this rep" (never fabricated);
@@ -1760,7 +1869,7 @@ def main(argv=None):
                 cell_gate["latency_within_budget"] = all(known) if known else None
             gates_report[cid] = cell_gate
             cells_report.append({
-                "id": cid, "experiments": experiments, "seeds": seeds,
+                "id": cid, "experiments": per_cid_experiments[cid], "seeds": per_cid_seeds[cid],
                 "gate": cell_gate, "excluded_from_claims": not cell_gate["passed"],
             })
 
@@ -1827,6 +1936,7 @@ def main(argv=None):
             suite_doc=suites_doc["suites"][suite_id], candidate=candidate_snapshot,
             baseline=baseline_report, cells_report=cells_report,
             budget_report=cells_doc.get("budget", {}), tool_shas=tool_shas,
+            cell_order=_cell_order_manifest_field(), timing=timing_report,
         )
         validate_manifest_shape(manifest)
         _write_json(out_dir / "manifest.json", manifest)

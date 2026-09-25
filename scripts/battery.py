@@ -781,6 +781,33 @@ def _amplifier_exec_metrics(result, run_dir):
     return (ms if ms >= 0 else None), requests
 
 
+def _native_events(result, run_dir):
+    """Every parsed line of the run's native events.jsonl (see
+    `_amplifier_events_path`), oldest first. [] (never raises) when the
+    session/events file can't be resolved, doesn't exist, or a line isn't
+    valid JSON."""
+    session_id = _resolve_session_id(result, run_dir)
+    if not session_id:
+        return []
+    events_path = _amplifier_events_path(run_dir, session_id)
+    if not events_path.exists():
+        return []
+    try:
+        lines = events_path.read_text().splitlines()
+    except OSError:
+        return []
+    events = []
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            events.append(json.loads(line))
+        except ValueError:
+            continue
+    return events
+
+
 def _opencode_exec_time_ms(stdout_text):
     """First step_start timestamp (ms epoch) -> last step_finish timestamp, from
     opencode's --format json JSONL stdout. None when either marker is missing."""
@@ -1031,6 +1058,7 @@ def cmd_run(args, launcher=None, waiter=None, closer=None, forge_module=None):
         concurrency_max = _note_finish(name)
         result = {**result, 'concurrency_max': concurrency_max}
         run_dir.mkdir(parents=True, exist_ok=True)
+        result = {**result, 'routing': _routing_summary(result, run_dir)}
         _dump(run_dir/'result.json', result)
 
         cost = result.get('cost_usd') if result.get('cost_billable') else None
@@ -1349,6 +1377,137 @@ def _percentile(values_sorted, pct):
 _LATENCY_EVENT_KINDS = ('scored', 'fallback', 'escalation_judged', 'phase_judged', 'difficulty_judged')
 
 
+# --------------------------------------------------------------------------
+# per-turn/per-provider-call routing recorded on result.json (task #2): served
+# model, requested model, effort/reason/escalation and token usage, derived
+# purely from what's already on disk (receipts.jsonl for a fast-decisions
+# run, native events.jsonl fallback for a plain run) -- no new instrumentation.
+# --------------------------------------------------------------------------
+
+_ROUTING_TOKEN_KEYS = ('input_tokens', 'output_tokens', 'cache_read_tokens', 'cache_write_tokens')
+
+
+def _routing_from_receipts(run_dir):
+    """{'turn_decisions', 'provider_calls', 'served_model_counts'} for one
+    amplifier-fd run, derived from run_dir/'receipts.jsonl' (see
+    docs/EVENTS.md): `difficulty_judged` receipts become `turn_decisions`
+    (one per turn-start tier judgment: decision/tier, backend, p_complex,
+    reason); `slow_start`/`effort_routed`/`model_routed`/`slow_end` receipts,
+    correlated by their shared `provider_call_id`, become `provider_calls`
+    (requested vs actually-served model, reason_code, escalated, effort,
+    token usage). None when receipts.jsonl is missing/empty (e.g. an
+    infrastructure failure, or a harness with no fast-decisions receipts at
+    all -- see `_provider_calls_from_native_events` for that fallback)."""
+    events = _receipt_events(run_dir)
+    if not events:
+        return None
+
+    turn_decisions = []
+    effort_by_call = {}
+    routed_by_call = {}
+    slow_start_by_call = {}
+    provider_calls = []
+    seen_calls = set()
+
+    for e in events:
+        kind = (e.get('event') or '').removeprefix('fast_decisions:')
+        d = e.get('data') or {}
+        if kind == 'difficulty_judged':
+            probabilities = d.get('probabilities') or {}
+            turn_decisions.append({
+                'decision': d.get('choice'), 'backend': d.get('backend'),
+                'p_complex': probabilities.get('complex'), 'tier': d.get('choice'),
+                'reason': d.get('reason_code'),
+            })
+        elif kind == 'effort_routed':
+            pcid = d.get('provider_call_id')
+            if pcid:
+                effort_by_call[pcid] = d.get('requested_effort')
+        elif kind == 'model_routed':
+            pcid = d.get('provider_call_id')
+            if pcid:
+                routed_by_call[pcid] = d
+        elif kind == 'slow_start':
+            pcid = d.get('provider_call_id')
+            if pcid:
+                slow_start_by_call[pcid] = d
+        elif kind == 'slow_end':
+            pcid = d.get('provider_call_id')
+            if not pcid or pcid in seen_calls:
+                continue  # a duplicate/missing-id slow_end is dropped, never double-counted
+            seen_calls.add(pcid)
+            start = slow_start_by_call.get(pcid) or {}
+            routed = routed_by_call.get(pcid) or {}
+            requested_model = routed.get('requested_model') or start.get('model')
+            served_model = d.get('served_model') or d.get('model') or requested_model
+            entry = {
+                'provider_call_id': pcid, 'served_model': served_model,
+                'requested_model': requested_model, 'reason_code': routed.get('reason_code'),
+                'escalated': routed.get('escalated'), 'effort': effort_by_call.get(pcid),
+                'status': d.get('status'),
+            }
+            for key in _ROUTING_TOKEN_KEYS:
+                if key in d:
+                    entry[key] = d[key]
+            provider_calls.append(entry)
+
+    served_model_counts = Counter(c['served_model'] for c in provider_calls if c.get('served_model'))
+    return {
+        'turn_decisions': turn_decisions, 'provider_calls': provider_calls,
+        'served_model_counts': dict(served_model_counts),
+    }
+
+
+def _provider_calls_from_native_events(result, run_dir):
+    """Fallback `provider_calls` for a run with no fast-decisions receipts.jsonl
+    at all (e.g. amplifier-plain): one entry per native `llm:response` event,
+    carrying whatever the core itself recorded (model, usage). There is no
+    routing decision to report for a plain run, so `requested_model ==
+    served_model` and reason_code/escalated/effort are all None. []
+    (never raises) when no session/events can be resolved."""
+    calls = []
+    for i, ev in enumerate(_native_events(result, run_dir)):
+        etype = ev.get('event') or ev.get('type')
+        if etype != 'llm:response':
+            continue
+        d = ev.get('data') or {}
+        model = d.get('model')
+        usage = d.get('usage') if isinstance(d.get('usage'), dict) else {}
+        entry = {
+            'provider_call_id': f'native-{i}', 'served_model': model, 'requested_model': model,
+            'reason_code': None, 'escalated': None, 'effort': None, 'status': None,
+        }
+        for key in _ROUTING_TOKEN_KEYS:
+            value = usage.get(key)
+            if value is not None:
+                entry[key] = value
+        calls.append(entry)
+    return calls
+
+
+def _routing_summary(result, run_dir):
+    """`routing` block for one run's result.json: {'available': True,
+    'turn_decisions', 'provider_calls', 'served_model_counts'} when derivable
+    from receipts.jsonl (a fast-decisions run) or, failing that, from native
+    events.jsonl alone (a plain run -- 'turn_decisions' is then always [],
+    since there's no routing decision to report, but 'served_model_counts'
+    is still populated). {'available': False, 'reason': ...} when neither
+    source yields anything -- never raises, never crashes result writing."""
+    try:
+        from_receipts = _routing_from_receipts(run_dir)
+        if from_receipts is not None:
+            return {'available': True, **from_receipts}
+        provider_calls = _provider_calls_from_native_events(result, run_dir)
+        if not provider_calls:
+            return {'available': False,
+                    'reason': 'no fast_decisions receipts.jsonl and no native llm:response events'}
+        served_model_counts = Counter(c['served_model'] for c in provider_calls if c.get('served_model'))
+        return {'available': True, 'turn_decisions': [], 'provider_calls': provider_calls,
+                'served_model_counts': dict(served_model_counts)}
+    except Exception as exc:  # noqa: BLE001 -- routing is diagnostic; must never break result writing
+        return {'available': False, 'reason': f'routing_summary_error: {exc}'}
+
+
 def _run_mechanism_counts(run_dir):
     """Raw fast_decisions:* receipt counts for one amplifier-fd run: scored by
     backend, fallback count, routed by route (fast/slow), effort_routed by
@@ -1374,6 +1533,7 @@ def _run_mechanism_counts(run_dir):
     phase_judged_by_backend = Counter()
     phase_judged_agreement = Counter()
     difficulty_judged = Counter()
+    served_model_counts = Counter()
     for e in events:
         kind = (e.get('event') or '').removeprefix('fast_decisions:')
         d = e.get('data') or {}
@@ -1403,6 +1563,10 @@ def _run_mechanism_counts(run_dir):
             phase_judged_by_backend[d.get('backend')] += 1
             agreed = d.get('agreed_with_rules')
             phase_judged_agreement['agreed' if agreed is True else 'disagreed' if agreed is False else 'abstained'] += 1
+        elif kind == 'slow_end':
+            served = d.get('served_model') or d.get('model')
+            if served:
+                served_model_counts[served] += 1
     loop_config = _profile_loop_config(run_dir)
     return {
         'scored_by_backend': dict(scored_by_backend), 'fallback_count': fallback_count,
@@ -1415,6 +1579,7 @@ def _run_mechanism_counts(run_dir):
         'phase_judged_by_backend': dict(phase_judged_by_backend),
         'phase_judged_agreement': dict(phase_judged_agreement),
         'difficulty_judged': dict(difficulty_judged),
+        'served_model_counts': dict(served_model_counts),
         'read_shortcut': loop_config.get('read_shortcut', True),
         'configured_backend': loop_config.get('backend'),
         'model_routing': loop_config.get('model_routing'),
@@ -1456,10 +1621,12 @@ def _mechanism_report(experiment_dir, manifest):
     model_routing = None
     effort_routing = None
     difficulty_judged = Counter()
+    served_model_counts = Counter()
     read_shortcut = True
     latencies_ms_by_backend = {}
     for c in per_run:
         difficulty_judged.update(c.get('difficulty_judged', {}))
+        served_model_counts.update(c.get('served_model_counts', {}))
         read_shortcut = read_shortcut and c.get('read_shortcut', True) is not False
         scored_by_backend.update(c['scored_by_backend'])
         fallback_count += c['fallback_count']
@@ -1596,6 +1763,7 @@ def _mechanism_report(experiment_dir, manifest):
         'phase_judged_agreement': dict(phase_judged_agreement),
         'judged_engaged': judged_engaged,
         'judged_reason': '; '.join(judged_reasons) if judged_reasons else None,
+        'served_model_counts': dict(served_model_counts),
     }
 
 
