@@ -1062,8 +1062,11 @@ for all four:
 - **pytest-10356.** Routed strong, so the config is identical to plain, yet it failed 0/3 vs 2/3.
   That is run-to-run variance under identical configuration.
 
-Meanwhile S1 (small scope) showed no quality cost at all. The shipped rule-only router ran at 0.55x
-plain's time and 0.38x its cost, 12/12, even with plain-sonnet.
+Meanwhile S1 (small scope) showed no measurable quality cost, though it is a ceiling suite (every
+config passes every task). The rule-only router (pre-scope-gate build 43ed54e) ran at 0.55x plain's
+time and 0.38x its cost, 12/12, as did plain-sonnet. On the preregistered 8-task holdout (3 reps) it
+ran at 0.61x [0.47–0.78] time and 0.40x cost, 24/24; the sign test gave 7 faster, 1 marginally slower
+(median 8.79 s vs 8.73 s), p = 0.07, so 5 of 6 criteria passed and the result is not confirmed.
 
 **Conclusion.** For repository-scale bugs, "difficulty" is not "the cheap model can solve it". The
 quality-safe shape gates the cheap tier on task scope. `model_routing.cheap_max_workspace_files: 300`
@@ -1088,7 +1091,8 @@ S3, 10 instances x 2 reps, same wave:
 | strong tier + phase effort (orient medium / explore low→held medium / implement high) | 12/20 | 0.81 (faster 14/20) | 0.87 | 2 plain-only (pylint-7080, both reps) |
 
 **The shipped default passes non-inferiority** on S3. Lower effort on repository-scale tasks trades
-~19% time for a quality risk: pylint-7080 was 0/2, against 3/3 in every other strong arm. It is
+~19% time for a quality risk: pylint-7080 was 0/2 with lower effort, against 2/2 for plain and 1/2 for
+the shipped default in the same batch. It is
 shipped as an opt-in knob (`by_tier.strong: phase`), not a default. Beyond this, repository-scale
 speed must come from Amplifier's own overhead, not from the model or effort choice:
 - 5.8 s per session start in foundation `hooks-deprecation`, sub-sessions included (upstream patch
