@@ -1244,6 +1244,13 @@ def cost_ratio_from_cell_comparisons(candidate_comparisons, anchor_comparisons,
     return ratio, c_unknown + a_unknown
 
 
+def is_holdout_split(split):
+    """A confirmation split: the original `holdout` or any fresh `holdout*` /
+    multi-turn `m-holdout*` split. Gates both preregistration and the
+    "confirmed" verdict, so the two can never disagree."""
+    return bool(split) and (split.startswith("holdout") or split.startswith("m-holdout"))
+
+
 def classify_verdict(*, reps, split, gate_passed, quality_non_inferior, ratio_point,
                       ratio_ci_low, ratio_ci_high, sign_p, paired_task_count, cost_ratio,
                       critical_failure_count=0):
@@ -1269,7 +1276,7 @@ def classify_verdict(*, reps, split, gate_passed, quality_non_inferior, ratio_po
     if not quality_non_inferior:
         return "quality-regressed"
     enough_evidence = (reps >= MIN_REPS_FOR_CLAIM and paired_task_count >= MIN_PAIRED_TASKS_FOR_CLAIM
-                        and (split == "holdout" or split.startswith("holdout")))
+                        and is_holdout_split(split))
     speedup_confirmed_by_ci = (ratio_ci_high is not None and ratio_ci_high < 1.0)
     sign_significant = (sign_p is not None and sign_p <= 0.05)
     cost_ok = (cost_ratio is None) or (cost_ratio <= 1.00)
@@ -1826,8 +1833,8 @@ def main(argv=None):
         validate_cell_dependencies(cell_ids, cells_doc)
         validate_external_state_consent(cell_ids, cells_doc, args.allow_external_state)
 
-        if split == "holdout" and not (out_dir / "PREREGISTRATION.md").exists():
-            raise EvalsError(2, "--split holdout requires PREREGISTRATION.md to exist in --out first")
+        if is_holdout_split(split) and not (out_dir / "PREREGISTRATION.md").exists():
+            raise EvalsError(2, f"--split {split} requires PREREGISTRATION.md to exist in --out first")
 
         if args.dry_run:
             # Pure preview: compute the same default a real run would resolve,

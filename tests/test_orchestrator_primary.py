@@ -692,6 +692,17 @@ class EasyTurnShapingTests(_DifficultyHarness):
             self.assertIs(seen, original)  # byte-for-byte: no shaping applied
         self.assertEqual([e for e in events if e["event"].endswith("easy_turn_shaped")], [])
 
+    async def test_escalated_calls_are_not_shaped(self):
+        # After the turn escalates to the host, calls go out unshaped.
+        routing = dict(self.ROUTING, max_requests_before_escalation=1,
+                       easy_turn_guidance="g", easy_turn_hide_tools=["todo"])
+        tools = [{"name": "todo"}, {"name": "bash"}]
+        provider, _events, reqs, turn = await self._run_calls(routing, n=3, tools=tools)
+        self.assertTrue(turn.escalated)
+        self.assertEqual([t["name"] for t in provider.requests_seen[0].tools], ["bash"])
+        for seen, original in zip(provider.requests_seen[1:], reqs[1:]):
+            self.assertIs(seen, original)
+
     async def test_hide_tools_filters_by_name(self):
         routing = dict(self.ROUTING, max_requests_before_escalation=6,
                        easy_turn_hide_tools=["todo"])

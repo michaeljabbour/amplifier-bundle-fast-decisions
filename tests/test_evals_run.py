@@ -469,6 +469,19 @@ class ExitCodeTests(unittest.TestCase):
         self.assertEqual(rc, 2)
         self.assertEqual(calls, [])
 
+    def test_holdout2_without_preregistration_exits_2_with_zero_launches(self):
+        calls = []
+        rc = self._run(["--suite", "s1", "--split", "holdout2", "--cells", "plain",
+                         "--candidate-sha", "deadbeef", "--baseline-source", "/b"], calls)
+        self.assertEqual(rc, 2)
+        self.assertEqual(calls, [])
+
+    def test_holdout_split_helper(self):
+        for name in ("holdout", "holdout2", "holdout3", "m-holdout3"):
+            self.assertTrue(run.is_holdout_split(name), name)
+        for name in ("dev", "m-dev", "", None):
+            self.assertFalse(run.is_holdout_split(name), name)
+
     def test_missing_candidate_sha_exits_2_with_zero_launches(self):
         calls = []
         rc = self._run(["--suite", "s1", "--split", "dev", "--cells", "plain",

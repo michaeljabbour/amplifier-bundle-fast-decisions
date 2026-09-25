@@ -1112,13 +1112,14 @@ docs/UPSTREAM_CONTRACT.md.
             # receipts below -- otherwise they'd keep showing the
             # pre-routing value even though a different model was requested.
             model = field_value(request, "model") or model
-        # HC12 ("easy-turn shaping", opt-in): applies to EVERY slow call of
-        # an easy (start_tier == "cheap") turn, regardless of escalation --
-        # start_tier is decided once and never changes. A shaped COPY is
+        # HC12 ("easy-turn shaping", opt-in): applies to every slow call of
+        # an easy (start_tier == "cheap") turn while it runs on the cheap
+        # model; once the turn escalates to the host it is no longer shaped
+        # (the host was called in because the work needed care). A shaped COPY is
         # built (call_request); `request` itself, and every message/content
         # object it references, are left untouched. See _shape_easy_turn_request.
         call_request = request
-        if model_routing and turn.start_tier == "cheap":
+        if model_routing and turn.start_tier == "cheap" and not turn.escalated:
             easy_turn_guidance = model_routing.get("easy_turn_guidance")
             easy_turn_hide_tools = model_routing.get("easy_turn_hide_tools") or ()
             if easy_turn_guidance or easy_turn_hide_tools:

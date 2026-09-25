@@ -388,7 +388,7 @@ tool calls into a single response and verifies once. Each round trip costs
 wall-clock time dominated by cached-prompt prefill, so the cheap model can
 end up slower despite lower per-call latency. Both knobs apply only while
 `turn.start_tier == "cheap"` -- decided once at turn start and never
-re-evaluated mid-turn, so this is inert on every strong turn and everywhere
+re-evaluated mid-turn, so this is inert on every strong turn, stops once an easy turn escalates to the host, and everywhere
 `model_routing` itself is not configured.
 
 `RoutedProvider.complete` builds a shaped COPY of the request
