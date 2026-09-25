@@ -1,0 +1,46 @@
+{
+  "name": "plain-opus-s1-dev-r1-bugfix_session_ttl_naive_tz-amplifier-plain-a1",
+  "task": "bugfix_session_ttl_naive_tz",
+  "family": "bugfix",
+  "split": "dev",
+  "kind": "code",
+  "harness": "amplifier-plain",
+  "attempt": 1,
+  "model": "claude-opus-5-5",
+  "started_at": "2026-09-25T03:25:49.919416+00:00",
+  "ended_at": "2026-09-25T03:26:11.342595+00:00",
+  "wall_time_ms": 21422.571540999343,
+  "harness_duration_ms": null,
+  "exit_code": 0,
+  "timed_out": false,
+  "cost_usd": 0.2343496,
+  "cost_source": "harness_reported",
+  "cost_billable": true,
+  "tokens": {
+    "input_tokens": 169546.0,
+    "output_tokens": 529.0,
+    "cache_read_tokens": 169538.0,
+    "cache_write_tokens": 37966.0,
+    "cost_usd": 0.2343496
+  },
+  "num_turns": null,
+  "final_message": null,
+  "quality": {
+    "checks": 8,
+    "passed": 8,
+    "failed": 0,
+    "failure_labels": []
+  },
+  "protected_files_unchanged": {
+    "README.md": true,
+    "test_public.py": true
+  },
+  "outcome_passed": true,
+  "infrastructure_failure": false,
+  "notes": [],
+  "exec_time_ms": 9814.814,
+  "exec_time_source": "native_events_first_request_to_last_response",
+  "provider_requests": 3,
+  "concurrency_at_launch": 3,
+  "concurrency_max": 3
+}
