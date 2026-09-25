@@ -59,6 +59,7 @@
   const backendName = (b, label) => label || ({ 'scripted-demo': 'Scripted scorer', deterministic: 'Scripted scorer', 'ollama-token': 'Local model', ollama: 'Local model', jev: 'Jev', unavailable: 'No scorer' }[b] || b || 'Backend not recorded');
   const money = v => (v < 0 ? '−' : '') + (Math.abs(v) >= 100 ? '$' + Math.round(Math.abs(v)) : '$' + Math.abs(v).toFixed(2));
   const minutes = s => (s >= 3600 ? (s / 3600).toFixed(1) + ' h' : s >= 60 ? Math.round(s / 60) + ' min' : Math.round(s) + ' s');
+  const ageOf = t => { const n = Math.max(0, Math.floor((Date.now() - t) / 1000)); return n < 60 ? n + 's ago' : n < 3600 ? Math.floor(n / 60) + 'm ago' : n < 86400 ? Math.floor(n / 3600) + 'h ago' : Math.floor(n / 86400) + 'd ago'; };
   function savingsView(r) {
     const t = r.turns || {}, c = r.cost || {}, tm = r.time || {};
     if (!t.total) return { scope: 'No routed turns recorded yet', cost: '—', costDetail: 'Appears once the orchestrator routes turns.', time: '—', timeDetail: '', turns: '0', turnsDetail: '', note: 'Estimates cover only turns the orchestrator routes to the cheaper model.' };
@@ -72,6 +73,12 @@
       turnsDetail: (t.judge_calls ? t.judge_calls + ' judged by the decision-maker; ' : '') + t.strong + ' kept on the host model',
       note: 'Estimates: the same recorded work priced and timed at host-model rates. Host-model turns are unchanged, so they save nothing. Tool time, start-up and decision-maker calls are not counted.',
     };
+    const rc = r.recent || {};
+    if (rc.turns_since) {
+      const reasons = rc.turns_since_by_reason || {}, big = reasons.scope_strong || 0;
+      view.recent = (rc.last_cheap_turn_at ? 'Last request on the faster model ' + ageOf(Date.parse(rc.last_cheap_turn_at)) + '. ' : '') + 'Since then ' + rc.turns_since + ' request' + (rc.turns_since === 1 ? '' : 's') + ' stayed on your usual model' + (big ? ' (' + big + ' in large projects, where the size rule always keeps the usual model)' : '') + ', so the totals are not moving.';
+      view.note = view.recent + ' ' + view.note;
+    }
     if (c.requests_without_cache_data) view.note += ' ' + c.requests_without_cache_data + ' older requests lack cache data, so their dollars are overstated.';
     return view;
   }

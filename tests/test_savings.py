@@ -198,6 +198,17 @@ class SummarizeTests(unittest.TestCase):
                 handle.write(json.dumps(_event("difficulty_judged", "t2", {"choice": "cheap", "reason_code": "rules_cheap"})) + "\n")
             self.assertEqual(savings.summarize(d, cache_path=cache)["turns"]["cheap"], 2)
 
+    def test_recent_reports_turns_since_last_cheap_turn(self):
+        with tempfile.TemporaryDirectory() as d:
+            _write(d, "s.jsonl", [
+                _event("difficulty_judged", "a", {"choice": "cheap", "reason_code": "judge_cheap"}, ts="2026-09-25T01:00:00Z"),
+                _event("difficulty_judged", "b", {"choice": "strong", "reason_code": "scope_strong"}, ts="2026-09-25T02:00:00Z"),
+                _event("difficulty_judged", "c", {"choice": "strong", "reason_code": "scope_strong"}, ts="2026-09-25T03:00:00Z"),
+            ])
+            r = savings.summarize(d)
+        self.assertEqual(r["recent"]["last_cheap_turn_at"], "2026-09-25T01:00:00Z")
+        self.assertEqual(r["recent"]["turns_since_by_reason"], {"scope_strong": 2})
+
     def test_empty_or_missing_directory(self):
         r = savings.summarize("/nonexistent/afast-events")
         self.assertEqual(r["turns"]["total"], 0)

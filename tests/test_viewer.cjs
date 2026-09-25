@@ -171,3 +171,8 @@ test('loop engine names are not shown as a harness',()=>{
  assert.equal(harnessOf({engine:'upstream-loop-streaming'}),'');
  assert.equal(harnessOf({engine:'claude'}),'Claude Code');
 });
+test('savings panel explains why totals are flat',()=>{
+ const {savingsView}=require('../src/amplifier_fast_decisions/static/app.js');
+ const v=savingsView({files:1,host_model:'claude-opus-5-5',turns:{total:5,cheap:1,strong:4},cost:{saved_usd:1,cheap_turns_actual_usd:1,cheap_turns_on_host_usd:2},time:{available:false},recent:{last_cheap_turn_at:new Date(Date.now()-3*3600e3).toISOString(),turns_since:4,turns_since_by_reason:{scope_strong:4}}});
+ assert.match(v.note,/Last request on the faster model 3h ago\. Since then 4 requests stayed on your usual model \(4 in large projects/);
+});

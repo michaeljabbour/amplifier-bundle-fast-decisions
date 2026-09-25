@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import json
 import os
+import collections
 from collections import defaultdict
 from datetime import UTC, datetime
 from pathlib import Path
@@ -45,7 +46,7 @@ DEFAULT_RATES: dict[str, tuple[float, float, float, float]] = {
 DEFAULT_HOST_MODEL = "claude-fable-5-1"
 MIN_RATE_OUTPUT = 200
 MIN_RATE_SAMPLES = 20
-CACHE_VERSION = 3
+CACHE_VERSION = 4
 _JUDGED = '"fast_decisions:difficulty_judged"'
 _SLOW_END = '"fast_decisions:slow_end"'
 
@@ -111,7 +112,7 @@ def scan_file(path: Path, *, host_model: str | None = None, rates: dict | None =
             day = str(event.get("timestamp", ""))[:10]
             if event.get("event") == "fast_decisions:difficulty_judged" and turn:
                 turns[turn] = {"tier": data.get("choice"), "reason": str(data.get("reason_code") or "unknown"),
-                               "day": day}
+                               "day": day, "ts": str(event.get("timestamp", ""))}
             elif event.get("event") == "fast_decisions:slow_end" and data.get("status") == "ok":
                 requests.append({"turn": turn, "day": day, "data": data, "ts": str(event.get("timestamp", ""))})
     days: dict[str, dict] = defaultdict(_empty_day)
@@ -187,7 +188,9 @@ def scan_file(path: Path, *, host_model: str | None = None, rates: dict | None =
             continue
         bucket["actual_usd"] += actual
         bucket["counterfactual_usd"] += counterfactual
-    return {"days": dict(days), "rate": {m: list(v) for m, v in rate.items()}, "hosts": dict(hosts)}
+    recent = sorted(((t["ts"], t["tier"], t["reason"]) for t in turns.values() if t.get("ts")), reverse=True)[:200]
+    return {"days": dict(days), "rate": {m: list(v) for m, v in rate.items()}, "hosts": dict(hosts),
+            "turns_recent": [list(r) for r in recent]}
 
 
 def _merge(total: dict, part: dict) -> None:
@@ -199,6 +202,7 @@ def _merge(total: dict, part: dict) -> None:
                     into["by_reason"][reason] = into["by_reason"].get(reason, 0) + n
             else:
                 into[key] += value
+    total.setdefault("turns_recent", []).extend(part.get("turns_recent", []))
     for model, n in part.get("hosts", {}).items():
         total.setdefault("hosts", {})
         total["hosts"][model] = total["hosts"].get(model, 0) + n
@@ -290,6 +294,9 @@ def summarize(events_dir: str | Path, *, host_model: str | None = None, cheap_mo
     ratio = (host_rate / cheap_rate) if (time_ok and host_rate and cheap_rate) else None
 
     saved_usd = agg["counterfactual_usd"] - agg["actual_usd"] - agg["switch_penalty_usd"]
+    recent = sorted((tuple(r) for r in total.get("turns_recent", []) if not since or r[0][:10] >= since), reverse=True)
+    last_cheap = next((r[0] for r in recent if r[1] == "cheap"), None)
+    since_last = collections.Counter(r[2] for r in recent if last_cheap is None or r[0] > last_cheap)
     turns_total = agg["cheap_turns"] + agg["strong_turns"]
     by_day = []
     for day in sorted(days):
@@ -334,6 +341,8 @@ def summarize(events_dir: str | Path, *, host_model: str | None = None, cheap_mo
         },
         "tokens": {k: agg[k] for k in ("input", "output", "cache_read", "cache_write")},
         "by_day": by_day,
+        "recent": {"last_cheap_turn_at": last_cheap, "turns_since_by_reason": dict(since_last),
+                   "turns_since": sum(since_last.values())},
         "method": ("Cheap turns only; strong turns run the host setup unchanged. Cost: the same recorded tokens "
                    "priced at host-model rates vs actual. Time: cheap-turn model time scaled by the measured "
                    "host/start generation-rate ratio. After a session's first turn the host is assumed to have the "
