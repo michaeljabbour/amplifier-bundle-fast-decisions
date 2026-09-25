@@ -13,20 +13,23 @@ than replacing it.
 
 | Kind of work | Time | Cost | Quality |
 |---|---|---|---|
-| Everyday coding tasks, expensive default model (Claude Fable 5.1) | **0.42×** | **0.50×** | Every run passed (24 of 24 vs. 24 of 24) |
-| Everyday coding tasks, Claude Opus 5.5 as default | 1.01× (no gain) | 0.98× | Every run passed |
+| Everyday coding tasks, expensive default model (Claude Fable 5.1) | **0.42×** | **0.50×** | Every scored run passed (24 of 24 vs. 24 of 24) |
+| Everyday coding tasks, Claude Opus 5.5 as default | 1.01× (no measurable gain) | 0.98× | Every scored run passed |
 | Real bug fixes in large projects (SWE-bench Verified) | 1.00× | 0.98× | 13 of 20 fixed vs. 14 of 20 (same setup as standard) |
 
 Everyday rows: the current default (Jev deciding, one decision per request) on 8 tasks never used for tuning, 3 runs
-each, against standard Amplifier with the same default model. The Fable result met all 6 criteria written down before
-the run (faster on 8 of 8 tasks, sign test p = 0.008, 95% interval 0.35–0.50); the Opus result failed the time
+each, against standard Amplifier with the same default model. The Fable result passed all 6 criteria written down
+before the run (faster on 8 of 8 tasks, sign test p = 0.008, 95% interval 0.35–0.50), but on a reused holdout, so it
+is not a confirmation (see Limits); a re-run on a fresh 12-task split is pending. The Opus result failed the time
 and sign-test criteria. On the 12 tuning tasks the default measured 0.56–0.57× / 0.46–0.48× (Fable) and 0.76–0.83× / 0.82–0.90× (Opus) in
-two batches. Ratios are geometric means of per-task ratios. Everyday setups ran back to back in the same batch, always in the same order; bug-fix
-setups ran at the same time.
+two batches. Ratios are geometric means of per-task ratios. Everyday setups ran back to back in the same batch, always
+in the same order (see Limits); bug-fix setups ran at the same time. One everyday run failed on infrastructure and was
+retried; the retry is the counted result.
 
 **Who benefits.** Easy requests go to Claude Sonnet 5, so the gain depends on your default model. With an expensive
-default it is large. Claude Opus 5.5 was about as fast and as cheap as Sonnet on these tasks, so there was nothing to
-gain; with Opus, keep Fast Decisions for the dashboard and savings view or turn model routing off. On small tasks most
+default it is large. With Claude Opus 5.5 there was no measurable gain on the unseen tasks: the gain seen on the
+tuning tasks did not transfer, and on the unseen tasks standard Amplifier on Opus already took 0.85× the time of
+standard Amplifier on Sonnet, leaving little headroom. With Opus, keep Fast Decisions for the dashboard and savings view or turn model routing off. On small tasks most
 of the gain is the faster model itself: against standard Amplifier switched to Sonnet, Fast Decisions took 0.91× the
 time (95% interval 0.77–1.08) and 1.29× the cost on the unseen tasks. The dispatcher's job is keeping hard requests and large projects on your usual model.
 
@@ -71,16 +74,16 @@ Design detail: [docs/ORCHESTRATOR-PRIMARY.md](docs/ORCHESTRATOR-PRIMARY.md).
 ## Who decides
 
 Measured on 90 real issues rated by human experts (SWE-bench Verified): how often each decision-maker ranks an issue
-rated an hour or more of work above one rated under 15 minutes, and how long it takes. 50% is a coin flip. Issues in
+rated an hour or more of work above one rated under 15 minutes (AUC), and how long it takes. 0.5 is a coin flip. Issues in
 between were not included, so everyday accuracy will be lower. Re-run on 2026-09-25; figures reproduced.
 
-| Decision-maker | Picks the harder issue | Time per decision | Data leaves your machine |
+| Decision-maker | Picks the harder issue (AUC) | Time per decision | Data leaves your machine |
 |---|---|---|---|
-| **Jev** (hosted by TypeSafe) · default | 83% | ~0.14–0.16 s | The first 2,500 characters of your latest message (for helper sessions, of the helper's instructions) |
-| Built-in rule · used without a key or if Jev fails | 60% | instant | No |
-| Large local Qwen model (Ollama `qwen:latest`, 27.4B parameters, 29 GB) | 85% | ~2.2–2.5 s | No |
-| Qwen3 8B on your Mac (Ollama `qwen3:8b`) | 72% | ~0.36 s | No |
-| Qwen3.8 27B on a shared hosted server (RunPod) | 85% | median ~0.6 s; 18–25% of calls took 5–24 s | To your server |
+| **Jev** (hosted by TypeSafe) · default | 0.83 | ~0.14–0.16 s | The first 2,500 characters of your latest message (for helper sessions, of the helper's instructions) |
+| Built-in rule · used without a key or if Jev fails | 0.60 | instant | No |
+| Large local Qwen model (Ollama `qwen:latest`, 27.4B parameters, 29 GB) | 0.85 | ~2.2–2.5 s | No |
+| Qwen3 8B on your Mac (Ollama `qwen3:8b`) | 0.72 | ~0.36 s | No |
+| Qwen3.8 27B on a shared hosted server (RunPod) | 0.85 | median ~0.6 s; 18–25% of calls took 5–24 s | To your server |
 
 Switch in `~/.amplifier/settings.yaml` (no bundle edit):
 
@@ -118,6 +121,21 @@ was cheaper on a set of all-easy tasks because it kept fewer requests on the usu
   Studio uses) and the terminal app. Studio's window itself was not driven.
 - A model set before a session starts (in settings or with `--model`) looks the same as your default, so it can
   still be routed; a model picked during the session is always respected.
+- **Reused holdout.** The 2026-09-25 unseen-task run used the same 8 tasks as the 2026-09-24 unseen-task run, and
+  the current default was designed after that first run's results were seen. The study protocol
+  ([evals/STUDY-DESIGN.md](evals/STUDY-DESIGN.md) §3, §8) spends a holdout once and requires a new split for a changed
+  setup, so the Fable 0.42× result is not a confirmation. It is being re-run on a fresh 12-task split (`holdout2`;
+  4 of its tasks are longer).
+- **Fixed run order and shared cache.** In all three 2026-09-25 batches the setups ran in the same order every time:
+  standard on the default model, standard on Sonnet, Fast Decisions, standard on Opus, Fast Decisions on Opus.
+  Standard Amplifier always ran first. Runs also share the provider's prompt cache across setups (the first call of a
+  run already shows large cache reads), so order can bias both time and cost. `evals/run.py` now shuffles the order
+  per repetition (seeded, recorded in the manifest as `invocation.cell_order`; `--cell-order declared` restores the
+  old order).
+- **Served model per call not recorded.** Those runs did not record which model served each call, only per-batch
+  counts (on the Opus unseen-task run, 18 of 24 requests were judged easy and started on Sonnet); the Opus
+  conclusions rest on those counts. New runs record per-call requested model and effort and the provider-reported
+  model and cost.
 - Ten bug-fix issues and eight unseen everyday tasks are small samples. See
   [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md) before relying on this in production.
 
