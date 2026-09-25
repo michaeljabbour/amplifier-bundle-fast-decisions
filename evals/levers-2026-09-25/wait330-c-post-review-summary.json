@@ -1,0 +1,109 @@
+{
+  "runs": [
+    {
+      "task": "wait330",
+      "arm": "off",
+      "rep": 1,
+      "exit_code": 0,
+      "wall_s": 343.2,
+      "sessions": 1,
+      "model_calls": 2,
+      "cost_usd": 0.379894,
+      "refresh_calls": 0,
+      "refresh_cost_usd": 0,
+      "total_cost_usd": 0.379894,
+      "post_wait_call": {
+        "cache_read_tokens": 31767,
+        "cache_write_tokens": 36820,
+        "cost_usd": 0.1906094,
+        "duration_ms": 1331.8451670056675
+      },
+      "loop_notes": [],
+      "tools": [
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 330.0
+        }
+      ],
+      "receipts": [],
+      "receipt_sums": {
+        "calls_saved": 0,
+        "usd_saved": 0
+      }
+    },
+    {
+      "task": "wait330",
+      "arm": "on",
+      "rep": 1,
+      "exit_code": 0,
+      "wall_s": 342.2,
+      "sessions": 1,
+      "model_calls": 2,
+      "cost_usd": 0.20587,
+      "refresh_calls": 1,
+      "refresh_cost_usd": 0.01364,
+      "total_cost_usd": 0.21951,
+      "post_wait_call": {
+        "cache_read_tokens": 68022,
+        "cache_write_tokens": 565,
+        "cost_usd": 0.0165854,
+        "duration_ms": 1201.400374993682
+      },
+      "loop_notes": [],
+      "tools": [
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 330.0
+        }
+      ],
+      "receipts": [
+        {
+          "actual": {
+            "calls": 1,
+            "cost_usd": 0.0272448,
+            "model": "claude-opus-5-5",
+            "prefix_tokens": 68022,
+            "refresh_calls": 1,
+            "seconds": null,
+            "tools": [
+              "bash"
+            ]
+          },
+          "baseline": {
+            "calls": 0,
+            "cost_usd": 0.1876284,
+            "model": "claude-opus-5-5",
+            "prefix_tokens": 68022,
+            "seconds": null,
+            "shared_warm_tokens": 31767
+          },
+          "calls_saved": -1,
+          "decision": "kept_cache_warm",
+          "lever": "cache_keepalive",
+          "mechanism": "rule:tool_wait",
+          "method": "list prices; prefix = last call's cached tokens (31767 shared-warm); next call read 68022/68022 (confirmed); gap 333s vs",
+          "project": "ws",
+          "seconds_saved": null,
+          "traffic": "test",
+          "usd_saved": 0.1603836
+        }
+      ],
+      "receipt_sums": {
+        "calls_saved": -1,
+        "usd_saved": 0.160384
+      }
+    }
+  ],
+  "comparison": {
+    "wait330": {
+      "n_off": 1,
+      "n_on": 1,
+      "measured_cost_diff_usd(off-on)": 0.160384,
+      "measured_call_diff(off-on)": -1.0,
+      "receipts_usd_saved_mean(on)": 0.160384,
+      "receipts_calls_saved_mean(on)": -1.0
+    }
+  }
+}
