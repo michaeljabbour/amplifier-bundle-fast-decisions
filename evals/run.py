@@ -234,6 +234,9 @@ def cell_to_argv(cell_id, cells_doc, suites_doc, suite_id, split, rep, *, out_ro
     if task_source == "battery":
         splitcfg = suite["splits"][split]
         argv += ["--tasks", splitcfg["tasks_flag"]]
+        turn_gap_seconds = suite.get("turn_gap_seconds")
+        if turn_gap_seconds:
+            argv += ["--turn-gap-seconds", str(turn_gap_seconds)]
     elif task_source == "polyglot":
         poly = suite["polyglot"]
         splitcfg = suite["splits"][split]
@@ -1417,8 +1420,8 @@ def design_recommendation_text(results, cells_doc):
 
 def build_arg_parser():
     p = argparse.ArgumentParser(prog="evals/run.py")
-    p.add_argument("--suite", choices=["s1", "s2"])
-    p.add_argument("--split", choices=["dev", "holdout", "holdout2"])
+    p.add_argument("--suite", choices=["s1", "s1m", "s2"])
+    p.add_argument("--split", choices=["dev", "holdout", "holdout2", "m-dev"])
     p.add_argument("--cells")
     p.add_argument("--reps", type=int, default=None,
                     help="default: 5 on --split holdout, else 3 (Decision 2026-09-20b, "

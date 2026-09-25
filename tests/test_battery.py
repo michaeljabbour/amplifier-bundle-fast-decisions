@@ -1886,6 +1886,101 @@ class ComputeExecTimeTests(unittest.TestCase):
 
 
 # --------------------------------------------------------------------------
+# Scenario (multi-turn) exec-time windowing -- sums each turn's own
+# first-request -> last-response window instead of one whole-session window,
+# so the inter-turn gap (including any --turn-gap-seconds pause) is excluded.
+# --------------------------------------------------------------------------
+
+class ScenarioExecMetricsTests(unittest.TestCase):
+    def _make_session(self, tmp, events):
+        fake_home = Path(tmp)/'home'
+        run_dir = Path(tmp)/'run'
+        workspace = run_dir/'workspace'
+        workspace.mkdir(parents=True)
+        (run_dir/'worker-result.json').write_text(json.dumps({'session_id': 'sess-1'}))
+        slug = str(workspace.resolve()).replace('\\', '-').replace('/', '-').replace(':', '')
+        sessions_dir = fake_home/'.amplifier/projects'/slug/'sessions'/'sess-1'
+        sessions_dir.mkdir(parents=True)
+        (sessions_dir/'events.jsonl').write_text('\n'.join(json.dumps(e) for e in events)+'\n')
+        return fake_home, run_dir
+
+    def test_sums_per_turn_windows_excluding_the_gap_between_them(self):
+        # Turn 1: request@0s -> response@2s (2000ms). Idle gap 2s-100s (a
+        # --turn-gap-seconds pause). Turn 2: request@100s -> response@103s (3000ms).
+        # A whole-session window would report ~103000ms; the correct answer is 5000ms.
+        events = [
+            {'event': 'llm:request', 'ts': '2026-01-01T00:00:00+00:00', 'data': {'model': 'model-a'}},
+            {'event': 'llm:response', 'ts': '2026-01-01T00:00:02+00:00', 'data': {'usage': {'cost_usd': 0.02}}},
+            {'event': 'llm:request', 'ts': '2026-01-01T00:01:40+00:00', 'data': {'model': 'model-b'}},
+            {'event': 'llm:response', 'ts': '2026-01-01T00:01:43+00:00', 'data': {'usage': {'cost_usd': 0.03}}},
+        ]
+        with tempfile.TemporaryDirectory() as tmp:
+            fake_home, run_dir = self._make_session(tmp, events)
+            result = {
+                'harness': 'amplifier-fd', 'wall_time_ms': 999999.0,
+                'turns': [
+                    {'index': 1, 'subtask': 'a', 'started_at': '2026-01-01T00:00:00+00:00',
+                     'ended_at': '2026-01-01T00:00:02+00:00', 'skipped': False},
+                    {'index': 2, 'subtask': 'b', 'started_at': '2026-01-01T00:01:40+00:00',
+                     'ended_at': '2026-01-01T00:01:43+00:00', 'skipped': False},
+                ],
+            }
+            with patch('battery.Path.home', return_value=fake_home):
+                ms, requests = battery._amplifier_exec_metrics(result, run_dir)
+                annotated = battery._with_exec_time(result, run_dir)
+        self.assertAlmostEqual(ms, 5000.0)
+        self.assertEqual(requests, 2)
+        self.assertEqual(annotated['exec_time_ms'], 5000.0)
+        turn1, turn2 = annotated['turns']
+        self.assertAlmostEqual(turn1['exec_time_ms'], 2000.0)
+        self.assertAlmostEqual(turn2['exec_time_ms'], 3000.0)
+        self.assertAlmostEqual(turn1['cost_usd'], 0.02)
+        self.assertAlmostEqual(turn2['cost_usd'], 0.03)
+        self.assertEqual(turn1['model_counts'], {'model-a': 1})
+        self.assertEqual(turn2['model_counts'], {'model-b': 1})
+
+    def test_skipped_turns_are_excluded_from_the_sum_and_left_unannotated(self):
+        events = [
+            {'event': 'llm:request', 'ts': '2026-01-01T00:00:00+00:00', 'data': {'model': 'model-a'}},
+            {'event': 'llm:response', 'ts': '2026-01-01T00:00:01+00:00', 'data': {'usage': {'cost_usd': 0.01}}},
+        ]
+        with tempfile.TemporaryDirectory() as tmp:
+            fake_home, run_dir = self._make_session(tmp, events)
+            result = {
+                'harness': 'amplifier-fd', 'wall_time_ms': 999999.0,
+                'turns': [
+                    {'index': 1, 'subtask': 'a', 'started_at': '2026-01-01T00:00:00+00:00',
+                     'ended_at': '2026-01-01T00:00:01+00:00', 'skipped': False},
+                    {'index': 2, 'subtask': 'b', 'started_at': None, 'ended_at': None, 'skipped': True},
+                ],
+            }
+            with patch('battery.Path.home', return_value=fake_home):
+                ms, requests = battery._amplifier_exec_metrics(result, run_dir)
+                annotated = battery._with_exec_time(result, run_dir)
+        self.assertAlmostEqual(ms, 1000.0)
+        self.assertEqual(requests, 1)
+        turn1, turn2 = annotated['turns']
+        self.assertAlmostEqual(turn1['exec_time_ms'], 1000.0)
+        self.assertIsNone(turn2['exec_time_ms'])
+        self.assertEqual(turn2['model_counts'], {})
+
+    def test_single_turn_result_is_unaffected_by_the_scenario_branch(self):
+        """A result with no 'turns' key must take the exact pre-existing
+        whole-session-window code path (byte-identical single-turn behavior)."""
+        events = [
+            {'type': 'llm:request', 'ts': '2026-01-01T00:00:00+00:00'},
+            {'type': 'llm:response', 'ts': '2026-01-01T00:00:01+00:00'},
+        ]
+        with tempfile.TemporaryDirectory() as tmp:
+            fake_home, run_dir = self._make_session(tmp, events)
+            result = {'harness': 'amplifier-fd', 'wall_time_ms': 99999.0}
+            with patch('battery.Path.home', return_value=fake_home):
+                ms, requests = battery._amplifier_exec_metrics(result, run_dir)
+        self.assertAlmostEqual(ms, 1000.0)
+        self.assertEqual(requests, 1)
+
+
+# --------------------------------------------------------------------------
 # backfill-exec: fills exec_time_ms/exec_time_source on existing results,
 # in place, idempotently
 # --------------------------------------------------------------------------

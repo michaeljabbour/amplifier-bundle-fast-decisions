@@ -55,6 +55,11 @@ class Task:
     protected: tuple[str, ...]
     expected_answer: str | None
     evaluate: Callable[[Path], dict]
+    # Multi-turn scenario tasks only (kind="scenario"): the ordered names of
+    # the single-turn Tasks this scenario replays as turns 1..N (each already
+    # registered in TASKS). None for every ordinary single-turn task -- this
+    # field is additive and every existing Task(...) call site is unaffected.
+    subtasks: tuple[str, ...] | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -3207,6 +3212,121 @@ REFERENCE_SOLUTIONS: dict[str, dict[str, str]] = {
 }
 
 
+# ---------------------------------------------------------------------------
+# m-dev: multi-turn scenarios built ONLY from existing single-turn dev tasks.
+#
+# One Amplifier session, several user turns (--resume between them). This
+# measures what no single-turn task can: per-turn routing may switch models
+# between turns, and the provider prompt cache is per-model, so a mid-session
+# model switch forces a fresh cache write of the (by then large) growing
+# context. Each scenario's files/protected/prompts are entirely DERIVED from
+# its subtasks' own Task objects -- there is no new fixture content here.
+# ---------------------------------------------------------------------------
+
+SCENARIO_TURN_SEPARATOR = "\n\n=== NEXT TURN ===\n\n"
+
+
+def scenario_turn_dir(turn_index: int, subtask_name: str) -> str:
+    """Workspace subdirectory a scenario turn's subtask files/prompt live under."""
+    return f"t{turn_index}-{subtask_name}"
+
+
+def scenario_turn_prompts(subtask_names: tuple[str, ...]) -> list[str]:
+    """The ordered, directory-scoped prompt text for each turn of a scenario
+    built from `subtask_names`. Pure function of TASKS + subtask_names, so a
+    launcher can recompute it at run time and a test can recompute it to
+    check against the registered scenario Task's own `.prompt`."""
+    prompts = []
+    for i, sname in enumerate(subtask_names, start=1):
+        subtask = TASKS[sname]
+        directory = scenario_turn_dir(i, sname)
+        prompts.append(f"In the directory {directory}/: {subtask.prompt}")
+    return prompts
+
+
+def evaluate_scenario_turn(subtask_name: str, turn_workspace: Path, final_message: str | None = None) -> dict:
+    """Grade one turn of a scenario: the subtask's own evaluator against its
+    (subdirectory) workspace for kind='code', or check_answer against this
+    turn's own final message for kind='answer'."""
+    subtask = TASKS[subtask_name]
+    if subtask.kind == "answer":
+        return check_answer(subtask, final_message)
+    return subtask.evaluate(Path(turn_workspace))
+
+
+def fold_scenario_qualities(turn_results: list[tuple[str, dict]]) -> dict:
+    """Merge a scenario's per-turn quality dicts (see `evaluate_scenario_turn`)
+    into one dict, prefixing every failure label with its turn label (e.g.
+    't2-answer_compute_fee:answer_mismatch') so a fold failure is traceable
+    back to the turn that produced it. `turn_results` is
+    [(turn_label, quality_dict), ...] in turn order."""
+    checks = passed = failed = 0
+    failure_labels: list[str] = []
+    for turn_label, quality in turn_results:
+        checks += quality["checks"]
+        passed += quality["passed"]
+        failed += quality["failed"]
+        failure_labels += [f"{turn_label}:{label}" for label in quality["failure_labels"]]
+    return {"checks": checks, "passed": passed, "failed": failed, "failure_labels": failure_labels}
+
+
+def _scenario_evaluate_placeholder(_workspace: Path) -> dict:
+    """Never invoked for a real scenario run: forge_e2e branches on
+    kind='scenario' before ever calling Task.evaluate, because scenario
+    grading needs per-turn final messages (evaluate_scenario_turn +
+    fold_scenario_qualities above), which a single Callable[[Path], dict]
+    cannot express. This exists only so Task's `evaluate` field (required,
+    non-Optional) is always populated."""
+    return {"checks": 0, "passed": 0, "failed": 0, "failure_labels": []}
+
+
+def make_scenario(name: str, split_name: str, subtask_names: tuple[str, ...]) -> Task:
+    """Build a multi-turn scenario Task by composing existing subtask Tasks.
+
+    Files/protected paths are namespaced under `t{turn}-{subtask}/` so all
+    subtasks' fixtures coexist in one workspace without collisions; prompts
+    are rewritten (see `scenario_turn_prompts`) to tell the agent which
+    subdirectory each turn concerns.
+    """
+    subtask_names = tuple(subtask_names)
+    turn_prompts = scenario_turn_prompts(subtask_names)
+    files: dict[str, str] = {}
+    protected: list[str] = []
+    for i, sname in enumerate(subtask_names, start=1):
+        subtask = TASKS[sname]
+        directory = scenario_turn_dir(i, sname)
+        for relpath, content in subtask.files.items():
+            files[f"{directory}/{relpath}"] = content
+        protected += [f"{directory}/{p}" for p in subtask.protected]
+    return Task(
+        name=name,
+        family="scenario",
+        split=split_name,
+        kind="scenario",
+        prompt=SCENARIO_TURN_SEPARATOR.join(turn_prompts),
+        files=files,
+        protected=tuple(protected),
+        expected_answer=None,
+        evaluate=_scenario_evaluate_placeholder,
+        subtasks=subtask_names,
+    )
+
+
+# m-dev: 3 scenarios, 4 turns each (repair -> answer -> edit -> bugfix), built
+# ONLY from the 12 existing dev tasks (3 dev tasks per family x 4 families).
+_SCENARIO_DEV_REPAIR = ("repair_parse_duration", "repair_merge_intervals", "repair_semver_compare")
+_SCENARIO_DEV_ANSWER = ("answer_audit_log_key", "answer_compute_fee", "answer_sqlite_import_module")
+_SCENARIO_DEV_EDIT = ("edit_cli_dry_run", "edit_dequeue_validation", "edit_record_to_json")
+_SCENARIO_DEV_BUGFIX = ("bugfix_paginate_off_by_one", "bugfix_session_ttl_naive_tz", "bugfix_add_tag_mutable_default")
+
+for _i in range(3):
+    _add(make_scenario(
+        f"scn_dev_{_i + 1}", "m-dev",
+        (_SCENARIO_DEV_REPAIR[_i], _SCENARIO_DEV_ANSWER[_i], _SCENARIO_DEV_EDIT[_i], _SCENARIO_DEV_BUGFIX[_i]),
+    ))
+del _i
+
+
 def families() -> list[str]:
     seen: list[str] = []
     for t in TASKS.values():
@@ -3218,6 +3338,6 @@ def families() -> list[str]:
 def split(name: str) -> list[str]:
     if name == "all":
         return list(TASKS.keys())
-    if name not in ("dev", "holdout", "holdout2"):
+    if name not in ("dev", "holdout", "holdout2", "m-dev"):
         raise ValueError(f"unknown split: {name}")
     return [n for n, t in TASKS.items() if t.split == name]

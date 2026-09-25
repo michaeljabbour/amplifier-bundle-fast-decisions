@@ -285,7 +285,7 @@ def cmd_prepare(args):
         battery_tasks = None
     else:
         battery_tasks = _load_battery_tasks()
-        if args.tasks in ('all', 'dev', 'holdout', 'holdout2'):
+        if args.tasks in ('all', 'dev', 'holdout', 'holdout2', 'm-dev'):
             task_names = list(battery_tasks.split(args.tasks))
         elif args.tasks:
             task_names = [t.strip() for t in args.tasks.split(',') if t.strip()]
@@ -368,6 +368,7 @@ def cmd_prepare(args):
             'events_dir': str(forge_e2e.EVENTS), 'host_python': str(forge_e2e.HOST_PYTHON),
             'forge_py': str(forge_e2e.FORGE), 'prompt': forge_e2e.PROMPT,
             'task_source': polyglot_meta,
+            'turn_gap_seconds': getattr(args, 'turn_gap_seconds', None) or 0,
         }
         forge_e2e.prepare(runs_root/'amplifier', fe_config)
     else:
@@ -598,7 +599,26 @@ def _parse_opencode(stdout, model=None):
 # run
 # --------------------------------------------------------------------------
 
-def _evaluate_quality(task_name, task_kind, workspace, final_message):
+def _evaluate_quality(task_name, task_kind, workspace, final_message, turns=None):
+    if task_kind == 'scenario':
+        battery_tasks = _load_battery_tasks()
+        task = battery_tasks.TASKS[task_name]
+        turns = turns or []
+        turns_by_index = {t.get('index'): t for t in turns}
+        parts = []
+        for i, subtask_name in enumerate(task.subtasks, start=1):
+            turn_label = battery_tasks.scenario_turn_dir(i, subtask_name)
+            t = turns_by_index.get(i)
+            if t is None or t.get('skipped'):
+                parts.append((turn_label, {'checks': 1, 'passed': 0, 'failed': 1,
+                                            'failure_labels': ['turn_skipped_after_earlier_failure']}))
+                continue
+            try:
+                q = battery_tasks.evaluate_scenario_turn(subtask_name, Path(workspace)/turn_label, t.get('final_message'))
+            except Exception as exc:  # noqa: BLE001 -- a turn evaluator must never crash the runner
+                q = {'checks': 1, 'passed': 0, 'failed': 1, 'failure_labels': [f'turn_evaluate_error:{exc}']}
+            parts.append((turn_label, q))
+        return battery_tasks.fold_scenario_qualities(parts)
     if task_kind == 'answer':
         battery_tasks = _load_battery_tasks()
         try:
@@ -685,7 +705,8 @@ def _normalize_worker_result(base, native):
                 'final_message': native.get('final_message'), 'quality': native.get('quality'),
                 'protected_files_unchanged': native.get('protected_files_unchanged'),
                 'outcome_passed': bool(native.get('outcome_passed')),
-                'infrastructure_failure': bool(native.get('infrastructure_failure')), 'notes': []}
+                'infrastructure_failure': bool(native.get('infrastructure_failure')), 'notes': [],
+                'turns': native.get('turns')}
 
 
 # --------------------------------------------------------------------------
@@ -744,20 +765,26 @@ def _amplifier_events_path(run_dir, session_id):
     return Path.home()/'.amplifier/projects'/slug/'sessions'/session_id/'events.jsonl'
 
 
-def _amplifier_exec_metrics(result, run_dir):
-    """(exec_time_ms, provider_requests) from the session's native events.jsonl:
-    first llm:request ts -> last llm:response ts. (None, None) when undeterminable."""
-    session_id = _resolve_session_id(result, run_dir)
-    if not session_id:
-        return None, None
-    events_path = _amplifier_events_path(run_dir, session_id)
-    if not events_path.exists():
-        return None, None
-    try:
-        lines = events_path.read_text().splitlines()
-    except OSError:
-        return None, None
+def _window_metrics(events_path, start_iso, end_iso):
+    """(exec_time_ms, provider_requests, cost_usd, model_counts) for the events
+    in `events_path` whose `ts` falls within [start_iso, end_iso] (either bound
+    None means unbounded on that side). cost_usd is summed from llm:response
+    usage.cost_usd (None entries treated as 0, matching forge_e2e.native_summary's
+    'sum what's known' convention -- this is a provider-reported estimate, not a
+    billing record, same caveat as everywhere else in this file). model_counts
+    counts llm:request events by their 'model' field. exec_time_ms is first
+    llm:request ts -> last llm:response ts within the window; None if either
+    boundary event is missing from the window.
+    """
+    start = _parse_iso(start_iso)
+    end = _parse_iso(end_iso)
     first_request, last_response, request_count = None, None, 0
+    cost_usd, cost_known = 0.0, False
+    model_counts = Counter()
+    try:
+        lines = Path(events_path).read_text().splitlines()
+    except OSError:
+        lines = []
     for line in lines:
         line = line.strip()
         if not line:
@@ -766,19 +793,104 @@ def _amplifier_exec_metrics(result, run_dir):
             ev = json.loads(line)
         except ValueError:
             continue
-        etype = ev.get('type') or ev.get('event')
         ts = _parse_iso(ev.get('ts'))
+        if ts is not None:
+            if start is not None and ts < start:
+                continue
+            if end is not None and ts > end:
+                continue
+        etype = ev.get('type') or ev.get('event')
+        data = ev.get('data') or {}
         if etype == 'llm:request':
             request_count += 1
             if first_request is None and ts is not None:
                 first_request = ts
-        elif etype == 'llm:response' and ts is not None:
-            last_response = ts
+            model = data.get('model')
+            if model is not None:
+                model_counts[model] += 1
+        elif etype == 'llm:response':
+            if ts is not None:
+                last_response = ts
+            v = (data.get('usage') or {}).get('cost_usd')
+            if v is not None:
+                try:
+                    cost_usd += float(v)
+                    cost_known = True
+                except (TypeError, ValueError):
+                    pass
     requests = request_count or None
-    if first_request is None or last_response is None:
-        return None, requests
-    ms = (last_response-first_request).total_seconds()*1000
-    return (ms if ms >= 0 else None), requests
+    ms = None
+    if first_request is not None and last_response is not None:
+        candidate = (last_response-first_request).total_seconds()*1000
+        ms = candidate if candidate >= 0 else None
+    return ms, requests, (cost_usd if cost_known else None), dict(model_counts)
+
+
+def _amplifier_exec_metrics(result, run_dir):
+    """(exec_time_ms, provider_requests) from the session's native events.jsonl.
+
+    Single-turn (no `turns` in `result`): first llm:request ts -> last
+    llm:response ts over the whole session -- unchanged behavior.
+
+    Scenario (`result['turns']` present): SUM of each turn's own
+    first-request -> last-response window (each turn's started_at/ended_at,
+    as recorded by forge_e2e._worker_scenario), rather than one window over
+    the whole session -- a whole-session window would count the gaps between
+    turns (including any --turn-gap-seconds pause) as execution time, which
+    is exactly the inter-turn idle time this measurement must exclude.
+    """
+    session_id = _resolve_session_id(result, run_dir)
+    if not session_id:
+        return None, None
+    events_path = _amplifier_events_path(run_dir, session_id)
+    if not events_path.exists():
+        return None, None
+    turns = (result or {}).get('turns')
+    if isinstance(turns, list) and turns:
+        total_ms, any_ms, total_requests = 0.0, False, 0
+        for t in turns:
+            if t.get('skipped'):
+                continue
+            ms, requests, _cost, _models = _window_metrics(events_path, t.get('started_at'), t.get('ended_at'))
+            if ms is not None:
+                total_ms += ms
+                any_ms = True
+            if requests is not None:
+                total_requests += requests
+        return (total_ms if any_ms else None), (total_requests or None)
+    ms, requests, _cost, _models = _window_metrics(events_path, None, None)
+    return ms, requests
+
+
+def _annotate_scenario_turns(result, run_dir):
+    """New `turns` list (does not mutate `result`) with each turn dict gaining
+    `exec_time_ms`, `provider_requests`, `cost_usd`, and `model_counts` (a
+    {model: llm:request count} dict -- there is no single 'the model' once
+    per-turn routing can switch models mid-scenario). Turns skip this
+    annotation (all four fields None/{} ) when skipped or when the session's
+    events.jsonl can't be resolved."""
+    turns = result.get('turns')
+    if not isinstance(turns, list) or not turns:
+        return turns
+    session_id = _resolve_session_id(result, run_dir)
+    events_path = _amplifier_events_path(run_dir, session_id) if session_id else None
+    out = []
+    for t in turns:
+        t = dict(t)
+        if t.get('skipped') or events_path is None or not events_path.exists():
+            t.setdefault('exec_time_ms', None)
+            t.setdefault('provider_requests', None)
+            t.setdefault('cost_usd', None)
+            t.setdefault('model_counts', {})
+            out.append(t)
+            continue
+        ms, requests, cost, models = _window_metrics(events_path, t.get('started_at'), t.get('ended_at'))
+        t['exec_time_ms'] = ms
+        t['provider_requests'] = requests
+        t['cost_usd'] = cost
+        t['model_counts'] = models
+        out.append(t)
+    return out
 
 
 def _native_events(result, run_dir):
@@ -874,13 +986,19 @@ def compute_exec_time(result, run_dir, stdout_text=None):
 
 def _with_exec_time(result, run_dir, stdout_text=None):
     """Annotate a result dict with exec_time_ms/exec_time_source (and
-    provider_requests, when derivable) without mutating the input."""
+    provider_requests, when derivable) without mutating the input. For a
+    scenario result (has 'turns'), also replaces 'turns' with a copy
+    enriched per-turn (exec_time_ms/provider_requests/cost_usd/model_counts;
+    see _annotate_scenario_turns) -- the top-level exec_time_ms above is
+    already their sum (see _amplifier_exec_metrics)."""
     ms, source = compute_exec_time(result, run_dir, stdout_text)
     out = {**result, 'exec_time_ms': ms, 'exec_time_source': source}
     if result.get('harness') in AMPLIFIER_HARNESSES:
         _ms, requests = _amplifier_exec_metrics(result, run_dir)
         if requests is not None:
             out['provider_requests'] = requests
+        if isinstance(result.get('turns'), list) and result['turns']:
+            out['turns'] = _annotate_scenario_turns(result, run_dir)
     return out
 
 
@@ -2007,7 +2125,7 @@ def cmd_reevaluate(args):
         result = _latest_result(experiment_dir, manifest, name)
         workspace = run_dir/'workspace'
         task = forge_workloads.get_task(item['task'])
-        quality = _evaluate_quality(item['task'], task.kind, workspace, result.get('final_message'))
+        quality = _evaluate_quality(item['task'], task.kind, workspace, result.get('final_message'), result.get('turns'))
         files = forge_workloads.task_files(item['task'])
         protected = {f: (workspace/f).exists() and (workspace/f).read_text() == files.get(f, '')
                      for f in forge_workloads.task_protected(item['task'])}
@@ -2017,8 +2135,15 @@ def cmd_reevaluate(args):
             suite_ok, workspace_tests_runner, _summary = forge_e2e.run_workspace_tests(workspace)
         prompt_matches, prompt_note = _prompt_match_info(name, item, amp_manifest)
         prompt_checks.append({'run': name, 'prompt_matches': prompt_matches, 'note': prompt_note})
-        outcome = bool(result.get('exit_code') == 0 and not result.get('timed_out') and quality.get('failed') == 0
-                       and suite_ok is not False and all(protected.values()) and not result.get('infrastructure_failure'))
+        if task.kind == 'scenario':
+            turns = result.get('turns') or []
+            all_turns_ok = bool(turns) and all(
+                (not t.get('skipped')) and t.get('exit_code') == 0 and not t.get('timed_out') for t in turns)
+            outcome = bool(all_turns_ok and quality.get('failed') == 0 and all(protected.values())
+                           and not result.get('infrastructure_failure'))
+        else:
+            outcome = bool(result.get('exit_code') == 0 and not result.get('timed_out') and quality.get('failed') == 0
+                           and suite_ok is not False and all(protected.values()) and not result.get('infrastructure_failure'))
         if outcome != bool(result.get('outcome_passed')) or quality != result.get('quality'):
             (run_dir/'result-before-reevaluate.json').write_text(json.dumps(result, indent=2)+'\n')
             notes = list(result.get('notes') or []) + [f'reevaluated: outcome {result.get("outcome_passed")} -> {outcome}']
@@ -2261,8 +2386,10 @@ def main(argv=None):
     p.add_argument('--experiment', required=True)
     p.add_argument('--harnesses', required=True)
     p.add_argument('--tasks', required=False, default=None,
-                    help='all|dev|holdout|comma-list. Required for --task-source battery (the default); '
-                         'ignored for --task-source polyglot (use --split instead).')
+                    help='all|dev|holdout|holdout2|m-dev|comma-list. Required for --task-source battery '
+                         '(the default); ignored for --task-source polyglot (use --split instead). '
+                         "'m-dev' is the multi-turn scenario split (scn_dev_1..3, each replaying 4 of the "
+                         "12 existing dev tasks as --resume'd turns in one session).")
     p.add_argument('--seed', type=int, required=True)
     p.add_argument('--fd-override', action='append')
     p.add_argument('--deadline-seconds', type=int)
@@ -2307,6 +2434,10 @@ def main(argv=None):
     p.add_argument('--slice', type=int, help='Deterministic sample size for --task-source polyglot.')
     p.add_argument('--split', choices=['dev', 'holdout', 'all'],
                     help='Which half of the --slice sample to prepare (--task-source polyglot).')
+    p.add_argument('--turn-gap-seconds', type=int, default=None,
+                    help='Multi-turn (--tasks m-dev) only: sleep this long between turns of a scenario, '
+                         'to simulate a user pausing (the provider prompt-cache TTL is ~5 minutes). '
+                         'Default 0 (no gap, unchanged behavior). Ignored for single-turn tasks.')
     p.set_defaults(func=cmd_prepare)
 
     p = sub.add_parser('run')
