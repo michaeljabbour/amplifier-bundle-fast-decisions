@@ -287,6 +287,14 @@ def cmd_agent(args):
         env = dict(os.environ)
         if item.get('source_root'):
             env['PYTHONPATH'] = str(Path(item['source_root'])/'src')
+        # AMPLIFIER_MEMORY_CAPTURE=off: this launches the real `amplifier
+        # run` CLI, which inherits the caller's memory bundle install (if
+        # any) via os.environ above -- without this it writes a capture
+        # after every tool call in every one of these worker runs, into
+        # the LAUNCHING USER's personal memory store. Matches forge_e2e.
+        # worker's same fix. amplifier-bundle-memory's automation_gate
+        # module honors this var; harmless no-op on older/no memory bundle.
+        env['AMPLIFIER_MEMORY_CAPTURE'] = 'off'
         proc = subprocess.Popen(argv, cwd=workspace, stdout=out, stderr=err, start_new_session=True, env=env)
         try:
             exit_code = proc.wait(timeout=deadline)

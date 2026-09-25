@@ -787,7 +787,17 @@ def worker(root,name):
     slug=str(workspace.resolve()).replace('/','-').replace('\\','-').replace(':','')
     sessions=Path.home()/'.amplifier/projects'/slug/'sessions'
     before=set(sessions.iterdir()) if sessions.exists() else set()
-    env=dict(os.environ,AFAST_OBSERVATORY='off')
+    # AMPLIFIER_MEMORY_CAPTURE=off: this launches the real `amplifier run`
+    # CLI as a full subprocess -- it inherits ALL of `os.environ` (unlike
+    # the in-process bench/screen harness paths), so it also inherits
+    # whatever memory bundle is installed for this user. Without this the
+    # amplifier-bundle-memory hooks (capture/interject/briefing) treat every
+    # worker run as a normal interactive session and write a capture after
+    # every tool call, polluting the user's personal memory store with
+    # automation noise (amplifier-bundle-memory's automation_gate module
+    # honors this var; a memory bundle predating that fix is a silent no-op
+    # here, not an error).
+    env=dict(os.environ,AFAST_OBSERVATORY='off',AMPLIFIER_MEMORY_CAPTURE='off')
     env['PYTHONPATH'] = str(source_root/'src')
     _assert_bundle_uri_safe(run/'profile.md')
     command=['amplifier','run','--bundle',(run/'profile.md').as_uri(),'--mode','single','--provider',manifest['provider'],'--model',manifest['model'],'--output-format','json',prompt]
