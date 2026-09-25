@@ -29,7 +29,7 @@ import tempfile
 from pathlib import Path
 from typing import Any, Iterable
 
-from .savings import DEFAULT_RATES, price
+from .savings import DEFAULT_RATES, _rates_for, price
 
 EVENT = "fast_decisions:efficiency"
 LEVERS = (
@@ -194,6 +194,86 @@ def prepared_action(*, tool: str, decision_seconds: float, host_model: str | Non
                    baseline=_side(host_model, 1, avg_host_call_usd, avg_host_call_seconds),
                    actual=_side(None, 0, 0.0, decision_seconds),
                    method="session average host call", project=project, traffic=traffic)
+
+
+CACHE_TTL_S = 300.0  # Anthropic prompt cache: 5-minute TTL, refreshed on use
+
+
+def cache_keepalive(*, model: str | None, prefix_tokens: int, refresh_costs: list, tools: list[str],
+                    gap_s: float | None, next_cache_read: int | None, next_model: str | None, project: str | None,
+                    traffic: str, mechanism: str = "rule:tool_wait", ttl_s: float = CACHE_TTL_S,
+                    rates: dict | None = None) -> dict:
+    """Receipt for one keep-alive episode (one or more refreshes during one wait).
+
+    Baseline (the same next step without keep-alive, same model): the next
+    real call re-writes the cached prefix (``prefix_tokens`` x cache-write
+    price) when the time since the cache was last used (``gap_s``) reached the
+    TTL, or reads it (x cache-read price) when it did not. Actual: every
+    refresh's cost plus the next call's price for those prefix tokens as
+    observed -- the part it read from cache at the read price, the rest at the
+    write price. With no later call on the same model nothing reused the
+    cache, so nothing was avoided. Calls: refreshes are extra calls
+    (calls_saved = -refreshes). Seconds are not estimated (refreshes run
+    concurrently with the tool; the cold-write latency is not modelled)."""
+    rates = rates or DEFAULT_RATES
+    r = _rates_for(model, rates)
+    n = len(refresh_costs)
+    known = [c for c in refresh_costs if isinstance(c, (int, float)) and not isinstance(c, bool)]
+    refresh_usd = float(sum(known)) if len(known) == n else None
+    prefix = max(0, int(prefix_tokens or 0))
+    extra = {"refresh_calls": n, "prefix_tokens": prefix, "tools": sorted(set(tools))[:8]}
+    if next_model is None or next_cache_read is None:
+        base, actual = 0.0, refresh_usd
+        decision, method = "keepalive_unused", "no later call in the turn reused the cache"
+    elif next_model != model:
+        base, actual = 0.0, refresh_usd
+        decision, method = "keepalive_unused", "next call ran on another model (per-model caches)"
+    else:
+        expired = gap_s is None or gap_s >= ttl_s
+        read = min(max(0, int(next_cache_read)), prefix)
+        if r is None:
+            base = actual = None
+        else:
+            base = prefix * (r[3] if expired else r[2]) / 1e6
+            actual = None if refresh_usd is None else refresh_usd + (read * r[2] + (prefix - read) * r[3]) / 1e6
+        confirmed = prefix > 0 and read >= 0.95 * prefix
+        decision = ("keepalive_not_needed" if not expired else
+                    "kept_cache_warm" if confirmed else "keepalive_missed")
+        method = (f"list prices; prefix = last call's cached tokens; next call read {read}/{prefix} "
+                  f"({'confirmed' if confirmed else 'not confirmed'}); gap {round(gap_s or 0)}s vs ttl {int(ttl_s)}s")
+    return receipt(lever="cache_keepalive", mechanism=mechanism, decision=decision,
+                   baseline=_side(model, 0, base, None, prefix_tokens=prefix),
+                   actual=_side(model, n, actual, None, **extra), method=method, project=project, traffic=traffic)
+
+
+def loop_stop(*, kind: str, tool: str, expected_further_calls: int, observed_further_calls: int | None,
+              avg_call_usd: float | None, avg_call_seconds: float | None, note_usd: float | None,
+              host_model: str | None, source: str, project: str | None, traffic: str) -> dict:
+    """Receipt for one loop-stop nudge (a short note to the model, never a hard stop).
+
+    Baseline: ``expected_further_calls`` more model calls continuing the
+    pattern -- the measured continuation of the same pattern in real sessions
+    without intervention (``source``). Actual: the pattern calls observed
+    after the note until the turn ended, plus the note's own token cost.
+    Calls are priced at this turn's average model call. When the continuation
+    could not be observed (``observed_further_calls`` None) calls_saved comes
+    from the observed stop and the method says so."""
+    measured = observed_further_calls is not None
+    further = int(observed_further_calls) if measured else 0
+    per_usd = _num(avg_call_usd)
+    per_s = _num(avg_call_seconds)
+    base_usd = None if per_usd is None else expected_further_calls * per_usd
+    act_usd = None if per_usd is None else further * per_usd + (_num(note_usd) or 0.0)
+    base_s = None if per_s is None else expected_further_calls * per_s
+    act_s = None if per_s is None else further * per_s
+    method = (f"expected {expected_further_calls} further calls ({source}); "
+              + (f"observed {further} after the note until turn end" if measured
+                 else "continuation unmeasurable: calls_saved from the observed stop")
+              + "; priced at this turn's average model call")
+    return receipt(lever="loop_stop", mechanism="rule:" + kind, decision="nudged_" + kind,
+                   baseline=_side(host_model, expected_further_calls, base_usd, base_s),
+                   actual=_side(host_model, further, act_usd, act_s, tool=str(tool)[:64], measured=measured),
+                   method=method, project=project, traffic=traffic)
 
 
 def _empty() -> dict:

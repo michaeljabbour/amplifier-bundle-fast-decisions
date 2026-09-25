@@ -14,6 +14,7 @@ from typing import Any
 from uuid import uuid4
 
 from . import efficiency
+from .levers import Levers
 from .contracts import (
     Candidate,
     DecisionRequest,
@@ -624,6 +625,18 @@ async def _ask_tool_risk(
 _UNSEEN = object()
 
 
+def project_and_traffic(service: Any) -> tuple[str, str]:
+    """Receipt attribution: the session's project (repository or folder
+    name) and its traffic class (production or test)."""
+    wd = session_working_dir(service)
+    try:
+        from .observer import repo_context
+        ctx = repo_context(Path(wd))
+    except Exception:  # noqa: BLE001
+        ctx = {}
+    return ctx.get("repo") or Path(wd).name or "(unknown)", efficiency.classify_traffic(wd)
+
+
 class RoutedProvider:
     """Preserve the Provider protocol while intercepting complete() boundaries.
 
@@ -636,8 +649,9 @@ failing closed (defer to the LLM). See docs/COMPATIBILITY.md and
 docs/UPSTREAM_CONTRACT.md.
 """
     def __init__(self, provider: Any, runtime: Runtime, tools: dict[str, Any],
-                 response_factory=action_response, provider_key: str | None = None):
+                 response_factory=action_response, provider_key: str | None = None, *, levers: Any = None):
         self._provider = provider
+        self._levers = levers
         self._runtime = runtime
         self._tools = tools
         self._response_factory = response_factory
@@ -1045,6 +1059,7 @@ docs/UPSTREAM_CONTRACT.md.
             "route": "slow", "destination": self._provider_key, "status": "running",
             "transport_measured": "provider-complete"}, decision_id)
         start = time.perf_counter()
+        mono_start = time.monotonic()
         try:
             # Preserve the actual request, model override, kwargs, and response identity.
             response = await self._provider.complete(request, **kwargs)
@@ -1071,19 +1086,15 @@ docs/UPSTREAM_CONTRACT.md.
             "transport_measured": "provider-complete"}, decision_id)
         await self._receipt_model_call(service, turn, response, efficiency_routed_model,
                                        time.perf_counter() - start, decision_id)
+        if self._levers is not None:
+            await self._levers.after_call(self._provider, request, kwargs, usage_fields(response), mono_start,
+                                          time.perf_counter() - start)
         return response
 
     def _eff_context(self, service: Any) -> dict:
         st = self._eff
         if st["project"] is None:
-            wd = session_working_dir(service)
-            try:
-                from .observer import repo_context
-                ctx = repo_context(Path(wd))
-            except Exception:  # noqa: BLE001
-                ctx = {}
-            st["project"] = ctx.get("repo") or Path(wd).name or "(unknown)"
-            st["traffic"] = efficiency.classify_traffic(wd)
+            st["project"], st["traffic"] = project_and_traffic(service)
         return st
 
     def _eff_turn(self, st: dict, turn: Any) -> None:
@@ -1208,9 +1219,10 @@ docs/UPSTREAM_CONTRACT.md.
 class ObservedTool:
     """Measure actual execute(), not merely a tool:pre hook which may be denied."""
     def __init__(
-        self, tool: Any, runtime: Runtime, tool_key: str, *, workspace: Any = None
+        self, tool: Any, runtime: Runtime, tool_key: str, *, workspace: Any = None, levers: Any = None
     ):
         self._tool, self._runtime, self._tool_key = tool, runtime, tool_key
+        self._levers = levers
         # HC02a: the raw fast_workspace tool (never wrapped, never executed
         # from here) used only to normalize a native read_file's file_path
         # into the same (path, revision) identity space as candidates.
@@ -1306,6 +1318,9 @@ class ObservedTool:
                     "mode": service.policy.mode,
                 }, decision_id)
         start = time.perf_counter()
+        levers = self._levers
+        if levers is not None:
+            levers.tool_started(id(fields), self._tool_key)
         try:
             result = await self._tool.execute(input, **kwargs)
         except asyncio.CancelledError:
@@ -1315,6 +1330,8 @@ class ObservedTool:
         except Exception as exc:
             await service.emit("tool_end", {**fields, "status": "error", "success": False,
                 "exception_type": type(exc).__name__, "duration_ms": (time.perf_counter() - start) * 1000}, decision_id)
+            if levers is not None:
+                await levers.tool_observed(self._tool_key, input, False)
             raise
         else:
             success = field_value(result, "success", None)
@@ -1349,8 +1366,12 @@ class ObservedTool:
                 turn.last_tool_result_text = _tool_result_text(result)
             await service.emit("tool_end", {**fields, "status": "ok" if success is not False else "error",
                 "success": success, "duration_ms": (time.perf_counter() - start) * 1000}, decision_id)
+            if levers is not None:
+                await levers.tool_observed(self._tool_key, input, success)
             return result
         finally:
+            if levers is not None:
+                levers.tool_finished(id(fields))
             if turn:
                 turn.revision += 1
 
@@ -1470,6 +1491,8 @@ class HybridOrchestrator:
         # Lifecycle bookkeeping for the execution:end backfill (see execute()).
         self._execution_started = False
         self._execution_ended = False
+        # This turn's keep-alive / loop-stop state (None when both are off).
+        self._levers: Levers | None = None
 
     async def _on_execution_start(self, event: str, data: dict):
         self._execution_started = True
@@ -1478,6 +1501,24 @@ class HybridOrchestrator:
     async def _on_execution_end(self, event: str, data: dict):
         self._execution_ended = True
         return _hook_continue()
+
+    async def _on_tool_post(self, event: str, data: dict):
+        """Deliver a pending loop-stop note with the next model request: the
+        upstream loop stores a tool:post context injection and adds it to
+        the next request (persisted at the conversation tail, cache-safe)."""
+        levers = self._levers
+        note = levers.take_note() if levers is not None else None
+        if not note:
+            return _hook_continue()
+        try:
+            from amplifier_core.models import HookResult
+            return HookResult(action="inject_context", context_injection=note,
+                              context_injection_role="user", ephemeral=True)
+        except ImportError:
+            from types import SimpleNamespace
+            return SimpleNamespace(action="inject_context", context_injection=note,
+                                   context_injection_role="user", ephemeral=True,
+                                   append_to_last_tool_result=False)
 
     def register_lifecycle_hooks(self, hooks: Any) -> list[Any]:
         """Observe the wrapped loop's execution:start/end so execute() can
@@ -1492,6 +1533,8 @@ class HybridOrchestrator:
                      name="loop-fast-decisions:execution-start"),
             register("execution:end", self._on_execution_end, priority=0,
                      name="loop-fast-decisions:execution-end"),
+            register("tool:post", self._on_tool_post, priority=50,
+                     name="loop-fast-decisions:loop-stop"),
         ]
 
     async def _backfill_execution_end(self, hooks: Any, response: Any, status: str) -> None:
@@ -1528,12 +1571,15 @@ class HybridOrchestrator:
                 "model_routing_enabled": bool(service.policy.model_routing)})
             # Provider keys and defaults are unchanged. Upstream pins and selections apply.
             workspace_tool = tools.get("fast_workspace")
+            levers = Levers(service.policy, service, lambda: project_and_traffic(service), usage_fn=usage_fields)
+            levers = levers if levers.active else None
+            self._levers = levers
             wrapped_tools = {
-                key: ObservedTool(tool, self.runtime, key, workspace=workspace_tool)
+                key: ObservedTool(tool, self.runtime, key, workspace=workspace_tool, levers=levers)
                 for key, tool in tools.items()
             }
             wrapped_providers = {key: RoutedProvider(provider, self.runtime, tools,
-                self.response_factory, key) for key, provider in providers.items()}
+                self.response_factory, key, levers=levers) for key, provider in providers.items()}
             kwargs.setdefault("coordinator", self.coordinator)
             started = time.perf_counter()
             status = "error"
@@ -1549,6 +1595,9 @@ class HybridOrchestrator:
                 await service.emit("cancelled", {"reason_code": "turn_cancelled"})
                 raise
             finally:
+                if levers is not None:
+                    await levers.finish(status)
+                    self._levers = None
                 await self._backfill_execution_end(hooks, response, status)
                 await service.emit("turn_end", {"fast_total": service.turn.fast_total,
                     "status": status, "duration_ms": (time.perf_counter() - started) * 1000,

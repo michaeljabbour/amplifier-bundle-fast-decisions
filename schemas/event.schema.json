@@ -52,7 +52,9 @@
         "fast_decisions:escalation_signals",
         "fast_decisions:tool_risk",
         "fast_decisions:difficulty_judged",
-        "fast_decisions:efficiency"
+        "fast_decisions:efficiency",
+        "fast_decisions:cache_refresh",
+        "fast_decisions:loop_note"
       ]
     },
     "session_id": {

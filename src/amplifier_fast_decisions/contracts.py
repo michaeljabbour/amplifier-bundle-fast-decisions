@@ -64,6 +64,10 @@ EVENT_NAMES = tuple(
         # Efficiency receipts (docs/GOAL.md): one per optimization decision,
         # with the baseline and the savings fixed at decision time.
         "efficiency",
+        # Cache keep-alive refresh calls (usage and cost of each) and
+        # loop-stop notes (pattern kind and tool name only). See levers.py.
+        "cache_refresh",
+        "loop_note",
     )
 )
 
@@ -561,6 +565,71 @@ class DecisionResult:
     synthetic: bool = False
 
 
+
+# Cache keep-alive and loop-stop levers (levers.py): config keys, defaults and
+# validation live here so Policy validation needs no import from levers.
+KEEPALIVE_KEYS = frozenset({"enabled", "interval_s", "max_refreshes", "min_prefix_tokens", "max_output_tokens"})
+LOOP_STOP_KEYS = frozenset({"enabled", "repeat_threshold", "failure_threshold", "sleep_threshold", "min_sleep_s",
+                            "expected_further_calls"})
+KEEPALIVE_DEFAULTS = {"enabled": True, "interval_s": 270.0, "max_refreshes": 6, "min_prefix_tokens": 20_000,
+                      "max_output_tokens": 1}
+# Expected further pattern calls after the trigger point WITHOUT a note: the
+# mean continuation in the owner's real sessions of 2026-09-25 (47 session
+# files, turn-scoped; exact repeat: 7 episodes, mean 0.14; >=3 consecutive
+# failures: 12 episodes, mean 0.75; sleep-as-timer from the 2nd timer call:
+# 15 episodes, mean 6.27), rounded to whole calls.
+EXPECTED_FURTHER_CALLS = {"repeat": 0, "failures": 1, "sleep_timer": 6}
+EXPECTED_SOURCE = "mean continuation in real sessions 2026-09-25"
+LOOP_STOP_DEFAULTS = {"enabled": True, "repeat_threshold": 3, "failure_threshold": 3, "sleep_threshold": 2,
+                      "min_sleep_s": 5.0, "expected_further_calls": EXPECTED_FURTHER_CALLS}
+
+
+def _lever_num(v: Any) -> float | None:
+    return float(v) if isinstance(v, (int, float)) and not isinstance(v, bool) else None
+
+
+def validate_cache_keepalive(cfg: Any) -> None:
+    if cfg is None:
+        return
+    if not isinstance(cfg, dict):
+        raise ValueError("cache_keepalive must be a dict")
+    unknown = set(cfg) - KEEPALIVE_KEYS
+    if unknown:
+        raise ValueError(f"cache_keepalive has unknown keys: {sorted(unknown)}")
+    if not isinstance(cfg.get("enabled", True), bool):
+        raise ValueError("cache_keepalive.enabled must be a bool")
+    interval = cfg.get("interval_s", 270.0)
+    if _lever_num(interval) is None or not 0 < interval < 300.0:
+        raise ValueError("cache_keepalive.interval_s must be in (0, 300)")
+    for key in ("max_refreshes", "min_prefix_tokens", "max_output_tokens"):
+        value = cfg.get(key, KEEPALIVE_DEFAULTS[key])
+        if isinstance(value, bool) or not isinstance(value, int) or value < (1 if key != "min_prefix_tokens" else 0):
+            raise ValueError(f"cache_keepalive.{key} must be a positive integer")
+
+
+def validate_loop_stop(cfg: Any) -> None:
+    if cfg is None:
+        return
+    if not isinstance(cfg, dict):
+        raise ValueError("loop_stop must be a dict")
+    unknown = set(cfg) - LOOP_STOP_KEYS
+    if unknown:
+        raise ValueError(f"loop_stop has unknown keys: {sorted(unknown)}")
+    if not isinstance(cfg.get("enabled", True), bool):
+        raise ValueError("loop_stop.enabled must be a bool")
+    for key in ("repeat_threshold", "failure_threshold", "sleep_threshold"):
+        value = cfg.get(key, LOOP_STOP_DEFAULTS[key])
+        if isinstance(value, bool) or not isinstance(value, int) or value < 2:
+            raise ValueError(f"loop_stop.{key} must be an integer >= 2")
+    if _lever_num(cfg.get("min_sleep_s", 5.0)) is None:
+        raise ValueError("loop_stop.min_sleep_s must be a number")
+    expected = cfg.get("expected_further_calls")
+    if expected is not None:
+        if not isinstance(expected, dict) or set(expected) - set(EXPECTED_FURTHER_CALLS) or any(
+                isinstance(v, bool) or not isinstance(v, int) or v < 0 for v in expected.values()):
+            raise ValueError("loop_stop.expected_further_calls maps repeat/failures/sleep_timer to integers >= 0")
+
+
 @dataclass(frozen=True)
 class Policy:
     mode: Literal["off", "shadow", "active"] = "shadow"
@@ -622,6 +691,14 @@ class Policy:
     # backend available to the routers (e.g. start_policy: judge) without
     # putting a candidate-scoring call in front of slow requests.
     read_shortcut: bool = True
+    # Cache keep-alive during long tool/helper waits (levers.py). None (the
+    # default) is fully off; a dict turns it on with contracts.KEEPALIVE_DEFAULTS
+    # for omitted keys ({"enabled": false} keeps it off).
+    cache_keepalive: dict[str, Any] | None = None
+    # Loop-stop nudges: repeated identical calls, consecutive failures and
+    # sleep-as-timer polling get a short note in the next request (levers.py).
+    # None (the default) is fully off.
+    loop_stop: dict[str, Any] | None = None
     version: str = "policy-v1"
 
     def __post_init__(self) -> None:
@@ -652,6 +729,8 @@ class Policy:
             raise ValueError("tool_risk_shadow must be a bool")
         if not isinstance(self.read_shortcut, bool):
             raise ValueError("read_shortcut must be a bool")
+        validate_cache_keepalive(self.cache_keepalive)
+        validate_loop_stop(self.loop_stop)
 
     @classmethod
     def from_config(cls, config: dict[str, Any]) -> Policy:
