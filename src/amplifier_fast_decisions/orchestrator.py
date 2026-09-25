@@ -1243,13 +1243,22 @@ docs/UPSTREAM_CONTRACT.md.
                         )
                         turn.planner_plan = plan
                         if not plan["abstained"]:
-                            await service.emit("turn_planned", {
+                            turn_planned_data = {
                                 "objective": plan["objective"], "ctx": plan["ctx"],
                                 "options": plan["options"], "choice": plan["choice"],
                                 "host_model": host_model[:80],
                                 "session_kind": session_kind, "p_continue": p_continue,
                                 "provider_call_id": provider_call_id, "mode": service.policy.mode,
-                            }, decision_id)
+                            }
+                            # "value" objective only: the resolved USD/hour
+                            # used to convert time into money (each
+                            # option's own "utility" already rides along
+                            # inside "options" above -- see planner.py).
+                            if "value_of_time_usd_per_hour" in plan:
+                                turn_planned_data["value_of_time_usd_per_hour"] = plan[
+                                    "value_of_time_usd_per_hour"
+                                ]
+                            await service.emit("turn_planned", turn_planned_data, decision_id)
                     plan = turn.planner_plan if planner_config is not None else None
                     if plan is not None and not plan["abstained"]:
                         if plan["choice"] == plan["host"]:

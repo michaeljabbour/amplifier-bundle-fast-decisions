@@ -31,22 +31,30 @@ Config lives under `model_routing.planner` (all keys optional):
 ```yaml
 planner:
   enabled: false                 # off = today's behaviour, byte for byte
-  objective: balanced            # speed | cost | balanced
+  objective: balanced            # speed | cost | balanced | value
   cost_tolerance: 0.05           # balanced: allowed expected-cost increase vs staying on the host
   candidates: []                 # cheap models to consider for easy turns; empty = [start_model]
   cache_ttl_seconds: 300
   expected_calls: 3.5            # provider calls in an easy turn, on the host
-  output_tokens_per_call: 170
+  output_tokens_per_call: 170    # fallback for a model with no priors[model].output_tokens_per_call
+  value_of_time_usd_per_hour: 36 # "value" objective only; see "Objectives" below
   priors:                        # per model family (prefix match on the model id); measured 2026-09-25
-    claude-fable-5-1: { latency_s: 5.4, calls_factor: 1.0,  cold_s_per_100k: 2.0 }
-    claude-opus-5-5:  { latency_s: 3.3, calls_factor: 1.0,  cold_s_per_100k: 1.95 }
-    claude-sonnet-5:  { latency_s: 2.4, calls_factor: 1.15, cold_s_per_100k: 0.65 }
-    claude-haiku-4-5: { latency_s: 2.2, calls_factor: 1.35, cold_s_per_100k: 0.4 }
+    claude-fable-5-1: { latency_s: 5.4, calls_factor: 1.0,  cold_s_per_100k: 2.0,  output_tokens_per_call: 260 }
+    claude-opus-5-5:  { latency_s: 3.3, calls_factor: 1.0,  cold_s_per_100k: 1.95, output_tokens_per_call: 180 }
+    claude-sonnet-5:  { latency_s: 2.4, calls_factor: 1.15, cold_s_per_100k: 0.65, output_tokens_per_call: 165 }
+    claude-haiku-4-5: { latency_s: 2.2, calls_factor: 1.35, cold_s_per_100k: 0.4,  output_tokens_per_call: 185 }
   continue_probability:          # P(a LATER turn runs on the host); see "Lookahead" below
     sub_session: 0.06
     first_turn: 0.25
     later_turn: 0.8
 ```
+
+`output_tokens_per_call` moved from one global assumption to a per-model measured median (2026-09-25 dev
+runs) after a Fable-host multi-turn dev regression: with everything defaulting to 170, a warm Fable looked
+marginally cheaper than a warm Sonnet under `balanced`; in reality Fable writes roughly 2x the output
+tokens per call of Sonnet/Opus at Fable's own $50/M output rate, which the single global default was
+silently hiding. A model without its own `priors[model].output_tokens_per_call` still falls back to the
+global `output_tokens_per_call`.
 
 Prices come from `savings.DEFAULT_RATES` (input, output, cache_read, cache_write per M tokens); a model with
 no price or no prior is not a candidate. If the host itself has no price or prior, the planner abstains and
@@ -63,8 +71,10 @@ today's behaviour applies.
    - `n = expected_calls * calls_factor[m]`
    - `cost = cold * write[m] + (ctx - cold) * read[m] + (n - 1) * ctx * read[m] + n * out * output[m]`
    - `time = n * latency_s[m] + cold / 100000 * cold_s_per_100k[m]`
-3. Choice: `speed` = least time; `cost` = least cost; `balanced` = least time among options whose cost is at
-   most `host_cost * (1 + cost_tolerance)` (the host always qualifies). Ties go to the host.
+3. Choice (see "Objectives" below for the full table): `speed` = least time; `cost` = least cost;
+   `balanced` = least time among options whose cost is at most `host_cost * (1 + cost_tolerance)` (the
+   host always qualifies); `value` = least `cost + value_of_time_usd_per_hour / 3600 * time` (a single
+   number, no separate budget step). Ties go to the host.
 4. The chosen model is used for the whole turn (decide once). Choosing the host behaves exactly like a
    hard turn (no model override, host effort) with reason code `planner_host`; choosing a candidate behaves
    like today's easy turn with that model as the start model and reason code `planner_<objective>`.
@@ -72,8 +82,29 @@ today's behaviour applies.
    provider reported (input + cache_read + cache_write tokens).
 6. Emit one receipt per planned turn, `fast_decisions:turn_planned`, with the objective, `ctx`, the
    resolved `session_kind` and `p_continue` (see "Lookahead" below), each option's
-   `{model, warm, cold, cost, time, lookahead_cost, lookahead_time}` and the choice (add it to
-   `EVENT_NAMES`, the privacy allowlist of fields, `schemas/event.schema.json` and docs/EVENTS.md).
+   `{model, warm, cold, cost, time, lookahead_cost, lookahead_time}` (plus `utility` per option and a
+   top-level `value_of_time_usd_per_hour` when `objective: value` -- see "Objectives") and the choice
+   (add it to `EVENT_NAMES`, the privacy allowlist of fields, `schemas/event.schema.json` and
+   docs/EVENTS.md).
+
+## Objectives
+
+| Objective | Minimises | Notes |
+|---|---|---|
+| `speed` | `time + lookahead_time` (TOTAL time) | Least time, full stop. |
+| `cost` | `cost + lookahead_cost` (TOTAL cost) | Least cost, full stop. |
+| `balanced` (default) | `time + lookahead_time`, among options whose TOTAL cost is within `cost_tolerance` of the host's own TOTAL cost | The host always qualifies. A cost BUDGET, not a single number -- can leave a much faster option unchosen if it is even slightly over budget (see the Fable-warm/Sonnet-warm worked example below). |
+| `value` | `(cost + lookahead_cost) + value_of_time_usd_per_hour / 3600 * (time + lookahead_time)` | Converts TOTAL time into a dollar figure at `value_of_time_usd_per_hour` and adds it to TOTAL cost, so the whole speed/cost/lookahead triangle collapses to ONE number to minimise -- no separate budget step. `value_of_time_usd_per_hour: 0` degenerates to exactly `cost`; an arbitrarily large value degenerates to exactly `speed`. |
+
+`value` exists because `balanced`'s cost-tolerance budget is myopic about time: a candidate that is
+*slightly* over budget on cost is rejected outright even if it is dramatically faster, and a candidate
+that is *within* budget is accepted even if it is dramatically slower -- there is no dial between those
+two extremes. Live-smoke evidence: a Fable-host multi-turn session kept choosing a warm Fable under
+`balanced` (0.117774 USD for Sonnet was just outside Fable's 0.111125 * 1.05 == 0.116681 budget), even
+though Fable is ~2x slower per call (18.9s vs 9.7s) -- `balanced` cannot see that trade at all, because
+its only lever is a cost ceiling, never a price on time. `value` prices that same trade explicitly in one
+number: at `value_of_time_usd_per_hour: 36` ($0.01/s), Fable's utility (0.111125 + 0.01*18.9 == 0.300125)
+is nearly 1.4x Sonnet's (0.117774 + 0.01*9.6925 == 0.214699) -- Sonnet wins outright.
 
 ## Lookahead
 
@@ -155,6 +186,13 @@ unchanged.
   `<events_dir>/planner-state/<session_id>.json` (atomic write, best-effort, never fails a turn) so a
   resumed session (a fresh process per turn) does not start every model cold again; `ctx` prefers this
   persisted `last_ctx` plus the new turn's own user message over a characters/4 estimate.
+- `value` objective and per-model `output_tokens_per_call` tests: Fable host later turn (Fable warm 75k,
+  Sonnet warm 70k, `p_continue: 0.8`) -- `balanced` still picks Fable (Sonnet's cost is just outside the
+  cost-tolerance budget) but `value` picks Sonnet (Fable's much larger per-call time and output-token
+  cost now price in); Opus host later turn (Opus warm 90k, Sonnet cold) -- `value` keeps Opus; Opus fresh
+  sub-session at 70k -- `value` picks Sonnet; `value_of_time_usd_per_hour: 0` reproduces the `cost`
+  objective's choice exactly; an arbitrarily large `value_of_time_usd_per_hour` reproduces `speed`'s
+  choice exactly.
 - Run the full suite: `PYTHONPATH=src python3 -m unittest discover -s tests`.
 
 ## How it will be judged

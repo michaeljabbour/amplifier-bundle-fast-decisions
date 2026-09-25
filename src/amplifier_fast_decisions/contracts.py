@@ -233,11 +233,30 @@ DEFAULT_ESCALATION_WEIGHTS: dict[str, float] = {
 # docs/proposals/TURN-PLANNER.md. Priors are per model FAMILY (prefix
 # match on the model id, mirroring savings._rates_for's dated-id
 # matching), measured 2026-09-25 -- see the spec for the underlying data.
+# output_tokens_per_call is each model's own measured median output
+# tokens per call (2026-09-25 dev runs); a model without one falls back
+# to the global planner.output_tokens_per_call. Added after a Fable-host
+# multi-turn dev regression: Fable writes ~2x the output tokens per call
+# of Sonnet/Opus at Fable's own $50/M output rate, which the single
+# global default was silently hiding, making Fable look marginally
+# cheaper than it actually is once warm.
 DEFAULT_PLANNER_PRIORS: dict[str, dict[str, float]] = {
-    "claude-fable-5-1": {"latency_s": 5.4, "calls_factor": 1.0, "cold_s_per_100k": 2.0},
-    "claude-opus-5-5": {"latency_s": 3.3, "calls_factor": 1.0, "cold_s_per_100k": 1.95},
-    "claude-sonnet-5": {"latency_s": 2.4, "calls_factor": 1.15, "cold_s_per_100k": 0.65},
-    "claude-haiku-4-5": {"latency_s": 2.2, "calls_factor": 1.35, "cold_s_per_100k": 0.4},
+    "claude-fable-5-1": {
+        "latency_s": 5.4, "calls_factor": 1.0, "cold_s_per_100k": 2.0,
+        "output_tokens_per_call": 260,
+    },
+    "claude-opus-5-5": {
+        "latency_s": 3.3, "calls_factor": 1.0, "cold_s_per_100k": 1.95,
+        "output_tokens_per_call": 180,
+    },
+    "claude-sonnet-5": {
+        "latency_s": 2.4, "calls_factor": 1.15, "cold_s_per_100k": 0.65,
+        "output_tokens_per_call": 165,
+    },
+    "claude-haiku-4-5": {
+        "latency_s": 2.2, "calls_factor": 1.35, "cold_s_per_100k": 0.4,
+        "output_tokens_per_call": 185,
+    },
 }
 # Lookahead (opt-in, see planner.plan_turn): the probability that a LATER
 # turn in this session runs on the host, used to price the risk of
@@ -268,10 +287,20 @@ DEFAULT_PLANNER_CONFIG: dict[str, Any] = {
     "output_tokens_per_call": 170,
     "priors": DEFAULT_PLANNER_PRIORS,
     "continue_probability": DEFAULT_PLANNER_CONTINUE_PROBABILITY,
+    # "value" objective only (see planner.plan_turn): USD/hour used to
+    # convert TOTAL time (base + lookahead) into a dollar figure added to
+    # TOTAL cost, so the whole speed/cost/lookahead triangle collapses to
+    # one number to minimise. $36/hour is this team's default -- roughly
+    # a mid-market engineer's fully-loaded hourly cost -- but is just a
+    # policy knob or another calibration input; there is nothing
+    # measured/authoritative about it. See docs/proposals/TURN-PLANNER.md.
+    "value_of_time_usd_per_hour": 36,
 }
 PLANNER_KEYS = frozenset(DEFAULT_PLANNER_CONFIG)
-PLANNER_OBJECTIVES = frozenset({"speed", "cost", "balanced"})
-PLANNER_PRIOR_KEYS = frozenset({"latency_s", "calls_factor", "cold_s_per_100k"})
+PLANNER_OBJECTIVES = frozenset({"speed", "cost", "balanced", "value"})
+PLANNER_PRIOR_KEYS = frozenset(
+    {"latency_s", "calls_factor", "cold_s_per_100k", "output_tokens_per_call"}
+)
 PLANNER_CONTINUE_PROBABILITY_KEYS = frozenset(DEFAULT_PLANNER_CONTINUE_PROBABILITY)
 
 
@@ -362,6 +391,15 @@ def validate_planner(planner: Any) -> None:
                 raise ValueError(
                     f"model_routing.planner.continue_probability.{key} must be a number in [0, 1]"
                 )
+    value_of_time = planner.get("value_of_time_usd_per_hour")
+    if value_of_time is not None and (
+        isinstance(value_of_time, bool)
+        or not isinstance(value_of_time, (int, float))
+        or value_of_time < 0
+    ):
+        raise ValueError(
+            "model_routing.planner.value_of_time_usd_per_hour must be a non-negative number"
+        )
 
 
 def effective_planner_config(model_routing: dict[str, Any] | None) -> dict[str, Any] | None:

@@ -237,6 +237,12 @@ SAFE_FIELDS = {
     # never raw session content.
     "p_continue",
     "session_kind",
+    # "value" objective (opt-in): the resolved USD/hour used to convert
+    # TOTAL time into money -- a config-level policy scalar, never
+    # session content. Each option's own "utility" rides along inside
+    # "options" (already allowlisted above), not as a separate top-level
+    # field.
+    "value_of_time_usd_per_hour",
 }
 
 

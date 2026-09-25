@@ -62,11 +62,17 @@ def _option(
     n = expected_calls * calls_factor
     read_rate, write_rate = rate[2], rate[3]
     output_rate = rate[1]
+    # Per-model measured output tokens/call (e.g. Fable writes ~2x
+    # Sonnet's/Opus's) when the prior has one; else the global
+    # planner.output_tokens_per_call fallback. A single global default
+    # silently hid Fable's much larger per-call output, understating its
+    # cost once warm -- see docs/proposals/TURN-PLANNER.md.
+    output_tokens = prior.get("output_tokens_per_call", output_tokens_per_call)
     cost = (
         cold * write_rate
         + (ctx - cold) * read_rate
         + (n - 1) * ctx * read_rate
-        + n * output_tokens_per_call * output_rate
+        + n * output_tokens * output_rate
     ) / 1_000_000
     latency_s = prior.get("latency_s", 0.0)
     cold_s_per_100k = prior.get("cold_s_per_100k", 0.0)
@@ -90,10 +96,13 @@ def plan_turn(
     ``state`` maps a model id to ``{"last_used_at": float, "cached_tokens": int}``,
     updated by the caller after every real provider response -- this
     function only reads it. ``config`` is the merged
-    ``model_routing.planner`` dict (``objective``, ``cost_tolerance``,
-    ``cache_ttl_seconds``, ``expected_calls``, ``output_tokens_per_call``,
-    ``priors``); ``candidates`` are the cheap models to consider alongside
-    the host. ``p_continue`` is the caller-resolved probability that a
+    ``model_routing.planner`` dict (``objective`` -- ``speed``/``cost``/
+    ``balanced``/``value`` -- ``cost_tolerance``, ``cache_ttl_seconds``,
+    ``expected_calls``, ``output_tokens_per_call`` (a model's own
+    ``priors[model].output_tokens_per_call`` wins when present),
+    ``priors``, ``value_of_time_usd_per_hour`` (``objective: value`` only));
+    ``candidates`` are the cheap models to consider alongside the host.
+    ``p_continue`` is the caller-resolved probability that a
     LATER turn in this session runs on the host (see
     ``contracts.DEFAULT_PLANNER_CONTINUE_PROBABILITY`` and
     ``orchestrator._session_kind`` for how it is chosen) -- this function
@@ -201,6 +210,7 @@ def plan_turn(
         return opt["time"] + opt["lookahead_time"]
 
     host_total_cost = total_cost(host_option)
+    value_of_time = config.get("value_of_time_usd_per_hour", 36)
 
     if objective == "speed":
         best = min(total_time(opt) for opt in options)
@@ -208,6 +218,19 @@ def plan_turn(
     elif objective == "cost":
         best = min(total_cost(opt) for opt in options)
         winners = [opt["model"] for opt in options if total_cost(opt) == best]
+    elif objective == "value":
+        # Converts TOTAL time (base + lookahead) into a dollar figure at
+        # value_of_time_usd_per_hour and adds it to TOTAL cost, so the
+        # whole speed/cost/lookahead triangle collapses to ONE number to
+        # minimise -- no separate cost_tolerance budget step is needed
+        # (unlike balanced): value_of_time_usd_per_hour == 0 degenerates
+        # to exactly the "cost" objective; an arbitrarily large value
+        # degenerates to exactly "speed" (whichever option's utility that
+        # value dominates is the one with the least total_time).
+        for opt in options:
+            opt["utility"] = total_cost(opt) + value_of_time / 3600 * total_time(opt)
+        best = min(opt["utility"] for opt in options)
+        winners = [opt["model"] for opt in options if opt["utility"] == best]
     else:  # balanced
         budget = host_total_cost * (1 + cost_tolerance)
         eligible = [opt for opt in options if opt["model"] == host or total_cost(opt) <= budget]
@@ -216,7 +239,7 @@ def plan_turn(
 
     choice = host if host in winners else winners[0]
 
-    return {
+    result = {
         "ctx": ctx,
         "objective": objective,
         "host": host,
@@ -224,3 +247,6 @@ def plan_turn(
         "choice": choice,
         "abstained": False,
     }
+    if objective == "value":
+        result["value_of_time_usd_per_hour"] = value_of_time
+    return result

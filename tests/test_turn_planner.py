@@ -835,32 +835,35 @@ class PlannerMultiTurnHandComputedTests(unittest.IsolatedAsyncioTestCase):
 
         - turn1 (easy, fresh, ctx=60k, session_kind=first_turn, p=0.25):
           both cold. Sonnet's BASE numbers are still cheaper and faster
-          (0.2897 USD / 10.05s vs Opus's 0.3419 USD / 12.72s) -- but with
-          the one-step lookahead, choosing Sonnet risks a full cold
-          rewrite of Opus's cache on some later turn:
+          (0.28941188 USD / 10.05s vs Opus's 0.3426 USD / 12.72s -- each
+          model's own measured output_tokens_per_call now applies: Opus
+          180, Sonnet 165) -- but with the one-step lookahead, choosing
+          Sonnet risks a full cold rewrite of Opus's cache on some later
+          turn:
               lookahead_cost = 0.25 * 60000 * (5.0 - 0.2) / 1e6 = 0.072
-          Sonnet's TOTAL cost (0.2897 + 0.072 = 0.36171) now EXCEEDS
-          balanced's budget (Opus's own cost * 1.05 = 0.3419 * 1.05 =
-          0.35895) -- Sonnet is no longer eligible -> chosen: OPUS (host,
-          reason_code planner_host). This is the fix for the live-smoke
-          regression: the OLD myopic (no-lookahead) choice was SONNET here,
-          which then paid a full cold write on Opus anyway at turn2 (a hard
-          turn) -- TWO cold writes instead of one.
+          Sonnet's TOTAL cost (0.28941188 + 0.072 = 0.36141188) now
+          EXCEEDS balanced's budget (Opus's own cost * 1.05 =
+          0.3426 * 1.05 = 0.35973) -- Sonnet is no longer eligible ->
+          chosen: OPUS (host, reason_code planner_host). This is the fix
+          for the live-smoke regression: the OLD myopic (no-lookahead)
+          choice was SONNET here, which then paid a full cold write on
+          Opus anyway at turn2 (a hard turn) -- TWO cold writes instead
+          of one.
         - turn2 (hard, ctx=75k): the difficulty router sends it straight to
           the host (Opus); the planner is never consulted. This warms
           Opus's cache to 75k tokens. planner_state is now non-empty, so
           every later turn's session_kind is later_turn (p=0.8).
         - turn3 (easy, ctx=90k, later_turn, p=0.8): Opus is warm
-          (cold=15k, cost 0.1469) while Sonnet is cold at 90k (base cost
-          0.2224 PLUS lookahead 0.8*15000*4.8/1e6=0.0576 = 0.2800 total)
-          -- outside balanced's 5% cost-tolerance budget
-          (0.1469 * 1.05 = 0.15425) either way -- so only Opus is eligible
+          (cold=15k, cost 0.1476) while Sonnet is cold at 90k (base cost
+          0.42913688 PLUS lookahead 0.8*15000*4.8/1e6=0.0576 = 0.48673688
+          total) -- outside balanced's 5% cost-tolerance budget
+          (0.1476 * 1.05 = 0.1550) either way -- so only Opus is eligible
           -> chosen: OPUS (host, via the planner, reason_code planner_host).
         - turn4 (easy, ctx=100k, later_turn, p=0.8): Opus stays warm
-          (cold=10k, cost 0.1299); Sonnet is still cold at 100k (base
-          0.2690 + lookahead 0.8*10000*4.8/1e6=0.0384 = 0.3074 total),
-          again outside budget (0.1299 * 1.05 = 0.13640) -> chosen: OPUS
-          again.
+          (cold=10k, cost 0.1306); Sonnet is still cold at 100k (base
+          0.47571188 + lookahead 0.8*10000*4.8/1e6=0.0384 = 0.51411188
+          total), again outside budget (0.1306 * 1.05 = 0.13713) ->
+          chosen: OPUS again.
 
         Net effect of the fix: Opus is chosen on EVERY turn of this
         sequence -- the host never pays more than the one cold write it
@@ -934,10 +937,10 @@ class PlannerMultiTurnHandComputedTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual([p["data"]["p_continue"] for p in planned], [0.25, 0.8, 0.8])
         # Base costs (the "cost" field) are unaffected by lookahead --
         # only the separate lookahead_cost/lookahead_time fields are new.
-        self.assertAlmostEqual(planned[0]["data"]["options"][1]["cost"], 0.289714, places=5)
+        self.assertAlmostEqual(planned[0]["data"]["options"][1]["cost"], 0.28941188, places=5)
         self.assertAlmostEqual(planned[0]["data"]["options"][1]["lookahead_cost"], 0.072, places=4)
-        self.assertAlmostEqual(planned[1]["data"]["options"][0]["cost"], 0.1469, places=4)
-        self.assertAlmostEqual(planned[2]["data"]["options"][0]["cost"], 0.1299, places=4)
+        self.assertAlmostEqual(planned[1]["data"]["options"][0]["cost"], 0.1476, places=4)
+        self.assertAlmostEqual(planned[2]["data"]["options"][0]["cost"], 0.1306, places=4)
         # Host options never carry a lookahead penalty.
         for p in planned:
             self.assertEqual(p["data"]["options"][0]["lookahead_cost"], 0.0)
@@ -1241,20 +1244,21 @@ class LookaheadTests(unittest.TestCase):
     def test_root_first_turn_p025_prefers_host_over_myopically_cheaper_candidate(self):
         """Opus host, fresh ROOT session (session kind: first_turn,
         p_continue=0.25), ctx=70000, both cold. Sonnet's BASE numbers are
-        cheaper and faster (cost 0.336289 vs Opus's 0.3969; time 10.115 vs
-        12.915), but its lookahead penalty --
+        cheaper and faster (cost 0.33598688 vs Opus's 0.3976 -- Opus's own
+        prior now measures 180 output tokens/call, Sonnet's 165; time
+        10.115 vs 12.915), but its lookahead penalty --
         ``0.25 * 70000 * (5.0 - 0.2) / 1e6 == 0.084`` -- pushes its TOTAL
-        cost to 0.420289, which exceeds balanced's budget
-        (``0.3969 * 1.05 == 0.416745``). Sonnet is therefore not eligible
+        cost to 0.41998688, which exceeds balanced's budget
+        (``0.3976 * 1.05 == 0.41748``). Sonnet is therefore not eligible
         -> chosen: OPUS (the host)."""
         plan = planner.plan_turn(
             OPUS, [SONNET], {}, 70000, 0.0, config(), DEFAULT_RATES, p_continue=0.25
         )
         by_model = {o["model"]: o for o in plan["options"]}
-        self.assertAlmostEqual(by_model[SONNET]["cost"], 0.336289, places=5)
+        self.assertAlmostEqual(by_model[SONNET]["cost"], 0.33598688, places=5)
         self.assertAlmostEqual(by_model[SONNET]["lookahead_cost"], 0.084, places=5)
-        self.assertAlmostEqual(by_model[SONNET]["cost"] + by_model[SONNET]["lookahead_cost"], 0.420289, places=5)
-        self.assertAlmostEqual(by_model[OPUS]["cost"] * 1.05, 0.416745, places=5)
+        self.assertAlmostEqual(by_model[SONNET]["cost"] + by_model[SONNET]["lookahead_cost"], 0.41998688, places=5)
+        self.assertAlmostEqual(by_model[OPUS]["cost"] * 1.05, 0.41748, places=5)
         self.assertEqual(by_model[OPUS]["lookahead_cost"], 0.0)
         self.assertEqual(plan["choice"], OPUS)
 
@@ -1262,8 +1266,9 @@ class LookaheadTests(unittest.TestCase):
         """Same inputs as above but sub_session's much lower p_continue
         (0.06) keeps Sonnet's lookahead penalty small --
         ``0.06 * 70000 * 4.8 / 1e6 == 0.02016`` -- so its total cost
-        (0.336289 + 0.02016 == 0.356449) stays under budget (0.416745),
-        and it wins on time (10.1969s total vs Opus's 12.915s)."""
+        (0.33598688 + 0.02016 == 0.35614688) stays under budget
+        (0.41748), and it wins on time (10.1969s total vs Opus's
+        12.915s)."""
         plan = planner.plan_turn(
             OPUS, [SONNET], {}, 70000, 0.0, config(), DEFAULT_RATES, p_continue=0.06
         )
@@ -1295,9 +1300,12 @@ class LookaheadTests(unittest.TestCase):
         (cold=0 for both) at ctx=30000, p_continue=0.8. Because the HOST's
         own cold this turn is 0, every lookahead term is exactly 0
         regardless of p_continue -- there is no stale cache to eventually
-        pay for. Sonnet's (unpenalized) cost 0.046489 is under budget
-        (0.056 * 1.05 == 0.0588) and its time (9.66s) beats Fable's
-        (18.9s) -> chosen: SONNET."""
+        pay for. Fable's own prior now measures 260 output tokens/call
+        (vs Sonnet's 165), so Fable's cost is 0.07175, not the
+        global-default-output-tokens 0.056 an earlier version of this
+        test measured. Sonnet's (unpenalized) cost 0.04618688 is under
+        budget (0.07175 * 1.05 == 0.0753375) and its time (9.66s) beats
+        Fable's (18.9s) -> chosen: SONNET."""
         state = {
             FABLE: {"last_used_at": 0.0, "cached_tokens": 40000},
             SONNET: {"last_used_at": 0.0, "cached_tokens": 35000},
@@ -1309,7 +1317,8 @@ class LookaheadTests(unittest.TestCase):
         self.assertEqual(by_model[FABLE]["cold"], 0)
         self.assertEqual(by_model[SONNET]["lookahead_cost"], 0.0)
         self.assertEqual(by_model[SONNET]["lookahead_time"], 0.0)
-        self.assertAlmostEqual(by_model[SONNET]["cost"], 0.046489, places=5)
+        self.assertAlmostEqual(by_model[FABLE]["cost"], 0.07175, places=5)
+        self.assertAlmostEqual(by_model[SONNET]["cost"], 0.04618688, places=5)
         self.assertEqual(plan["choice"], SONNET)
 
     def test_default_p_continue_is_zero_preserves_pre_lookahead_behavior(self):
@@ -1430,6 +1439,283 @@ class SessionKindTests(unittest.TestCase):
         runtime = self._runtime()
         runtime.planner_state[OPUS] = {"last_used_at": time.time(), "cached_tokens": 1000}
         self.assertEqual(_session_kind(runtime), "later_turn")
+
+
+# ---------------------------------------------------------------------------
+# Per-model output_tokens_per_call priors
+# ---------------------------------------------------------------------------
+
+
+class PerModelOutputTokensTests(unittest.TestCase):
+    def test_prior_output_tokens_overrides_global_default(self):
+        """Fable's own prior (260 output tokens/call) applies instead of
+        the global config default (170) -- confirmed by comparing against
+        a hand-built rates/priors pair that isolates the difference."""
+        priors_without_override = {FABLE: {**DEFAULT_PLANNER_PRIORS[FABLE]}}
+        del priors_without_override[FABLE]["output_tokens_per_call"]
+        cfg_without = config(priors=priors_without_override, output_tokens_per_call=170)
+        cfg_with = config()  # DEFAULT_PLANNER_PRIORS, Fable's own 260
+
+        plan_without = planner.plan_turn(FABLE, [], {}, 30000, 0.0, cfg_without, DEFAULT_RATES)
+        plan_with = planner.plan_turn(FABLE, [], {}, 30000, 0.0, cfg_with, DEFAULT_RATES)
+
+        fable_without = plan_without["options"][0]
+        fable_with = plan_with["options"][0]
+        self.assertGreater(fable_with["cost"], fable_without["cost"])
+
+    def test_model_without_its_own_output_tokens_prior_falls_back_to_global(self):
+        priors = {"custom-model": {"latency_s": 1.0, "calls_factor": 1.0, "cold_s_per_100k": 1.0}}
+        rates = {**DEFAULT_RATES, "custom-model": DEFAULT_RATES[SONNET]}
+        cfg = config(priors=priors, output_tokens_per_call=999)
+        plan = planner.plan_turn("custom-model", [], {}, 10000, 0.0, cfg, rates)
+        # n * 999 * output_rate is the only output-token term at ctx=10000 cold.
+        option = plan["options"][0]
+        n = 3.5 * 1.0
+        expected_output_component = n * 999 * DEFAULT_RATES[SONNET][1] / 1_000_000
+        self.assertAlmostEqual(
+            option["cost"],
+            (10000 * DEFAULT_RATES[SONNET][3] + (n - 1) * 10000 * DEFAULT_RATES[SONNET][2]) / 1_000_000
+            + expected_output_component,
+            places=8,
+        )
+
+    def test_fable_costs_more_than_the_old_uniform_170_default_once_warm(self):
+        """The live-smoke regression: with a single global 170-token
+        default, a warm Fable looked marginally cheaper than a warm
+        Sonnet. With Fable's own measured 260, it no longer does."""
+        state = {FABLE: {"last_used_at": 0.0, "cached_tokens": 30000}}
+        plan = planner.plan_turn(FABLE, [], state, 30000, 10.0, config(), DEFAULT_RATES)
+        fable = plan["options"][0]
+        self.assertTrue(fable["warm"])
+        self.assertEqual(fable["cold"], 0)
+        # cold=0 -> cost is purely n * output_tokens * output_rate / 1e6.
+        n = 3.5 * DEFAULT_PLANNER_PRIORS[FABLE]["calls_factor"]
+        old_cost = n * 170 * DEFAULT_RATES[FABLE][1] / 1_000_000
+        self.assertGreater(fable["cost"], old_cost)
+
+
+# ---------------------------------------------------------------------------
+# "value" objective (planner.plan_turn)
+# ---------------------------------------------------------------------------
+
+
+class ValueObjectiveTests(unittest.TestCase):
+    def test_fable_host_later_turn_fable_warm_75k_sonnet_warm_70k(self):
+        """Fable host, LATER turn (p_continue=0.8), ctx=75000: Fable
+        warm at 75000 (cold=0, cost 0.111125, time 18.9s -- Fable's own
+        260 output tokens/call and $50/M output rate dominate); Sonnet
+        warm at 70000 (cold=5000, cost 0.117774375, time 9.6925s).
+
+        balanced: Sonnet's cost (0.117774375) is just OUTSIDE budget
+        (0.111125 * 1.05 == 0.11668125) -- not eligible -> chosen: FABLE.
+        This reproduces the live-smoke regression itself: balanced alone
+        still keeps a warm-but-slow-and-token-heavy Fable.
+
+        value (value_of_time_usd_per_hour=36, i.e. $0.01/s): Fable's
+        utility = 0.111125 + 0.01 * 18.9 = 0.300125; Sonnet's utility =
+        0.117774375 + 0.01 * 9.6925 = 0.214699375. Sonnet's utility is far
+        lower -> chosen: SONNET. This is the actual fix: value correctly
+        prices Fable's ~2.3x slower per-call latency as money, which
+        balanced's pure cost-tolerance budget cannot see at all.
+        """
+        state = {
+            FABLE: {"last_used_at": 0.0, "cached_tokens": 75000},
+            SONNET: {"last_used_at": 0.0, "cached_tokens": 70000},
+        }
+        balanced_plan = planner.plan_turn(
+            FABLE, [SONNET], state, 75000, 10.0, config(objective="balanced"),
+            DEFAULT_RATES, p_continue=0.8,
+        )
+        value_plan = planner.plan_turn(
+            FABLE, [SONNET], state, 75000, 10.0, config(objective="value"),
+            DEFAULT_RATES, p_continue=0.8,
+        )
+        by_balanced = {o["model"]: o for o in balanced_plan["options"]}
+        by_value = {o["model"]: o for o in value_plan["options"]}
+
+        self.assertAlmostEqual(by_balanced[FABLE]["cost"], 0.111125, places=6)
+        self.assertAlmostEqual(by_balanced[SONNET]["cost"], 0.117774375, places=6)
+        self.assertEqual(balanced_plan["choice"], FABLE)
+
+        self.assertAlmostEqual(by_value[FABLE]["utility"], 0.300125, places=6)
+        self.assertAlmostEqual(by_value[SONNET]["utility"], 0.214699375, places=6)
+        self.assertEqual(value_plan["value_of_time_usd_per_hour"], 36)
+        self.assertEqual(value_plan["choice"], SONNET)
+
+    def test_opus_host_later_turn_opus_warm_90k_sonnet_cold_value_keeps_opus(self):
+        """Opus host, LATER turn (p_continue=0.8), Opus warm at 90000
+        (cold=0, cost 0.0756, time 11.55s, utility 0.1911); Sonnet cold at
+        90000 (cost 0.429136875, time 10.245s, utility 0.531586875).
+        Despite Sonnet's lower time, its much higher cold-write cost
+        dominates its utility -> chosen: OPUS."""
+        state = {OPUS: {"last_used_at": 0.0, "cached_tokens": 90000}}
+        plan = planner.plan_turn(
+            OPUS, [SONNET], state, 90000, 10.0, config(objective="value"),
+            DEFAULT_RATES, p_continue=0.8,
+        )
+        by_model = {o["model"]: o for o in plan["options"]}
+        self.assertAlmostEqual(by_model[OPUS]["utility"], 0.1911, places=6)
+        self.assertAlmostEqual(by_model[SONNET]["utility"], 0.531586875, places=6)
+        self.assertEqual(plan["choice"], OPUS)
+
+    def test_opus_fresh_sub_session_70k_value_picks_sonnet(self):
+        """Opus host, fresh SUB-SESSION (p_continue=0.06), ctx=70000, both
+        cold: Opus utility 0.3976 + 0.01*12.915 == 0.52675; Sonnet utility
+        (0.335986875 base cost + 0.02016 lookahead) + 0.01*(10.115 +
+        0.0819) == 0.458115875. Sonnet's utility is lower -> chosen:
+        SONNET -- the low sub-session continuation probability keeps its
+        lookahead penalty small enough that its speed still wins out."""
+        plan = planner.plan_turn(
+            OPUS, [SONNET], {}, 70000, 0.0, config(objective="value"),
+            DEFAULT_RATES, p_continue=0.06,
+        )
+        by_model = {o["model"]: o for o in plan["options"]}
+        self.assertAlmostEqual(by_model[OPUS]["utility"], 0.52675, places=6)
+        self.assertAlmostEqual(by_model[SONNET]["utility"], 0.458115875, places=6)
+        self.assertEqual(plan["choice"], SONNET)
+
+    def test_value_of_time_zero_equals_cost_objective(self):
+        """value_of_time_usd_per_hour=0 degenerates value to exactly the
+        cost objective: same choice, and each option's utility equals its
+        total_cost exactly (the time term is multiplied by 0)."""
+        state = {
+            FABLE: {"last_used_at": 0.0, "cached_tokens": 75000},
+            SONNET: {"last_used_at": 0.0, "cached_tokens": 70000},
+        }
+        value_plan = planner.plan_turn(
+            FABLE, [SONNET], state, 75000, 10.0,
+            config(objective="value", value_of_time_usd_per_hour=0),
+            DEFAULT_RATES, p_continue=0.8,
+        )
+        cost_plan = planner.plan_turn(
+            FABLE, [SONNET], state, 75000, 10.0, config(objective="cost"),
+            DEFAULT_RATES, p_continue=0.8,
+        )
+        self.assertEqual(value_plan["choice"], cost_plan["choice"])
+        by_value = {o["model"]: o for o in value_plan["options"]}
+        by_cost = {o["model"]: o for o in cost_plan["options"]}
+        for model in (FABLE, SONNET):
+            self.assertAlmostEqual(by_value[model]["utility"], by_cost[model]["cost"], places=8)
+
+    def test_huge_value_of_time_equals_speed_objective(self):
+        """An arbitrarily large value_of_time_usd_per_hour (here 1e9,
+        i.e. $277,777/s) degenerates value to exactly the speed
+        objective: whichever option has the least TOTAL time dominates
+        every other term in the utility sum."""
+        state = {
+            FABLE: {"last_used_at": 0.0, "cached_tokens": 75000},
+            SONNET: {"last_used_at": 0.0, "cached_tokens": 70000},
+        }
+        value_plan = planner.plan_turn(
+            FABLE, [SONNET], state, 75000, 10.0,
+            config(objective="value", value_of_time_usd_per_hour=1e9),
+            DEFAULT_RATES, p_continue=0.8,
+        )
+        speed_plan = planner.plan_turn(
+            FABLE, [SONNET], state, 75000, 10.0, config(objective="speed"),
+            DEFAULT_RATES, p_continue=0.8,
+        )
+        self.assertEqual(value_plan["choice"], speed_plan["choice"])
+        self.assertEqual(value_plan["choice"], SONNET)
+
+    def test_utility_not_recorded_for_non_value_objectives(self):
+        for objective in ("speed", "cost", "balanced"):
+            plan = planner.plan_turn(
+                OPUS, [SONNET], {}, 60000, 0.0, config(objective=objective), DEFAULT_RATES
+            )
+            for option in plan["options"]:
+                self.assertNotIn("utility", option)
+            self.assertNotIn("value_of_time_usd_per_hour", plan)
+
+    def test_value_objective_ties_go_to_host(self):
+        rates = {**DEFAULT_RATES, "twin-model": DEFAULT_RATES[OPUS]}
+        priors = {**DEFAULT_PLANNER_PRIORS, "twin-model": DEFAULT_PLANNER_PRIORS[OPUS]}
+        plan = planner.plan_turn(
+            OPUS, ["twin-model"], {}, 60000, 0.0, config(objective="value", priors=priors), rates
+        )
+        self.assertEqual(plan["choice"], OPUS)
+
+
+class ValueObjectiveValidationTests(unittest.TestCase):
+    def test_value_is_a_valid_objective(self):
+        Policy(model_routing={"start_model": SONNET, "planner": {"enabled": True, "objective": "value"}})
+
+    def test_value_of_time_default_is_36(self):
+        merged = effective_planner_config({"start_model": SONNET, "planner": {"enabled": True}})
+        self.assertEqual(merged["value_of_time_usd_per_hour"], 36)
+
+    def test_value_of_time_must_be_non_negative(self):
+        with self.assertRaises(ValueError):
+            Policy(
+                model_routing={
+                    "start_model": SONNET,
+                    "planner": {"enabled": True, "value_of_time_usd_per_hour": -1},
+                }
+            )
+
+    def test_value_of_time_must_be_a_number(self):
+        with self.assertRaises(ValueError):
+            Policy(
+                model_routing={
+                    "start_model": SONNET,
+                    "planner": {"enabled": True, "value_of_time_usd_per_hour": "expensive"},
+                }
+            )
+
+    def test_value_of_time_zero_is_valid(self):
+        Policy(
+            model_routing={
+                "start_model": SONNET,
+                "planner": {"enabled": True, "value_of_time_usd_per_hour": 0},
+            }
+        )
+
+    def test_prior_output_tokens_per_call_validated_like_other_prior_fields(self):
+        with self.assertRaises(ValueError):
+            Policy(
+                model_routing={
+                    "start_model": SONNET,
+                    "planner": {
+                        "enabled": True,
+                        "priors": {SONNET: {"output_tokens_per_call": -1}},
+                    },
+                }
+            )
+
+
+class ValueObjectiveOrchestratorTests(unittest.IsolatedAsyncioTestCase):
+    async def test_value_objective_receipt_carries_utility_and_value_of_time(self):
+        policy = Policy(
+            mode="off",
+            model_routing={
+                "start_model": SONNET,
+                "planner": {"enabled": True, "objective": "value"},
+            },
+        )
+        _service, runtime, events = setup_service(policy=policy)
+        provider = PricedProvider(default_model=OPUS, usage_by_call=[{"input_tokens": 60000}])
+        facade = RoutedProvider(provider, runtime, {}, demo_response)
+
+        await facade.complete(request([user()]))
+
+        planned = [e for e in events if e["event"].endswith("turn_planned")]
+        self.assertEqual(len(planned), 1)
+        self.assertEqual(planned[0]["data"]["value_of_time_usd_per_hour"], 36)
+        for option in planned[0]["data"]["options"]:
+            self.assertIn("utility", option)
+
+    async def test_balanced_objective_receipt_has_no_value_fields(self):
+        policy = planner_policy()  # objective defaults to balanced
+        _service, runtime, events = setup_service(policy=policy)
+        provider = PricedProvider(default_model=OPUS, usage_by_call=[{"input_tokens": 60000}])
+        facade = RoutedProvider(provider, runtime, {}, demo_response)
+
+        await facade.complete(request([user()]))
+
+        planned = [e for e in events if e["event"].endswith("turn_planned")]
+        self.assertNotIn("value_of_time_usd_per_hour", planned[0]["data"])
+        for option in planned[0]["data"]["options"]:
+            self.assertNotIn("utility", option)
 
 
 if __name__ == "__main__":
