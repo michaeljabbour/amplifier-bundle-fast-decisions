@@ -1,5 +1,5 @@
 {
-  "generated": "2026-09-24",
+  "generated": "2026-09-25",
   "note": "Summaries only: no prompts, patches, final messages or secrets. Raw records: see DATA-INDEX.md.",
   "files": {
     "README.md": "b82009656e1371488a9e4196ba02becd26f468e2ce3e0287a856101f6d12848e",
@@ -11,7 +11,16 @@
     "difficulty/difficulty-report-qwen3.json": "855a2efded9e89ffbe4067e13ac3a703f0f760132d958d5dd716c706fb8ec22d",
     "difficulty/difficulty-report.json": "6b331945dc9d2d7590c16002eec10f0ba7960eff211e17b4a56fc3bdb1065d99",
     "difficulty/surface-feature-auc.json": "b5cb8d7ad14947633fa784f83e71bcb18360e8d284eda317f29c2877ab2a841b",
+    "followups/extras.json": "85c58446a8def4820d3920675caf968e690fd57da85087b3768c5c9a9b94835d",
     "followups/followups.json": "335e13dbfae2e80d3b33888a493c53cff00938b059c261b6a052657bab9cb887",
+    "followups/install-measurements-2026-09-24.md": "0060d7603d9e6279321941d4fe2ed7b5d6de0383654537a714248403bad58434",
+    "followups/reviews/addon-behavioral-plasticity-review.md": "c8e4bbde8751fdf145d444e42f29afd2c083905bbafff51c2d79f84ecb58d9f4",
+    "followups/reviews/addon-design-loop-review.md": "7ae78dd12c03e27329c179746d07b58cf62919c819c933154b26e3dd26a6f3ae",
+    "followups/reviews/addon-memory-review.md": "71c9e09ebd2cfe4cd16f8b48b67f249adb6a6e7450cc4ad2b0b131663075e378",
+    "followups/reviews/addon-preceptor-review.md": "762425a3a6796355252d20e9992e714254f091b0258e65917b2fc7e26e44678c",
+    "followups/reviews/claims-audit-2026-09-25.md": "3ea838fb24b0175bc9c48d9f44bf5e35f278123a299c8f15ca5fc2f1e0916bfd",
+    "followups/reviews/upstream-hooks-deprecation-review.md": "6e261e9ab4fee488d1a735ab87e27da704e689ce8136c8e43fa1d03a9cb2a86f",
+    "followups/test-audit/mutation-table.md": "167fe14a7ebe452c542f85dc6065da5cf6ec406e0d4a801ccc96703f97b7b4f9",
     "s1/prereg-s1-holdout/DESIGN-RECOMMENDATION.md": "aa3e16d05896ad37a5b40cc8f12e5da27ae2eef9f16c7c6904a41203b79805d0",
     "s1/prereg-s1-holdout/PREREGISTRATION.md": "865a671e31ce6e62bfbca5ccb171c579e876b9dd5792a13cee278155a238ec8b",
     "s1/prereg-s1-holdout/RESULTS.md": "b971b538a5ab5f25317c9bd4a4361e45f27ec3925f5441d0c24e8a785fe9c056",

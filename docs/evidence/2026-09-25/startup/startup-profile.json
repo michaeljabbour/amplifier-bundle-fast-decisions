@@ -1,0 +1,266 @@
+{
+  "date": "2026-09-25",
+  "command": "python -m cProfile <amplifier> run --output-format json 'Reply with the single word: ok' (scratch 1-file folder; user's 24 app bundles incl. fast-decisions and the four optimized add-ons)",
+  "wall_s_with_profiler": 25.6,
+  "note": "cProfile adds overhead; relative sizes are the point. Top items by cumulative time (callers include callees).",
+  "highlights": {
+    "hooks-deprecation find_source_files (2 calls)": 8.25,
+    "team-knowledge-base hooks-team-knowledge-context": 5.33,
+    "yaml composition (3583 documents)": 4.11
+  },
+  "top": [
+    {
+      "cumulative_s": 129.0,
+      "calls": 2372,
+      "where": "base_events.py",
+      "function": "_run_once"
+    },
+    {
+      "cumulative_s": 65.77,
+      "calls": 7,
+      "where": "base_events.py",
+      "function": "run_until_complete"
+    },
+    {
+      "cumulative_s": 65.77,
+      "calls": 7,
+      "where": "base_events.py",
+      "function": "run_forever"
+    },
+    {
+      "cumulative_s": 44.09,
+      "calls": 2430,
+      "where": "~",
+      "function": "<method 'control' of 'select.kqueue' objects>"
+    },
+    {
+      "cumulative_s": 35.21,
+      "calls": 9214,
+      "where": "~",
+      "function": "<method 'run' of '_contextvars.Context' objects>"
+    },
+    {
+      "cumulative_s": 24.5,
+      "calls": 5231,
+      "where": "~",
+      "function": "<built-in method builtins.exec>"
+    },
+    {
+      "cumulative_s": 24.5,
+      "calls": 2,
+      "where": "amplifier",
+      "function": "<module>"
+    },
+    {
+      "cumulative_s": 24.34,
+      "calls": 2,
+      "where": "runners.py",
+      "function": "run"
+    },
+    {
+      "cumulative_s": 24.34,
+      "calls": 2,
+      "where": "runners.py",
+      "function": "__exit__"
+    },
+    {
+      "cumulative_s": 24.21,
+      "calls": 2,
+      "where": "runners.py",
+      "function": "close"
+    },
+    {
+      "cumulative_s": 23.89,
+      "calls": 2,
+      "where": "base_events.py",
+      "function": "_do_shutdown"
+    },
+    {
+      "cumulative_s": 23.89,
+      "calls": 4,
+      "where": "thread.py",
+      "function": "shutdown"
+    },
+    {
+      "cumulative_s": 22.32,
+      "calls": 2,
+      "where": "amplifier_app_cli/main.py",
+      "function": "main"
+    },
+    {
+      "cumulative_s": 22.32,
+      "calls": 2,
+      "where": "click/core.py",
+      "function": "__call__"
+    },
+    {
+      "cumulative_s": 22.32,
+      "calls": 2,
+      "where": "click/core.py",
+      "function": "main"
+    },
+    {
+      "cumulative_s": 22.32,
+      "calls": 2,
+      "where": "click/core.py",
+      "function": "invoke"
+    },
+    {
+      "cumulative_s": 22.32,
+      "calls": 1,
+      "where": "amplifier_app_cli/commands/run.py",
+      "function": "run"
+    },
+    {
+      "cumulative_s": 20.52,
+      "calls": 1107,
+      "where": "thread.py",
+      "function": "run"
+    },
+    {
+      "cumulative_s": 19.5,
+      "calls": 9206,
+      "where": "events.py",
+      "function": "_run"
+    },
+    {
+      "cumulative_s": 18.41,
+      "calls": 3,
+      "where": "telemetry.py",
+      "function": "close"
+    },
+    {
+      "cumulative_s": 14.0,
+      "calls": 188,
+      "where": "amplifier_core/_async_compat.py",
+      "function": "run"
+    },
+    {
+      "cumulative_s": 8.25,
+      "calls": 2,
+      "where": "amplifier-foundation:__init__.py",
+      "function": "_on_session_start"
+    },
+    {
+      "cumulative_s": 8.25,
+      "calls": 2,
+      "where": "amplifier-foundation:__init__.py",
+      "function": "on_session_start"
+    },
+    {
+      "cumulative_s": 7.5,
+      "calls": 4,
+      "where": "amplifier_app_cli/truststore_shim.py",
+      "function": "wrap_bio"
+    },
+    {
+      "cumulative_s": 7.5,
+      "calls": 4,
+      "where": "truststore/_api.py",
+      "function": "wrap_bio"
+    },
+    {
+      "cumulative_s": 7.5,
+      "calls": 4,
+      "where": "ssl.py",
+      "function": "wrap_bio"
+    },
+    {
+      "cumulative_s": 6.5,
+      "calls": 13002,
+      "where": "pathlib.py",
+      "function": "rglob"
+    },
+    {
+      "cumulative_s": 6.34,
+      "calls": 13002,
+      "where": "pathlib.py",
+      "function": "_select_from"
+    },
+    {
+      "cumulative_s": 5.99,
+      "calls": 80523,
+      "where": "~",
+      "function": "<built-in method posix.scandir>"
+    },
+    {
+      "cumulative_s": 5.82,
+      "calls": 78826,
+      "where": "pathlib.py",
+      "function": "_scandir"
+    },
+    {
+      "cumulative_s": 5.33,
+      "calls": 1,
+      "where": "amplifier-bundle-team-knowledge-base:__init__.py",
+      "function": "on_prompt_submit"
+    },
+    {
+      "cumulative_s": 4.32,
+      "calls": 3583,
+      "where": "yaml/__init__.py",
+      "function": "safe_load"
+    },
+    {
+      "cumulative_s": 4.32,
+      "calls": 3583,
+      "where": "yaml/__init__.py",
+      "function": "load"
+    },
+    {
+      "cumulative_s": 4.28,
+      "calls": 3583,
+      "where": "yaml/constructor.py",
+      "function": "get_single_data"
+    },
+    {
+      "cumulative_s": 4.11,
+      "calls": 3583,
+      "where": "yaml/composer.py",
+      "function": "get_single_node"
+    },
+    {
+      "cumulative_s": 4.01,
+      "calls": 3583,
+      "where": "yaml/composer.py",
+      "function": "compose_document"
+    },
+    {
+      "cumulative_s": 4.0,
+      "calls": 122058,
+      "where": "yaml/composer.py",
+      "function": "compose_node"
+    },
+    {
+      "cumulative_s": 3.97,
+      "calls": 9250,
+      "where": "yaml/composer.py",
+      "function": "compose_mapping_node"
+    },
+    {
+      "cumulative_s": 3.92,
+      "calls": 4176,
+      "where": "~",
+      "function": "<method 'acquire' of '_thread.lock' objects>"
+    },
+    {
+      "cumulative_s": 3.8,
+      "calls": 358661,
+      "where": "yaml/parser.py",
+      "function": "check_event"
+    }
+  ],
+  "telemetry_close_note": "The profile attributes ~18 s to amplifier_fast_decisions telemetry.JsonlRecorder.close (3 calls, run in executor threads at shutdown). That is a cProfile thread-accounting artifact: close() takes 0.1-10 ms in isolation, and in two unprofiled runs the process exited 0.3-0.5 s after the turn's execution:end (wall 19.4 s and 18.2 s; first event 2.6-3.2 s after launch).",
+  "unprofiled_runs": [
+    {
+      "wall_s": 19.4,
+      "launch_to_first_event_s": 3.2,
+      "turn_end_to_exit_s": 0.5
+    },
+    {
+      "wall_s": 18.2,
+      "launch_to_first_event_s": 2.6,
+      "turn_end_to_exit_s": 0.5
+    }
+  ]
+}

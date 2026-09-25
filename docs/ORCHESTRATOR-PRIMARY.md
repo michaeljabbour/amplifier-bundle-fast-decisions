@@ -40,16 +40,18 @@ Before a turn's first provider call, one typed question ("simple or complex?") d
 
 | Tier | Model | Effort | Mid-turn switches |
 |---|---|---|---|
-| simple ("cheap") | `model_routing.start_model` (claude-sonnet-5), Anthropic providers only (`provider_match`) | `effort_routing.by_tier.cheap` (medium) | escalation on test failure, provider error or after 6 requests |
+| simple ("cheap") | `model_routing.start_model` (claude-sonnet-5), Anthropic providers only (`provider_match`) | `effort_routing.by_tier.cheap` (medium) | only on a provider error (later calls in the turn move to the host model) |
 | complex ("strong") | the host model: exactly plain Amplifier | provider default | none |
 
 Why per turn, not per request: Anthropic invalidates the cached conversation when the model or the
-thinking/effort parameters change. The previous cheap-first policy re-wrote a 37k–235k-token cache on
+thinking/effort parameters change. The previous cheap-first policy re-wrote the ~37k-token conversation cache (up to 235k cache-write tokens over one
+SWE-bench run) on
 every escalation and every effort flip. On SWE-bench that made it 1.2x plain's time and 1.4x plain's
 cost (`evals/STUDY-DESIGN.md` 18.7).
 
 **Who judges.** The shipped config is `backend: jev` (hosted TypeSafe Jev, AUC 0.83 at ~0.16 s) with
-`allow_external_state: true`: the first 2,500 characters of the turn's request go to the Jev endpoint.
+`allow_external_state: true`: the first 2,500 characters of the turn's latest user message (system reminders removed; in delegated sub-sessions,
+the delegation instruction) go to the Jev endpoint.
 Without `TYPESAFE_API_KEY`, or on any Jev error or timeout, the turn uses the prompt-length rule
 (AUC 0.60) and nothing leaves the machine. Change it through Amplifier's sanctioned per-user override in
 `~/.amplifier/settings.yaml`. No bundle edit is needed:
@@ -77,7 +79,9 @@ that were all easy. Re-measure on your own mix with `afast savings`.
 routing saved: every cheaper-model turn's recorded tokens priced at host-model rates (the provider's
 own `cost_usd` is the actual when recorded), and its model time scaled by the measured host/start
 generation-rate ratio once both models have 20+ measured requests. Host-model turns run the standard
-setup and save nothing. These are estimates, not matched comparisons; the eval suites remain the
+setup and save nothing. These are estimates, not matched comparisons; after a session's first turn the host is assumed to have the
+conversation cached (a cheap turn's cache writes are priced as host cache reads), and a host turn right after a cheap
+turn is charged its cache rebuild; rate samples need at least 200 output tokens; the eval suites remain the
 evidence for net savings and quality.
 
 The AUCs are measured by `evals/difficulty/probe.py` on SWE-bench Verified human difficulty labels.
@@ -90,12 +94,15 @@ debiasing (`local_backend.py`). qwen3:0.6b cannot do this judgment (AUC 0.50).
 - `provider_match: anthropic`: the start model id is never sent to a non-Anthropic provider.
 - Sub-sessions inherit the parent's orchestrator and config, so delegated agents are routed too.
 
-**Evidence so far** (screens, 1 rep; confirmation at 3 reps running):
+**Evidence** (details in `docs/RESULTS-2026-09-24.md`, update at the top):
 
-| Suite | Router (Jev) vs plain: time | cost | quality |
+| Suite | Current default vs plain (same host): time | cost | quality |
 |---|---|---|---|
-| S1 simple (12 tasks) | 0.61x | 0.55x | 12/12 vs 12/12 |
-| S3 SWE-bench Verified (10) | 0.90x | 0.94x | 7/10 vs 7/10 |
+| S1 holdout (8 × 3 reps, preregistered), host Fable 5.1 | 0.42x [0.35-0.49] | 0.50x | 24/24 vs 24/24 (confirmed) |
+| S1 holdout (8 × 3 reps, preregistered), host Opus 5.5 | 1.01x [0.86-1.17] | 0.98x | 24/24 vs 24/24 (no effect) |
+| S3 SWE-bench Verified (10 × 2 reps), scope gate → host model | 1.00x | 0.98x | 13/20 vs 14/20 |
+
+Before the scope gate, the Jev router on S3 (10 × 3 reps) ran 0.86x / 0.91x but fixed 19/30 vs 23/30.
 
 ## Staying compliant while replacing loop-streaming
 
@@ -120,7 +127,7 @@ the native-event bridge the viewer's session list uses).
 
 ## Measuring it
 
-`evals/cells.yaml` adds three cells, all built with `--fd-composition composed`.
+`evals/cells.yaml` adds these cells, all built with `--fd-composition composed`.
 That profile includes the frozen bundle root and **never names the orchestrator
 module**. `model_routed` and `effort_routed` receipts therefore prove that
 composition did the swap, and `effective-loop-config.json` records the config

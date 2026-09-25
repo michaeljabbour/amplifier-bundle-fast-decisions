@@ -13,22 +13,26 @@ than replacing it.
 
 | Kind of work | Time | Cost | Quality |
 |---|---|---|---|
-| Everyday coding tasks | 0.55–0.61× | 0.38–0.40× | Every task passed |
+| Everyday coding tasks, expensive default model (Claude Fable 5.1) | **0.42×** | **0.50×** | Every run passed (24 of 24 vs. 24 of 24) |
+| Everyday coding tasks, Claude Opus 5.5 as default | 1.01× (no gain) | 0.98× | Every run passed |
 | Real bug fixes in large projects (SWE-bench Verified) | 1.00× | 0.98× | 13 of 20 fixed vs. 14 of 20 (same setup as standard) |
 
-Compared with standard Amplifier on the same tasks, run at the same time. Ratios are geometric means of per-task
-ratios. Everyday tasks: 12 tuning tasks (0.55× / 0.38×, one run each) and 8 unseen tasks run three times each
-(0.61× / 0.40×). The unseen-task result met 5 of its 6 preregistered criteria; the significance test fell short
-(p = 0.07), so it is not yet confirmed.
+Everyday rows: the current default (Jev deciding, one decision per request) on 8 tasks never used for tuning, 3 runs
+each, against standard Amplifier with the same default model. The Fable result met all 6 criteria written down before
+the run (faster on 8 of 8 tasks, sign test p = 0.008, 95% interval 0.35–0.49); the Opus result failed the time
+criterion. On the 12 tuning tasks the default measured 0.56× / 0.48× (Fable) and 0.76–0.83× / 0.82–0.90× (Opus) in
+two batches. Ratios are geometric means of per-task ratios. Everyday setups ran back to back in the same batch; bug-fix
+setups ran at the same time.
 
-**These runs used an expensive default model (Claude Fable 5.1).** With Claude Opus 5.5 as your default, Sonnet is
-about 1.3× faster at writing but reads cached conversation at a higher price, so expect mostly a speed gain:
-short requests save a little, long ones can cost slightly more. `afast savings` (below) measures it on your own
-work.
+**Who benefits.** Easy requests go to Claude Sonnet 5, so the gain depends on your default model. With an expensive
+default it is large. Claude Opus 5.5 was about as fast and as cheap as Sonnet on these tasks, so there was nothing to
+gain; with Opus, keep Fast Decisions for the dashboard and savings view or turn model routing off. On small tasks most
+of the gain is the faster model itself: against standard Amplifier switched to Sonnet, Fast Decisions took 0.91× the
+time (95% interval 0.77–1.08) and 1.29× the cost on the unseen tasks. The dispatcher's job is keeping hard requests and large projects on your usual model.
 
 Full results: [report](docs/report/fast-decisions-report.html) (plain language) ·
 [RESULTS-2026-09-24.md](docs/RESULTS-2026-09-24.md) · [study protocol](evals/STUDY-DESIGN.md) §18 ·
-[raw summaries with checksums](docs/evidence/2026-09-24/).
+evidence with checksums: [2026-09-24](docs/evidence/2026-09-24/), [2026-09-25](docs/evidence/2026-09-25/).
 
 ## Install
 
@@ -54,9 +58,10 @@ amplifier bundle add --app "git+https://github.com/michaeljabbour/amplifier-bund
 
 1. **One decision per request.** Before the first model call, the decision-maker judges the request easy or hard.
    That picks the model and thinking level for the whole request; nothing switches halfway (only a provider error
-   on the faster model moves the request to your usual model).
-2. **Large projects always get your usual model.** In a folder with more than 300 files, the request runs exactly
-   as standard Amplifier would, whatever the decision-maker says. On real bug fixes, starting on the cheaper model
+   on the faster model moves the rest of the request to your usual model; the failed call itself is not retried).
+2. **Large projects always get your usual model.** When the session's folder holds more than 300 files (not counting
+   .git, dependency, virtualenv and build folders), the request runs on your usual model and thinking level, whatever
+   the decision-maker says. On real bug fixes, starting on the cheaper model
    lost fixes (19 of 30 vs. 23 of 30) and switching up later did not recover them.
 3. **Everything is recorded.** Each decision, who made it, and each model call's tokens and cost go to a local
    log (no prompts or file contents) that the dashboard and `afast savings` read.
@@ -65,16 +70,17 @@ Design detail: [docs/ORCHESTRATOR-PRIMARY.md](docs/ORCHESTRATOR-PRIMARY.md).
 
 ## Who decides
 
-Measured on 90 real issues rated by human experts (SWE-bench Verified): how often each decision-maker picks the
-harder of two issues, and how long it takes. 50% is a coin flip.
+Measured on 90 real issues rated by human experts (SWE-bench Verified): how often each decision-maker ranks an issue
+rated an hour or more of work above one rated under 15 minutes, and how long it takes. 50% is a coin flip. Issues in
+between were not included, so everyday accuracy will be lower. Re-run on 2026-09-25; figures reproduced.
 
 | Decision-maker | Picks the harder issue | Time per decision | Data leaves your machine |
 |---|---|---|---|
-| **Jev** (hosted by TypeSafe) · default | 83% | ~0.16 s | The first 2,500 characters of the request |
+| **Jev** (hosted by TypeSafe) · default | 83% | ~0.14–0.16 s | The first 2,500 characters of your latest message (for helper sessions, of the helper's instructions) |
 | Built-in rule · used without a key or if Jev fails | 60% | instant | No |
-| Qwen 27B-class model on your Mac (Ollama `qwen:latest`) | 85% | ~2.45 s | No |
+| Large local Qwen model (Ollama `qwen:latest`, 27.4B parameters, 29 GB) | 85% | ~2.2–2.5 s | No |
 | Qwen3 8B on your Mac (Ollama `qwen3:8b`) | 72% | ~0.36 s | No |
-| A 27B model on a shared hosted server (RunPod) | 85% | median 0.63 s; 1 in 4 took 5–22 s | To your server |
+| Qwen3.8 27B on a shared hosted server (RunPod) | 85% | median ~0.6 s; 18–25% of calls took 5–24 s | To your server |
 
 Switch in `~/.amplifier/settings.yaml` (no bundle edit):
 
@@ -87,16 +93,17 @@ overrides:
       # or a local model:  backend: ollama, model: "qwen3:8b", timeout_ms: 3000
 ```
 
-On the 12 everyday tasks, Jev deciding ran at 0.61× time and 0.50× cost against 0.55× and 0.38× for the built-in
-rule, because Jev kept 3 of 12 tasks on the usual model. Jev judges difficulty better; the rule was cheaper on a
-set of all-easy tasks. Setup details: [docs/MODEL-SETUP.md](docs/MODEL-SETUP.md) · data paths:
+The built-in rule alone (no key) measured 0.55× / 0.38× on the 12 tuning tasks and 0.61× / 0.40× on the 8 unseen
+tasks (Fable default); its confirmation run met 5 of 6 criteria (p = 0.07). Jev judges difficulty better; the rule
+was cheaper on a set of all-easy tasks because it kept fewer requests on the usual model. Setup details: [docs/MODEL-SETUP.md](docs/MODEL-SETUP.md) · data paths:
 [docs/PRIVACY.md](docs/PRIVACY.md).
 
 ## Also included
 
 - **Savings estimate:** `afast savings [--since 7d] [--json]` and the dashboard's savings panel price and time each
-  cheaper-model request as if your usual model had done it. Estimates, labeled as such; a negative number means
-  routing cost more.
+  cheaper-model request as if your usual model had done it, assuming your usual model would already have the
+  conversation cached after the first request and charging the cache rebuild when a hard request follows an easy
+  one. Estimates, labeled as such; a negative number means routing cost more.
 - **Quality grader:** `afast rubric requests.jsonl` scores answers against weighted yes/no questions using Jev.
 - **Watch-only mode:** `behaviors/fast-decisions-shadow.yaml` records what would have been decided without
   changing anything.
@@ -105,7 +112,8 @@ set of all-easy tasks. Setup details: [docs/MODEL-SETUP.md](docs/MODEL-SETUP.md)
 
 ## Limits
 
-- Tested on one Apple-silicon Mac with the Anthropic provider. Other providers, models and machines may differ.
+- Tested on one Apple-silicon Mac with the Anthropic provider; routing only sends the faster model to Anthropic
+  providers. Other providers, models and machines may differ.
 - The routing checks are confirmed end to end in the Amplifier command line, `amplifier-runtime serve` (the engine
   Studio uses) and the terminal app. Studio's window itself was not driven.
 - A model set before a session starts (in settings or with `--model`) looks the same as your default, so it can

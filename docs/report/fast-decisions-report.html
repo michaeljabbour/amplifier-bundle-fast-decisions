@@ -106,16 +106,17 @@
 <header class="section">
   <div class="hero">
     <div class="hero-copy">
-      <p class="kicker">Amplifier · September 24, 2026</p>
+      <p class="kicker">Amplifier · September 24, 2026 · updated September 25</p>
       <h1 class="hero-title">Introducing fast decisions for Amplifier</h1>
       <p class="lede">Most of what you ask a coding assistant is quick work. Some of it is a real investigation. Until now,
       Amplifier treated both the same way: its largest model, thinking hard, every time.</p>
       <p class="lede">Fast decisions gives Amplifier a dispatcher. Before the work begins, it makes one quick call on
-      how much horsepower the job needs, then gets out of the way. On everyday tasks, Amplifier now finishes in
-      <strong>roughly half to three-fifths of the time for about 40% of the cost</strong>, with every task still
-      passing its hidden checks. On real bug fixes in large projects it runs exactly the standard setup, so reliability
-      matched within noise (13 of 20 fixed vs. 14 of 20).</p>
-      <p class="meta">About 360 recorded coding runs · 3 test courses · 9 decision-makers compared</p>
+      how much horsepower the job needs, then gets out of the way. With an expensive default model, everyday tasks
+      now finish in <strong>0.42× the time for half the cost</strong> on eight tasks we never tuned against, confirmed
+      by a test whose pass criteria we wrote down in advance, with every task still passing its hidden checks. With
+      Claude Opus 5.5 as the default there was no measurable gain. On real bug fixes in large projects it runs exactly
+      the standard setup, so reliability matched within noise (13 of 20 fixed vs. 14 of 20).</p>
+      <p class="meta">About 660 recorded coding runs · 3 test courses · 9 decision-makers compared</p>
     </div>
   </div>
 </header>
@@ -126,15 +127,16 @@
   <table class="headline">
     <thead><tr><th>Kind of work</th><th>Time</th><th>Cost</th><th>Quality</th></tr></thead>
     <tbody>
-      <tr><td>Everyday tasks<br><span class="fine">small, well-defined jobs</span></td><td class="big">0.55–0.61×</td><td class="big">0.38–0.40×</td><td>Every task passed in every setup (these tasks are too easy to reveal small quality differences)</td></tr>
+      <tr><td>Everyday tasks, expensive default model<br><span class="fine">Claude Fable 5.1 · eight unseen tasks, confirmed</span></td><td class="big">0.42×</td><td class="big">0.50×</td><td>Every run passed (24 of 24 vs. 24 of 24); these tasks are too easy to reveal small quality differences</td></tr>
+      <tr><td>Everyday tasks, Claude Opus 5.5 as default<br><span class="fine">eight unseen tasks</span></td><td class="big">1.01×</td><td class="big">0.98×</td><td>No measurable gain; every run passed</td></tr>
       <tr><td>Real bug fixes in large projects<br><span class="fine">SWE-bench Verified, official grading</span></td><td class="big">1.00×</td><td class="big">0.98×</td><td>Same model and settings as standard; 13 of 20 vs. 14 of 20 fixed (within run-to-run noise)</td></tr>
     </tbody>
   </table>
-  <p class="fine">Relative to standard Amplifier running the same tasks at the same time; 0.55× means 55% of the time.
-  Time and cost ratios are geometric means of per-task ratios.
-  The everyday-task range spans tuning tasks (0.55×) and a separate set of eight tasks never used for tuning (0.61×).
-  These runs used an expensive default model (Claude Fable 5.1); with a cheaper default the savings shrink (see
-  <em>Which default model benefits</em>).</p>
+  <p class="fine">Relative to standard Amplifier with the same default model, in the same batch: everyday-task setups
+  ran back to back within about fifteen minutes, bug-fix setups ran at the same time. 0.42× means 42% of the time.
+  Time and cost ratios are geometric means of per-task ratios. The everyday rows are the current default (Jev
+  deciding, one decision per request), three runs per task; on the twelve tuning tasks it measured 0.56× / 0.48×
+  (Fable) and 0.76–0.83× / 0.82–0.90× (Opus) across two batches.</p>
 </section>
 
 <section class="section">
@@ -145,9 +147,9 @@
   request. Work inside a large project always gets the full model. That's the lesson of the bug-fix results below.</p>
   <figure>
     <div class="fig"><div id="v-flow"></div></div>
-    <figcaption>Figure 1. The dispatcher. The call can be made by a simple built-in rule (the default; nothing leaves
-    your machine), by Jev, TypeSafe's hosted decision model, or by a model you run yourself. Every decision is logged
-    to a live dashboard that opens automatically.</figcaption>
+    <figcaption>Figure 1. The dispatcher. The call is made by Jev, TypeSafe's hosted decision model (the default), by
+    a simple built-in rule (used without a Jev key or when Jev fails; nothing leaves your machine), or by a model you
+    run yourself. Every decision is logged to a live dashboard that opens automatically.</figcaption>
   </figure>
 </section>
 
@@ -156,20 +158,22 @@
   <h2>A step up where it's safe</h2>
 
   <h3>Everyday tasks</h3>
-  <p>On twelve small, realistic jobs (fixing a bug, adding a feature, answering a question about code), the
-  dispatcher sends nearly everything to the faster model and finishes in <strong>0.55× the time for 0.38× the
-  cost</strong>, with every task passing its hidden checks. On eight further tasks we never tuned against, it ran at
-  <strong>0.61× the time and 0.40× the cost</strong>. Against standard Amplifier simply switched to the cheaper
-  model it cost the same and was not reliably faster (four tasks faster, four slower), which is what we expected: on
-  small jobs the dispatcher mostly just picks the cheaper model.</p>
+  <p>On twelve small, realistic jobs (fixing a bug, adding a feature, answering a question about code), Jev sent
+  about three in four requests to the faster model and the current default finished in <strong>0.56× the time for
+  0.48× the cost</strong> (0.57× and 0.46× in a second batch), every task passing its hidden checks. On eight
+  further tasks we never tuned against, three runs each, it ran at <strong>0.42× the time and 0.50× the cost</strong>
+  and was faster on all eight. Against standard Amplifier simply switched to the cheaper model it took about the same
+  time (0.91×, 95% interval 0.77–1.08) and cost more (1.29×) on the unseen tasks, because the dispatcher keeps the
+  requests it judges hard on the full model. On small jobs, most of the gain comes from using the faster model; the dispatcher's job is to
+  know when not to.</p>
   <figure>
     <div class="fig" id="c-simple-time"></div>
     <figcaption>Figure 2. Everyday tasks, time relative to standard Amplifier (1.0×), on the twelve tuning tasks. The
     "first version" started every task on the cheaper model and switched up after a few steps. It was fast, but cost
-    more than it needed to (Figure 3). Each task has hidden checks the assistant cannot see. Each setup ran at the
-    same time as its own standard-Amplifier comparison; the rows come from three separate runs, so compare each bar
-    with 1.0×, not with each other. In the same run as the recommended rule, the cheaper-model control was 0.57× the
-    time and 0.37× the cost.</figcaption>
+    more than it needed to (Figure 3). Each task has hidden checks the assistant cannot see. Each setup was compared
+    with standard Amplifier in its own batch, run back to back; the rows come from four separate batches, so compare
+    each bar with 1.0×, not with each other. The "earlier Jev build" could still switch a request up after six steps;
+    the current default never switches mid-request except after a service error.</figcaption>
     <details><summary>Data</summary><div id="t-simple"></div></details>
   </figure>
   <figure>
@@ -204,11 +208,14 @@
   </figure>
 
   <h3>Choosing who makes the call</h3>
-  <p>To compare decision-makers, we showed each one pairs of real issues: one rated a quick fix by human experts and
-  one rated an hour or more of work. <strong>Jev picks the harder one 83% of the time in about 0.16 seconds.</strong> A 27-billion-parameter open model
-  does slightly better (85%): on this Mac it takes about two and a half seconds; hosted on a shared RunPod gateway it
-  takes about 0.6 seconds typically, but one decision in four stalled for 5–22 seconds. Mid-size local models land around 70–76%. The tiny model we started with was no better than a coin flip,
-  and no simple rule based on the wording of a request beat 60%.</p>
+  <p>To compare decision-makers, we showed each one pairs of real issues: one rated a quick fix (under 15 minutes)
+  by human experts and one rated an hour or more of work; issues in between were left out, so everyday accuracy will
+  be lower. <strong>Jev picks the harder one 83% of the time in about 0.14–0.16 seconds.</strong> A large open model
+  does slightly better (85%): run locally (Ollama qwen:latest, 27 billion parameters) it takes about two and a
+  quarter to two and a half seconds; hosted on a shared RunPod gateway it takes about 0.6 seconds typically, but in
+  two runs 18–25% of decisions stalled for 5–24 seconds. Mid-size local models land around 69–76%. The tiny model we
+  started with was no better than a coin flip, and no simple rule based on the wording of a request beat 60%. We ran
+  every decision-maker twice, a day apart; each landed within a point or two of its first result.</p>
   <figure>
     <div class="fig"><div id="v-judges"></div></div>
     <figcaption>Figure 6. How often each decision-maker picks the harder of two issues, against its speed, on 90 human-rated issues from SWE-bench
@@ -222,21 +229,22 @@
 <section class="section">
   <p class="kicker">Fit</p>
   <h2>Which default model benefits</h2>
-  <p>Fast decisions sends easy requests to Claude Sonnet 5. How much that saves depends on what your default model
-  is. Against an expensive default the gain is large; against a default that is nearly as cheap, it is mostly speed.
-  Claude Opus 5.5, for example, costs a little more than Sonnet for fresh text but <strong>less</strong> for re-reading
-  a conversation it has already seen, which is most of what a long request does.</p>
+  <p>Fast decisions sends easy requests to Claude Sonnet 5, so what it saves depends on what your default model is.
+  Against an expensive default the gain is large. Against Claude Opus 5.5, which on these tasks was about as fast
+  and as cheap as Sonnet (and reads a conversation it has already seen for less), we measured no gain on unseen
+  tasks.</p>
   <table class="data">
-    <thead><tr><th>Default model</th><th>Price vs. Sonnet 5 (new text · output · re-read)</th><th>Writing speed vs. Sonnet 5</th><th>What routing easy requests buys</th></tr></thead>
+    <thead><tr><th>Default model</th><th>Price vs. Sonnet 5 (new text · output · re-read)</th><th>Eight unseen everyday tasks: time · cost</th><th>Twelve tuning tasks (two batches): time · cost</th></tr></thead>
     <tbody>
-      <tr><td>Claude Fable 5.1 (used in our studies)</td><td>3.3× · 3.3× · 0.8×</td><td>not measured separately</td><td>Measured: 0.55–0.61× time, 0.38–0.40× cost on everyday tasks</td></tr>
-      <tr><td>Claude Opus 5.5</td><td>1.3× · 1.3× · 0.7×</td><td>Sonnet about 1.3× faster (113 vs. 88 tokens per second)</td><td>Estimated: roughly 20% faster writing; a small saving on short requests, slightly higher cost on long ones</td></tr>
+      <tr><td>Claude Fable 5.1</td><td>3.3× · 3.3× · 0.8×</td><td><strong>0.42× · 0.50×</strong>, faster on 8 of 8 (confirmed)</td><td>0.56–0.57× · 0.46–0.48×</td></tr>
+      <tr><td>Claude Opus 5.5</td><td>1.3× · 1.3× · 0.7×</td><td>1.01× · 0.98×, faster on 2 of 8 (no effect)</td><td>0.76–0.83× · 0.82–0.90×</td></tr>
     </tbody>
   </table>
-  <p class="fine">Prices are the provider's list rates per million tokens as recorded by Amplifier. Speed: four
-  600-token answers per model to the same prompt, measured once on 24 September 2026; service speed varies by hour.
-  The Opus row is an estimate, not a head-to-head study. The dashboard's savings view prices every routed request
-  against your own default model and shows a negative number if routing costs more.</p>
+  <p class="fine">Each against standard Amplifier with the same default model, every run passing. On the tuning tasks
+  the Opus setup looked 17–24% faster; on the unseen tasks that did not hold. If your default is Opus 5.5, keep fast
+  decisions for its dashboard and savings view, or turn model routing off. Prices are the provider's list rates as
+  recorded by Amplifier. The dashboard's savings view prices every routed request against your own default model
+  and shows a negative number if routing costs more.</p>
 </section>
 
 <section class="section">
@@ -250,13 +258,15 @@
     <div class="fig"><div id="v-memory"></div></div>
     <figcaption>Figure 7. The same SymPy fix, done two ways, from its per-request records. Top: the first version
     changed its thinking level twice, forcing two full rebuilds (the tall blocks). Bottom: deciding once kept the
-    memory warm after the first step. That's about 87,000 words rebuilt in the first case, and 31,000 in the second.</figcaption>
+    memory warm after the first step. That's about 87,000 words rebuilt in the first case, and 31,000 in the second. Per-step values are stored with the evidence (follow-ups).</figcaption>
   </figure>
   <ul class="lead-list">
     <li><strong>One decision per request.</strong> The dispatcher picks the model and thinking level before the first
-    step and never changes them mid-request.</li>
-    <li><strong>Large projects get the full model.</strong> A workspace with more than 300 files is treated as a real
-    investigation, whatever the decision-maker says. That keeps large-project work on exactly the standard setup.</li>
+    step and changes them mid-request only if the faster model's service returns an error. In the current default's
+    first re-test batch: 96 decisions, zero mid-request switches. (An earlier build could also switch up after six steps.)</li>
+    <li><strong>Large projects get the full model.</strong> When the session's folder holds more than 300 files (not
+    counting .git, dependency and build folders), the request is treated as a real investigation, whatever the
+    decision-maker says. That keeps large-project work on exactly the standard setup.</li>
     <li><strong>Everything is recorded.</strong> Each decision, and who made it, appears in the live dashboard.</li>
   </ul>
 </section>
@@ -264,23 +274,23 @@
 <section class="section">
   <p class="kicker">Start-up</p>
   <h2>The slowdown that isn't the AI</h2>
-  <p>On real bug fixes, waiting on the AI service is about 80–85% of the working time; most of the rest is running
-  tools. On top of that, every run spends about 12 seconds starting up and shutting down, and that part grows with
-  every add-on and every stored conversation. The largest single start-up item we found is part of Amplifier itself,
-  so the fix helps everyone.</p>
+  <p>On real bug fixes, waiting on the AI service is about 80–85% of the working time (median 84% over 165 runs);
+  most of the rest is running tools. On top of that, every run spends about 12 seconds starting up and shutting down
+  (median 12.5 s), and that part grows with every add-on and every stored conversation. The largest single start-up
+  item we found is part of Amplifier itself, so the fix helps everyone.</p>
   <figure>
     <div class="fig" id="c-startup"></div>
-    <figcaption>Figure 8. Where 26 seconds of start-up went on one well-used machine with many add-ons, from a profiled
-    run. The largest item was a built-in check that searched every file Amplifier had ever saved, including every
-    stored conversation, at every start and for every helper Amplifier spins up. The add-on items belong to their
-    owners to optimize. The start-up check took 5.8 s on its own and 5.5–7.7 s inside profiled sessions; the add-on
-    refresh runs before every message, not only at start-up. "Everything else" is the remainder of the profiled total.</figcaption>
+    <figcaption>Figure 8. The largest start-up items in one profiled trivial request on a well-used machine with 24
+    add-ons (25 September). The biggest is a built-in check that searched every file Amplifier had ever saved,
+    including every stored conversation, at every start and for every helper Amplifier spins up (two calls here). The
+    add-on item belongs to its owners to optimize. Launching Amplifier before the session begins took 2.6–3.2 s in two
+    unprofiled runs. The profiler adds overhead, so compare the bars with each other.</figcaption>
   </figure>
-  <p>We then trimmed four of the heaviest add-ons at the source and merged the changes to their projects. Three
-  cut the text they add to every request, one of them from 2,153 to 1,146 tokens, and the memory add-on stopped
-  holding up the first reply while it looked things up: on a copy of a real memory store, the wait before the first
-  answer fell from about 12 seconds to under 3. With all four back on, a trivial request took 18.5 seconds against
-  17.5 seconds without them.</p>
+  <p>We then trimmed four of the heaviest add-ons at the source, and each change was reviewed by a separate
+  Amplifier session before merging. Three cut the text they add to every request (one from 2,153 to 1,146 tokens,
+  another from about 2,900 to 1,350), and the memory add-on's look-ups got about three times faster (a search went
+  from 3.0 to 1.0 seconds on a copy of a real memory store) and no longer hold up the start of a session. With all
+  four back on, a trivial request took 18.5 seconds against 17.5 seconds without them.</p>
   <p class="fine">Trivial-request times: two runs each (18.3 and 16.6 s without the four add-ons; 18.6 and 18.4 s with
   them), same machine and settings, after a warm-up run.</p>
   
@@ -305,16 +315,16 @@
       <h4>Choose who makes the call</h4>
       <p>Jev by default, with a built-in rule taking over whenever Jev isn't available; or a model you run
       yourself, locally or on your own servers. One setting switches between them, and picking a model yourself
-      always wins.</p></div></div>
+      during a session always wins (a model set before the session starts can still be routed).</p></div></div>
     <div class="card"><span class="plate"><span class="plate-art" data-plate-seed="other-assistants" data-plate-w="480" data-plate-h="180"></span></span>
       <div class="card-body"><span class="tag">Inside your tools</span>
       <h4>For Claude Code, Codex and OpenCode</h4>
       <p>The same decision service, callable as a stand-alone tool. It offers suggestions; it can't change how those assistants run.</p></div></div>
     <div class="card"><span class="plate"><span class="plate-art" data-plate-seed="startup-fix" data-plate-w="480" data-plate-h="180"></span></span>
       <div class="card-body"><span class="tag">Back into Amplifier</span><span class="tag tag--quiet">Proposed</span>
-      <h4>A six-second start-up delay, fixed</h4>
-      <p>The start-up check now looks only where settings actually live: about 6–7 seconds becomes 2 milliseconds on
-      one well-used machine, and it stops mistaking saved notes for settings. Independently reviewed; offered to the
+      <h4>A multi-second start-up delay, fixed</h4>
+      <p>The start-up check now looks only where settings actually live: 4–7 seconds per session start becomes 2
+      milliseconds on one well-used machine, and it stops mistaking saved notes for settings. Independently reviewed; offered to the
       Amplifier project as an optional suggestion (amplifier-foundation #413).</p></div></div>
     <div class="card"><span class="plate"><span class="plate-art" data-plate-seed="savings-view" data-plate-w="480" data-plate-h="180"></span></span>
       <div class="card-body"><span class="tag">Inside your tools</span><span class="tag tag--quiet">New</span>
@@ -337,17 +347,20 @@
 <section class="section">
   <p class="kicker">Rigor</p>
   <h2>How sure we are</h2>
-  <p>Every setup ran at the same time as its own standard-Amplifier comparison, and against standard Amplifier
-  simply switched to the cheaper model; charts that combine rows from different runs say so. The second comparison tells us whether savings come from dispatching or just
-  from a cheaper model. Runs were isolated from each other and from this machine's everyday settings.</p>
+  <p>Every setup was compared with standard Amplifier in the same batch, and against standard Amplifier simply
+  switched to the cheaper model, which tells us whether savings come from dispatching or just from a cheaper model.
+  Bug-fix setups ran at the same time; everyday-task setups ran back to back, always in the same order, about ten
+  minutes apart. Two batches an hour and a half apart gave the same result, but within-batch drift was not tested
+  directly. Charts that combine rows from different batches say so. Runs were isolated from each other and from this
+  machine's everyday settings, and an independent Amplifier session re-computed every number here from the stored
+  records.</p>
   <div class="verdict">
-    <p><strong>The confirmation run: strong effect, not yet confirmed by our own rule.</strong></p>
-    <p>Before starting it, we wrote down six pass criteria for eight unseen everyday tasks, each repeated three times.
-    Five passed: time 0.61× (95% interval 0.47–0.78), cost 0.40×, quality equal (every run passed), every mechanism
-    check green, and enough repetitions and tasks. The sixth, a sign test requiring statistical significance, did not:
-    seven tasks were faster and one was marginally slower (a median of 8.79 s vs. 8.73 s), giving p = 0.07 against a
-    bar of 0.05. With only eight tasks, that test passes only if all eight are faster. Next time we'll register a
-    larger set.</p>
+    <p><strong>The confirmation run: confirmed with an expensive default model, no effect with Opus 5.5.</strong></p>
+    <p>Before starting it, we wrote down six pass criteria for eight unseen everyday tasks, each repeated three times,
+    for two default models. With Claude Fable 5.1 all six passed: time 0.42× (95% interval 0.35–0.49), cost 0.50×,
+    faster on all eight tasks (sign test p = 0.008), every run passing, every mechanism check green. With Claude Opus
+    5.5 the time criterion failed: 1.01× (0.86–1.17), cost 0.98×, faster on two of eight. An earlier confirmation run
+    of the built-in rule met five of its six criteria (0.61×, p = 0.07).</p>
   </div>
   <ul class="lead-list">
     <li><strong>Real bug fixes.</strong> Ten issues is a small sample. On large projects the recommended setup runs exactly
@@ -482,48 +495,47 @@ records: <code>docs/RESULTS-2026-09-24.md</code>, <code>evals/STUDY-DESIGN.md</c
 <script>
 const DATA = {
   simpleTime: { title: 'Everyday tasks · time', unit: '×', ref: 1, rows: [
-    ['Standard Amplifier, cheaper model', 0.59, 'Just swapping in the cheaper model'],
+    ['Standard Amplifier, cheaper model', 0.58, 'Same batch as the current default'],
     ['First version: start cheap, switch up', 0.48, 'Fast, but costly'],
-    ['Recommended · built-in rule', 0.55, 'The new default; 0.61× on eight unseen tasks', true],
-    ['Recommended · Jev decides', 0.61, 'Sent 3 of 12 tasks to the full model'],
-    ['Full model, lower thinking level', 0.77, 'Same model as standard Amplifier'] ]},
+    ['Current default · Jev decides once', 0.56, '0.57× in a second batch; 0.42× on eight unseen tasks', true],
+    ['Built-in rule (no Jev key)', 0.55, '0.61× on eight unseen tasks'],
+    ['Earlier Jev build (could switch mid-request)', 0.61, 'Sent 3 of 12 tasks to the full model'],
+    ['Full model, thinking level by phase', 0.77, 'Same model as standard Amplifier'] ]},
   simpleCost: { title: 'Everyday tasks · cost', unit: '×', ref: 1, rows: [
-    ['Standard Amplifier, cheaper model', 0.42, ''],
+    ['Standard Amplifier, cheaper model', 0.38, 'Same batch as the current default'],
     ['First version: start cheap, switch up', 0.77, 'Switching thinking levels rebuilt the memory'],
-    ['Recommended · built-in rule', 0.38, 'The new default; 0.40× on eight unseen tasks', true],
-    ['Recommended · Jev decides', 0.50, ''],
-    ['Full model, lower thinking level', 1.09, 'Faster, slightly pricier'] ]},
+    ['Current default · Jev decides once', 0.48, '0.46× in a second batch; 0.50× on eight unseen tasks', true],
+    ['Built-in rule (no Jev key)', 0.38, '0.40× on eight unseen tasks'],
+    ['Earlier Jev build (could switch mid-request)', 0.50, ''],
+    ['Full model, thinking level by phase', 1.09, 'Faster, slightly pricier'] ]},
   complexSolved: { title: 'Real bug fixes · share fixed', unit: '%', ref: null, max: 100, rows: [
     ['Standard Amplifier', 70, '14 of 20, same batch as recommended'],
     ['Recommended · full model for large projects', 65, '13 of 20; same setup as standard (14 of 20)', true],
-    ['Full model, lower thinking level', 60, '12 of 20: lost one issue twice'],
+    ['Full model, thinking level by phase', 60, '12 of 20: lost one issue twice'],
     ['Earlier dispatcher (Jev, no size rule)', 63, '19 of 30 (standard fixed 23 of 30 in that batch)'],
     ['First version: start cheap, switch up', 80, '8 of 10 (standard fixed 7 of 10 in that batch)'],
     ['Standard Amplifier, cheaper model', 50, '5 of 10'] ]},
   complexTime: { title: 'Real bug fixes · time', unit: '×', ref: 1, rows: [
     ['Recommended · full model for large projects', 1.00, 'Same as standard, by design', true],
-    ['Full model, lower thinking level', 0.81, 'Faster; fixed 12 of 20 vs. 14 of 20'],
+    ['Full model, thinking level by phase', 0.81, 'Faster; fixed 12 of 20 vs. 14 of 20'],
     ['Earlier dispatcher (Jev, no size rule)', 0.86, 'Faster on quick bugs, less reliable'],
     ['First version: start cheap, switch up', 1.21, 'Wasted steps, then rebuilt its memory'],
     ['Standard Amplifier, cheaper model', 1.66, 'The cheaper model struggles on real bugs'] ]},
-  startup: { title: 'Where 26 seconds of start-up went', unit: ' s', ref: null, rows: [
-    ['Searching every saved file (built-in check)', 7.7, 'Fix in review: 2 ms'],
-    ['An add-on that refreshes before every message', 5.1, 'Owned by that add-on'],
-    ['Loading and checking 151 modules', 4.8, ''],
-    ['An add-on\'s start-of-session look-ups', 4.6, 'Owned by that add-on'],
-    ['Reading and combining settings', 2.0, ''],
-    ['Everything else (remainder)', 2.2, ''] ]},
+  startup: { title: 'Largest start-up items, one profiled request', unit: ' s', ref: null, rows: [
+    ['Searching every saved file (built-in check, 2 calls)', 8.3, 'Fix proposed upstream: 2 ms'],
+    ['A knowledge-base add-on\'s session look-ups', 5.3, 'Owned by that add-on'],
+    ['Launching Amplifier, before the session starts', 2.9, 'Unprofiled: 2.6–3.2 s'] ]},
   judges: [ // [label, accuracy %, latency s, note, emphasis]
-    ['Jev (hosted)', 83, 0.155, 'TypeSafe', true],
-    ['Large open model, this Mac', 85, 2.45, '27B parameters, runs locally'],
-    ['GLM 4.7 Flash, this Mac', 76, 0.5, ''],
+    ['Jev (hosted)', 83, 0.15, 'TypeSafe; 83% in both runs', true],
+    ['Large open model, this Mac', 85, 2.3, 'Ollama qwen:latest, 27B parameters'],
+    ['GLM 4.7 Flash, this Mac', 76, 0.45, '75% and 76% in two runs'],
     ['Qwen3 4B, this Mac', 74, 0.26, ''],
     ['Qwen3 8B, this Mac', 72, 0.36, ''],
-    ['Llama 3.1 8B, this Mac', 70, 0.46, ''],
+    ['Llama 3.1 8B, this Mac', 70, 0.38, '70% and 69% in two runs'],
     ['Built-in rule', 60, 0.001, 'Instant, private'],
     ['Qwen3 0.6B, this Mac', 50, 0.072, 'Coin flip'] ],
 };
-window.HOSTED = [85, 0.63, 'The same 27B model on a shared RunPod gateway: median 0.63 s; one decision in four stalled for 5–22 s and would fall back to the built-in rule', 'The hosted point is the same 27-billion-parameter model served from a shared RunPod gateway: median 0.63 s per decision, 40–90 ms on calls the gateway had cached, and one decision in four took 5–22 seconds, which the dispatcher would cut off at its 3-second limit and answer with the built-in rule instead. A dedicated server should be steadier; we have not measured one.']; // [accuracy %, typical seconds, note, caption sentence] or null
+window.HOSTED = [85, 0.61, 'The same 27B model on a shared RunPod gateway: median about 0.6 s; in two runs 18–25% of decisions stalled for 5–24 s and would fall back to the built-in rule', 'The hosted point is a 27-billion-parameter Qwen model served from a shared RunPod gateway: median 0.59–0.63 s per decision, and in two runs 18–25% of decisions took 5–24 seconds, which the dispatcher would cut off at its 3-second limit and answer with the built-in rule instead. A dedicated server should be steadier; we have not measured one.']; // [accuracy %, typical seconds, note, caption sentence] or null
 
 const tip = document.getElementById('tip');
 const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
