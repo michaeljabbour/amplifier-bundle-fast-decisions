@@ -1,0 +1,1698 @@
+{
+ "scope": {
+  "projects": [
+   "amplifier-bundle-fast-decisions",
+   "teaserkit"
+  ],
+  "day_local": "2026-09-25 (EDT)",
+  "sessions_with_calls": 45,
+  "helper_sessions_with_calls": 42,
+  "calls": 2884,
+  "cost_usd": 363.09,
+  "model_seconds": 23455,
+  "prices_per_MTok": {
+   "opus": [
+    4,
+    20,
+    0.2,
+    5
+   ],
+   "sonnet": [
+    3,
+    15,
+    0.3,
+    3.75
+   ],
+   "haiku": [
+    1,
+    5,
+    0.1,
+    1.25
+   ]
+  }
+ },
+ "cost_components_usd": {
+  "uncached_input": 0.48,
+  "output": 32.62,
+  "cache_read": 221.71,
+  "cache_write": 108.28
+ },
+ "prompt_tokens_pctiles": {
+  "p10": 98432,
+  "p50": 263036,
+  "p90": 484680,
+  "p99": 630082
+ },
+ "by_model_mainhelper": {
+  "sonnet | helper": {
+   "calls": 2184,
+   "cost_usd": 237.829,
+   "seconds": 17249.13,
+   "out_tok": 1560579,
+   "think_tok": 642879,
+   "cache_read_M": 600.371,
+   "cache_write_M": 9.146,
+   "pct_cost": 65.502,
+   "usd_per_call": 0.109,
+   "sec_per_call": 7.898
+  },
+  "opus | main": {
+   "calls": 390,
+   "cost_usd": 93.479,
+   "seconds": 3954.52,
+   "out_tok": 317669,
+   "think_tok": 122360,
+   "cache_read_M": 96.944,
+   "cache_write_M": 13.461,
+   "pct_cost": 25.746,
+   "usd_per_call": 0.24,
+   "sec_per_call": 10.14
+  },
+  "sonnet | main": {
+   "calls": 199,
+   "cost_usd": 26.94,
+   "seconds": 1292.029,
+   "out_tok": 95321,
+   "think_tok": 45716,
+   "cache_read_M": 70.446,
+   "cache_write_M": 1.166,
+   "pct_cost": 7.42,
+   "usd_per_call": 0.135,
+   "sec_per_call": 6.493
+  },
+  "opus | helper": {
+   "calls": 40,
+   "cost_usd": 4.101,
+   "seconds": 681.629,
+   "out_tok": 65653,
+   "think_tok": 31877,
+   "cache_read_M": 3.759,
+   "cache_write_M": 0.407,
+   "pct_cost": 1.129,
+   "usd_per_call": 0.103,
+   "sec_per_call": 17.041
+  },
+  "haiku | helper": {
+   "calls": 69,
+   "cost_usd": 0.712,
+   "seconds": 273.999,
+   "out_tok": 23256,
+   "think_tok": 2025,
+   "cache_read_M": 3.219,
+   "cache_write_M": 0.219,
+   "pct_cost": 0.196,
+   "usd_per_call": 0.01,
+   "sec_per_call": 3.971
+  },
+  "haiku | main": {
+   "calls": 2,
+   "cost_usd": 0.026,
+   "seconds": 3.395,
+   "out_tok": 189,
+   "think_tok": 0,
+   "cache_read_M": 0.0,
+   "cache_write_M": 0.0,
+   "pct_cost": 0.007,
+   "usd_per_call": 0.013,
+   "sec_per_call": 1.698
+  }
+ },
+ "by_bucket": {
+  "routine_continuation": {
+   "calls": 1671,
+   "cost_usd": 184.025,
+   "seconds": 5743.502,
+   "out_tok": 364087,
+   "think_tok": 75459,
+   "cache_read_M": 471.303,
+   "cache_write_M": 9.218,
+   "pct_cost": 50.683,
+   "usd_per_call": 0.11,
+   "sec_per_call": 3.437
+  },
+  "other_action": {
+   "calls": 302,
+   "cost_usd": 54.488,
+   "seconds": 2944.173,
+   "out_tok": 266781,
+   "think_tok": 89706,
+   "cache_read_M": 85.465,
+   "cache_write_M": 5.893,
+   "pct_cost": 15.007,
+   "usd_per_call": 0.18,
+   "sec_per_call": 9.749
+  },
+  "planning_heavy": {
+   "calls": 238,
+   "cost_usd": 45.318,
+   "seconds": 9076.391,
+   "out_tok": 923216,
+   "think_tok": 540401,
+   "cache_read_M": 61.715,
+   "cache_write_M": 2.97,
+   "pct_cost": 12.481,
+   "usd_per_call": 0.19,
+   "sec_per_call": 38.136
+  },
+  "exploration": {
+   "calls": 311,
+   "cost_usd": 38.394,
+   "seconds": 2324.153,
+   "out_tok": 183018,
+   "think_tok": 98035,
+   "cache_read_M": 53.372,
+   "cache_write_M": 4.999,
+   "pct_cost": 10.574,
+   "usd_per_call": 0.123,
+   "sec_per_call": 7.473
+  },
+  "edit_write": {
+   "calls": 231,
+   "cost_usd": 23.663,
+   "seconds": 1445.732,
+   "out_tok": 151405,
+   "think_tok": 13992,
+   "cache_read_M": 67.965,
+   "cache_write_M": 0.289,
+   "pct_cost": 6.517,
+   "usd_per_call": 0.102,
+   "sec_per_call": 6.259
+  },
+  "final_answer": {
+   "calls": 61,
+   "cost_usd": 7.116,
+   "seconds": 1067.444,
+   "out_tok": 96947,
+   "think_tok": 6248,
+   "cache_read_M": 12.77,
+   "cache_write_M": 0.45,
+   "pct_cost": 1.96,
+   "usd_per_call": 0.117,
+   "sec_per_call": 17.499
+  },
+  "delegation_launch": {
+   "calls": 40,
+   "cost_usd": 6.656,
+   "seconds": 784.895,
+   "out_tok": 72645,
+   "think_tok": 20775,
+   "cache_read_M": 10.952,
+   "cache_write_M": 0.566,
+   "pct_cost": 1.833,
+   "usd_per_call": 0.166,
+   "sec_per_call": 19.622
+  },
+  "loop_repeat": {
+   "calls": 30,
+   "cost_usd": 3.427,
+   "seconds": 68.412,
+   "out_tok": 4568,
+   "think_tok": 241,
+   "cache_read_M": 11.197,
+   "cache_write_M": 0.014,
+   "pct_cost": 0.944,
+   "usd_per_call": 0.114,
+   "sec_per_call": 2.28
+  }
+ },
+ "by_bucket_project": {
+  "routine_continuation | amplifier-bundle-fast-decisions": {
+   "calls": 1316,
+   "cost_usd": 154.072,
+   "seconds": 4515.187,
+   "out_tok": 280326,
+   "think_tok": 61101,
+   "cache_read_M": 392.114,
+   "cache_write_M": 7.778,
+   "pct_cost": 42.434,
+   "usd_per_call": 0.117,
+   "sec_per_call": 3.431
+  },
+  "other_action | amplifier-bundle-fast-decisions": {
+   "calls": 231,
+   "cost_usd": 42.849,
+   "seconds": 2310.7,
+   "out_tok": 217310,
+   "think_tok": 63896,
+   "cache_read_M": 70.405,
+   "cache_write_M": 4.184,
+   "pct_cost": 11.801,
+   "usd_per_call": 0.185,
+   "sec_per_call": 10.003
+  },
+  "planning_heavy | amplifier-bundle-fast-decisions": {
+   "calls": 193,
+   "cost_usd": 36.912,
+   "seconds": 6843.505,
+   "out_tok": 733907,
+   "think_tok": 417156,
+   "cache_read_M": 51.539,
+   "cache_write_M": 2.41,
+   "pct_cost": 10.166,
+   "usd_per_call": 0.191,
+   "sec_per_call": 35.459
+  },
+  "routine_continuation | teaserkit": {
+   "calls": 355,
+   "cost_usd": 29.953,
+   "seconds": 1228.315,
+   "out_tok": 83761,
+   "think_tok": 14358,
+   "cache_read_M": 79.189,
+   "cache_write_M": 1.44,
+   "pct_cost": 8.25,
+   "usd_per_call": 0.084,
+   "sec_per_call": 3.46
+  },
+  "exploration | amplifier-bundle-fast-decisions": {
+   "calls": 218,
+   "cost_usd": 28.833,
+   "seconds": 1705.602,
+   "out_tok": 136781,
+   "think_tok": 75059,
+   "cache_read_M": 41.104,
+   "cache_write_M": 3.733,
+   "pct_cost": 7.941,
+   "usd_per_call": 0.132,
+   "sec_per_call": 7.824
+  },
+  "edit_write | amplifier-bundle-fast-decisions": {
+   "calls": 197,
+   "cost_usd": 20.166,
+   "seconds": 1224.683,
+   "out_tok": 129989,
+   "think_tok": 10846,
+   "cache_read_M": 57.74,
+   "cache_write_M": 0.242,
+   "pct_cost": 5.554,
+   "usd_per_call": 0.102,
+   "sec_per_call": 6.217
+  },
+  "other_action | teaserkit": {
+   "calls": 71,
+   "cost_usd": 11.639,
+   "seconds": 633.473,
+   "out_tok": 49471,
+   "think_tok": 25810,
+   "cache_read_M": 15.059,
+   "cache_write_M": 1.708,
+   "pct_cost": 3.206,
+   "usd_per_call": 0.164,
+   "sec_per_call": 8.922
+  },
+  "exploration | teaserkit": {
+   "calls": 93,
+   "cost_usd": 9.561,
+   "seconds": 618.551,
+   "out_tok": 46237,
+   "think_tok": 22976,
+   "cache_read_M": 12.268,
+   "cache_write_M": 1.267,
+   "pct_cost": 2.633,
+   "usd_per_call": 0.103,
+   "sec_per_call": 6.651
+  },
+  "planning_heavy | teaserkit": {
+   "calls": 45,
+   "cost_usd": 8.407,
+   "seconds": 2232.886,
+   "out_tok": 189309,
+   "think_tok": 123245,
+   "cache_read_M": 10.176,
+   "cache_write_M": 0.56,
+   "pct_cost": 2.315,
+   "usd_per_call": 0.187,
+   "sec_per_call": 49.62
+  },
+  "final_answer | amplifier-bundle-fast-decisions": {
+   "calls": 32,
+   "cost_usd": 5.285,
+   "seconds": 784.502,
+   "out_tok": 73115,
+   "think_tok": 4685,
+   "cache_read_M": 8.773,
+   "cache_write_M": 0.362,
+   "pct_cost": 1.456,
+   "usd_per_call": 0.165,
+   "sec_per_call": 24.516
+  },
+  "delegation_launch | amplifier-bundle-fast-decisions": {
+   "calls": 23,
+   "cost_usd": 4.64,
+   "seconds": 597.943,
+   "out_tok": 55790,
+   "think_tok": 19083,
+   "cache_read_M": 6.873,
+   "cache_write_M": 0.426,
+   "pct_cost": 1.278,
+   "usd_per_call": 0.202,
+   "sec_per_call": 25.998
+  },
+  "edit_write | teaserkit": {
+   "calls": 34,
+   "cost_usd": 3.497,
+   "seconds": 221.049,
+   "out_tok": 21416,
+   "think_tok": 3146,
+   "cache_read_M": 10.225,
+   "cache_write_M": 0.047,
+   "pct_cost": 0.963,
+   "usd_per_call": 0.103,
+   "sec_per_call": 6.501
+  },
+  "loop_repeat | amplifier-bundle-fast-decisions": {
+   "calls": 25,
+   "cost_usd": 3.158,
+   "seconds": 50.551,
+   "out_tok": 2670,
+   "think_tok": 179,
+   "cache_read_M": 10.282,
+   "cache_write_M": 0.011,
+   "pct_cost": 0.87,
+   "usd_per_call": 0.126,
+   "sec_per_call": 2.022
+  },
+  "delegation_launch | teaserkit": {
+   "calls": 17,
+   "cost_usd": 2.016,
+   "seconds": 186.952,
+   "out_tok": 16855,
+   "think_tok": 1692,
+   "cache_read_M": 4.079,
+   "cache_write_M": 0.14,
+   "pct_cost": 0.555,
+   "usd_per_call": 0.119,
+   "sec_per_call": 10.997
+  },
+  "final_answer | teaserkit": {
+   "calls": 29,
+   "cost_usd": 1.831,
+   "seconds": 282.942,
+   "out_tok": 23832,
+   "think_tok": 1563,
+   "cache_read_M": 3.997,
+   "cache_write_M": 0.087,
+   "pct_cost": 0.504,
+   "usd_per_call": 0.063,
+   "sec_per_call": 9.757
+  },
+  "loop_repeat | teaserkit": {
+   "calls": 5,
+   "cost_usd": 0.268,
+   "seconds": 17.861,
+   "out_tok": 1898,
+   "think_tok": 62,
+   "cache_read_M": 0.915,
+   "cache_write_M": 0.003,
+   "pct_cost": 0.074,
+   "usd_per_call": 0.054,
+   "sec_per_call": 3.572
+  }
+ },
+ "by_bucket_mainhelper": {
+  "routine_continuation | helper": {
+   "calls": 1342,
+   "cost_usd": 124.147,
+   "seconds": 4264.749,
+   "out_tok": 275225,
+   "think_tok": 55010,
+   "cache_read_M": 374.738,
+   "cache_write_M": 2.23,
+   "pct_cost": 34.192,
+   "usd_per_call": 0.093,
+   "sec_per_call": 3.178
+  },
+  "routine_continuation | main": {
+   "calls": 329,
+   "cost_usd": 59.879,
+   "seconds": 1478.753,
+   "out_tok": 88862,
+   "think_tok": 20449,
+   "cache_read_M": 96.565,
+   "cache_write_M": 6.988,
+   "pct_cost": 16.492,
+   "usd_per_call": 0.182,
+   "sec_per_call": 4.495
+  },
+  "planning_heavy | helper": {
+   "calls": 194,
+   "cost_usd": 31.92,
+   "seconds": 7886.017,
+   "out_tok": 817281,
+   "think_tok": 473930,
+   "cache_read_M": 49.367,
+   "cache_write_M": 1.264,
+   "pct_cost": 8.791,
+   "usd_per_call": 0.165,
+   "sec_per_call": 40.65
+  },
+  "exploration | helper": {
+   "calls": 270,
+   "cost_usd": 30.314,
+   "seconds": 1938.239,
+   "out_tok": 153791,
+   "think_tok": 81780,
+   "cache_read_M": 44.024,
+   "cache_write_M": 3.929,
+   "pct_cost": 8.349,
+   "usd_per_call": 0.112,
+   "sec_per_call": 7.179
+  },
+  "other_action | helper": {
+   "calls": 208,
+   "cost_usd": 27.573,
+   "seconds": 1870.837,
+   "out_tok": 181282,
+   "think_tok": 50669,
+   "cache_read_M": 59.374,
+   "cache_write_M": 1.934,
+   "pct_cost": 7.594,
+   "usd_per_call": 0.133,
+   "sec_per_call": 8.994
+  },
+  "other_action | main": {
+   "calls": 94,
+   "cost_usd": 26.915,
+   "seconds": 1073.336,
+   "out_tok": 85499,
+   "think_tok": 39037,
+   "cache_read_M": 26.091,
+   "cache_write_M": 3.958,
+   "pct_cost": 7.413,
+   "usd_per_call": 0.286,
+   "sec_per_call": 11.418
+  },
+  "edit_write | helper": {
+   "calls": 203,
+   "cost_usd": 20.701,
+   "seconds": 1264.127,
+   "out_tok": 133928,
+   "think_tok": 10987,
+   "cache_read_M": 59.095,
+   "cache_write_M": 0.257,
+   "pct_cost": 5.701,
+   "usd_per_call": 0.102,
+   "sec_per_call": 6.227
+  },
+  "planning_heavy | main": {
+   "calls": 44,
+   "cost_usd": 13.399,
+   "seconds": 1190.374,
+   "out_tok": 105935,
+   "think_tok": 66471,
+   "cache_read_M": 12.348,
+   "cache_write_M": 1.706,
+   "pct_cost": 3.69,
+   "usd_per_call": 0.305,
+   "sec_per_call": 27.054
+  },
+  "exploration | main": {
+   "calls": 41,
+   "cost_usd": 8.08,
+   "seconds": 385.914,
+   "out_tok": 29227,
+   "think_tok": 16255,
+   "cache_read_M": 9.348,
+   "cache_write_M": 1.071,
+   "pct_cost": 2.225,
+   "usd_per_call": 0.197,
+   "sec_per_call": 9.413
+  },
+  "delegation_launch | main": {
+   "calls": 39,
+   "cost_usd": 6.553,
+   "seconds": 768.166,
+   "out_tok": 71143,
+   "think_tok": 20775,
+   "cache_read_M": 10.687,
+   "cache_write_M": 0.565,
+   "pct_cost": 1.805,
+   "usd_per_call": 0.168,
+   "sec_per_call": 19.697
+  },
+  "final_answer | helper": {
+   "calls": 47,
+   "cost_usd": 4.591,
+   "seconds": 903.267,
+   "out_tok": 82667,
+   "think_tok": 4164,
+   "cache_read_M": 9.82,
+   "cache_write_M": 0.146,
+   "pct_cost": 1.264,
+   "usd_per_call": 0.098,
+   "sec_per_call": 19.218
+  },
+  "loop_repeat | helper": {
+   "calls": 28,
+   "cost_usd": 3.294,
+   "seconds": 60.793,
+   "out_tok": 3812,
+   "think_tok": 241,
+   "cache_read_M": 10.666,
+   "cache_write_M": 0.012,
+   "pct_cost": 0.907,
+   "usd_per_call": 0.118,
+   "sec_per_call": 2.171
+  },
+  "edit_write | main": {
+   "calls": 28,
+   "cost_usd": 2.962,
+   "seconds": 181.605,
+   "out_tok": 17477,
+   "think_tok": 3005,
+   "cache_read_M": 8.87,
+   "cache_write_M": 0.032,
+   "pct_cost": 0.816,
+   "usd_per_call": 0.106,
+   "sec_per_call": 6.486
+  },
+  "final_answer | main": {
+   "calls": 14,
+   "cost_usd": 2.525,
+   "seconds": 164.177,
+   "out_tok": 14280,
+   "think_tok": 2084,
+   "cache_read_M": 2.95,
+   "cache_write_M": 0.304,
+   "pct_cost": 0.695,
+   "usd_per_call": 0.18,
+   "sec_per_call": 11.727
+  },
+  "loop_repeat | main": {
+   "calls": 2,
+   "cost_usd": 0.132,
+   "seconds": 7.619,
+   "out_tok": 756,
+   "think_tok": 0,
+   "cache_read_M": 0.531,
+   "cache_write_M": 0.002,
+   "pct_cost": 0.036,
+   "usd_per_call": 0.066,
+   "sec_per_call": 3.809
+  },
+  "delegation_launch | helper": {
+   "calls": 1,
+   "cost_usd": 0.103,
+   "seconds": 16.729,
+   "out_tok": 1502,
+   "think_tok": 0,
+   "cache_read_M": 0.265,
+   "cache_write_M": 0.0,
+   "pct_cost": 0.028,
+   "usd_per_call": 0.103,
+   "sec_per_call": 16.729
+  }
+ },
+ "by_project_mainhelper": {
+  "amplifier-bundle-fast-decisions | helper": {
+   "calls": 1976,
+   "cost_usd": 219.162,
+   "seconds": 15210.974,
+   "out_tok": 1405139,
+   "think_tok": 568098,
+   "cache_read_M": 568.348,
+   "cache_write_M": 7.597,
+   "pct_cost": 60.361,
+   "usd_per_call": 0.111,
+   "sec_per_call": 7.698
+  },
+  "amplifier-bundle-fast-decisions | main": {
+   "calls": 259,
+   "cost_usd": 76.753,
+   "seconds": 2821.699,
+   "out_tok": 224749,
+   "think_tok": 83907,
+   "cache_read_M": 70.483,
+   "cache_write_M": 11.549,
+   "pct_cost": 21.139,
+   "usd_per_call": 0.296,
+   "sec_per_call": 10.895
+  },
+  "teaserkit | main": {
+   "calls": 332,
+   "cost_usd": 43.693,
+   "seconds": 2428.245,
+   "out_tok": 188430,
+   "think_tok": 84169,
+   "cache_read_M": 96.908,
+   "cache_write_M": 3.078,
+   "pct_cost": 12.034,
+   "usd_per_call": 0.132,
+   "sec_per_call": 7.314
+  },
+  "teaserkit | helper": {
+   "calls": 317,
+   "cost_usd": 23.48,
+   "seconds": 2993.784,
+   "out_tok": 244349,
+   "think_tok": 108683,
+   "cache_read_M": 39.001,
+   "cache_write_M": 2.175,
+   "pct_cost": 6.467,
+   "usd_per_call": 0.074,
+   "sec_per_call": 9.444
+  }
+ },
+ "by_agent": {
+  "foundation:modular-builder | sonnet": {
+   "calls": 972,
+   "cost_usd": 116.82,
+   "seconds": 8027.314,
+   "out_tok": 789004,
+   "think_tok": 320509,
+   "cache_read_M": 295.654,
+   "cache_write_M": 4.342,
+   "pct_cost": 32.174,
+   "usd_per_call": 0.12,
+   "sec_per_call": 8.259
+  },
+  "self | sonnet": {
+   "calls": 892,
+   "cost_usd": 97.409,
+   "seconds": 6080.998,
+   "out_tok": 502173,
+   "think_tok": 220510,
+   "cache_read_M": 262.624,
+   "cache_write_M": 2.956,
+   "pct_cost": 26.828,
+   "usd_per_call": 0.109,
+   "sec_per_call": 6.817
+  },
+  "root | opus": {
+   "calls": 390,
+   "cost_usd": 93.479,
+   "seconds": 3954.52,
+   "out_tok": 317669,
+   "think_tok": 122360,
+   "cache_read_M": 96.944,
+   "cache_write_M": 13.461,
+   "pct_cost": 25.746,
+   "usd_per_call": 0.24,
+   "sec_per_call": 10.14
+  },
+  "root | sonnet": {
+   "calls": 199,
+   "cost_usd": 26.94,
+   "seconds": 1292.029,
+   "out_tok": 95321,
+   "think_tok": 45716,
+   "cache_read_M": 70.446,
+   "cache_write_M": 1.166,
+   "pct_cost": 7.42,
+   "usd_per_call": 0.135,
+   "sec_per_call": 6.493
+  },
+  "foundation:explorer | sonnet": {
+   "calls": 163,
+   "cost_usd": 13.762,
+   "seconds": 1646.868,
+   "out_tok": 148785,
+   "think_tok": 69308,
+   "cache_read_M": 26.18,
+   "cache_write_M": 0.98,
+   "pct_cost": 3.79,
+   "usd_per_call": 0.084,
+   "sec_per_call": 10.103
+  },
+  "foundation:bug-hunter | sonnet": {
+   "calls": 91,
+   "cost_usd": 5.681,
+   "seconds": 745.523,
+   "out_tok": 56281,
+   "think_tok": 30833,
+   "cache_read_M": 11.878,
+   "cache_write_M": 0.339,
+   "pct_cost": 1.565,
+   "usd_per_call": 0.062,
+   "sec_per_call": 8.193
+  },
+  "foundation:web-research | sonnet": {
+   "calls": 52,
+   "cost_usd": 3.688,
+   "seconds": 688.573,
+   "out_tok": 58852,
+   "think_tok": 1605,
+   "cache_read_M": 3.334,
+   "cache_write_M": 0.481,
+   "pct_cost": 1.016,
+   "usd_per_call": 0.071,
+   "sec_per_call": 13.242
+  },
+  "foundation:zen-architect | opus": {
+   "calls": 10,
+   "cost_usd": 1.941,
+   "seconds": 336.163,
+   "out_tok": 31410,
+   "think_tok": 20885,
+   "cache_read_M": 1.346,
+   "cache_write_M": 0.209,
+   "pct_cost": 0.535,
+   "usd_per_call": 0.194,
+   "sec_per_call": 33.616
+  },
+  "foundation:explorer | opus": {
+   "calls": 24,
+   "cost_usd": 1.619,
+   "seconds": 286.577,
+   "out_tok": 27468,
+   "think_tok": 10535,
+   "cache_read_M": 2.119,
+   "cache_write_M": 0.129,
+   "pct_cost": 0.446,
+   "usd_per_call": 0.067,
+   "sec_per_call": 11.941
+  },
+  "foundation:file-ops | opus": {
+   "calls": 6,
+   "cost_usd": 0.541,
+   "seconds": 58.889,
+   "out_tok": 6775,
+   "think_tok": 457,
+   "cache_read_M": 0.293,
+   "cache_write_M": 0.069,
+   "pct_cost": 0.149,
+   "usd_per_call": 0.09,
+   "sec_per_call": 9.815
+  },
+  "foundation:git-ops | sonnet": {
+   "calls": 14,
+   "cost_usd": 0.47,
+   "seconds": 59.854,
+   "out_tok": 5484,
+   "think_tok": 114,
+   "cache_read_M": 0.702,
+   "cache_write_M": 0.047,
+   "pct_cost": 0.129,
+   "usd_per_call": 0.034,
+   "sec_per_call": 4.275
+  },
+  "foundation:session-analyst | haiku": {
+   "calls": 31,
+   "cost_usd": 0.42,
+   "seconds": 173.522,
+   "out_tok": 15890,
+   "think_tok": 1033,
+   "cache_read_M": 1.764,
+   "cache_write_M": 0.131,
+   "pct_cost": 0.116,
+   "usd_per_call": 0.014,
+   "sec_per_call": 5.597
+  },
+  "foundation:git-ops | haiku": {
+   "calls": 38,
+   "cost_usd": 0.292,
+   "seconds": 100.477,
+   "out_tok": 7366,
+   "think_tok": 992,
+   "cache_read_M": 1.455,
+   "cache_write_M": 0.088,
+   "pct_cost": 0.081,
+   "usd_per_call": 0.008,
+   "sec_per_call": 2.644
+  },
+  "root | haiku": {
+   "calls": 2,
+   "cost_usd": 0.026,
+   "seconds": 3.395,
+   "out_tok": 189,
+   "think_tok": 0,
+   "cache_read_M": 0.0,
+   "cache_write_M": 0.0,
+   "pct_cost": 0.007,
+   "usd_per_call": 0.013,
+   "sec_per_call": 1.698
+  }
+ },
+ "light_share": {
+  "light_calls": 1996,
+  "strict_light_calls": 1321,
+  "single_tool_calls": 2627
+ },
+ "tool_mix_routine": [
+  [
+   "bash:grep",
+   211
+  ],
+  [
+   "read_file",
+   208
+  ],
+  [
+   "bash:sed",
+   128
+  ],
+  [
+   "bash:sleep",
+   93
+  ],
+  [
+   "bash:python3 script",
+   79
+  ],
+  [
+   "bash:python3 -c",
+   50
+  ],
+  [
+   "bash:cat",
+   49
+  ],
+  [
+   "bash:ls",
+   48
+  ],
+  [
+   "bash:python3 -",
+   43
+  ],
+  [
+   "grep",
+   37
+  ],
+  [
+   "bash:image-vision",
+   35
+  ],
+  [
+   "bash:for",
+   30
+  ],
+  [
+   "bash:git status",
+   27
+  ],
+  [
+   "bash:find",
+   27
+  ],
+  [
+   "python_check",
+   24
+  ],
+  [
+   "bash:tail",
+   23
+  ],
+  [
+   "bash:timeout",
+   22
+  ],
+  [
+   "bash:gh pr",
+   21
+  ],
+  [
+   "bash:vision-analyze-robust.sh",
+   20
+  ],
+  [
+   "bash:git diff",
+   18
+  ]
+ ],
+ "calls_per_main_turn": {
+  "turns": 14,
+  "median": 29.5,
+  "p90": 84.80000000000001,
+  "max": 190
+ },
+ "large_cache_writes": {
+  "cache expired (gap >5 min since previous call) mid-turn (long tool/child)": {
+   "calls": 37,
+   "write_cost_usd": 58.57,
+   "write_MTok": 11.79
+  },
+  "cache expired (gap >5 min since previous call) at turn start": {
+   "calls": 9,
+   "write_cost_usd": 12.75,
+   "write_MTok": 3.09
+  },
+  "session_start (first call)": {
+   "calls": 42,
+   "write_cost_usd": 10.7,
+   "write_MTok": 2.8
+  },
+  "large new content (tool result/prompt) within TTL": {
+   "calls": 27,
+   "write_cost_usd": 5.56,
+   "write_MTok": 1.4
+  },
+  "model switch": {
+   "calls": 1,
+   "write_cost_usd": 0.96,
+   "write_MTok": 0.26
+  }
+ },
+ "latency_model": {
+  "opus": {
+   "n": 1691,
+   "intercept_s": -2.9111488712201834,
+   "s_per_out_tok": 0.010481958674455954,
+   "s_per_1k_cache_write": 0.09709243510067536,
+   "s_per_1k_cache_read": 0.02370704371496119,
+   "median_out_tok_per_s(out>300)": 70.32998746638145,
+   "median_s": 11.656
+  },
+  "sonnet": {
+   "n": 7310,
+   "intercept_s": 1.621712475284967,
+   "s_per_out_tok": 0.00853836390198209,
+   "s_per_1k_cache_write": 0.014187026092773124,
+   "s_per_1k_cache_read": -0.0008372053891124814,
+   "median_out_tok_per_s(out>300)": 95.76888080072794,
+   "median_s": 3.6065
+  },
+  "haiku": {
+   "n": 841,
+   "intercept_s": -2.8335666663969494,
+   "s_per_out_tok": 0.010995637611621855,
+   "s_per_1k_cache_write": 0.0846838640173309,
+   "s_per_1k_cache_read": 0.07086092301872451,
+   "median_out_tok_per_s(out>300)": 84.63073852295409,
+   "median_s": 2.392
+  }
+ },
+ "latency_model_used": {
+  "opus": {
+   "ttft_s": 1.2,
+   "out_tok_per_s": 95.0,
+   "s_per_1k_cache_write": 0.018
+  },
+  "sonnet": {
+   "ttft_s": 1.5,
+   "out_tok_per_s": 118.0,
+   "s_per_1k_cache_write": 0.009
+  },
+  "haiku": {
+   "ttft_s": 0.5,
+   "out_tok_per_s": 83.0,
+   "s_per_1k_cache_write": 0.013
+  }
+ },
+ "routing_sim": {
+  "S0_logged_models_resimulated (validation)": {
+   "cost_usd": 367.37,
+   "seconds": 23477,
+   "routed_calls": 0,
+   "extra_cache_write_on_host_usd": 7.0
+  },
+  "S1_all_opus": {
+   "cost_usd": 322.59,
+   "seconds": 26473,
+   "routed_calls": 2454,
+   "extra_cache_write_on_host_usd": 5.31
+  },
+  "S2_all_sonnet": {
+   "cost_usd": 358.03,
+   "seconds": 22694,
+   "routed_calls": 501,
+   "extra_cache_write_on_host_usd": 2.4
+  },
+  "S3_all_haiku (floor, not viable)": {
+   "cost_usd": 334.12,
+   "seconds": 25072,
+   "routed_calls": 804,
+   "extra_cache_write_on_host_usd": 17.13
+  },
+  "host=logged route every routine -> haiku": {
+   "cost_usd": 364.47,
+   "seconds": 23485,
+   "routed_calls": 399,
+   "extra_cache_write_on_host_usd": 13.46
+  },
+  "host=logged route strict routine -> haiku": {
+   "cost_usd": 366.62,
+   "seconds": 23447,
+   "routed_calls": 262,
+   "extra_cache_write_on_host_usd": 9.47
+  },
+  "host=logged route run3 routine -> haiku": {
+   "cost_usd": 366.25,
+   "seconds": 23486,
+   "routed_calls": 260,
+   "extra_cache_write_on_host_usd": 10.48
+  },
+  "host=logged route run5 routine -> haiku": {
+   "cost_usd": 366.4,
+   "seconds": 23479,
+   "routed_calls": 164,
+   "extra_cache_write_on_host_usd": 8.46
+  },
+  "host=logged route every routine -> sonnet": {
+   "cost_usd": 412.91,
+   "seconds": 23506,
+   "routed_calls": 269,
+   "extra_cache_write_on_host_usd": 33.95
+  },
+  "host=logged route strict routine -> sonnet": {
+   "cost_usd": 403.79,
+   "seconds": 23559,
+   "routed_calls": 148,
+   "extra_cache_write_on_host_usd": 23.56
+  },
+  "host=logged route run3 routine -> sonnet": {
+   "cost_usd": 390.51,
+   "seconds": 23485,
+   "routed_calls": 178,
+   "extra_cache_write_on_host_usd": 19.79
+  },
+  "host=logged route run5 routine -> sonnet": {
+   "cost_usd": 384.92,
+   "seconds": 23483,
+   "routed_calls": 135,
+   "extra_cache_write_on_host_usd": 15.52
+  },
+  "host=opus route every routine -> haiku": {
+   "cost_usd": 401.64,
+   "seconds": 26406,
+   "routed_calls": 1396,
+   "extra_cache_write_on_host_usd": 32.26
+  },
+  "host=opus route strict routine -> haiku": {
+   "cost_usd": 392.28,
+   "seconds": 26521,
+   "routed_calls": 1662,
+   "extra_cache_write_on_host_usd": 33.15
+  },
+  "host=opus route run3 routine -> haiku": {
+   "cost_usd": 393.07,
+   "seconds": 26473,
+   "routed_calls": 1695,
+   "extra_cache_write_on_host_usd": 34.53
+  },
+  "host=opus route run5 routine -> haiku": {
+   "cost_usd": 383.12,
+   "seconds": 26513,
+   "routed_calls": 1912,
+   "extra_cache_write_on_host_usd": 33.5
+  },
+  "host=opus route every routine -> sonnet": {
+   "cost_usd": 458.38,
+   "seconds": 26447,
+   "routed_calls": 1266,
+   "extra_cache_write_on_host_usd": 61.77
+  },
+  "host=opus route strict routine -> sonnet": {
+   "cost_usd": 438.26,
+   "seconds": 26655,
+   "routed_calls": 1548,
+   "extra_cache_write_on_host_usd": 56.83
+  },
+  "host=opus route run3 routine -> sonnet": {
+   "cost_usd": 424.79,
+   "seconds": 26490,
+   "routed_calls": 1613,
+   "extra_cache_write_on_host_usd": 51.95
+  },
+  "host=opus route run5 routine -> sonnet": {
+   "cost_usd": 407.46,
+   "seconds": 26531,
+   "routed_calls": 1883,
+   "extra_cache_write_on_host_usd": 46.89
+  },
+  "IDEAL no-cache-penalty every routine -> haiku (logged host, logged token split)": {
+   "cost_usd": 348.49
+  },
+  "IDEAL no-cache-penalty every routine -> sonnet (logged host)": {
+   "cost_usd": 360.49
+  },
+  "HYPOTHETICAL no Haiku context cap: host=logged route every routine -> haiku": {
+   "cost_usd": 305.06,
+   "seconds": 23385,
+   "routed_calls": 1616,
+   "extra_cache_write_on_host_usd": 54.63
+  },
+  "HYPOTHETICAL no Haiku context cap: host=logged route strict routine -> haiku": {
+   "cost_usd": 333.16,
+   "seconds": 23292,
+   "routed_calls": 1112,
+   "extra_cache_write_on_host_usd": 39.59
+  },
+  "HYPOTHETICAL no Haiku context cap: host=logged route run3 routine -> haiku": {
+   "cost_usd": 328.14,
+   "seconds": 23431,
+   "routed_calls": 1097,
+   "extra_cache_write_on_host_usd": 37.42
+  },
+  "HYPOTHETICAL no Haiku context cap: host=logged route run5 routine -> haiku": {
+   "cost_usd": 346.03,
+   "seconds": 23473,
+   "routed_calls": 757,
+   "extra_cache_write_on_host_usd": 31.15
+  },
+  "HYPOTHETICAL no cap, IDEAL no-cache-penalty every routine -> haiku": {
+   "cost_usd": 239.54
+  }
+ },
+ "routing_sim_actual_logged_cost": 363.09,
+ "routing_sim_actual_logged_seconds": 23455,
+ "routine_run_lengths": {
+  "runs": 581,
+  "median": 2,
+  "p90": 6.0,
+  "max": 29,
+  "calls_in_runs_ge3": 1147,
+  "calls_in_runs_ge5": 799
+ },
+ "prepared_actions": {
+  "read_after_locate": {
+   "calls": 102,
+   "usd_saved_ub": 6.19,
+   "sec_saved_ub": 313.73
+  },
+  "status_probe": {
+   "calls": 114,
+   "usd_saved_ub": 9.19,
+   "sec_saved_ub": 411.43
+  },
+  "rerun_after_edit": {
+   "calls": 6,
+   "usd_saved_ub": 0.69,
+   "sec_saved_ub": 13.02
+  }
+ },
+ "batch_readonly_chains": {
+  "calls_removable_ub": 424,
+  "usd_saved_ub": 32.15,
+  "sec_saved_ub": 1414
+ },
+ "delegations": {
+  "n": 42,
+  "by_agent": {
+   "foundation:modular-builder": {
+    "n": 7,
+    "cost_usd": 116.82,
+    "median_cost": 7.812,
+    "median_calls": 93,
+    "median_tool_calls": 92,
+    "median_wall_s": 1376.7,
+    "median_startup_s": 14.6,
+    "inline_candidates": 0,
+    "models": {
+     "sonnet": 7
+    }
+   },
+   "self": {
+    "n": 15,
+    "cost_usd": 97.41,
+    "median_cost": 0.769,
+    "median_calls": 11,
+    "median_tool_calls": 10,
+    "median_wall_s": 241.9,
+    "median_startup_s": 18.0,
+    "inline_candidates": 0,
+    "models": {
+     "sonnet": 15
+    }
+   },
+   "foundation:explorer": {
+    "n": 6,
+    "cost_usd": 15.38,
+    "median_cost": 1.59,
+    "median_calls": 24.5,
+    "median_tool_calls": 38.0,
+    "median_wall_s": 256.45,
+    "median_startup_s": 12.3,
+    "inline_candidates": 0,
+    "models": {
+     "sonnet": 5,
+     "opus": 1
+    }
+   },
+   "foundation:bug-hunter": {
+    "n": 2,
+    "cost_usd": 5.68,
+    "median_cost": 2.841,
+    "median_calls": 45.5,
+    "median_tool_calls": 52.5,
+    "median_wall_s": 764.7,
+    "median_startup_s": 49.5,
+    "inline_candidates": 0,
+    "models": {
+     "sonnet": 2
+    }
+   },
+   "foundation:web-research": {
+    "n": 5,
+    "cost_usd": 3.69,
+    "median_cost": 0.75,
+    "median_calls": 10,
+    "median_tool_calls": 21,
+    "median_wall_s": 793.4,
+    "median_startup_s": 623.1,
+    "inline_candidates": 0,
+    "models": {
+     "sonnet": 5
+    }
+   },
+   "foundation:zen-architect": {
+    "n": 1,
+    "cost_usd": 1.94,
+    "median_cost": 1.941,
+    "median_calls": 10,
+    "median_tool_calls": 19,
+    "median_wall_s": 367.7,
+    "median_startup_s": 24.9,
+    "inline_candidates": 0,
+    "models": {
+     "opus": 1
+    }
+   },
+   "foundation:git-ops": {
+    "n": 4,
+    "cost_usd": 0.76,
+    "median_cost": 0.197,
+    "median_calls": 11.5,
+    "median_tool_calls": 10.5,
+    "median_wall_s": 94.0,
+    "median_startup_s": 26.5,
+    "inline_candidates": 0,
+    "models": {
+     "haiku": 2,
+     "sonnet": 2
+    }
+   },
+   "foundation:file-ops": {
+    "n": 1,
+    "cost_usd": 0.54,
+    "median_cost": 0.541,
+    "median_calls": 6,
+    "median_tool_calls": 5,
+    "median_wall_s": 77.9,
+    "median_startup_s": 14.8,
+    "inline_candidates": 0,
+    "models": {
+     "opus": 1
+    }
+   },
+   "foundation:session-analyst": {
+    "n": 1,
+    "cost_usd": 0.42,
+    "median_cost": 0.42,
+    "median_calls": 31,
+    "median_tool_calls": 30,
+    "median_wall_s": 423.2,
+    "median_startup_s": 11.8,
+    "inline_candidates": 0,
+    "models": {
+     "haiku": 1
+    }
+   }
+  },
+  "totals": {
+   "child_cost_usd": 242.64,
+   "child_calls": 2293,
+   "wall_s": 28750,
+   "startup_s_median": 20.1,
+   "startup_s_sum": 4622,
+   "first_call_usd_sum": 10.0,
+   "first_prompt_tok_median": 83849.0
+  },
+  "inline_candidates": {
+   "n": 0,
+   "child_cost_usd": 0,
+   "inline_est_cost_usd": 0,
+   "net_saving_usd_ub": 0,
+   "wall_s": 0,
+   "inline_est_s": 0,
+   "net_time_saving_s_ub": 0
+  },
+  "top_by_cost": [
+   {
+    "agent": "self",
+    "project": "amplifier-bundle-fast-decisions",
+    "parent_is_helper": false,
+    "context_depth": "none",
+    "child_calls": 436,
+    "child_tool_calls": 434,
+    "child_cost_usd": 56.985,
+    "child_model_s": 2626.3,
+    "wall_s": 2693.6,
+    "startup_s": 93.6,
+    "child_first_call_usd": 0.361,
+    "child_first_prompt_tok": 92853,
+    "child_model": "sonnet",
+    "inline_candidate": false,
+    "inline_est_cost_usd": 40.954,
+    "inline_est_s": 8082.6
+   },
+   {
+    "agent": "foundation:modular-builder",
+    "project": "amplifier-bundle-fast-decisions",
+    "parent_is_helper": false,
+    "context_depth": "none",
+    "child_calls": 303,
+    "child_tool_calls": 299,
+    "child_cost_usd": 48.887,
+    "child_model_s": 2568.7,
+    "wall_s": 1620.6,
+    "startup_s": 20.5,
+    "child_first_call_usd": 0.317,
+    "child_first_prompt_tok": 83996,
+    "child_model": "sonnet",
+    "inline_candidate": false,
+    "inline_est_cost_usd": 35.138,
+    "inline_est_s": 4308.2
+   },
+   {
+    "agent": "foundation:modular-builder",
+    "project": "amplifier-bundle-fast-decisions",
+    "parent_is_helper": false,
+    "context_depth": "none",
+    "child_calls": 240,
+    "child_tool_calls": 243,
+    "child_cost_usd": 29.722,
+    "child_model_s": 1848.7,
+    "wall_s": 1538.1,
+    "startup_s": 11.7,
+    "child_first_call_usd": 0.203,
+    "child_first_prompt_tok": 84903,
+    "child_model": "sonnet",
+    "inline_candidate": false,
+    "inline_est_cost_usd": 20.883,
+    "inline_est_s": 3524.6
+   },
+   {
+    "agent": "self",
+    "project": "amplifier-bundle-fast-decisions",
+    "parent_is_helper": false,
+    "context_depth": "none",
+    "child_calls": 130,
+    "child_tool_calls": 150,
+    "child_cost_usd": 12.965,
+    "child_model_s": 816.6,
+    "wall_s": 1438.7,
+    "startup_s": 93.6,
+    "child_first_call_usd": 0.359,
+    "child_first_prompt_tok": 92516,
+    "child_model": "sonnet",
+    "inline_candidate": false,
+    "inline_est_cost_usd": 13.925,
+    "inline_est_s": 2008.4
+   },
+   {
+    "agent": "foundation:modular-builder",
+    "project": "amplifier-bundle-fast-decisions",
+    "parent_is_helper": false,
+    "context_depth": "none",
+    "child_calls": 106,
+    "child_tool_calls": 107,
+    "child_cost_usd": 10.56,
+    "child_model_s": 862.2,
+    "wall_s": 1210.3,
+    "startup_s": 14.6,
+    "child_first_call_usd": 0.2,
+    "child_first_prompt_tok": 84162,
+    "child_model": "sonnet",
+    "inline_candidate": false,
+    "inline_est_cost_usd": 5.78,
+    "inline_est_s": 1488.8
+   },
+   {
+    "agent": "self",
+    "project": "amplifier-bundle-fast-decisions",
+    "parent_is_helper": false,
+    "context_depth": "none",
+    "child_calls": 107,
+    "child_tool_calls": 131,
+    "child_cost_usd": 10.241,
+    "child_model_s": 784.0,
+    "wall_s": 1701.1,
+    "startup_s": 93.6,
+    "child_first_call_usd": 0.364,
+    "child_first_prompt_tok": 92882,
+    "child_model": "sonnet",
+    "inline_candidate": false,
+    "inline_est_cost_usd": 12.23,
+    "inline_est_s": 2237.0
+   },
+   {
+    "agent": "self",
+    "project": "teaserkit",
+    "parent_is_helper": false,
+    "context_depth": "none",
+    "child_calls": 112,
+    "child_tool_calls": 119,
+    "child_cost_usd": 10.227,
+    "child_model_s": 1440.6,
+    "wall_s": 2347.8,
+    "startup_s": 17.9,
+    "child_first_call_usd": 0.215,
+    "child_first_prompt_tok": 87329,
+    "child_model": "sonnet",
+    "inline_candidate": false,
+    "inline_est_cost_usd": 6.046,
+    "inline_est_s": 2216.8
+   },
+   {
+    "agent": "foundation:modular-builder",
+    "project": "amplifier-bundle-fast-decisions",
+    "parent_is_helper": false,
+    "context_depth": "none",
+    "child_calls": 83,
+    "child_tool_calls": 87,
+    "child_cost_usd": 7.812,
+    "child_model_s": 909.8,
+    "wall_s": 1517.7,
+    "startup_s": 78.4,
+    "child_first_call_usd": 0.318,
+    "child_first_prompt_tok": 83790,
+    "child_model": "sonnet",
+    "inline_candidate": false,
+    "inline_est_cost_usd": 5.115,
+    "inline_est_s": 1275.0
+   },
+   {
+    "agent": "foundation:modular-builder",
+    "project": "amplifier-bundle-fast-decisions",
+    "parent_is_helper": false,
+    "context_depth": "none",
+    "child_calls": 93,
+    "child_tool_calls": 92,
+    "child_cost_usd": 6.661,
+    "child_model_s": 552.8,
+    "wall_s": 1174.0,
+    "startup_s": 11.0,
+    "child_first_call_usd": 0.316,
+    "child_first_prompt_tok": 83908,
+    "child_model": "sonnet",
+    "inline_candidate": false,
+    "inline_est_cost_usd": 7.844,
+    "inline_est_s": 1626.4
+   },
+   {
+    "agent": "foundation:modular-builder",
+    "project": "amplifier-bundle-fast-decisions",
+    "parent_is_helper": false,
+    "context_depth": "none",
+    "child_calls": 67,
+    "child_tool_calls": 70,
+    "child_cost_usd": 6.634,
+    "child_model_s": 768.8,
+    "wall_s": 1376.7,
+    "startup_s": 19.7,
+    "child_first_call_usd": 0.198,
+    "child_first_prompt_tok": 83982,
+    "child_model": "sonnet",
+    "inline_candidate": false,
+    "inline_est_cost_usd": 7.813,
+    "inline_est_s": 1368.6
+   },
+   {
+    "agent": "foundation:modular-builder",
+    "project": "amplifier-bundle-fast-decisions",
+    "parent_is_helper": false,
+    "context_depth": "none",
+    "child_calls": 80,
+    "child_tool_calls": 82,
+    "child_cost_usd": 6.543,
+    "child_model_s": 516.3,
+    "wall_s": 919.5,
+    "startup_s": 11.8,
+    "child_first_call_usd": 0.32,
+    "child_first_prompt_tok": 84054,
+    "child_model": "sonnet",
+    "inline_candidate": false,
+    "inline_est_cost_usd": 5.893,
+    "inline_est_s": 1296.2
+   },
+   {
+    "agent": "foundation:explorer",
+    "project": "amplifier-bundle-fast-decisions",
+    "parent_is_helper": false,
+    "context_depth": "none",
+    "child_calls": 48,
+    "child_tool_calls": 75,
+    "child_cost_usd": 5.269,
+    "child_model_s": 502.7,
+    "wall_s": 532.9,
+    "startup_s": 10.7,
+    "child_first_call_usd": 0.218,
+    "child_first_prompt_tok": 54499,
+    "child_model": "sonnet",
+    "inline_candidate": false,
+    "inline_est_cost_usd": 3.746,
+    "inline_est_s": 867.7
+   }
+  ],
+  "size_dist": {
+   "child_tool_calls_pctiles": {
+    "p10": 6.0,
+    "p25": 11.0,
+    "p50": 22.5,
+    "p75": 73.75,
+    "p90": 129.79999999999998
+   },
+   "children_ge_50_calls": 13,
+   "cost_children_ge_50_calls": 215.42
+  },
+  "children_le_3_tool_calls": {
+   "n": 0,
+   "child_cost_usd": 0,
+   "inline_est_cost_usd": 0,
+   "net_saving_usd_ub": 0,
+   "wall_s": 0,
+   "startup_s": 0,
+   "agents": {}
+  },
+  "children_le_6_tool_calls": {
+   "n": 8,
+   "child_cost_usd": 3.45,
+   "inline_est_cost_usd": 3.34,
+   "net_saving_usd_ub": 0.11,
+   "wall_s": 795,
+   "startup_s": 273,
+   "agents": {
+    "foundation:file-ops": 1,
+    "self": 5,
+    "foundation:git-ops": 2
+   }
+  },
+  "children_le_10_tool_calls": {
+   "n": 11,
+   "child_cost_usd": 5.42,
+   "inline_est_cost_usd": 5.61,
+   "net_saving_usd_ub": -0.18,
+   "wall_s": 1489,
+   "startup_s": 386,
+   "agents": {
+    "foundation:file-ops": 1,
+    "self": 8,
+    "foundation:git-ops": 2
+   }
+  }
+ },
+ "loops": {
+  "exact_repeat_no_intervening_edit": {
+   "loop_repeat_calls": 30,
+   "usd": 3.37,
+   "sec": 68.41
+  },
+  "consecutive_failures": {
+   "streaks_ge3": 13,
+   "calls_after_3rd_failure": 22,
+   "usd": 1.61,
+   "sec": 71.43
+  },
+  "retry_after_failed_edit": {
+   "calls": 4,
+   "usd": 0.35
+  },
+  "no_write_streaks_gt40": {
+   "streak_threshold": 40,
+   "streaks": 14,
+   "calls_beyond_threshold": 388,
+   "usd_beyond_threshold": 78.1
+  }
+ },
+ "loop_repeat_tool_mix": [
+  [
+   "bash:sleep",
+   17
+  ],
+  [
+   "bash:python3 script",
+   4
+  ],
+  [
+   "bash:git status",
+   2
+  ],
+  [
+   "bash:image-vision",
+   2
+  ],
+  [
+   "bash:teaserkit",
+   2
+  ],
+  [
+   "bash:scripts",
+   1
+  ],
+  [
+   "bash:cat",
+   1
+  ],
+  [
+   "bash:do",
+   1
+  ]
+ ],
+ "polling_steps": {
+  "calls": 139,
+  "usd": 13.88,
+  "sec_model": 483.88
+ },
+ "cache_expiry_keepalive": {
+  "bash": {
+   "calls": 15,
+   "extra_rewrite_usd": 24.37,
+   "keepalive_cost_usd": 2.94,
+   "net_saving_usd": 21.43,
+   "median_gap_s": 601
+  },
+  "delegate": {
+   "calls": 16,
+   "extra_rewrite_usd": 22.76,
+   "keepalive_cost_usd": 3.37,
+   "net_saving_usd": 19.4,
+   "median_gap_s": 879
+  },
+  "user idle (turn start)": {
+   "calls": 9,
+   "extra_rewrite_usd": 11.29,
+   "keepalive_cost_usd": 15.14,
+   "net_saving_usd": -3.85,
+   "median_gap_s": 1620
+  },
+  "bash+delegate": {
+   "calls": 5,
+   "extra_rewrite_usd": 7.85,
+   "keepalive_cost_usd": 1.94,
+   "net_saving_usd": 5.91,
+   "median_gap_s": 1377
+  },
+  "delegate+team_knowledge": {
+   "calls": 1,
+   "extra_rewrite_usd": 0.52,
+   "keepalive_cost_usd": 0.07,
+   "net_saving_usd": 0.46,
+   "median_gap_s": 909
+  }
+ },
+ "context_lever": {
+  "cache_read_usd": 221.71,
+  "if_prompt_capped_at_150k_tokens_usd_saved_ub": 111.16,
+  "if_prompt_capped_at_100k_tokens_usd_saved_ub": 144.66,
+  "base_prefix_read_usd": 68.79,
+  "base_prefix_tokens_median_first_call": 83945.0
+ },
+ "call_removal_union": {
+  "union_calls": 723,
+  "union_usd_ub": 58.16,
+  "union_model_sec_ub": 2457,
+  "pct_calls": 25.1,
+  "pct_cost": 16.0
+ }
+}

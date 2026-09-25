@@ -48,6 +48,24 @@ test/benchmark traffic.
    holdouts; keep quality guards (large-repo edits stay on the full model unless evidence says otherwise).
 4. Ship only what is confirmed; report savings honestly, including where it does not help.
 
+## What the measurement says (2026-09-25, real sessions, `docs/evidence/2026-09-25/step-opportunity/summary.json`)
+
+$363 across 2,884 calls: 61% re-reading cached context, 30% writing cache, 9% output. Median prompt per call 263k
+tokens. Helper agents are 67% of the bill; 13 helpers with 50+ calls cost $215. Routine continuations are 51% of
+cost, driven by context size, not reasoning. Routing routine steps to Sonnet 5 would ADD $17-46 (its cache read is
+dearer than Opus 5.5's); Haiku saves at most $3 (200k context window). So the levers, ranked by measured upper bound:
+
+1. **Cache keep-alive during long waits** (tool or helper running >~4.5 min): about -13% cost, near-zero risk.
+2. **Remove calls:** deterministic waits instead of `sleep` polling, batched read-only chains, prepared
+   status/read actions, loop and repeated-failure stops: up to -16% cost, -10% model time.
+3. **Right-size context:** compaction or fresh-context hand-off for helpers past ~150-200k tokens; slimmer helper
+   base prompt (84k today): up to -30% cost, highest quality risk.
+4. **Price-aware model choice per step** (not tier-based): about -12% cost, +13% model time.
+5. Harness overhead fixes (settings): first-request cost -84%, trivial request 25 s -> 20 s (-> ~11-12 s with the
+   start-up check fix).
+
+Levers 1-3 together are needed to reach cost <= 0.50x.
+
 ## Status
 
 See `docs/RESULTS-2026-09-24.md` (top update) for what has been measured so far. As of 2026-09-25 the goal is
