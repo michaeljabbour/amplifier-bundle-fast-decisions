@@ -70,7 +70,25 @@ dearer than Opus 5.5's); Haiku saves at most $3 (200k context window). So the le
 
 Levers 1-3 together are needed to reach cost <= 0.50x.
 
+## Efficiency receipts (how the dashboard numbers are made)
+
+Each optimization decision emits a `fast_decisions:efficiency` event (see `src/amplifier_fast_decisions/efficiency.py`):
+`lever`, `mechanism` (the judge, rule or mechanism), `decision`, `baseline` and `actual` sides (model, calls, cost,
+seconds) fixed when the decision is made, `calls_saved` / `usd_saved` / `seconds_saved` (baseline minus actual;
+negative = cost more), `method`, `project`, and `traffic` (`production` or `test`: `AFAST_TRAFFIC` wins; temp dirs,
+eval roots, agent worktrees and Forge-labeled sessions are test). The dashboard's **Efficiency ledger**,
+`/api/efficiency` and `afast efficiency [--include-test] [--json]` all show `efficiency.aggregate`: plain sums by
+lever and by project x lever over the stored events, deduplicated by `event_id`, production only by default.
+Recompute independently by reading the event files and summing those three fields.
+
+Mechanisms emitting receipts today: `cheaper_model` (each cheaper-model step, the host's cache rebuild after a cheap
+turn as a loss, and judge time on judged turns kept on the host) and `prepared_action` (when the read shortcut is
+enabled). `cache_keepalive`, `launch_blocked`, `loop_stop` and `context_rightsize` are reported as "not active yet"
+until their mechanisms ship; each will emit the same receipt shape.
+
 ## Status
 
-See `docs/RESULTS-2026-09-24.md` (top update) for what has been measured so far. As of 2026-09-25 the goal is
+See `docs/RESULTS-2026-09-24.md` (top update) for what has been measured so far. As of 2026-09-25 the savings targets are
 **not met**: the shipped router picks one model per request and saved close to nothing on the owner's real work.
+The measurement side is in place: per-decision receipts, the Efficiency ledger by project and lever, test traffic
+excluded, and exact recomputation (commit `2dbe1d2`).
