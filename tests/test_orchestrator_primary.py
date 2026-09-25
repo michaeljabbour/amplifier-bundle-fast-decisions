@@ -630,6 +630,11 @@ class _RequestCapturingProvider(DemoProvider):
 
 
 class EasyTurnShapingTests(_DifficultyHarness):
+    def test_receipt_name_is_an_allowed_event(self):
+        # The emitter drops unknown event names; a mocked emit would not notice.
+        from amplifier_fast_decisions.contracts import EVENT_NAMES
+        self.assertIn("fast_decisions:easy_turn_shaped", EVENT_NAMES)
+
     """HC12 ("easy-turn shaping", opt-in): model_routing.easy_turn_guidance /
     easy_turn_hide_tools apply only while turn.start_tier == "cheap", via a
     shaped COPY built per call -- the original request/messages/tools are

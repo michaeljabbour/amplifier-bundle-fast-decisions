@@ -61,6 +61,9 @@ EVENT_NAMES = tuple(
         # Turn-start difficulty router (model_routing.start_policy): which
         # tier the turn starts on, who decided, with what probability.
         "difficulty_judged",
+        # HC12 ("easy-turn shaping", opt-in): guidance appended / tools
+        # hidden on a turn judged easy. See orchestrator.py and docs/EVENTS.md.
+        "easy_turn_shaped",
     )
 )
 
