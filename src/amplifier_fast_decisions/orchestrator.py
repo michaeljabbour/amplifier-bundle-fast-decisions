@@ -26,6 +26,7 @@ from .contracts import (
     field_value,
     digest,
     candidate_read_identity,
+    jsonable,
 )
 from . import effort
 from . import planner as turn_planner
@@ -240,40 +241,45 @@ def _apply_start_effort(
 
 
 def _request_chars(request: Any) -> int:
-    """Best-effort character count of this request's system + tool +
-    message text -- the turn planner's cold-start ``ctx`` estimate, used
-    only until a real provider response in this session gives an actual
-    prompt-token count. Never raises.
+    """Character count of this request AS SERIALIZED for the provider --
+    the turn planner's cold-start ``ctx`` estimate, used only when no
+    prompt-token count is available at all yet (a fresh session, nothing
+    persisted -- see ``_estimate_ctx``). Never raises.
+
+    Serializes the FULL ``messages`` (which carries the system prompt as
+    a ``role: "system"`` message, per HC12's own ``_append_guidance_to_system_message``)
+    and ``tools`` structures via ``jsonable``/``canonical`` rather than
+    hand-picking a ``text`` field off each content block: an earlier
+    version only counted plain-text blocks and silently dropped tool_use
+    arguments and tool_result content (often the largest part of a
+    real prompt -- file reads, command output), undercounting real prompt
+    size by ~2.6x against measured receipts. Serializing the whole
+    structure, as the provider itself does, does not have this gap.
     """
-    total = 0
     try:
-        messages = field_value(request, "messages") or []
-        for message in messages:
-            content = field_value(message, "content")
-            if isinstance(content, str):
-                total += len(content)
-            elif isinstance(content, list):
-                for block in content:
-                    text = field_value(block, "text")
-                    if isinstance(text, str):
-                        total += len(text)
-        tools = field_value(request, "tools")
-        if tools:
-            total += len(canonical(tools))
+        messages = list(field_value(request, "messages") or [])
+        tools = list(field_value(request, "tools") or [])
+        payload = {"messages": jsonable(messages), "tools": jsonable(tools)}
+        return len(canonical(payload))
     except Exception:  # noqa: BLE001 -- best-effort estimate, never raises
-        return total
-    return total
+        return 0
 
 
 def _estimate_ctx(request: Any, runtime: Runtime) -> int:
-    """The turn planner's ``ctx`` input (spec: docs/proposals/TURN-PLANNER.md):
-    the provider-reported prompt size of the most recent real provider
-    response in this session (``runtime.planner_last_ctx``, any model) when
-    available, else a characters/4 estimate of THIS request's system +
-    tools + messages.
+    """The turn planner's ``ctx`` input (spec: docs/proposals/TURN-PLANNER.md
+    and its cross-process follow-up): the most recent known total prompt
+    size in this session -- ``runtime.planner_last_ctx``, persisted across
+    process restarts by ``Runtime.ensure_planner_state_loaded`` and updated
+    from every real provider response, regardless of which model served it
+    -- PLUS this turn's own new user message (not yet reflected in that
+    prior total). Only when nothing is known yet at all (a session's
+    first-ever request, nothing persisted, nothing recorded this process)
+    does this fall back to a characters/4 estimate of the full current
+    request (system + tools + messages, as serialized for the provider).
     """
+    new_message_chars = len(_turn_user_text(request))
     if runtime.planner_last_ctx is not None:
-        return runtime.planner_last_ctx
+        return runtime.planner_last_ctx + new_message_chars // 4
     return _request_chars(request) // 4
 
 
@@ -1173,6 +1179,14 @@ docs/UPSTREAM_CONTRACT.md.
                     planner_config = effective_planner_config(model_routing)
                     if planner_config is not None and not turn.planner_decided:
                         turn.planner_decided = True
+                        # Lazily load persisted cross-process cache state
+                        # (see Runtime.ensure_planner_state_loaded) the
+                        # first time the planner actually runs in this
+                        # process -- a fresh process (each resumed-session
+                        # turn today) starts with an empty in-memory
+                        # Runtime otherwise, so every model would look
+                        # cold forever. See docs/proposals/TURN-PLANNER.md.
+                        self._runtime.ensure_planner_state_loaded()
                         host_model = getattr(self._provider, "default_model", None) or start_model
                         plan_candidates = list(planner_config["candidates"]) or [start_model]
                         ctx = _estimate_ctx(request, self._runtime)
@@ -1278,27 +1292,43 @@ docs/UPSTREAM_CONTRACT.md.
         usage = usage_fields(response)
         # Turn planner (opt-in): record per-model cache state from every
         # real provider response's usage -- last_used_at and the reported
-        # total prompt size (input + cache_read + cache_write), keyed by
-        # the model that actually served this request. Inert (no attribute
-        # read, nothing recorded) unless model_routing.planner is enabled,
-        # matching every other HC0x seam. Updated regardless of which
-        # reason_code routed this request (host, start_model, or a planner
-        # choice) -- an accurate cache state needs every model's real
-        # usage, not just the planner's own picks. See planner.py.
+        # total prompt size, keyed by the model that actually served this
+        # request. Inert (no attribute read, nothing recorded) unless
+        # model_routing.planner is enabled, matching every other HC0x
+        # seam. Updated regardless of which reason_code routed this
+        # request (host, start_model, or a planner choice) -- an accurate
+        # cache state needs every model's real usage, not just the
+        # planner's own picks. See planner.py.
+        #
+        # Total prompt size is input_tokens + cache_write_tokens, NOT
+        # + cache_read_tokens: the installed Anthropic provider already
+        # folds cache_read_input_tokens INTO input_tokens when building
+        # Usage (`input_tokens = response.usage.input_tokens +
+        # cache_read_input_tokens`; cache_write is reported separately,
+        # under `cache_creation_input_tokens`, and is never added to
+        # input_tokens). Adding cache_read again double-counts it. Verified
+        # against real receipts: a call reporting
+        # {input: 75256, cache_read: 75254, cache_write: 1062} is followed
+        # by a call reporting input: 76318 == 75256 + 1062 (not
+        # 75256 + 75254 + 1062 == 151572).
         planner_config = effective_planner_config(model_routing)
         if planner_config is not None:
             served = usage.get("served_model") or model
+            if served in (None, "", "provider-default"):
+                # The response didn't report a real model id (or the
+                # request never carried an explicit one) -- key the cache
+                # by the host's actual configured model, never the
+                # placeholder label, mirroring savings.py's own fallback.
+                served = getattr(self._provider, "default_model", None)
             input_tokens = usage.get("input_tokens")
             if isinstance(served, str) and served and isinstance(input_tokens, int):
-                total_prompt = (
-                    input_tokens
-                    + usage.get("cache_read_tokens", 0)
-                    + usage.get("cache_write_tokens", 0)
-                )
+                total_prompt = input_tokens + usage.get("cache_write_tokens", 0)
+                self._runtime.ensure_planner_state_loaded()
                 entry = self._runtime.planner_state.setdefault(served, {})
                 entry["last_used_at"] = time.time()
                 entry["cached_tokens"] = total_prompt
                 self._runtime.planner_last_ctx = total_prompt
+                self._runtime.persist_planner_state()
         await service.emit("slow_end", {"provider": self._provider_key, "model": model, **self._host_model_field(),
             "provider_call_id": provider_call_id,
             "status": "ok", "duration_ms": (time.perf_counter() - start) * 1000,

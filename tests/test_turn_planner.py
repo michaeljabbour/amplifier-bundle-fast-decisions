@@ -5,9 +5,12 @@ Spec: docs/proposals/TURN-PLANNER.md. No amplifier_core, no network.
 
 from __future__ import annotations
 
+import json
+import tempfile
 import time
 import unittest
 from dataclasses import dataclass, field
+from pathlib import Path
 from types import SimpleNamespace as NS
 from typing import Any
 
@@ -20,8 +23,8 @@ from amplifier_fast_decisions.contracts import (
     effective_planner_config,
 )
 from amplifier_fast_decisions.demo import DemoCoordinator, DemoProvider, demo_response
-from amplifier_fast_decisions.orchestrator import RoutedProvider
-from amplifier_fast_decisions.runtime import Runtime
+from amplifier_fast_decisions.orchestrator import RoutedProvider, _estimate_ctx, _request_chars
+from amplifier_fast_decisions.runtime import Runtime, load_planner_state, save_planner_state
 from amplifier_fast_decisions.savings import DEFAULT_RATES
 from amplifier_fast_decisions.service import DecisionService
 from amplifier_fast_decisions.telemetry import Emitter
@@ -498,11 +501,23 @@ class PlannerOrchestratorTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(req_a.model, req_b.model)
 
     async def test_cache_state_updated_from_provider_response(self):
+        """Total prompt size is input_tokens + cache_write_tokens -- NOT
+        + cache_read_tokens, which the installed Anthropic provider already
+        folds into input_tokens (see the comment on the cache-state update
+        in orchestrator.RoutedProvider.complete). Uses the exact numbers
+        from a real live-smoke receipt: a call reporting
+        {input: 75256, cache_read: 75254, cache_write: 1062} must be
+        recorded as total prompt 76318 -- which is exactly what the VERY
+        NEXT real call in that same smoke reported as its own input_tokens
+        (75256 + 1062 == 76318), confirming the formula against ground
+        truth, not just self-consistency."""
         policy = planner_policy()
         _service, runtime, _events = setup_service(policy=policy)
         provider = PricedProvider(
             default_model=OPUS,
-            usage_by_call=[{"input_tokens": 55000, "cache_read_tokens": 3000, "cache_write_tokens": 2000}],
+            usage_by_call=[
+                {"input_tokens": 75256, "cache_read_tokens": 75254, "cache_write_tokens": 1062},
+            ],
         )
         facade = RoutedProvider(provider, runtime, {}, demo_response)
 
@@ -510,9 +525,29 @@ class PlannerOrchestratorTests(unittest.IsolatedAsyncioTestCase):
 
         # Sonnet was chosen (fresh session, balanced) -- its cache state now reflects usage.
         entry = runtime.planner_state[SONNET]
-        self.assertEqual(entry["cached_tokens"], 55000 + 3000 + 2000)
+        self.assertEqual(entry["cached_tokens"], 76318)
         self.assertIsInstance(entry["last_used_at"], float)
-        self.assertEqual(runtime.planner_last_ctx, 60000)
+        self.assertEqual(runtime.planner_last_ctx, 76318)
+
+    async def test_cache_state_second_receipt_pair_no_cache_read(self):
+        """Second real-smoke pair: a fresh-cache-write-only first call
+        (input: 2, cache_read: None, cache_write: 68569) is followed by a
+        real second call reporting input_tokens 68571 -- exactly
+        2 + 68569, confirming the same formula when cache_read is absent
+        (None) rather than zero."""
+        policy = planner_policy()
+        _service, runtime, _events = setup_service(policy=policy)
+        provider = PricedProvider(
+            default_model=OPUS,
+            usage_by_call=[{"input_tokens": 2, "cache_write_tokens": 68569}],
+        )
+        facade = RoutedProvider(provider, runtime, {}, demo_response)
+
+        await facade.complete(request([user()]))
+
+        entry = runtime.planner_state[SONNET]
+        self.assertEqual(entry["cached_tokens"], 68571)
+        self.assertEqual(runtime.planner_last_ctx, 68571)
 
     async def test_planner_host_suppresses_easy_turn_shaping(self):
         """HC12 shaping must not fire on a request the planner routed to the
@@ -582,10 +617,14 @@ class PlannerMultiTurnHandComputedTests(unittest.IsolatedAsyncioTestCase):
         )
         facade = RoutedProvider(provider, runtime, {}, demo_response)
 
-        # turn1: easy, fresh ctx 60k.
+        # turn1: easy, fresh ctx 60k. An empty new-user-message keeps
+        # _estimate_ctx's "+ this turn's new user message" term at exactly
+        # 0, so ctx stays precisely at the hand-computed value below --
+        # the incremental-ctx addition itself has its own dedicated test
+        # (EstimateCtxTests).
         service.turn = TurnState("t1")
         runtime.planner_last_ctx = 60000
-        req1 = request([user("Fix bug")])
+        req1 = request([user("")])
         await facade.complete(req1)
         self.assertEqual(req1.model, SONNET)
 
@@ -598,14 +637,14 @@ class PlannerMultiTurnHandComputedTests(unittest.IsolatedAsyncioTestCase):
         # turn3: easy ctx 90k -- Opus (warm) beats a cold Sonnet.
         service.turn = TurnState("t3")
         runtime.planner_last_ctx = 90000
-        req3 = request([user("Fix bug")])
+        req3 = request([user("")])
         await facade.complete(req3)
         self.assertFalse(hasattr(req3, "model"))  # host chosen -- no override
 
         # turn4: easy ctx 100k -- Opus stays warm enough to win again.
         service.turn = TurnState("t4")
         runtime.planner_last_ctx = 100000
-        req4 = request([user("Fix bug")])
+        req4 = request([user("")])
         await facade.complete(req4)
         self.assertFalse(hasattr(req4, "model"))
 
@@ -620,6 +659,244 @@ class PlannerMultiTurnHandComputedTests(unittest.IsolatedAsyncioTestCase):
         self.assertAlmostEqual(planned[0]["data"]["options"][1]["cost"], 0.289714, places=5)
         self.assertAlmostEqual(planned[1]["data"]["options"][0]["cost"], 0.1469, places=4)
         self.assertAlmostEqual(planned[2]["data"]["options"][0]["cost"], 0.1299, places=4)
+
+
+# ---------------------------------------------------------------------------
+# ctx estimation (_estimate_ctx / _request_chars)
+# ---------------------------------------------------------------------------
+
+
+class EstimateCtxTests(unittest.TestCase):
+    def test_persisted_last_ctx_plus_new_user_message(self):
+        """Prefer the persisted/known last_ctx, adding only the NEW user
+        message's own size -- not re-measuring the whole conversation."""
+        runtime = Runtime(DecisionService(Policy(mode="off"), ScriptedBackend(delay_ms=0),
+                                           Emitter("s"), DemoCoordinator(), []))
+        runtime.planner_last_ctx = 76318
+        req = request([user("x" * 400)])  # 400 chars -> 100 tokens
+
+        self.assertEqual(_estimate_ctx(req, runtime), 76318 + 100)
+
+    def test_persisted_last_ctx_with_empty_new_message_is_unchanged(self):
+        runtime = Runtime(DecisionService(Policy(mode="off"), ScriptedBackend(delay_ms=0),
+                                           Emitter("s"), DemoCoordinator(), []))
+        runtime.planner_last_ctx = 60000
+        self.assertEqual(_estimate_ctx(request([user("")]), runtime), 60000)
+
+    def test_cold_start_falls_back_to_full_request_chars(self):
+        runtime = Runtime(DecisionService(Policy(mode="off"), ScriptedBackend(delay_ms=0),
+                                           Emitter("s"), DemoCoordinator(), []))
+        self.assertIsNone(runtime.planner_last_ctx)
+        req = request([user("x" * 4000)])
+
+        self.assertEqual(_estimate_ctx(req, runtime), _request_chars(req) // 4)
+        self.assertGreater(_estimate_ctx(req, runtime), 0)
+
+    def test_request_chars_includes_tool_results_and_tool_use_arguments(self):
+        """The earlier version only counted a content block's ``text``
+        field, silently dropping tool_result content and tool_use
+        arguments -- often the largest part of a real prompt (file reads,
+        command output) -- which measured ~2.6x against real receipts.
+        Serializing the full messages/tools structure closes that gap."""
+        bare = [user("short")]
+        with_tool_traffic = [
+            user("short"),
+            {
+                "role": "assistant",
+                "content": [
+                    {"type": "tool_use", "id": "t1", "name": "bash",
+                     "input": {"command": "x" * 5000}},
+                ],
+            },
+            {
+                "role": "tool",
+                "content": [
+                    {"type": "tool_result", "tool_use_id": "t1", "content": "y" * 5000},
+                ],
+            },
+        ]
+
+        chars_bare = _request_chars(request(bare))
+        chars_with_tools = _request_chars(request(with_tool_traffic))
+
+        self.assertGreater(chars_with_tools, chars_bare + 9000)
+
+    def test_request_chars_never_raises_on_malformed_request(self):
+        # No messages/tools attributes at all -- just the fixed overhead of
+        # the serialized (empty) payload shape, never an exception.
+        empty_payload_chars = len('{"messages":[],"tools":[]}')
+        self.assertEqual(_request_chars(NS()), empty_payload_chars)
+        self.assertEqual(_request_chars(object()), empty_payload_chars)
+
+    def test_request_chars_never_raises_on_unserializable_content(self):
+        """A content object jsonable() cannot represent (no model_dump,
+        not a JSON primitive/container) is simply dropped -- never raises."""
+        class Unserializable:
+            pass
+
+        req = request([{"role": "user", "content": Unserializable()}])
+        self.assertIsInstance(_request_chars(req), int)
+
+
+# ---------------------------------------------------------------------------
+# Cross-process persistence (Runtime.ensure_planner_state_loaded /
+# persist_planner_state, runtime.load_planner_state / save_planner_state)
+# ---------------------------------------------------------------------------
+
+
+class PlannerPersistenceTests(unittest.TestCase):
+    def test_missing_events_dir_or_session_id_is_a_no_op(self):
+        self.assertEqual(load_planner_state(None, "s"), ({}, None))
+        self.assertEqual(load_planner_state("/tmp/whatever", None), ({}, None))
+        save_planner_state(None, "s", {"m": {"last_used_at": 1.0, "cached_tokens": 2}}, 3)  # no raise
+
+    def test_missing_file_returns_empty(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            self.assertEqual(load_planner_state(tmp, "no-such-session"), ({}, None))
+
+    def test_corrupted_file_is_ignored(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "planner-state" / "sess.json"
+            path.parent.mkdir(parents=True)
+            path.write_text("{not valid json", encoding="utf-8")
+            self.assertEqual(load_planner_state(tmp, "sess"), ({}, None))
+
+    def test_round_trip_save_and_load(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            state = {OPUS: {"last_used_at": 12345.5, "cached_tokens": 90000}}
+            save_planner_state(tmp, "sess-1", state, 90000)
+
+            loaded_state, loaded_ctx = load_planner_state(tmp, "sess-1")
+
+            self.assertEqual(loaded_state, state)
+            self.assertEqual(loaded_ctx, 90000)
+
+    def test_session_id_is_sanitized_for_the_filename(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            save_planner_state(tmp, "weird/session:id", {}, None)
+            files = list((Path(tmp) / "planner-state").glob("*.json"))
+            self.assertEqual(len(files), 1)
+
+    def test_malformed_entries_are_dropped_not_fatal(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "planner-state" / "sess.json"
+            path.parent.mkdir(parents=True)
+            path.write_text(json.dumps({
+                "models": {
+                    OPUS: {"last_used_at": 1.0, "cached_tokens": 100},
+                    "bad-1": {"last_used_at": "not-a-number", "cached_tokens": 1},
+                    "bad-2": {"last_used_at": 1.0, "cached_tokens": "not-an-int"},
+                    "bad-3": "not-a-dict",
+                },
+                "last_ctx": 100,
+            }), encoding="utf-8")
+
+            state, ctx = load_planner_state(tmp, "sess")
+
+            self.assertEqual(state, {OPUS: {"last_used_at": 1.0, "cached_tokens": 100}})
+            self.assertEqual(ctx, 100)
+
+
+class PlannerPersistenceOrchestratorTests(unittest.IsolatedAsyncioTestCase):
+    def _service_and_runtime(self, tmp, session_id, *, policy=None):
+        events = []
+        coordinator = DemoCoordinator()
+        policy = policy or planner_policy()
+        emitter = Emitter(coordinator.session_id, callback=events.append)
+        service = DecisionService(policy, ScriptedBackend(delay_ms=0), emitter, coordinator, [])
+        service.turn = TurnState("t")
+        runtime = Runtime(service, events_dir=tmp, session_id=session_id)
+        return service, runtime, events
+
+    async def test_state_survives_a_simulated_process_restart(self):
+        """Each turn is a fresh process under `amplifier run --resume` --
+        simulated here by constructing a brand-new Runtime (same events_dir
+        + session_id) for the second turn instead of reusing the first
+        Runtime object. Whichever model process 1 actually served must be
+        WARM in process 2's plan; a model neither process ever served must
+        stay cold -- this is the whole point of persistence, not merely
+        "no exception"."""
+        with tempfile.TemporaryDirectory() as tmp:
+            session_id = "session-abc"
+
+            # "Process 1", turn 1.
+            _s1, runtime1, events1 = self._service_and_runtime(tmp, session_id)
+            provider1 = PricedProvider(
+                default_model=OPUS,
+                usage_by_call=[{"input_tokens": 75256, "cache_write_tokens": 1062}],
+            )
+            facade1 = RoutedProvider(provider1, runtime1, {}, demo_response)
+            await facade1.complete(request([user()]))
+            planned1 = [e for e in events1 if e["event"].endswith("turn_planned")]
+            served_model = planned1[0]["data"]["choice"]  # whatever the planner actually chose
+
+            # "Process 2", turn 2: a BRAND NEW Runtime -- nothing shared in
+            # memory with process 1 except the same events_dir/session_id.
+            _s2, runtime2, events2 = self._service_and_runtime(tmp, session_id)
+            self.assertEqual(runtime2.planner_state, {})  # fresh process, empty in-memory
+            provider2 = PricedProvider(default_model=OPUS, usage_by_call=[{"input_tokens": 76318}])
+            facade2 = RoutedProvider(provider2, runtime2, {}, demo_response)
+
+            await facade2.complete(request([user("")]))  # empty: ctx == persisted last_ctx exactly
+
+            planned2 = [e for e in events2 if e["event"].endswith("turn_planned")]
+            self.assertEqual(len(planned2), 1)
+            # ctx = persisted last_ctx (76318) + this turn's empty new user message.
+            self.assertEqual(planned2[0]["data"]["ctx"], 76318)
+            options_by_model = {o["model"]: o for o in planned2[0]["data"]["options"]}
+            self.assertTrue(options_by_model[served_model]["warm"])
+            other_model = OPUS if served_model != OPUS else SONNET
+            if other_model in options_by_model:  # never used by either process
+                self.assertFalse(options_by_model[other_model]["warm"])
+
+    async def test_ttl_still_applies_across_processes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            session_id = "session-ttl"
+            # Seed persisted state directly with an old last_used_at (wall
+            # clock, far enough in the past to exceed the default 300s TTL).
+            old_state = {OPUS: {"last_used_at": time.time() - 400, "cached_tokens": 80000}}
+            save_planner_state(tmp, session_id, old_state, 80000)
+
+            _s2, runtime2, events2 = self._service_and_runtime(tmp, session_id)
+            provider2 = PricedProvider(default_model=OPUS, usage_by_call=[{"input_tokens": 90000}])
+            facade2 = RoutedProvider(provider2, runtime2, {}, demo_response)
+            await facade2.complete(request([user()]))
+
+            planned = [e for e in events2 if e["event"].endswith("turn_planned")]
+            opus_option = next(o for o in planned[0]["data"]["options"] if o["model"] == OPUS)
+            self.assertFalse(opus_option["warm"])  # TTL expired even though it was loaded from disk
+
+    async def test_corrupted_persisted_file_falls_back_to_in_memory(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            session_id = "session-corrupt"
+            path = Path(tmp) / "planner-state" / f"{session_id}.json"
+            path.parent.mkdir(parents=True)
+            path.write_text("{ this is not json", encoding="utf-8")
+
+            _service, runtime, events = self._service_and_runtime(tmp, session_id)
+            provider = PricedProvider(default_model=OPUS, usage_by_call=[{"input_tokens": 60000}])
+            facade = RoutedProvider(provider, runtime, {}, demo_response)
+
+            await facade.complete(request([user()]))  # must not raise
+
+            planned = [e for e in events if e["event"].endswith("turn_planned")]
+            self.assertEqual(len(planned), 1)
+
+    async def test_state_persisted_to_disk_after_response(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            session_id = "session-persist"
+            _service, runtime, _events = self._service_and_runtime(tmp, session_id)
+            provider = PricedProvider(
+                default_model=OPUS,
+                usage_by_call=[{"input_tokens": 75256, "cache_read_tokens": 75254, "cache_write_tokens": 1062}],
+            )
+            facade = RoutedProvider(provider, runtime, {}, demo_response)
+
+            await facade.complete(request([user()]))
+
+            on_disk_state, on_disk_ctx = load_planner_state(tmp, session_id)
+            self.assertEqual(on_disk_ctx, 76318)
+            self.assertEqual(on_disk_state[SONNET]["cached_tokens"], 76318)
 
 
 if __name__ == "__main__":
