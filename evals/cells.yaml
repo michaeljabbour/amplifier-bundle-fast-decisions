@@ -488,7 +488,8 @@ cells:
     harnesses: [amplifier-fd]
     amplifier_model: claude-opus-5-5
     fd: { composition: composed, backend: jev, allow_external_state: true, effort_profile: all_phase,
-          model_routing_profile: haiku_once }
+          model_routing_profile: haiku_once ,
+          overrides: { model_routing: { start_model: claude-haiku-4-5-20251001 } } }
     role: "Jev decide-once, easy turns on Haiku 4.5 (medium effort), Opus 5.5 host"
     purpose: "is a cheap tier that is strictly faster and cheaper than the host the lever on Opus?"
     anchor_cell: plain-opus
@@ -499,7 +500,8 @@ cells:
     harnesses: [amplifier-fd]
     amplifier_model: claude-opus-5-5
     fd: { composition: composed, backend: jev, allow_external_state: true, effort_profile: all_phase_cheap_low,
-          model_routing_profile: haiku_once }
+          model_routing_profile: haiku_once ,
+          overrides: { model_routing: { start_model: claude-haiku-4-5-20251001 }, effort_routing: { by_tier: { cheap: low } } } }
     role: "Jev decide-once, easy turns on Haiku 4.5 at low effort, Opus 5.5 host"
     purpose: "Haiku cheap tier with less thinking"
     anchor_cell: plain-opus
@@ -510,7 +512,8 @@ cells:
     harnesses: [amplifier-fd]
     amplifier_model: claude-opus-5-5
     fd: { composition: composed, backend: jev, allow_external_state: true, effort_profile: all_phase_cheap_low,
-          model_routing_profile: opus_once }
+          model_routing_profile: opus_once ,
+          overrides: { model_routing: { start_model: claude-opus-5-5 }, effort_routing: { by_tier: { cheap: low } } } }
     role: "Jev decide-once, easy turns stay on Opus 5.5 at low effort (no model switch)"
     purpose: "effort-only routing on the host: keeps the prompt cache"
     anchor_cell: plain-opus
@@ -521,7 +524,8 @@ cells:
     harnesses: [amplifier-fd]
     amplifier_model: claude-opus-5-5
     fd: { composition: composed, backend: jev, allow_external_state: true, effort_profile: all_phase_cheap_low,
-          model_routing_profile: sonnet_once }
+          model_routing_profile: sonnet_once ,
+          overrides: { effort_routing: { by_tier: { cheap: low } } } }
     role: "Jev decide-once, easy turns on Sonnet 5 at low effort, Opus 5.5 host"
     purpose: "the shipped cheap tier with less thinking"
     anchor_cell: plain-opus
