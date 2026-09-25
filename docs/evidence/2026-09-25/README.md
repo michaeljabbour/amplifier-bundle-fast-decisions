@@ -23,7 +23,7 @@ Candidate commits (frozen snapshots; see each `manifest.json`): `52e0d29` for `s
 
 ## Recomputing
 
-- Time/cost ratio: geometric mean over tasks of (median candidate / median anchor) using `runs/**/result.json`
+- Time/cost ratio: geometric mean over tasks of (median candidate / median anchor) using `runs/**/result.json` (holdout2/, tuning/, multiturn/: `runs/<experiment>/<task>-<harness>-a<N>.json`, flattened for Windows path limits)
   `exec_time_ms` and `cost_usd`, excluding `infrastructure_failure` runs. The pipeline's own `results.json` uses a
   different cost estimator (holdout Fable: 0.54x vs 0.50x here).
 - Sign test: two-sided binomial over per-task faster/slower. CI: bootstrap over tasks.
