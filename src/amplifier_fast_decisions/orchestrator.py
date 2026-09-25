@@ -59,7 +59,7 @@ def usage_fields(response: Any) -> dict:
             fields["cost_usd"] = round(float(cost), 8)
         except (TypeError, ValueError):
             pass
-    served = field_value(response, "model")
+    served = field_value(response, "model") or field_value(field_value(response, "metadata", {}) or {}, "model")
     if isinstance(served, str) and served:
         fields["served_model"] = served[:80]
     return fields
@@ -952,7 +952,7 @@ docs/UPSTREAM_CONTRACT.md.
             # Preserve the actual request, model override, kwargs, and response identity.
             response = await self._provider.complete(request, **kwargs)
         except asyncio.CancelledError:
-            await service.emit("slow_end", {"provider": self._provider_key, "model": model,
+            await service.emit("slow_end", {"provider": self._provider_key, "model": model, **self._host_model_field(),
                 "provider_call_id": provider_call_id,
                 "status": "cancelled", "duration_ms": (time.perf_counter() - start) * 1000,
                 "transport_measured": "provider-complete"}, decision_id)
@@ -961,18 +961,24 @@ docs/UPSTREAM_CONTRACT.md.
             turn.provider_errors_seen += 1
             if model_routing and not turn.escalated and model_routing.get("escalate_on_provider_error"):
                 turn.escalated, turn.escalation_reason = True, "provider_error"
-            await service.emit("slow_end", {"provider": self._provider_key, "model": model,
+            await service.emit("slow_end", {"provider": self._provider_key, "model": model, **self._host_model_field(),
                 "provider_call_id": provider_call_id,
                 "status": "error", "exception_type": type(exc).__name__,
                 "duration_ms": (time.perf_counter() - start) * 1000,
                 "transport_measured": "provider-complete"}, decision_id)
             raise
-        await service.emit("slow_end", {"provider": self._provider_key, "model": model,
+        await service.emit("slow_end", {"provider": self._provider_key, "model": model, **self._host_model_field(),
             "provider_call_id": provider_call_id,
             "status": "ok", "duration_ms": (time.perf_counter() - start) * 1000,
             **usage_fields(response), "latency_kind": "provider_complete_wall_time",
             "transport_measured": "provider-complete"}, decision_id)
         return response
+
+    def _host_model_field(self) -> dict:
+        """The wrapped provider's configured default model -- the model a
+        request without a routed override runs on -- for the savings estimate."""
+        name = getattr(self._provider, "default_model", None)
+        return {"host_model": name[:80]} if isinstance(name, str) and name else {}
 
     async def _stream_proxy(self, request, **kwargs):
         """Verbatim proxy of the provider's stream transport.

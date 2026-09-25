@@ -37,13 +37,15 @@ DEFAULT_RATES: dict[str, tuple[float, float, float, float]] = {
     "claude-fable-5": (10.0, 50.0, 1.0, 12.5),
     "claude-sonnet-5": (3.0, 15.0, 0.30, 3.75),
     "claude-sonnet-4-6": (3.0, 15.0, 0.30, 3.75),
+    "claude-opus-5-5": (4.0, 20.0, 0.20, 5.0),
+    "claude-opus-5": (5.0, 25.0, 0.50, 6.25),
     "claude-opus-4-7": (5.0, 25.0, 0.50, 6.25),
     "claude-haiku-4-5": (1.0, 5.0, 0.10, 1.25),
 }
 DEFAULT_HOST_MODEL = "claude-fable-5-1"
 MIN_RATE_OUTPUT = 200
 MIN_RATE_SAMPLES = 20
-CACHE_VERSION = 1
+CACHE_VERSION = 2
 _JUDGED = '"fast_decisions:difficulty_judged"'
 _SLOW_END = '"fast_decisions:slow_end"'
 
@@ -84,7 +86,7 @@ def _empty_day() -> dict:
             "input": 0, "output": 0, "cache_read": 0, "cache_write": 0}
 
 
-def scan_file(path: Path, *, host_model: str = DEFAULT_HOST_MODEL, rates: dict | None = None) -> dict:
+def scan_file(path: Path, *, host_model: str | None = None, rates: dict | None = None) -> dict:
     """Per-day partial aggregates for one session's event file (additive
     across files). Only routing and provider-completion records are parsed."""
     rates = rates or DEFAULT_RATES
@@ -114,6 +116,13 @@ def scan_file(path: Path, *, host_model: str = DEFAULT_HOST_MODEL, rates: dict |
                 requests.append({"turn": turn, "day": day, "data": data})
     days: dict[str, dict] = defaultdict(_empty_day)
     rate: dict[str, list] = defaultdict(lambda: [0.0, 0, 0])  # model -> [seconds, output tokens, samples]
+    hosts: dict[str, int] = defaultdict(int)  # recorded host models, for auto-detection
+    for req in requests:
+        recorded = req["data"].get("host_model")
+        if isinstance(recorded, str) and recorded:
+            hosts[recorded] += 1
+    file_host = max(hosts, key=hosts.get) if hosts else None
+    host_model = host_model or file_host or DEFAULT_HOST_MODEL
     for info in turns.values():
         bucket = days[info["day"]]
         bucket["cheap_turns" if info["tier"] == "cheap" else "strong_turns"] += 1
@@ -125,7 +134,8 @@ def scan_file(path: Path, *, host_model: str = DEFAULT_HOST_MODEL, rates: dict |
         info = turns.get(req["turn"])
         model = data.get("served_model") or data.get("model")
         if model in (None, "", "provider-default"):
-            model = host_model if not info or info["tier"] != "cheap" else None
+            recorded = data.get("host_model")
+            model = (recorded or host_model) if not info or info["tier"] != "cheap" else None
         seconds = float(data.get("duration_ms") or 0) / 1000
         tokens = {"input": _int(data.get("input_tokens")), "output": _int(data.get("output_tokens")),
                   "cache_read": _int(data.get("cache_read_tokens")), "cache_write": _int(data.get("cache_write_tokens"))}
@@ -147,13 +157,13 @@ def scan_file(path: Path, *, host_model: str = DEFAULT_HOST_MODEL, rates: dict |
         if isinstance(cost, (int, float)) and not isinstance(cost, bool):
             bucket["provider_costed_requests"] += 1
         actual = float(cost) if isinstance(cost, (int, float)) and not isinstance(cost, bool) else price(model, tokens, rates)
-        counterfactual = price(host_model, tokens, rates)
+        counterfactual = price(data.get("host_model") or host_model, tokens, rates)
         if actual is None or counterfactual is None:
             bucket["unpriced_requests"] += 1
             continue
         bucket["actual_usd"] += actual
         bucket["counterfactual_usd"] += counterfactual
-    return {"days": dict(days), "rate": {m: list(v) for m, v in rate.items()}}
+    return {"days": dict(days), "rate": {m: list(v) for m, v in rate.items()}, "hosts": dict(hosts)}
 
 
 def _merge(total: dict, part: dict) -> None:
@@ -165,6 +175,9 @@ def _merge(total: dict, part: dict) -> None:
                     into["by_reason"][reason] = into["by_reason"].get(reason, 0) + n
             else:
                 into[key] += value
+    for model, n in part.get("hosts", {}).items():
+        total.setdefault("hosts", {})
+        total["hosts"][model] = total["hosts"].get(model, 0) + n
     for model, (seconds, output, samples) in part["rate"].items():
         entry = total["rate"].setdefault(model, [0.0, 0, 0])
         entry[0] += seconds
@@ -194,7 +207,7 @@ def _save_cache(path: Path | None, files: dict) -> None:
         pass
 
 
-def summarize(events_dir: str | Path, *, host_model: str = DEFAULT_HOST_MODEL, cheap_model: str | None = None,
+def summarize(events_dir: str | Path, *, host_model: str | None = None, cheap_model: str | None = None,
               since: str | None = None, rates: dict | None = None, cache_path: str | Path | None = None) -> dict:
     """Aggregate savings across every ``*.jsonl`` session file in ``events_dir``.
 
@@ -209,7 +222,7 @@ def summarize(events_dir: str | Path, *, host_model: str = DEFAULT_HOST_MODEL, c
     fresh: dict[str, Any] = {}
     total: dict = {"days": {}, "rate": {}}
     files = sorted(root.glob("*.jsonl")) if root.is_dir() else []
-    key_suffix = f"|{host_model}"
+    key_suffix = f"|{host_model or 'auto'}"
     for path in files:
         try:
             stat = path.stat()
@@ -240,6 +253,10 @@ def summarize(events_dir: str | Path, *, host_model: str = DEFAULT_HOST_MODEL, c
         seconds, output, samples = total["rate"].get(model, (0.0, 0, 0))
         return (seconds / output if output else None), samples
 
+    # Recorded host models (requests carry the provider's default model);
+    # older records without one fall back to DEFAULT_HOST_MODEL.
+    recorded_hosts = total.get("hosts", {})
+    host_model = host_model or (max(recorded_hosts, key=recorded_hosts.get) if recorded_hosts else DEFAULT_HOST_MODEL)
     host_rate, host_samples = rate_of(host_model)
     if cheap_model is None:
         candidates = [m for m in total["rate"] if m != host_model and _rates_for(m, rates)]
@@ -264,6 +281,7 @@ def summarize(events_dir: str | Path, *, host_model: str = DEFAULT_HOST_MODEL, c
         "files": len(files),
         "since": since,
         "host_model": host_model,
+        "host_model_source": "recorded" if recorded_hosts else "default",
         "cheap_model": cheap_model,
         "turns": {"total": turns_total, "cheap": agg["cheap_turns"], "strong": agg["strong_turns"],
                   "cheap_share": round(agg["cheap_turns"] / turns_total, 3) if turns_total else None,

@@ -101,6 +101,23 @@ class SummarizeTests(unittest.TestCase):
             self.assertEqual(again["turns"]["cheap"], 2)
             self.assertEqual([x["day"] for x in again["by_day"]], ["2026-09-01", "2026-09-24"])
 
+    def test_recorded_host_model_prices_the_counterfactual(self):
+        # Opus 5.5 reads cache cheaper than Sonnet 5: a cache-heavy cheap turn
+        # can cost MORE than the host would have -- the estimate must show it.
+        with tempfile.TemporaryDirectory() as d:
+            _write(d, "s.jsonl", [
+                _event("difficulty_judged", "t", {"choice": "cheap", "reason_code": "judge_cheap"}),
+                _event("slow_end", "t", {"status": "ok", "model": "claude-sonnet-5", "host_model": "claude-opus-5-5",
+                                         "input_tokens": 1_000_000, "cache_read_tokens": 1_000_000,
+                                         "output_tokens": 0}),
+            ])
+            r = savings.summarize(d)
+        self.assertEqual(r["host_model"], "claude-opus-5-5")
+        self.assertEqual(r["host_model_source"], "recorded")
+        self.assertAlmostEqual(r["cost"]["cheap_turns_actual_usd"], 0.30)
+        self.assertAlmostEqual(r["cost"]["cheap_turns_on_host_usd"], 0.20)
+        self.assertAlmostEqual(r["cost"]["saved_usd"], -0.10)
+
     def test_empty_or_missing_directory(self):
         r = savings.summarize("/nonexistent/afast-events")
         self.assertEqual(r["turns"]["total"], 0)

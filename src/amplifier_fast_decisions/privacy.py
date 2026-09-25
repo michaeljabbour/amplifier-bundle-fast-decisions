@@ -54,6 +54,7 @@ SAFE_FIELDS = {
     "cache_write_tokens",
     "cost_usd",
     "served_model",
+    "host_model",
     "tool",
     "tool_call_id",
     "status",

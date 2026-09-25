@@ -40,23 +40,33 @@ Protocol: [evals/STUDY-DESIGN.md](evals/STUDY-DESIGN.md); full numbers and limit
 
 ## Quick start
 
-Requires a local judge: install [Ollama](https://ollama.com/download), then
-`ollama pull qwen3:0.6b` (or let the recipe below do it).
-
-**Amplifier.** Install one of the two rungs:
+**Amplifier (CLI, TUI and Studio).** One command, run once:
 
 ```bash
-# judge-only fast path (incumbent default)
-amplifier bundle add "git+https://github.com/michaeljabbour/amplifier-bundle-fast-decisions@main#subdirectory=bundles/active.yaml"
-# judge + phase effort routing + opt-in model routing/escalation
-amplifier bundle add "git+https://github.com/michaeljabbour/amplifier-bundle-fast-decisions@main#subdirectory=bundles/active-routing.yaml"
+amplifier bundle add --app "git+https://github.com/michaeljabbour/amplifier-bundle-fast-decisions@main#subdirectory=behaviors/fast-decisions.yaml"
 ```
 
-The routing rung needs a provider that serves `claude-sonnet-5` alongside the
-pinned judge model. Or ask an Amplifier session to run the
-[`make-amplifier-faster` recipe](recipes/make-amplifier-faster.yaml): it checks the
-machine, installs Ollama and the judge model, and installs a rung behind an
-approval gate (`profile: routing` picks the second).
+That registers fast-decisions as an app bundle in `~/.amplifier/settings.yaml`. The `amplifier`
+CLI and every app built on `amplifier-runtime` (the TUI, Studio) read that file, so all of them
+compose it onto every session and sub-session. No per-app setup. Then:
+
+- **Judge (optional, recommended):** put `TYPESAFE_API_KEY=...` in `~/.amplifier/keys.env` so hosted
+  Jev decides each turn. Without it, a local prompt-length rule decides and nothing leaves the machine.
+- **Updating:** `amplifier update` picks up new versions. If you had installed an earlier version,
+  run it once after the command above so the cached copy is refreshed.
+- **Check it works:** run any prompt, then `afast savings` (or open the dashboard it launches): each
+  turn shows up as routed to the cheaper model or kept on your host model.
+- **Keep one fast-decisions entry.** Remove older entries (`bundles/active.yaml`,
+  `bundles/active-routing.yaml`, or a `file://` checkout) with `amplifier bundle remove --app <uri>`.
+  Put this entry last in the list if another app bundle also sets the orchestrator: later entries win.
+- **Turn it off per project:** `overrides.loop-fast-decisions.config: {backend: none}` in that project's
+  `.amplifier/settings.yaml` keeps everything local; removing the app entry restores plain Amplifier.
+
+**Which host model benefits.** Easy turns move to `claude-sonnet-5`. The savings are largest when your
+default model is an expensive one (the published results used `claude-fable-5-1`). If your default is
+`claude-opus-5-5`, Sonnet is about 1.3x faster at generating text but reads cached context at a higher
+price, so long turns can cost slightly more. `afast savings` measures this on your own history and
+shows a negative number when that happens.
 
 **Any other harness.** The decision service is a callable Smart Tool, verified
 from Claude Code, Codex, OpenCode and Amplifier ([docs/SMART-TOOL.md](docs/SMART-TOOL.md)):

@@ -728,10 +728,10 @@ def _since_day(value: str | None) -> str | None:
 
 
 def savings_command(args) -> int:
-    from .savings import DEFAULT_HOST_MODEL, summarize
+    from .savings import summarize
 
     events = Path(args.events).expanduser()
-    report = summarize(events, host_model=args.host_model or DEFAULT_HOST_MODEL, since=_since_day(args.since),
+    report = summarize(events, host_model=args.host_model, since=_since_day(args.since),
                        cache_path=events.parent / "savings-cache.json")
     if args.json:
         print(json.dumps(report, indent=2))
@@ -891,7 +891,7 @@ def main(argv=None) -> int:
     )
     savings.add_argument("--events", default=str(DEFAULT_EVENTS))
     savings.add_argument("--since", default=None, help="YYYY-MM-DD, or Nd for the last N days")
-    savings.add_argument("--host-model", default=None, help="Host model id (default claude-fable-5-1)")
+    savings.add_argument("--host-model", default=None, help="Host model id (default: the recorded provider default model, else claude-fable-5-1)")
     savings.add_argument("--json", action="store_true")
     args = parser.parse_args(argv)
     try:

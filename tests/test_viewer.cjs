@@ -125,3 +125,8 @@ test('savings view explains empty and estimated states',()=>{
  const v=savingsView({files:3,host_model:'claude-fable-5-1',turns:{total:10,cheap:7,strong:3,judge_calls:10},cost:{saved_usd:12.5,cheap_turns_actual_usd:5,cheap_turns_on_host_usd:17.5,requests_without_cache_data:2},time:{available:false}});
  assert.equal(v.cost,'$12.50');assert.equal(v.turns,'7 of 10');assert.equal(v.time,'Not yet');assert.match(v.note,/2 older requests/);
 });
+test('negative savings read as costing more',()=>{
+ const {savingsView}=require('../src/amplifier_fast_decisions/static/app.js');
+ const v=savingsView({files:1,host_model:'claude-opus-5-5',turns:{total:1,cheap:1,strong:0},cost:{saved_usd:-0.1,cheap_turns_actual_usd:0.3,cheap_turns_on_host_usd:0.2},time:{available:false}});
+ assert.equal(v.cost,'−$0.10 (costs more)');
+});

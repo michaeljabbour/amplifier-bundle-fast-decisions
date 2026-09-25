@@ -30,14 +30,14 @@
   const noteLabel = e => { if (e && e.data && e.data.phase === 'configuration' && typeof e.data.backend_label === 'string' && e.data.backend_label) backendLabels.set(e.session_id, e.data.backend_label); };
   const labelOf = e => backendLabels.get(e.session_id) || (e.data && typeof e.data.backend_label === 'string' ? e.data.backend_label : '');
   const backendName = (b, label) => label || ({ 'scripted-demo': 'Scripted scorer', deterministic: 'Scripted scorer', 'ollama-token': 'Local model', ollama: 'Local model', jev: 'Jev', unavailable: 'No scorer' }[b] || b || 'Backend not recorded');
-  const money = v => (v >= 100 ? '$' + Math.round(v) : '$' + v.toFixed(2));
+  const money = v => (v < 0 ? '−' : '') + (Math.abs(v) >= 100 ? '$' + Math.round(Math.abs(v)) : '$' + Math.abs(v).toFixed(2));
   const minutes = s => (s >= 3600 ? (s / 3600).toFixed(1) + ' h' : s >= 60 ? Math.round(s / 60) + ' min' : Math.round(s) + ' s');
   function savingsView(r) {
     const t = r.turns || {}, c = r.cost || {}, tm = r.time || {};
     if (!t.total) return { scope: 'No routed turns recorded yet', cost: '—', costDetail: 'Appears once the orchestrator routes turns.', time: '—', timeDetail: '', turns: '0', turnsDetail: '', note: 'Estimates cover only turns the orchestrator routes to the cheaper model.' };
     const view = {
       scope: 'All recorded sessions · ' + r.files + ' session files',
-      cost: money(c.saved_usd || 0),
+      cost: (c.saved_usd || 0) < 0 ? money(c.saved_usd) + ' (costs more)' : money(c.saved_usd || 0),
       costDetail: money(c.cheap_turns_actual_usd || 0) + ' spent vs ' + money(c.cheap_turns_on_host_usd || 0) + ' on ' + (r.host_model || 'the host model'),
       time: tm.available ? minutes(tm.saved_seconds || 0) : 'Not yet',
       timeDetail: tm.available ? minutes(tm.cheap_turns_model_seconds || 0) + ' vs ' + minutes(tm.cheap_turns_on_host_seconds || 0) + ' at host-model speed' : 'Needs more measured requests on both models',
