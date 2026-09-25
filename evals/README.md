@@ -46,6 +46,13 @@ ollama pull qwen3:0.6b && ollama run qwen3:0.6b "ok" >/dev/null
 
 ---
 
+## Holdout runs: commit the preregistration first
+
+`--split holdout` refuses to start without `PREREGISTRATION.md` in `--out`. Also commit (or at least hash and
+timestamp in a committed file) that document **before** launching, so the order is provable from the repository. The
+2026-09-25 holdout's preregistration was committed together with its results, so only local file timestamps show it
+came first. Note that `run.py` runs cells in `cells.yaml` declared order; within-batch order is not randomized.
+
 ## Where results live
 
 ```
