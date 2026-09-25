@@ -1,0 +1,436 @@
+{
+  "runs": [
+    {
+      "task": "fail",
+      "arm": "off",
+      "rep": 1,
+      "exit_code": 0,
+      "wall_s": 204.5,
+      "sessions": 1,
+      "model_calls": 4,
+      "cost_usd": 0.253515,
+      "refresh_calls": 0,
+      "refresh_cost_usd": 0,
+      "total_cost_usd": 0.253515,
+      "post_wait_call": null,
+      "loop_notes": [],
+      "tools": [
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 0.1
+        },
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 120.3
+        },
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 0.0
+        }
+      ],
+      "receipts": [],
+      "receipt_sums": {
+        "calls_saved": 0,
+        "usd_saved": 0
+      }
+    },
+    {
+      "task": "fail",
+      "arm": "off",
+      "rep": 2,
+      "exit_code": 0,
+      "wall_s": 286.6,
+      "sessions": 1,
+      "model_calls": 4,
+      "cost_usd": 0.257364,
+      "refresh_calls": 0,
+      "refresh_cost_usd": 0,
+      "total_cost_usd": 0.257364,
+      "post_wait_call": null,
+      "loop_notes": [],
+      "tools": [
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 0.2
+        },
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 200.5
+        },
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 0.0
+        }
+      ],
+      "receipts": [],
+      "receipt_sums": {
+        "calls_saved": 0,
+        "usd_saved": 0
+      }
+    },
+    {
+      "task": "fail",
+      "arm": "off",
+      "rep": 3,
+      "exit_code": 0,
+      "wall_s": 245.6,
+      "sessions": 1,
+      "model_calls": 4,
+      "cost_usd": 0.258758,
+      "refresh_calls": 0,
+      "refresh_cost_usd": 0,
+      "total_cost_usd": 0.258758,
+      "post_wait_call": null,
+      "loop_notes": [],
+      "tools": [
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 0.1
+        },
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 160.5
+        },
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 0.1
+        }
+      ],
+      "receipts": [],
+      "receipt_sums": {
+        "calls_saved": 0,
+        "usd_saved": 0
+      }
+    },
+    {
+      "task": "fail",
+      "arm": "on",
+      "rep": 1,
+      "exit_code": 0,
+      "wall_s": 285.1,
+      "sessions": 1,
+      "model_calls": 4,
+      "cost_usd": 0.258118,
+      "refresh_calls": 0,
+      "refresh_cost_usd": 0,
+      "total_cost_usd": 0.258118,
+      "post_wait_call": null,
+      "loop_notes": [],
+      "tools": [
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 0.1
+        },
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 200.7
+        },
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 0.0
+        }
+      ],
+      "receipts": [],
+      "receipt_sums": {
+        "calls_saved": 0,
+        "usd_saved": 0
+      }
+    },
+    {
+      "task": "fail",
+      "arm": "on",
+      "rep": 2,
+      "exit_code": 0,
+      "wall_s": 203.8,
+      "sessions": 1,
+      "model_calls": 4,
+      "cost_usd": 0.256183,
+      "refresh_calls": 0,
+      "refresh_cost_usd": 0,
+      "total_cost_usd": 0.256183,
+      "post_wait_call": null,
+      "loop_notes": [],
+      "tools": [
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 0.1
+        },
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 120.3
+        },
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 0.0
+        }
+      ],
+      "receipts": [],
+      "receipt_sums": {
+        "calls_saved": 0,
+        "usd_saved": 0
+      }
+    },
+    {
+      "task": "fail",
+      "arm": "on",
+      "rep": 3,
+      "exit_code": 0,
+      "wall_s": 207.2,
+      "sessions": 1,
+      "model_calls": 4,
+      "cost_usd": 0.257555,
+      "refresh_calls": 0,
+      "refresh_cost_usd": 0,
+      "total_cost_usd": 0.257555,
+      "post_wait_call": null,
+      "loop_notes": [],
+      "tools": [
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 0.1
+        },
+        {
+          "tool": "bash",
+          "status": "error",
+          "seconds": 120.3
+        },
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 0.0
+        }
+      ],
+      "receipts": [],
+      "receipt_sums": {
+        "calls_saved": 0,
+        "usd_saved": 0
+      }
+    },
+    {
+      "task": "poll",
+      "arm": "off",
+      "rep": 1,
+      "exit_code": 0,
+      "wall_s": 227.8,
+      "sessions": 1,
+      "model_calls": 3,
+      "cost_usd": 0.224623,
+      "refresh_calls": 0,
+      "refresh_cost_usd": 0,
+      "total_cost_usd": 0.224623,
+      "post_wait_call": null,
+      "loop_notes": [],
+      "tools": [
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 0.1
+        },
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 150.4
+        }
+      ],
+      "receipts": [],
+      "receipt_sums": {
+        "calls_saved": 0,
+        "usd_saved": 0
+      }
+    },
+    {
+      "task": "poll",
+      "arm": "off",
+      "rep": 2,
+      "exit_code": 0,
+      "wall_s": 227.4,
+      "sessions": 1,
+      "model_calls": 3,
+      "cost_usd": 0.225611,
+      "refresh_calls": 0,
+      "refresh_cost_usd": 0,
+      "total_cost_usd": 0.225611,
+      "post_wait_call": null,
+      "loop_notes": [],
+      "tools": [
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 0.0
+        },
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 150.9
+        }
+      ],
+      "receipts": [],
+      "receipt_sums": {
+        "calls_saved": 0,
+        "usd_saved": 0
+      }
+    },
+    {
+      "task": "poll",
+      "arm": "off",
+      "rep": 3,
+      "exit_code": 0,
+      "wall_s": 226.6,
+      "sessions": 1,
+      "model_calls": 3,
+      "cost_usd": 0.224749,
+      "refresh_calls": 0,
+      "refresh_cost_usd": 0,
+      "total_cost_usd": 0.224749,
+      "post_wait_call": null,
+      "loop_notes": [],
+      "tools": [
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 0.2
+        },
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 150.4
+        }
+      ],
+      "receipts": [],
+      "receipt_sums": {
+        "calls_saved": 0,
+        "usd_saved": 0
+      }
+    },
+    {
+      "task": "poll",
+      "arm": "on",
+      "rep": 1,
+      "exit_code": 0,
+      "wall_s": 225.9,
+      "sessions": 1,
+      "model_calls": 3,
+      "cost_usd": 0.224876,
+      "refresh_calls": 0,
+      "refresh_cost_usd": 0,
+      "total_cost_usd": 0.224876,
+      "post_wait_call": null,
+      "loop_notes": [],
+      "tools": [
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 0.1
+        },
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 148.8
+        }
+      ],
+      "receipts": [],
+      "receipt_sums": {
+        "calls_saved": 0,
+        "usd_saved": 0
+      }
+    },
+    {
+      "task": "poll",
+      "arm": "on",
+      "rep": 2,
+      "exit_code": 0,
+      "wall_s": 228.3,
+      "sessions": 1,
+      "model_calls": 3,
+      "cost_usd": 0.225777,
+      "refresh_calls": 0,
+      "refresh_cost_usd": 0,
+      "total_cost_usd": 0.225777,
+      "post_wait_call": null,
+      "loop_notes": [],
+      "tools": [
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 0.1
+        },
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 150.3
+        }
+      ],
+      "receipts": [],
+      "receipt_sums": {
+        "calls_saved": 0,
+        "usd_saved": 0
+      }
+    },
+    {
+      "task": "poll",
+      "arm": "on",
+      "rep": 3,
+      "exit_code": 0,
+      "wall_s": 227.6,
+      "sessions": 1,
+      "model_calls": 3,
+      "cost_usd": 0.224614,
+      "refresh_calls": 0,
+      "refresh_cost_usd": 0,
+      "total_cost_usd": 0.224614,
+      "post_wait_call": null,
+      "loop_notes": [],
+      "tools": [
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 0.1
+        },
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 150.3
+        }
+      ],
+      "receipts": [],
+      "receipt_sums": {
+        "calls_saved": 0,
+        "usd_saved": 0
+      }
+    }
+  ],
+  "comparison": {
+    "fail": {
+      "n_off": 3,
+      "n_on": 3,
+      "measured_cost_diff_usd(off-on)": -0.00074,
+      "measured_call_diff(off-on)": 0.0,
+      "receipts_usd_saved_mean(on)": 0.0,
+      "receipts_calls_saved_mean(on)": 0.0
+    },
+    "poll": {
+      "n_off": 3,
+      "n_on": 3,
+      "measured_cost_diff_usd(off-on)": -9.5e-05,
+      "measured_call_diff(off-on)": 0.0,
+      "receipts_usd_saved_mean(on)": 0.0,
+      "receipts_calls_saved_mean(on)": 0.0
+    }
+  }
+}

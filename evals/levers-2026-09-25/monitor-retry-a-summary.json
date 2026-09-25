@@ -1,0 +1,1165 @@
+{
+  "runs": [
+    {
+      "task": "monitor",
+      "arm": "off",
+      "rep": 1,
+      "exit_code": 0,
+      "wall_s": 240.0,
+      "sessions": 1,
+      "model_calls": 9,
+      "cost_usd": 0.338396,
+      "refresh_calls": 0,
+      "refresh_cost_usd": 0,
+      "total_cost_usd": 0.338396,
+      "post_wait_call": null,
+      "loop_notes": [],
+      "tools": [
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 0.0
+        },
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 20.1
+        },
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 25.0
+        },
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 25.0
+        },
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 25.0
+        },
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 25.0
+        },
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 25.0
+        },
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 25.0
+        },
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 25.0
+        },
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 25.0
+        },
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 25.0
+        },
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 25.0
+        },
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 25.0
+        }
+      ],
+      "receipts": [],
+      "receipt_sums": {
+        "calls_saved": 0,
+        "usd_saved": 0
+      }
+    },
+    {
+      "task": "monitor",
+      "arm": "off",
+      "rep": 2,
+      "exit_code": 0,
+      "wall_s": 312.7,
+      "sessions": 1,
+      "model_calls": 13,
+      "cost_usd": 0.40451,
+      "refresh_calls": 0,
+      "refresh_cost_usd": 0,
+      "total_cost_usd": 0.40451,
+      "post_wait_call": null,
+      "loop_notes": [],
+      "tools": [
+        {
+          "tool": "bash",
+          "status": "error",
+          "seconds": 30.6
+        },
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 0.4
+        },
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 25.0
+        },
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 25.0
+        },
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 0.2
+        },
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 1.0
+        },
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 25.0
+        },
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 25.0
+        },
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 25.0
+        },
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 25.0
+        },
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 25.0
+        },
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 25.0
+        },
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 25.0
+        }
+      ],
+      "receipts": [],
+      "receipt_sums": {
+        "calls_saved": 0,
+        "usd_saved": 0
+      }
+    },
+    {
+      "task": "monitor",
+      "arm": "off",
+      "rep": 3,
+      "exit_code": 0,
+      "wall_s": 411.9,
+      "sessions": 1,
+      "model_calls": 18,
+      "cost_usd": 0.512029,
+      "refresh_calls": 0,
+      "refresh_cost_usd": 0,
+      "total_cost_usd": 0.512029,
+      "post_wait_call": null,
+      "loop_notes": [],
+      "tools": [
+        {
+          "tool": "bash",
+          "status": "error",
+          "seconds": 30.6
+        },
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 0.4
+        },
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 25.0
+        },
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 25.0
+        },
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 0.6
+        },
+        {
+          "tool": "bash",
+          "status": "error",
+          "seconds": 30.6
+        },
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 0.6
+        },
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 25.0
+        },
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 0.0
+        },
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 0.0
+        },
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 20.0
+        },
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 28.1
+        },
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 28.0
+        },
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 28.0
+        },
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 28.0
+        },
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 28.0
+        },
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 15.0
+        }
+      ],
+      "receipts": [],
+      "receipt_sums": {
+        "calls_saved": 0,
+        "usd_saved": 0
+      }
+    },
+    {
+      "task": "monitor",
+      "arm": "on",
+      "rep": 1,
+      "exit_code": 0,
+      "wall_s": 234.3,
+      "sessions": 1,
+      "model_calls": 9,
+      "cost_usd": 0.336566,
+      "refresh_calls": 0,
+      "refresh_cost_usd": 0,
+      "total_cost_usd": 0.336566,
+      "post_wait_call": null,
+      "loop_notes": [
+        "loop_sleep_timer",
+        "loop_repeat"
+      ],
+      "tools": [
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 0.0
+        },
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 25.0
+        },
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 25.0
+        },
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 28.0
+        },
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 28.0
+        },
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 28.0
+        },
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 28.0
+        },
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 0.0
+        }
+      ],
+      "receipts": [
+        {
+          "actual": {
+            "calls": 0,
+            "cost_usd": 0.00045,
+            "measured": true,
+            "model": "claude-opus-5-5",
+            "seconds": 0.0,
+            "tool": "bash"
+          },
+          "baseline": {
+            "calls": 6,
+            "cost_usd": 0.22437747,
+            "model": "claude-opus-5-5",
+            "seconds": 16.46
+          },
+          "calls_saved": 6,
+          "decision": "nudged_sleep_timer",
+          "lever": "loop_stop",
+          "mechanism": "rule:sleep_timer",
+          "method": "expected 6 further calls (mean continuation in real sessions 2026-09-25); observed 0 after the note until turn end; pric",
+          "project": "ws",
+          "seconds_saved": 16.46,
+          "traffic": "test",
+          "usd_saved": 0.22392747
+        },
+        {
+          "actual": {
+            "calls": 2,
+            "cost_usd": 0.07524249,
+            "measured": true,
+            "model": "claude-opus-5-5",
+            "seconds": 5.4867,
+            "tool": "bash"
+          },
+          "baseline": {
+            "calls": 0,
+            "cost_usd": 0.0,
+            "model": "claude-opus-5-5",
+            "seconds": 0.0
+          },
+          "calls_saved": -2,
+          "decision": "nudged_repeat",
+          "lever": "loop_stop",
+          "mechanism": "rule:repeat",
+          "method": "expected 0 further calls (mean continuation in real sessions 2026-09-25); observed 2 after the note until turn end; pric",
+          "project": "ws",
+          "seconds_saved": -5.4867,
+          "traffic": "test",
+          "usd_saved": -0.07524249
+        }
+      ],
+      "receipt_sums": {
+        "calls_saved": 4,
+        "usd_saved": 0.148685
+      }
+    },
+    {
+      "task": "monitor",
+      "arm": "on",
+      "rep": 2,
+      "exit_code": 0,
+      "wall_s": 367.9,
+      "sessions": 1,
+      "model_calls": 14,
+      "cost_usd": 0.455208,
+      "refresh_calls": 0,
+      "refresh_cost_usd": 0,
+      "total_cost_usd": 0.455208,
+      "post_wait_call": null,
+      "loop_notes": [
+        "loop_sleep_timer",
+        "loop_repeat"
+      ],
+      "tools": [
+        {
+          "tool": "bash",
+          "status": "error",
+          "seconds": 30.6
+        },
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 0.1
+        },
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 25.0
+        },
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 25.0
+        },
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 28.0
+        },
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 0.7
+        },
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 0.0
+        },
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 28.7
+        },
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 28.0
+        },
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 28.0
+        },
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 28.0
+        },
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 28.0
+        },
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 22.5
+        }
+      ],
+      "receipts": [
+        {
+          "actual": {
+            "calls": 0,
+            "cost_usd": 0.00045,
+            "measured": true,
+            "model": "claude-opus-5-5",
+            "seconds": 0.0,
+            "tool": "bash"
+          },
+          "baseline": {
+            "calls": 6,
+            "cost_usd": 0.19508897,
+            "model": "claude-opus-5-5",
+            "seconds": 20.0701
+          },
+          "calls_saved": 6,
+          "decision": "nudged_sleep_timer",
+          "lever": "loop_stop",
+          "mechanism": "rule:sleep_timer",
+          "method": "expected 6 further calls (mean continuation in real sessions 2026-09-25); observed 0 after the note until turn end; pric",
+          "project": "ws",
+          "seconds_saved": 20.0701,
+          "traffic": "test",
+          "usd_saved": 0.19463897
+        },
+        {
+          "actual": {
+            "calls": 0,
+            "cost_usd": 0.00045,
+            "measured": true,
+            "model": "claude-opus-5-5",
+            "seconds": 0.0,
+            "tool": "bash"
+          },
+          "baseline": {
+            "calls": 0,
+            "cost_usd": 0.0,
+            "model": "claude-opus-5-5",
+            "seconds": 0.0
+          },
+          "calls_saved": 0,
+          "decision": "nudged_repeat",
+          "lever": "loop_stop",
+          "mechanism": "rule:repeat",
+          "method": "expected 0 further calls (mean continuation in real sessions 2026-09-25); observed 0 after the note until turn end; pric",
+          "project": "ws",
+          "seconds_saved": 0.0,
+          "traffic": "test",
+          "usd_saved": -0.00045
+        }
+      ],
+      "receipt_sums": {
+        "calls_saved": 6,
+        "usd_saved": 0.194189
+      }
+    },
+    {
+      "task": "monitor",
+      "arm": "on",
+      "rep": 3,
+      "exit_code": 0,
+      "wall_s": 235.0,
+      "sessions": 1,
+      "model_calls": 9,
+      "cost_usd": 0.342044,
+      "refresh_calls": 0,
+      "refresh_cost_usd": 0,
+      "total_cost_usd": 0.342044,
+      "post_wait_call": null,
+      "loop_notes": [
+        "loop_sleep_timer",
+        "loop_repeat"
+      ],
+      "tools": [
+        {
+          "tool": "load_skill",
+          "status": "ok",
+          "seconds": 0.0
+        },
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 0.0
+        },
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 0.0
+        },
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 25.0
+        },
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 25.0
+        },
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 28.0
+        },
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 28.0
+        },
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 28.0
+        },
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 27.2
+        }
+      ],
+      "receipts": [
+        {
+          "actual": {
+            "calls": 0,
+            "cost_usd": 0.00045,
+            "measured": true,
+            "model": "claude-opus-5-5",
+            "seconds": 0.0,
+            "tool": "bash"
+          },
+          "baseline": {
+            "calls": 6,
+            "cost_usd": 0.2280296,
+            "model": "claude-opus-5-5",
+            "seconds": 17.7433
+          },
+          "calls_saved": 6,
+          "decision": "nudged_sleep_timer",
+          "lever": "loop_stop",
+          "mechanism": "rule:sleep_timer",
+          "method": "expected 6 further calls (mean continuation in real sessions 2026-09-25); observed 0 after the note until turn end; pric",
+          "project": "ws",
+          "seconds_saved": 17.7433,
+          "traffic": "test",
+          "usd_saved": 0.2275796
+        },
+        {
+          "actual": {
+            "calls": 0,
+            "cost_usd": 0.00045,
+            "measured": true,
+            "model": "claude-opus-5-5",
+            "seconds": 0.0,
+            "tool": "bash"
+          },
+          "baseline": {
+            "calls": 0,
+            "cost_usd": 0.0,
+            "model": "claude-opus-5-5",
+            "seconds": 0.0
+          },
+          "calls_saved": 0,
+          "decision": "nudged_repeat",
+          "lever": "loop_stop",
+          "mechanism": "rule:repeat",
+          "method": "expected 0 further calls (mean continuation in real sessions 2026-09-25); observed 0 after the note until turn end; pric",
+          "project": "ws",
+          "seconds_saved": 0.0,
+          "traffic": "test",
+          "usd_saved": -0.00045
+        }
+      ],
+      "receipt_sums": {
+        "calls_saved": 6,
+        "usd_saved": 0.22713
+      }
+    },
+    {
+      "task": "retry",
+      "arm": "off",
+      "rep": 1,
+      "exit_code": 0,
+      "wall_s": 212.6,
+      "sessions": 1,
+      "model_calls": 9,
+      "cost_usd": 0.320057,
+      "refresh_calls": 0,
+      "refresh_cost_usd": 0,
+      "total_cost_usd": 0.320057,
+      "post_wait_call": null,
+      "loop_notes": [],
+      "tools": [
+        {
+          "tool": "bash",
+          "status": "error",
+          "seconds": 0.1
+        },
+        {
+          "tool": "bash",
+          "status": "error",
+          "seconds": 10.0
+        },
+        {
+          "tool": "bash",
+          "status": "error",
+          "seconds": 20.0
+        },
+        {
+          "tool": "bash",
+          "status": "error",
+          "seconds": 25.0
+        },
+        {
+          "tool": "bash",
+          "status": "error",
+          "seconds": 25.0
+        },
+        {
+          "tool": "bash",
+          "status": "error",
+          "seconds": 28.0
+        },
+        {
+          "tool": "bash",
+          "status": "error",
+          "seconds": 28.0
+        },
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 0.0
+        }
+      ],
+      "receipts": [],
+      "receipt_sums": {
+        "calls_saved": 0,
+        "usd_saved": 0
+      }
+    },
+    {
+      "task": "retry",
+      "arm": "off",
+      "rep": 2,
+      "exit_code": 0,
+      "wall_s": 229.6,
+      "sessions": 1,
+      "model_calls": 10,
+      "cost_usd": 0.338234,
+      "refresh_calls": 0,
+      "refresh_cost_usd": 0,
+      "total_cost_usd": 0.338234,
+      "post_wait_call": null,
+      "loop_notes": [],
+      "tools": [
+        {
+          "tool": "bash",
+          "status": "error",
+          "seconds": 0.1
+        },
+        {
+          "tool": "bash",
+          "status": "error",
+          "seconds": 10.0
+        },
+        {
+          "tool": "bash",
+          "status": "error",
+          "seconds": 20.0
+        },
+        {
+          "tool": "bash",
+          "status": "error",
+          "seconds": 25.0
+        },
+        {
+          "tool": "bash",
+          "status": "error",
+          "seconds": 25.0
+        },
+        {
+          "tool": "bash",
+          "status": "error",
+          "seconds": 25.0
+        },
+        {
+          "tool": "bash",
+          "status": "error",
+          "seconds": 25.0
+        },
+        {
+          "tool": "bash",
+          "status": "error",
+          "seconds": 20.0
+        },
+        {
+          "tool": "read_file",
+          "status": "ok",
+          "seconds": 0.0
+        }
+      ],
+      "receipts": [],
+      "receipt_sums": {
+        "calls_saved": 0,
+        "usd_saved": 0
+      }
+    },
+    {
+      "task": "retry",
+      "arm": "off",
+      "rep": 3,
+      "exit_code": 0,
+      "wall_s": 154.8,
+      "sessions": 1,
+      "model_calls": 7,
+      "cost_usd": 0.290346,
+      "refresh_calls": 0,
+      "refresh_cost_usd": 0,
+      "total_cost_usd": 0.290346,
+      "post_wait_call": null,
+      "loop_notes": [],
+      "tools": [
+        {
+          "tool": "bash",
+          "status": "error",
+          "seconds": 0.1
+        },
+        {
+          "tool": "bash",
+          "status": "error",
+          "seconds": 10.0
+        },
+        {
+          "tool": "bash",
+          "status": "error",
+          "seconds": 20.0
+        },
+        {
+          "tool": "bash",
+          "status": "error",
+          "seconds": 30.1
+        },
+        {
+          "tool": "bash",
+          "status": "error",
+          "seconds": 30.0
+        },
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 0.0
+        }
+      ],
+      "receipts": [],
+      "receipt_sums": {
+        "calls_saved": 0,
+        "usd_saved": 0
+      }
+    },
+    {
+      "task": "retry",
+      "arm": "on",
+      "rep": 1,
+      "exit_code": 0,
+      "wall_s": 126.6,
+      "sessions": 1,
+      "model_calls": 6,
+      "cost_usd": 0.284038,
+      "refresh_calls": 0,
+      "refresh_cost_usd": 0,
+      "total_cost_usd": 0.284038,
+      "post_wait_call": null,
+      "loop_notes": [
+        "loop_failures",
+        "loop_sleep_timer"
+      ],
+      "tools": [
+        {
+          "tool": "bash",
+          "status": "error",
+          "seconds": 0.1
+        },
+        {
+          "tool": "bash",
+          "status": "error",
+          "seconds": 10.0
+        },
+        {
+          "tool": "bash",
+          "status": "error",
+          "seconds": 20.0
+        },
+        {
+          "tool": "bash",
+          "status": "error",
+          "seconds": 30.0
+        },
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 0.0
+        }
+      ],
+      "receipts": [
+        {
+          "actual": {
+            "calls": 1,
+            "cost_usd": 0.0477897,
+            "measured": true,
+            "model": "claude-opus-5-5",
+            "seconds": 3.295,
+            "tool": "bash"
+          },
+          "baseline": {
+            "calls": 1,
+            "cost_usd": 0.0473397,
+            "model": "claude-opus-5-5",
+            "seconds": 3.295
+          },
+          "calls_saved": 0,
+          "decision": "nudged_failures",
+          "lever": "loop_stop",
+          "mechanism": "rule:failures",
+          "method": "expected 1 further calls (mean continuation in real sessions 2026-09-25); observed 1 after the note until turn end; pric",
+          "project": "ws",
+          "seconds_saved": 0.0,
+          "traffic": "test",
+          "usd_saved": -0.00045
+        },
+        {
+          "actual": {
+            "calls": 1,
+            "cost_usd": 0.0477897,
+            "measured": true,
+            "model": "claude-opus-5-5",
+            "seconds": 3.295,
+            "tool": "bash"
+          },
+          "baseline": {
+            "calls": 6,
+            "cost_usd": 0.2840382,
+            "model": "claude-opus-5-5",
+            "seconds": 19.77
+          },
+          "calls_saved": 5,
+          "decision": "nudged_sleep_timer",
+          "lever": "loop_stop",
+          "mechanism": "rule:sleep_timer",
+          "method": "expected 6 further calls (mean continuation in real sessions 2026-09-25); observed 1 after the note until turn end; pric",
+          "project": "ws",
+          "seconds_saved": 16.475,
+          "traffic": "test",
+          "usd_saved": 0.2362485
+        }
+      ],
+      "receipt_sums": {
+        "calls_saved": 5,
+        "usd_saved": 0.235798
+      }
+    },
+    {
+      "task": "retry",
+      "arm": "on",
+      "rep": 2,
+      "exit_code": 0,
+      "wall_s": 102.0,
+      "sessions": 1,
+      "model_calls": 6,
+      "cost_usd": 0.289254,
+      "refresh_calls": 0,
+      "refresh_cost_usd": 0,
+      "total_cost_usd": 0.289254,
+      "post_wait_call": null,
+      "loop_notes": [
+        "loop_failures",
+        "loop_sleep_timer"
+      ],
+      "tools": [
+        {
+          "tool": "bash",
+          "status": "error",
+          "seconds": 0.1
+        },
+        {
+          "tool": "bash",
+          "status": "error",
+          "seconds": 10.0
+        },
+        {
+          "tool": "bash",
+          "status": "error",
+          "seconds": 20.0
+        },
+        {
+          "tool": "bash",
+          "status": "error",
+          "seconds": 0.1
+        },
+        {
+          "tool": "bash",
+          "status": "ok",
+          "seconds": 0.0
+        }
+      ],
+      "receipts": [
+        {
+          "actual": {
+            "calls": 1,
+            "cost_usd": 0.04865903,
+            "measured": true,
+            "model": "claude-opus-5-5",
+            "seconds": 4.2221,
+            "tool": "bash"
+          },
+          "baseline": {
+            "calls": 1,
+            "cost_usd": 0.04820903,
+            "model": "claude-opus-5-5",
+            "seconds": 4.2221
+          },
+          "calls_saved": 0,
+          "decision": "nudged_failures",
+          "lever": "loop_stop",
+          "mechanism": "rule:failures",
+          "method": "expected 1 further calls (mean continuation in real sessions 2026-09-25); observed 1 after the note until turn end; pric",
+          "project": "ws",
+          "seconds_saved": 0.0,
+          "traffic": "test",
+          "usd_saved": -0.00045
+        },
+        {
+          "actual": {
+            "calls": 0,
+            "cost_usd": 0.00045,
+            "measured": true,
+            "model": "claude-opus-5-5",
+            "seconds": 0.0,
+            "tool": "bash"
+          },
+          "baseline": {
+            "calls": 6,
+            "cost_usd": 0.2892542,
+            "model": "claude-opus-5-5",
+            "seconds": 25.3329
+          },
+          "calls_saved": 6,
+          "decision": "nudged_sleep_timer",
+          "lever": "loop_stop",
+          "mechanism": "rule:sleep_timer",
+          "method": "expected 6 further calls (mean continuation in real sessions 2026-09-25); observed 0 after the note until turn end; pric",
+          "project": "ws",
+          "seconds_saved": 25.3329,
+          "traffic": "test",
+          "usd_saved": 0.2888042
+        }
+      ],
+      "receipt_sums": {
+        "calls_saved": 6,
+        "usd_saved": 0.288354
+      }
+    },
+    {
+      "task": "retry",
+      "arm": "on",
+      "rep": 3,
+      "exit_code": 0,
+      "wall_s": 102.0,
+      "sessions": 1,
+      "model_calls": 6,
+      "cost_usd": 0.285215,
+      "refresh_calls": 0,
+      "refresh_cost_usd": 0,
+      "total_cost_usd": 0.285215,
+      "post_wait_call": null,
+      "loop_notes": [
+        "loop_failures",
+        "loop_sleep_timer"
+      ],
+      "tools": [
+        {
+          "tool": "bash",
+          "status": "error",
+          "seconds": 0.1
+        },
+        {
+          "tool": "bash",
+          "status": "error",
+          "seconds": 15.0
+        },
+        {
+          "tool": "bash",
+          "status": "error",
+          "seconds": 20.0
+        },
+        {
+          "tool": "bash",
+          "status": "error",
+          "seconds": 0.0
+        },
+        {
+          "tool": "read_file",
+          "status": "ok",
+          "seconds": 0.0
+        }
+      ],
+      "receipts": [
+        {
+          "actual": {
+            "calls": 1,
+            "cost_usd": 0.0479859,
+            "measured": true,
+            "model": "claude-opus-5-5",
+            "seconds": 3.4261,
+            "tool": "bash"
+          },
+          "baseline": {
+            "calls": 1,
+            "cost_usd": 0.0475359,
+            "model": "claude-opus-5-5",
+            "seconds": 3.4261
+          },
+          "calls_saved": 0,
+          "decision": "nudged_failures",
+          "lever": "loop_stop",
+          "mechanism": "rule:failures",
+          "method": "expected 1 further calls (mean continuation in real sessions 2026-09-25); observed 1 after the note until turn end; pric",
+          "project": "ws",
+          "seconds_saved": 0.0,
+          "traffic": "test",
+          "usd_saved": -0.00045
+        },
+        {
+          "actual": {
+            "calls": 0,
+            "cost_usd": 0.00045,
+            "measured": true,
+            "model": "claude-opus-5-5",
+            "seconds": 0.0,
+            "tool": "bash"
+          },
+          "baseline": {
+            "calls": 6,
+            "cost_usd": 0.2852154,
+            "model": "claude-opus-5-5",
+            "seconds": 20.5565
+          },
+          "calls_saved": 6,
+          "decision": "nudged_sleep_timer",
+          "lever": "loop_stop",
+          "mechanism": "rule:sleep_timer",
+          "method": "expected 6 further calls (mean continuation in real sessions 2026-09-25); observed 0 after the note until turn end; pric",
+          "project": "ws",
+          "seconds_saved": 20.5565,
+          "traffic": "test",
+          "usd_saved": 0.2847654
+        }
+      ],
+      "receipt_sums": {
+        "calls_saved": 6,
+        "usd_saved": 0.284315
+      }
+    }
+  ],
+  "comparison": {
+    "monitor": {
+      "n_off": 3,
+      "n_on": 3,
+      "measured_cost_diff_usd(off-on)": 0.040372,
+      "measured_call_diff(off-on)": 2.667,
+      "receipts_usd_saved_mean(on)": 0.190001,
+      "receipts_calls_saved_mean(on)": 5.333
+    },
+    "retry": {
+      "n_off": 3,
+      "n_on": 3,
+      "measured_cost_diff_usd(off-on)": 0.030043,
+      "measured_call_diff(off-on)": 2.667,
+      "receipts_usd_saved_mean(on)": 0.269489,
+      "receipts_calls_saved_mean(on)": 5.667
+    }
+  }
+}
