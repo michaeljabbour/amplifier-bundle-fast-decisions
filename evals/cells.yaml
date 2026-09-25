@@ -499,7 +499,7 @@ cells:
   orch-haiku-low-opus:
     harnesses: [amplifier-fd]
     amplifier_model: claude-opus-5-5
-    fd: { composition: composed, backend: jev, allow_external_state: true, effort_profile: all_phase_cheap_low,
+    fd: { composition: composed, backend: jev, allow_external_state: true, effort_profile: all_phase,
           model_routing_profile: haiku_once ,
           overrides: { model_routing: { start_model: claude-haiku-4-5-20251001 }, effort_routing: { by_tier: { cheap: low } } } }
     role: "Jev decide-once, easy turns on Haiku 4.5 at low effort, Opus 5.5 host"
@@ -511,7 +511,7 @@ cells:
   orch-opuslow-opus:
     harnesses: [amplifier-fd]
     amplifier_model: claude-opus-5-5
-    fd: { composition: composed, backend: jev, allow_external_state: true, effort_profile: all_phase_cheap_low,
+    fd: { composition: composed, backend: jev, allow_external_state: true, effort_profile: all_phase,
           model_routing_profile: opus_once ,
           overrides: { model_routing: { start_model: claude-opus-5-5 }, effort_routing: { by_tier: { cheap: low } } } }
     role: "Jev decide-once, easy turns stay on Opus 5.5 at low effort (no model switch)"
@@ -523,11 +523,71 @@ cells:
   orch-sonnetlow-opus:
     harnesses: [amplifier-fd]
     amplifier_model: claude-opus-5-5
-    fd: { composition: composed, backend: jev, allow_external_state: true, effort_profile: all_phase_cheap_low,
+    fd: { composition: composed, backend: jev, allow_external_state: true, effort_profile: all_phase,
           model_routing_profile: sonnet_once ,
           overrides: { effort_routing: { by_tier: { cheap: low } } } }
     role: "Jev decide-once, easy turns on Sonnet 5 at low effort, Opus 5.5 host"
     purpose: "the shipped cheap tier with less thinking"
+    anchor_cell: plain-opus
+    requires_cells: [plain-opus]
+    mechanism_gate: { max_scored: 0, model_routed_model: claude-sonnet-5, min_model_routed: 1 }
+
+  # Same tuning question on the Fable 5.1 host (dev split only).
+  orch-haiku-fable:
+    harnesses: [amplifier-fd]
+    fd: { composition: composed, backend: jev, allow_external_state: true, effort_profile: all_phase,
+          model_routing_profile: haiku_once,
+          overrides: { model_routing: { start_model: claude-haiku-4-5-20251001 } } }
+    role: "Jev decide-once, easy turns on Haiku 4.5 (medium effort), Fable 5.1 host"
+    purpose: "cost-first cheap tier on an expensive host"
+    anchor_cell: plain
+    requires_cells: [plain]
+    mechanism_gate: { max_scored: 0, model_routed_model: claude-haiku-4-5-20251001, min_model_routed: 1 }
+
+  orch-fablelow:
+    harnesses: [amplifier-fd]
+    fd: { composition: composed, backend: jev, allow_external_state: true, effort_profile: all_phase,
+          model_routing_profile: sonnet_once,
+          overrides: { model_routing: { start_model: claude-fable-5-1 }, effort_routing: { by_tier: { cheap: low } } } }
+    role: "Jev decide-once, easy turns stay on Fable 5.1 at low effort (no model switch)"
+    purpose: "effort-only routing on the Fable host"
+    anchor_cell: plain
+    requires_cells: [plain]
+    mechanism_gate: { max_scored: 0, model_routed_model: claude-fable-5-1, min_model_routed: 1 }
+
+  # Easy-turn shaping on the Opus 5.5 host (dev split only).
+  orch-haiku-shaped-opus:
+    harnesses: [amplifier-fd]
+    amplifier_model: claude-opus-5-5
+    fd: { composition: composed, backend: jev, allow_external_state: true, effort_profile: all_phase,
+          model_routing_profile: sonnet_once,
+          overrides: { model_routing: { start_model: claude-haiku-4-5-20251001, easy_turn_guidance: "This request was judged small. Work directly: read what you need in one step, make independent tool calls together in a single response, skip planning and checklist tools, verify once, then give a short answer.", easy_turn_hide_tools: [todo] } } }
+    role: "Haiku easy tier + guidance + todo hidden, Opus host"
+    purpose: "easy-turn shaping (HC12): does telling the cheap tier to work directly remove its extra round trips?"
+    anchor_cell: plain-opus
+    requires_cells: [plain-opus]
+    mechanism_gate: { max_scored: 0, model_routed_model: claude-haiku-4-5-20251001, min_model_routed: 1 }
+
+  orch-haiku-guided-opus:
+    harnesses: [amplifier-fd]
+    amplifier_model: claude-opus-5-5
+    fd: { composition: composed, backend: jev, allow_external_state: true, effort_profile: all_phase,
+          model_routing_profile: sonnet_once,
+          overrides: { model_routing: { start_model: claude-haiku-4-5-20251001, easy_turn_guidance: "This request was judged small. Work directly: read what you need in one step, make independent tool calls together in a single response, skip planning and checklist tools, verify once, then give a short answer." } } }
+    role: "Haiku easy tier + guidance only, Opus host"
+    purpose: "easy-turn shaping (HC12): does telling the cheap tier to work directly remove its extra round trips?"
+    anchor_cell: plain-opus
+    requires_cells: [plain-opus]
+    mechanism_gate: { max_scored: 0, model_routed_model: claude-haiku-4-5-20251001, min_model_routed: 1 }
+
+  orch-sonnet-shaped-opus:
+    harnesses: [amplifier-fd]
+    amplifier_model: claude-opus-5-5
+    fd: { composition: composed, backend: jev, allow_external_state: true, effort_profile: all_phase,
+          model_routing_profile: sonnet_once,
+          overrides: { model_routing: { start_model: claude-sonnet-5, easy_turn_guidance: "This request was judged small. Work directly: read what you need in one step, make independent tool calls together in a single response, skip planning and checklist tools, verify once, then give a short answer.", easy_turn_hide_tools: [todo] } } }
+    role: "Sonnet easy tier + guidance + todo hidden, Opus host"
+    purpose: "easy-turn shaping (HC12): does telling the cheap tier to work directly remove its extra round trips?"
     anchor_cell: plain-opus
     requires_cells: [plain-opus]
     mechanism_gate: { max_scored: 0, model_routed_model: claude-sonnet-5, min_model_routed: 1 }
