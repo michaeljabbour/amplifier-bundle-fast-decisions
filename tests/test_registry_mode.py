@@ -202,6 +202,36 @@ class MountTests(unittest.IsolatedAsyncioTestCase):
             await cleanup()
 
 
+class OwnershipTests(unittest.IsolatedAsyncioTestCase):
+    async def test_owner_backend_replaces_shadow_hook_backend(self):
+        """Hook order can mount the shadow observer (backend: deterministic)
+        before the router. Active routing must use the router's backend."""
+        from amplifier_fast_decisions.backends import ScriptedBackend, UnavailableBackend
+        with tempfile.TemporaryDirectory() as tmp:
+            coordinator = DemoCoordinator()
+            runtime, created = get_runtime(coordinator, {"mode": "shadow", "backend": "deterministic",
+                                                         "events_dir": tmp})
+            self.assertTrue(created)
+            self.assertIsInstance(runtime.service.backend, ScriptedBackend)
+            same, created = get_runtime(coordinator, {"mode": "active", "backend": "unavailable",
+                                                      "events_dir": tmp}, owner=True)
+            self.assertIs(same, runtime)
+            self.assertFalse(created)
+            self.assertIsInstance(runtime.service.backend, UnavailableBackend)
+            self.assertEqual(runtime.service.policy.mode, "active")
+            await runtime.close()
+
+    async def test_later_non_owner_does_not_replace_owner_backend(self):
+        from amplifier_fast_decisions.backends import UnavailableBackend
+        with tempfile.TemporaryDirectory() as tmp:
+            coordinator = DemoCoordinator()
+            runtime, _ = get_runtime(coordinator, {"mode": "active", "backend": "unavailable",
+                                                   "events_dir": tmp}, owner=True)
+            get_runtime(coordinator, {"mode": "shadow", "backend": "deterministic", "events_dir": tmp})
+            self.assertIsInstance(runtime.service.backend, UnavailableBackend)
+            await runtime.close()
+
+
 class BehaviorTests(unittest.TestCase):
     def setUp(self):
         self.primary = yaml.safe_load((ROOT / "behaviors/fast-decisions.yaml").read_text())
