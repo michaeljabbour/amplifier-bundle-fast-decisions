@@ -910,7 +910,7 @@ details.dt { margin-top:8px; } details.dt summary { cursor:pointer; color:var(--
 .cmwrap { max-height:560px; overflow:auto; border:1px solid var(--rule); border-radius:8px; }
 #dpanel { border:1px solid var(--rule); border-radius:10px; padding:10px 14px; margin:8px 0; background:var(--bg); }
 #dpanel h4 { margin-top:6px; } #dpanel .opt.exp { font-weight:650; } #dpanel .opt.exp::after { content:"  (frozen label)"; font-weight:400; color:var(--ink2); }
-#dpanel tr.bad td { color:var(--sysone); font-weight:600; }
+#dpanel tr.bad td { color:var(--ink); font-weight:600; } #dpanel tr.bad td:first-child { box-shadow: inset 4px 0 0 var(--sysone); }
 #dpanel pre.st { white-space:pre-wrap; }
 .tip { position:fixed; z-index:50; pointer-events:none; background:var(--card); color:var(--ink); border:1px solid var(--ink3); border-radius:8px;
   padding:6px 9px; font-size:12px; max-width:min(340px,88vw); white-space:pre-line; box-shadow:0 4px 14px rgba(0,0,0,.25); display:none; }
@@ -1417,7 +1417,7 @@ function renderExplorer() {
   const W = cw(el), H = W < 480 ? 360 : 430, m = {l: 68, r: 14, t: 10, b: 44};
   const ymax = Math.max(1, ...CURVES.flat().map(c => c.waCount)) * 1.08, X = v => m.l + v * (W - m.l - m.r), Y = v => H - m.b - v / ymax * (H - m.t - m.b);
   const svg = sv('svg', {width: W, height: H, viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': 'Coverage versus wrong automatic frontier'});
-  axisFrame(svg, {m, W, H, X, Y, xticks: [0, .2, .4, .6, .8, 1], yticks: niceTicks(0, ymax, 5), xfmt: v => pct(v, 0), yfmt: v => fnum(v, v < 10 && v % 1 ? 1 : 0), xtitle: 'coverage (share of decisions automatic)', ytitle: 'wrong automatic per repetition'});
+  axisFrame(svg, {m, W, H, X, Y, xticks: [0, .2, .4, .6, .8, 1], yticks: niceTicks(0, ymax, 5).filter(v => v > 0), xfmt: v => pct(v, 0), yfmt: v => fnum(v, v < 10 && v % 1 ? 1 : 0), xtitle: 'coverage (share of decisions automatic)', ytitle: 'wrong automatic per repetition'});
   const dash = ['', '6 3', '2 3', '8 3 2 3'], seen = {};
   js.forEach((j, i) => {
     const k = seen[j.family] = (seen[j.family] || 0) + 1;

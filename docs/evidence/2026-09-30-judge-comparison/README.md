@@ -1,5 +1,10 @@
 # Judge comparison: quality, calibration, latency and cost
 
+> **Superseded (2026-09-30).** This first pass was validated and partly corrected in
+> [2026-09-30-judge-benchmark](../2026-09-30-judge-benchmark/README.md): Luna's 90/90 and zero wrong automatic
+> decisions did not reproduce, tev1 0.8B does not qualify as an offline tier under the bundle's real policy, and the
+> automatic rule here (0.75 on the stated choice) is not the bundle's. The data below is unchanged.
+
 Measured September 30, 2026 on an Apple M5 Max (128 GB). [Interactive report](index.html).
 
 Ten decision judges answered the same 90 frozen screening cases from the Laya study: the original 60
