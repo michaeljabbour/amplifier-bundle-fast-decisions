@@ -399,6 +399,8 @@ def print_plan(plan: dict, split: str, n_cases: int, args, extra: list[str]) -> 
 
 
 def main(argv=None) -> int:
+    # Benchmark traffic must never count toward production efficiency receipts (docs/GOAL.md).
+    os.environ.setdefault("AFAST_TRAFFIC", "test")
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--split", choices=("dev", "holdout"), default="dev")
     parser.add_argument("--arms", nargs="+")
