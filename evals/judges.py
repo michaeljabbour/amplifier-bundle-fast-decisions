@@ -155,7 +155,8 @@ def validate_policies(names, primary) -> None:
 
 
 def dump(obj) -> str:
-    return json.dumps(obj, indent=2, sort_keys=True) + "\n"
+    # Compact on purpose: a 14-arm summary is ~6.5 MB indented and ~2.5 MB compact. The report renders it.
+    return json.dumps(obj, sort_keys=True, separators=(",", ":")) + "\n"
 
 
 def _read_rows(path: Path) -> list[dict]:

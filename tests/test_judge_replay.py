@@ -58,7 +58,7 @@ class FirstPassReplayTests(unittest.TestCase):
 
 class CommittedBenchmarkReplayTests(unittest.TestCase):
     def test_committed_benchmarks_replay_byte_identical(self):
-        found = sorted((ROOT / "docs" / "evidence").glob("*-judge-benchmark/requests.jsonl"))
+        found = sorted((ROOT / "docs" / "evidence").glob("*-judge-benchmark/**/requests.jsonl"))
         if not found:
             self.skipTest("no committed judge-benchmark evidence yet")
         for requests in found:

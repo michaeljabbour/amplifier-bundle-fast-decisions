@@ -451,7 +451,47 @@ def _kv_html(obj, depth: int = 0) -> str:
         if all(not isinstance(x, (dict, list)) for x in obj):
             return f"<code>{esc(' '.join(str(x) for x in obj))}</code>" if obj else "<span class='muted'>(empty)</span>"
         return "<ol>" + "".join(f"<li>{_kv_html(x, depth + 1)}</li>" for x in obj) + "</ol>"
+    if obj is None:
+        return "<span class='muted'>null</span>"
+    if isinstance(obj, bool):
+        return "true" if obj else "false"
     return esc(obj)
+
+
+def _run_facts(run: dict | None) -> dict:
+    """Flatten run.json: real runs nest the facts in invocations[0]; older/test files keep them at top level."""
+    if not run:
+        return {}
+    facts = dict(run)
+    inv = run.get("invocations")
+    if isinstance(inv, list) and inv and isinstance(inv[0], dict):
+        facts.update(inv[0])
+    return facts
+
+
+def _summary_facts(run: dict | None) -> str:
+    f = _run_facts(run)
+    if not f:
+        return ""
+    git = f.get("git")
+    sha = f.get("git_sha") or (git.get("sha") if isinstance(git, dict) else None)
+    dirty = git.get("dirty") if isinstance(git, dict) else None
+    host = f.get("host")
+    if isinstance(host, dict):
+        host = ", ".join(f"{k} {v}" for k, v in sorted(host.items()))
+    bud = f.get("budget") if isinstance(f.get("budget"), dict) else {}
+    rows = [
+        ["Harness commit", f"<code>{esc(sha)}</code>" + (" (clean worktree)" if dirty is False else " (dirty worktree)" if dirty else "") if sha else "<span class='muted'>not recorded</span>"],
+        ["Ollama version", esc(f.get("ollama_version")) if f.get("ollama_version") else "<span class='muted'>not recorded</span>"],
+        ["Host", esc(host) if host else "<span class='muted'>not recorded</span>"],
+        ["Run window (UTC)", esc(f"{f.get('started_utc', '?')} to {f.get('ended_utc', '?')}")],
+        ["Repetitions / cases / concurrency", esc(f"{f.get('reps', '?')} / {f.get('cases', '?')} / {f.get('concurrency', '?')}")],
+    ]
+    if bud:
+        rows.append(["Spend vs. budget", esc(f"${bud.get('realized_usd', 0):.2f} of ${bud.get('limit_usd', 0):.2f}" + (", stopped early" if bud.get("stopped_early") else ""))])
+    if f.get("harness_commit"):
+        rows.append(["Harness commit (first-pass reproduction)", f"<code>{esc(f['harness_commit'])}</code>"])
+    return table(["Fact", "Value"], rows)
 
 
 def _fmt_cmd(argv) -> str:
@@ -574,6 +614,19 @@ def latency_html(lat: dict | None) -> str:
     return out
 
 
+def _probe_html(probe) -> str:
+    if isinstance(probe, dict):
+        body = probe.get("body")
+        try:
+            msg = json.loads(body)["error"]["message"] if isinstance(body, str) else None
+        except (ValueError, KeyError, TypeError):
+            msg = None
+        st = probe.get("status")
+        if st is not None:
+            return f"HTTP <b>{esc(st)}</b>" + (f" &ldquo;{esc(msg or body)}&rdquo;" if (msg or body) else "") + (f" (arm <code>{esc(probe['arm'])}</code>)" if probe.get("arm") else "")
+    return f"<code>{esc(json.dumps(probe, sort_keys=True))}</code>"
+
+
 def repro_html(splits: dict, root: Path, lat: dict | None) -> str:
     parts = []
     for name, sp in splits.items():
@@ -590,9 +643,11 @@ def repro_html(splits: dict, root: Path, lat: dict | None) -> str:
                          esc(", ".join(f"{k}={v}" for k, v in sorted(j["flags"].items())))] for j in sp["judges"]])
         run_html = ""
         if run:
-            argv = run.get("argv")
-            rest = {k: v for k, v in run.items() if k != "argv"}
-            run_html = _kv_html(rest) + (f"<h5>Exact command</h5><pre>{esc(_fmt_cmd(argv))}</pre>" if argv is not None else "")
+            facts = _run_facts(run)
+            argv = facts.get("argv")
+            rest = {k: v for k, v in facts.items() if k not in ("argv", "invocations")}
+            run_html = (_summary_facts(run) + (f"<h5>Exact command</h5><pre>{esc(_fmt_cmd(argv))}</pre>" if argv is not None else "")
+                        + f"<details class='dt'><summary>Full run.json contents</summary>{_kv_html(rest)}</details>")
         else:
             run_html = "<p class='muted'>run.json not found for this split: git SHA, host load, Ollama version and command are not recorded.</p>"
         prices = sp.get("prices")
@@ -601,13 +656,17 @@ def repro_html(splits: dict, root: Path, lat: dict | None) -> str:
             price_html = "<h5>Prices used (USD per million tokens: input, output; manifest)</h5>" + table(
                 ["Price key", "input", "output"], [[esc(k), esc(v[0]), esc(v[1])] for k, v in sorted(prices.items())])
         parts.append(f"<h4>{esc(name)} split</h4>{run_html}{price_html}<h5>Manifest and log hashes</h5>{hashes}<h5>Models</h5>{models}")
+    fp = _read_json(root / "firstpass-repro" / "run.json", None)
+    if isinstance(fp, dict) and fp.get("harness_commit"):
+        parts.append("<h4>First-pass reproduction</h4>" + table(["Fact", "Value"], [
+            ["Harness commit", f"<code>{esc(fp['harness_commit'])}</code>"], ["Note", esc(fp.get("note") or "")]]))
     probe = None
     for sp in splits.values():
-        if sp and sp["run"] and sp["run"].get("openai_decisions_probe") is not None:
-            probe = sp["run"]["openai_decisions_probe"]
+        if sp and _run_facts(sp["run"]).get("openai_decisions_probe") is not None:
+            probe = _run_facts(sp["run"])["openai_decisions_probe"]
             break
     parts.append("<h4>OpenAI Decisions API</h4><p>Probe status recorded in run.json: " +
-                 (f"<code>{esc(json.dumps(probe, sort_keys=True))}</code>" if probe is not None else "<span class='muted'>not recorded</span>") +
+                 (_probe_html(probe) if probe is not None else "<span class='muted'>not recorded</span>") +
                  ". No Decisions-API results are claimed anywhere in this report; hosted OpenAI arms use the chat endpoint.</p>")
     if lat:
         parts.append("<h4>Latency run</h4>" + (_kv_html({"spend_usd": lat["spend"], "errors": lat["errors"],
@@ -824,12 +883,13 @@ table.kv { border-collapse:collapse; font-size:13px; } table.kv th, table.kv td 
 pre, code { font:12.5px ui-monospace,SFMono-Regular,Menlo,monospace; } pre { background:var(--bg); padding:10px; border-radius:8px; overflow-x:auto; white-space:pre-wrap; word-break:break-all; }
 code { word-break:break-all; }
 details.dt { margin-top:8px; } details.dt summary { cursor:pointer; color:var(--ink2); font-size:13px; }
-.heat { display:inline-block; min-width:2.4em; padding:1px 6px; border-radius:4px; text-align:center; background:color-mix(in srgb, var(--sysone) calc(var(--v) * 80%), transparent); }
+.heat { display:inline-block; min-width:2.4em; padding:1px 6px; border-radius:4px; text-align:center; background:color-mix(in srgb, var(--sysone) calc(var(--v) * 50%), transparent); }
 .verdict { font-weight:600; padding:1px 8px; border-radius:10px; border:1px solid var(--rule); font-size:12px; }
 .v-confirmed::before { content:"\2713 "; } .v-refuted::before { content:"\2717 "; } .v-revised::before { content:"\21BB "; } .v-new::before { content:"+ "; }
 .v-refuted { border-color:var(--sysone); } .v-confirmed { border-color:var(--hosted); }
 .ctrl { display:flex; gap:12px 18px; flex-wrap:wrap; align-items:end; margin:8px 0 12px; }
 .ctrl label { display:flex; flex-direction:column; gap:3px; font-size:12.5px; color:var(--ink2); }
+.ctrl select { min-width:11em; padding-right:26px; text-overflow:ellipsis; }
 .ctrl input[type=range] { width:min(340px,80vw); padding:0; }
 .big { font-size:22px; font-weight:650; color:var(--ink); }
 .mx { border-collapse:separate; border-spacing:2px; font-size:12px; }
@@ -843,7 +903,7 @@ details.dt { margin-top:8px; } details.dt summary { cursor:pointer; color:var(--
 .cm thead th { height:112px; vertical-align:bottom; text-align:center; position:sticky; top:0; background:var(--card); }
 .cm thead th > span { display:inline-block; writing-mode:vertical-rl; transform:rotate(180deg); }
 .cm td { padding:0; }
-.cm button { width:26px; height:24px; padding:0; border-radius:4px; border:1px solid transparent; font-size:13px; line-height:1; color:#fff; }
+.cm button { width:26px; height:24px; padding:0; border-radius:4px; border:1px solid transparent; font-size:14px; font-weight:700; line-height:1; color:#fff; }
 .cm button.correct { background:var(--hosted); } .cm button.wrong { background:var(--sysone); } .cm button.fallback { background:var(--neutral); color:#111; }
 .cm button.mixed { box-shadow:inset 0 0 0 2px var(--card), inset 0 0 0 3px var(--ink); }
 .cm button.sel { outline:2px solid var(--ink); outline-offset:1px; }
@@ -861,6 +921,9 @@ footer { max-width:1180px; margin:0 auto; padding:0 16px 40px; color:var(--ink3)
   body { font-size:14px; } main { padding:4px 10px 48px; } section.card { padding:14px 12px; border-radius:10px; margin:10px 0; }
   .bar nav { display:none; } h1 { font-size:20px; }
   .mx td { width:36px; min-width:36px; }
+  .scroll { background:linear-gradient(to right,var(--card) 30%,transparent),linear-gradient(to left,var(--card) 30%,transparent) 100% 0,radial-gradient(farthest-side at 0 50%,rgba(0,0,0,.25),transparent) 0 0,radial-gradient(farthest-side at 100% 50%,rgba(0,0,0,.25),transparent) 100% 0; background-repeat:no-repeat; background-size:30px 100%,30px 100%,10px 100%,10px 100%; background-attachment:local,local,scroll,scroll; }
+  table.kv, table.kv tbody, table.kv tr, table.kv th, table.kv td { display:block; max-width:100%; overflow-wrap:anywhere; }
+  table.kv th { padding-top:6px; color:var(--ink3); } ol { padding-left:20px; }
 }
 """
 
@@ -890,9 +953,9 @@ TEMPLATE = r"""<!doctype html>
 <div class="callout"><b>Why wrong automatic decisions matter most.</b> When a judge is wrong but confident, the agent acts on it with no second look, for example clicking <em>Buy now</em> when the task never said to buy. A wrong answer that falls back to slow reasoning only costs time. So accuracy alone is the wrong headline: this report leads with the <em>wrong-automatic rate</em> and <em>coverage</em> (the share of decisions that skip slow reasoning).</div>
 <h3>How to read each chart</h3>
 <ul class="notes">
-<li><b>Bars and points with whiskers:</b> the whisker is a 95% Wilson confidence interval. If two whiskers overlap a lot, do not read a ranking into it.</li>
+<li><b>Bars and points with whiskers:</b> the whisker is the range the true rate plausibly lies in, given only 90 or 63 cases (a 95% Wilson interval). If two whiskers overlap a lot, do not read a ranking into it.</li>
 <li><b>Trade-off scatters:</b> the best corner is high accuracy at low latency (first) and low wrong-automatic at high coverage (second). Colour marks the judge family; every point is labelled directly. Latency uses a log axis.</li>
-<li><b>Pairwise matrix:</b> each cell is row minus column in percentage points on per-case majorities. Bold with a star means significant after Holm correction over <em>all</em> pairs; a dashed outline marks a contrast declared in advance.</li>
+<li><b>Pairwise matrix:</b> each cell is row minus column in percentage points. A star means the difference is unlikely to be luck even after adjusting for making many comparisons at once (exact McNemar test, Holm-adjusted p &le; 0.05); no star means "within noise at this sample size". A dashed outline marks a comparison declared before the data came in.</li>
 <li><b>Threshold explorer:</b> moving the slider re-scores every judge at that certainty cutoff. Lines are the coverage-versus-wrong frontier; the dot is where the slider sits.</li>
 <li><b>Case matrix:</b> &#10003; = automatic and right, &#10007; = automatic and wrong, &#8631; = fell back to slow reasoning. Click a cell for the whole case.</li>
 <li><b>Latency bars:</b> segments add up to the median call; shade shows the component, colour the family.</li>
@@ -937,6 +1000,7 @@ TEMPLATE = r"""<!doctype html>
 <label id="c-custom-wrap">Custom cutoff<input id="c-custom" type="number" min="0.5" max="0.99" step="0.01" value="0.90"></label>
 <label>OpenAI tier<select id="c-tier"><option value="standard">standard</option><option value="priority">priority (2x price)</option></select></label>
 </div>
+<div class="legend" id="legend-fam4"></div>
 <div class="scroll" id="calc-out"></div>
 </section>
 
@@ -1092,9 +1156,10 @@ const rectsOverlap = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y +
 function placeLabels(items, box, obstacles) {
   // items: {x,y,text}; tries a ring of offsets, greedy; returns [{x,y,anchor,leader}]
   const placed = [], out = [];
-  const offs = (w) => { const dys = [4], o = []; for (let k = 1; k <= 10; k++) { dys.push(4 - 13 * k, 4 + 13 * k); }
-    for (const dy of dys) { o.push([9, dy]); o.push([-9 - w, dy]); }
-    o.push([-w / 2, -12], [-w / 2, 24]); return o; };
+  const offs = (w) => { const dys = [4], o = []; for (let k = 1; k <= 18; k++) { dys.push(4 - 13 * k, 4 + 13 * k); }
+    for (const dx of [9, -9 - w, 9 + w * 0.6, -9 - w * 1.6]) for (const dy of dys) o.push([dx, dy]);
+    o.push([-w / 2, -12], [-w / 2, 24]);
+    return o.sort((a, b) => (Math.abs(a[1] - 4) + (a[0] < 0 ? 2 : 0) + Math.abs(a[0]) * 0.01) - (Math.abs(b[1] - 4) + (b[0] < 0 ? 2 : 0) + Math.abs(b[0]) * 0.01)); };
   for (const it of items) {
     const w = it.text.length * 6.7 + 4, hgt = 13;
     let best = null, bestScore = 1e9;
@@ -1261,7 +1326,7 @@ function renderScatter() {
     points: js.map(j => ({x: j.p95, y: j.acc.rate, ylo: j.acc.ci[0], yhi: j.acc.ci[1], fam: j.family, label: j.short, tip: j.arm + '\nAccuracy ' + rateTxt(j.acc) + '\np50 ' + fms(j.p50) + ', p95 ' + fms(j.p95) + '\n' + D.families[j.family]}))});
   const xm = Math.min(1, Math.max(...js.map(j => j.cov.ci[1])) + 0.03), xn = Math.max(0, Math.min(...js.map(j => j.cov.ci[0])) - 0.03);
   const ym = Math.max(0.05, ...js.map(j => j.wa.ci[1])) + 0.01;
-  scatter($('#ch-sc2'), {title: 'Wrong automatic versus coverage', xlog: false, xdom: [xn, xm], ydom: [0, ym], xticks: niceTicks(xn, xm, 5), yticks: niceTicks(0, ym, 5), xfmt: v => pct(v, 0), yfmt: v => pct(v, 0), xtitle: 'coverage (share automatic; whiskers 95% CI)', ytitle: 'wrong automatic rate',
+  scatter($('#ch-sc2'), {title: 'Wrong automatic versus coverage', xlog: false, xdom: [xn, xm], ydom: [0, ym], xticks: niceTicks(xn, xm, cw($('#ch-sc2')) < 480 ? 4 : 8), yticks: niceTicks(0, ym, 5), xfmt: v => pct(v, 0), yfmt: v => pct(v, 0), xtitle: 'coverage (share automatic; whiskers 95% CI)', ytitle: 'wrong automatic rate',
     points: js.map(j => ({x: j.cov.rate, y: j.wa.rate, xlo: j.cov.ci[0], xhi: j.cov.ci[1], ylo: j.wa.ci[0], yhi: j.wa.ci[1], fam: j.family, label: j.short, tip: j.arm + '\nCoverage ' + rateTxt(j.cov) + '\nWrong automatic ' + rateTxt(j.wa) + '\n' + D.families[j.family]}))});
   dtable($('#dt-scatter'), 'Data: scatter points (' + split + ')', ['Judge', 'Accuracy', 'Acc CI', 'p95 ms', 'Coverage', 'Cov CI', 'Wrong-auto', 'WA CI'],
     js.map(j => [j.arm, pct(j.acc.rate), pct(j.acc.ci[0]) + ' to ' + pct(j.acc.ci[1]), fnum(j.p95, 1), pct(j.cov.rate), pct(j.cov.ci[0]) + ' to ' + pct(j.cov.ci[1]), pct(j.wa.rate), pct(j.wa.ci[0]) + ' to ' + pct(j.wa.ci[1])]));
@@ -1281,7 +1346,7 @@ function renderPairs() {
     const flip = i > j, diff = e[2] == null ? null : (flip ? -e[2] : e[2]), rowOnly = flip ? e[4] : e[3], colOnly = flip ? e[3] : e[4];
     const sig = e[7] < D.alpha, dec = declared.has(key);
     const good = diff != null && diff * better > 0, mag = Math.min(1, Math.abs(diff || 0) / 0.25);
-    const bg = diff === 0 || diff == null ? 'transparent' : `color-mix(in srgb, ${good ? 'var(--hosted)' : 'var(--sysone)'} ${Math.round(12 + mag * 58)}%, transparent)`;
+    const bg = diff === 0 || diff == null ? 'transparent' : `color-mix(in srgb, ${good ? 'var(--hosted)' : 'var(--sysone)'} ${Math.round(10 + mag * 36)}%, transparent)`;
     const td = h('td', {class: (sig ? 'sig ' : '') + (dec ? 'decl' : ''), style: 'background:' + bg, text: (diff == null ? 'n/a' : (diff * 100 >= 0 ? '+' : '') + (diff * 100).toFixed(1)) + (sig ? '\u2605' : '')});
     return tipped(td, `${rj.arm} minus ${cj.arm} (${metric === 'correct' ? 'accuracy' : 'wrong automatic'})\nDifference ${diff == null ? 'n/a' : (diff * 100).toFixed(1) + ' pp'}\nRow-only ${rowOnly}, column-only ${colOnly} of ${e[6]} cases\nExact McNemar p=${e[5].toFixed(4)}, Holm over all ${sp.matrix[metric].length} pairs p=${e[7].toFixed(4)}${sig ? ' (significant)' : ''}${dec ? '\nDeclared contrast' : ''}`);
   })));
@@ -1545,7 +1610,7 @@ function renderAll() {
 function rerenderSizes() { renderHeadline(); renderScatter(); renderPairs(); renderExplorer(); renderLatency(); renderInterv(); }
 function init() {
   const fams = famsIn(D.splits.dev);
-  ['#legend-fam', '#legend-fam2', '#legend-fam3'].forEach(id => legend(id, fams));
+  ['#legend-fam', '#legend-fam2', '#legend-fam3', '#legend-fam4'].forEach(id => legend(id, fams));
   const sel = $('#c-pol');
   for (const k of Object.keys(D.policies)) sel.append(h('option', {value: k, text: D.policies[k].label}));
   sel.append(h('option', {value: 'custom', text: 'custom cutoff (pure certainty)'}));

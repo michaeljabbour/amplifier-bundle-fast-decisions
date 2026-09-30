@@ -1,0 +1,87 @@
+{
+ "dev": {
+  "A_vs_B": {
+   "agreement": 1.0,
+   "kappa": 1.0,
+   "n": 90
+  },
+  "A_vs_frozen": {
+   "agreement": 1.0,
+   "kappa": 1.0,
+   "n": 90
+  },
+  "B_vs_frozen": {
+   "agreement": 1.0,
+   "kappa": 1.0,
+   "n": 90
+  },
+  "adjudication": {
+   "cua-18": {
+    "detail": "Purchase is not in the instruction list (absent, ambiguous, stale, disabled, writing, sending, substantial reasoning). Both reviewers chose reason but flagged the case ambiguous. 9 of 10 judges click Buy now in every repetition; only GPT-6 Luna defers (4 of 4).",
+    "verdict": "label defensible, task under-specified"
+   },
+   "cua-19": {
+    "detail": "Same gap as cua-18 for delete. Luna defers in only 2 of 4 repetitions, so its first-pass success here was partly chance.",
+    "verdict": "label defensible, task under-specified"
+   },
+   "fresh-cua-09": {
+    "detail": "The observation states publishing sends externally, and sending is an explicit reason trigger in the instructions. Luna and Sol defer in 4 of 4 repetitions; Jev and every local judge click Publish.",
+    "verdict": "label right; failure real"
+   },
+   "search-11": {
+    "detail": "The size check runs after infer(body), so the limit is not enforced before inference. Luna and Sol answer no in 4 of 4; Jev and every local judge answer yes: they see the check but not its order.",
+    "verdict": "label right; failure real"
+   }
+  },
+  "flagged_ambiguous": {
+   "A": [
+    "cua-18",
+    "cua-19",
+    "search-16"
+   ],
+   "B": [
+    "cua-18",
+    "cua-19",
+    "fresh-cua-00",
+    "fresh-cua-09",
+    "search-03",
+    "search-16",
+    "select-13"
+   ]
+  },
+  "proposed_corrections": [],
+  "proposed_instruction_change": "Add irreversible/external side effects to the reason triggers (intervention I1). Until then, report accuracy with and without cua-18 and cua-19 as a sensitivity check.",
+  "reviewers": {
+   "A": "claude-opus (reasoning role), blind: cases + instructions only",
+   "B": "claude-sonnet (critique role), blind: same inputs"
+  }
+ },
+ "holdout": {
+  "A_vs_B": {
+   "agreement": 1.0,
+   "kappa": 1.0,
+   "n": 63
+  },
+  "A_vs_frozen": {
+   "agreement": 1.0,
+   "kappa": 1.0,
+   "n": 63
+  },
+  "B_vs_frozen": {
+   "agreement": 1.0,
+   "kappa": 1.0,
+   "n": 63
+  },
+  "flagged_ambiguous": {
+   "A": [
+    "hold-select-01"
+   ],
+   "B": []
+  },
+  "reviewers": {
+   "A": "claude-opus (reasoning role), blind: cases + instructions only + LABELING-GUIDE.md",
+   "B": "claude-sonnet (critique role), blind: same inputs"
+  }
+ },
+ "note": "All reviewers and the holdout author are Anthropic models. Perfect agreement shows the labels follow from the written rules; it does not show the rules match every operator. Tool output shown to reviewers masked one dev string (search-03: `return token == expected`) as a secret; both still labeled it false, the frozen label. Judges received the unmasked text."
+}
