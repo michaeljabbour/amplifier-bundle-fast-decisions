@@ -1,0 +1,94 @@
+\section{Results on the dev split \texorpdfstring{\screen}{[screen]}}\label{sec:dev}
+
+The dev split is where configurations and interventions were chosen, and every judge had seen these
+cases before. Treat everything in this section as a screen: it suggests what to test, and
+\cref{sec:holdout} tests it.
+
+\subsection{Headline numbers}
+
+\Cref{tab:headline-dev} gives every arm's numbers under the bundle's gate. Rows are sorted by accuracy.
+
+\begin{table}[htbp]
+\centering\small
+\caption{Dev split \screen, \DevN\ cases, \DevReps\ repetitions, policy \code{bundle-read-shortcut}.
+Accuracy, wrong-automatic count and coverage are per-case majorities over the repetitions; intervals are
+95\,\% Wilson. Latency pools every valid request. ``+ I1'' marks the arms with the side-effect clause
+added to their instruction.}
+\label{tab:headline-dev}
+\input{generated/tables/headline-dev.tex}
+\end{table}
+\howtoreadtable{Read across a row. ``Wrong automatic'' is the number of cases (out of \DevN) in which
+the agent would have acted on a wrong answer. ``Coverage'' is the number of cases decided automatically.
+A good judge has few wrong automatic decisions and many automatic ones. Two judges whose intervals
+overlap heavily should not be ranked.}
+
+\paragraph{The three hosted judges are indistinguishable on accuracy.} Jev and GPT-6 Luna were each
+right on \JevDevAccK/\DevN; GPT-6.1 Sol on \SolDevAccK. None of the differences between these three is
+significant (Holm-adjusted $p = \LunaDevRAccPHolm$ for Luna versus Jev and \SolDevRAccPHolm\ for Sol
+versus Jev). They also made similar numbers of wrong automatic decisions: \JevDevWaRange\ per repetition
+for Jev, \LunaDevWaRange\ for Luna and \SolDevWaRange\ for Sol.
+
+\paragraph{Sol's coverage is limited by its speed.} Sol's median call took \SolDevPfifty\,ms, and
+\SolDevOverTimeoutPct\,\% of its calls in each repetition exceeded the \TimeoutS\,s timeout. A timed-out
+call is a fallback, so Sol's coverage moved between \SolDevCovRange\ of \DevN\ from one repetition to
+the next depending on how many calls were slow.
+
+\paragraph{Jev is more accurate than every local judge.} This is the one ranking the dev data supports
+after correction: every local judge is less accurate than Jev with Holm-adjusted $p \le
+\MaxLocalAccPHolmDev$. The best local judges were Qwen3 8B (\QwenEightDevAccK/\DevN), Qwen3 4B
+(\QwenFourDevAccK) and nimble 9B (\NimbleDevAccK). Their wrong-automatic counts, however, are not
+significantly different from Jev's after correction (\cref{tab:rule1-dev}).
+
+\subsection{Trade-offs}
+
+\input{figures/fig-wa-coverage.tex}
+\input{figures/fig-acc-latency.tex}
+
+\begin{figure}[htbp]
+\centering
+\wacovpanel{dev}{Dev split (screen)}
+\caption{Wrong automatic rate against coverage on the dev split \screen. Whiskers are 95\,\% Wilson
+intervals in both directions. Marker shape and colour show the judge family.}
+\label{fig:wacov-dev}
+\howtoread{The best corner is the bottom right: many decisions made automatically, few of them wrong.
+A judge far up the chart acts wrongly often, however much it automates. Long whiskers are the honest
+uncertainty of \DevN\ cases; where whiskers overlap, do not read a ranking.}
+\end{figure}
+
+\Cref{fig:wacov-dev} shows the tension that runs through the whole report. The best local judges (triangles)
+automate about as much as the hosted ones, but a much larger share of what they automate is wrong.
+The three hosted judges sit together near the bottom.
+
+\subsection{The decision rules on dev}
+
+\Cref{tab:rule1-dev} applies the default-judge rule to the dev data, only as a rehearsal: dev results
+cannot change a default.
+
+\begin{table}[htbp]
+\centering\small
+\caption{Rule 1 on the dev split \screen: each candidate minus Jev. Positive accuracy differences and
+negative wrong-automatic differences favour the candidate. Bold Holm $p$ values are $\le 0.05$. Gates:
+(a) non-inferior on both endpoints, (b) significantly better on one, (c) p95 $\le$
+\RuleOneMaxPninetyfive\,ms, (d) cost $\le$ \RuleOneCostX$\times$ Jev.}
+\label{tab:rule1-dev}
+\input{generated/tables/rule1-dev.tex}
+\end{table}
+
+No candidate passes gate (b) on dev: nothing is significantly better than Jev. The offline-tier rule
+picked \OffBestDev\ on dev (\QwenFourDevOffWaK\ wrong automatic at \QwenFourDevOffCov\,\% coverage, upper
+bound \QwenFourDevOffWaUpper\,\%), which would have qualified. It did not hold on the holdout
+(\cref{sec:offline}): a good example of why a screen is not a finding.
+
+\subsection{Interventions on dev}
+
+The three interventions (\cref{sec:interventions}) were declared before any was measured. On dev:
+\begin{itemize}
+  \item \textbf{I1, the side-effect clause,} helped Jev (targeted wrong automatic decisions
+    \IOneDevJevClBefore$\to$\IOneDevJevClAfter\ over three repetitions) but not Luna or Qwen3 8B; pooled over
+    the arms it was \IOneDevConfirmed.
+  \item \textbf{I2, the host guard,} removed every targeted wrong automatic decision
+    (\ITwoDevBefore$\to$\ITwoDevAfter) in all \ITwoDevNApplicable\ applicable judges, at
+    \ITwoDevCovCostRange\ points of coverage.
+  \item \textbf{I3, the yes/no gate,} worked for Jev, nimble and Qwen3 8B but cost several small judges
+    more than \IConfirmCovPts\ points of coverage, so pooled it was \IThreeDevConfirmed.
+\end{itemize}

@@ -1,0 +1,124 @@
+\section{Recommendations}\label{sec:recs}
+
+Each recommendation below says which rule produced it, the numbers behind it with their uncertainty,
+and what evidence would change it.
+
+\subsection{Default judge: keep Jev 1.13 \texorpdfstring{\prereg}{[preregistered]}}
+
+\begin{keyidea}
+\textbf{Keep Jev~1.13 as the default judge.} Holdout: \JevHoldAccK/\HoldN\ correct (95\,\% CI
+\JevHoldAccCI), \JevHoldWaK\ wrong automatic decision (CI \JevHoldWaCI), coverage \JevHoldCovPct\,\%,
+p50 \JevHoldPfifty\,ms, p95 \JevHoldPninetyfive\,ms, \$\JevHoldCost\ per million decisions.
+\end{keyidea}
+
+Rule 1 kept Jev because no candidate passed all its gates (\cref{sec:rule1}). GPT-6 Luna
+(\LunaHoldAccK/\HoldN) and GPT-6.1 Sol (\SolHoldAccK/\HoldN) were more accurate, but those differences did
+not survive the Holm correction ($p = \LunaHoldRAccPHolm$ and \SolHoldRAccPHolm), and both fail the
+latency bar (p95 \LunaHoldPninetyfive\ and \SolHoldPninetyfive\,ms against \RuleOneMaxPninetyfive) and the
+cost bar (\LunaHoldCostX$\times$ and \SolHoldCostX$\times$ Jev against \RuleOneCostX$\times$).
+
+\subsection{Add the host guard, whatever the judge \texorpdfstring{\prereg}{[preregistered]}}
+
+\begin{keyidea}
+\textbf{Adopt intervention I2}: never act automatically on an option whose description names an
+irreversible or external side effect. Confirmed on the holdout in all \ITwoHoldNApplicable\ applicable
+judges (\ITwoHoldBefore$\to$\ITwoHoldAfter\ targeted wrong automatic decisions), with no accuracy change
+and \ITwoHoldCovCostRange\ points of coverage.
+\end{keyidea}
+
+Also consider adding the one-sentence side-effect clause (I1) to Jev's instruction. It raised Jev's
+holdout accuracy from \JevHoldAccK\ to \JevClHoldAccK\ of \HoldN\ at similar latency and cost, but that
+gain is within noise (Holm $p = \JevClHoldRAccPHolm$), so it is a reasonable low-risk change, not a
+proven improvement. Both the guard and the clause have since been adopted for the bundle's
+computer-use judge on the main branch (\cref{sec:since}).
+
+\subsection{Cloud fallback when Jev is unreachable: GPT-6 Luna, behind the guard \texorpdfstring{\prereg}{[preregistered]}}
+
+Rule 3 is descriptive: it reports, and changes no default. If Jev cannot be reached, GPT-6 Luna is the
+more reasonable fallback: \LunaHoldAccK/\HoldN\ correct (CI \LunaHoldAccCI), \LunaHoldWaK\ wrong automatic
+(CI \LunaHoldWaCI), p95 \LunaHoldPninetyfive\,ms, \$\LunaHoldCost\ per million. Sol is more accurate
+(\SolHoldAccK/\HoldN) but its p95 of \SolHoldPninetyfive\,ms runs into the \TimeoutS\,s timeout
+(\SolHoldOverTimeoutPct\,\% of calls per repetition exceeded it) and it costs \SolLunaCostXHold$\times$ as
+much as Luna. Use Luna \emph{only behind the host guard}: its mistakes are confident (a refund at
+\LunaHoldRefundPRange, an injected submit at \LunaHoldSubmitPRange), and the guard removed all of its
+side-effect wrong automatic decisions on the holdout (\ITwoHoldLunaBefore$\to$\ITwoHoldLunaAfter).
+Its probabilities are self-reported, so its confidence should not be read as calibrated.
+
+\subsection{Offline tier: none qualifies \texorpdfstring{\prereg}{[preregistered]}}\label{sec:offline}
+
+\begin{table}[htbp]
+\centering\small
+\caption{Rule 2, the offline tier, on both splits: local judges under the strictest policy (bundle gate
+plus host guard plus yes/no gate). ``Wrong'' is the majority count of wrong automatic decisions;
+``upper'' is the upper end of its 95\,\% Wilson interval. $^{\dagger}$ below the \OffMinCovPct\,\%
+coverage floor, so not eligible.}
+\label{tab:rule2}
+\input{generated/tables/rule2.tex}
+\end{table}
+
+No local judge met the preregistered rule on the holdout. The best eligible judge, \OffBestHold, made
+\TevFourHoldOffWaK\ wrong automatic decisions at \TevFourHoldOffCov\,\% coverage, with an upper bound of
+\TevFourHoldOffWaUpper\,\%, above the \OffMaxUpperPct\,\% limit. The dev screen's choice, \OffBestDev,
+fell below the coverage floor on the holdout. The first pass's tev1 0.8B recommendation does not hold:
+\TevPtEightHoldAccK/\HoldN\ correct and \TevPtEightHoldWaK\ wrong automatic decisions under the bundle's
+gate. Without network access, the safer choice today is to fall back to slow reasoning rather than to act
+on a local judge.
+
+\subsection{What is within noise}
+
+At these sample sizes the following are \textbf{not} distinguishable (Holm-adjusted $p > 0.05$):
+\begin{itemize}
+  \item Jev versus Luna versus Sol on accuracy, on both splits (holdout Holm $p$ \LunaHoldRAccPHolm\ and
+    \SolHoldRAccPHolm; dev \LunaDevRAccPHolm\ and \SolDevRAccPHolm);
+  \item Jev versus Luna versus Sol on wrong automatic decisions (holdout Holm $p$ \LunaHoldRWaPHolm\ and
+    \SolHoldRWaPHolm);
+  \item Luna versus Sol on either endpoint (\cref{tab:pairwise});
+  \item every intervention's effect on accuracy, including Jev with the clause;
+  \item on the holdout, Jev versus nimble 9B on both endpoints, and Jev versus tev1 4B on accuracy.
+\end{itemize}
+What \textbf{is} distinguishable: Jev is more accurate than every local judge on dev (Holm $p \le
+\MaxLocalAccPHolmDev$); on the holdout Jev makes fewer wrong automatic decisions than every local judge
+except nimble 9B, and is more accurate than every local judge except nimble 9B and tev1 4B.
+
+\subsection{What would change these recommendations}
+
+\begin{itemize}
+  \item \textbf{An OpenAI Decisions API that answers.} The runner probes it on every run; if it returns
+    HTTP 200 and passes rule 1 on a holdout, it can replace Jev. Today it returns
+    \HoldProbeStatus.
+  \item \textbf{A new Jev release} whose p95 latency or accuracy moves.
+  \item \textbf{A larger holdout.} With \HoldN\ cases only gaps of roughly \HoldMinDetectPts\ points or
+    more can be detected. A real accuracy advantage for Luna or Sol of that size or smaller is
+    compatible with these data.
+  \item \textbf{Live-traffic receipts} that disagree with this constructed benchmark.
+\end{itemize}
+Any changed configuration needs a \emph{new} holdout; this one is now spent.
+
+\subsection{Changes since this study}\label{sec:since}
+
+\begin{caution}[title={Measured before these changes}]
+Every result in this report was measured \emph{before} the changes below were merged, and is reported
+exactly as measured. None of the numbers has been re-run against the new code.
+\end{caution}
+
+PR \#\SincePR, merged to the main branch at commit \code{\SinceCommit} after these measurements, acted
+on several findings of this study:
+\begin{enumerate}[label=(\alph*)]
+  \item \textbf{A stricter computer-use gate.} The \code{jev\_cua} gate now uses the read-shortcut
+    thresholds, a probability of at least \MinP\ with a margin of at least \MinMargin, and the thresholds
+    are configurable. When measured it was \CuaMinP\ with no margin rule (\cref{sec:background}).
+  \item \textbf{The side-effect guard (I2).} \code{jev\_cua} now refuses a target whose label names an
+    irreversible or external change and returns \code{side\_effect\_requires\_confirmation} instead of
+    acting (\cref{sec:interventions}).
+  \item \textbf{The side-effect clause (I1).} The same change is now named in \code{jev\_cua}'s
+    instructions.
+  \item \textbf{The \code{reason} defect.} The local backend no longer drops a question's own
+    \code{reason} option, the defect this study had to work around (\cref{sec:method,sec:limits}).
+\end{enumerate}
+The descriptions of \code{jevgrep} and \code{jev\_cua} now also say that Jev, not Laya, is the default
+judge. \Cref{tab:changes} records the same change as the last entry of \code{changes.json}.
+
+These changes follow the recommendations above, but this report does not measure their effect. In
+particular, the I2 and I1 results in \cref{sec:interventions} were obtained by re-scoring stored answers
+(I2) and by an instruction-clause arm (I1) in the benchmark harness, not by the new \code{jev\_cua} code.
+Confirming them in the shipped path needs a new holdout run.

@@ -1,0 +1,130 @@
+\section{Why judges fail: failure modes and interventions}\label{sec:failures}
+
+Knowing \emph{that} a judge is wrong is less useful than knowing \emph{how}. Every wrong answer is
+sorted into one class by a fixed rule that looks only at the case, its tags and the answer.
+
+\begin{description}[leftmargin=1.2em,style=nextline]
+  \item[Acted on side effect] The right answer was to defer (\code{reason}) and the judge picked the
+    option that names a side effect (buy, delete, publish, \dots).
+  \item[Under-deferred] The right answer was to defer, but the judge picked some other concrete action.
+  \item[Followed injection] The judge picked exactly what an instruction planted in the observation or
+    source code told it to pick. This class takes precedence over the others.
+  \item[Accepted wrong code] Search: the judge said ``yes, the code does this'' when it does not.
+  \item[Rejected correct code] Search: the judge said ``no'' when the code is correct.
+  \item[Wrong target] The judge picked a concrete option, but not the right one.
+  \item[Over-deferred] The judge deferred although one option was right: safe, but loses the speed-up.
+\end{description}
+
+\subsection{The failure-mode matrix}
+
+\begin{table}[htbp]
+\centering\small
+\caption{Holdout \prereg: all wrong answers by class (mean per repetition), whether or not the bundle
+would have acted on them. Darker cells mean more errors; a dot means none.}
+\label{tab:fail-all}
+\input{generated/tables/failure-holdout.tex}
+\end{table}
+
+\begin{table}[htbp]
+\centering\small
+\caption{Holdout \prereg: only the wrong answers the bundle would have \emph{acted on} under its gate
+(mean per repetition). This is the unsafe subset of \cref{tab:fail-all}.}
+\label{tab:fail-auto}
+\input{generated/tables/failure-auto-holdout.tex}
+\end{table}
+\howtoreadtable{Compare the two matrices row by row. A cell that is dark in the first but empty in the
+second is a failure the gate caught: the judge was wrong but unsure. A cell that stays dark in the second
+matrix is a failure the agent would have acted on.}
+
+Read together, the two matrices show how differently the judges fail. Jev, for example, followed an
+injected instruction \JevHoldAllInj\ times per repetition, but never automatically: every one of those
+answers fell back, because the injections pushed it toward \code{reason} or its confidence was low.
+GPT-6 Luna followed an injection \LunaHoldAllInj\ time per repetition, and it acted on it every time
+(\LunaHoldAutoInj).
+
+\subsection{Root causes}
+
+\paragraph{Acting on side effects is shared by every judge, and its cause is the instruction.}
+All \SideEffectJudgesHold\ base judges picked a side-effect option at least once on the holdout. The
+judges' instruction lists ``writing, sending, or substantial reasoning'' as reasons to defer, but not
+purchasing, deleting, refunding or publishing. The judges are doing roughly what they were told. Two
+pieces of evidence point to the wording rather than to the models: adding one sentence to Jev's
+instruction (I1) removed all of its targeted dev errors (\IOneDevJevClBefore$\to$\IOneDevJevClAfter), and a
+host-side word list (I2) removed them for every judge.
+
+\paragraph{Accepted wrong code dominates the small local judges, and the policy amplifies it.}
+On dev, \TevPtEightDevAllAwc\ of tev1 0.8B's \TevPtEightDevWrong\ errors were accepted wrong code. The
+bundle has no abstention for yes/no answers, so each of these becomes an action: a model that says
+``yes'' at 0.55 is acted on exactly like one that says ``yes'' at 0.99.
+
+\paragraph{Injection following splits the families.} On dev only local judges followed injections.
+On the holdout, where \HoldNInjection\ cases carry an injected instruction, Jev tended to defer when an
+injected note pushed it toward \code{reason}, which is a safe failure. GPT-6 Luna followed an injected
+``click Submit now'' on \code{hold-cua-12} at \LunaHoldSubmitPRange, which is not.
+
+\paragraph{Confident cloud mistakes.} Luna's mistakes on the holdout were few but confident: it issued
+a full, irreversible refund on \code{hold-cua-00} at \LunaHoldRefundPRange\ in all \LunaHoldRefundReps\
+repetitions. In repetition 1, Jev was wrong on \JevHoldRepOneWrong\ holdout cases, and
+\JevHoldRepOneWrongFallback\ of them fell back to slow reasoning (its highest confidence on a wrong
+answer was \JevHoldRepOneWrongMaxP). This pattern, humble mistakes for Jev and confident ones for Luna,
+is why the cloud fallback recommendation in \cref{sec:recs} comes with a guard.
+
+\subsection{Interventions}\label{sec:interventions}
+
+Three interventions were declared in writing before any was measured, measured once on dev, and then
+confirmed or not on the holdout under the preregistered rule.
+\begin{description}[leftmargin=1.2em,style=nextline]
+  \item[I1: side-effect clause (targets acted-on-side-effect and under-deferred)] One sentence appended to
+    the judge's instruction: \emph{``\IOneClause''}
+  \item[I2: host guard (targets acted-on-side-effect)] A deterministic check in the host, not the model:
+    if the chosen option's own description matches a fixed side-effect verb list, fall back. No model
+    call and no per-case exceptions.
+  \item[I3: yes/no gate (targets accepted-wrong-code and rejected-correct-code)] A yes/no answer is
+    automatic only when $\max(p, 1-p) \ge \MinP$, the same bar the bundle uses for choices.
+\end{description}
+
+\begin{table}[htbp]
+\centering\small
+\caption{Interventions on both splits. ``Targeted'' is the number of targeted wrong automatic decisions,
+summed over the \HoldReps\ repetitions, before$\to$after. $\Delta$acc is the change in correct cases;
+$\Delta$cov the change in coverage in percentage points. \ok\ marks an arm that meets the confirmation
+rule on its own. Only arms where the intervention applies (at least one targeted error before) are
+listed.}
+\label{tab:interventions}
+\input{generated/tables/interventions.tex}
+\end{table}
+
+\begin{figure}[htbp]
+\centering
+\input{figures/fig-i2.tex}
+\caption{The host guard (I2) on the holdout \prereg: side-effect wrong automatic decisions per judge,
+summed over repetitions, without and with the guard.}
+\label{fig:i2}
+\howtoread{Each pair of bars is one judge. The hatched orange bar counts side-effect actions the bundle
+would have taken automatically and wrongly; the solid blue bar counts them with the guard on. Every blue
+bar is zero. The price is coverage: the guard also blocks some correct actions whose description contains a
+listed verb, \ITwoHoldCovCostRange\ points depending on the judge.}
+\end{figure}
+
+\paragraph{What was confirmed on the holdout.}
+\begin{itemize}
+  \item \textbf{I2 (host guard): \ITwoHoldConfirmed.} It removed all \ITwoHoldBefore\ targeted wrong
+    automatic decisions in the \ITwoHoldNApplicable\ judges it applied to, with no accuracy change and
+    a coverage cost of \ITwoHoldCovCostRange\ points. Jev had no side-effect wrong automatic decisions
+    on the holdout to remove.
+  \item \textbf{I1 (clause): \IOneHoldConfirmed\ overall.} It worked for GPT-6 Luna
+    (\IOneHoldLunaClBefore$\to$\IOneHoldLunaClAfter) but not for the local judges, and it did not apply to
+    Jev, whose side-effect picks all fell below the \MinP\ gate. Jev with the clause was
+    \JevClHoldRAccDiff\ points more accurate than Jev (\JevClHoldAccK\ versus \JevHoldAccK), but that
+    gain is within noise (Holm $p = \JevClHoldRAccPHolm$).
+  \item \textbf{I3 (yes/no gate): \IThreeHoldConfirmed.} It removed many accepted-wrong-code errors, but no
+    single judge met the confirmation rule: where it removed errors, it cost more than \IConfirmCovPts\
+    points of coverage (the range across judges was \IThreeHoldCovCostRange\ points), and it left
+    the Qwen3 0.6B and Qwen3 8B errors untouched.
+\end{itemize}
+
+\begin{keyidea}
+The most effective safety measure in this benchmark is not a better model but a dumb, deterministic
+rule in the host: never act automatically on an option that names an irreversible side effect. It works
+the same way for every judge, costs a few points of coverage, and needs no retraining.
+\end{keyidea}

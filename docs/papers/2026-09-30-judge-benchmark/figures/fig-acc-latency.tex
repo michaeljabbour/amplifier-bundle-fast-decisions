@@ -1,0 +1,33 @@
+% Accuracy against pooled p95 latency (log axis), 95% Wilson whiskers on accuracy.
+\newcommand{\acclatpanel}[2]{%
+\begin{tikzpicture}
+\begin{axis}[benchmark,
+  scale only axis, width=\ScatterAxisW, height=\ScatterAxisH,
+  xmode=log, xmin=25, xmax=9000, ymin=25, ymax=102,
+  log ticks with fixed point,
+  xtick={30,100,300,1000,3000}, ytick={30,40,50,60,70,80,90,100},
+  xlabel={p95 latency per call (ms, log scale)},
+  ylabel={Accuracy (\%)},
+  xmajorgrids, ymajorgrids,
+  legend style={at={(0.98,0.02)}, anchor=south east}, legend cell align=left,
+  clip=false,
+]
+\addplot[only marks, mark=*, mark size=2.6pt, color=okblue,
+  error bars/.cd, y dir=both, y explicit, error bar style={okblue!55, line width=0.6pt}]
+  table[x=pninetyfive, y=acc, y error minus=accminus, y error plus=accplus]{generated/data/scatter-#1-cloud.dat};
+\addlegendentry{Cloud LLM}
+\addplot[only marks, mark=square*, mark size=2.6pt, color=okorange,
+  error bars/.cd, y dir=both, y explicit, error bar style={okorange!55, line width=0.6pt}]
+  table[x=pninetyfive, y=acc, y error minus=accminus, y error plus=accplus]{generated/data/scatter-#1-jev.dat};
+\addlegendentry{Jev 1.13}
+\addplot[only marks, mark=triangle*, mark size=3.0pt, color=okgreen,
+  error bars/.cd, y dir=both, y explicit, error bar style={okgreen!55, line width=0.6pt}]
+  table[x=pninetyfive, y=acc, y error minus=accminus, y error plus=accplus]{generated/data/scatter-#1-local.dat};
+\addlegendentry{Local model}
+\draw[okgray, dashed, line width=0.8pt] (axis cs:\RuleOneMaxPninetyfive,25) -- (axis cs:\RuleOneMaxPninetyfive,102)
+  node[pos=1, anchor=south, font=\scriptsize, text=okgray] {rule 1: \RuleOneMaxPninetyfive\ ms};
+\draw[okgray, dotted, line width=0.8pt] (axis cs:\TimeoutMsRaw,25) -- (axis cs:\TimeoutMsRaw,102)
+  node[pos=1, anchor=south, font=\scriptsize, text=okgray] {timeout: \TimeoutMs\ ms};
+\input{generated/labels/acclat-#1.tex}
+\end{axis}
+\end{tikzpicture}}
