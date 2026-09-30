@@ -1164,7 +1164,7 @@ wrong target, accepted wrong code, rejected correct code, injection following.
 **Efficiency receipts (docs/GOAL.md).** Benchmark runs set `AFAST_TRAFFIC=test`, so nothing here enters
 production receipt sums. The receipt quantities a judge change would move -- decisions automated (coverage),
 seconds per decision (p50/p95) and USD per decision -- are all in `summary.json` per arm with their source rows,
-and `tests/test_judge_replay.py` recomputes the committed summary byte-for-byte from `requests.jsonl`.
+and `tests/test_judge_replay.py` recomputes the committed summary from `requests.jsonl` (counts exact, floats within 1e-9 relative).
 
 **Tests and CI.** Unit tests (`tests/test_judge_bench.py`) cover adapters, the sentinel, renormalisation,
 policies, failure classes and statistics; `tests/test_judge_replay.py` replays committed request logs offline;

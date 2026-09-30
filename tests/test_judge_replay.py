@@ -1,5 +1,6 @@
 """Replay tests: recompute committed judge results offline. No network."""
 import json
+import math
 from pathlib import Path
 import sys
 import tempfile
@@ -56,16 +57,37 @@ class FirstPassReplayTests(unittest.TestCase):
                                   want["all/all"]["automatic_errors"]))
 
 
+def assert_same_summary(test, got, want, path="$"):
+    """Exact on structure, counts, strings and booleans; floats within 1e-9 relative.
+
+    Floats get a tolerance because platform libm differs in the last ulp (Linux CI vs macOS),
+    which is far below any reported precision."""
+    test.assertIs(type(got), type(want), path)
+    if isinstance(want, dict):
+        test.assertEqual(list(got), list(want), path)
+        for key in want:
+            assert_same_summary(test, got[key], want[key], f"{path}.{key}")
+    elif isinstance(want, list):
+        test.assertEqual(len(got), len(want), path)
+        for i, (g, w) in enumerate(zip(got, want)):
+            assert_same_summary(test, g, w, f"{path}[{i}]")
+    elif isinstance(want, float):
+        test.assertTrue(math.isclose(got, want, rel_tol=1e-9, abs_tol=1e-12), f"{path}: {got} != {want}")
+    else:
+        test.assertEqual(got, want, path)
+
+
 class CommittedBenchmarkReplayTests(unittest.TestCase):
-    def test_committed_benchmarks_replay_byte_identical(self):
+    def test_committed_benchmarks_replay_exactly(self):
         found = sorted((ROOT / "docs" / "evidence").glob("*-judge-benchmark/**/requests.jsonl"))
         if not found:
             self.skipTest("no committed judge-benchmark evidence yet")
         for requests in found:
             with self.subTest(evidence=requests.parent.name), tempfile.TemporaryDirectory() as tmp:
                 self.assertEqual(judges.main(["--replay", str(requests), "--out", tmp]), 0)
-                self.assertEqual((Path(tmp) / "summary.json").read_bytes(),
-                                 (requests.parent / "summary.json").read_bytes())
+                got = json.loads((Path(tmp) / "summary.json").read_text())
+                want = json.loads((requests.parent / "summary.json").read_text())
+                assert_same_summary(self, got, want)
 
 
 if __name__ == "__main__":
