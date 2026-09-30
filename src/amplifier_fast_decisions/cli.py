@@ -176,6 +176,54 @@ def _laya_server_check() -> dict:
     }
 
 
+_HOST_PYTHONS = (
+    ("amplifier CLI", "~/.local/share/uv/tools/amplifier/bin/python3"),
+    ("amplifier-app-cli", "~/.local/share/uv/tools/amplifier-app-cli/bin/python3"),
+    ("amplifier-runtime (TUI/Studio)", "~/.local/share/uv/tools/amplifier-runtime/bin/python3"),
+    ("amplifier-unified runtime", "~/.amplifier-unified/runtime/*/.venv/bin/python"),
+)
+_REGISTRY_PROBE = (
+    "import importlib.util as u\n"
+    "s = u.find_spec('amplifier_fast_decisions')\n"
+    "print('absent' if s is None else ('current' if u.find_spec('amplifier_fast_decisions.registry') "
+    "else 'stale') + ' ' + str(s.origin))\n"
+)
+
+
+def _host_environment_checks(settings: Path | None = None) -> list[dict]:
+    """Registry mode needs amplifier_fast_decisions.registry in EVERY Amplifier
+    host environment. Each host installs the package separately, and an older
+    copy (same version string) is kept silently; the host then drops the router
+    hook without an error. Checked only when settings compose registry mode."""
+    import glob
+    import subprocess
+
+    settings = settings or Path.home() / ".amplifier" / "settings.yaml"
+    try:
+        if "fast-decisions-registry" not in settings.read_text():
+            return []
+    except OSError:
+        return []
+    checks = []
+    for label, pattern in _HOST_PYTHONS:
+        for python in sorted(glob.glob(os.path.expanduser(pattern))):
+            try:
+                out = subprocess.run([python, "-c", _REGISTRY_PROBE], capture_output=True,
+                                     text=True, timeout=30).stdout.strip()
+            except (OSError, subprocess.SubprocessError) as exc:
+                out = "error " + type(exc).__name__
+            state, _, origin = out.partition(" ")
+            check = {"check": f"registry_mode_package[{label}]", "ok": state in ("current", "absent"),
+                     "value": state or "unknown", "python": python}
+            if state == "stale":
+                check["note"] = (f"{origin} predates registry mode; the router hook will not load. Reinstall: "
+                                 f"uv pip install --python {python} --reinstall-package amplifier-fast-decisions "
+                                 "--no-deps 'amplifier-fast-decisions @ git+https://github.com/michaeljabbour/"
+                                 "amplifier-bundle-fast-decisions@main'")
+            checks.append(check)
+    return checks
+
+
 def doctor(require_amplifier: bool = False) -> int:
     checks: list[dict] = []
     checks.append(
@@ -251,6 +299,7 @@ def doctor(require_amplifier: bool = False) -> int:
     checks.append(_mlx_server_check())
     checks.append(_hosted_server_check())
     checks.append(_laya_server_check())
+    checks.extend(_host_environment_checks())
     entries = {
         e.name for e in importlib.metadata.entry_points(group="amplifier.modules")
     }
