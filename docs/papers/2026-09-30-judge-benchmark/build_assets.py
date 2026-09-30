@@ -38,6 +38,11 @@ HOST = "bundle-read-shortcut+host-guard"
 NOUL = "bundle-read-shortcut+noul-gate"
 BOTH = "bundle-read-shortcut+noul-gate+host-guard"
 CUTOFFS = ["0.5", "0.6", "0.7", "0.75", "0.8", "0.85", "0.9", "0.95", "0.99"]
+# Changes merged to main after these measurements (not in the evidence JSON; stated here once).
+SINCE_PR = 56
+SINCE_COMMIT = "180f919"
+# changes.json entries recording post-study changes rather than first-pass claims start with this.
+POST_STUDY_PREFIX = "Changes since this study"
 # Illustrative traffic volume for the cost-at-scale projection (an assumption, not a measurement).
 DECISIONS_PER_DAY = 100_000
 DAYS_PER_MONTH = 30
@@ -289,6 +294,8 @@ for sp, P in SPLITS:
     M(f"{P}NInjection", sum(1 for t in tags.values() if t.get("injection")))
     M(f"{P}RequestsLogged", thousands(len(REQ[sp])))
 
+M("SincePR", SINCE_PR)
+M("SinceCommit", SINCE_COMMIT)
 M("TimeoutMs", thousands(RUN["holdout"]["timeout_ms"]))
 M("TimeoutMsRaw", RUN["holdout"]["timeout_ms"])
 M("TimeoutS", f"{RUN['holdout']['timeout_ms'] / 1000:g}")
@@ -865,26 +872,47 @@ def concurrency_table():
     return "\n".join(lines) + "\n"
 
 
+def cell(s: str) -> str:
+    """changes.json text for a narrow table cell: `code` spans as typewriter, long identifiers breakable."""
+    parts = s.split("`")
+    out = []
+    for i, part in enumerate(parts):
+        esc = tex_escape(part).replace(r"\_", r"\_\allowbreak{}")
+        out.append(r"\texttt{" + esc + "}" if i % 2 else esc)
+    return "".join(out)
+
+
 def changes_table():
     style = {"confirmed": r"\vconf", "refuted": r"\vref", "revised": r"\vrev", "new": r"\vnew"}
     counts = defaultdict(int)
+    claims = [c for c in CHANGES if not c["claim"].startswith(POST_STUDY_PREFIX)]
+    post = [c for c in CHANGES if c["claim"].startswith(POST_STUDY_PREFIX)]
     head = r"First-pass claim & First pass said & What the validation found & Verdict \\"
     lines = [r"\begin{xltabular}{\textwidth}{@{}>{\raggedright\arraybackslash}p{0.2\textwidth}"
              r" >{\raggedright\arraybackslash}p{0.15\textwidth} >{\raggedright\arraybackslash}X l@{}}",
-             r"\caption{All \ChangesN\ first-pass claims, what the first pass said, and what the validation found "
+             r"\caption{All \ChangesN\ first-pass claims, what the first pass said, and what the validation found, "
+             r"followed by \ChangesPostStudy\ entry recording changes merged after this study "
              r"(verbatim from \code{changes.json}, where each entry also names its evidence file).}"
              r"\label{tab:changes}\\",
              r"\toprule", head, r"\midrule", r"\endfirsthead",
              r"\multicolumn{4}{@{}l}{\small\emph{(continued)}}\\", r"\toprule", head, r"\midrule", r"\endhead",
              r"\bottomrule", r"\endlastfoot"]
-    for i, c in enumerate(CHANGES):
+    for i, c in enumerate(claims):
         counts[c["verdict"]] += 1
-        lines.append(f"{tex_escape(c['claim'])} & {tex_escape(c['first_pass'])} & "
-                     f"{tex_escape(c['validated'])} & {style[c['verdict']]} \\\\")
-        if i != len(CHANGES) - 1:
+        lines.append(f"{cell(c['claim'])} & {cell(c['first_pass'])} & {cell(c['validated'])} & "
+                     f"{style[c['verdict']]} \\\\")
+        if i != len(claims) - 1:
             lines.append(r"\addlinespace[4pt]")
+    if post:
+        lines += [r"\midrule",
+                  r"\multicolumn{4}{@{}l}{\emph{After this study (see \cref{sec:since}); "
+                  r"``first pass said'' here means ``before the change''}}\\", r"\addlinespace[2pt]"]
+        for c in post:
+            lines.append(f"{cell(c['claim'])} & {cell(c['first_pass'])} & {cell(c['validated'])} & "
+                         f"{style[c['verdict']]} \\\\")
     lines.append(r"\end{xltabular}")
-    M("ChangesN", len(CHANGES))
+    M("ChangesN", len(claims))
+    M("ChangesPostStudy", len(post))
     for k in ("confirmed", "refuted", "revised", "new"):
         M("Changes" + k.capitalize(), counts[k])
     return "\n".join(lines) + "\n"
@@ -1038,45 +1066,98 @@ for i, arm in enumerate(order):
 dat("accuracy.dat", ["idx", "label", "dev", "devminus", "devplus", "hold", "holdminus", "holdplus"], acc_rows)
 M("AccPlotMax", len(order) - 1)
 
-# Label placement for the scatter plots: a small deterministic greedy placer. It estimates each
-# label's box in points (axis geometry fixed by `scale only axis` in the figure files) and picks,
-# per point, the anchor that least overlaps other labels, all markers and the axis edge. Placement
-# never changes a plotted value.
-AXIS_W, AXIS_H = 12.5 * 28.45, 6.2 * 28.45      # must match figures/fig-wa-coverage.tex, fig-acc-latency.tex
-CHAR_W, LABEL_H, PAD, MARK_R = 3.9, 7.5, 2.5, 3.2
-CANDIDATES = ["west", "east", "south", "north", "south west", "north west", "south east", "north east"]
+# Label placement for the labelled scatter plots (Figs. wacov-dev, wacov-holdout, acclat-holdout).
+# A deterministic backtracking placer. Label sizes come from the font's TFM metrics (the same
+# metrics pdflatex uses), positions from the axis geometry fixed by `scale only axis`. Every label
+# must satisfy ALL of these, or the build fails:
+#   (1) it keeps a clear gap to every marker, its own included;
+#   (2) it does not overlap any other label or any other label's leader line;
+#   (3) it stays inside the axis frame, clear of the axis lines;
+#   (4) its own marker is strictly nearer to it than any other marker (by NEAREST_MARGIN);
+#   (5) a displaced label gets a leader line that passes clear of other markers and labels.
+# Placement never changes a plotted value; it only decides where text goes.
+PT_PER_CM = 72.27 / 2.54
+AXIS_W_CM, AXIS_H_CM = 14.5, 6.4
+AXIS_W, AXIS_H = AXIS_W_CM * PT_PER_CM, AXIS_H_CM * PT_PER_CM
+LABEL_PT = 8.0            # \scriptsize in an 11pt document
+PAD = 2.0                 # TikZ inner sep of a label node
+MARK_R = 3.2              # largest marker half-size used in the scatter plots
+CLEAR = 1.5               # minimum gap between a label box and any marker
+EDGE = 3.0                # minimum gap between a label box and the axis frame
+LABEL_GAP = 1.0           # minimum gap between two label boxes
+NEAREST_MARGIN = 2.0      # own marker must be nearer than any other by this much
+DISTANCES = [0, 6, 12, 18, 24, 32, 40, 50]
+DIRS = [("east", (1, 0), "west"), ("west", (-1, 0), "east"), ("north", (0, 1), "south"),
+        ("south", (0, -1), "north"), ("north east", (1, 1), "south west"),
+        ("north west", (-1, 1), "south east"), ("south east", (1, -1), "north west"),
+        ("south west", (-1, -1), "north east")]
+M("ScatterAxisW", f"{AXIS_W_CM:g}cm")
+M("ScatterAxisH", f"{AXIS_H_CM:g}cm")
 
 
-def _box(px, py, text, anchor):
-    w, h = len(text) * CHAR_W + 2 * PAD, LABEL_H + 2 * PAD
-    x0 = {"west": px, "east": px - w}.get(anchor.split()[-1], px - w / 2)
-    if anchor in ("south west", "north west"):
-        x0 = px
-    if anchor in ("south east", "north east"):
-        x0 = px - w
-    if anchor.startswith("south"):
-        y0 = py
-    elif anchor.startswith("north"):
-        y0 = py - h
-    else:
-        y0 = py - h / 2
-    if anchor in ("west", "east"):
-        x0 += MARK_R if anchor == "west" else -MARK_R
+def _tfm_metrics():
+    """Width/height/depth (in em) of each T1 glyph of the text font, read from its TFM."""
+    import subprocess
+    path = subprocess.run(["kpsewhich", "LibertinusSerif-Regular-tlf-t1.tfm"], capture_output=True,
+                          text=True, check=True).stdout.strip()
+    b = Path(path).read_bytes()
+    lf, lh, bc, ec, nw, nh, nd, ni, nl, nk, ne, npar = (int.from_bytes(b[i:i + 2], "big") for i in range(0, 24, 2))
+
+    def fix(off):
+        return int.from_bytes(b[off:off + 4], "big", signed=True) / 2 ** 20
+
+    ci = 4 * (6 + lh)
+    wt = ci + 4 * (ec - bc + 1)
+    ht, dt = wt + 4 * nw, wt + 4 * nw + 4 * nh
+    pr = 4 * (6 + lh + (ec - bc + 1) + nw + nh + nd + ni + nl + nk + ne)
+    glyph = {}
+    for c in range(bc, ec + 1):
+        info = b[ci + 4 * (c - bc): ci + 4 * (c - bc) + 4]
+        if info[0]:
+            glyph[c] = (fix(wt + 4 * info[0]), fix(ht + 4 * (info[1] >> 4)), fix(dt + 4 * (info[1] & 15)))
+    return glyph, fix(pr + 4)  # param 2 = interword space
+
+
+GLYPH, SPACE = _tfm_metrics()
+
+
+def label_size(text):
+    """(width, height) in pt of a TikZ label node holding `text` at LABEL_PT."""
+    w = sum(SPACE if ch == " " else GLYPH[ord(ch)][0] for ch in text) * LABEL_PT
+    h = max(GLYPH[ord(ch)][1] for ch in text if ch != " ") * LABEL_PT
+    d = max(GLYPH[ord(ch)][2] for ch in text if ch != " ") * LABEL_PT
+    return w + 2 * PAD, h + d + 2 * PAD
+
+
+def _anchor_box(qx, qy, w, h, anchor):
+    x0 = {"west": qx, "east": qx - w}.get(anchor.split()[-1], qx - w / 2)
+    y0 = qy if anchor.startswith("south") else (qy - h if anchor.startswith("north") else qy - h / 2)
     return (x0, y0, x0 + w, y0 + h)
 
 
-def _overlap(a, b):
-    return max(0.0, min(a[2], b[2]) - max(a[0], b[0])) * max(0.0, min(a[3], b[3]) - max(a[1], b[1]))
+def _dist_pt_box(px, py, b):
+    dx = max(b[0] - px, 0.0, px - b[2])
+    dy = max(b[1] - py, 0.0, py - b[3])
+    return math.hypot(dx, dy)
 
 
-SHIFTS = [0.0, 7.0, 14.0, 21.0]
-UNIT = {"west": (1, 0), "east": (-1, 0), "south": (0, 1), "north": (0, -1), "south west": (1, 1),
-        "north west": (1, -1), "south east": (-1, 1), "north east": (-1, -1)}
+def _boxes_touch(a, b, gap):
+    return a[0] < b[2] + gap and b[0] < a[2] + gap and a[1] < b[3] + gap and b[1] < a[3] + gap
 
 
-def place_labels(points, xr, yr, xlog=False):
-    """points: [(key, text, x, y)] in data units -> {key: (anchor, xshift_pt, yshift_pt)}.
-    Greedy start, then a few rounds of re-placing each label given all the others."""
+def _seg_hits_box(p, q, b, steps=40):
+    return any(b[0] <= p[0] + (q[0] - p[0]) * i / steps <= b[2] and b[1] <= p[1] + (q[1] - p[1]) * i / steps <= b[3]
+               for i in range(steps + 1))
+
+
+def _seg_dist(p, q, c):
+    vx, vy = q[0] - p[0], q[1] - p[1]
+    t = max(0.0, min(1.0, ((c[0] - p[0]) * vx + (c[1] - p[1]) * vy) / ((vx * vx + vy * vy) or 1)))
+    return math.hypot(p[0] + t * vx - c[0], p[1] + t * vy - c[1])
+
+
+def place_labels(name, points, xr, yr, xlog=False):
+    """points: [(key, text, x, y)] in data units. Returns placements; exits non-zero if impossible."""
     def tx(x):
         if xlog:
             return AXIS_W * (math.log10(x) - math.log10(xr[0])) / (math.log10(xr[1]) - math.log10(xr[0]))
@@ -1085,48 +1166,101 @@ def place_labels(points, xr, yr, xlog=False):
     def ty(y):
         return AXIS_H * (y - yr[0]) / (yr[1] - yr[0])
 
-    pts = [(k, t, tx(x), ty(y)) for k, t, x, y in points]
-    marks = {k: (px - MARK_R, py - MARK_R, px + MARK_R, py + MARK_R) for k, _, px, py in pts}
-    options = [(a, d) for d in SHIFTS for a in CANDIDATES]
+    pts = [(k, t, x, y, tx(x), ty(y)) for k, t, x, y in points]
+    centers = {p[0]: (p[4], p[5]) for p in pts}
 
-    def box_for(p, opt):
-        k, t, px, py = p
-        a, d = opt
-        ux, uy = UNIT[a]
-        return _box(px + ux * d, py + uy * d, t, a)
+    def options(p):
+        k, t, _, _, px, py = p
+        w, h = label_size(t)
+        for d in DISTANCES:
+            for dname, (ux, uy), anchor in DIRS:
+                n = math.hypot(ux, uy)
+                r = MARK_R + CLEAR + d
+                qx, qy = px + r * ux / n, py + r * uy / n
+                box = _anchor_box(qx, qy, w, h, anchor)
+                leader = None
+                if d > 0:
+                    leader = ((px + MARK_R * ux / n, py + MARK_R * uy / n), (qx, qy))
+                yield {"key": k, "text": t, "anchor": anchor, "dir": dname, "d": d, "dx": qx - px, "dy": qy - py,
+                       "box": box, "leader": leader}
 
-    def cost(p, b, others, rank):
-        c = sum(_overlap(b, o) for o in others) * 4
-        c += sum(_overlap(b, m) for k, m in marks.items()) * 3
-        c += 50 * (max(0, -b[0]) + max(0, b[2] - AXIS_W) + max(0, -b[1]) + max(0, b[3] - AXIS_H))
-        return c + rank * 0.3
+    def ok(o, placed):
+        b = o["box"]
+        if b[0] < EDGE or b[1] < EDGE or b[2] > AXIS_W - EDGE or b[3] > AXIS_H - EDGE:
+            return False
+        own = _dist_pt_box(*centers[o["key"]], b)
+        for k, c in centers.items():
+            dist = _dist_pt_box(*c, b)
+            if dist < MARK_R + CLEAR - 1e-9:
+                return False
+            if k != o["key"] and dist < own + NEAREST_MARGIN:
+                return False
+            if o["leader"] and k != o["key"] and _seg_dist(*o["leader"], c) < MARK_R + 1.0:
+                return False
+        for q in placed:
+            if _boxes_touch(b, q["box"], LABEL_GAP):
+                return False
+            if q["leader"] and _seg_hits_box(*q["leader"], b):
+                return False
+            if o["leader"] and _seg_hits_box(*o["leader"], q["box"]):
+                return False
+        return True
 
-    choice = {}
-    order = sorted(pts, key=lambda p: (p[2], p[0]))
-    for _ in range(6):
-        for p in order:
-            others = [box_for(q, choice[q[0]]) for q in order if q[0] != p[0] and q[0] in choice]
-            best = min(((cost(p, box_for(p, o), others, r), r, o) for r, o in enumerate(options)))
-            choice[p[0]] = best[2]
-    out = {}
-    for k, _, _, _ in pts:
-        a, d = choice[k]
-        ux, uy = UNIT[a]
-        out[k] = (a, f"{ux * d + 0.0:g}", f"{uy * d + 0.0:g}")
-    return out
+    crowd = {p[0]: sum(1 for q in pts if q is not p and math.hypot(q[4] - p[4], q[5] - p[5]) < 60) for p in pts}
+    order = sorted(pts, key=lambda p: (-crowd[p[0]], p[4], p[0]))
+    opts = {p[0]: list(options(p)) for p in pts}
+    placed: list = []
+    budget = [200000]
+
+    def solve(i):
+        if i == len(order):
+            return True
+        for o in opts[order[i][0]]:
+            budget[0] -= 1
+            if budget[0] < 0:
+                return False
+            if ok(o, placed):
+                placed.append(o)
+                if solve(i + 1):
+                    return True
+                placed.pop()
+        return False
+
+    if not solve(0):
+        raise SystemExit(f"build_assets.py: cannot place scatter labels cleanly in panel {name!r}; "
+                         f"placed {[o['key'] for o in placed]}")
+    res = {o["key"]: o for o in placed}
+    # Emit the TikZ code (read inside the axis) and a geometry record for checking.
+    tex, rec = [f"% Generated by build_assets.py: labels for panel {name}. Do not edit."], \
+        ["key\ttext\tx\ty\tpx\tpy\tx0\ty0\tx1\ty1\town_dist\tnearest_other\tnearest_other_dist\tleader"]
+    for k, t, x, y, px, py in pts:
+        o = res[k]
+        at = f"($(axis cs:{x:.4f},{y:.4f})+({o['dx']:.3f}pt,{o['dy']:.3f}pt)$)"
+        tex.append(f"\\node[scatterlabel, anchor={o['anchor']}] at {at} {{{t}}};")
+        if o["leader"]:
+            (lx, ly), _ = o["leader"]
+            tex.append(f"\\draw[leader] ($(axis cs:{x:.4f},{y:.4f})+({lx - px:.3f}pt,{ly - py:.3f}pt)$) -- {at};")
+        b = o["box"]
+        own = _dist_pt_box(px, py, b)
+        other = min(((kk, _dist_pt_box(*c, b)) for kk, c in centers.items() if kk != k), key=lambda z: z[1])
+        rec.append("\t".join([k, t, f"{x:.4f}", f"{y:.4f}", f"{px:.2f}", f"{py:.2f}"] + [f"{v:.2f}" for v in b]
+                             + [f"{own:.2f}", other[0], f"{other[1]:.2f}", "yes" if o["leader"] else "no"]))
+    write(OUT / "labels" / f"{name}.tex", "\n".join(tex) + "\n")
+    write(DATA / f"labels-{name}.tsv", "\n".join(rec) + "\n")
+    return res
 
 
 WACOV_X, WACOV_Y = (15, 100), (0, 40)
 ACCLAT_X, ACCLAT_Y = (25, 9000), (25, 102)
-ANCHORS, LAT_ANCHORS = {}, {}
 for sp in S:
     pts_wa, pts_lat = [], []
     for arm in BASE:
         mv = maj(sp, arm)
         pts_wa.append((arm, NAME[arm], 100 * mv["coverage"]["rate"], 100 * mv["wrong_automatic_rate"]["rate"]))
         pts_lat.append((arm, NAME[arm], pooled(sp, arm, .95), 100 * mv["accuracy"]))
-    ANCHORS[sp] = place_labels(pts_wa, WACOV_X, WACOV_Y)
-    LAT_ANCHORS[sp] = place_labels(pts_lat, ACCLAT_X, ACCLAT_Y, xlog=True)
+    place_labels(f"wacov-{sp}", pts_wa, WACOV_X, WACOV_Y)
+    if sp == "holdout":
+        place_labels(f"acclat-{sp}", pts_lat, ACCLAT_X, ACCLAT_Y, xlog=True)
 FAMS = {"cloud": ["gpt-6-luna", "gpt-6.1-sol"], "jev": ["jev-1.13"],
         "local": [a for a in BASE if FAM[a] == "local"]}
 for sp in S:
@@ -1142,12 +1276,10 @@ for sp in S:
                         f"{100 * (wa['ci95'][1] - wa['rate']):.2f}",
                         f"{100 * acc:.2f}", f"{100 * (acc - mv['ci95'][0]):.2f}",
                         f"{100 * (mv['ci95'][1] - acc):.2f}",
-                        f"{pooled(sp, arm, .95):.1f}",
-                        "{" + ANCHORS[sp][arm][0] + "}", ANCHORS[sp][arm][1], ANCHORS[sp][arm][2],
-                        "{" + LAT_ANCHORS[sp][arm][0] + "}", LAT_ANCHORS[sp][arm][1], LAT_ANCHORS[sp][arm][2]])
+                        f"{pooled(sp, arm, .95):.1f}"])
         dat(f"scatter-{sp}-{fam}.dat",
             ["label", "cov", "covminus", "covplus", "wa", "waminus", "waplus", "acc", "accminus", "accplus",
-             "pninetyfive", "anchor", "dx", "dy", "latanchor", "latdx", "latdy"], out)
+             "pninetyfive"], out)
 
 cloud_rows = []
 for i, (key, lab) in enumerate((("sol|keepalive", "GPT-6.1 Sol"), ("luna|keepalive", "GPT-6 Luna"),
@@ -1182,6 +1314,7 @@ for sp, P in SPLITS:
                               ("accepted_wrong_code", "Awc")):
                 v = sum(b[key].get(cls, 0) for b in blocks) / len(blocks)
                 M(f"{TOK[arm]}{P}{tag}{ctag}", f"{v:.1f}".rstrip("0").rstrip("."))
+M("LocalHoldAccGap", f"{100 * (maj('holdout', 'jev-1.13')['accuracy'] - max(maj('holdout', a)['accuracy'] for a in BASE if FAM[a] == 'local')):.1f}")
 M("SweepMin", CUTOFFS[0])
 M("SweepMax", CUTOFFS[-1])
 for sp, P in SPLITS:

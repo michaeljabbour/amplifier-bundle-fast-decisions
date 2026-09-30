@@ -1,5 +1,5 @@
 \begin{xltabular}{\textwidth}{@{}>{\raggedright\arraybackslash}p{0.2\textwidth} >{\raggedright\arraybackslash}p{0.15\textwidth} >{\raggedright\arraybackslash}X l@{}}
-\caption{All \ChangesN\ first-pass claims, what the first pass said, and what the validation found (verbatim from \code{changes.json}, where each entry also names its evidence file).}\label{tab:changes}\\
+\caption{All \ChangesN\ first-pass claims, what the first pass said, and what the validation found, followed by \ChangesPostStudy\ entry recording changes merged after this study (verbatim from \code{changes.json}, where each entry also names its evidence file).}\label{tab:changes}\\
 \toprule
 First-pass claim & First pass said & What the validation found & Verdict \\
 \midrule
@@ -29,7 +29,7 @@ Local latency: tev1 0.8B 38 ms, nimble 157 ms, Laya 21 ms & single run & with id
 \addlinespace[4pt]
 Luna is about 8x slower than Jev because of OpenAI, not the client & 1.19 s median; about 980 ms is server time & server time is 95\% of the Luna-Jev gap and 98\% of the Sol-Jev gap; the client adds about 1 ms; round trip to both hosts is about 13 ms & \vconf \\
 \addlinespace[4pt]
-service\_tier priority cuts Luna's median about 14\% & about 14\% at 2x price & 32\% lower wall median (768 vs 1135 ms, 20 requests, one time window, not interleaved) & \vrev \\
+service\_\allowbreak{}tier priority cuts Luna's median about 14\% & about 14\% at 2x price & 32\% lower wall median (768 vs 1135 ms, 20 requests, one time window, not interleaved) & \vrev \\
 \addlinespace[4pt]
 Every judge except Luna fails on side-effect actions & Luna the exception & Luna also acts on side effects in the validated run; the root cause is the instruction, which lists writing and sending but not purchase or delete. A one-sentence clause removed all of Jev's side-effect errors on dev (5 to 0 over 3 repetitions); a deterministic host guard removed them for every judge at 1-4 points of coverage & \vrev \\
 \addlinespace[4pt]
@@ -50,4 +50,8 @@ Suggested routing: tev1 0.8B at a cutoff of 0.85 or higher as the offline fallba
 Keep Jev as the default judge & recommended & holdout (preregistered): Jev 55/63 correct, 1 wrong automatic; GPT-6 Luna 60/63 and GPT-6.1 Sol 62/63 are more accurate, but neither difference survives Holm correction (p 0.16 and 0.09) and both fail the p95 $\le$ 500 ms and $\le$ 2x cost rules. Jev's misses mostly fall back at low certainty; Luna's are confident (refund at 0.98-0.99, an injected submit at 0.97-0.99) & \vconf \\
 \addlinespace[4pt]
 Deterministic host guards on side-effect actions whatever judge is used & recommended, untested & preregistered intervention I2 confirmed on holdout: it removed every side-effect wrong automatic decision in all 9 applicable judges, with no accuracy change and 1.6-7.9 points of coverage & \vconf \\
+\midrule
+\multicolumn{4}{@{}l}{\emph{After this study (see \cref{sec:since}); ``first pass said'' here means ``before the change''}}\\
+\addlinespace[2pt]
+Changes since this study (main at 180f919, PR \#56) & jev\_\allowbreak{}cua gate 0.75 with no margin; no side-effect guard or clause in jev\_\allowbreak{}cua; the local backend dropped a question's own \texttt{reason} option (worked around in the harness) & PR \#56, merged after these measurements: jev\_\allowbreak{}cua uses the read-shortcut gate (0.90 with a 0.20 margin, configurable), refuses targets whose label names an irreversible or external change (the I2 guard, returning side\_\allowbreak{}effect\_\allowbreak{}requires\_\allowbreak{}confirmation), names those changes in its instructions (I1), and the local backend answers a question's own \texttt{reason} option again. jevgrep and jev\_\allowbreak{}cua descriptions now say Jev is the default. Results in this directory are unchanged: they were measured before the merge. & \vnew \\
 \end{xltabular}

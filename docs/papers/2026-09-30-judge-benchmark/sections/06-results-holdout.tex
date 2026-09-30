@@ -96,6 +96,18 @@ on both endpoints and both splits. No I1 arm differs significantly from its base
 
 \subsection{Trade-offs on the holdout}
 
+\Cref{fig:wacov-hold} is the holdout counterpart of \cref{fig:wacov-dev}: every base judge's
+wrong-automatic rate against its coverage on the \HoldN\ preregistered cases. The hosted judges sit on
+the floor of the chart. GPT-6.1 Sol automated \SolHoldCovPct\,\% of cases with \SolHoldWaK\ wrong
+automatic decisions, Jev \JevHoldCovPct\,\% with \JevHoldWaK\ (\JevHoldWaPct\,\%), and GPT-6 Luna
+\LunaHoldCovPct\,\% with \LunaHoldWaK\ (\LunaHoldWaPct\,\%); their whiskers overlap, which is the
+picture behind the ``within noise'' verdicts above. The local judges form a band well above them: nimble
+9B, the local judge with the fewest wrong automatic decisions, automated \NimbleHoldCovPct\,\% but was wrong on \NimbleHoldWaK\ of those
+(\NimbleHoldWaPct\,\% of all cases), and Qwen3 8B \QwenEightHoldCovPct\,\% with \QwenEightHoldWaK\ wrong.
+\Cref{fig:acclat} adds the latency axis: only Jev and the local models meet the
+\RuleOneMaxPninetyfive\,ms bar, and even the most accurate local model is \LocalHoldAccGap\ points less
+accurate than Jev.
+
 \begin{figure}[htbp]
 \centering
 \wacovpanel{holdout}{Holdout (preregistered)}

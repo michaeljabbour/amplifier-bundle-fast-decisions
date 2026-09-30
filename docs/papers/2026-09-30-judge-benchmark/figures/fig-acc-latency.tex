@@ -2,10 +2,10 @@
 \newcommand{\acclatpanel}[2]{%
 \begin{tikzpicture}
 \begin{axis}[benchmark,
-  scale only axis, width=12.5cm, height=6.2cm,
+  scale only axis, width=\ScatterAxisW, height=\ScatterAxisH,
   xmode=log, xmin=25, xmax=9000, ymin=25, ymax=102,
   log ticks with fixed point,
-  xtick={30,100,300,1000,3000},
+  xtick={30,100,300,1000,3000}, ytick={30,40,50,60,70,80,90,100},
   xlabel={p95 latency per call (ms, log scale)},
   ylabel={Accuracy (\%)},
   xmajorgrids, ymajorgrids,
@@ -28,20 +28,6 @@
   node[pos=1, anchor=south, font=\scriptsize, text=okgray] {rule 1: \RuleOneMaxPninetyfive\ ms};
 \draw[okgray, dotted, line width=0.8pt] (axis cs:\TimeoutMsRaw,25) -- (axis cs:\TimeoutMsRaw,102)
   node[pos=1, anchor=south, font=\scriptsize, text=okgray] {timeout: \TimeoutMs\ ms};
-\addplot[only marks, mark=none, nodes near coords, point meta=explicit symbolic,
-  visualization depends on={value \thisrow{latanchor}\as\myanchor},
-  visualization depends on={\thisrow{latdx}\as\mydx}, visualization depends on={\thisrow{latdy}\as\mydy},
-  every node near coord/.append style={anchor=\myanchor, xshift=\mydx pt, yshift=\mydy pt, font=\scriptsize, inner sep=2.5pt, fill=white, fill opacity=0.8, text opacity=1}]
-  table[x=pninetyfive, y=acc, meta=label] {generated/data/scatter-#1-cloud.dat};
-\addplot[only marks, mark=none, nodes near coords, point meta=explicit symbolic,
-  visualization depends on={value \thisrow{latanchor}\as\myanchor},
-  visualization depends on={\thisrow{latdx}\as\mydx}, visualization depends on={\thisrow{latdy}\as\mydy},
-  every node near coord/.append style={anchor=\myanchor, xshift=\mydx pt, yshift=\mydy pt, font=\scriptsize, inner sep=2.5pt, fill=white, fill opacity=0.8, text opacity=1}]
-  table[x=pninetyfive, y=acc, meta=label] {generated/data/scatter-#1-jev.dat};
-\addplot[only marks, mark=none, nodes near coords, point meta=explicit symbolic,
-  visualization depends on={value \thisrow{latanchor}\as\myanchor},
-  visualization depends on={\thisrow{latdx}\as\mydx}, visualization depends on={\thisrow{latdy}\as\mydy},
-  every node near coord/.append style={anchor=\myanchor, xshift=\mydx pt, yshift=\mydy pt, font=\scriptsize, inner sep=2.5pt, fill=white, fill opacity=0.8, text opacity=1}]
-  table[x=pninetyfive, y=acc, meta=label] {generated/data/scatter-#1-local.dat};
+\input{generated/labels/acclat-#1.tex}
 \end{axis}
 \end{tikzpicture}}

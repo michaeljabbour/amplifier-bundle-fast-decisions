@@ -7,8 +7,8 @@
   ytick=data, yticklabels from table={generated/data/latency-cloud.dat}{label},
   xlabel={Median milliseconds per call (cloud, connection reused)},
   xmajorgrids,
-  legend style={at={(0.98,0.04)}, anchor=south east}, legend cell align=left,
-  reverse legend=false,
+  legend style={at={(0.5,1)}, anchor=south, yshift=5pt, legend columns=3, /tikz/every even column/.append style={column sep=8pt}},
+  legend cell align=left,
 ]
 \addplot[fill=okgray!55, draw=black!70] table[x=network, y=idx]{generated/data/latency-cloud.dat};
 \addlegendentry{network}
@@ -30,7 +30,8 @@
   ytick=data, yticklabels from table={generated/data/latency-local.dat}{label},
   xlabel={Median milliseconds per call (local, Ollama, model already loaded)},
   xmajorgrids,
-  legend style={at={(0.98,0.04)}, anchor=south east}, legend cell align=left,
+  legend style={at={(0.5,1)}, anchor=south, yshift=5pt, legend columns=3, /tikz/every even column/.append style={column sep=8pt}},
+  legend cell align=left,
 ]
 \addplot[fill=okgray!55, draw=black!70] table[x=load, y=idx]{generated/data/latency-local.dat};
 \addlegendentry{model load/check}

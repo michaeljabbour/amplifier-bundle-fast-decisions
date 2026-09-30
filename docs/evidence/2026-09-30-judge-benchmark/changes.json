@@ -138,5 +138,12 @@
   "validated": "preregistered intervention I2 confirmed on holdout: it removed every side-effect wrong automatic decision in all 9 applicable judges, with no accuracy change and 1.6-7.9 points of coverage",
   "verdict": "confirmed",
   "evidence": "holdout/summary.json decisions.rule4_interventions.I2"
+ },
+ {
+  "claim": "Changes since this study (main at 180f919, PR #56)",
+  "first_pass": "jev_cua gate 0.75 with no margin; no side-effect guard or clause in jev_cua; the local backend dropped a question's own `reason` option (worked around in the harness)",
+  "validated": "PR #56, merged after these measurements: jev_cua uses the read-shortcut gate (0.90 with a 0.20 margin, configurable), refuses targets whose label names an irreversible or external change (the I2 guard, returning side_effect_requires_confirmation), names those changes in its instructions (I1), and the local backend answers a question's own `reason` option again. jevgrep and jev_cua descriptions now say Jev is the default. Results in this directory are unchanged: they were measured before the merge.",
+  "verdict": "new",
+  "evidence": "git show 180f919; tests/test_judge_guards.py on main"
  }
 ]

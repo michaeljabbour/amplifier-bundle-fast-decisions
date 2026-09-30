@@ -29,7 +29,8 @@ and \ITwoHoldCovCostRange\ points of coverage.
 Also consider adding the one-sentence side-effect clause (I1) to Jev's instruction. It raised Jev's
 holdout accuracy from \JevHoldAccK\ to \JevClHoldAccK\ of \HoldN\ at similar latency and cost, but that
 gain is within noise (Holm $p = \JevClHoldRAccPHolm$), so it is a reasonable low-risk change, not a
-proven improvement.
+proven improvement. Both the guard and the clause have since been adopted for the bundle's
+computer-use judge on the main branch (\cref{sec:since}).
 
 \subsection{Cloud fallback when Jev is unreachable: GPT-6 Luna, behind the guard \texorpdfstring{\prereg}{[preregistered]}}
 
@@ -92,3 +93,32 @@ except nimble 9B, and is more accurate than every local judge except nimble 9B a
   \item \textbf{Live-traffic receipts} that disagree with this constructed benchmark.
 \end{itemize}
 Any changed configuration needs a \emph{new} holdout; this one is now spent.
+
+\subsection{Changes since this study}\label{sec:since}
+
+\begin{caution}[title={Measured before these changes}]
+Every result in this report was measured \emph{before} the changes below were merged, and is reported
+exactly as measured. None of the numbers has been re-run against the new code.
+\end{caution}
+
+PR \#\SincePR, merged to the main branch at commit \code{\SinceCommit} after these measurements, acted
+on several findings of this study:
+\begin{enumerate}[label=(\alph*)]
+  \item \textbf{A stricter computer-use gate.} The \code{jev\_cua} gate now uses the read-shortcut
+    thresholds, a probability of at least \MinP\ with a margin of at least \MinMargin, and the thresholds
+    are configurable. When measured it was \CuaMinP\ with no margin rule (\cref{sec:background}).
+  \item \textbf{The side-effect guard (I2).} \code{jev\_cua} now refuses a target whose label names an
+    irreversible or external change and returns \code{side\_effect\_requires\_confirmation} instead of
+    acting (\cref{sec:interventions}).
+  \item \textbf{The side-effect clause (I1).} The same change is now named in \code{jev\_cua}'s
+    instructions.
+  \item \textbf{The \code{reason} defect.} The local backend no longer drops a question's own
+    \code{reason} option, the defect this study had to work around (\cref{sec:method,sec:limits}).
+\end{enumerate}
+The descriptions of \code{jevgrep} and \code{jev\_cua} now also say that Jev, not Laya, is the default
+judge. \Cref{tab:changes} records the same change as the last entry of \code{changes.json}.
+
+These changes follow the recommendations above, but this report does not measure their effect. In
+particular, the I2 and I1 results in \cref{sec:interventions} were obtained by re-scoring stored answers
+(I2) and by an instruction-clause arm (I1) in the benchmark harness, not by the new \code{jev\_cua} code.
+Confirming them in the shipped path needs a new holdout run.

@@ -3,8 +3,9 @@
 \newcommand{\wacovpanel}[2]{%
 \begin{tikzpicture}
 \begin{axis}[benchmark,
-  scale only axis, width=12.5cm, height=6.2cm,
+  scale only axis, width=\ScatterAxisW, height=\ScatterAxisH,
   xmin=15, xmax=100, ymin=0, ymax=40,
+  xtick={20,40,60,80,100}, ytick={0,10,20,30,40},
   xlabel={Coverage: share of cases decided automatically (\%)},
   ylabel={Wrong automatic (\% of cases)},
   xmajorgrids, ymajorgrids,
@@ -26,20 +27,6 @@
   table[x=cov, y=wa, x error minus=covminus, x error plus=covplus, y error minus=waminus, y error plus=waplus]
   {generated/data/scatter-#1-local.dat};
 \addlegendentry{Local model}
-\addplot[only marks, mark=none, nodes near coords, point meta=explicit symbolic,
-  visualization depends on={value \thisrow{anchor}\as\myanchor},
-  visualization depends on={\thisrow{dx}\as\mydx}, visualization depends on={\thisrow{dy}\as\mydy},
-  every node near coord/.append style={anchor=\myanchor, xshift=\mydx pt, yshift=\mydy pt, font=\scriptsize, inner sep=2.5pt, fill=white, fill opacity=0.8, text opacity=1}]
-  table[x=cov, y=wa, meta=label] {generated/data/scatter-#1-cloud.dat};
-\addplot[only marks, mark=none, nodes near coords, point meta=explicit symbolic,
-  visualization depends on={value \thisrow{anchor}\as\myanchor},
-  visualization depends on={\thisrow{dx}\as\mydx}, visualization depends on={\thisrow{dy}\as\mydy},
-  every node near coord/.append style={anchor=\myanchor, xshift=\mydx pt, yshift=\mydy pt, font=\scriptsize, inner sep=2.5pt, fill=white, fill opacity=0.8, text opacity=1}]
-  table[x=cov, y=wa, meta=label] {generated/data/scatter-#1-jev.dat};
-\addplot[only marks, mark=none, nodes near coords, point meta=explicit symbolic,
-  visualization depends on={value \thisrow{anchor}\as\myanchor},
-  visualization depends on={\thisrow{dx}\as\mydx}, visualization depends on={\thisrow{dy}\as\mydy},
-  every node near coord/.append style={anchor=\myanchor, xshift=\mydx pt, yshift=\mydy pt, font=\scriptsize, inner sep=2.5pt, fill=white, fill opacity=0.8, text opacity=1}]
-  table[x=cov, y=wa, meta=label] {generated/data/scatter-#1-local.dat};
+\input{generated/labels/wacov-#1.tex}
 \end{axis}
 \end{tikzpicture}}

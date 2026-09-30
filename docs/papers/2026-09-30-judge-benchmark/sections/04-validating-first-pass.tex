@@ -44,7 +44,8 @@ so its variation is the model's, not the harness's.
     \LunaMismatchDevK\ of \LunaMismatchDevN\ in the validated run). In case \code{select-13}, for
     instance, Luna stated \code{reason} while giving option \code{a} the highest probability.
   \item \textbf{The \code{reason} sentinel.} The workaround that lets local judges answer \code{reason}
-    is correct and is now unit-tested both ways; the underlying bundle defect is unchanged.
+    is correct and is now unit-tested both ways; the underlying bundle defect was unchanged when these
+    measurements were taken (it has since been fixed on main; \cref{sec:since}).
   \item \textbf{Order flips.} Qwen's order-flip count of 0 is true by construction (its backend averages
     both orders) and is now flagged as not comparable.
   \item \textbf{Cost.} Token and cost accounting recompute to the cent from the logged usage.

@@ -4,9 +4,13 @@ LATEXMK ?= latexmk
 PDF := judge-benchmark.pdf
 EVIDENCE := ../../evidence/2026-09-30-judge-benchmark
 
-.PHONY: all assets pdf clean distclean
+.PHONY: all assets pdf check clean distclean
 
 all: $(PDF)
+
+# Geometry check of the built figures (labels vs markers, legends vs bars).
+check: $(PDF)
+	$(PYTHON) check_figures.py
 
 assets: generated/numbers.tex
 

@@ -18,9 +18,14 @@
   \item \textbf{Host-dependent latency.} Local latency was measured on one Apple M5 Max under varying load
     and with Ollama serving one request at a time. Cloud latency depends on provider load; the priority
     tier was measured in a single window.
-  \item \textbf{A bundle defect is worked around, not fixed.} The bundle's local backend drops options
-    literally named \code{reason}; the harness disables that rule for comparability. In production, local
-    judges cannot answer such questions correctly.
+  \item \textbf{A bundle defect was worked around, not fixed, in these runs.} When measured, the
+    bundle's local backend dropped options literally named \code{reason}, so in production a local judge
+    could not answer such questions correctly; the harness disabled that rule for comparability. PR
+    \#\SincePR\ has since fixed the defect on main (\cref{sec:since}). The local-judge numbers here are
+    from the harness path and are reported as measured.
+  \item \textbf{Main has changed since.} PR \#\SincePR\ (commit \code{\SinceCommit}) tightened the
+    computer-use gate and added the side-effect guard and clause to \code{jev\_cua} after these
+    measurements (\cref{sec:since}). This report describes the system as it was measured.
   \item \textbf{Decisions API not measured.} It returned HTTP \HoldProbeStatus; no claim is made about it.
   \item \textbf{Only the first option order is scored.} The second order is logged but used only for
     latency and order-flip counts.

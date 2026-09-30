@@ -27,8 +27,10 @@ For a choice question, the bundle's read-shortcut gate acts only if all of these
   \item the answer arrived within the \TimeoutS-second timeout.
 \end{enumerate}
 A \emph{yes/no} answer has no abstention in the bundle: it is always acted on unless the call times
-out. (A second gate used for computer-use tasks relaxes the probability bar to \CuaMinP\ and has no
-margin rule; we report it as a secondary policy.)
+out. When these measurements were taken, the bundle's computer-use gate (\code{jev\_cua}) was looser:
+a probability bar of \CuaMinP\ and no margin rule. We report it as a secondary policy. The main
+branch has since moved that gate to \MinP\ with a \MinMargin\ margin (\cref{sec:since}); every result
+in this report was measured before that change.
 
 Two numbers summarize how a judge behaves under this gate:
 \begin{itemize}

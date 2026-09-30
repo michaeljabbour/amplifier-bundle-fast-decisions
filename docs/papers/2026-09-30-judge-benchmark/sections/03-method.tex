@@ -84,11 +84,11 @@ before this benchmark. The runner probes it at the start of every run and would 
 HTTP 200. Both runs got HTTP \HoldProbeStatus\ (``\HoldProbeMessage''). \textbf{Nothing in this report
 is a claim about the OpenAI Decisions API}, and GPT-6 Luna is not a stand-in for it.
 
-\paragraph{Two harness details.} First, the bundle's local backend (\code{OllamaBackend}) silently drops
-any option literally named \code{reason} and renormalizes the rest, so through the bundle's own path a
-local model can never pick this benchmark's fallback. The harness disables that rule so every judge
-answers the same three-way question; the bundle defect itself is unchanged and is noted in
-\cref{sec:limits}. Second, that backend asks each question in both option orders and averages the two,
+\paragraph{Two harness details.} First, when these measurements were taken, the local backend of the
+bundle, \code{OllamaBackend}, silently dropped any option literally named \code{reason} and renormalized the
+rest, so through the bundle's own path a local model could never pick this benchmark's fallback. The
+harness disabled that rule so every judge answered the same three-way question. The defect has since
+been fixed on the main branch (\cref{sec:since}); see also \cref{sec:limits}. Second, that backend asks each question in both option orders and averages the two,
 so ``order flip'' counts are not comparable for the Qwen arms.
 
 \subsection{Scoring policies}
