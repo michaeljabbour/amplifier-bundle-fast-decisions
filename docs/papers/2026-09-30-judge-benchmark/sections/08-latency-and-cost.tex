@@ -1,0 +1,85 @@
+\section{Latency and cost}\label{sec:latency}
+
+A judge exists to save time, so its own speed matters as much as its accuracy. This section explains
+where the time goes, using a separate latency study (\LatNSeq\ sequential calls per configuration,
+warm-ups excluded, and a per-request random string, a \term{nonce}, so that no provider or local prompt
+cache could serve a repeated prompt).
+
+\subsection{Anatomy of one call}
+
+\begin{figure}[htbp]
+\centering
+\input{figures/fig-latency-anatomy.tex}
+\caption{Where the time goes in one call (medians of each component). Top: hosted judges, split into
+network, provider server time and the rest. Bottom: local models through Ollama, split into model
+load check, prompt prefill and the rest (decoding one token plus overhead).}
+\label{fig:anatomy}
+\howtoread{Each bar is one median call; its segments add up to about the median wall-clock time.
+Segments differ by colour \emph{and} by fill pattern. The two panels have different horizontal scales, so compare
+bar lengths only within a panel.}
+\end{figure}
+
+\begin{table}[htbp]
+\centering\small
+\caption{The numbers behind \cref{fig:anatomy}. Components are separate medians, so they need not add
+exactly to the median wall time; the residual is shown as ``rest.''}
+\label{tab:anatomy}
+\input{generated/tables/latency-anatomy.tex}
+\end{table}
+
+\paragraph{Hosted judges: it is the provider's server.} A Jev call took \LatJevWall\,ms at the median,
+of which \LatJevServer\,ms was server time. A Luna call took \LatLunaWall\,ms. Of the
+\LatLunaGap\,ms gap between Luna and Jev, \LatLunaServerShare\,\% is OpenAI server time; for Sol the
+share is \LatSolServerShare\,\%. The client adds at most \LatClientMax\,ms, and the TCP round trip is
+about \LatRttJev\,ms to Jev's host and \LatRttOpenAI\,ms to OpenAI's. Opening a fresh connection
+instead of reusing one adds \LatFreshRange\,ms (connection plus TLS handshake). OpenAI's priority tier cut
+Luna's median by \LatPrioCut\,\% in one window of \LatPrioN\ requests, at \PriorityMultiplier$\times$ the
+price; that window was not interleaved with the default tier, so treat it as indicative.
+
+\paragraph{Local judges: prefill and residency.} A local judge reads a prompt of about
+\LatPromptTokens\ tokens and writes \LatDecodeTokens\ token, so reading the prompt (prefill) is
+\LatPrefillShareRange\,\% of the call. The expensive event is a \term{cold start}: when a model is not
+already in memory, the first call took \LatColdRange\,s. On this host Ollama serves one request at a
+time, so local throughput stays flat as more requests are in flight, while Jev's grows
+(\cref{tab:concurrency}).
+
+\begin{table}[htbp]
+\centering\small
+\caption{Latency and throughput as requests in flight rise. $^{*}$ GPT-6 Luna at 8 in flight had
+\LatLunaConcErrors\ read timeout; its throughput counts successful requests only.}
+\label{tab:concurrency}
+\input{generated/tables/latency-concurrency.tex}
+\end{table}
+
+\begin{caution}
+Local latency is a property of this host at that time, not of the model. Across the reproduction runs
+the same local answers came back with medians that moved by tens of percent, and the host's one-minute
+load average ranged over \HoldLoadRange\ during the holdout run. Cloud latency depends on the provider's
+load. Ollama's prompt cache also made repeated prompts look several times faster in an early probe,
+which is why every latency probe here uses a nonce.
+\end{caution}
+
+\subsection{Cost at scale}
+
+\Cref{tab:cost} turns the holdout numbers into a monthly picture, assuming an illustrative
+\ProjPerDay\ decisions per day for \ProjDays\ days (\ProjPerMonthM\ million decisions).
+
+\begin{table}[htbp]
+\centering\small
+\caption{Projected monthly API cost and wrong automatic actions at \ProjPerDay\ decisions per day,
+using holdout rates \prereg. Local judges show \$0 API cost and exclude hardware, power and operations.}
+\label{tab:cost}
+\input{generated/tables/cost.tex}
+\end{table}
+
+\begin{caution}
+The wrong-action column assumes that real traffic has the \emph{same mix} of decisions as this
+benchmark. It does not: the cases were deliberately built to be hard, and \HoldNSideOrInjection\ of
+\HoldN\ holdout cases involve side effects or injected instructions. Real traffic is likely to contain
+far fewer traps, so read this column as a comparison between judges on a stress test, not as a forecast.
+The cost column is more portable, because it depends only on tokens per decision and list prices.
+\end{caution}
+
+At this volume Jev would cost about \$\JevProjUSD\ a month, GPT-6 Luna about \$\LunaProjUSD\ and
+GPT-6.1 Sol about \$\SolProjUSD. The cost ratio to Jev (\LunaHoldCostX$\times$ for Luna,
+\SolHoldCostX$\times$ for Sol) is the quantity the preregistered rule tests.

@@ -248,6 +248,8 @@ def cell_to_argv(cell_id, cells_doc, suites_doc, suite_id, split, rep, *, out_ro
             "--slice", str(poly["slice"]),
             "--split", splitcfg["split_flag"],
         ]
+    elif task_source == "judge_bench":
+        raise EvalsError(2, f"suite {suite_id!r} is run by {suite.get('runner', 'evals/judges.py')}, not run.py")
     else:
         raise EvalsError(2, f"unknown task_source {task_source!r} for suite {suite_id!r}")
 

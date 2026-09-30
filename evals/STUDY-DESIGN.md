@@ -1099,3 +1099,79 @@ speed must come from Amplifier's own overhead, not from the model or effort choi
   ready)
 - per-prompt hooks in heavy app compositions (up to 5 s)
 - a 68–114k-token prompt
+
+---
+
+## 19. Judge-quality benchmark (2026-09-30)
+
+Context: [docs/evidence/2026-09-30-judge-benchmark](../docs/evidence/2026-09-30-judge-benchmark/README.md)
+validates the first-pass judge comparison (PR #54) and turns it into a repeatable suite. Section 14 compares
+judges *inside agent runs* (time and quality of whole tasks, local qwen3:0.6b vs Jev); this section compares the
+judges *on the decision itself*: one structured question, one answer, a known label. The two are complementary:
+a judge must pass here before a section 14 cell is worth its cost, and section 14's decision rule (d2), including
+its p95 < 500 ms bar, is unchanged.
+
+**Suite.** `suites.yaml` `judge`, run by `evals/judges.py` (not `run.py`). Splits follow section 3:
+`dev` is the 90 Laya screens (60 original + 30 fresh), which are **spent** -- every first-pass judge and the
+first-pass analysis saw them -- and is where configurations and interventions are chosen. `holdout` is 63 fresh
+cases (21 select, 21 computer-use, 21 search; balanced a / b / reason and true / false; 29 side-effect or
+injection cases, about half of them contrasts where the safe action is correct), labeled under
+`evals/judge_bench/holdout/LABELING-GUIDE.md`, double-reviewed blind, and preregistered with its hash
+(`holdout/PREREGISTRATION.md`) before any judge saw it. The runner refuses a holdout run unless the
+preregistration and cases are committed, unmodified, and the hash matches.
+
+**Arms.** `evals/judges.yaml` declares each judge with its adapter, protocol, prices and what it sends for
+determinism. `jev-1.13` is the baseline. Intervention arms (`*+sideeffect-clause`) wrap a base arm.
+`openai-decisions` is disabled and **auto-enables only when `POST /v1/decisions` returns 200**; on 2026-09-30 it
+returned 403 "Decision API is not enabled for this user", recorded in `run.json`. No Decisions API result is
+claimed without a logged 200. GPT-6 Luna is not a stand-in for it in any claim.
+
+**Policy.** Scores are recomputed from raw answers under named policies (`judge_bench/scoring.py`), so any
+policy can be applied to a stored log. The primary policy is the bundle's own read-shortcut gate: argmax of the
+probabilities (the bundle ignores an API's stated `choice`), fallback on `reason`, p < 0.90 or margin < 0.20,
+or no answer within 3000 ms; a yes/no answer has **no abstention in the bundle**. The first pass used the Laya
+study's cutoff (0.75, stated `choice`, no timeout, confident "no" abstains at 0.75), which is not the bundle's
+policy; it is kept as `study-0.75` for replay only.
+
+**Rules learned here (add to section 2's list).**
+- *Argmax, not the stated choice.* GPT-6 Luna once returned `choice: reason` with probabilities favouring `a`
+  (select-13). The first pass scored the stated choice; the bundle would have acted on `a` at 0.49 (then fallen
+  back). Self-reported probabilities are renormalised and their raw values kept; ECE on them is reported but
+  marked not meaningful.
+- *The `reason` sentinel.* `local_backend.OllamaBackend` drops any option literally named `reason` (its SLOW
+  sentinel) and renormalises, so a local judge can never choose this screen's fallback through the bundle's own
+  path. The harness disables that rule for comparability (`keep_reason_option`, unit-tested both ways). The
+  bundle defect itself is unchanged here: questions with a literal `reason` option cannot be answered correctly
+  by the local backend.
+- *Ollama residency and caching.* Ollama keeps three models resident on this host (`OLLAMA_MAX_LOADED_MODELS`
+  automatic, `NUM_PARALLEL` 1): each local arm runs as one contiguous block after two warmups. Ollama 0.35 also
+  reuses cached prompt prefixes: repeating identical prompts made qwen3:8b look 4x faster under concurrency.
+  Latency probes must use a per-request nonce.
+- *Host load moves local latency.* Across three reproduction runs the same local arms produced identical answers
+  while their median latency moved from -33% (qwen3:8b) to +95% (Laya) against the first pass; the host's load
+  average was 15-36 when sampled during reproduction. `run.json` now records load per arm block. Local latency is a property of the host at the time,
+  never a portable number; cloud latency is dominated by provider server time (95-98% of the Luna and Sol gap
+  to Jev), not by the client or network.
+- *Order-flip metrics are not comparable* for arms that average both option orders internally (the bundle's
+  OllamaBackend), flagged `order_flip_comparable: false`.
+
+**Metrics.** Accuracy and coverage with Wilson intervals; wrong-automatic rate per case; paired exact McNemar with
+Holm correction inside each contrast family; paired bootstrap CIs for differences; ECE and the Brier
+decomposition; p50/p95 by nearest rank; USD per million decisions from logged tokens at list price (OpenAI
+priority tier at 2x). Failure classes (`judge_bench/failure.py`): acted on side effect, under- and over-deferred,
+wrong target, accepted wrong code, rejected correct code, injection following.
+
+**Efficiency receipts (docs/GOAL.md).** Benchmark runs set `AFAST_TRAFFIC=test`, so nothing here enters
+production receipt sums. The receipt quantities a judge change would move -- decisions automated (coverage),
+seconds per decision (p50/p95) and USD per decision -- are all in `summary.json` per arm with their source rows,
+and `tests/test_judge_replay.py` recomputes the committed summary from `requests.jsonl` (counts exact, floats within 1e-9 relative).
+
+**Tests and CI.** Unit tests (`tests/test_judge_bench.py`) cover adapters, the sentinel, renormalisation,
+policies, failure classes and statistics; `tests/test_judge_replay.py` replays committed request logs offline;
+`tests/test_judge_report.py` checks the report is deterministic and self-contained. All run in the existing
+offline CI job (`unittest discover -s tests`). The real-kernel lane (`tests/test_judge_live.py`, 3 cases per
+reachable local arm) runs only with `AFAST_JUDGE_LIVE=1`; paid arms stay manual.
+
+**Decision rule.** Preregistered in `holdout/PREREGISTRATION.md` (non-inferiority margins vs Jev: accuracy -5
+points, wrong-automatic +3 points; replacement needs a significant primary-endpoint win, p95 <= 500 ms and <= 2x
+Jev's cost). Dev results are **screens** under section 8.

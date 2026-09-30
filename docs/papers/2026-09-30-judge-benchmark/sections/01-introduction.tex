@@ -1,0 +1,60 @@
+\section{Introduction}\label{sec:intro}
+
+Modern AI agents spend much of their time on decisions that are small but frequent. Should the agent
+read \code{report-final.md} or \code{report-draft.md}? Is the \emph{Save} button the one the task needs?
+Does this function really enforce the size limit it claims to? A large language model can answer each
+of these questions well, but it takes seconds and costs money every time. The agent bundle studied here,
+\emph{Fast Decisions}, hands such questions to a small, fast \term{decision judge} instead. The judge
+returns a probability for each option. If it is confident enough, the agent acts at once. If not, the
+agent falls back to its ordinary, slower reasoning.
+
+This design only helps if the judge is right when it is confident. A judge that is confidently wrong
+does not merely waste time: it makes the agent do the wrong thing with no second look. This report asks
+a practical question: \emph{which fast model should make these decisions, and under what safeguards?}
+
+\paragraph{What we did.} We compared \NumBase\ judges: two hosted OpenAI language models, one hosted
+decision model (Jev~1.13, the bundle's current default) and \NumLocal\ models that run on the same
+computer as the agent. We also tested \NumClauseArms\ judge variants with one extra sentence in their
+instructions. Every judge answered the same structured questions, \DevReps\ times each, and every
+answer was scored under the exact rule the bundle uses to decide whether to act.
+
+The work had two parts.
+\begin{enumerate}
+  \item \textbf{Validate a first pass.} An earlier, quick comparison on the same \DevN\ development
+    cases (the \term{first pass}) made \ChangesN\ claims. We reproduced it, audited its harness and
+    labels, and checked each claim (\cref{sec:validate}).
+  \item \textbf{Confirm on fresh data.} We then wrote \HoldN\ new cases, had their labels checked blind,
+    and committed the analysis plan and decision rules \emph{before} any judge saw them
+    (a \term{preregistration}). Only this \term{holdout} can confirm a claim (\cref{sec:holdout}).
+\end{enumerate}
+
+\begin{keyidea}
+Accuracy alone is the wrong headline for a judge. What matters most is how often the agent
+\emph{acts automatically on a wrong answer} (the wrong-automatic rate), and how often it gets to act
+automatically at all (coverage). A wrong answer that falls back to slow reasoning costs only time.
+\end{keyidea}
+
+\paragraph{Main findings.} In short (details and uncertainty in \cref{sec:recs}):
+\begin{itemize}
+  \item \textbf{Keep Jev~1.13 as the default.} It was right on \JevHoldAccK/\HoldN\ holdout cases with
+    \JevHoldWaK\ wrong automatic decision, a p95 latency of \JevHoldPninetyfive\,ms and
+    \$\JevHoldCost\ per million decisions. The two OpenAI models scored higher, but those differences
+    are within noise after correcting for multiple comparisons, and both are much slower
+    (p95 \LunaHoldPninetyfiveS\,s and \SolHoldPninetyfiveS\,s).
+  \item \textbf{Add a host guard on side-effect actions.} A fixed word list that blocks automatic
+    purchases, deletions, publications and similar actions removed every side-effect wrong automatic
+    decision it targeted on the holdout, in all \ITwoHoldNApplicable\ judges it applied to.
+  \item \textbf{No local model is ready to be the offline tier.} The best, \OffBestHold, still made
+    \TevFourHoldOffWaK\ wrong automatic decisions (upper 95\,\% bound \TevFourHoldOffWaUpper\,\%,
+    above the preregistered \OffMaxUpperPct\,\% limit).
+  \item \textbf{The first pass was partly wrong.} Its headline that GPT-6 Luna was right on all
+    \DevN\ cases with no wrong automatic decisions did not hold up (\cref{sec:validate}).
+\end{itemize}
+
+\paragraph{How to read this report.} \Cref{sec:background} explains judges and automatic decisions
+with one worked example. \Cref{sec:method} describes the cases, labels, judges and statistics in plain
+terms. \Cref{sec:validate,sec:dev,sec:holdout} give the results; results from the development split
+are marked \screen\ and results from the holdout are marked \prereg. \Cref{sec:failures,sec:latency}
+explain \emph{why} judges fail and where their time goes. \Cref{sec:recs} gives recommendations, and
+\cref{sec:limits,sec:repro} state the limits and how to reproduce everything. A glossary is in
+\cref{app:glossary}.

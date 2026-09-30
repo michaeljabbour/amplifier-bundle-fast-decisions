@@ -1,0 +1,92 @@
+\section{Validating the first pass}\label{sec:validate}
+
+The first pass compared the same judges on the same \DevN\ dev cases, once, with a quick harness
+(commit \code{\FpHarnessCommit}). Before building on it we asked three questions: does it reproduce, is
+the harness scoring what the bundle does, and are the labels right?
+
+\subsection{Reproduction and run-to-run variance}
+
+We reran the unchanged first-pass harness three times from a clean copy of the code, then ran the new
+harness for three more repetitions. Together with the first pass that makes seven runs of every judge
+on the dev cases. \Cref{tab:variance} counts, for each judge, the cases whose answer (the argmax option)
+changed in any of the seven runs.
+
+\begin{table}[htbp]
+\centering\small
+\caption{Repeatability over seven runs on the \DevN\ dev cases (first pass, three reproduction runs and
+three validated repetitions; first option order).}
+\label{tab:variance}
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}l r r l@{}}
+\toprule
+Judge & cases whose answer changed & correct per run & what is sent for determinism \\
+\midrule
+GPT-6 Luna & \LunaChangedCases & \LunaSixRunRange$^{a}$ & nothing (no control at effort \code{none}) \\
+Jev 1.13 & \JevChangedCases & \JevSevenRunRange & no temperature or seed \\
+GPT-6.1 Sol & \SolChangedCases & \SolSevenRunRange & no temperature or seed \\
+Every local judge & \LocalChangedMax & identical in all runs & temperature 0 (Qwen) or none needed \\
+\bottomrule
+\end{tabular*}
+\par\smallskip\raggedright\footnotesize $^{a}$ Scored on its probabilities (argmax) in the six runs after
+the first pass; the first pass itself scored \FpLunaArgmaxK/\DevN\ this way.
+\end{table}
+
+Local judges were fully deterministic. Jev changed its answer on \JevChangedCases\ cases, and GPT-6
+Luna on \LunaChangedCases. Luna's request bodies were verified byte-identical between the two harnesses,
+so its variation is the model's, not the harness's.
+
+\subsection{Harness audit}
+
+\begin{enumerate}
+  \item \textbf{Stated choice versus probabilities.} The first pass scored Luna and Sol by the option
+    they \emph{stated}. The bundle ignores the stated choice and takes the argmax of the probabilities.
+    Luna's stated choice contradicted its own probabilities in \LunaMismatchK\ of \LunaMismatchN\ choice
+    answers (\LunaMismatchFpK\ of \LunaMismatchFpN\ in the first pass and reproduction runs,
+    \LunaMismatchDevK\ of \LunaMismatchDevN\ in the validated run). In case \code{select-13}, for
+    instance, Luna stated \code{reason} while giving option \code{a} the highest probability.
+  \item \textbf{The \code{reason} sentinel.} The workaround that lets local judges answer \code{reason}
+    is correct and is now unit-tested both ways; the underlying bundle defect was unchanged when these
+    measurements were taken (it has since been fixed on main; \cref{sec:since}).
+  \item \textbf{Order flips.} Qwen's order-flip count of 0 is true by construction (its backend averages
+    both orders) and is now flagged as not comparable.
+  \item \textbf{Cost.} Token and cost accounting recompute to the cent from the logged usage.
+  \item \textbf{p95.} The first pass used banker's rounding for the percentile index and was one rank
+    low on the \DevNFresh-case slices; the headline values on all \DevN\ cases were unaffected. The benchmark
+    now uses nearest rank.
+  \item \textbf{``Automatic'' was the study's rule, not the bundle's.} The first pass called an answer
+    automatic at \StudyCutoff\ on the stated choice, with no margin, no timeout, and with a confident
+    ``no'' allowed to abstain. The bundle uses \MinP, a \MinMargin\ margin and a \TimeoutS\,s timeout,
+    and a yes/no answer never abstains. Everything is now scored under the bundle's gate, with the old
+    rule kept for replay.
+\end{enumerate}
+An independent code review of the new harness found two blocking bugs (a pairwise comparison that
+silently dropped invalid cases, and an \code{--append} option that deleted rows). Both were fixed before
+the holdout ran.
+
+\subsection{What the first pass got right and wrong}
+
+\Cref{tab:changes} lists all \ChangesN\ first-pass claims with the evidence that settles each one:
+\ChangesConfirmed\ confirmed, \ChangesRefuted\ refuted, \ChangesRevised\ revised and \ChangesNew\ new.
+The main corrections are:
+\begin{itemize}
+  \item \textbf{``GPT-6 Luna was right on all \DevN.''} That was \FpLunaStudyK/\DevN\ on its stated
+    choice. On its own probabilities, which the bundle uses, it was \FpLunaArgmaxK/\DevN\ in the first
+    pass and \LunaSixRunRange\ across the six later runs. In the validated run its majority was
+    \LunaDevAccK/\DevN, the same as Jev (\JevDevAccK/\DevN).
+  \item \textbf{``Luna made no wrong automatic decisions.''} Under the bundle's gate it made
+    \LunaDevWaRange\ per repetition in the validated run. It clicked \emph{Buy now} on \code{cua-18}
+    at \ExLunaPRange\ in all three validated repetitions after deferring in the \ExLunaFpRuns\ earlier runs
+    (\cref{sec:worked}).
+  \item \textbf{``tev1 0.8B has zero wrong automatic decisions from a \FpCutoff\ cutoff.''} True only under
+    the study rule (\FpTevPtEightCutWa\ wrong of \FpTevPtEightCutAuto\ automatic), where a confident
+    ``no'' can abstain. The bundle acts on every yes/no answer, which gives \FpTevPtEightBundleWa\ wrong
+    automatic decisions of \DevN, \TevPtEightDevAwc\ of them accepted wrong code.
+\end{itemize}
+What held up: Jev's accuracy (\JevSevenRunRange/\DevN\ in all seven runs), Sol's (\SolSevenRunRange\ in
+all seven), every local judge's, Laya's \LayaOriginalK/\LayaOriginalN\ on the original screen, the
+costs, and that Luna's extra latency is OpenAI server time (\cref{sec:latency}).
+
+{\small
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.1}
+\input{generated/tables/changes.tex}
+}

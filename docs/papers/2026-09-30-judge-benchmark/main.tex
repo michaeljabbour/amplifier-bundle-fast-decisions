@@ -1,0 +1,159 @@
+% Which Fast Model Should Make an Agent's Small Decisions?
+% Build with `make` (runs build_assets.py, then latexmk -pdf).
+\documentclass[11pt,letterpaper]{article}
+
+% ---------------------------------------------------------------- fonts & page
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{libertinus}
+\usepackage[scaled=0.85]{beramono}
+\usepackage[margin=0.9in,headheight=14pt]{geometry}
+\usepackage{microtype}
+\input{glyphtounicode}\pdfgentounicode=1 % real text in the PDF (copy, search, screen readers)
+\usepackage{setspace}\setstretch{1.02}
+\usepackage{parskip}
+\usepackage{fancyhdr}
+\pagestyle{fancy}\fancyhf{}
+\fancyhead[L]{\small\itshape Decision-judge benchmark}
+\fancyhead[R]{\small\itshape September 30, 2026}
+\fancyfoot[C]{\small\thepage}
+\renewcommand{\headrulewidth}{0.3pt}
+
+% ---------------------------------------------------------------- colours (Okabe-Ito)
+\usepackage[table]{xcolor}
+\definecolor{okblue}{HTML}{0072B2}
+\definecolor{okorange}{HTML}{D55E00}
+\definecolor{okgreen}{HTML}{009E73}
+\definecolor{okgray}{HTML}{8A8A85}
+
+% ---------------------------------------------------------------- tables, lists, maths
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs,array,tabularx,xltabular,multirow}
+\usepackage{graphicx}
+\usepackage{pifont}
+\usepackage[inline]{enumitem}
+\setlist{itemsep=2pt,topsep=4pt}
+\usepackage{siunitx}
+\sisetup{group-separator={,},group-minimum-digits=4}
+\usepackage{listings}
+\lstset{basicstyle=\ttfamily\small,columns=fullflexible,keepspaces=true,frame=none,
+        breaklines=true,aboveskip=2pt,belowskip=2pt,xleftmargin=1em}
+\usepackage[font=small,labelfont=bf,skip=4pt]{caption}
+\usepackage{float}
+
+% ---------------------------------------------------------------- plots
+\usepackage{pgfplots}
+\usepackage{pgfplotstable}
+\pgfplotsset{compat=1.18}
+\usepgfplotslibrary{groupplots}
+\usetikzlibrary{patterns,plotmarks,calc}
+\tikzset{
+  scatterlabel/.style={font=\scriptsize, inner sep=2pt, outer sep=0pt, fill=white, fill opacity=0.85, text opacity=1},
+  leader/.style={okgray, line width=0.5pt},
+}
+\pgfplotsset{
+  benchmark/.style={
+    tick label style={font=\small}, label style={font=\small},
+    legend style={font=\small, draw=okgray!60, fill=white, fill opacity=0.9, text opacity=1},
+    grid style={okgray!25}, major grid style={okgray!25},
+    axis line style={black!70}, every axis plot/.append style={line width=0.9pt},
+  },
+}
+
+% ---------------------------------------------------------------- boxes
+\usepackage[most]{tcolorbox}
+\newtcolorbox{keyidea}[1][]{enhanced, breakable, colback=okblue!5, colframe=okblue,
+  boxrule=0.6pt, arc=2pt, left=6pt, right=6pt, top=4pt, bottom=4pt,
+  fonttitle=\bfseries\small, coltitle=white, title={Key idea}, #1}
+\newtcolorbox{caution}[1][]{enhanced, breakable, colback=okorange!5, colframe=okorange,
+  boxrule=0.6pt, arc=2pt, left=6pt, right=6pt, top=4pt, bottom=4pt,
+  fonttitle=\bfseries\small, coltitle=white, title={Read with care}, #1}
+\newtcolorbox{casecard}[1]{enhanced, breakable, colback=white, colframe=okgray,
+  boxrule=0.5pt, arc=2pt, left=6pt, right=6pt, top=4pt, bottom=4pt,
+  fonttitle=\bfseries\small, coltitle=black, colbacktitle=okgray!18, title={#1}}
+\newcommand{\howtoread}[1]{\par\smallskip{\small\noindent\textbf{How to read this figure.} #1\par}}
+\newcommand{\howtoreadtable}[1]{\par\smallskip{\small\noindent\textbf{How to read this table.} #1\par}}
+
+% labels and symbols
+\newcommand{\screen}{\textsf{\small\color{okgray}[screen]}}
+\newcommand{\prereg}{\textsf{\small\color{okblue}[preregistered]}}
+\newcommand{\ok}{\textcolor{okgreen}{\ding{51}}}
+\newcommand{\no}{\textcolor{okorange}{\ding{55}}}
+\newcommand{\symok}{\textcolor{okgreen}{\ding{51}}}
+\newcommand{\symbad}{\textcolor{okorange}{\ding{55}}}
+\newcommand{\symfb}{\textcolor{okgray}{$\curvearrowright$}}
+\newcommand{\vconf}{\textcolor{okgreen}{\textsf{confirmed}}}
+\newcommand{\vref}{\textcolor{okorange}{\textbf{\textsf{refuted}}}}
+\newcommand{\vrev}{\textcolor{okblue}{\textsf{revised}}}
+\newcommand{\vnew}{\textcolor{okgray}{\textsf{new}}}
+\newcommand{\term}[1]{\emph{#1}}
+\newcommand{\code}[1]{\texttt{#1}}
+\newcommand{\pct}{\,\%}
+
+% ---------------------------------------------------------------- numbers
+\input{generated/numbers.tex}
+
+% ---------------------------------------------------------------- links & metadata
+\usepackage{hyperref}
+\hypersetup{
+  pdftitle={Which Fast Model Should Make an Agent's Small Decisions? A Validated, Preregistered Benchmark of Decision Judges},
+  pdfauthor={Amplifier; Michael J. Jabbour},
+  pdfsubject={Technical report: benchmark of fast decision judges for AI agents},
+  pdfkeywords={decision judge, agent, preregistration, McNemar, Holm, calibration, latency},
+  pdflang={en-US},
+  pdfdisplaydoctitle=true,
+  colorlinks=true, linkcolor=okblue, urlcolor=okblue, citecolor=okblue,
+  bookmarksnumbered=true, bookmarksopen=true,
+}
+\usepackage{bookmark}
+\usepackage[nameinlink,capitalise]{cleveref}
+
+\title{Which Fast Model Should Make an Agent's Small Decisions?\\[4pt]
+\large A Validated, Preregistered Benchmark of Decision Judges}
+\date{September 30, 2026}
+
+\begin{document}
+
+\begin{titlepage}
+  \centering
+  \vspace*{1.2in}
+  {\LARGE\bfseries Which Fast Model Should Make\\[2pt] an Agent's Small Decisions?\par}
+  \vspace{10pt}
+  {\Large A Validated, Preregistered Benchmark of Decision Judges\par}
+  \vspace{36pt}
+  {\large Amplifier \qquad Michael J.\ Jabbour\par}
+  \vspace{6pt}
+  {\normalsize Microsoft, Office of the CTO\par}
+  \vspace{18pt}
+  {\normalsize September 30, 2026\par}
+  \vspace{40pt}
+  \begin{minipage}{0.86\textwidth}
+    \input{sections/00-abstract}
+  \end{minipage}
+  \vfill
+  {\small Technical report. Every number in this document is generated from committed evidence files by
+  \code{build\_assets.py}; see \cref{sec:repro}.\par}
+\end{titlepage}
+
+\pdfbookmark[1]{Contents}{toc}\setcounter{tocdepth}{1}
+\tableofcontents
+\clearpage
+
+\input{sections/01-introduction}
+\input{sections/02-background}
+\input{sections/03-method}
+\input{sections/04-validating-first-pass}
+\input{sections/05-results-dev}
+\input{sections/06-results-holdout}
+\input{sections/07-failure-modes}
+\input{sections/08-latency-and-cost}
+\input{sections/09-recommendations}
+\input{sections/10-limitations}
+\input{sections/11-reproducibility}
+
+\appendix
+\input{sections/appendix-a-glossary}
+\input{sections/appendix-b-labeling-guide}
+\input{sections/appendix-c-case-examples}
+
+\end{document}

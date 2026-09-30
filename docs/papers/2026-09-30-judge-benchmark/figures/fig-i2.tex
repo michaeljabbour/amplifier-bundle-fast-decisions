@@ -1,0 +1,22 @@
+% Intervention I2 (host guard) on the holdout: targeted wrong automatic decisions before and after.
+\begin{tikzpicture}
+\begin{axis}[benchmark,
+  xbar, bar width=6pt,
+  width=0.9\linewidth, height=7cm,
+  xmin=0, ymin=-0.6, ymax=\ITwoPlotMax+0.6,
+  ytick={0,...,\ITwoPlotMax},
+  yticklabels from table={generated/data/i2-holdout.dat}{label},
+  xlabel={Side-effect wrong automatic decisions, summed over \HoldReps\ repetitions},
+  xmajorgrids,
+  legend style={at={(0.98,0.04)}, anchor=south east}, legend cell align=left,
+  nodes near coords, nodes near coords style={font=\scriptsize},
+  enlarge y limits=false,
+]
+\addplot[fill=okorange!80, draw=black!70, postaction={pattern=north east lines, pattern color=white}]
+  table[x=before, y=idx]{generated/data/i2-holdout.dat};
+\addlegendentry{bundle gate only}
+\addplot[fill=okblue, draw=black!70]
+  table[x=after, y=idx]{generated/data/i2-holdout.dat};
+\addlegendentry{bundle gate + host guard (I2)}
+\end{axis}
+\end{tikzpicture}

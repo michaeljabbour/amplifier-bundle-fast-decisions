@@ -1,0 +1,22 @@
+\begin{center}\textbf{Abstract}\end{center}
+\small
+An AI agent makes many small decisions: which file to read, which button to click, whether a code
+snippet does what was asked. A \emph{decision judge} is a fast model that answers one such question
+with a probability for each option, so the agent can skip slow reasoning when the answer is clear.
+We compared \NumBase\ judges, plus \NumClauseArms\ variants with a changed instruction, on
+\DevN\ development cases (a screen) and \HoldN\ fresh holdout cases whose analysis was
+preregistered, with \HoldReps\ repetitions each, scored under the gate the agent bundle actually
+ships. On the holdout the current default, Jev~1.13, was right on \JevHoldAccK\ of \HoldN\ cases
+(95\,\% confidence interval \JevHoldAccCI) and made \JevHoldWaK\ wrong automatic decision, at a
+p95 latency of \JevHoldPninetyfive\,ms and \$\JevHoldCost\ per million decisions. GPT-6 Luna
+(\LunaHoldAccK/\HoldN) and GPT-6.1 Sol (\SolHoldAccK/\HoldN) were more accurate, but neither
+difference survives the preregistered Holm correction (adjusted $p = \LunaHoldRAccPHolm$ and
+\SolHoldRAccPHolm), and both fail the latency and cost rules, so Jev stays the default.
+A deterministic host guard that refuses to act automatically on side-effect options removed all
+\ITwoHoldBefore\ side-effect wrong automatic decisions (counted over all repetitions) across the
+\ITwoHoldNApplicable\ judges it applied to, with no accuracy change; we recommend it whatever judge is used. No local model
+qualified as an offline tier. The benchmark also re-examined an earlier first pass: of its
+\ChangesN\ claims, \ChangesConfirmed\ were confirmed, \ChangesRefuted\ refuted, \ChangesRevised\
+revised and \ChangesNew\ was new. The OpenAI Decisions API returned HTTP \HoldProbeStatus, so
+nothing is claimed for it.
+\normalsize

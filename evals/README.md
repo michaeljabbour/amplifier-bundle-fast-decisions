@@ -46,6 +46,22 @@ ollama pull qwen3:0.6b && ollama run qwen3:0.6b "ok" >/dev/null
 
 ---
 
+## Judge-quality suite (`evals/judges.py`)
+
+The `judge` suite in `suites.yaml` asks judge arms (`judges.yaml`) structured decision questions and scores them
+under the bundle's own decision policy; it is run by `evals/judges.py`, not `run.py` (STUDY-DESIGN.md section 19).
+
+```bash
+set -a; . ~/.amplifier/keys.env; set +a
+PYTHONPATH=src:. python3 evals/judges.py --split dev --dry-run          # plan and cost estimate
+PYTHONPATH=src:. python3 evals/judges.py --split dev --reps 3 --arms jev-1.13 tev1-4b
+PYTHONPATH=src:. python3 evals/judges.py --split holdout --budget-usd 3 # refuses without a committed PREREGISTRATION.md
+PYTHONPATH=src:. python3 evals/judge_bench/report.py <evidence dir>     # self-contained index.html
+```
+
+Results default to `.amplifier/evaluation/fast-decisions/<UTC>-judges-<split>/`. The holdout
+(`evals/judge_bench/holdout/`) is spent once per claim: a changed configuration needs a new holdout.
+
 ## Holdout runs: commit the preregistration first
 
 `--split holdout` refuses to start without `PREREGISTRATION.md` in `--out`. Also commit (or at least hash and

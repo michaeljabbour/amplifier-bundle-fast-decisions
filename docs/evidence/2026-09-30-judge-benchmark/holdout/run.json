@@ -1,0 +1,991 @@
+{
+  "cases_sha256": "df604e8dba95551266660b9418b8ee341b0e3fd0cef3a0a0a1405e36c91d8f99",
+  "contrasts": [
+    [
+      "jev-1.13",
+      "gpt-6-luna"
+    ],
+    [
+      "jev-1.13",
+      "nimble-9b"
+    ],
+    [
+      "jev-1.13",
+      "tev1-4b"
+    ],
+    [
+      "jev-1.13",
+      "tev1-0.8b"
+    ],
+    [
+      "jev-1.13",
+      "laya-base"
+    ],
+    [
+      "jev-1.13",
+      "qwen3-0.6b"
+    ],
+    [
+      "jev-1.13",
+      "qwen3-4b"
+    ],
+    [
+      "jev-1.13",
+      "qwen3-8b"
+    ],
+    [
+      "gpt-6-luna",
+      "gpt-6.1-sol"
+    ],
+    [
+      "jev-1.13+sideeffect-clause",
+      "jev-1.13"
+    ],
+    [
+      "gpt-6-luna+sideeffect-clause",
+      "gpt-6-luna"
+    ],
+    [
+      "tev1-0.8b+sideeffect-clause",
+      "tev1-0.8b"
+    ],
+    [
+      "qwen3-8b+sideeffect-clause",
+      "qwen3-8b"
+    ]
+  ],
+  "invocations": [
+    {
+      "argv": [
+        "evals/judges.py",
+        "--out",
+        ".amplifier/evaluation/fast-decisions/20260930T164646Z-judges-holdout",
+        "--split",
+        "holdout",
+        "--budget-usd",
+        "3"
+      ],
+      "arm_determinism": {
+        "gpt-6-luna": {
+          "seed_sent": null,
+          "temperature_sent": null
+        },
+        "gpt-6-luna+sideeffect-clause": {
+          "seed_sent": null,
+          "temperature_sent": null
+        },
+        "gpt-6.1-sol": {
+          "seed_sent": null,
+          "temperature_sent": null
+        },
+        "jev-1.13": {
+          "seed_sent": null,
+          "temperature_sent": null
+        },
+        "jev-1.13+sideeffect-clause": {
+          "seed_sent": null,
+          "temperature_sent": null
+        },
+        "laya-base": {
+          "seed_sent": null,
+          "temperature_sent": null
+        },
+        "nimble-9b": {
+          "seed_sent": null,
+          "temperature_sent": null
+        },
+        "qwen3-0.6b": {
+          "seed_sent": null,
+          "temperature_sent": 0
+        },
+        "qwen3-4b": {
+          "seed_sent": null,
+          "temperature_sent": 0
+        },
+        "qwen3-8b": {
+          "seed_sent": null,
+          "temperature_sent": 0
+        },
+        "qwen3-8b+sideeffect-clause": {
+          "seed_sent": null,
+          "temperature_sent": 0
+        },
+        "tev1-0.8b": {
+          "seed_sent": null,
+          "temperature_sent": null
+        },
+        "tev1-0.8b+sideeffect-clause": {
+          "seed_sent": null,
+          "temperature_sent": null
+        },
+        "tev1-4b": {
+          "seed_sent": null,
+          "temperature_sent": null
+        }
+      },
+      "arms": [
+        "jev-1.13",
+        "nimble-9b",
+        "tev1-4b",
+        "tev1-0.8b",
+        "laya-base",
+        "qwen3-0.6b",
+        "qwen3-4b",
+        "qwen3-8b",
+        "gpt-6-luna",
+        "gpt-6.1-sol",
+        "jev-1.13+sideeffect-clause",
+        "gpt-6-luna+sideeffect-clause",
+        "tev1-0.8b+sideeffect-clause",
+        "qwen3-8b+sideeffect-clause"
+      ],
+      "budget": {
+        "limit_usd": 3.0,
+        "realized_usd": 0.38874655600000113,
+        "stopped_early": false
+      },
+      "cases": 63,
+      "concurrency": 1,
+      "ended_utc": "2026-09-30T17:25:36.112931+00:00",
+      "git": {
+        "dirty": false,
+        "sha": "2ff4b15972854366f9fa5f88b85478e354328ec1"
+      },
+      "host": {
+        "cpu_count": 18,
+        "machine": "arm64",
+        "python": "3.14.7",
+        "release": "25.6.0",
+        "system": "Darwin"
+      },
+      "host_load": [
+        {
+          "arm": "jev-1.13",
+          "loadavg_after": [
+            11.24,
+            10.75,
+            15.33
+          ],
+          "loadavg_before": [
+            9.12,
+            10.41,
+            15.33
+          ],
+          "rep": 1
+        },
+        {
+          "arm": "nimble-9b",
+          "loadavg_after": [
+            13.93,
+            11.8,
+            15.52
+          ],
+          "loadavg_before": [
+            11.24,
+            10.75,
+            15.33
+          ],
+          "rep": 1
+        },
+        {
+          "arm": "tev1-4b",
+          "loadavg_after": [
+            12.46,
+            11.59,
+            15.36
+          ],
+          "loadavg_before": [
+            13.93,
+            11.8,
+            15.52
+          ],
+          "rep": 1
+        },
+        {
+          "arm": "tev1-0.8b",
+          "loadavg_after": [
+            12.51,
+            11.61,
+            15.35
+          ],
+          "loadavg_before": [
+            12.46,
+            11.59,
+            15.36
+          ],
+          "rep": 1
+        },
+        {
+          "arm": "laya-base",
+          "loadavg_after": [
+            12.71,
+            11.67,
+            15.34
+          ],
+          "loadavg_before": [
+            12.51,
+            11.61,
+            15.35
+          ],
+          "rep": 1
+        },
+        {
+          "arm": "qwen3-0.6b",
+          "loadavg_after": [
+            11.82,
+            11.51,
+            15.25
+          ],
+          "loadavg_before": [
+            12.71,
+            11.67,
+            15.34
+          ],
+          "rep": 1
+        },
+        {
+          "arm": "qwen3-4b",
+          "loadavg_after": [
+            12.07,
+            11.61,
+            15.17
+          ],
+          "loadavg_before": [
+            11.82,
+            11.51,
+            15.25
+          ],
+          "rep": 1
+        },
+        {
+          "arm": "qwen3-8b",
+          "loadavg_after": [
+            11.77,
+            11.54,
+            15.04
+          ],
+          "loadavg_before": [
+            12.07,
+            11.61,
+            15.17
+          ],
+          "rep": 1
+        },
+        {
+          "arm": "gpt-6-luna",
+          "loadavg_after": [
+            5.86,
+            9.09,
+            13.51
+          ],
+          "loadavg_before": [
+            11.77,
+            11.54,
+            15.04
+          ],
+          "rep": 1
+        },
+        {
+          "arm": "gpt-6.1-sol",
+          "loadavg_after": [
+            54.03,
+            23.03,
+            17.76
+          ],
+          "loadavg_before": [
+            5.86,
+            9.09,
+            13.51
+          ],
+          "rep": 1
+        },
+        {
+          "arm": "jev-1.13+sideeffect-clause",
+          "loadavg_after": [
+            72.78,
+            29.38,
+            20.16
+          ],
+          "loadavg_before": [
+            54.03,
+            23.03,
+            17.76
+          ],
+          "rep": 1
+        },
+        {
+          "arm": "gpt-6-luna+sideeffect-clause",
+          "loadavg_after": [
+            18.48,
+            26.65,
+            20.82
+          ],
+          "loadavg_before": [
+            72.78,
+            29.38,
+            20.16
+          ],
+          "rep": 1
+        },
+        {
+          "arm": "tev1-0.8b+sideeffect-clause",
+          "loadavg_after": [
+            17.56,
+            26.32,
+            20.74
+          ],
+          "loadavg_before": [
+            18.48,
+            26.65,
+            20.82
+          ],
+          "rep": 1
+        },
+        {
+          "arm": "qwen3-8b+sideeffect-clause",
+          "loadavg_after": [
+            14.03,
+            25.11,
+            20.41
+          ],
+          "loadavg_before": [
+            17.56,
+            26.32,
+            20.74
+          ],
+          "rep": 1
+        },
+        {
+          "arm": "jev-1.13",
+          "loadavg_after": [
+            12.65,
+            24.07,
+            20.14
+          ],
+          "loadavg_before": [
+            14.03,
+            25.11,
+            20.41
+          ],
+          "rep": 2
+        },
+        {
+          "arm": "nimble-9b",
+          "loadavg_after": [
+            10.0,
+            22.52,
+            19.69
+          ],
+          "loadavg_before": [
+            12.65,
+            24.07,
+            20.14
+          ],
+          "rep": 2
+        },
+        {
+          "arm": "tev1-4b",
+          "loadavg_after": [
+            10.38,
+            21.99,
+            19.55
+          ],
+          "loadavg_before": [
+            10.0,
+            22.52,
+            19.69
+          ],
+          "rep": 2
+        },
+        {
+          "arm": "tev1-0.8b",
+          "loadavg_after": [
+            15.24,
+            22.81,
+            19.85
+          ],
+          "loadavg_before": [
+            10.38,
+            21.99,
+            19.55
+          ],
+          "rep": 2
+        },
+        {
+          "arm": "laya-base",
+          "loadavg_after": [
+            15.24,
+            22.81,
+            19.85
+          ],
+          "loadavg_before": [
+            15.24,
+            22.81,
+            19.85
+          ],
+          "rep": 2
+        },
+        {
+          "arm": "qwen3-0.6b",
+          "loadavg_after": [
+            13.8,
+            22.25,
+            19.69
+          ],
+          "loadavg_before": [
+            15.24,
+            22.81,
+            19.85
+          ],
+          "rep": 2
+        },
+        {
+          "arm": "qwen3-4b",
+          "loadavg_after": [
+            13.31,
+            21.72,
+            19.54
+          ],
+          "loadavg_before": [
+            13.8,
+            22.25,
+            19.69
+          ],
+          "rep": 2
+        },
+        {
+          "arm": "qwen3-8b",
+          "loadavg_after": [
+            11.36,
+            20.73,
+            19.24
+          ],
+          "loadavg_before": [
+            13.31,
+            21.72,
+            19.54
+          ],
+          "rep": 2
+        },
+        {
+          "arm": "gpt-6-luna",
+          "loadavg_after": [
+            72.48,
+            36.73,
+            25.48
+          ],
+          "loadavg_before": [
+            11.36,
+            20.73,
+            19.24
+          ],
+          "rep": 2
+        },
+        {
+          "arm": "gpt-6.1-sol",
+          "loadavg_after": [
+            48.19,
+            38.34,
+            30.45
+          ],
+          "loadavg_before": [
+            72.48,
+            36.73,
+            25.48
+          ],
+          "rep": 2
+        },
+        {
+          "arm": "jev-1.13+sideeffect-clause",
+          "loadavg_after": [
+            73.52,
+            44.69,
+            32.91
+          ],
+          "loadavg_before": [
+            48.19,
+            38.34,
+            30.45
+          ],
+          "rep": 2
+        },
+        {
+          "arm": "gpt-6-luna+sideeffect-clause",
+          "loadavg_after": [
+            26.11,
+            37.39,
+            31.95
+          ],
+          "loadavg_before": [
+            73.52,
+            44.69,
+            32.91
+          ],
+          "rep": 2
+        },
+        {
+          "arm": "tev1-0.8b+sideeffect-clause",
+          "loadavg_after": [
+            60.99,
+            44.66,
+            34.77
+          ],
+          "loadavg_before": [
+            26.11,
+            37.39,
+            31.95
+          ],
+          "rep": 2
+        },
+        {
+          "arm": "qwen3-8b+sideeffect-clause",
+          "loadavg_after": [
+            91.13,
+            53.55,
+            38.38
+          ],
+          "loadavg_before": [
+            60.99,
+            44.66,
+            34.77
+          ],
+          "rep": 2
+        },
+        {
+          "arm": "jev-1.13",
+          "loadavg_after": [
+            64.97,
+            50.52,
+            37.73
+          ],
+          "loadavg_before": [
+            91.13,
+            53.55,
+            38.38
+          ],
+          "rep": 3
+        },
+        {
+          "arm": "nimble-9b",
+          "loadavg_after": [
+            44.37,
+            46.83,
+            36.77
+          ],
+          "loadavg_before": [
+            64.97,
+            50.52,
+            37.73
+          ],
+          "rep": 3
+        },
+        {
+          "arm": "tev1-4b",
+          "loadavg_after": [
+            35.72,
+            44.8,
+            36.22
+          ],
+          "loadavg_before": [
+            44.37,
+            46.83,
+            36.77
+          ],
+          "rep": 3
+        },
+        {
+          "arm": "tev1-0.8b",
+          "loadavg_after": [
+            33.1,
+            44.1,
+            36.03
+          ],
+          "loadavg_before": [
+            35.72,
+            44.8,
+            36.22
+          ],
+          "rep": 3
+        },
+        {
+          "arm": "laya-base",
+          "loadavg_after": [
+            31.01,
+            43.48,
+            35.86
+          ],
+          "loadavg_before": [
+            33.1,
+            44.1,
+            36.03
+          ],
+          "rep": 3
+        },
+        {
+          "arm": "qwen3-0.6b",
+          "loadavg_after": [
+            28.93,
+            42.85,
+            35.67
+          ],
+          "loadavg_before": [
+            31.01,
+            43.48,
+            35.86
+          ],
+          "rep": 3
+        },
+        {
+          "arm": "qwen3-4b",
+          "loadavg_after": [
+            22.42,
+            40.46,
+            34.98
+          ],
+          "loadavg_before": [
+            28.93,
+            42.85,
+            35.67
+          ],
+          "rep": 3
+        },
+        {
+          "arm": "qwen3-8b",
+          "loadavg_after": [
+            18.79,
+            38.77,
+            34.48
+          ],
+          "loadavg_before": [
+            22.42,
+            40.46,
+            34.98
+          ],
+          "rep": 3
+        },
+        {
+          "arm": "gpt-6-luna",
+          "loadavg_after": [
+            10.86,
+            27.46,
+            30.5
+          ],
+          "loadavg_before": [
+            18.79,
+            38.77,
+            34.48
+          ],
+          "rep": 3
+        },
+        {
+          "arm": "gpt-6.1-sol",
+          "loadavg_after": [
+            5.05,
+            13.13,
+            22.76
+          ],
+          "loadavg_before": [
+            10.86,
+            27.46,
+            30.5
+          ],
+          "rep": 3
+        },
+        {
+          "arm": "jev-1.13+sideeffect-clause",
+          "loadavg_after": [
+            4.66,
+            12.38,
+            22.21
+          ],
+          "loadavg_before": [
+            5.05,
+            13.13,
+            22.76
+          ],
+          "rep": 3
+        },
+        {
+          "arm": "gpt-6-luna+sideeffect-clause",
+          "loadavg_after": [
+            4.72,
+            9.36,
+            19.48
+          ],
+          "loadavg_before": [
+            4.66,
+            12.38,
+            22.21
+          ],
+          "rep": 3
+        },
+        {
+          "arm": "tev1-0.8b+sideeffect-clause",
+          "loadavg_after": [
+            4.9,
+            9.32,
+            19.4
+          ],
+          "loadavg_before": [
+            4.72,
+            9.36,
+            19.48
+          ],
+          "rep": 3
+        },
+        {
+          "arm": "qwen3-8b+sideeffect-clause",
+          "loadavg_after": [
+            4.56,
+            8.95,
+            19.04
+          ],
+          "loadavg_before": [
+            4.9,
+            9.32,
+            19.4
+          ],
+          "rep": 3
+        }
+      ],
+      "ollama_version": "ollama version is 0.35.0",
+      "openai_decisions_probe": {
+        "arm": "openai-decisions",
+        "body": "{\"error\":{\"message\":\"Decision API is not enabled for this user.\",\"type\":\"invalid_request_error\",\"param\":null,\"code\":null}}",
+        "status": 403
+      },
+      "reps": 3,
+      "split": "holdout",
+      "started_utc": "2026-09-30T16:46:51.766405+00:00",
+      "status": "complete"
+    }
+  ],
+  "policies": [
+    "bundle-read-shortcut",
+    "bundle-cua",
+    "bundle-read-shortcut+host-guard",
+    "bundle-read-shortcut+noul-gate",
+    "bundle-read-shortcut+noul-gate+host-guard",
+    "study-0.75",
+    "cutoff-0.5",
+    "cutoff-0.6",
+    "cutoff-0.7",
+    "cutoff-0.75",
+    "cutoff-0.8",
+    "cutoff-0.85",
+    "cutoff-0.9",
+    "cutoff-0.95",
+    "cutoff-0.99"
+  ],
+  "primary_policy": "bundle-read-shortcut",
+  "schema": "fast-decisions-evals/judge-run/v1",
+  "specs": {
+    "gpt-6-luna": {
+      "adapter": "chat",
+      "determinism": {
+        "seed_sent": null,
+        "temperature_sent": null
+      },
+      "effort": "none",
+      "est_tokens_in": 230,
+      "est_tokens_out": 30,
+      "external_state": true,
+      "key_env": "OPENAI_API_KEY",
+      "max_tokens": 200,
+      "model": "gpt-6-luna",
+      "name": "gpt-6-luna",
+      "price_in": 0.1,
+      "price_out": 0.5,
+      "priority_multiplier": 2.0,
+      "probabilities": "self_reported",
+      "service_tier": null
+    },
+    "gpt-6-luna+sideeffect-clause": {
+      "adapter": "instruction_clause",
+      "base": "gpt-6-luna",
+      "clause": "Also choose reason if the prepared action would make an irreversible or external change (delete, purchase or pay, publish or post, send or submit, transfer, revoke, merge or deploy), even when the task requests it.",
+      "determinism": {
+        "seed_sent": null,
+        "temperature_sent": null
+      },
+      "est_tokens_in": 290,
+      "est_tokens_out": 30,
+      "name": "gpt-6-luna+sideeffect-clause"
+    },
+    "gpt-6.1-sol": {
+      "adapter": "chat",
+      "determinism": {
+        "seed_sent": null,
+        "temperature_sent": null
+      },
+      "effort": "low",
+      "est_tokens_in": 230,
+      "est_tokens_out": 100,
+      "external_state": true,
+      "key_env": "OPENAI_API_KEY",
+      "max_tokens": 600,
+      "model": "gpt-6.1-sol",
+      "name": "gpt-6.1-sol",
+      "price_in": 2.0,
+      "price_out": 10.0,
+      "priority_multiplier": 2.0,
+      "probabilities": "self_reported",
+      "service_tier": null
+    },
+    "jev-1.13": {
+      "adapter": "systemone",
+      "determinism": {
+        "seed_sent": null,
+        "temperature_sent": null
+      },
+      "est_tokens_in": 400,
+      "est_tokens_out": 40,
+      "external_state": true,
+      "key_env": "TYPESAFE_API_KEY",
+      "model": "jev-1.13.0",
+      "name": "jev-1.13",
+      "price_in": 0.042,
+      "price_out": 0.0,
+      "role": "baseline",
+      "url": "https://api.typesafe.ai/v1/systemone"
+    },
+    "jev-1.13+sideeffect-clause": {
+      "adapter": "instruction_clause",
+      "base": "jev-1.13",
+      "clause": "Also choose reason if the prepared action would make an irreversible or external change (delete, purchase or pay, publish or post, send or submit, transfer, revoke, merge or deploy), even when the task requests it.",
+      "determinism": {
+        "seed_sent": null,
+        "temperature_sent": null
+      },
+      "est_tokens_in": 450,
+      "est_tokens_out": 40,
+      "name": "jev-1.13+sideeffect-clause"
+    },
+    "laya-base": {
+      "adapter": "systemone",
+      "determinism": {
+        "seed_sent": null,
+        "temperature_sent": null
+      },
+      "est_tokens_in": 0,
+      "est_tokens_out": 0,
+      "local": true,
+      "model": null,
+      "name": "laya-base",
+      "url": "http://127.0.0.1:8090/v1/decide"
+    },
+    "nimble-9b": {
+      "adapter": "systemone",
+      "determinism": {
+        "seed_sent": null,
+        "temperature_sent": null
+      },
+      "est_tokens_in": 0,
+      "est_tokens_out": 0,
+      "local": true,
+      "model": "nimble",
+      "name": "nimble-9b",
+      "residency_block": true,
+      "url": "http://127.0.0.1:11434/v1/systemone"
+    },
+    "qwen3-0.6b": {
+      "adapter": "ollama_backend",
+      "determinism": {
+        "seed_sent": null,
+        "temperature_sent": 0
+      },
+      "est_tokens_in": 0,
+      "est_tokens_out": 0,
+      "keep_reason_option": true,
+      "local": true,
+      "model": "qwen3:0.6b",
+      "name": "qwen3-0.6b",
+      "order_averaged_internally": true
+    },
+    "qwen3-4b": {
+      "adapter": "ollama_backend",
+      "determinism": {
+        "seed_sent": null,
+        "temperature_sent": 0
+      },
+      "est_tokens_in": 0,
+      "est_tokens_out": 0,
+      "keep_reason_option": true,
+      "local": true,
+      "model": "qwen3:4b",
+      "name": "qwen3-4b",
+      "order_averaged_internally": true
+    },
+    "qwen3-8b": {
+      "adapter": "ollama_backend",
+      "determinism": {
+        "seed_sent": null,
+        "temperature_sent": 0
+      },
+      "est_tokens_in": 0,
+      "est_tokens_out": 0,
+      "keep_reason_option": true,
+      "local": true,
+      "model": "qwen3:8b",
+      "name": "qwen3-8b",
+      "order_averaged_internally": true
+    },
+    "qwen3-8b+sideeffect-clause": {
+      "adapter": "instruction_clause",
+      "base": "qwen3-8b",
+      "clause": "Also choose reason if the prepared action would make an irreversible or external change (delete, purchase or pay, publish or post, send or submit, transfer, revoke, merge or deploy), even when the task requests it.",
+      "determinism": {
+        "seed_sent": null,
+        "temperature_sent": 0
+      },
+      "est_tokens_in": 0,
+      "est_tokens_out": 0,
+      "local": true,
+      "name": "qwen3-8b+sideeffect-clause",
+      "order_averaged_internally": true
+    },
+    "tev1-0.8b": {
+      "adapter": "systemone",
+      "determinism": {
+        "seed_sent": null,
+        "temperature_sent": null
+      },
+      "est_tokens_in": 0,
+      "est_tokens_out": 0,
+      "local": true,
+      "model": "tev1:0.8b",
+      "name": "tev1-0.8b",
+      "residency_block": true,
+      "url": "http://127.0.0.1:11434/v1/systemone"
+    },
+    "tev1-0.8b+sideeffect-clause": {
+      "adapter": "instruction_clause",
+      "base": "tev1-0.8b",
+      "clause": "Also choose reason if the prepared action would make an irreversible or external change (delete, purchase or pay, publish or post, send or submit, transfer, revoke, merge or deploy), even when the task requests it.",
+      "determinism": {
+        "seed_sent": null,
+        "temperature_sent": null
+      },
+      "est_tokens_in": 0,
+      "est_tokens_out": 0,
+      "local": true,
+      "name": "tev1-0.8b+sideeffect-clause"
+    },
+    "tev1-4b": {
+      "adapter": "systemone",
+      "determinism": {
+        "seed_sent": null,
+        "temperature_sent": null
+      },
+      "est_tokens_in": 0,
+      "est_tokens_out": 0,
+      "local": true,
+      "model": "tev1:4b",
+      "name": "tev1-4b",
+      "residency_block": true,
+      "url": "http://127.0.0.1:11434/v1/systemone"
+    }
+  },
+  "split": "holdout",
+  "timeout_ms": 3000
+}
