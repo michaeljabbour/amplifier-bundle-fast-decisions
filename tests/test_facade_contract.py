@@ -194,6 +194,26 @@ class StalePackageTests(unittest.TestCase):
         self.assertIn("--reinstall-package", checks["registry_mode_package[stale]"]["note"])
         self.assertTrue(checks["registry_mode_package[current]"]["ok"])
 
+    def test_doctor_probe_ignores_this_process_pythonpath(self):
+        import os, sys
+        from unittest import mock
+        from amplifier_fast_decisions import cli
+        src = os.path.join(os.path.dirname(__file__), "..", "src")
+        with tempfile.TemporaryDirectory() as root:
+            settings = os.path.join(root, "settings.yaml")
+            with open(settings, "w") as f:
+                f.write("x fast-decisions-registry\n")
+            bare = os.path.join(root, "bare")
+            os.makedirs(bare)
+            python = os.path.join(bare, "python")
+            with open(python, "w") as f:
+                f.write(f"#!/bin/sh\nexec {sys.executable} -S \"$@\"\n")
+            os.chmod(python, 0o755)
+            with mock.patch.dict(os.environ, {"PYTHONPATH": src}), \
+                    mock.patch.object(cli, "_HOST_PYTHONS", (("bare", python),)):
+                [check] = cli._host_environment_checks(Path(settings))
+        self.assertEqual(check["value"], "absent")
+
     def test_doctor_skips_hosts_when_registry_mode_is_not_configured(self):
         from amplifier_fast_decisions import cli
         with tempfile.NamedTemporaryFile("w", suffix=".yaml") as f:

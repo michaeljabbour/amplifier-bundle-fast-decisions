@@ -208,8 +208,12 @@ def _host_environment_checks(settings: Path | None = None) -> list[dict]:
     for label, pattern in _HOST_PYTHONS:
         for python in sorted(glob.glob(os.path.expanduser(pattern))):
             try:
+                # The probe must see that environment's own packages, never
+                # this process's PYTHONPATH (a source checkout would mask a
+                # stale install).
+                env = {k: v for k, v in os.environ.items() if k not in ("PYTHONPATH", "PYTHONHOME")}
                 out = subprocess.run([python, "-c", _REGISTRY_PROBE], capture_output=True,
-                                     text=True, timeout=30).stdout.strip()
+                                     text=True, timeout=30, env=env).stdout.strip()
             except (OSError, subprocess.SubprocessError) as exc:
                 out = "error " + type(exc).__name__
             state, _, origin = out.partition(" ")
