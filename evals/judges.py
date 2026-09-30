@@ -258,6 +258,19 @@ def _git_state() -> dict:
     return {"sha": sha.stdout.strip() or None, "dirty": bool(dirty.stdout.strip())}
 
 
+def _loadavg() -> list[float] | None:
+    try:
+        return [round(x, 2) for x in os.getloadavg()]
+    except (AttributeError, OSError):
+        return None
+
+
+def _host() -> dict:
+    import platform
+    return {"machine": platform.machine(), "system": platform.system(), "release": platform.release(),
+            "python": platform.python_version(), "cpu_count": os.cpu_count()}
+
+
 def _ollama_version() -> str | None:
     try:
         done = subprocess.run(["ollama", "--version"], capture_output=True, text=True, timeout=5)
@@ -304,7 +317,7 @@ async def run(args, cfg, cases, tags, split, arm_names, probe_decisions) -> int:
 
     previous = json.loads(run_path.read_text(encoding="utf-8")) if run_path.exists() else {}
     invocation = {"argv": sys.argv, "started_utc": datetime.now(timezone.utc).isoformat(),
-                  "git": _git_state(), "ollama_version": _ollama_version(), "split": split,
+                  "git": _git_state(), "ollama_version": _ollama_version(), "split": split, "host": _host(),
                   "reps": args.reps, "concurrency": args.concurrency, "arms": list(arm_names),
                   "cases": len(cases), "openai_decisions_probe": None,
                   "arm_determinism": {n: arms[n].determinism for n in arms}}
@@ -332,7 +345,11 @@ async def run(args, cfg, cases, tags, split, arm_names, probe_decisions) -> int:
                 for name, arm in arms.items():
                     if spend.exceeded():
                         break
+                    load_before = _loadavg()
                     await _block(arm, name, cases, rep, client, log, spend, specs, cfg, args.concurrency)
+                    # Local latency moves with host load (STUDY-DESIGN section 19), so record it per block.
+                    invocation.setdefault("host_load", []).append(
+                        {"rep": rep, "arm": name, "loadavg_before": load_before, "loadavg_after": _loadavg()})
                     print(json.dumps({"rep": rep, "arm_complete": name, "spent_usd": round(spend.total, 6)}),
                           flush=True)
     invocation.update(ended_utc=datetime.now(timezone.utc).isoformat(),
