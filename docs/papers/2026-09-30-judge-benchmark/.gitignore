@@ -1,0 +1,16 @@
+# LaTeX intermediates (keep judge-benchmark.pdf)
+*.aux
+*.log
+*.out
+*.toc
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.xdv
+*.bbl
+*.blg
+*.run.xml
+*.lof
+*.lot
+# page previews made during review
+*.png

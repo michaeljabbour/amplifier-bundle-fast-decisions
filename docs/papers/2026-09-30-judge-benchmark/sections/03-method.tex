@@ -1,0 +1,200 @@
+\section{Method}\label{sec:method}
+
+This section describes what was measured and how, in the order a reader needs it: the cases, their
+labels, the judges, the scoring rule, the repetitions and the statistics.
+
+\subsection{Cases and splits}
+
+Every case is one structured question with one correct answer (its \term{label}). There are two
+\term{splits}, that is, two separate sets of cases used for different purposes.
+
+\begin{description}[leftmargin=1.2em,style=nextline]
+  \item[Dev split (\DevN\ cases) \screen] The \DevNOriginal\ original screening cases of an earlier study
+    plus \DevNFresh\ fresh ones: \DevNSelect\ select, \DevNCua\ computer-use and \DevNSearch\ search
+    cases. They are \emph{spent}: the first pass and every judge had already seen them, and we used them
+    to choose the interventions. Results on dev are therefore a \term{screen}: a way to find promising
+    ideas, not evidence that confirms them.
+  \item[Holdout split (\HoldN\ cases) \prereg] Fresh cases written for this benchmark:
+    \HoldNSelect\ select, \HoldNCua\ computer-use and \HoldNSearch\ search, balanced across the answers
+    \code{a}, \code{b}, \code{reason} and yes/no. \HoldNSideOrInjection\ are tagged side-effect or
+    injection cases. About half of the side-effect cases are \emph{contrasts} whose correct answer is
+    the safe prepared action, so a judge that simply defers whenever it sees a scary word loses points.
+\end{description}
+
+\begin{keyidea}
+A \term{holdout} is a set of cases kept aside until the analysis is fixed. A \term{preregistration}
+is a public, dated record of the analysis plan and the decision rules, written before the data exist.
+Together they stop a quiet but common failure: trying many analyses and reporting the one that looks
+best. Here the preregistration (with a SHA-256 hash of the holdout cases, beginning
+\code{\HoldCasesShaShort}) was committed before any judge saw a holdout case, and the runner refuses
+to score the holdout unless that file is committed and the hash matches.
+\end{keyidea}
+
+\subsection{Labels and the blind audit}\label{sec:labelaudit}
+
+A label is ``what a careful operator wants,'' not what the text on screen says to do. The holdout was
+labeled under a written guide (\cref{app:labeling}). The guide states one rule that the judges'
+instructions leave implicit: an irreversible or external side effect (delete, pay or refund, publish or
+post, send or submit, transfer, revoke, merge or deploy) is \code{reason} even when the task asks for it.
+This difference is deliberate. The side-effect rule is a \emph{treatment}: one intervention (I1) adds it
+to the judge's instruction, and the other arms do not see it.
+
+To check the labels, two reviewers, each seeing only the cases and the instructions (and, for the
+holdout, the guide), labeled every case \emph{blind}, without seeing the frozen labels.
+We measure their agreement with Cohen's kappa ($\kappa$): the share of agreement beyond what chance
+alone would produce, where 1 means perfect agreement and 0 means chance level.
+
+\begin{table}[htbp]
+\centering
+\caption{Blind label audit. Both reviewers agreed with each other and with every frozen label on both
+splits. The dev split had \DevCorrections\ label corrections.}
+\label{tab:labelaudit}
+\input{generated/tables/label-audit.tex}
+\end{table}
+
+Perfect agreement shows that the labels follow from the written rules; it does not show that the rules
+match every operator's preference. Reviewers flagged some dev cases as ambiguous (\FlaggedDevA\ by
+reviewer~A, \FlaggedDevB\ by reviewer~B) and \FlaggedHoldA\ holdout case (reviewer~A). The dev cases that
+matter most for the results were adjudicated as follows:
+\input{generated/tables/adjudication.tex}
+
+\begin{caution}
+The holdout author and both reviewers are Anthropic models (Claude Opus and Claude Sonnet). None of
+the judges under test is an Anthropic model, but a shared blind spot among the labelers would not show
+up as disagreement.
+\end{caution}
+
+\subsection{Judges (arms)}
+
+Each judge configuration is called an \term{arm}. \Cref{tab:arms} lists the \NumBase\ base arms.
+In addition, \NumClauseArms\ \emph{intervention arms} wrap a base arm (Jev, GPT-6 Luna, tev1 0.8B and
+Qwen3 8B) and append one sentence to its instruction (intervention I1, \cref{sec:interventions}).
+
+\begin{table}[htbp]
+\centering\small
+\caption{The \NumBase\ base judges. ``Self-reported'' means the model writes its probabilities as text in
+a structured answer; they are not the model's internal token probabilities. Local judges have no API
+charge; hardware, electricity and memory are not priced.}
+\label{tab:arms}
+\input{generated/tables/arms.tex}
+\end{table}
+
+A fifth kind of judge was planned but could not be measured. OpenAI announced a Decisions API the day
+before this benchmark. The runner probes it at the start of every run and would include it only on
+HTTP 200. Both runs got HTTP \HoldProbeStatus\ (``\HoldProbeMessage''). \textbf{Nothing in this report
+is a claim about the OpenAI Decisions API}, and GPT-6 Luna is not a stand-in for it.
+
+\paragraph{Two harness details.} First, the bundle's local backend (\code{OllamaBackend}) silently drops
+any option literally named \code{reason} and renormalizes the rest, so through the bundle's own path a
+local model can never pick this benchmark's fallback. The harness disables that rule so every judge
+answers the same three-way question; the bundle defect itself is unchanged and is noted in
+\cref{sec:limits}. Second, that backend asks each question in both option orders and averages the two,
+so ``order flip'' counts are not comparable for the Qwen arms.
+
+\subsection{Scoring policies}
+
+A \term{policy} turns a raw answer into ``automatic or fallback'' and ``right or wrong.'' Scores are
+recomputed from the stored raw answers, so any policy can be applied to the same log. The benchmark
+defines \NumPolicies\ policies; the ones used in this report are:
+\begin{description}[leftmargin=1.2em,style=nextline]
+  \item[\code{bundle-read-shortcut} (primary)] The gate described in \cref{sec:background}: argmax, fall
+    back on \code{reason}, $p<\MinP$, margin $<\MinMargin$ or no answer within \TimeoutMs\,ms; yes/no
+    answers never abstain.
+  \item[\code{+host-guard} (intervention I2)] Additionally falls back when the chosen option's own
+    description contains a side-effect verb from a fixed list (buy, purchase, pay, refund, delete,
+    publish, post, send, submit, transfer, revoke, merge, deploy, approve, \dots).
+  \item[\code{+noul-gate} (intervention I3)] Makes yes/no answers automatic only when
+    $\max(p, 1-p) \ge \MinP$. (``Noul'' is the bundle's name for a yes/no question.)
+  \item[\code{cutoff-$t$}] A pure certainty cutoff for the threshold sweep: argmax, never automatic on
+    \code{reason}, automatic when the top probability is at least $t$; no margin or timeout.
+  \item[\code{study-0.75}] The first pass's rule, kept only to replay it: the model's \emph{stated}
+    choice, a \StudyCutoff\ cutoff, no timeout, and a confident ``no'' can abstain.
+\end{description}
+
+\subsection{Repetitions and how they are combined}
+
+Every arm answered every case \DevReps\ times (\term{repetitions}), in one contiguous block per arm after
+two warm-up calls that are not scored. Each case was also asked a second time with the options reversed;
+the tables score the first order. Three repetitions matter because some judges are not deterministic:
+the hosted models were sent no temperature or seed, and Luna's reasoning setting offers no sampling
+control.
+
+\begin{keyidea}
+For each case we take the \term{majority outcome} over the three repetitions (right or wrong,
+automatic or not). Every case counts in the denominator; a missing, invalid or unscorable answer counts
+as ``not right, not automatic.'' The range across individual repetitions is reported alongside, so a
+reader can see how much a single run can move.
+\end{keyidea}
+
+\subsection{Statistics, explained plainly}\label{sec:stats}
+
+\paragraph{Confidence intervals.} A \term{95\,\% confidence interval} (CI) is the range of values that
+are plausible for the true rate given only the cases we have. With \HoldN\ cases the ranges are wide:
+Jev's holdout accuracy of \JevHoldAccK/\HoldN\ has a CI of \JevHoldAccCI. We use the Wilson interval for
+rates, which behaves well near 0\,\% and 100\,\%. For a \emph{difference} between two judges we use a
+paired bootstrap: resample the cases \BootstrapB\ times with a fixed seed and take the middle 95\,\% of
+the resampled differences.
+
+\paragraph{The McNemar test.} Two judges answered the \emph{same} cases, so the fair comparison looks
+only at cases where they disagree. The exact \term{McNemar test} asks: if the two judges were equally
+good, how surprising is the split of these disagreements? For example, on the holdout GPT-6 Luna was
+right and Jev wrong on \LunaHoldRAccCandOnly\ cases, and the reverse happened on
+\LunaHoldRAccBaseOnly. The test gives $p = \LunaHoldRAccP$. A small $p$ means the split is unlikely
+under ``equally good.'' A useful consequence: even if every disagreement favors one judge, at least
+\MinDiscordant\ disagreements are needed to reach $p \le 0.05$ (\MinDiscordantPrev\ gives
+$p = \MinDiscordantPrevP$). On \HoldN\ cases that is a gap of \HoldMinDetectPts\ percentage points
+\emph{before} any correction; smaller true differences cannot be detected here.
+
+\paragraph{The Holm correction.} Comparing Jev with \RuleOneFamilyHold\ other arms means
+\RuleOneFamilyHold\ tests, and with many tests some will look significant by luck. The
+\term{Holm correction} adjusts the $p$-values of a family of tests so that the chance of \emph{any}
+false alarm in the family stays at 5\,\%. It sorts the $p$-values, multiplies the smallest by the number
+of tests, the next by one fewer, and so on. After Holm, Luna's accuracy advantage has adjusted
+$p = \LunaHoldRAccPHolm$. We call a difference \term{within noise} when its Holm-adjusted $p$ is above
+0.05, and we never rank judges on such a difference.
+
+Two Holm families appear in this report. The \emph{decision-rule family} compares Jev with every other
+arm (\RuleOneFamilyHold\ tests per endpoint) and is the one the preregistered rules use. The
+\emph{declared-contrast family} holds the \HoldPairwiseFamily\ contrasts named in the run configuration
+(Jev versus each base judge, Luna versus Sol, and each I1 arm versus its base) and is shown in
+\cref{tab:pairwise}. The same raw $p$ can have different adjusted values in the two families.
+
+\paragraph{Non-inferiority.} To replace Jev, a candidate must first be shown \emph{not worse}. For
+accuracy, the lower end of the 95\,\% CI of (candidate $-$ Jev) must be above $-\NIAccMarginPts$ points;
+for the wrong-automatic rate, the upper end must be below $+\NIWaMarginPts$ points.
+
+\paragraph{Calibration.} A judge is \term{calibrated} if its stated confidence matches how often it is
+right: among answers given at 0.9, about 90\,\% should be right. The \term{expected calibration error}
+(ECE) measures the average gap, using ten equal-width confidence bins. It is only meaningful when the
+probabilities come from the model itself; for GPT-6 Luna and GPT-6.1 Sol they are self-reported text,
+so their ECE is shown but should not be compared with the others.
+
+\paragraph{Latency.} \term{p50} (the median) is the time within which half of the calls finished;
+\term{p95} is the time within which 95\,\% finished, so it describes the slow tail an agent will feel.
+Both use the nearest-rank definition. In the headline tables they pool every valid request of every
+repetition and both option orders.
+
+\paragraph{Cost.} Dollars per million decisions, computed from the token counts each API reported and
+the list prices on the day (OpenAI's priority tier costs \PriorityMultiplier$\times$). Local judges
+show \$0 and exclude hardware.
+
+\subsection{The preregistered decision rules}\label{sec:rules}
+
+The holdout preregistration fixed four rules before any judge saw a case.
+\begin{enumerate}
+  \item \textbf{Default judge.} Jev stays the default unless a candidate is (a) non-inferior on both
+    accuracy and wrong-automatic rate, (b) better than Jev on at least one of them with Holm-adjusted
+    $p \le 0.05$, (c) has p95 latency at most \RuleOneMaxPninetyfive\,ms, (d) costs at most
+    \RuleOneCostX$\times$ Jev per decision, and (e) returns at least \RuleOneValidShare\,\% valid answers
+    in every repetition.
+  \item \textbf{Offline tier.} Among local arms with coverage of at least \OffMinCovPct\,\% under the
+    strictest policy (host guard and yes/no gate), pick the one with the fewest wrong automatic
+    decisions; recommend it only if the upper end of its 95\,\% CI is below \OffMaxUpperPct\,\%.
+  \item \textbf{Cloud fallback} (when Jev is unreachable). Reported descriptively; no rule changes a
+    default on it.
+  \item \textbf{Interventions.} An intervention is \emph{confirmed} if, pooled over the three
+    repetitions, it removes at least \IConfirmReductionPct\,\% of the targeted wrong automatic decisions in the
+    arms it applies to, while accuracy drops by at most \IConfirmAccCases\ cases and coverage by at most
+    \IConfirmCovPts\ points.
+\end{enumerate}
+Anything short of these rules, including every dev result, is labeled a screen.

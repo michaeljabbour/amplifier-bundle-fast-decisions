@@ -1,0 +1,46 @@
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}l l r r r r@{}}
+\toprule
+ & & \multicolumn{2}{c}{Dev (screen)} & \multicolumn{2}{c}{Holdout (preregistered)} \\
+\cmidrule(lr){3-4}\cmidrule(lr){5-6}
+Declared contrast ($A$ vs $B$) & endpoint & $A-B$ (pts) & Holm $p$ & $A-B$ (pts) & Holm $p$ \\
+\midrule
+Jev 1.13 vs GPT-6 Luna & accuracy & 0.0 & 1.00 & $-$7.9 & 0.38 \\
+ & wrong auto & +1.1 & 1.00 & $-$1.6 & 1.00 \\
+\addlinespace[2pt]
+Jev 1.13 vs nimble 9B & accuracy & +13.3 & \textbf{0.004} & +9.5 & 0.25 \\
+ & wrong auto & $-$8.9 & 0.09 & $-$11.1 & 0.11 \\
+\addlinespace[2pt]
+Jev 1.13 vs tev1 4B & accuracy & +16.7 & \textbf{$<$0.001} & +12.7 & 0.27 \\
+ & wrong auto & $-$8.9 & 0.09 & $-$15.9 & \textbf{0.02} \\
+\addlinespace[2pt]
+Jev 1.13 vs tev1 0.8B & accuracy & +21.1 & \textbf{$<$0.001} & +31.7 & \textbf{$<$0.001} \\
+ & wrong auto & $-$10.0 & 0.18 & $-$20.6 & \textbf{0.003} \\
+\addlinespace[2pt]
+Jev 1.13 vs Laya base & accuracy & +35.6 & \textbf{$<$0.001} & +42.9 & \textbf{$<$0.001} \\
+ & wrong auto & $-$11.1 & 0.12 & $-$17.5 & \textbf{0.009} \\
+\addlinespace[2pt]
+Jev 1.13 vs Qwen3 0.6B & accuracy & +35.6 & \textbf{$<$0.001} & +44.4 & \textbf{$<$0.001} \\
+ & wrong auto & $-$17.8 & \textbf{0.005} & $-$23.8 & \textbf{$<$0.001} \\
+\addlinespace[2pt]
+Jev 1.13 vs Qwen3 4B & accuracy & +11.1 & \textbf{0.02} & +27.0 & \textbf{0.005} \\
+ & wrong auto & $-$5.6 & 0.44 & $-$23.8 & \textbf{$<$0.001} \\
+\addlinespace[2pt]
+Jev 1.13 vs Qwen3 8B & accuracy & +10.0 & \textbf{0.03} & +15.9 & 0.06 \\
+ & wrong auto & $-$8.9 & 0.09 & $-$20.6 & \textbf{0.003} \\
+\addlinespace[2pt]
+GPT-6 Luna vs GPT-6.1 Sol & accuracy & $-$2.2 & 1.00 & $-$3.2 & 1.00 \\
+ & wrong auto & +1.1 & 1.00 & +3.2 & 1.00 \\
+\addlinespace[2pt]
+Jev 1.13 + I1 vs Jev 1.13 & accuracy & +3.3 & 1.00 & +6.3 & 0.62 \\
+ & wrong auto & $-$2.2 & 1.00 & 0.0 & 1.00 \\
+\addlinespace[2pt]
+GPT-6 Luna + I1 vs GPT-6 Luna & accuracy & +2.2 & 1.00 & +1.6 & 1.00 \\
+ & wrong auto & $-$1.1 & 1.00 & $-$1.6 & 1.00 \\
+\addlinespace[2pt]
+tev1 0.8B + I1 vs tev1 0.8B & accuracy & $-$1.1 & 1.00 & $-$3.2 & 1.00 \\
+ & wrong auto & 0.0 & 1.00 & 0.0 & 1.00 \\
+\addlinespace[2pt]
+Qwen3 8B + I1 vs Qwen3 8B & accuracy & +2.2 & 1.00 & $-$3.2 & 1.00 \\
+ & wrong auto & $-$1.1 & 1.00 & 0.0 & 1.00 \\
+\bottomrule
+\end{tabular*}

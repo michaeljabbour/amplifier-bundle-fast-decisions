@@ -1,0 +1,35 @@
+\section{Reproducibility}\label{sec:repro}
+
+\paragraph{Evidence.} Everything is in \path{docs/evidence/2026-09-30-judge-benchmark/}. Each split
+directory holds \code{manifest.json} (the cases and their hash), \code{run.json} (commit, arms, prices,
+determinism settings, host load per arm block and the Decisions API probe), \code{requests.jsonl}
+(every request and answer: \DevRequestsLogged\ rows for dev, \HoldRequestsLogged\ for the holdout) and
+\code{summary.json} (every metric, contrast and decision). \path{firstpass-repro/} holds the first pass
+and its three reruns; \path{label-audit/} the blind reviews; \path{latency/} the latency study;
+\code{changes.json} the claim-by-claim comparison with the first pass.
+
+\paragraph{Runs.} The dev run used commit \code{\DevCommit} (working tree \DevDirty) from \DevStarted\ to
+\DevEnded\ UTC; the holdout used commit \code{\HoldCommit} (working tree \HoldDirty) from \HoldStarted\ to
+\HoldEnded\ UTC, both with Ollama \HoldOllama\ on an \HoldCPUs-core Apple M5 Max. Logged API spend was
+\$\DevSpendUSD\ (dev), \$\HoldSpendUSD\ (holdout) and \$\LatencySpendUSD\ (latency study),
+\$\LoggedSpendTotal\ in total.
+
+\paragraph{Replaying the numbers.} Summaries are pure functions of the request logs: the repository test
+\path{tests/test_judge_replay.py} recomputes every committed \code{summary.json}, byte for byte, from its
+\code{requests.jsonl}. The commands are:
+\begin{lstlisting}
+PYTHONPATH=src:. python3 evals/judges.py --split dev --reps 3
+PYTHONPATH=src:. python3 evals/judges.py --split holdout --budget-usd 3
+PYTHONPATH=src:. python3 evals/judges.py --replay \
+    docs/evidence/2026-09-30-judge-benchmark/holdout/requests.jsonl --out /tmp/x
+\end{lstlisting}
+The holdout command refuses to run unless the preregistration and the cases are committed and unmodified.
+
+\paragraph{This document.} The source of this report lives in
+\path{docs/papers/2026-09-30-judge-benchmark/}. Running \code{make} there runs
+\code{build\_assets.py}, which reads only the evidence files above and writes every number
+(\path{generated/numbers.tex}), table (\path{generated/tables/}) and plotted datum
+(\path{generated/data/}), then builds the PDF with \code{latexmk}. No number in the text is typed by hand.
+The script also re-scores every stored answer with its own copy of the bundle gate and checks it against
+the committed summaries for every arm and repetition, so the per-case tables in
+\cref{sec:worked,app:cases} agree with the aggregates.

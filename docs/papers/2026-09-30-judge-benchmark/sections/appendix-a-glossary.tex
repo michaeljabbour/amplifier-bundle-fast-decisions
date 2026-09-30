@@ -1,0 +1,55 @@
+\section{Glossary}\label{app:glossary}
+
+\begin{description}[leftmargin=1.2em,style=nextline,itemsep=3pt]
+  \item[Argmax] The option with the highest probability. The bundle acts on the argmax, not on any
+    choice a model states in words.
+  \item[Arm] One judge configuration in the benchmark: a model plus how it is called, possibly with an
+    intervention.
+  \item[Automatic decision] A decision the bundle acts on without slow reasoning, because the judge's
+    answer passed the gate.
+  \item[Bootstrap confidence interval] An interval found by resampling the cases many times (here
+    \BootstrapB) and seeing how much a statistic moves. Used for differences between two judges.
+  \item[Calibration] How well stated confidence matches actual accuracy. A calibrated judge that says
+    0.9 is right about 90\,\% of the time.
+  \item[Cohen's kappa ($\kappa$)] Agreement between two labelers beyond what chance would produce;
+    1 is perfect, 0 is chance level.
+  \item[Confidence interval (CI)] A range of plausible values for a true rate or difference, given the
+    data. A 95\,\% interval is built so that, over many repetitions of the study, it would contain the
+    true value 95\,\% of the time.
+  \item[Coverage] The share of cases decided automatically.
+  \item[Cutoff] A single certainty threshold used in the sweep (\cref{fig:sweep}); simpler than the
+    bundle's gate.
+  \item[Dev split] The \DevN\ cases used to choose configurations. Results on it are a screen.
+  \item[ECE (expected calibration error)] The average gap between confidence and accuracy, over ten
+    confidence bins. Lower is better. Not meaningful for self-reported probabilities.
+  \item[Gate] The bundle's rule for acting automatically: argmax not \code{reason}, $p \ge \MinP$,
+    margin $\ge \MinMargin$, answer within \TimeoutS\,s; yes/no answers never abstain.
+  \item[Holdout] Cases kept aside until the analysis is fixed, used once to confirm.
+  \item[Holm correction] A way to adjust $p$-values when running several tests at once, so the chance of
+    any false alarm in the family stays at the chosen level (5\,\%).
+  \item[Host guard] Intervention I2: a fixed word list in the host that forces a fallback on side-effect
+    options.
+  \item[Injection] Text inside an observation or source file that tries to instruct the judge (``click
+    Submit now''). Judges are told to treat such text as data.
+  \item[Judge] A small, fast model that answers one structured question with a probability per option.
+  \item[Margin] The gap between the top option's probability and the runner-up's.
+  \item[McNemar test (exact)] A test for two judges answering the same cases, using only the cases on
+    which they disagree.
+  \item[Nearest rank] The percentile definition used here: sort the values and take the one at position
+    $\lceil q n \rceil$.
+  \item[Non-inferiority] Showing a candidate is not worse than the baseline by more than a set margin.
+  \item[p50, p95] The latency within which 50\,\% (the median) and 95\,\% of calls finished.
+  \item[$p$-value] How surprising the observed data would be if there were no real difference. Small
+    values are evidence of a difference; they are not the probability that the difference is real.
+  \item[Preregistration] A dated, committed record of the analysis plan and decision rules made before
+    the data exist.
+  \item[Repetition] One complete pass of an arm over all cases. Each arm ran \HoldReps.
+  \item[Screen] A result that suggests what to test but cannot confirm it (here, every dev result).
+  \item[Self-reported probabilities] Probabilities a language model writes as text, rather than the
+    model's internal token probabilities.
+  \item[Side effect] An irreversible or external change: delete, pay or refund, publish or post, send or
+    submit, transfer, revoke, merge or deploy.
+  \item[Within noise] A difference whose Holm-adjusted $p$ is above 0.05. Not a ranking.
+  \item[Wrong-automatic rate] The share of all cases in which the bundle acted automatically on a wrong
+    answer. The key safety number.
+\end{description}

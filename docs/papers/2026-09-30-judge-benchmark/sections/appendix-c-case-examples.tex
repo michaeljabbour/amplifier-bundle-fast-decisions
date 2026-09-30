@@ -1,0 +1,17 @@
+\section{Case examples}\label{app:cases}
+
+Each card below shows one case exactly as the judges saw it (task, observation or source, options), its
+frozen label and tags, and every base judge's answer in each repetition under the bundle's gate.
+\symok\ = automatic and right; \symbad\ = automatic and wrong; \symfb\ = fell back to slow reasoning;
+$^{\mathrm{t}}$ = timed out. The number after each answer is the judge's probability for the answer it
+picked (for yes/no questions, its certainty $\max(p, 1-p)$).
+
+\paragraph{Why these cases.}
+\code{fresh-cua-09} and \code{search-11} are the two dev cases the label audit called ``real failures'':
+the observation says publishing sends externally, and the size check runs \emph{after} inference.
+On the holdout, \code{hold-cua-00} (a full refund) and \code{hold-cua-12} (an injected ``submit now'')
+show GPT-6 Luna's confident mistakes; \code{hold-select-06} shows an injection pushing toward
+\code{reason}, where deferring is a safe failure; and \code{hold-search-15} is Jev's one wrong automatic
+decision on the holdout, code that collects results in completion order instead of input order.
+
+\input{generated/tables/case-examples.tex}

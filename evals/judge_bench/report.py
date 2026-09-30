@@ -370,6 +370,10 @@ def _load_audit(root: Path, split: str, case_ids, by_id) -> dict:
 
 
 # ----------------------------------------------------------------------------- latency
+LAT_FAMILY_LABEL = {"hosted": "Hosted API", "system_one": "Local System One (/v1/systemone, Laya)",
+                    "generic": "Local Ollama /api/generate"}
+
+
 def _lat_family(key: str) -> str:
     head = key.split("|")[0]
     if head.startswith("gen:"):
@@ -377,6 +381,32 @@ def _lat_family(key: str) -> str:
     if head.startswith(("so:", "laya")):
         return "system_one"
     return "hosted"
+
+
+def _lat_model(name: str) -> str:
+    base, _, size = name.partition(":")
+    base = "Qwen3" if base == "qwen3" else base
+    return f"{base} {size}" if size and size != "latest" else base
+
+
+def lat_info(key: str) -> dict:
+    """Row label by model family plus the endpoint that row actually measured."""
+    head, _, mode = key.partition("|")
+    if head.startswith("gen:"):
+        model, endpoint, where = _lat_model(head[4:]), "/api/generate", "(Ollama)"
+    elif head.startswith("so:"):
+        model, endpoint, where = _lat_model(head[3:]), "/v1/systemone", "(Ollama)"
+    elif head == "laya":
+        model, endpoint, where = "Laya", "/v1/decide", ""
+    elif head == "jev":
+        model, endpoint, where = "Jev", "/v1/systemone", "(hosted)"
+    else:
+        prio = head.endswith("-priority")
+        model, endpoint, where = head.replace("-priority", "") + (" priority" if prio else ""), "OpenAI API", "(hosted)"
+    label = f"{model} {where}".strip()
+    fresh = mode == "fresh"
+    return {"label": label, "endpoint": endpoint, "mode": mode or "keepalive",
+            "chart": f"{label} {endpoint}" + (" fresh conn" if fresh else "")}
 
 
 def build_latency(root: Path) -> dict | None:
@@ -401,7 +431,7 @@ def build_latency(root: Path) -> dict | None:
         else:
             segs = [["total (no breakdown recorded)", wall]]
             kind = "none"
-        stack.append({"key": key, "family": _lat_family(key), "kind": kind, "wall_p50": wall,
+        stack.append({"key": key, **lat_info(key), "family": _lat_family(key), "kind": kind, "wall_p50": wall,
                       "wall_p95": (e.get("wall_ms") or {}).get("p95"), "n": e.get("n"), "errors": e.get("errors"),
                       "segments": segs})
     conc: dict[str, list] = {}
@@ -413,7 +443,7 @@ def build_latency(root: Path) -> dict | None:
             continue
         w = e.get("wall_ms") or {}
         conc.setdefault(label, []).append([k, w.get("p50"), w.get("p95"), e.get("throughput_rps"), e.get("n"), e.get("errors")])
-    series = [{"label": lb, "family": _lat_family(lb), "points": sorted(pts)} for lb, pts in sorted(conc.items(), key=lambda kv: (_lat_family(kv[0]), kv[0]))]
+    series = [{"key": lb, "label": lat_info(lb)["label"], "endpoint": lat_info(lb)["endpoint"], "family": _lat_family(lb), "points": sorted(pts)} for lb, pts in sorted(conc.items(), key=lambda kv: (_lat_family(kv[0]), kv[0]))]
     cold = []
     for key, recs in sorted((ls.get("cold") or {}).items()):
         if not recs:
@@ -421,7 +451,7 @@ def build_latency(root: Path) -> dict | None:
         first = recs[0].get("wall_ms")
         rest = sorted(r["wall_ms"] for r in recs[1:] if r.get("wall_ms") is not None)
         med = stats.nearest_rank(rest, .5)
-        cold.append({"key": key, "family": _lat_family(key), "first_ms": first, "warm_p50_ms": med,
+        cold.append({"key": key, **lat_info(key), "family": _lat_family(key), "first_ms": first, "warm_p50_ms": med,
                      "ratio": (first / med) if first and med else None, "load_first_ms": recs[0].get("load_duration"),
                      "n": len(recs)})
     notes = ls.get("notes") or []
@@ -514,7 +544,7 @@ def headline_table(sp: dict | None) -> str:
                      esc(usd_txt(j["usd1m"]) if j["family"] == "hosted" else "$0 (local; hardware excluded)"),
                      f"{reps}<br><span class='muted'>acc/rep {rng}</span>"])
     return table(["Judge", "Accuracy (95% CI)", "Wrong automatic (95% CI)", "Coverage (95% CI)",
-                  "p50", "p95", "$ / 1M decisions", "Reps (n)"], rows, "sticky1")
+                  "p50", "p95", "$ / 1M decisions", "Reps (n)"], rows, "fit")
 
 
 def contrast_table(sp: dict | None) -> str:
@@ -597,14 +627,14 @@ def intervention_html(sp: dict | None, label: str) -> str:
 def latency_html(lat: dict | None) -> str:
     if not lat:
         return "<p class='pending'>latency/latency_summary.json not found.</p>"
-    srows = [[esc(s["key"]), esc(FAMILY_LABEL[s["family"]]), esc(ms_txt(s["wall_p50"])), esc(ms_txt(s["wall_p95"])),
+    srows = [[esc(s["label"]), esc(s["endpoint"]), esc(s["mode"]), esc(ms_txt(s["wall_p50"])), esc(ms_txt(s["wall_p95"])),
               esc("; ".join(f"{n} {v:.1f} ms" for n, v in s["segments"])), str(s["n"])] for s in lat["stack"]]
     out = "<h4>Anatomy of one call (median of each component)</h4>" + table(
-        ["Endpoint|mode", "Family", "wall p50", "wall p95", "components (p50)", "n"], srows)
-    crows = [[esc(c["key"]), esc(ms_txt(c["first_ms"])), esc(ms_txt(c["warm_p50_ms"])),
+        ["Model", "Endpoint measured", "Connection", "wall p50", "wall p95", "components (p50)", "n"], srows)
+    crows = [[esc(c["label"]), esc(c["endpoint"]), esc(ms_txt(c["first_ms"])), esc(ms_txt(c["warm_p50_ms"])),
               "n/a" if c["ratio"] is None else f"{c['ratio']:.1f}x", esc(ms_txt(c["load_first_ms"])), str(c["n"])] for c in lat["cold"]]
     out += "<h4>Cold start (model unloaded before call 0)</h4>" + table(
-        ["Endpoint", "first call", "calls 1+ (p50)", "first / warm", "load_duration (first)", "calls"], crows)
+        ["Model", "Endpoint measured", "first call", "calls 1+ (p50)", "first / warm", "load_duration (first)", "calls"], crows)
     rrows = []
     for host, e in sorted(lat["rtt"].items()):
         rrows.append([esc(host), esc(ms_txt((e.get("tcp_rtt_ms") or {}).get("p50"))), esc(ms_txt((e.get("tls_ms") or {}).get("p50"))),
@@ -754,7 +784,7 @@ def build(root: Path) -> str:
             break
 
     data = {"schema": SCHEMA, "default_split": "dev", "grid": GRID, "policies": pol_js, "priority_multiplier": mult,
-            "alpha": ALPHA, "families": FAMILY_LABEL, "colors": pal.FAMILIES, "state_colors": pal.STATES,
+            "alpha": ALPHA, "default_policy": "read", "families": FAMILY_LABEL, "lat_families": LAT_FAMILY_LABEL, "colors": pal.FAMILIES, "state_colors": pal.STATES,
             "splits": {k: ({kk: vv for kk, vv in v.items() if kk not in ("run", "ref")} if v else None) for k, v in splits.items()},
             "latency": lat}
 
@@ -846,9 +876,12 @@ CSS = r"""
 html { scroll-behavior: smooth; }
 body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif; }
 header.top { position:sticky; top:0; z-index:20; background:var(--card); border-bottom:1px solid var(--rule); }
-.bar { max-width:1180px; margin:0 auto; padding:8px 16px; display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
-.bar .title { font-weight:650; margin-right:auto; }
-.bar nav { display:flex; gap:4px 12px; flex-wrap:wrap; font-size:12.5px; }
+.bar { max-width:1180px; margin:0 auto; padding:8px 16px; display:flex; gap:10px; align-items:center; flex-wrap:nowrap; }
+.bar .title { font-weight:650; white-space:nowrap; }
+.bar > * { flex:0 0 auto; }
+.bar nav { flex:1 1 0; min-width:0; display:flex; gap:4px 10px; flex-wrap:nowrap; font-size:12.5px; overflow-x:auto; scrollbar-width:none; white-space:nowrap; padding:0 2px; }
+.bar nav::-webkit-scrollbar { display:none; }
+.bar button { white-space:nowrap; }
 .bar nav a { color:var(--ink2); text-decoration:none; } .bar nav a:hover { text-decoration:underline; }
 button, select, input { font:inherit; color:var(--ink); background:var(--card); border:1px solid var(--rule); border-radius:8px; padding:5px 10px; }
 button { cursor:pointer; } button:disabled { opacity:.5; cursor:not-allowed; }
@@ -873,7 +906,9 @@ svg .mark { cursor:default; } svg .mark:hover, svg .mark:focus { stroke:var(--in
 .fam-hosted { --c:var(--hosted); } .fam-system_one { --c:var(--sysone); } .fam-generic { --c:var(--generic); }
 .swatch { display:inline-block; width:11px; height:11px; border-radius:3px; margin-right:5px; vertical-align:-1px; background:var(--c, var(--neutral)); }
 .legend { display:flex; gap:6px 16px; flex-wrap:wrap; font-size:12.5px; color:var(--ink2); margin:4px 0 8px; }
-.scroll { overflow-x:auto; -webkit-overflow-scrolling:touch; margin:6px 0; }
+.scroll { overflow-x:auto; -webkit-overflow-scrolling:touch; margin:6px 0; max-width:100%; }
+.scroll { background:linear-gradient(to right,var(--card) 30%,transparent),linear-gradient(to left,var(--card) 30%,transparent) 100% 0,radial-gradient(farthest-side at 0 50%,rgba(0,0,0,.25),transparent) 0 0,radial-gradient(farthest-side at 100% 50%,rgba(0,0,0,.25),transparent) 100% 0; background-repeat:no-repeat; background-size:30px 100%,30px 100%,10px 100%,10px 100%; background-attachment:local,local,scroll,scroll; }
+table.data.fit th, table.data.fit td { white-space:normal; padding:6px 7px; } table.data.fit td:first-child, table.data.fit th:first-child { white-space:nowrap; }
 table.data { border-collapse:collapse; width:100%; font-size:13px; }
 table.data th, table.data td { padding:6px 9px; border-bottom:1px solid var(--rule); text-align:left; vertical-align:top; white-space:nowrap; }
 table.data.wrap td { white-space:normal; min-width:150px; }
@@ -919,9 +954,8 @@ details.dt { margin-top:8px; } details.dt summary { cursor:pointer; color:var(--
 footer { max-width:1180px; margin:0 auto; padding:0 16px 40px; color:var(--ink3); font-size:12px; }
 @media (max-width: 640px) {
   body { font-size:14px; } main { padding:4px 10px 48px; } section.card { padding:14px 12px; border-radius:10px; margin:10px 0; }
-  .bar nav { display:none; } h1 { font-size:20px; }
+  .bar { flex-wrap:wrap; } .bar nav { display:none; } .bar .title { margin-right:auto; } h1 { font-size:20px; }
   .mx td { width:36px; min-width:36px; }
-  .scroll { background:linear-gradient(to right,var(--card) 30%,transparent),linear-gradient(to left,var(--card) 30%,transparent) 100% 0,radial-gradient(farthest-side at 0 50%,rgba(0,0,0,.25),transparent) 0 0,radial-gradient(farthest-side at 100% 50%,rgba(0,0,0,.25),transparent) 100% 0; background-repeat:no-repeat; background-size:30px 100%,30px 100%,10px 100%,10px 100%; background-attachment:local,local,scroll,scroll; }
   table.kv, table.kv tbody, table.kv tr, table.kv th, table.kv td { display:block; max-width:100%; overflow-wrap:anywhere; }
   table.kv th { padding-top:6px; color:var(--ink3); } ol { padding-left:20px; }
 }
@@ -938,7 +972,7 @@ TEMPLATE = r"""<!doctype html>
 <body>
 <header class="top"><div class="bar">
   <span class="title">Decision-judge benchmark</span>
-  <nav aria-label="Sections"><a href="#explain">Explainer</a><a href="#headline">Headline</a><a href="#scatter">Trade-offs</a><a href="#pairs">Pairwise</a><a href="#calc">Cost</a><a href="#explorer">Threshold</a><a href="#drill">Cases</a><a href="#failures">Failures</a><a href="#latency">Latency</a><a href="#interv">Interventions</a><a href="#repro">Repro</a><a href="#changes">Changes</a><a href="#limits">Limits</a></nav>
+  <nav aria-label="Sections"><a href="#explain">Explain</a><a href="#headline">Headline</a><a href="#scatter">Trade-offs</a><a href="#pairs">Pairs</a><a href="#calc">Cost</a><a href="#explorer">Threshold</a><a href="#drill">Cases</a><a href="#failures">Failures</a><a href="#latency">Latency</a><a href="#interv">Interv.</a><a href="#repro">Repro</a><a href="#changes">Changes</a><a href="#limits">Limits</a></nav>
   <span role="group" aria-label="Data split for interactive sections"><button id="sp-dev" aria-pressed="true">Dev</button> <button id="sp-holdout" aria-pressed="false">Holdout</button></span>
   <button id="theme" aria-label="Toggle light and dark theme">Theme</button>
 </div></header>
@@ -980,7 +1014,7 @@ TEMPLATE = r"""<!doctype html>
 </section>
 
 <section class="card" id="pairs">
-<h2>Pairwise judge comparison</h2>
+<h2>4. Pairwise judge comparison</h2>
 <p class="sub">Exact McNemar test on per-case majorities, Holm-adjusted across every pair in the matrix. Toggle the metric. Active split: <span class="activesplit"></span>.</p>
 <div class="ctrl"><span role="group" aria-label="Matrix metric"><button id="mx-acc" aria-pressed="true">Accuracy</button> <button id="mx-wa" aria-pressed="false">Wrong automatic</button></span></div>
 <div class="legend"><span><span class="swatch" style="--c:var(--hosted)"></span>row better</span><span><span class="swatch" style="--c:var(--sysone)"></span>row worse</span><span>&#9733; significant after Holm</span><span>dashed outline = declared contrast</span></div>
@@ -992,7 +1026,7 @@ TEMPLATE = r"""<!doctype html>
 </section>
 
 <section class="card" id="calc">
-<h2>4. Cost at scale</h2>
+<h2>5. Cost at scale</h2>
 <p class="sub">Expected monthly bill and the number of wrong automatic actions per month if the benchmark's mix of decisions matched your traffic. <b>Local judges show $0 API cost and exclude hardware, power and operations.</b> Active split: <span class="activesplit"></span>.</p>
 <div class="ctrl">
 <label>Decisions per day<input id="c-vol" type="number" min="0" step="1000" value="100000"></label>
@@ -1001,11 +1035,12 @@ TEMPLATE = r"""<!doctype html>
 <label>OpenAI tier<select id="c-tier"><option value="standard">standard</option><option value="priority">priority (2x price)</option></select></label>
 </div>
 <div class="legend" id="legend-fam4"></div>
+<div class="callout" id="calc-note"><b>Read the wrong-action numbers as a stress test, not a forecast.</b> The wrong-action projections assume the benchmark's case mix, which is deliberately adversarial (heavy on side-effect, injection and fallback cases), not real traffic. Treat them as upper-bound stress numbers, not forecasts; real traffic will usually produce far fewer wrong automatic actions.</div>
 <div class="scroll" id="calc-out"></div>
 </section>
 
 <section class="card" id="explorer">
-<h2>5. Threshold explorer</h2>
+<h2>6. Threshold explorer</h2>
 <p class="sub">Raise the cutoff and coverage falls; the question is how fast wrong automatic decisions fall. Order-0 answers, argmax option, <code>reason</code> never automatic, no timeout or margin rule (a pure certainty cutoff). Active split: <span class="activesplit"></span>.</p>
 <div class="ctrl"><label>Certainty cutoff: <span class="big" id="th-val"></span><input id="th" type="range" min="0.50" max="0.99" step="0.01" value="0.90"></label></div>
 <div class="legend" id="legend-fam2"></div>
@@ -1017,7 +1052,7 @@ TEMPLATE = r"""<!doctype html>
 </section>
 
 <section class="card" id="drill">
-<h2>6. Case drill-down</h2>
+<h2>7. Case drill-down</h2>
 <p class="sub">Cases &times; judges under the primary policy (majority of repetitions; a ringed cell means repetitions disagreed). Active split: <span class="activesplit"></span>. "All judges wrong" and "only one judge right" consider the base judges (not the +intervention arms) by argmax correctness.</p>
 <div class="ctrl">
 <label>Task type<select id="f-kind"></select></label><label>Screen<select id="f-screen"></select></label><label>Failure class<select id="f-class"></select></label>
@@ -1031,13 +1066,13 @@ TEMPLATE = r"""<!doctype html>
 </section>
 
 <section class="card" id="failures">
-<h2>7. Failure modes</h2>
+<h2>8. Failure modes</h2>
 <p class="sub">How each judge is wrong, by class, from summary.json (mean per repetition). Second table counts only the wrong answers the bundle would have acted on.</p>
 @@FAILURE_TABLES@@
 </section>
 
 <section class="card" id="latency">
-<h2>8. Latency anatomy</h2>
+<h2>9. Latency anatomy</h2>
 <p class="sub">Where the time goes in one call, from the dedicated latency run. Cloud calls split into network, provider server time and client time; local Ollama calls into model load, prompt prefill, decode and overhead. Connection reused (keepalive) unless a row says fresh. Components are medians and need not add exactly to the median wall time; the residual is shown as client/overhead.</p>
 @@LATENCY_FINDINGS@@
 <div class="legend" id="legend-seg"></div>
@@ -1049,7 +1084,7 @@ TEMPLATE = r"""<!doctype html>
 </section>
 
 <section class="card" id="interv">
-<h2>9. Interventions</h2>
+<h2>10. Interventions</h2>
 <p class="sub">I1: adding a side-effect clause to the instructions (arm vs. its base). Policy modifiers: <code>+host-guard</code> forces fallback when the chosen option names a side effect; <code>+noul-gate</code> makes yes/no answers automatic only at the policy's probability bar. The dev split was used to choose these, so its numbers are a <b>screen</b>, not confirmation; only holdout confirms.</p>
 <div class="grid2"><div><h4>Wrong automatic, base vs. +clause (active split: <span class="activesplit"></span>)</h4><div class="chart" id="ch-iv-wa"></div></div><div><h4>Coverage, base vs. +clause</h4><div class="chart" id="ch-iv-cov"></div></div></div>
 <div id="dt-iv"></div>
@@ -1057,17 +1092,17 @@ TEMPLATE = r"""<!doctype html>
 </section>
 
 <section class="card" id="repro">
-<h2>10. Reproducibility</h2>
+<h2>11. Reproducibility</h2>
 @@REPRO@@
 </section>
 
 <section class="card" id="changes">
-<h2>11. Change history: first pass vs. validated</h2>
+<h2>12. Change history: first pass vs. validated</h2>
 @@CHANGES@@
 </section>
 
 <section class="card" id="limits">
-<h2>12. Evidence limits</h2>
+<h2>13. Evidence limits</h2>
 @@LIMITS@@
 </section>
 </main>
@@ -1152,32 +1187,100 @@ function logTicks(lo, hi) {
 }
 const rectsOverlap = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
 
-/* ---------- direct labels with simple collision nudging ---------- */
-function placeLabels(items, box, obstacles) {
-  // items: {x,y,text}; tries a ring of offsets, greedy; returns [{x,y,anchor,leader}]
-  const placed = [], out = [];
-  const offs = (w) => { const dys = [4], o = []; for (let k = 1; k <= 18; k++) { dys.push(4 - 13 * k, 4 + 13 * k); }
-    for (const dx of [9, -9 - w, 9 + w * 0.6, -9 - w * 1.6]) for (const dy of dys) o.push([dx, dy]);
-    o.push([-w / 2, -12], [-w / 2, 24]);
-    return o.sort((a, b) => (Math.abs(a[1] - 4) + (a[0] < 0 ? 2 : 0) + Math.abs(a[0]) * 0.01) - (Math.abs(b[1] - 4) + (b[0] < 0 ? 2 : 0) + Math.abs(b[0]) * 0.01)); };
-  for (const it of items) {
-    const w = it.text.length * 6.7 + 4, hgt = 13;
-    let best = null, bestScore = 1e9;
-    for (const [dx, dy] of offs(w)) {
-      const r = {x: it.x + dx, y: it.y + dy - 10, w, h: hgt};
-      let score = 0;
-      if (r.x < box.x0 + 2 || r.x + r.w > box.x1 - 4 || r.y < box.y0 || r.y + r.h > box.y1) score += 1000;
-      score += Math.abs(dy - 4) * 0.01;
-      for (const p of placed) if (rectsOverlap(r, p)) score += 100;
-      for (const o of obstacles) if (rectsOverlap(r, o)) score += 30;
-      if (score < bestScore) { bestScore = score; best = {r, dx, dy}; }
-      if (score === 0) break;
-    }
-    placed.push(best.r);
-    const far = Math.hypot(best.dx > 0 ? best.dx - 9 : best.dx + 9 + w, best.dy - 4) > 6;
-    out.push({x: best.r.x, y: best.r.y + 10, text: it.text, leader: far, px: it.x, py: it.y, r: best.r});
+/* ---------- direct labels: candidate search with hard geometric constraints ---------- */
+let _tctx = null;
+function textW(t, bold) {
+  if (!_tctx) _tctx = document.createElement('canvas').getContext('2d');
+  _tctx.font = (bold === false ? '400' : '560') + ' 11.5px system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif';
+  return _tctx.measureText(t).width * 1.04 + 4;
+}
+const inflate = (r, d) => ({x: r.x - d, y: r.y - d, w: r.w + 2 * d, h: r.h + 2 * d});
+function segHitsRect(a, b, r) {           // Liang-Barsky: does segment a-b touch rect r
+  let t0 = 0, t1 = 1; const dx = b.x - a.x, dy = b.y - a.y;
+  for (const [p, q] of [[-dx, a.x - r.x], [dx, r.x + r.w - a.x], [-dy, a.y - r.y], [dy, r.y + r.h - a.y]]) {
+    if (p === 0) { if (q < 0) return false; }
+    else { const t = q / p; if (p < 0) { if (t > t1) return false; if (t > t0) t0 = t; } else { if (t < t0) return false; if (t < t1) t1 = t; } }
   }
-  return out;
+  return true;
+}
+function segSeg(a, b, c, d) {
+  const o = (p, q, r) => (q.x - p.x) * (r.y - p.y) - (q.y - p.y) * (r.x - p.x);
+  const d1 = o(a, b, c), d2 = o(a, b, d), d3 = o(c, d, a), d4 = o(c, d, b);
+  return ((d1 > 0) !== (d2 > 0) || d1 === 0 || d2 === 0) && ((d3 > 0) !== (d4 > 0) || d3 === 0 || d4 === 0);
+}
+function placeLabels(items0, box, markers, whiskers, names0) {
+  // items: {x,y,text}; markers: every point marker (x,y); returns one entry per item:
+  // {text, num, r (text box), x, y (text baseline origin), leader ({x1,y1,x2,y2}|null)}
+  // points closer than a marker diameter cannot be told apart: they share one (numbered) label
+  const grp = [], items = [], members = [];
+  items0.forEach((p, i) => {
+    if (grp[i] !== undefined) return;
+    const g = items.length; items.push(p); members.push([]);
+    items0.forEach((q, k) => { if (grp[k] === undefined && Math.hypot(p.x - q.x, p.y - q.y) < 8) { grp[k] = g; members[g].push(k); } });
+  });
+  const H = 15, mk = markers.map(p => ({x: p.x - 8, y: p.y - 8, w: 16, h: 16}));
+  let placed = [], leaders = [], res = [], failed = -1;
+  const angles = [0, -30, 30, -60, 60, -90, 90, 180, 150, -150, 120, -120, -15, 15, -45, 45, -75, 75, 165, -165, 135, -135, 105, -105];
+  const radii = [9, 16, 26, 40, 58, 80, 106];
+  const tryPlace = (i, text, w, extraRadii, relax) => {
+    const P = items[i]; let best = null, bestScore = 1e18;
+    for (const d of radii.concat(extraRadii || [])) for (let ai = 0; ai < angles.length; ai++) {
+      const th = angles[ai] * Math.PI / 180, cx = Math.cos(th), sy = Math.sin(th);
+      const A = {x: P.x + d * cx, y: P.y + d * sy};
+      const r = {x: cx > 0.35 ? A.x : cx < -0.35 ? A.x - w : A.x - w / 2, y: sy > 0.35 ? A.y : sy < -0.35 ? A.y - H : A.y - H / 2, w, h: H};
+      if (r.x < box.x0 || r.x + r.w > box.x1 || r.y < box.y0 || r.y + r.h > box.y1) continue;
+      if (mk.some(m => rectsOverlap(inflate(r, 1), m))) continue;
+      if (placed.some(q => rectsOverlap(inflate(r, 2), q))) continue;
+      let L = null;
+      if (d > 9) {
+        const qx = Math.min(Math.max(P.x, r.x), r.x + r.w), qy = Math.min(Math.max(P.y, r.y), r.y + r.h);
+        const len = Math.hypot(qx - P.x, qy - P.y) || 1;
+        L = {x1: P.x + (qx - P.x) / len * 6, y1: P.y + (qy - P.y) / len * 6, x2: qx, y2: qy};
+        const a1 = {x: L.x1, y: L.y1}, a2 = {x: L.x2, y: L.y2};
+        if (!relax && mk.some((m, k) => Math.hypot(markers[k].x - P.x, markers[k].y - P.y) > 10 && segHitsRect(a1, a2, m))) continue;   // co-located markers cannot be avoided
+        if (placed.some(q => segHitsRect(a1, a2, inflate(q, 1)))) continue;
+        if (leaders.some(l => segSeg(a1, a2, {x: l.x1, y: l.y1}, {x: l.x2, y: l.y2}))) continue;
+      }
+      if (leaders.some(l => segHitsRect({x: l.x1, y: l.y1}, {x: l.x2, y: l.y2}, inflate(r, 1)))) continue;
+      let score = d * 1.0 + ai * 0.6;
+      for (const wk of whiskers || []) if (segHitsRect({x: wk[0], y: wk[1]}, {x: wk[2], y: wk[3]}, r)) score += 6;
+      if (score < bestScore) { bestScore = score; best = {r, L}; }
+    }
+    return best;
+  };
+  const crowd = items.map((p, i) => items.filter((q, k) => k !== i && Math.hypot(p.x - q.x, p.y - q.y) < 70).length);
+  const order = items.map((_, i) => i).sort((a, b) => crowd[b] - crowd[a] || a - b);
+  const commit = (i, text, num, best) => {
+    placed.push(best.r); if (best.L) leaders.push(best.L);
+    res[i] = {text, num, r: best.r, x: best.r.x + 2, y: best.r.y + 11, leader: best.L, key: members[i].map(k => (names0 || [])[k]).join(', ')};
+  };
+  const run = (force) => {
+    placed = []; leaders = []; res = new Array(items.length).fill(null); failed = -1;
+    for (const i of order) { if (members[i].length > 1 || force.has(i)) continue; const best = tryPlace(i, items[i].text, textW(items[i].text)); if (best) commit(i, items[i].text, null, best); }
+    let n = 0;
+    for (let i = 0; i < items.length; i++) if (!res[i]) {     // fallback: numbered marker, name goes in the key under the chart
+      n++; const w = textW(String(n)) + 2, xr = [10, 12, 14, 20, 32, 48, 70, 100, 140, 190, 250, 320];
+      const best = tryPlace(i, String(n), w, xr) || tryPlace(i, String(n), w, xr, true);   // last resort: leader may pass over another marker
+      if (best) commit(i, String(n), n, best);
+      else { failed = i; commit(i, String(n), n, {r: {x: Math.min(Math.max(items[i].x + 9, box.x0), box.x1 - w), y: Math.min(Math.max(items[i].y - 7, box.y0), box.y1 - H), w, h: H}, L: null}); }
+    }
+  };
+  const force = new Set();
+  for (let it = 0; it <= items.length; it++) {
+    run(force); if (failed < 0) break;
+    // still crowded: turn the nearest full-text label into a number too, which frees room
+    let v = -1, bd = 1e9;
+    items.forEach((q, k) => { const d = Math.hypot(q.x - items[failed].x, q.y - items[failed].y); if (k !== failed && !force.has(k) && members[k].length === 1 && d < bd) { bd = d; v = k; } });
+    if (v < 0) break; force.add(v);
+  }
+  return items0.map((_, k) => Object.assign({dup: members[grp[k]][0] !== k}, res[grp[k]]));
+}
+function drawLabels(svg, el, labs) {
+  labs = labs.filter(l => !l.dup);
+  for (const l of labs) if (l.leader) svg.append(sv('line', {x1: l.leader.x1, y1: l.leader.y1, x2: l.leader.x2, y2: l.leader.y2, stroke: 'var(--ink3)', 'stroke-width': .8, class: 'leader'}));
+  for (const l of labs) svg.append(sv('text', {x: l.x, y: l.y, class: 'lbl', text: l.text}));
+  const numbered = labs.map(l => l.num ? [l.num, l.key] : null).filter(Boolean).sort((a, b) => a[0] - b[0]);
+  if (numbered.length) el.append(h('div', {class: 'legend keytbl'}, numbered.map(([n, t]) => h('span', {}, h('b', {text: n + ' '}), t))));
 }
 function nudge1d(ys, gap, lo, hi) {
   const idx = ys.map((y, i) => i).sort((a, b) => ys[a] - ys[b]);
@@ -1214,7 +1317,7 @@ function whisker(svg, x1, y1, x2, y2, col, tiptext) {
 
 function scatter(el, o) {
   el.textContent = '';
-  const W = cw(el), H = W < 480 ? 350 : 420, m = {l: 68, r: 14, t: 10, b: 44};
+  const W = cw(el), H = W < 480 ? 360 : 420, m = {l: 68, r: 26, t: 26, b: 44};
   const iw = W - m.l - m.r, ih = H - m.t - m.b;
   const xs = o.xlog ? Math.log10 : (v => v);
   const x0 = xs(o.xdom[0]), x1 = xs(o.xdom[1]);
@@ -1227,13 +1330,12 @@ function scatter(el, o) {
     if (p.xlo != null) whisker(svg, X(p.xlo), Y(p.y), X(p.xhi), Y(p.y), col, p.tip);
   }
   for (const p of o.points) svg.append(tipped(sv('circle', {cx: X(p.x), cy: Y(p.y), r: 5.5, fill: FAMCOL[p.fam], stroke: 'var(--card)', 'stroke-width': 1.5, class: 'mark'}), p.tip));
-  const obst = o.points.map(p => ({x: X(p.x) - 7, y: Y(p.y) - 7, w: 14, h: 14}));
-  const labs = placeLabels(o.points.map(p => ({x: X(p.x), y: Y(p.y), text: p.label})), {x0: m.l, x1: W, y0: 0, y1: H - m.b + 2}, obst);
-  labs.forEach((l, i) => {
-    if (l.leader) svg.append(sv('line', {x1: l.px, y1: l.py, x2: Math.min(Math.max(l.px, l.r.x), l.r.x + l.r.w), y2: l.r.y + 6, stroke: 'var(--ink3)', 'stroke-width': .8}));
-    svg.append(sv('text', {x: l.x, y: l.y, class: 'lbl', text: l.text}));
-  });
-  el.append(svg);
+  const wk = [];
+  for (const p of o.points) { if (p.ylo != null) wk.push([X(p.x), Y(p.ylo), X(p.x), Y(p.yhi)]); if (p.xlo != null) wk.push([X(p.xlo), Y(p.y), X(p.xhi), Y(p.y)]); }
+  const pts = o.points.map(p => ({x: X(p.x), y: Y(p.y), text: p.label}));
+  const labs = placeLabels(pts, {x0: m.l + 2, x1: W - 2, y0: 2, y1: H - m.b - 2}, pts, wk, o.points.map(p => p.label));
+  drawLabels(svg, el, labs);
+  el.insertBefore(svg, el.firstChild);
 }
 
 function bars(el, items, o) {
@@ -1261,7 +1363,7 @@ function bars(el, items, o) {
 
 function dtable(container, title, head, rows, open) {
   container.textContent = '';
-  const t = h('table', {class: 'data'}, h('thead', {}, h('tr', {}, head.map(x => h('th', {text: x})))), h('tbody', {}, rows.map(r => h('tr', {}, r.map(c => h('td', {text: c}))))));
+  const t = h('table', {class: 'data fit'}, h('thead', {}, h('tr', {}, head.map(x => h('th', {text: x})))), h('tbody', {}, rows.map(r => h('tr', {}, r.map(c => h('td', {text: c}))))));
   const d = h('details', {class: 'dt'}, h('summary', {text: title}), h('div', {class: 'scroll'}, t));
   if (open) d.open = true;
   container.append(d);
@@ -1301,9 +1403,9 @@ function armStat(ai, pol) {
 }
 
 /* ---------- 2. headline charts ---------- */
-function legend(id, fams) {
+function legend(id, fams, names) {
   const el = $(id); if (!el) return; el.textContent = '';
-  for (const f of fams) el.append(h('span', {}, h('span', {class: 'swatch fam-' + f}), D.families[f]));
+  for (const f of fams) el.append(h('span', {}, h('span', {class: 'swatch fam-' + f}), (names || D.families)[f]));
 }
 function famsIn(sp) { return ['hosted', 'system_one', 'generic'].filter(f => sp.judges.some(j => j.family === f)); }
 function renderHeadline() {
@@ -1401,7 +1503,7 @@ function renderCalc() {
       td(pct(r.s.cov)), td(fms(r.j.p95))))));
   function td(t) { return h('td', {text: t}); }
   const host = $('#calc-out'); host.textContent = ''; host.append(tb);
-  host.append(h('p', {class: 'muted', text: `Cutoff: ${pol.label}. Priority tier reprices only arms that have a priority multiplier (${D.priority_multiplier ? D.priority_multiplier.toFixed(1) + 'x' : 'none recorded'}). Volume ${fnum(vol)}/day = ${fnum(month)}/month. Local judges exclude hardware, power and operations. Rates assume your traffic resembles this benchmark's mix of cases.`}));
+  host.append(h('p', {class: 'muted', text: `Cutoff: ${pol.label}. Priority tier reprices only arms that have a priority multiplier (${D.priority_multiplier ? D.priority_multiplier.toFixed(1) + 'x' : 'none recorded'}). Volume ${fnum(vol)}/day = ${fnum(month)}/month. Local judges exclude hardware, power and operations. Wrong-action counts assume this benchmark's adversarial case mix, so they are upper-bound stress numbers.`}));
 }
 
 /* ---------- 5. explorer ---------- */
@@ -1414,7 +1516,7 @@ function renderExplorer() {
   $('#th-val').textContent = t.toFixed(2);
   const js = sp.judges, cur = js.map((j, i) => CURVES[i][gi]);
   const el = $('#ch-front'); el.textContent = '';
-  const W = cw(el), H = W < 480 ? 360 : 430, m = {l: 68, r: 14, t: 10, b: 44};
+  const W = cw(el), H = W < 480 ? 380 : 430, m = {l: 68, r: 26, t: 26, b: 44};
   const ymax = Math.max(1, ...CURVES.flat().map(c => c.waCount)) * 1.08, X = v => m.l + v * (W - m.l - m.r), Y = v => H - m.b - v / ymax * (H - m.t - m.b);
   const svg = sv('svg', {width: W, height: H, viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': 'Coverage versus wrong automatic frontier'});
   axisFrame(svg, {m, W, H, X, Y, xticks: [0, .2, .4, .6, .8, 1], yticks: niceTicks(0, ymax, 5).filter(v => v > 0), xfmt: v => pct(v, 0), yfmt: v => fnum(v, v < 10 && v % 1 ? 1 : 0), xtitle: 'coverage (share of decisions automatic)', ytitle: 'wrong automatic per repetition'});
@@ -1424,18 +1526,14 @@ function renderExplorer() {
     const pts = CURVES[i].map(c => X(c.cov) + ',' + Y(c.waCount)).join(' ');
     svg.append(tipped(sv('polyline', {points: pts, fill: 'none', stroke: FAMCOL[j.family], 'stroke-width': 1.8, 'stroke-opacity': .75, 'stroke-dasharray': dash[(k - 1) % 4], class: 'mark'}), j.arm + '\nFrontier over cutoffs ' + D.grid[0].toFixed(2) + ' to ' + D.grid[D.grid.length - 1].toFixed(2) + '\nAt ' + t.toFixed(2) + ': coverage ' + pct(cur[i].cov) + ', ' + fnum(cur[i].waCount, 1) + ' wrong automatic per repetition'));
   });
-  const obst = [];
   js.forEach((j, i) => {
     const c = cur[i];
     svg.append(tipped(sv('circle', {cx: X(c.cov), cy: Y(c.waCount), r: 5.5, fill: FAMCOL[j.family], stroke: 'var(--card)', 'stroke-width': 1.5, class: 'mark'}), j.arm + '\nCutoff ' + t.toFixed(2) + '\nCoverage ' + pct(c.cov) + '\nWrong automatic ' + fnum(c.waCount, 2) + ' per repetition (' + pct(c.waRate, 2) + '), worst repetition ' + c.waMax + ' of ' + c.n));
-    obst.push({x: X(c.cov) - 7, y: Y(c.waCount) - 7, w: 14, h: 14});
   });
-  const labs = placeLabels(js.map((j, i) => ({x: X(cur[i].cov), y: Y(cur[i].waCount), text: j.short})), {x0: m.l, x1: W, y0: 0, y1: H - m.b + 2}, obst);
-  for (const l of labs) {
-    if (l.leader) svg.append(sv('line', {x1: l.px, y1: l.py, x2: Math.min(Math.max(l.px, l.r.x), l.r.x + l.r.w), y2: l.r.y + 6, stroke: 'var(--ink3)', 'stroke-width': .8}));
-    svg.append(sv('text', {x: l.x, y: l.y, class: 'lbl', text: l.text}));
-  }
-  el.append(svg);
+  const pts = js.map((j, i) => ({x: X(cur[i].cov), y: Y(cur[i].waCount), text: j.short}));
+  const labs = placeLabels(pts, {x0: m.l + 2, x1: W - 2, y0: 2, y1: H - m.b - 2}, pts, [], js.map(j => j.short));
+  drawLabels(svg, el, labs);
+  el.insertBefore(svg, el.firstChild);
   const rows = js.map((j, i) => [j.arm, pct(cur[i].cov), fnum(cur[i].waCount, 2), pct(cur[i].waRate, 2), cur[i].waMin + ' to ' + cur[i].waMax, cur[i].waMax === 0 ? 'zero in every repetition' : '']);
   const host = $('#th-table'); host.textContent = '';
   const tb = h('table', {class: 'data'}, h('thead', {}, h('tr', {}, ['Judge', 'Coverage', 'Wrong auto / rep (mean)', 'Wrong-auto rate', 'Range over reps (count)', ''].map(x => h('th', {text: x})))),
@@ -1531,8 +1629,8 @@ function openPanel(c) {
 function renderLatency() {
   const L = D.latency; if (!L) return;
   const el = $('#ch-lat'); el.textContent = '';
-  const nice = k => k.replace('|keepalive', '').replace('|fresh', ' (fresh conn)');
-  const W = cw(el), rowH = 26, m = {l: Math.min(W * 0.46, 10 + 7 * Math.max(...L.stack.map(s => nice(s.key).length))), r: 62, t: 6, b: 40};
+  const nice = s => s.chart;
+  const W = cw(el), rowH = 26, m = {l: Math.min(W * 0.46, 10 + 7 * Math.max(...L.stack.map(s => nice(s).length))), r: 62, t: 6, b: 40};
   const H = m.t + m.b + rowH * L.stack.length, max = Math.max(...L.stack.map(s => s.wall_p50)) * 1.03;
   const X = v => m.l + v / max * (W - m.l - m.r), alpha = [1, .72, .5, .3];
   const svg = sv('svg', {width: W, height: H, viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': 'Latency anatomy'});
@@ -1540,11 +1638,11 @@ function renderLatency() {
   svg.append(sv('text', {x: (m.l + W - m.r) / 2, y: H - 6, 'text-anchor': 'middle', class: 'axt', text: 'median call time (ms)'}));
   L.stack.forEach((s, i) => {
     const y = m.t + i * rowH; let x = 0;
-    svg.append(tipped(sv('text', {x: m.l - 6, y: y + rowH / 2 + 4, 'text-anchor': 'end', class: 'lbl', text: fit(nice(s.key), m.l - 8)}), s.key, false));
+    svg.append(tipped(sv('text', {x: m.l - 6, y: y + rowH / 2 + 4, 'text-anchor': 'end', class: 'lbl', text: fit(nice(s), m.l - 8)}), s.key + '\nendpoint ' + s.endpoint, false));
     const sum = s.segments.reduce((a, b) => a + b[1], 0) || 1;
     s.segments.forEach((sg, k) => {
       const w = sg[1] / sum * s.wall_p50;
-      svg.append(tipped(sv('rect', {x: X(x), y: y + 4, width: Math.max(0.8, X(x + w) - X(x)), height: rowH - 8, fill: FAMCOL[s.family], 'fill-opacity': s.kind === 'none' ? .55 : alpha[k % 4], stroke: 'var(--card)', 'stroke-width': 1, class: 'mark'}), `${s.key} (${D.families[s.family]})\n${sg[0]}: ${sg[1].toFixed(1)} ms of ${s.wall_p50.toFixed(1)} ms median wall\nWall p95 ${fms(s.wall_p95)}, n=${s.n}`));
+      svg.append(tipped(sv('rect', {x: X(x), y: y + 4, width: Math.max(0.8, X(x + w) - X(x)), height: rowH - 8, fill: FAMCOL[s.family], 'fill-opacity': s.kind === 'none' ? .55 : alpha[k % 4], stroke: 'var(--card)', 'stroke-width': 1, class: 'mark'}), `${s.label}, endpoint ${s.endpoint} (${D.lat_families[s.family]})\n${s.key}\n${sg[0]}: ${sg[1].toFixed(1)} ms of ${s.wall_p50.toFixed(1)} ms median wall\nWall p95 ${fms(s.wall_p95)}, n=${s.n}`));
       x += w;
     });
     svg.append(sv('text', {x: X(s.wall_p50) + 6, y: y + rowH / 2 + 4, text: fms(s.wall_p50)}));
@@ -1555,7 +1653,7 @@ function renderLatency() {
   // concurrency
   const ce = $('#ch-conc'); ce.textContent = '';
   if (L.conc.length) {
-    const Wc = cw(ce), Hc = Wc < 480 ? 360 : 420, mc = {l: 68, r: Math.min(150, Wc * 0.3), t: 10, b: 44};
+    const Wc = cw(ce), Hc = Wc < 480 ? 360 : 420, mc = {l: 68, r: Math.min(170, Wc * 0.42), t: 10, b: 44};
     const ks = [...new Set(L.conc.flatMap(s => s.points.map(p => p[0])))].sort((a, b) => a - b);
     const vals = L.conc.flatMap(s => s.points.map(p => p[1])).filter(v => v != null);
     const lo = Math.pow(10, Math.floor(Math.log10(Math.min(...vals) * 0.85))), hi = Math.pow(10, Math.ceil(Math.log10(Math.max(...vals) * 1.15)));
@@ -1568,14 +1666,14 @@ function renderLatency() {
     const ends = [];
     L.conc.forEach(s => {
       const k = seenF[s.family] = (seenF[s.family] || 0) + 1, pts = s.points.filter(p => p[1] != null);
-      s2.append(tipped(sv('polyline', {points: pts.map(p => Xc(p[0]) + ',' + Yc(p[1])).join(' '), fill: 'none', stroke: FAMCOL[s.family], 'stroke-width': 2, 'stroke-dasharray': dash[(k - 1) % 4], class: 'mark'}), s.label + ' (' + D.families[s.family] + ')'));
+      s2.append(tipped(sv('polyline', {points: pts.map(p => Xc(p[0]) + ',' + Yc(p[1])).join(' '), fill: 'none', stroke: FAMCOL[s.family], 'stroke-width': 2, 'stroke-dasharray': dash[(k - 1) % 4], class: 'mark'}), s.label + ', endpoint ' + s.endpoint + '\n' + D.lat_families[s.family]));
       for (const p of pts) s2.append(tipped(sv('circle', {cx: Xc(p[0]), cy: Yc(p[1]), r: 4.5, fill: FAMCOL[s.family], stroke: 'var(--card)', 'stroke-width': 1.5, class: 'mark'}), `${s.label} at ${p[0]} in flight\np50 ${fms(p[1])}, p95 ${fms(p[2])}\nThroughput ${p[3] == null ? 'n/a' : p[3].toFixed(1)} req/s, n=${p[4]}, errors ${p[5]}`));
       const last = pts[pts.length - 1]; if (last) ends.push({label: s.label, y: Yc(last[1]), x: Xc(last[0])});
     });
-    const ny = nudge1d(ends.map(e => e.y + 4), 13, mc.t + 8, Hc - mc.b);
-    ends.forEach((e, i) => { if (Math.abs(ny[i] - e.y - 4) > 3) s2.append(sv('line', {x1: e.x + 5, y1: e.y, x2: e.x + 12, y2: ny[i] - 4, stroke: 'var(--ink3)', 'stroke-width': .8})); s2.append(sv('text', {x: e.x + 14, y: ny[i], class: 'lbl', text: e.label})); });
+    const ny = nudge1d(ends.map(e => e.y + 4), 14, mc.t + 8, Hc - mc.b), lx = Wc - mc.r + 14;
+    ends.forEach((e, i) => { if (Math.abs(ny[i] - e.y - 4) > 3 || e.x + 14 < lx) s2.append(sv('line', {x1: e.x + 5, y1: e.y, x2: lx - 2, y2: ny[i] - 4, stroke: 'var(--ink3)', 'stroke-width': .8, class: 'leader'})); s2.append(sv('text', {x: lx, y: ny[i], class: 'lbl', text: e.label})); });
     ce.append(s2);
-    dtable($('#dt-conc') || ce.appendChild(h('div', {id: 'dt-conc'})), 'Data: concurrency', ['Endpoint', 'In flight', 'p50 ms', 'p95 ms', 'req/s', 'n', 'errors'], L.conc.flatMap(s => s.points.map(p => [s.label, p[0], fnum(p[1], 1), fnum(p[2], 1), p[3] == null ? 'n/a' : p[3].toFixed(1), p[4], p[5]])));
+    dtable($('#dt-conc') || ce.appendChild(h('div', {id: 'dt-conc'})), 'Data: concurrency', ['Model', 'Endpoint measured', 'In flight', 'p50 ms', 'p95 ms', 'req/s', 'n', 'errors'], L.conc.flatMap(s => s.points.map(p => [s.label, s.endpoint, p[0], fnum(p[1], 1), fnum(p[2], 1), p[3] == null ? 'n/a' : p[3].toFixed(1), p[4], p[5]])));
   }
 }
 
@@ -1610,10 +1708,12 @@ function renderAll() {
 function rerenderSizes() { renderHeadline(); renderScatter(); renderPairs(); renderExplorer(); renderLatency(); renderInterv(); }
 function init() {
   const fams = famsIn(D.splits.dev);
-  ['#legend-fam', '#legend-fam2', '#legend-fam3', '#legend-fam4'].forEach(id => legend(id, fams));
+  ['#legend-fam', '#legend-fam2', '#legend-fam4'].forEach(id => legend(id, fams));
+  legend('#legend-fam3', ['hosted', 'system_one', 'generic'].filter(f => D.latency && D.latency.stack.some(x => x.family === f)), D.lat_families);
   const sel = $('#c-pol');
   for (const k of Object.keys(D.policies)) sel.append(h('option', {value: k, text: D.policies[k].label}));
   sel.append(h('option', {value: 'custom', text: 'custom cutoff (pure certainty)'}));
+  sel.value = D.default_policy;
   const ho = $('#sp-holdout'); if (!D.splits.holdout) { ho.disabled = true; ho.title = 'holdout pending'; ho.textContent = 'Holdout (pending)'; }
   $('#sp-dev').addEventListener('click', () => { split = 'dev'; SELECTED = null; $('#dpanel').textContent = 'Click any cell to see the task, options, frozen label, label-audit notes and every judge\u2019s answer.'; renderAll(); });
   ho.addEventListener('click', () => { if (!D.splits.holdout) return; split = 'holdout'; SELECTED = null; $('#dpanel').textContent = 'Click any cell to see the task, options, frozen label, label-audit notes and every judge\u2019s answer.'; renderAll(); });

@@ -233,6 +233,31 @@ class ReportTests(unittest.TestCase):
             self.assertIn("run.json not found", html)
             self.assertIsNone(json.loads(re.search(r'<script id="data" type="application/json">(.*?)</script>', html, re.DOTALL).group(1))["splits"]["holdout"])
 
+    def test_calculator_default_is_read_shortcut_with_adversarial_note(self):
+        self.assertEqual(self.data["default_policy"], "read")
+        self.assertIn(self.data["default_policy"], self.data["policies"])
+        self.assertIn("sel.value = D.default_policy", self.html)
+        self.assertIsNotNone(self.data["policies"]["read"]["margin"])   # the read-shortcut policy carries a margin rule
+        self.assertIn("bundle read-shortcut", self.data["policies"]["read"]["label"])
+        m = re.search(r'id="calc-note">(.*?)</div>', self.html, re.DOTALL)
+        self.assertIsNotNone(m)
+        self.assertIn("adversarial", m.group(1))
+        self.assertIn("upper-bound stress numbers", m.group(1))
+        self.assertLess(self.html.index('id="calc-note"'), self.html.index('id="calc-out"'))
+
+    def test_latency_rows_labelled_by_model_family_and_endpoint(self):
+        info = report.lat_info("gen:tev1:4b|keepalive")
+        self.assertEqual((info["label"], info["endpoint"]), ("tev1 4b (Ollama)", "/api/generate"))
+        self.assertEqual(report.lat_info("so:tev1:4b|keepalive")["endpoint"], "/v1/systemone")
+        self.assertEqual(report.lat_info("gen:qwen3:8b|keepalive")["label"], "Qwen3 8b (Ollama)")
+        self.assertEqual(report.lat_info("laya|keepalive")["label"], "Laya")
+        self.assertNotIn("generic OllamaBackend", json.dumps(self.data["lat_families"]))
+
+    def test_sections_numbered_consecutively(self):
+        nums = [int(n) for n in re.findall(r"<h2>(\d+)\. ", self.html)]
+        self.assertEqual(nums, list(range(1, 14)))
+        self.assertIn("<h2>4. Pairwise judge comparison", self.html)
+
 
 if __name__ == "__main__":
     unittest.main()

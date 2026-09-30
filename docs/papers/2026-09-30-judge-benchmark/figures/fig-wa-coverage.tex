@@ -1,0 +1,45 @@
+% Wrong-automatic rate against coverage, with 95% Wilson whiskers on both axes.
+% #1 = split file stem (dev|holdout), #2 = title
+\newcommand{\wacovpanel}[2]{%
+\begin{tikzpicture}
+\begin{axis}[benchmark,
+  scale only axis, width=12.5cm, height=6.2cm,
+  xmin=15, xmax=100, ymin=0, ymax=40,
+  xlabel={Coverage: share of cases decided automatically (\%)},
+  ylabel={Wrong automatic (\% of cases)},
+  xmajorgrids, ymajorgrids,
+  legend style={at={(0.5,1.02)}, anchor=south, legend columns=3, /tikz/every even column/.append style={column sep=8pt}}, legend cell align=left,
+  clip=false,
+]
+\addplot[only marks, mark=*, mark size=2.6pt, color=okblue,
+  error bars/.cd, x dir=both, x explicit, y dir=both, y explicit, error bar style={okblue!55, line width=0.6pt}]
+  table[x=cov, y=wa, x error minus=covminus, x error plus=covplus, y error minus=waminus, y error plus=waplus]
+  {generated/data/scatter-#1-cloud.dat};
+\addlegendentry{Cloud LLM (self-reported $p$)}
+\addplot[only marks, mark=square*, mark size=2.6pt, color=okorange,
+  error bars/.cd, x dir=both, x explicit, y dir=both, y explicit, error bar style={okorange!55, line width=0.6pt}]
+  table[x=cov, y=wa, x error minus=covminus, x error plus=covplus, y error minus=waminus, y error plus=waplus]
+  {generated/data/scatter-#1-jev.dat};
+\addlegendentry{Jev 1.13}
+\addplot[only marks, mark=triangle*, mark size=3.0pt, color=okgreen,
+  error bars/.cd, x dir=both, x explicit, y dir=both, y explicit, error bar style={okgreen!55, line width=0.6pt}]
+  table[x=cov, y=wa, x error minus=covminus, x error plus=covplus, y error minus=waminus, y error plus=waplus]
+  {generated/data/scatter-#1-local.dat};
+\addlegendentry{Local model}
+\addplot[only marks, mark=none, nodes near coords, point meta=explicit symbolic,
+  visualization depends on={value \thisrow{anchor}\as\myanchor},
+  visualization depends on={\thisrow{dx}\as\mydx}, visualization depends on={\thisrow{dy}\as\mydy},
+  every node near coord/.append style={anchor=\myanchor, xshift=\mydx pt, yshift=\mydy pt, font=\scriptsize, inner sep=2.5pt, fill=white, fill opacity=0.8, text opacity=1}]
+  table[x=cov, y=wa, meta=label] {generated/data/scatter-#1-cloud.dat};
+\addplot[only marks, mark=none, nodes near coords, point meta=explicit symbolic,
+  visualization depends on={value \thisrow{anchor}\as\myanchor},
+  visualization depends on={\thisrow{dx}\as\mydx}, visualization depends on={\thisrow{dy}\as\mydy},
+  every node near coord/.append style={anchor=\myanchor, xshift=\mydx pt, yshift=\mydy pt, font=\scriptsize, inner sep=2.5pt, fill=white, fill opacity=0.8, text opacity=1}]
+  table[x=cov, y=wa, meta=label] {generated/data/scatter-#1-jev.dat};
+\addplot[only marks, mark=none, nodes near coords, point meta=explicit symbolic,
+  visualization depends on={value \thisrow{anchor}\as\myanchor},
+  visualization depends on={\thisrow{dx}\as\mydx}, visualization depends on={\thisrow{dy}\as\mydy},
+  every node near coord/.append style={anchor=\myanchor, xshift=\mydx pt, yshift=\mydy pt, font=\scriptsize, inner sep=2.5pt, fill=white, fill opacity=0.8, text opacity=1}]
+  table[x=cov, y=wa, meta=label] {generated/data/scatter-#1-local.dat};
+\end{axis}
+\end{tikzpicture}}
