@@ -70,11 +70,13 @@ class ScoringTests(unittest.TestCase):
         self.assertTrue(STUDY["uses_stated_choice"])
         self.assertFalse(BUNDLE["uses_stated_choice"])
 
-    def test_argmax_tie_prefers_stated_choice_else_sorted(self):
-        tie = {"a": .4, "b": .4, "reason": .2}
-        self.assertEqual(scoring.argmax_choice(tie, "b"), "b")
-        self.assertEqual(scoring.argmax_choice(tie), "a")
-        self.assertEqual(scoring.argmax_choice(tie, "reason"), "a")
+    def test_argmax_tie_takes_first_key_in_dict_order(self):
+        # Ties go to the first key in the answer's own order, like the bundle's max(dict, key=dict.get).
+        self.assertEqual(scoring.argmax_choice({"a": .4, "b": .4, "reason": .2}), "a")
+        self.assertEqual(scoring.argmax_choice({"b": .4, "a": .4, "reason": .2}), "b")
+        self.assertEqual(scoring.argmax_choice({"reason": .4, "a": .4, "b": .2}), "reason")
+        tie = choice({"b": .45, "a": .45, "reason": .1}, "a")
+        self.assertEqual(scoring.score(CASES["select-00"], tie, 1, BUNDLE)["predicted"], "b")
 
     def test_study_policy_matches_laya_quality(self):
         from evals import laya_quality
@@ -206,13 +208,27 @@ class StatsTests(unittest.TestCase):
         self.assertAlmostEqual(d["reliability"], .16)
         self.assertAlmostEqual(d["resolution"], 0)
         self.assertAlmostEqual(d["uncertainty"], .25)
-        self.assertAlmostEqual(d["reliability"] - d["resolution"] + d["uncertainty"], d["brier"])
+        self.assertAlmostEqual(d["reliability"] - d["resolution"] + d["uncertainty"], d["top_label_brier"])
         self.assertAlmostEqual(d["residual"], 0)
         conf = [.75] * 4 + [.25] * 4
         hit = [1, 1, 1, 0, 1, 0, 0, 0]
         d = stats.brier_decomposition(conf, hit)
-        self.assertAlmostEqual(d["reliability"] - d["resolution"] + d["uncertainty"], d["brier"])
+        self.assertAlmostEqual(d["reliability"] - d["resolution"] + d["uncertainty"], d["top_label_brier"])
         self.assertAlmostEqual(stats.ece(conf, hit), 0)
+
+    def test_generalized_decomposition_with_unequal_forecasts_in_a_bin(self):
+        # All four forecasts share bin 3 but differ, so Murphy's three terms alone are not the score.
+        conf = [.31, .39, .35, .33, .81, .85]
+        hit = [1, 0, 0, 1, 1, 1]
+        d = stats.brier_decomposition(conf, hit)
+        self.assertNotAlmostEqual(d["residual"], 0, places=3)
+        self.assertGreater(d["within_bin_variance"], 0)
+        self.assertNotEqual(d["within_bin_covariance"], 0)
+        full = (d["reliability"] - d["resolution"] + d["uncertainty"]
+                + d["within_bin_variance"] - d["within_bin_covariance"])
+        self.assertAlmostEqual(full, d["top_label_brier"], places=12)
+        self.assertAlmostEqual(d["residual"], d["within_bin_variance"] - d["within_bin_covariance"], places=12)
+        self.assertNotIn("brier", d)  # renamed so it is never confused with the multi-option mean_brier
 
 
 class ArmTests(unittest.TestCase):
@@ -567,6 +583,546 @@ class RunnerTests(unittest.TestCase):
             self.assertLess(len(rows), 12)
             self.assertTrue(json.loads((Path(tmp) / "run" / "run.json").read_text(encoding="utf-8"))
                             ["invocations"][0]["budget"]["stopped_early"])
+
+
+# ------------------------------------------------------------- review fixes (2026-09-30)
+
+def perfect(case, *, p=.96):
+    """A raw answer that is right and confident for `case`."""
+    if case["kind"] == "search":
+        return {"type": "noul", "noul": p if case["expected"] else 1 - p}
+    return choice({k: (p if k == case["expected"] else (1 - p) / 2) for k in case["payload"]["questions"]["decision"]["criteria"]})
+
+
+def picking(case, key, *, p=.96):
+    keys = list(case["payload"]["questions"]["decision"]["criteria"])
+    return choice({k: (p if k == key else (1 - p) / (len(keys) - 1)) for k in keys})
+
+
+def make_rows(arm, cases, answer_for, *, reps=(1,), elapsed=100.0, tokens=(1000, 10), skip=lambda case, rep: False,
+              invalid=lambda case, rep: False):
+    rows = []
+    for rep in reps:
+        for order in (0, 1):
+            for case in cases:
+                if skip(case, rep):
+                    continue
+                row = {"arm": arm, "rep": rep, "id": case["id"], "screen": case.get("screen", "original"),
+                       "kind": case["kind"], "expected": case["expected"], "order": order, "valid": True,
+                       "elapsed_ms": elapsed, "model": "m", "input_tokens": tokens[0], "output_tokens": tokens[1],
+                       "answer": answer_for(case)}
+                if invalid(case, rep):
+                    row.update(valid=False, error="ValueError: nope")
+                    row.pop("answer")
+                rows.append(row)
+    return rows
+
+
+def run_summary(rows, cases, specs=None, contrasts=(), policies=None, B=200, split=None):
+    policies = policies or [BUNDLE]
+    return summarize(rows, cases, {}, policies, specs=specs or {}, contrasts=[list(c) for c in contrasts],
+                     bootstrap_b=B, split=split)
+
+
+class CaseOutcomeTests(unittest.TestCase):
+    """The preregistered unit: all manifest cases, missing/invalid = fallback, majority, ties to rep 1."""
+
+    four = [CASES["select-00"], CASES["select-01"], CASES["select-02"], CASES["search-00"]]
+
+    def outcome(self, per_rep_correct, cid="select-00"):
+        """per_rep_correct: rep -> True (right) | False (wrong) | None (row missing) | 'invalid'."""
+        case = CASES[cid]
+        wrong = "b" if case["expected"] == "a" else "a"
+        rows = []
+        for rep, state in per_rep_correct.items():
+            if state is None:
+                rows.append({"arm": "X", "rep": rep, "id": "select-03", "order": 0, "valid": True,
+                             "elapsed_ms": 1, "answer": perfect(CASES["select-03"])})  # keeps the rep alive
+                continue
+            row = {"arm": "X", "rep": rep, "id": cid, "order": 0, "elapsed_ms": 1, "valid": state != "invalid"}
+            if state != "invalid":
+                row["answer"] = perfect(case) if state else picking(case, wrong)
+            rows.append(row)
+        return summarize_module.case_outcomes(rows, [case, CASES["select-03"]], BUNDLE, "X")[cid]
+
+    def test_denominator_is_every_case_and_dead_rows_are_fallbacks(self):
+        good = make_rows("dead", self.four[:2], perfect, reps=(1, 2, 3))  # two cases never answered
+        good += make_rows("dead", self.four[2:3], perfect, reps=(1, 2, 3), invalid=lambda c, r: True)
+        good += make_rows("live", self.four, perfect, reps=(1, 2, 3))
+        out = summarize_module.case_outcomes(good, self.four, BUNDLE, "dead")
+        self.assertEqual(list(out), [c["id"] for c in self.four])  # all four, manifest order
+        self.assertTrue(out["select-00"]["correct"] and out["select-00"]["automatic"])
+        for cid in ("select-02", "search-00"):  # invalid / missing everywhere
+            self.assertEqual(out[cid], {"correct": False, "automatic": False, "automatic_error": False})
+        summary = run_summary(good, self.four, contrasts=[("dead", "live")], policies=[BUNDLE, CUA])
+        block = summary["arms"]["dead"]["policies"]["bundle-read-shortcut"]["reps"]["1"]
+        self.assertEqual((block["n"], block["valid"], block["missing"], block["invalid"]), (4, 2, 1, 1))
+        self.assertEqual(block["accuracy"]["n"], 4)
+        pair = summary["pairwise"]["contrasts"]["correct"][0]
+        self.assertEqual((pair["n_pairs"], pair["b_only"], pair["a_only"]), (4, 2, 0))  # all cases, not the 2 seen
+        vote = summary["arms"]["dead"]["policies"]["bundle-read-shortcut"]["across_reps"]["majority_vote"]
+        self.assertEqual((vote["n"], vote["correct"]), (4, 2))
+
+    def test_three_reps_majority_counts_dead_reps_as_wrong(self):
+        self.assertTrue(self.outcome({1: True, 2: True, 3: "invalid"})["correct"])
+        self.assertFalse(self.outcome({1: True, 2: False, 3: "invalid"})["correct"])
+        self.assertFalse(self.outcome({1: True, 2: None, 3: None})["correct"])  # 1 of 3 reps right
+        self.assertTrue(self.outcome({1: False, 2: True, 3: True})["correct"])
+
+    def test_even_rep_count_ties_break_toward_rep_one(self):
+        self.assertFalse(self.outcome({1: False, 2: True})["correct"])
+        self.assertTrue(self.outcome({1: True, 2: False})["correct"])
+        self.assertTrue(self.outcome({1: True, 2: False, 3: False, 4: True})["correct"])
+        self.assertTrue(self.outcome({2: True, 3: False})["correct"])  # reps 2 and 3 only: the lowest present (2) decides
+
+    def test_rep_counts_are_flagged_on_contrasts(self):
+        rows = make_rows("A", self.four, perfect, reps=(1, 2, 3)) + make_rows("B", self.four, perfect, reps=(1,))
+        pair = run_summary(rows, self.four, contrasts=[("A", "B")])["pairwise"]["contrasts"]["correct"][0]
+        self.assertEqual(pair["rep_counts"], {"A": 3, "B": 1})
+        self.assertFalse(pair["rep_counts_equal"])
+
+    def test_report_uses_the_shared_function(self):
+        from evals.judge_bench import report
+        import inspect
+        source = inspect.getsource(report)
+        self.assertIn("summarize.case_outcomes", source)
+        self.assertNotIn("def _majority", source)
+
+
+from evals.judge_bench import summarize as summarize_module  # noqa: E402
+
+
+class SummaryAccountingTests(unittest.TestCase):
+    cases = [CASES["select-00"], CASES["select-01"], CASES["search-00"]]
+
+    def test_errors_timeouts_missing_unscorable_repaired(self):
+        rows = make_rows("A", self.cases, perfect)
+        rows[0].update(valid=False, elapsed_ms=5000.0, error="TimeoutError: slow")
+        rows[0].pop("answer")
+        rows.append({"arm": "A", "rep": 1, "id": "select-01", "order": 0, "valid": True, "elapsed_ms": 1,
+                     "answer": {"type": "choice", "probabilities": {"zzz": 1.0}}})  # replaces nothing: same key wins last
+        rows = [r for r in rows if not (r["id"] == "select-01" and r["order"] == 0 and "zzz" not in json.dumps(r))]
+        rows = [r for r in rows if not (r["id"] == "search-00" and r["order"] == 0)]  # missing
+        rows.append({"arm": "A", "rep": 1, "id": "search-00", "order": 1, "valid": True, "elapsed_ms": 4000.0,
+                     "answer": {"type": "noul", "noul": .9, "repaired": True}})
+        summary = run_summary(rows, self.cases)
+        arm = summary["arms"]["A"]
+        block = arm["policies"]["bundle-read-shortcut"]["reps"]["1"]
+        self.assertEqual((block["n"], block["invalid"], block["unscorable"], block["missing"]), (3, 1, 1, 1))
+        lat = arm["reps"]["1"]["latency"]
+        self.assertEqual(lat["errors"], 1)
+        self.assertGreaterEqual(lat["over_3000ms"], 2)  # the invalid 5000 ms row and the valid 4000 ms row
+        self.assertEqual(lat["over_3000ms_valid"], 1)
+        self.assertEqual(lat["p95_ms_all_requests"], 5000.0)
+        self.assertLess(lat["p95_ms"], 5000.0)  # p50/p95 stay over valid rows
+        self.assertEqual(summary["n_cases"], 3)
+        repaired = run_summary([dict(r) for r in rows if r["order"] == 1] + [
+            dict(r, order=0) for r in rows if r["id"] == "search-00"], self.cases)
+        self.assertEqual(repaired["arms"]["A"]["policies"]["bundle-read-shortcut"]["reps"]["1"]["repaired"], 1)
+
+    def test_cost_none_for_unpriced_hosted_and_priority_applied(self):
+        specs = {"H": {"adapter": "chat", "name": "H"}, "L": {"adapter": "systemone", "local": True, "name": "L"},
+                 "P": {"adapter": "chat", "name": "P", "price_in": 1.0, "price_out": 0.0, "service_tier": "priority",
+                       "priority_multiplier": 2.0},
+                 "N": {"adapter": "chat", "name": "N", "price_in": 1.0, "price_out": 0.0, "priority_multiplier": 2.0}}
+        rows = sum((make_rows(a, self.cases, perfect, tokens=(1000, 0)) for a in "HLPN"), [])
+        arms = run_summary(rows, self.cases, specs=specs)["arms"]
+        cost = lambda a: arms[a]["reps"]["1"]["cost"]
+        self.assertIsNone(cost("H")["usd_per_1m_decisions"])
+        self.assertEqual(cost("H")["note"], "unpriced")
+        self.assertEqual(cost("L")["usd_per_1m_decisions"], 0.0)
+        self.assertAlmostEqual(cost("N")["usd_per_1m_decisions"], 1000.0)
+        self.assertAlmostEqual(cost("P")["usd_per_1m_decisions"], 2000.0)  # priority tier billed at 2x
+        self.assertAlmostEqual(cost("P")["usd_per_1m_decisions_list"], 1000.0)
+        self.assertEqual(cost("P")["service_tier"], "priority")
+
+    def test_billed_requests_include_unusable_ones(self):
+        rows = make_rows("A", self.cases, perfect, tokens=(500, 5), invalid=lambda c, r: c["id"] == "search-00")
+        summary = run_summary(rows, self.cases, specs={"A": {"adapter": "chat", "name": "A", "price_in": 1.0,
+                                                             "price_out": 0.0}})
+        self.assertEqual(summary["arms"]["A"]["reps"]["1"]["cost"]["requests"], 6)  # 3 cases x 2 orders
+
+
+class ArmRepairTests(unittest.TestCase):
+    def decide(self, content, usage=None, case="select-00"):
+        arm = arms.ChatJudgeArm("t", "gpt-6-luna", "test-token")
+        client = FakeClient(lambda url, body: chat_response(content, usage=usage))
+        return asyncio.run(arm.decide(client, CASES[case]["payload"]))
+
+    def test_repaired_flag(self):
+        clean = self.decide({"choice": "a", "probabilities": {"a": .9, "b": .05, "reason": .05}})["answer"]
+        self.assertFalse(clean["repaired"])
+        small = self.decide({"choice": "a", "probabilities": {"a": .903, "b": .05, "reason": .05}})["answer"]
+        self.assertFalse(small["repaired"])  # moved by < 0.01
+        big = self.decide({"choice": "a", "probabilities": {"a": .6, "b": .4, "reason": .2}})["answer"]
+        self.assertTrue(big["repaired"])
+        neg = self.decide({"choice": "a", "probabilities": {"a": -.05, "b": .5, "reason": .5}})["answer"]
+        self.assertTrue(neg["repaired"])
+        self.assertEqual(neg["probabilities"]["a"], 0.0)
+        noul = self.decide({"probability_true": -.2}, case="search-00")["answer"]
+        self.assertEqual((noul["noul"], noul["repaired"]), (0.0, True))
+        self.assertFalse(self.decide({"probability_true": .7}, case="search-00")["answer"]["repaired"])
+
+    def test_non_finite_and_above_one_are_invalid_but_billed(self):
+        usage = {"prompt_tokens": 210, "completion_tokens": 33}
+        for bad in (float("nan"), float("inf"), 1.5):
+            with self.subTest(bad=bad):
+                with self.assertRaises(arms.ArmParseError) as ctx:
+                    self.decide({"choice": "a", "probabilities": {"a": bad, "b": .1, "reason": .1}}, usage=usage)
+                self.assertEqual(ctx.exception.usage, (210, 33))
+                self.assertEqual(ctx.exception.http_status, 200)
+        with self.assertRaises(arms.ArmParseError):
+            self.decide({"probability_true": float("nan")}, case="search-00")
+        with self.assertRaises(arms.ArmParseError):
+            self.decide({"probability_true": 1.2}, case="search-00")
+
+    def test_unparseable_200_body_carries_usage(self):
+        arm = arms.ChatJudgeArm("t", "gpt-6-luna", "test-token")
+        client = FakeClient(lambda url, body: FakeResponse(
+            {"choices": [{"message": {"content": "not json"}}], "usage": {"prompt_tokens": 7, "completion_tokens": 3}}))
+        with self.assertRaises(arms.ArmParseError) as ctx:
+            asyncio.run(arm.decide(client, CASES["select-00"]["payload"]))
+        self.assertEqual(ctx.exception.usage, (7, 3))
+        spend = judges.Spend(1.0)
+        specs = {"gpt-6-luna": {"adapter": "chat", "price_in": 1_000_000.0, "price_out": 0.0}}
+        row = {}
+        judges._charge_unusable(ctx.exception, "gpt-6-luna", specs, spend, row)
+        self.assertAlmostEqual(spend.total, 7.0)
+        self.assertEqual((row["input_tokens"], row["http_status"]), (7, 200))
+        judges._charge_unusable(ValueError("no usage"), "gpt-6-luna", specs, spend, row)  # nothing to charge
+        self.assertAlmostEqual(spend.total, 7.0)
+
+    def test_ollama_answer_carries_argmax_choice_so_study_policy_works(self):
+        answer = self_answer = ArmTests().ollama_probabilities(True)["answer"]
+        probabilities = answer["probabilities"]
+        self.assertEqual(answer["choice"], max(probabilities, key=probabilities.get))
+        replay = scoring.score(CASES["select-00"], self_answer, 1, STUDY)
+        self.assertEqual(replay["predicted"], answer["choice"])
+
+
+class PolicyValidationTests(unittest.TestCase):
+    def test_noop_modifiers_and_bad_cutoffs_rejected(self):
+        for name in ("study-0.75+noul-gate", "cutoff-0.9+noul-gate", "cutoff-nan", "cutoff-inf", "cutoff-1.5",
+                     "cutoff-", "no-such-policy", "bundle-cua+noul-gate+typo"):
+            with self.subTest(name=name), self.assertRaises((KeyError, ValueError)):
+                scoring.resolve_policy(name)
+        for t in (float("nan"), float("inf"), -.1, True):
+            with self.assertRaises(ValueError):
+                scoring.cutoff(t)
+        self.assertTrue(scoring.resolve_policy("bundle-read-shortcut+noul-gate+host-guard")["noul_gate"])
+        self.assertTrue(scoring.resolve_policy("cutoff-0.9+host-guard")["host_guard"])
+
+    def test_policies_validated_before_any_request(self):
+        judges.validate_policies(["bundle-read-shortcut", "cutoff-0.9"], "bundle-read-shortcut")
+        with self.assertRaises(KeyError):
+            judges.validate_policies(["bundle-read-shortcut", "bogus"], "bundle-read-shortcut")
+        with self.assertRaises(ValueError):
+            judges.validate_policies(["bundle-read-shortcut"], "bundle-cua")
+        from unittest import mock
+        cfg = judges.load_config()
+        cfg["defaults"]["policies"] = cfg["defaults"]["policies"] + ["study-0.75+noul-gate"]
+        err = io.StringIO()
+        with mock.patch.object(judges, "load_config", lambda: cfg), contextlib.redirect_stderr(err), \
+                mock.patch.object(judges, "build_arm", side_effect=AssertionError("must not reach the arms")):
+            self.assertEqual(judges.main(["--split", "dev", "--limit", "3", "--out", "/nonexistent/never"]), 2)
+        self.assertIn("invalid policy", err.getvalue())
+
+
+class HoldoutGuardHardeningTests(unittest.TestCase):
+    repo = GuardTests.repo
+
+    def test_uncommitted_benchmark_code_is_refused(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root, holdout = self.repo(tmp)
+            (root / "evals").mkdir(exist_ok=True)
+            (root / "evals" / "judges.py").write_text("x = 1\n", encoding="utf-8")
+            subprocess.run(["git", "-C", tmp, "add", "-A"], check=True, capture_output=True)
+            subprocess.run(["git", "-C", tmp, "-c", "user.email=t@t", "-c", "user.name=t", "commit", "-qm", "code"],
+                           check=True, capture_output=True)
+            self.assertEqual(len(judges.check_holdout_guard(root, holdout)), 64)  # clean: accepted
+            (root / "evals" / "judges.py").write_text("x = 2\n", encoding="utf-8")
+            with self.assertRaisesRegex(judges.GuardError, "uncommitted changes in the benchmark code"):
+                judges.check_holdout_guard(root, holdout)
+            subprocess.run(["git", "-C", tmp, "checkout", "--", "evals/judges.py"], check=True, capture_output=True)
+            (root / "evals" / "judge_bench").mkdir(exist_ok=True)
+            (root / "evals" / "judge_bench" / "extra.py").write_text("y = 1\n", encoding="utf-8")  # untracked
+            with self.assertRaisesRegex(judges.GuardError, "uncommitted changes in the benchmark code"):
+                judges.check_holdout_guard(root, holdout)
+
+    def test_limit_refused_with_holdout(self):
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err), contextlib.redirect_stdout(io.StringIO()):
+            code = judges.main(["--split", "holdout", "--limit", "5"])
+        self.assertEqual(code, 2)
+        self.assertIn("--limit is not allowed", err.getvalue())
+
+    def test_run_checks_preregistered_hash_before_any_request(self):
+        from types import SimpleNamespace
+        cases = case_lib.dev_cases()[:3]
+        with tempfile.TemporaryDirectory() as tmp:
+            args = SimpleNamespace(out=Path(tmp) / "run", append=False, reps=1, concurrency=1, budget_usd=1.0)
+            err = io.StringIO()
+            with contextlib.redirect_stderr(err):
+                code = asyncio.run(judges.run(args, judges.load_config(), cases, {}, "holdout", ["jev-1.13"], False,
+                                              prereg_sha="0" * 64))
+            self.assertEqual(code, 2)
+            self.assertIn("not the preregistered", err.getvalue())
+            self.assertFalse((Path(tmp) / "run" / "manifest.json").exists())  # nothing written, nothing sent
+            # an existing manifest whose sha is not the preregistered one is refused too
+            (Path(tmp) / "run").mkdir(exist_ok=True)
+            sha = case_lib.cases_sha256(cases)
+            (Path(tmp) / "run" / "manifest.json").write_text(json.dumps({"cases_sha256": "1" * 64}), encoding="utf-8")
+            (Path(tmp) / "run" / "run.json").write_text("{}", encoding="utf-8")
+            args.append = True
+            with contextlib.redirect_stderr(io.StringIO()):
+                code = asyncio.run(judges.run(args, judges.load_config(), cases, {}, "holdout", ["jev-1.13"], False,
+                                              prereg_sha=sha))
+            self.assertEqual(code, 2)
+
+
+class RunnerRobustnessTests(unittest.TestCase):
+    Oracle = RunnerTests.Oracle
+    run_main = RunnerTests.run_main
+
+    class FakeDecisions:
+        name, determinism, model = "openai-decisions", {"temperature_sent": None, "seed_sent": None}, None
+
+        def __init__(self, status):
+            self.status = status
+
+        usable = property(lambda self: self.status == 200)
+
+        async def probe(self, client):
+            return self.status, "fake body"
+
+        async def decide(self, client, payload):
+            return await RunnerTests.Oracle("openai-decisions").decide(client, payload)
+
+    def seed_decisions_rows(self, run):
+        rows = [json.loads(l) for l in (run / "requests.jsonl").read_text(encoding="utf-8").splitlines()]
+        stored = [dict(r, arm="openai-decisions", model="stored") for r in rows if r["arm"] == "jev-1.13"]
+        with (run / "requests.jsonl").open("a", encoding="utf-8") as f:
+            for r in stored:
+                f.write(json.dumps(r) + "\n")
+        return len(stored)
+
+    def stored(self, run):
+        return [json.loads(l) for l in (run / "requests.jsonl").read_text(encoding="utf-8").splitlines()
+                if json.loads(l)["arm"] == "openai-decisions"]
+
+    def test_append_keeps_stored_decisions_rows_unless_reprobed_and_run(self):
+        from unittest import mock
+        with tempfile.TemporaryDirectory() as tmp:
+            run = Path(tmp) / "run"
+            self.assertEqual(self.run_main(tmp, "--arms", "jev-1.13", "--reps", "1"), 0)
+            n = self.seed_decisions_rows(run)
+            # 1. not probed in this invocation: rows survive
+            self.assertEqual(self.run_main(tmp, "--arms", "gpt-6-luna", "--reps", "1", "--append"), 0)
+            self.assertEqual(len(self.stored(run)), n)
+            # 2. probed but unavailable (404): rows survive, the probe is recorded
+            with mock.patch.object(judges, "OpenAIDecisionsArm", lambda *a, **k: self.FakeDecisions(404)):
+                self.assertEqual(self.run_main(tmp, "--arms", "openai-decisions", "gpt-6-luna", "--reps", "1",
+                                               "--append"), 0)
+            self.assertEqual(len(self.stored(run)), n)
+            doc = json.loads((run / "run.json").read_text(encoding="utf-8"))
+            self.assertEqual(doc["invocations"][-1]["openai_decisions_probe"]["status"], 404)
+            # 3. probed and 200: this invocation replaces them
+            with mock.patch.object(judges, "OpenAIDecisionsArm", lambda *a, **k: self.FakeDecisions(200)):
+                self.assertEqual(self.run_main(tmp, "--arms", "openai-decisions", "--reps", "1", "--append"), 0)
+            fresh = self.stored(run)
+            self.assertEqual(len(fresh), 6 * 2)
+            self.assertNotIn("stored", {r["model"] for r in fresh})
+
+    def test_run_json_exists_before_first_request_and_append_needs_it(self):
+        seen = []
+        outer = self
+
+        class Spy(RunnerTests.Oracle):
+            async def decide(self, client, payload):
+                run = Path(outer.tmp) / "run" / "run.json"
+                seen.append((run.exists(), json.loads(run.read_text(encoding="utf-8"))["invocations"][-1]["status"]
+                             if run.exists() else None))
+                return await super().decide(client, payload)
+        import os
+        from unittest import mock
+        with tempfile.TemporaryDirectory() as tmp:
+            self.tmp = tmp
+            with mock.patch.object(judges, "build_arm", lambda spec, specs: Spy(spec["name"])), \
+                    mock.patch.dict(os.environ, {"OPENAI_API_KEY": "sk-x", "TYPESAFE_API_KEY": "tk-x"}), \
+                    contextlib.redirect_stdout(io.StringIO()):
+                code = judges.main(["--split", "dev", "--limit", "6", "--out", str(Path(tmp) / "run"),
+                                    "--arms", "jev-1.13", "--reps", "1"])
+            self.assertEqual(code, 0)
+            self.assertTrue(seen)
+            self.assertEqual(set(seen), {(True, "running")})  # on disk, marked running, before any request
+            doc = json.loads((Path(tmp) / "run" / "run.json").read_text(encoding="utf-8"))
+            self.assertEqual(doc["invocations"][-1]["status"], "complete")
+            (Path(tmp) / "run" / "run.json").unlink()
+            err = io.StringIO()
+            with contextlib.redirect_stderr(err):
+                self.assertEqual(self.run_main(tmp, "--arms", "gpt-6-luna", "--reps", "1", "--append"), 2)
+            self.assertIn("run.json is missing", err.getvalue())
+
+    def test_summary_carries_decisions_split_and_label(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            self.assertEqual(self.run_main(tmp, "--arms", "jev-1.13", "gpt-6-luna", "--reps", "1"), 0)
+            summary = json.loads((Path(tmp) / "run" / "summary.json").read_text(encoding="utf-8"))
+            self.assertEqual((summary["split"], summary["label"]), ("dev", "screen"))
+            self.assertEqual(summary["decisions"]["label"], "screen")
+            self.assertIn("candidates", summary["decisions"]["rule1_default_judge"])
+
+
+class DecisionsTests(unittest.TestCase):
+    dev = case_lib.dev_cases()
+    ten = [c for c in dev if c["kind"] == "select" and c["expected"] in ("a", "b")][:10]
+    jev_specs = {"jev-1.13": {"adapter": "systemone", "name": "jev-1.13", "price_in": 0.042, "price_out": 0.0}}
+
+    def wrong(self, case):
+        return picking(case, "b" if case["expected"] == "a" else "a")
+
+    def rule1(self, rows, specs, cases=None, contrasts=()):
+        cases = cases or self.ten
+        return run_summary(rows, cases, specs=specs, B=300, contrasts=contrasts)["decisions"]["rule1_default_judge"]
+
+    def scenario(self, cand_elapsed=100.0, cand_spec=None):
+        wrong_ids = {c["id"] for c in self.ten[:6]}
+        jev = make_rows("jev-1.13", self.ten, lambda c: self.wrong(c) if c["id"] in wrong_ids else perfect(c),
+                        tokens=(1000, 0))
+        cand = make_rows("cand", self.ten, perfect, tokens=(1000, 0), elapsed=cand_elapsed)
+        specs = dict(self.jev_specs, cand=cand_spec or {"adapter": "chat", "name": "cand", "price_in": 0.05,
+                                                        "price_out": 0.0})
+        return self.rule1(jev + cand, specs)["candidates"]["cand"]
+
+    def test_rule1_replaces_default_only_when_every_condition_holds(self):
+        good = self.scenario()
+        self.assertEqual(good["accuracy"]["diff"], .6)  # candidate - jev, sign as stated
+        self.assertEqual(good["wrong_automatic"]["diff"], -.6)
+        self.assertLess(good["accuracy"]["p_holm"], .05)
+        self.assertEqual(good["superior_on"], ["accuracy", "wrong_automatic"])
+        self.assertTrue(good["non_inferior_accuracy"] and good["non_inferior_wrong_auto"])
+        self.assertTrue(good["p95_ok"] and good["cost_ok"] and good["valid_ok"])
+        self.assertTrue(good["replaces_default"])
+        self.assertFalse(self.scenario(cand_elapsed=900.0)["replaces_default"])  # p95 > 500 ms
+        self.assertFalse(self.scenario(cand_spec={"adapter": "chat", "name": "cand"})["replaces_default"])  # unpriced
+        self.assertIsNone(self.scenario(cand_spec={"adapter": "chat", "name": "cand"})["cost_usd_per_1m"])
+        pricey = self.scenario(cand_spec={"adapter": "chat", "name": "cand", "price_in": 0.09, "price_out": 0.0})
+        self.assertFalse(pricey["cost_ok"])  # > 2x Jev's 0.042
+
+    def test_rule1_needs_non_inferiority_and_validity(self):
+        jev = make_rows("jev-1.13", self.ten, perfect, tokens=(1000, 0))
+        worse = make_rows("cand", self.ten, lambda c: self.wrong(c) if c["id"] in {x["id"] for x in self.ten[:3]}
+                          else perfect(c), tokens=(1000, 0))
+        cand = self.rule1(jev + worse, dict(self.jev_specs, cand={"adapter": "chat", "name": "cand",
+                                                                  "price_in": 0.05}))["candidates"]["cand"]
+        self.assertFalse(cand["non_inferior_accuracy"])
+        self.assertEqual(cand["superior_on"], [])
+        self.assertFalse(cand["replaces_default"])
+        flaky = make_rows("cand", self.ten, perfect, tokens=(1000, 0),
+                          invalid=lambda c, r: c["id"] == self.ten[0]["id"])  # 90% valid < 98%
+        cand = self.rule1(jev + flaky, dict(self.jev_specs, cand={"adapter": "chat", "name": "cand",
+                                                                  "price_in": 0.05}))["candidates"]["cand"]
+        self.assertFalse(cand["valid_ok"])
+        self.assertEqual(cand["valid_share_by_rep"], {"1": .9})
+
+    def test_rule1_absent_without_jev(self):
+        rows = make_rows("cand", self.ten, perfect)
+        self.assertFalse(self.rule1(rows, {})["available"])
+
+    def test_rule2_offline_tier(self):
+        specs = {"L1": {"adapter": "systemone", "local": True, "name": "L1"},
+                 "L2": {"adapter": "ollama_backend", "name": "L2"},
+                 "L3": {"adapter": "systemone", "local": True, "name": "L3"}, "H": {"adapter": "chat", "name": "H"}}
+        cases = self.dev
+        rows = (make_rows("L1", cases, perfect) + make_rows("H", cases, perfect)
+                + make_rows("L2", cases, lambda c: self.wrong(c) if c["kind"] == "select" and c["expected"] in "ab"
+                            else perfect(c))
+                + make_rows("L3", cases, lambda c: choice({"a": .34, "b": .33, "reason": .33})
+                            if c["kind"] != "search" else {"type": "noul", "noul": .5}))  # never confident: below the floor
+        rule = run_summary(rows, cases, specs=specs, B=100)["decisions"]["rule2_offline_tier"]
+        self.assertEqual(rule["best"], "L1")
+        self.assertEqual(rule["recommended"], "L1")  # 0/90 wrong-automatic: Wilson upper ~0.04 < 0.10
+        self.assertEqual([r["arm"] for r in rule["ranking"]], ["L1", "L2"])
+        self.assertIn("L3", rule["below_coverage_floor"])
+        self.assertNotIn("H", json.dumps(rule["ranking"]))  # hosted arms are not in the offline tier
+        small = run_summary(make_rows("L1", self.ten, perfect), self.ten, specs=specs, B=100)["decisions"]
+        self.assertEqual(small["rule2_offline_tier"]["best"], "L1")
+        self.assertIsNone(small["rule2_offline_tier"]["recommended"])  # 0/10: Wilson upper 0.28
+
+    def test_rule2_tie_goes_to_accuracy(self):
+        specs = {"A": {"adapter": "systemone", "local": True, "name": "A"},
+                 "B": {"adapter": "systemone", "local": True, "name": "B"}}
+        cases = self.dev
+
+        def timid(case):  # no automatic errors, but wrong (falls back to reason) on the select cases
+            return perfect(case) if case["kind"] == "search" else picking(case, "reason")
+        rows = make_rows("A", cases, timid) + make_rows("B", cases, perfect)
+        rule = run_summary(rows, cases, specs=specs, B=100)["decisions"]["rule2_offline_tier"]
+        self.assertEqual([r["arm"] for r in rule["ranking"]], ["B", "A"])  # equal wrong-auto (0), B is more accurate
+
+    def side_effect_scenario(self, intervention):
+        specs = {"Base": {"adapter": "systemone", "local": True, "name": "Base"},
+                 "Base+sideeffect-clause": {"adapter": "instruction_clause", "base": "Base", "local": True,
+                                            "name": "Base+sideeffect-clause"}}
+        tags = case_lib.load_tags("dev")
+        risky = {cid for cid, t in tags.items() if t["side_effect_option"] and CASES.get(cid, {}).get("expected") == "reason"}
+        base = make_rows("Base", self.dev, lambda c: picking(c, "a") if c["id"] in risky else perfect(c))
+        new = make_rows("Base+sideeffect-clause", self.dev, intervention(risky))
+        return run_summary_with_tags(base + new, self.dev, tags, specs), risky
+
+    def test_rule4_prompt_clause_confirmed_and_rejected(self):
+        ok, risky = self.side_effect_scenario(lambda risky: perfect)
+        i1 = ok["decisions"]["rule4_interventions"]["I1_prompt_clause"]
+        entry = i1["arms"][0]
+        self.assertEqual(entry["targeted_wrong_auto_before"], len(risky))
+        self.assertGreater(len(risky), 0)
+        self.assertEqual((entry["targeted_wrong_auto_after"], entry["reduction"]), (0, 1.0))
+        self.assertGreater(entry["accuracy_change_cases"], 0)
+        self.assertTrue(entry["confirmed"] and i1["overall"]["confirmed"])
+        self.assertEqual(entry["mcnemar_automatic_error"]["only_before"], len(risky))
+        # an "intervention" that defers everything kills coverage and accuracy: reduction alone is not enough
+        bad, _ = self.side_effect_scenario(lambda risky: (lambda c: perfect(c) if c["kind"] == "search" else picking(c, "reason")))
+        entry = bad["decisions"]["rule4_interventions"]["I1_prompt_clause"]["arms"][0]
+        self.assertEqual(entry["reduction"], 1.0)
+        self.assertFalse(entry["guards_ok"])
+        self.assertFalse(entry["confirmed"])
+        self.assertLess(entry["coverage_change_points"], -10)
+
+    def test_rule4_policy_interventions_on_the_same_answers(self):
+        specs = {"Base": {"adapter": "systemone", "local": True, "name": "Base"}}
+        tags = case_lib.load_tags("dev")
+        risky = {cid for cid, t in tags.items() if t["side_effect_option"] and CASES.get(cid, {}).get("expected") == "reason"}
+
+        def answer(c):
+            if c["id"] in risky:
+                return picking(c, "a")
+            if c["kind"] == "search":  # one wrong yes/no at p=0.8: automatic today, held back by the 0.90 noul gate
+                return {"type": "noul", "noul": .8} if c["id"] == "search-03" else perfect(c)
+            return perfect(c)
+        rows = make_rows("Base", self.dev, answer)
+        d = run_summary_with_tags(rows, self.dev, tags, specs)["decisions"]["rule4_interventions"]
+        i2 = d["I2"]["arms"][0]
+        self.assertEqual(i2["accuracy_change_cases"], 0)  # a policy never changes the answer
+        self.assertEqual(i2["targeted_wrong_auto_after"], 0)
+        self.assertTrue(i2["confirmed"])
+        i3 = d["I3"]["arms"][0]
+        self.assertEqual((i3["targeted_wrong_auto_before"], i3["targeted_wrong_auto_after"]), (1, 0))
+        self.assertTrue(i3["confirmed"])
+        self.assertLess(i3["coverage_change_points"], 0)
+        both = d["I2+I3"]
+        self.assertEqual(both["policy"], "bundle-read-shortcut+noul-gate+host-guard")
+        self.assertTrue(both["overall"]["confirmed"])
+
+    def test_labels(self):
+        rows = make_rows("jev-1.13", self.ten, perfect)
+        self.assertEqual(run_summary(rows, self.ten)["decisions"]["label"], "screen")
+        holdout = [dict(c, screen="holdout") for c in self.ten]
+        summary = run_summary(make_rows("jev-1.13", holdout, perfect), holdout)
+        self.assertEqual((summary["split"], summary["label"]), ("holdout", "preregistered"))
+        self.assertEqual(summary["decisions"]["label"], "preregistered")
+
+
+def run_summary_with_tags(rows, cases, tags, specs, B=100):
+    return summarize(rows, cases, tags, [BUNDLE], specs=specs, contrasts=[], bootstrap_b=B)
 
 
 if __name__ == "__main__":

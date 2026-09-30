@@ -13,7 +13,6 @@ import math
 import re
 
 TOL = 1e-9
-TIE = 1e-12
 
 # Deterministic and pre-declared: no per-case exceptions, no LLM judgement.
 HOST_SIDE_EFFECT = re.compile(
@@ -33,6 +32,8 @@ POLICIES: dict[str, dict] = {
 
 def cutoff(t: float) -> dict:
     """Study-style certainty cutoff for threshold sweeps: argmax predicted, no timeout."""
+    if isinstance(t, bool) or not isinstance(t, (int, float)) or not math.isfinite(t) or not 0 <= t <= 1:
+        raise ValueError(f"cutoff must be a finite number in [0, 1], got {t!r}")
     return {"name": f"cutoff-{t:g}", "kind": "cutoff", "threshold": t, "uses_stated_choice": False,
             "sweep": True}
 
@@ -43,7 +44,10 @@ def with_host_guard(policy: dict) -> dict:
 
 
 def with_noul_gate(policy: dict) -> dict:
-    """Pre-declared intervention: a yes/no answer is automatic only at certainty >= the policy's min_p."""
+    """Pre-declared intervention: a yes/no answer is automatic only at certainty >= the policy's min_p.
+    Only bundle policies have a noul path without abstention; on study/cutoff policies it would be a no-op."""
+    if policy["kind"] != "bundle":
+        raise ValueError(f"+noul-gate is a no-op on {policy['name']!r}; it applies to bundle policies only")
     return dict(policy, name=policy["name"] + "+noul-gate", noul_gate=True)
 
 
@@ -88,10 +92,10 @@ def validate_answer(case: dict, answer: dict) -> None:
         raise ValueError("Invalid probabilities")
 
 
-def argmax_choice(probabilities: dict, stated=None) -> str:
-    top = max(probabilities.values())
-    ties = sorted(k for k, v in probabilities.items() if v >= top - TIE)
-    return stated if len(ties) > 1 and stated in ties else ties[0]
+def argmax_choice(probabilities: dict) -> str:
+    """The first key holding the maximum, in the answer's own dict order: exactly the bundle's
+    max(probabilities, key=probabilities.get) (backends._decision_from_answer)."""
+    return max(probabilities, key=probabilities.get)
 
 
 def _fallback(policy: dict, is_choice: bool, predicted, certainty: float, margin: float | None,
@@ -139,7 +143,7 @@ def score(case: dict, answer: dict, elapsed_ms: float, policy: dict) -> dict:
             if predicted not in probabilities:
                 raise ValueError("Invalid choice")
         else:
-            predicted = argmax_choice(probabilities, answer.get("stated_choice", answer.get("choice")))
+            predicted = argmax_choice(probabilities)
         certainty = probabilities[predicted]
         others = [v for k, v in probabilities.items() if k != predicted]
         margin = certainty - max(others) if others else certainty

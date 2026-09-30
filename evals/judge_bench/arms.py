@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import contextlib
 import json
+import math
 import os
 import re
 
@@ -23,6 +24,15 @@ OPENAI_DECISIONS_URL = "https://api.openai.com/v1/decisions"
 
 class ArmUnavailable(RuntimeError):
     """The arm cannot answer (missing key, endpoint absent). Never worked around."""
+
+
+class ArmParseError(ValueError):
+    """The endpoint answered HTTP 2xx but the body could not be used. Carries the usage the
+    response reported (input, output tokens) so the runner can still charge the budget."""
+
+    def __init__(self, message, usage=(None, None), http_status=None):
+        super().__init__(message)
+        self.usage, self.http_status = usage, http_status
 
 
 def server_ms(headers, names=("x-processing-ms", "server-timing")) -> float | None:
@@ -63,12 +73,17 @@ class SystemOneArm:
         body = dict(payload, model=self.model) if self.model else payload
         response = await client.post(self.url, json=body, headers=headers)
         response.raise_for_status()
-        data = response.json()
-        if not data.get("model"):
-            raise ValueError("Missing model identity")
-        usage = data.get("usage") or {}
-        return _result(data["answers"]["decision"], data["model"], usage.get("input_tokens"),
-                       usage.get("output_tokens"), server_ms(response.headers), response.status_code)
+        usage_pair = (None, None)
+        try:
+            data = response.json()
+            if not data.get("model"):
+                raise ValueError("Missing model identity")
+            usage = data.get("usage") or {}
+            usage_pair = (usage.get("input_tokens"), usage.get("output_tokens"))
+            return _result(data["answers"]["decision"], data["model"], usage_pair[0], usage_pair[1],
+                           server_ms(response.headers), response.status_code)
+        except Exception as exc:
+            raise ArmParseError(f"{type(exc).__name__}: {exc}", usage_pair, response.status_code) from exc
 
 
 _slow_depth = 0
@@ -126,7 +141,11 @@ class OllamaBackendArm:
         if spec["type"] == "noul":
             decision = {"type": "noul", "noul": answer.noul}
         else:
-            decision = {"type": "choice", "probabilities": dict(answer.probabilities)}
+            probabilities = dict(answer.probabilities)
+            # `choice` mirrors the first-pass harness (argmax, first key on ties) so the
+            # replay-only study-0.75 policy also works on new runs; bundle policies ignore it.
+            decision = {"type": "choice", "probabilities": probabilities,
+                        "choice": max(probabilities, key=probabilities.get)}
         return _result(decision, self.model, None, None, None, None)
 
 
@@ -181,23 +200,49 @@ class ChatJudgeArm:
         response = await client.post(self.url, json=self.request_body(payload),
                                      headers={"Authorization": "Bearer " + self.token})
         response.raise_for_status()
-        data = response.json()
-        content = json.loads(data["choices"][0]["message"]["content"])
-        if spec["type"] == "choice":
-            stated = content["probabilities"]
-            raw = {k: max(0.0, float(v)) for k, v in stated.items()}
-            total = sum(raw.values())
-            if total <= 0:
-                raise ValueError("Probabilities sum to zero")
-            decision = {"type": "choice", "choice": content["choice"], "stated_choice": content["choice"],
-                        "probabilities": {k: v / total for k, v in raw.items()}, "stated": stated}
-        else:
-            decision = {"type": "noul", "noul": min(1.0, max(0.0, float(content["probability_true"])))}
-        usage = data.get("usage") or {}
-        reasoning = (usage.get("completion_tokens_details") or {}).get("reasoning_tokens")
-        extra = {"reasoning_tokens": reasoning} if reasoning is not None else {}
-        return _result(decision, data.get("model"), usage.get("prompt_tokens"), usage.get("completion_tokens"),
-                       server_ms(response.headers, ("openai-processing-ms",)), response.status_code, **extra)
+        usage_pair = (None, None)
+        try:
+            data = response.json()
+            usage = data.get("usage") or {}
+            usage_pair = (usage.get("prompt_tokens"), usage.get("completion_tokens"))
+            content = json.loads(data["choices"][0]["message"]["content"])
+            if spec["type"] == "choice":
+                decision = self._choice_answer(content)
+            else:
+                decision = self._noul_answer(content)
+            reasoning = (usage.get("completion_tokens_details") or {}).get("reasoning_tokens")
+            extra = {"reasoning_tokens": reasoning} if reasoning is not None else {}
+            return _result(decision, data.get("model"), usage_pair[0], usage_pair[1],
+                           server_ms(response.headers, ("openai-processing-ms",)), response.status_code, **extra)
+        except Exception as exc:
+            raise ArmParseError(f"{type(exc).__name__}: {exc}", usage_pair, response.status_code) from exc
+
+    @staticmethod
+    def _stated(value) -> float:
+        """A stated probability: non-finite or > 1 is invalid (raises); negative is clipped by the caller."""
+        if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
+            raise ValueError("Stated probability is not a finite number")
+        if value > 1:
+            raise ValueError("Stated probability above 1")
+        return float(value)
+
+    def _choice_answer(self, content) -> dict:
+        stated = content["probabilities"]
+        values = {k: self._stated(v) for k, v in stated.items()}
+        clipped = any(v < 0 for v in values.values())
+        raw = {k: max(0.0, v) for k, v in values.items()}
+        total = sum(raw.values())
+        if total <= 0:
+            raise ValueError("Probabilities sum to zero")
+        probabilities = {k: v / total for k, v in raw.items()}
+        # repaired: the stated numbers were not a distribution (clipped, or moved by > 0.01 to sum to 1)
+        repaired = clipped or any(abs(probabilities[k] - raw[k]) > 0.01 for k in raw)
+        return {"type": "choice", "choice": content["choice"], "stated_choice": content["choice"],
+                "probabilities": probabilities, "stated": stated, "repaired": repaired}
+
+    def _noul_answer(self, content) -> dict:
+        value = self._stated(content["probability_true"])
+        return {"type": "noul", "noul": max(0.0, value), "repaired": value < 0}
 
 
 class OpenAIDecisionsArm:
@@ -236,11 +281,15 @@ class OpenAIDecisionsArm:
         body = dict(payload, model=self.model) if self.model else payload
         response = await client.post(self.url, json=body, headers={"Authorization": "Bearer " + self.token})
         response.raise_for_status()
-        data = response.json()
-        usage = data.get("usage") or {}
-        return _result(data["answers"]["decision"], data.get("model"), usage.get("input_tokens"),
-                       usage.get("output_tokens"), server_ms(response.headers, ("openai-processing-ms",)),
-                       response.status_code)
+        usage_pair = (None, None)
+        try:
+            data = response.json()
+            usage = data.get("usage") or {}
+            usage_pair = (usage.get("input_tokens"), usage.get("output_tokens"))
+            return _result(data["answers"]["decision"], data.get("model"), usage_pair[0], usage_pair[1],
+                           server_ms(response.headers, ("openai-processing-ms",)), response.status_code)
+        except Exception as exc:
+            raise ArmParseError(f"{type(exc).__name__}: {exc}", usage_pair, response.status_code) from exc
 
 
 class InstructionClauseArm:

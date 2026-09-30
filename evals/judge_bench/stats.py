@@ -74,9 +74,17 @@ def ece(conf, correct, bins: int = 10) -> float | None:
 
 
 def brier_decomposition(conf, outcome, bins: int = 10) -> dict | None:
-    """Murphy decomposition of the binary Brier score of `conf` against 0/1 `outcome`:
-    brier = reliability - resolution + uncertainty + residual, where the residual
-    is the within-bin variance of the forecasts (zero when forecasts in a bin are equal)."""
+    """Generalized Brier decomposition (Stephenson et al. 2008) of the binary Brier score of
+    forecasts `conf` against 0/1 `outcome`, over `bins` equal-width forecast bins:
+
+        BS = REL - RES + UNC + WBV - WBC
+
+    REL reliability, RES resolution, UNC uncertainty (Murphy 1973), WBV the within-bin variance
+    of the forecasts and WBC twice the within-bin covariance of forecast and outcome. When all
+    forecasts in a bin are equal, WBV = WBC = 0 and Murphy's identity holds exactly. `residual`
+    is BS - (REL - RES + UNC), which equals WBV - WBC. The score is for the top-label forecast
+    (certainty of the chosen answer vs. whether it was right), so it is named `top_label_brier`
+    to keep it apart from the multi-option `mean_brier`."""
     conf, outcome = list(conf), [float(bool(o)) for o in outcome]
     n = len(conf)
     if not n:
@@ -85,16 +93,19 @@ def brier_decomposition(conf, outcome, bins: int = 10) -> dict | None:
     groups: dict[int, list[int]] = {}
     for i, c in enumerate(conf):
         groups.setdefault(_bin(c, bins), []).append(i)
-    reliability = resolution = 0.0
+    reliability = resolution = wbv = wbc = 0.0
     for idx in groups.values():
         f = sum(conf[i] for i in idx) / len(idx)
         o = sum(outcome[i] for i in idx) / len(idx)
         reliability += len(idx) / n * (f - o) ** 2
         resolution += len(idx) / n * (o - base) ** 2
+        wbv += sum((conf[i] - f) ** 2 for i in idx) / n
+        wbc += 2 * sum((conf[i] - f) * (outcome[i] - o) for i in idx) / n
     uncertainty = base * (1 - base)
     brier = sum((c - o) ** 2 for c, o in zip(conf, outcome)) / n
-    return {"brier": brier, "reliability": reliability, "resolution": resolution,
-            "uncertainty": uncertainty, "residual": brier - (reliability - resolution + uncertainty)}
+    return {"top_label_brier": brier, "reliability": reliability, "resolution": resolution,
+            "uncertainty": uncertainty, "within_bin_variance": wbv, "within_bin_covariance": wbc,
+            "residual": brier - (reliability - resolution + uncertainty)}
 
 
 def nearest_rank(values, q: float):

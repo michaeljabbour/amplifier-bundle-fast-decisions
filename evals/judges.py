@@ -123,6 +123,12 @@ def check_holdout_guard(root: Path = ROOT, holdout_dir: Path | None = None) -> s
             raise GuardError(f"holdout guard: {rel} is not tracked by git; commit it first")
         if _git(root, "diff", "--quiet", "HEAD", "--", rel).returncode != 0:
             raise GuardError(f"holdout guard: {rel} differs from HEAD; commit it (or restore it) first")
+    # The code that scores and drives a preregistered claim must be the committed code.
+    code = [":(glob)evals/judge_bench/*.py", "evals/judges.py", "evals/judges.yaml"]
+    dirty = _git(root, "status", "--porcelain", "--", *code)
+    if dirty.returncode != 0 or dirty.stdout.strip():
+        changed = ", ".join(line[3:] for line in dirty.stdout.splitlines()) or "git status failed"
+        raise GuardError(f"holdout guard: uncommitted changes in the benchmark code ({changed}); commit them first")
     match = re.search(r"^cases_sha256:\s*([0-9a-f]{64})\s*$", prereg.read_text(encoding="utf-8"), re.MULTILINE)
     if not match:
         raise GuardError("holdout guard: PREREGISTRATION.md has no 'cases_sha256: <64 hex>' line")
@@ -137,7 +143,15 @@ def check_holdout_guard(root: Path = ROOT, holdout_dir: Path | None = None) -> s
 def build_summary(rows, cases, tags, meta: dict) -> dict:
     policies = [resolve_policy(n) for n in meta["policies"]]
     return summarize(rows, cases, tags, policies, specs=meta["specs"], contrasts=meta["contrasts"],
-                     primary=meta["primary_policy"], timeout_ms=meta["timeout_ms"])
+                     primary=meta["primary_policy"], timeout_ms=meta["timeout_ms"], split=meta.get("split"))
+
+
+def validate_policies(names, primary) -> None:
+    """Resolve every policy name up front; a typo must fail before any request is sent."""
+    for name in list(names) + [primary]:
+        resolve_policy(name)
+    if primary not in names:
+        raise ValueError(f"primary policy {primary!r} is not in the policies list")
 
 
 def dump(obj) -> str:
@@ -212,6 +226,16 @@ def _scrub(text: str) -> str:
     return text
 
 
+def _charge_unusable(exc, name, specs, spend, row=None) -> None:
+    """An HTTP 2xx whose body could not be parsed was still billed: charge the usage it reported."""
+    usage = getattr(exc, "usage", None)
+    if usage is None:
+        return
+    spend.total += request_cost(name, specs, usage[0], usage[1])
+    if row is not None:
+        row.update(input_tokens=usage[0], output_tokens=usage[1], http_status=getattr(exc, "http_status", None))
+
+
 async def _one(arm, name, case, order, rep, client, log, spend, specs, sem):
     async with sem:
         if spend.exceeded():
@@ -232,6 +256,7 @@ async def _one(arm, name, case, order, rep, client, log, spend, specs, sem):
             row["valid"] = True
         except Exception as exc:
             row.setdefault("elapsed_ms", (time.perf_counter() - start) * 1000)
+            _charge_unusable(exc, name, specs, spend, row)
             row["error"] = _scrub(f"{type(exc).__name__}: {str(exc)[:200]}")
         log.write(json.dumps(row, default=str) + "\n")
         log.flush()
@@ -246,6 +271,7 @@ async def _block(arm, name, cases, rep, client, log, spend, specs, cfg, concurre
             result = await arm.decide(client, case_lib.reorder(cases[0]["payload"], 0))
             spend.total += request_cost(name, specs, result["input_tokens"], result["output_tokens"])
         except Exception as exc:
+            _charge_unusable(exc, name, specs, spend)
             print(json.dumps({"warmup_failed": name, "error": _scrub(repr(exc)[:200])}), flush=True)
     sem = asyncio.Semaphore(concurrency)
     await asyncio.gather(*(_one(arm, name, case, order, rep, client, log, spend, specs, sem)
@@ -290,23 +316,31 @@ def _ollama_version() -> str | None:
         return None
 
 
-async def run(args, cfg, cases, tags, split, arm_names, probe_decisions) -> int:
+async def run(args, cfg, cases, tags, split, arm_names, probe_decisions, prereg_sha=None) -> int:
     import httpx
     specs = cfg["arms"]
     out = Path(args.out) if args.out else default_out(split)
     out.mkdir(parents=True, exist_ok=True)
     manifest_path, requests_path, run_path = out / "manifest.json", out / "requests.jsonl", out / "run.json"
     sha = case_lib.cases_sha256(cases)
+    if prereg_sha is not None and sha != prereg_sha:  # before any request, and before any manifest exists
+        print(f"refusing: cases_sha256 {sha} is not the preregistered {prereg_sha}", file=sys.stderr)
+        return 2
     if manifest_path.exists():
         if not args.append:
             print(f"refusing: {manifest_path} exists; use --append to add arms to this run", file=sys.stderr)
             return 2
-        if json.loads(manifest_path.read_text(encoding="utf-8")).get("cases_sha256") != sha:
+        stored = json.loads(manifest_path.read_text(encoding="utf-8")).get("cases_sha256")
+        if stored != sha or (prereg_sha is not None and stored != prereg_sha):
             print("refusing: cases_sha256 differs from the existing manifest (manifest is never rewritten)",
                   file=sys.stderr)
             return 2
+        if not run_path.exists():
+            print("refusing: --append but run.json is missing (an interrupted run leaves it; restore it)",
+                  file=sys.stderr)
+            return 2
     else:
-        if args.append and requests_path.exists():
+        if args.append:
             print("refusing: --append but manifest.json is missing", file=sys.stderr)
             return 2
         manifest = {"schema": "fast-decisions-evals/judge-manifest/v1", "split": split, "cases": cases,
@@ -327,15 +361,27 @@ async def run(args, cfg, cases, tags, split, arm_names, probe_decisions) -> int:
         return 2
 
     previous = json.loads(run_path.read_text(encoding="utf-8")) if run_path.exists() else {}
-    invocation = {"argv": sys.argv, "started_utc": datetime.now(timezone.utc).isoformat(),
+    invocation = {"argv": sys.argv, "started_utc": datetime.now(timezone.utc).isoformat(), "status": "running",
                   "git": _git_state(), "ollama_version": _ollama_version(), "split": split, "host": _host(),
                   "reps": args.reps, "concurrency": args.concurrency, "arms": list(arm_names),
                   "cases": len(cases), "openai_decisions_probe": None,
                   "arm_determinism": {n: arms[n].determinism for n in arms}}
+    meta = _meta_from_cfg(cfg)
+
+    def write_run_doc() -> None:
+        kept = dict(previous.get("specs", {}))
+        for name in invocation["arms"]:
+            spec = specs[name]
+            while spec:
+                kept[spec["name"]] = spec
+                spec = specs.get(spec.get("base"))
+        doc = dict(meta, specs=kept, schema="fast-decisions-evals/judge-run/v1", split=split, cases_sha256=sha,
+                   invocations=previous.get("invocations", []) + [invocation])
+        run_path.write_text(dump(doc), encoding="utf-8")
+        meta["specs"] = kept
+
+    write_run_doc()  # before the first request, so an interrupted run is still described
     spend = Spend(args.budget_usd)
-    rows = []
-    if args.append and requests_path.exists():
-        rows = [r for r in _read_rows(requests_path) if r["arm"] not in set(arm_names) | {"openai-decisions"}]
     async with httpx.AsyncClient(timeout=60, follow_redirects=False) as client:
         if decisions_arm is not None:
             if os.environ.get("OPENAI_API_KEY"):
@@ -349,6 +395,13 @@ async def run(args, cfg, cases, tags, split, arm_names, probe_decisions) -> int:
                 arms["openai-decisions"] = decisions_arm
                 invocation["arms"].append("openai-decisions")
                 invocation["arm_determinism"]["openai-decisions"] = decisions_arm.determinism
+            write_run_doc()
+        # --append replaces the rows of the arms that run in this invocation, and only those. A stored
+        # openai-decisions arm is replaced only when it is probed here AND answers 200; otherwise its rows stay.
+        replaced = set(arms)
+        rows = []
+        if args.append and requests_path.exists():
+            rows = [r for r in _read_rows(requests_path) if r["arm"] not in replaced]
         with requests_path.open("w", encoding="utf-8") as log:
             for row in rows:
                 log.write(json.dumps(row, default=str) + "\n")
@@ -363,21 +416,11 @@ async def run(args, cfg, cases, tags, split, arm_names, probe_decisions) -> int:
                         {"rep": rep, "arm": name, "loadavg_before": load_before, "loadavg_after": _loadavg()})
                     print(json.dumps({"rep": rep, "arm_complete": name, "spent_usd": round(spend.total, 6)}),
                           flush=True)
-    invocation.update(ended_utc=datetime.now(timezone.utc).isoformat(),
+    invocation.update(ended_utc=datetime.now(timezone.utc).isoformat(), status="complete",
                       budget={"limit_usd": args.budget_usd, "realized_usd": spend.total,
                               "stopped_early": spend.stopped})
-    meta = _meta_from_cfg(cfg)
-    kept_specs = dict(previous.get("specs", {}))
-    for name in invocation["arms"]:
-        s = specs[name]
-        while s:
-            kept_specs[s["name"]] = s
-            s = specs.get(s.get("base"))
-    meta["specs"] = kept_specs
-    run_doc = dict(meta, schema="fast-decisions-evals/judge-run/v1", split=split, cases_sha256=sha,
-                   invocations=previous.get("invocations", []) + [invocation])
-    run_path.write_text(dump(run_doc), encoding="utf-8")
-    summary = build_summary(_read_rows(requests_path), cases, tags, meta)
+    write_run_doc()
+    summary = build_summary(_read_rows(requests_path), cases, tags, meta | {"split": split})
     (out / "summary.json").write_text(dump(summary), encoding="utf-8")
     _print_table(summary)
     print(json.dumps({"out": str(out), "spent_usd": round(spend.total, 6), "stopped_early": spend.stopped}))
@@ -427,8 +470,18 @@ def main(argv=None) -> int:
     if unknown:
         parser.error(f"unknown arms: {unknown}")
     try:
+        validate_policies(cfg["defaults"]["policies"], cfg["defaults"]["primary_policy"])
+    except (KeyError, ValueError) as exc:
+        print(f"refusing: invalid policy configuration: {exc}", file=sys.stderr)
+        return 2
+    if args.split == "holdout" and args.limit:
+        print("refusing: --limit is not allowed with --split holdout (the preregistered cases run whole)",
+              file=sys.stderr)
+        return 2
+    prereg_sha = None
+    try:
         if args.split == "holdout":
-            check_holdout_guard()
+            prereg_sha = check_holdout_guard()
             cases = case_lib.holdout_cases()
         else:
             cases = case_lib.dev_cases()
@@ -461,7 +514,7 @@ def main(argv=None) -> int:
         return 2
     if args.dry_run:
         return 0
-    return asyncio.run(run(args, cfg, cases, tags, args.split, arm_names, probe_decisions))
+    return asyncio.run(run(args, cfg, cases, tags, args.split, arm_names, probe_decisions, prereg_sha))
 
 
 if __name__ == "__main__":

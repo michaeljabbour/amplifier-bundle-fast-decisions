@@ -23,7 +23,7 @@ REPO = HERE.parent.parent
 if str(REPO) not in sys.path:
     sys.path.insert(0, str(REPO))
 
-from evals.judge_bench import failure, palette_check as pal, scoring, stats
+from evals.judge_bench import failure, palette_check as pal, scoring, stats, summarize
 
 SCHEMA = "fast-decisions-evals/judge-report/v1"
 ALPHA = 0.05
@@ -100,10 +100,6 @@ def usd_txt(x) -> str:
     if x is None:
         return "n/a"
     return "$0" if x == 0 else f"${x:,.2f}"
-
-
-def _majority(flags: list[bool]) -> bool:
-    return 2 * sum(flags) > len(flags)
 
 
 def table(head: list[str], rows: list[list], cls: str = "") -> str:
@@ -203,29 +199,12 @@ def load_split(d: Path, name: str) -> dict | None:
                 pass
         recs.append(rec)
 
-    def scored(rec, policy):
-        if not rec["valid"]:
-            return None
-        try:
-            return scoring.score(by_id[rec["cid"]], rec["row"]["answer"], rec["row"]["elapsed_ms"], policy)
-        except (ValueError, KeyError, TypeError):
-            return None
-
-    per_arm_case: dict[str, dict[str, list]] = {}
-    for rec in recs:
-        per_arm_case.setdefault(rec["arm"], {}).setdefault(rec["cid"], []).append(rec)
-
     def majority_maps(arm, policy):
-        corr, auto, err = {}, {}, {}
-        for cid in case_ids:
-            rs = per_arm_case.get(arm, {}).get(cid)
-            if not rs:
-                continue
-            ss = [s for s in (scored(r, policy) for r in rs) if s is not None]
-            corr[cid] = _majority([s["correct"] for s in ss]) if ss else False
-            auto[cid] = _majority([s["automatic"] for s in ss]) if ss else False
-            err[cid] = _majority([s["automatic_error"] for s in ss]) if ss else False
-        return corr, auto, err
+        """Per-case outcomes from the one shared definition (summarize.case_outcomes): every manifest
+        case counts; missing/invalid rows are fallbacks; ties go to the rep-1 outcome."""
+        out = summarize.case_outcomes(rows_all, cases, policy, arm)
+        return ({c: o["correct"] for c, o in out.items()}, {c: o["automatic"] for c, o in out.items()},
+                {c: o["automatic_error"] for c, o in out.items()})
 
     prim_maps = {a: majority_maps(a, prim_pol) for a in arms}
 
@@ -253,7 +232,7 @@ def load_split(d: Path, name: str) -> dict | None:
             **m,
             "p50": stats.nearest_rank(lat.get(a, []), .50), "p95": stats.nearest_rank(lat.get(a, []), .95),
             "n_lat": len(lat.get(a, [])),
-            "usd1m": (sum(usd) / len(usd)) if usd else 0.0,
+            "usd1m": (sum(usd) / len(usd)) if usd else None,  # None = unpriced hosted arm, not $0
             "usd1m_priority": (sum(usdp) / len(usdp)) if usdp else None,
             "reps": [int(k) for k in rep_keys],
             "acc_rep": [across.get("accuracy", {}).get("min"), across.get("accuracy", {}).get("max")],
