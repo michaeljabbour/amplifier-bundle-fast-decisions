@@ -56,6 +56,12 @@ context, so a `ContextVar` set in a hook is not visible to the loop.
 - Host wrappers added after the router (loop-live's `AsyncTool`, Unified's `PersistentDelegate`) are detected and
   not wrapped twice.
 
+## Facades are visible to all host code
+
+Because the facades now live in the registries, every host component sees them, not only the loop: session
+naming copies providers, pipelines clone tools, and hooks patch methods. docs/FACADE-CONTRACT.md records the
+audit, the 2026-09-30 naming incident, and the transparency contract every registry object must satisfy.
+
 ## Verification
 
 - `tests/test_registry_mode.py`: attachment, pass-through rules, turn lifecycle, and config parity with

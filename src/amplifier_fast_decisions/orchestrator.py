@@ -16,6 +16,7 @@ from uuid import uuid4
 
 from . import delegation
 from . import efficiency
+from .facade import TransparentFacade, own_state
 from .levers import Levers
 from .contracts import (
     Candidate,
@@ -1095,7 +1096,7 @@ def _mean(values: list, default: float) -> float:
     return sum(values) / len(values) if values else float(default)
 
 
-class RoutedProvider:
+class RoutedProvider(TransparentFacade):
     """Preserve the Provider protocol while intercepting complete() boundaries.
 
 The facade is transport-transparent: `stream` is mirrored iff the wrapped
@@ -1171,13 +1172,15 @@ docs/UPSTREAM_CONTRACT.md.
             return current
         return None
 
+    _target_attr = "_provider"
+
     def __getattr__(self, name: str):
         if name == "stream":
-            inner = getattr(self._provider, "stream", None)
+            inner = getattr(self._target_object(), "stream", None)
             if not callable(inner):
                 raise AttributeError(name)  # mirror absence exactly
             return self._stream_proxy
-        return getattr(self._provider, name)
+        return super().__getattr__(name)
 
     @property
     def name(self):
@@ -1800,7 +1803,7 @@ docs/UPSTREAM_CONTRACT.md.
             try:
                 service._fd_session_state = store
             except Exception:  # noqa: BLE001
-                store = self.__dict__.setdefault("_local_session_state", {})
+                store = own_state(self).setdefault("_local_session_state", {})
         return store
 
     def _step_state(self, service: Any) -> dict:
@@ -2285,7 +2288,7 @@ docs/UPSTREAM_CONTRACT.md.
                 "transport_measured": "provider-stream"})
 
 
-class ObservedTool:
+class ObservedTool(TransparentFacade):
     """Measure actual execute(), not merely a tool:pre hook which may be denied."""
     def __init__(
         self, tool: Any, runtime: Runtime, tool_key: str, *, workspace: Any = None, levers: Any = None
@@ -2297,7 +2300,9 @@ class ObservedTool:
         # into the same (path, revision) identity space as candidates.
         self._workspace = workspace
 
-    def __new__(cls, tool: Any, *args, **kwargs):
+    _target_attr = "_tool"
+
+    def __new__(cls, tool: Any = None, *args, **kwargs):
         # loop-streaming builds each tool's model-facing spec with
         # getattr(type(tool), "native_tool_spec", None) -- a TYPE-level read,
         # which __getattr__ (instance-level, below) never answers. A
@@ -2308,12 +2313,9 @@ class ObservedTool:
         # through a subclass that exposes a delegating property at class level, so
         # we keep both the observation and the native shape. Tools without a
         # native spec are wrapped exactly as before.
-        if cls is ObservedTool:
+        if cls is ObservedTool and tool is not None:
             cls = _observed_class_for(tool)
         return super().__new__(cls)
-
-    def __getattr__(self, name):
-        return getattr(self._tool, name)
 
     def begin_turn(self, levers: Any, workspace: Any) -> None:
         """Registry attachment: this turn's levers and raw workspace tool."""
