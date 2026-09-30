@@ -15,6 +15,7 @@ from pathlib import Path
 ARMS = {  # display name, family, where it runs, size note
     "jev-1.13": ("Jev 1.13", "cloud", "TypeSafe API", "hosted"),
     "gpt-6-luna": ("GPT-6 Luna*", "cloud", "OpenAI API", "hosted"),
+    "gpt-6.1-sol": ("GPT-6.1 Sol", "cloud", "OpenAI API (effort low)", "hosted"),
     "nimble-9b": ("nimble 9B", "decision", "Ollama System One", "9.5 GB"),
     "tev1-4b": ("tev1 4B", "decision", "Ollama System One", "4.5 GB"),
     "tev1-0.8b": ("tev1 0.8B", "decision", "Ollama System One", "0.8 GB"),
@@ -148,7 +149,7 @@ footer { max-width: 1180px; margin: 24px auto 48px; padding: 0 24px; color: var(
 <body>
 <header>
   <h1>Fast Decisions: which judge should make the small decisions?</h1>
-  <p class="lede">Nine decision judges on the same 90 frozen, hand-labeled screening cases from the Laya study
+  <p class="lede">Ten decision judges on the same 90 frozen, hand-labeled screening cases from the Laya study
   (60 original + 30 fresh): prepared-action selection, source-code relevance and computer-use target selection.
   Each case was asked twice with the options reversed; scores use the first pass. Measured __DATE__ on an Apple M5 Max.</p>
   <div class="toolbar" role="toolbar" aria-label="Report controls">
@@ -178,8 +179,8 @@ footer { max-width: 1180px; margin: 24px auto 48px; padding: 0 24px; color: var(
       <div class="sub">Up and to the left is better. Median latency per decision (log scale) against accuracy.</div>
       <div class="legend" id="legend1"></div><div id="scatterLatency"></div></section>
     <section class="card"><h2>Quality vs. cost</h2>
-      <div class="sub">Up and to the left is better. API cost per million decisions at list price; local judges sit at $0
-      (hardware and electricity not included).</div>
+      <div class="sub">Up and to the left is better. API cost per million decisions at list price, log scale; local judges have no API
+      charge and sit at the left edge (hardware and electricity not included).</div>
       <div class="legend" id="legend2"></div><div id="scatterCost"></div></section>
   </div>
 
@@ -315,12 +316,12 @@ function board() {
 }
 
 /* ---------- scatter maps ---------- */
-function scatter(id, {xOf, xLabel, xLog, xFmt, yOf = a => stat(a.id).accuracy, yLabel = "Accuracy", yFmt = fmtPct, yMin, yMax, invertY}) {
+function scatter(id, {xOf, xLabel, xLog, xFmt, xTicks, yOf = a => stat(a.id).accuracy, yLabel = "Accuracy", yFmt = fmtPct, yMin, yMax, invertY}) {
   const box = document.getElementById(id); box.innerHTML = "";
   const W = box.clientWidth || 520, H = 340, m = {l: 64, r: 24, t: 14, b: 44};
   const svg = el("svg", {width: W, height: H, role: "img", "aria-label": yLabel + " versus " + xLabel}, box);
   const xs = ARMS.map(xOf).filter(v => v != null), ys = ARMS.map(yOf).filter(v => v != null);
-  let x0 = xLog ? Math.min(...xs) / 1.6 : 0, x1 = xLog ? Math.max(...xs) * 1.6 : Math.max(...xs) * 1.12 || 1;
+  let x0 = xLog ? Math.min(...xs) / (xTicks ? 1.25 : 1.6) : 0, x1 = xLog ? Math.max(...xs) * 1.6 : Math.max(...xs) * 1.12 || 1;
   const xStep = xLog ? null : niceStep(x1 - x0, 4); if (!xLog) x1 = Math.ceil(x1 / xStep) * xStep;
   const y0 = yMin ?? Math.max(0, Math.floor((Math.min(...ys) - .06) * 10) / 10); const yStep = niceStep((yMax ?? 1) - y0, 5); const y1 = yMax == null ? 1 : Math.ceil(yMax / yStep) * yStep;
   const sx = v => m.l + (xLog ? (Math.log(v) - Math.log(x0)) / (Math.log(x1) - Math.log(x0)) : (v - x0) / (x1 - x0)) * (W - m.l - m.r);
@@ -329,7 +330,7 @@ function scatter(id, {xOf, xLabel, xLog, xFmt, yOf = a => stat(a.id).accuracy, y
   for (let v = y0; v <= y1 + 1e-9; v += yStep) { const y = sy(v);
     el("line", {x1: m.l, x2: W - m.r, y1: y, y2: y, class: "gridline"}, g);
     el("text", {x: m.l - 8, y: y + 4, "text-anchor": "end"}, g).textContent = yFmt(v); }
-  const xt = xLog ? [10, 30, 100, 300, 1000, 3000, 10000].filter(v => v >= x0 && v <= x1) : Array.from({length: Math.round((x1 - x0) / xStep) + 1}, (_, i) => x0 + i * xStep);
+  const xt = xLog ? (xTicks || [10, 30, 100, 300, 1000, 3000, 10000]).filter(v => v >= x0 && v <= x1) : Array.from({length: Math.round((x1 - x0) / xStep) + 1}, (_, i) => x0 + i * xStep);
   for (const v of xt) { el("text", {x: sx(v), y: H - m.b + 18, "text-anchor": "middle"}, g).textContent = xFmt(v); }
   el("line", {x1: m.l, x2: W - m.r, y1: H - m.b, y2: H - m.b, stroke: "var(--rule)"}, g);
   el("text", {x: (m.l + W - m.r) / 2, y: H - 6, "text-anchor": "middle"}, g).textContent = xLabel;
@@ -361,7 +362,7 @@ function scatter(id, {xOf, xLabel, xLog, xFmt, yOf = a => stat(a.id).accuracy, y
 function scatters() {
   ["legend1", "legend2", "legend3"].forEach(legend);
   scatter("scatterLatency", {xOf: a => stat(a.id).p50_ms, xLabel: "Median latency per decision", xLog: true, xFmt: fmtMs});
-  scatter("scatterCost", {xOf: a => 1000 * costPer1k(a.id), xLabel: "API cost per million decisions", xFmt: v => "$" + Math.round(v)});
+  scatter("scatterCost", {xOf: a => Math.max(1, 1000 * costPer1k(a.id)), xLabel: "API cost per million decisions (log scale)", xLog: true, xTicks: [1, 3, 10, 30, 100, 300, 1000], xFmt: v => v <= 1 ? "$0 local" : "$" + Math.round(v)});
   scatter("frontier", {xOf: a => stat(a.id).coverage, xLabel: "Coverage: share decided automatically", xFmt: v => Math.round(100 * v) + "%",
     yOf: a => stat(a.id).automatic ? stat(a.id).automatic_errors / stat(a.id).automatic : 0, yLabel: "Wrong share of automatic decisions",
     yFmt: v => Math.round(100 * v) + "%", yMin: 0, yMax: Math.max(.2, ...ARMS.map(a => stat(a.id).automatic ? stat(a.id).automatic_errors / stat(a.id).automatic : 0)) * 1.05, invertY: false});
@@ -521,11 +522,11 @@ function method() {
   const m = DATA.manifest, p = m.prices_usd_per_mtok;
   document.getElementById("method").innerHTML = `<ul class="tight">
   <li><b>Cases.</b> ${m.source}. Hand-authored labels, not independently audited. Constructed text decisions over public observations: diagnostic screens, not live browser tasks, tool executions or SWE-bench. The screens were built before Jev and Laya were queried; they were never shown to nimble, tev1, Qwen or Luna before this run, and no prompt was tuned for any arm.</li>
-  <li><b>Protocol.</b> Jev, nimble, tev1 and Laya received byte-identical System One payloads. Qwen models ran through the bundle's production OllamaBackend, which asks both option orders and averages them (two model calls per decision); the backend's rule that drops an option named "reason" was disabled so every arm answered the same three-way question. GPT-6 Luna ran through Chat Completions with reasoning effort "none" and stated its probabilities in strict structured output, renormalized to sum to 1.</li>
+  <li><b>Protocol.</b> Jev, nimble, tev1 and Laya received byte-identical System One payloads. Qwen models ran through the bundle's production OllamaBackend, which asks both option orders and averages them (two model calls per decision); the backend's rule that drops an option named "reason" was disabled so every arm answered the same three-way question. GPT-6 Luna ran through Chat Completions with reasoning effort "none" and stated its probabilities in strict structured output, renormalized to sum to 1. GPT-6.1 Sol ran the same way at effort "low" (its fastest; it has no "none"), added the same day without re-running the other judges.</li>
   <li><b>GPT-6 Luna* is a stand-in.</b> OpenAI's Decisions API (announced September 29, limited preview, built on GPT-6 Luna) has no public endpoint, model ID or schema, and this key cannot see it. Luna returns no token probabilities, so its confidence is self-reported: compare its accuracy and latency directly, and treat its calibration and automatic-decision numbers with care.</li>
   <li><b>Scoring.</b> The Laya study's own <code>score()</code>: automatic = non-"reason" choice or yes/no certainty ≥ ${m.threshold}. Accuracy counts invalid replies as wrong. Brier is averaged over valid replies. First pass only; the reversed pass is used for the stability check.</li>
   <li><b>Latency.</b> Wall-clock per decision from this machine, two warmups per arm excluded. Each arm ran as one contiguous block so Ollama did not swap models mid-run. Cloud latency includes the network. Local latency depends on this Apple M5 Max (128 GB) and on what else was running.</li>
-  <li><b>Cost.</b> List prices on 2026-09-30: Jev $${p.jev[0]} per million input tokens, output free (docs.typesafe.ai/models); GPT-6 Luna $${p["gpt-6-luna"][0]} input and $${p["gpt-6-luna"][1]} output per million (developers.openai.com). Token counts come from each API's usage report. Local judges have no API charge; hardware, electricity and memory pressure are not priced.</li>
+  <li><b>Cost.</b> List prices on 2026-09-30: Jev $${p.jev[0]} per million input tokens, output free (docs.typesafe.ai/models); GPT-6 Luna $${p["gpt-6-luna"][0]} input and $${p["gpt-6-luna"][1]} output per million; GPT-6.1 Sol $${p["gpt-6.1-sol"][0]} and $${p["gpt-6.1-sol"][1]} (developers.openai.com). Token counts come from each API's usage report. Local judges have no API charge; hardware, electricity and memory pressure are not priced.</li>
   <li><b>Small samples.</b> 90 cases; per-type cells have 30 or fewer, and the fresh screen alone has 10 per type. Differences of a few cases are within noise. This screens candidates; it does not establish production savings or safety.</li></ul>`;
 }
 

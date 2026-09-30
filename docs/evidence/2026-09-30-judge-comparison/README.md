@@ -2,7 +2,7 @@
 
 Measured September 30, 2026 on an Apple M5 Max (128 GB). [Interactive report](index.html).
 
-Nine decision judges answered the same 90 frozen screening cases from the Laya study: the original 60
+Ten decision judges answered the same 90 frozen screening cases from the Laya study: the original 60
 (`evals/laya_quality.fixtures`) and the fresh 30 (`evals/laya_holdout.cases`), with unchanged instructions and
 labels. Each case was asked twice with the choice options reversed; tables score the first pass. Scoring is the
 Laya study's own `score()`: a decision is automatic at probability ≥ 0.75 (a non-"reason" choice, or yes/no
@@ -13,6 +13,7 @@ certainty). This is **not the bundle's full policy**. Reproduce the run with
 | Judge | All 90 | Original 60 | Fresh 30 | Automatic | Wrong automatic | Brier | Order flips | p50 | p95 | $ / 1M decisions |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | GPT-6 Luna* (OpenAI API) | 90/90 (100.0%) | 60/60 | 30/30 | 70 | 0 | 0.006 | 0 | 1192 ms | 2045 ms | $34.95 |
+| GPT-6.1 Sol (OpenAI API, effort low) | 88/90 (97.8%) | 58/60 | 30/30 | 72 | 2 | 0.022 | 0 | 2478 ms | 3332 ms | $753.04 |
 | Jev 1.13 (TypeSafe API) | 86/90 (95.6%) | 57/60 | 29/30 | 72 | 4 | 0.051 | 0 | 147 ms | 214 ms | $15.91 |
 | Qwen3 8B (bundle OllamaBackend) | 77/90 (85.6%) | 51/60 | 26/30 | 71 | 11 | 0.135 | 0 | 218 ms | 249 ms | $0.00 |
 | Qwen3 4B (bundle OllamaBackend) | 76/90 (84.4%) | 51/60 | 25/30 | 44 | 4 | 0.139 | 0 | 150 ms | 164 ms | $0.00 |
@@ -26,15 +27,19 @@ certainty). This is **not the bundle's full policy**. Reproduce the run with
 Luna). The Decisions API has no public endpoint, model ID or schema, and this key cannot see it. Luna returns no
 token probabilities, so it stated its probabilities in strict structured output (reasoning effort `none`).
 Compare its accuracy and latency directly; treat its calibration and automatic-decision numbers with care.
+GPT-6.1 Sol (added the same day, appended with `--append`; the other nine judges' results are unchanged) ran the
+same way at reasoning effort `low`, its fastest setting (it has no `none`), priced at $2 input and $10 output per
+million tokens ([developers.openai.com](https://developers.openai.com/api/docs/models/gpt-6.1-sol)).
 
 ## Findings
 
 - **Jev remains the best default.** 95.6% correct (86/90), 147 ms median, about $16 per million decisions. Among judges with measured token probabilities, it is the only one that reaches **zero wrong automatic decisions at a 0.95 cutoff** while still deciding 41 of 90 cases on its own. Three of its four misses were side-effect actions it chose to take (purchase, delete, post) instead of deferring.
 - **GPT-6 Luna was right on all 90 cases**, with no wrong automatic decisions at any cutoff. It was also **8× slower** than Jev (1.19 s median, 2.0 s p95; 3 of 90 exceeded Fast Decisions' 3 s timeout) and about 2.2× the price ($35 per million). Its confidence is self-reported because Luna returns no token probabilities. This is a stand-in: OpenAI's Decisions API is built on Luna and claims about 150 ms, but it is a limited preview with no public endpoint, so it could not be measured.
+- **A stronger OpenAI model is not a better judge.** GPT-6.1 Sol scored 88/90, but both misses were side-effect actions it took with near-certainty (clicked "Buy now" at 0.98 and "Delete project" at 0.99), so no cutoff removes them. It was the slowest judge (2.48 s median, 17% over the 3 s timeout, at its fastest "low" effort) and by far the most expensive: about $753 per million decisions, 47× Jev and 21× Luna.
 - **The best local judges reach 82–86%, not Jev's 96%.** Qwen3 8B 85.6% (218 ms), Qwen3 4B 84.4% (150 ms) and nimble 82.2% (157 ms), all free to run. The Qwen scores use the bundle backend's two calls per decision, averaging both option orders.
 - **Local judges are overconfident.** Raising the cutoff does not make them safe: at 0.98 certainty Qwen3 8B still makes 8 wrong automatic decisions and nimble 3. Qwen3 4B is the most cautious good local judge (1 wrong at 0.95, but only 25 automatic).
 - **tev1 0.8B is a credible fast tier.** 74.4% correct at 38 ms, and **zero wrong automatic decisions from a 0.85 cutoff**, although it then decides only 20 of 90 on its own. Qwen3 0.6B (60%, 22 wrong automatic) and Laya base (60%, 14 answers flipped by option order) are not usable judges here; Laya's score reproduces the earlier study exactly (35/60).
-- **Every judge except Luna shares the same two failure modes:** acting on a side-effect action when it should defer (buy, delete, send, publish), and accepting code that does not do what was asked. That argues for **deterministic host guards on side-effect actions whatever judge is used**, as the Laya study recommended.
+- **Every judge except Luna, including GPT-6.1 Sol, shares the same two failure modes:** acting on a side-effect action when it should defer (buy, delete, send, publish), and accepting code that does not do what was asked. That argues for **deterministic host guards on side-effect actions whatever judge is used**, as the Laya study recommended.
 **Suggested routing (to validate on live traffic before adopting):** keep Jev as the default judge; use tev1 0.8B at a cutoff of 0.85 or higher only as an offline or no-network fallback; revisit GPT-6 Luna, or the Decisions API once it is public, for decisions where correctness matters more than speed. Treat these as screening results over 90 constructed cases, not production estimates.
 
 ## Threshold sweep (first pass, all 90): automatic decisions / wrong automatic decisions
@@ -43,6 +48,7 @@ Compare its accuracy and latency directly; treat its calibration and automatic-d
 |---|---:|---:|---:|---:|---:|
 | Jev 1.13 | 72 / 4 | 67 / 4 | 63 / 2 | 41 / 0 | 14 / 0 |
 | GPT-6 Luna* | 70 / 0 | 70 / 0 | 70 / 0 | 68 / 0 | 65 / 0 |
+| GPT-6.1 Sol | 72 / 2 | 72 / 2 | 72 / 2 | 72 / 2 | 71 / 2 |
 | nimble 9B | 71 / 12 | 67 / 9 | 65 / 8 | 62 / 6 | 46 / 3 |
 | tev1 4B | 66 / 11 | 59 / 8 | 52 / 6 | 35 / 4 | 16 / 3 |
 | tev1 0.8B | 39 / 5 | 20 / 0 | 11 / 0 | 3 / 0 | 1 / 0 |

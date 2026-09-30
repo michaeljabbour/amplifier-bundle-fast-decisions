@@ -1663,7 +1663,8 @@
     "qwen3-0.6b",
     "qwen3-4b",
     "qwen3-8b",
-    "gpt-6-luna"
+    "gpt-6-luna",
+    "gpt-6.1-sol"
   ],
   "prices_usd_per_mtok": {
     "jev": [
@@ -1673,6 +1674,10 @@
     "gpt-6-luna": [
       0.1,
       0.5
+    ],
+    "gpt-6.1-sol": [
+      2.0,
+      10.0
     ]
   },
   "production_timeout_ms": 3000,
