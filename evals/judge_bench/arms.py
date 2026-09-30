@@ -131,8 +131,8 @@ class OllamaBackendArm:
         # local_backend drops any option literally named "reason" (its SLOW
         # sentinel) and renormalizes the rest, so the local model could never
         # choose this screen's fallback. Keep it: every arm answers the same
-        # three-way question. (Finding recorded in the evidence README.)
-        # keep_reason_option=False shows the bundle default, which drops it.
+        # three-way question. (Finding recorded in the evidence README; fixed in
+        # the bundle by #56, so keep_reason_option=False now keeps it as well.)
         if self.keep_reason_option:
             with _sentinel_disabled():
                 answer = await self.backend.answer_question(json.loads(payload["state"]), question)
