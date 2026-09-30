@@ -10,7 +10,9 @@ tools:
       backend: jev
       allow_external_state: true
       timeout_ms: 3000
-      min_probability: 0.75
+      # The bundle's read-shortcut gate (docs/evidence/2026-09-30-judge-benchmark).
+      min_probability: 0.90
+      min_margin: 0.20
 
 context:
   include:

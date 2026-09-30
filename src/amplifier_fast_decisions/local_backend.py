@@ -112,7 +112,11 @@ def answer_from_top_logprobs(question: Question, top: list, labels: dict[str, st
     if len(labels) > 2 and any(letter not in folded for letter in labels):
         raise BackendUnavailable("An option letter fell outside the returned top tokens")
     probabilities = score_tokens({"logprobs": [{"top_logprobs": merged}]}, labels)
-    probabilities.pop(SLOW, None)
+    # SLOW is the action path's defer sentinel. A question that declares its own "reason"
+    # option (the CUA target questions, the judge benchmark) must keep it, or a local judge
+    # could never choose to fall back and its remaining mass would be inflated.
+    if SLOW not in labels.values():
+        probabilities.pop(SLOW, None)
     mass = sum(probabilities.values())
     if mass < MIN_OPTION_MASS:
         raise BackendUnavailable("Local question answer was not an option letter")
@@ -198,7 +202,11 @@ def score_tokens(payload: dict, labels: dict[str, str]) -> dict[str, float]:
         for key in probabilities:
             probabilities[key] /= total_mass
         total_mass = 1.0
-    probabilities[SLOW] = max(0.0, 1.0 - sum(probabilities.values()))
+    # Unscored mass becomes the SLOW (defer) sentinel. A question that declares its own
+    # "reason" option already scored it from its letter; never overwrite that real mass.
+    # (The action path rejects a candidate named SLOW, so it always takes this branch.)
+    if SLOW not in labels.values():
+        probabilities[SLOW] = max(0.0, 1.0 - sum(probabilities.values()))
     return probabilities
 
 
