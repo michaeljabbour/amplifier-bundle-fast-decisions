@@ -65,3 +65,18 @@ suites:
     excluded_languages:
       java: "corpus ships no junit-platform-console-standalone jar; polyglot_tasks.load() skips java"
       javascript: "grading needs `npx --no-install jest` with node_modules present; corpus is not vendored offline"
+
+  # judge (2026-09-30), STUDY-DESIGN.md section 19: judge-quality benchmark. Each task is one
+  # structured decision question asked of a judge arm (evals/judges.yaml), not an agent run, so
+  # run.py does not drive it: evals/judges.py does (same result root, same holdout rule).
+  # dev = the 90 first-pass Laya screens (spent). holdout = 63 fresh cases, double-reviewed and
+  # preregistered in evals/judge_bench/holdout/PREREGISTRATION.md before any judge saw them.
+  judge:
+    label: "Judge quality (select / search / computer-use decisions)"
+    task_source: judge_bench       # evals/judges.py --split <split>
+    runner: evals/judges.py
+    splits:
+      dev:     { expected_task_count: 90, source: "evals/laya_quality.fixtures + evals/laya_holdout.cases" }
+      holdout: { expected_task_count: 63, source: "evals/judge_bench/holdout/cases.json",
+                 preregistration: "evals/judge_bench/holdout/PREREGISTRATION.md" }
+    required_toolchains: [python3]

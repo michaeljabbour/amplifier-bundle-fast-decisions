@@ -258,6 +258,17 @@ def _git_state() -> dict:
     return {"sha": sha.stdout.strip() or None, "dirty": bool(dirty.stdout.strip())}
 
 
+def _expected_task_count(split: str) -> int | None:
+    """evals/suites.yaml suites.judge.splits.<split>.expected_task_count (None if absent)."""
+    import yaml
+    path = ROOT / "evals" / "suites.yaml"
+    if not path.exists():
+        return None
+    doc = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    return (((doc.get("suites") or {}).get("judge") or {}).get("splits") or {}).get(split, {}).get(
+        "expected_task_count")
+
+
 def _loadavg() -> list[float] | None:
     try:
         return [round(x, 2) for x in os.getloadavg()]
@@ -421,6 +432,10 @@ def main(argv=None) -> int:
             cases = case_lib.dev_cases()
     except (GuardError, FileNotFoundError) as exc:
         print(f"refusing: {exc}", file=sys.stderr)
+        return 2
+    expected = _expected_task_count(args.split)
+    if expected is not None and len(cases) != expected:
+        print(f"refusing: split {args.split} has {len(cases)} cases, suites.yaml expects {expected}", file=sys.stderr)
         return 2
     if args.limit:
         cases = cases[::max(1, len(cases) // args.limit)][:args.limit]
