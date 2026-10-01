@@ -157,6 +157,15 @@ def mcnemar(b, c):
     return min(1.0, 2 * sum(math.comb(n, i) for i in range(k + 1)) / 2 ** n)
 
 
+def wilson(k, n, z=1.96):
+    """95% Wilson interval for k of n (same formula as evals/judge_bench/stats.py)."""
+    p = k / n
+    d = 1 + z * z / n
+    c = (p + z * z / (2 * n)) / d
+    h = z * math.sqrt(p * (1 - p) / n + z * z / (4 * n * n)) / d
+    return [max(0.0, c - h), min(1.0, c + h)]
+
+
 def argmax(p: dict) -> str:
     return max(p, key=p.get)
 
@@ -1085,7 +1094,7 @@ MARK_R = 3.2              # largest marker half-size used in the scatter plots
 CLEAR = 1.5               # minimum gap between a label box and any marker
 EDGE = 3.0                # minimum gap between a label box and the axis frame
 LABEL_GAP = 1.0           # minimum gap between two label boxes
-NEAREST_MARGIN = 2.0      # own marker must be nearer than any other by this much
+NEAREST_MARGIN = 3.5      # own marker must be nearer than any other by this much (pt)
 DISTANCES = [0, 6, 12, 18, 24, 32, 40, 50]
 DIRS = [("east", (1, 0), "west"), ("west", (-1, 0), "east"), ("north", (0, 1), "south"),
         ("south", (0, -1), "north"), ("north east", (1, 1), "south west"),
@@ -1121,12 +1130,23 @@ def _tfm_metrics():
 GLYPH, SPACE = _tfm_metrics()
 
 
+BASELINE_SKIP = 9.5 * 1.15  # \scriptsize baseline skip (11pt document) x the \linespread of multi-line labels
+
+
 def label_size(text):
-    """(width, height) in pt of a TikZ label node holding `text` at LABEL_PT."""
-    w = sum(SPACE if ch == " " else GLYPH[ord(ch)][0] for ch in text) * LABEL_PT
-    h = max(GLYPH[ord(ch)][1] for ch in text if ch != " ") * LABEL_PT
-    d = max(GLYPH[ord(ch)][2] for ch in text if ch != " ") * LABEL_PT
-    return w + 2 * PAD, h + d + 2 * PAD
+    """(width, height) in pt of a TikZ label node holding `text` at LABEL_PT. A label may have several
+    lines separated by newlines (typeset with align=left)."""
+    lines = text.split("\n")
+
+    def width(line):
+        return sum(SPACE if ch == " " else GLYPH[ord(ch)][0] for ch in line) * LABEL_PT
+
+    def hd(line, i):
+        return max(GLYPH[ord(ch)][i] for ch in line if ch != " ") * LABEL_PT
+
+    w = max(width(ln) for ln in lines)
+    h = hd(lines[0], 1) + BASELINE_SKIP * (len(lines) - 1) + hd(lines[-1], 2)
+    return w + 2 * PAD, h + 2 * PAD
 
 
 def _anchor_box(qx, qy, w, h, anchor):
@@ -1156,7 +1176,7 @@ def _seg_dist(p, q, c):
     return math.hypot(p[0] + t * vx - c[0], p[1] + t * vy - c[1])
 
 
-def place_labels(name, points, xr, yr, xlog=False):
+def place_labels(name, points, xr, yr, xlog=False, obstacles=()):
     """points: [(key, text, x, y)] in data units. Returns placements; exits non-zero if impossible."""
     def tx(x):
         if xlog:
@@ -1168,6 +1188,7 @@ def place_labels(name, points, xr, yr, xlog=False):
 
     pts = [(k, t, x, y, tx(x), ty(y)) for k, t, x, y in points]
     centers = {p[0]: (p[4], p[5]) for p in pts}
+    blocked = [(tx(a), ty(b), tx(c), ty(d)) for a, b, c, d in obstacles]  # e.g. a shaded zone
 
     def options(p):
         k, t, _, _, px, py = p
@@ -1187,6 +1208,8 @@ def place_labels(name, points, xr, yr, xlog=False):
     def ok(o, placed):
         b = o["box"]
         if b[0] < EDGE or b[1] < EDGE or b[2] > AXIS_W - EDGE or b[3] > AXIS_H - EDGE:
+            return False
+        if any(_boxes_touch(b, z, LABEL_GAP) for z in blocked):
             return False
         own = _dist_pt_box(*centers[o["key"]], b)
         for k, c in centers.items():
@@ -1236,14 +1259,15 @@ def place_labels(name, points, xr, yr, xlog=False):
     for k, t, x, y, px, py in pts:
         o = res[k]
         at = f"($(axis cs:{x:.4f},{y:.4f})+({o['dx']:.3f}pt,{o['dy']:.3f}pt)$)"
-        tex.append(f"\\node[scatterlabel, anchor={o['anchor']}] at {at} {{{t}}};")
+        opts = ", scatterlabelmulti" if "\n" in t else ""
+        tex.append(f"\\node[scatterlabel, anchor={o['anchor']}{opts}] at {at} {{{t.replace(chr(10), chr(92) * 2)}}};")
         if o["leader"]:
             (lx, ly), _ = o["leader"]
             tex.append(f"\\draw[leader] ($(axis cs:{x:.4f},{y:.4f})+({lx - px:.3f}pt,{ly - py:.3f}pt)$) -- {at};")
         b = o["box"]
         own = _dist_pt_box(px, py, b)
         other = min(((kk, _dist_pt_box(*c, b)) for kk, c in centers.items() if kk != k), key=lambda z: z[1])
-        rec.append("\t".join([k, t, f"{x:.4f}", f"{y:.4f}", f"{px:.2f}", f"{py:.2f}"] + [f"{v:.2f}" for v in b]
+        rec.append("\t".join([k, t.replace("\n", " "), f"{x:.4f}", f"{y:.4f}", f"{px:.2f}", f"{py:.2f}"] + [f"{v:.2f}" for v in b]
                              + [f"{own:.2f}", other[0], f"{other[1]:.2f}", "yes" if o["leader"] else "no"]))
     write(OUT / "labels" / f"{name}.tex", "\n".join(tex) + "\n")
     write(DATA / f"labels-{name}.tsv", "\n".join(rec) + "\n")
@@ -1329,6 +1353,359 @@ dat("i2-holdout.dat", ["idx", "label", "before", "after", "cov"],
     [[i, "{" + NAME[e["arm"]] + "}", e["targeted_wrong_auto_before"], e["targeted_wrong_auto_after"],
       f"{e['coverage_change_points']:.2f}"] for i, e in enumerate(i2)])
 M("ITwoPlotMax", len(i2) - 1)
+
+
+# =================================================================== FOLLOW-UP (2026-10-01)
+# Two follow-up studies, read only from their committed evidence:
+#   docs/evidence/2026-10-01-trace-judge-benchmark/  (real read-shortcut decisions)
+#   docs/evidence/2026-10-01-caching/                (cost of switching models in longer chats)
+#   evals/judge_bench/traces/                        (preregistration, labels, pool, findings)
+# A few facts exist only as prose in those committed Markdown files (the state-budget numbers, the
+# smoke-run erratum, the proposed caching experiment). They are read with anchored patterns below and
+# the build fails if the text no longer matches, so a number can never silently drift.
+import re as _re2
+
+TEV = HERE.parents[1] / "evidence" / "2026-10-01-trace-judge-benchmark"
+CEV = HERE.parents[1] / "evidence" / "2026-10-01-caching"
+TRACES = HERE.parents[2] / "evals" / "judge_bench" / "traces"
+
+
+def grab(path: Path, pattern: str, group=1):
+    m = _re2.search(pattern.replace(" ", r"\s+"), path.read_text(), _re2.S)  # tolerate line wraps
+    if not m:
+        raise SystemExit(f"build_assets.py: pattern not found in {path}: {pattern!r}")
+    return m.group(group)
+
+
+TS = {"dev": json.loads((TEV / "dev/summary.json").read_text()),
+      "holdout": json.loads((TEV / "holdout/summary.json").read_text())}
+TRUN = {sp: json.loads((TEV / f"{sp}/run.json").read_text())["invocations"][0] for sp in TS}
+TMAN = json.loads((TEV / "holdout/manifest.json").read_text())
+TREQ = [json.loads(x) for x in (TEV / "holdout/requests.jsonl").read_text().splitlines() if x.strip()]
+TR2 = json.loads((TEV / "holdout/rule2_useful.json").read_text())
+TAN = json.loads((TEV / "holdout/trace_analysis.json").read_text())
+LABELS = json.loads((TRACES / "labels_final.json").read_text())["labels"]
+POOL = json.loads((TRACES / "pool.json").read_text())
+CR = json.loads((CEV / "results.json").read_text())
+TH = TS["holdout"]
+TARMS = [a for a in BASE if a in TH["arms"]]
+
+
+def tmaj(arm, policy=PRIMARY, sp="holdout"):
+    return TS[sp]["arms"][arm]["policies"][policy]["across_reps"]["majority_vote"]
+
+
+def tpooled(arm, q):
+    return nearest_rank([r["elapsed_ms"] for r in TREQ if r["arm"] == arm and r.get("valid")], q)
+
+
+def tcost(arm, sp="holdout"):
+    vals = [r["cost"]["usd_per_1m_decisions"] for r in TS[sp]["arms"][arm]["reps"].values()]
+    return sum(vals) / len(vals)
+
+
+def kappa(a, b):
+    n = len(a)
+    po = sum(x == y for x, y in zip(a, b)) / n
+    ca, cb = defaultdict(int), defaultdict(int)
+    for x in a:
+        ca[x] += 1
+    for x in b:
+        cb[x] += 1
+    pe = sum(ca[k] * cb[k] for k in ca) / (n * n)
+    return (po - pe) / (1 - pe)
+
+
+def pval_hu(p):
+    """pval() with half-up rounding at two decimals (0.625 -> 0.63, as the evidence README states)."""
+    from decimal import ROUND_HALF_UP, Decimal
+    if 0.01 <= p < 0.9995:
+        return str(Decimal(str(p)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
+    return pval(p)
+
+
+# ---- design and labels
+M("TrN", TH["n_cases"])
+M("TrDevN", TS["dev"]["n_cases"])
+M("TrReps", TRUN["holdout"]["reps"])
+M("TrCommit", TRUN["holdout"]["git"]["sha"][:7])
+M("TrProbeStatus", TRUN["holdout"]["openai_decisions_probe"]["status"])
+M("TrSpendHold", money(TRUN["holdout"]["budget"]["realized_usd"]))
+M("TrSpendDev", money(TRUN["dev"]["budget"]["realized_usd"]))
+smoke_usd = float(grab(TEV / "README.md", r"adapter smoke test \$([\d.]+)\)"))
+M("TrSpendSmoke", money(smoke_usd))
+M("TrSpendTotal", money(TRUN["holdout"]["budget"]["realized_usd"] + TRUN["dev"]["budget"]["realized_usd"] + smoke_usd))
+M("TrSmokeCases", len(grab(TEV / "README.md", r"\((rt-\d+, rt-\d+, rt-\d+); 9 arms").split(",")))
+M("TrSmokeMinutes", grab(TEV / "README.md", r"ran about ([\d.]+) minutes before that commit"))
+sel = POOL["meta"]["selection"]
+M("TrMined", thousands(sel["eligible_after_dedupe"]))
+M("TrFastRouted", sel["pool_skips"]["fast_routed_weak_label"])
+M("TrRebuildFail", sel["pool_skips"]["rebuild_not_exact"])
+M("TrDrawn", len(POOL["cases"]))
+M("TrSeed", POOL["meta"]["seed"])
+eligible_read = sum(v for k, v in sel["eligible_by_stratum_label"].items() if k.endswith("candidate"))
+M("TrPoolReadPct", pct(eligible_read / sel["eligible_after_dedupe"]))
+ids = sorted(LABELS)
+ka = kappa([LABELS[i]["reviewer_A"] for i in ids], [LABELS[i]["reviewer_B"] for i in ids])
+ko = sorted([kappa([LABELS[i]["reviewer_A"] for i in ids], [LABELS[i]["outcome_label"] for i in ids]),
+             kappa([LABELS[i]["reviewer_B"] for i in ids], [LABELS[i]["outcome_label"] for i in ids])])
+M("TrKappaAB", f"{ka:.2f}")
+M("TrKappaOutcome", f"{ko[0]:.2f}--{ko[1]:.2f}")
+dec = defaultdict(int)
+for v in LABELS.values():
+    dec[v["decision"]] += 1
+M("TrAgreed", dec["agreed"])
+M("TrOverridden", dec["adjudicated"])
+M("TrDropped", dec["dropped"])
+M("TrKept", dec["agreed"] + dec["adjudicated"])
+hold_ids = [c["id"] for c in TMAN["cases"]]
+over = [i for i in hold_ids if LABELS[i]["decision"] == "adjudicated"]
+kind = lambda x: "reason" if x == "reason" else "read"
+M("TrHoldOverrides", len(over))
+M("TrOverReadToReason", sum(kind(LABELS[i]["outcome_label"]) == "read" and kind(LABELS[i]["label"]) == "reason" for i in over))
+M("TrOverReasonToRead", sum(kind(LABELS[i]["outcome_label"]) == "reason" and kind(LABELS[i]["label"]) == "read" for i in over))
+M("TrOverReadToRead", sum(kind(LABELS[i]["outcome_label"]) == "read" and kind(LABELS[i]["label"]) == "read" for i in over))
+M("TrReasonLabels", sum(c["expected"] == "reason" for c in TMAN["cases"]))
+reads = TAN["read_cases_final_label"]
+M("TrReadCases", reads)
+M("TrGroups", TAN["g_clustering"]["n_groups"])
+M("TrJevWrongGroups", TAN["g_clustering"]["jev_groups_with_a_wrong_automatic"])
+strata = defaultdict(int)
+for c in TMAN["cases"]:
+    strata[c["tags"]["stratum"]] += 1
+M("TrSThree", strata["S3"])
+M("TrSOneTwo", strata["S12"])
+fam = TAN["c_selection_effect"]["cases_by_family"]
+M("TrFamJev", fam["jev"])
+M("TrFamLaya", fam["laya"])
+M("TrFamOllama", fam["ollama"])
+tok_in = sum(r["cost"]["mean_input_tokens"] for r in TH["arms"]["jev-1.13"]["reps"].values()) / len(TH["arms"]["jev-1.13"]["reps"])
+M("TrJevInputTokens", thousands(round(tok_in, -2)))
+# state budget (FINDING-state-budget-clips-task.md)
+fb = TRACES / "FINDING-state-budget-clips-task.md"
+M("TrStateBudget", grab(fb, r"the state budget was ([\d,]+) characters").replace(",", "{,}"))
+M("TrStateDefault", grab(fb, r"defaults to ([\d,]+) \(contracts").replace(",", "{,}"))
+M("TrTaskSeen", grab(fb, r"ends after about ([\d,]+) characters"))
+M("TrTimeoutMs", thousands(json.loads((TEV / "holdout/run.json").read_text())["timeout_ms"]))
+
+# ---- per-judge results (holdout, preregistered)
+for arm in TARMS:
+    t = "Tr" + TOK[arm]
+    mv = tmaj(arm)
+    r2 = TR2[arm]
+    M(f"{t}AccK", mv["correct"])
+    M(f"{t}AccCI", ci_pct(mv["ci95"]))
+    M(f"{t}WaK", mv["automatic_errors"])
+    M(f"{t}WaPct", pct(mv["wrong_automatic_rate"]["rate"]))
+    M(f"{t}WaUpper", pct(r2["wrong_automatic_upper95"]))
+    M(f"{t}CovK", mv["automatic"])
+    M(f"{t}Reads", r2["correct_automatic_reads"])
+    M(f"{t}Pfifty", thousands(tpooled(arm, .5)))
+    M(f"{t}Pninetyfive", thousands(tpooled(arm, .95)))
+    M(f"{t}Cost", money(tcost(arm)))
+    assert (r2["wrong_automatic"], r2["n"], r2["read_cases"]) == (mv["automatic_errors"], TH["n_cases"], reads), arm
+    lats = [x["latency"] for x in TH["arms"][arm]["reps"].values()]
+    M(f"{t}PfiftyRangeS", rng(min(x["p50_ms"] for x in lats) / 1000, max(x["p50_ms"] for x in lats) / 1000, "{:.1f}"))
+    hn = TAN["a_outcome_label"]["judges"][arm]
+    M(f"{t}HostReads", hn["outcome_label"]["correct_automatic_reads"])
+    M(f"{t}HostWa", hn["outcome_label"]["wrong_automatic"]["k"])
+    M(f"{t}WaMatchHost", hn["wrong_automatic_matching_host_next_read"]["k"])
+M("TrHostReadCases", TAN["a_outcome_label"]["outcome_read_cases"])
+M("TrSolJevCostX", f"{tcost('gpt-6.1-sol') / tcost('jev-1.13'):.0f}")
+M("TrJevCostXFirst", f"{tcost('jev-1.13') / cost('holdout', 'jev-1.13'):.1f}")
+useful = [a for a in TARMS if TR2[a]["useful"]]
+M("TrNUseful", len(useful))
+M("TrUsefulMinReads", grab(TRACES / "PREREGISTRATION.md", r"at least (\d+) correct automatic reads"))
+M("TrUsefulMaxUpperPct", pct(float(grab(TRACES / "PREREGISTRATION.md", r"upper 95% bound\s+below (0\.\d+)"))))
+ge4 = [a for a in TARMS if TR2[a]["correct_automatic_reads"] >= int(MACROS["TrUsefulMinReads"])]
+assert all(TR2[a]["wrong_automatic"] >= 1 for a in ge4)
+M("TrNGeMinReads", len(ge4))
+# always fall back reference (no automation): correct = number of reason labels
+M("TrAlwaysK", TAN["b_by_suite"]["S3"]["always_fall_back"]["correct"] + TAN["b_by_suite"]["S12"]["always_fall_back"]["correct"])
+assert int(MACROS["TrAlwaysK"]) == int(MACROS["TrReasonLabels"])
+M("TrAlwaysSThreeK", TAN["b_by_suite"]["S3"]["always_fall_back"]["correct"])
+M("TrAlwaysSOneTwoK", TAN["b_by_suite"]["S12"]["always_fall_back"]["correct"])
+M("TrAlwaysCI", ci_pct(wilson(int(MACROS["TrAlwaysK"]), TH["n_cases"])))
+# selection effect (Jev)
+se = TAN["c_selection_effect"]["judges"]["jev-1.13"]
+M("TrJevOwnN", se["own_family_cases"]["n"])
+M("TrJevOwnWa", se["own_family_cases"]["wrong_automatic"]["k"])
+M("TrJevOtherN", se["all_other_cases"]["n"])
+M("TrJevOtherWa", se["all_other_cases"]["wrong_automatic"]["k"])
+# Sol timeouts and the hypothetical no-timeout view
+fr = TAN["d_fallback_reasons"]["judges"]["gpt-6.1-sol"]
+M("TrSolTimeouts", fr["fallback_reasons_all_reps"]["decision_timeout"])
+M("TrSolAnswers", sum(fr["fallback_reasons_all_reps"].values()))
+M("TrSolNoTimeoutReads", fr["hypothetical_no_timeout"]["correct_automatic_reads"])
+M("TrSolNoTimeoutWa", fr["hypothetical_no_timeout"]["wrong_automatic"]["k"])
+M("TrQwenFourAbstained", TAN["d_fallback_reasons"]["judges"]["qwen3-4b"]["fallback_reasons_all_reps"]["model_abstained"])
+# contrasts
+r1t = TH["decisions"]["rule1_default_judge"]["candidates"]
+M("TrNReplaces", sum(bool(c["replaces_default"]) for c in r1t.values()))
+pw = {(c["a"], c["b"], m): c for m in ("correct", "automatic_error") for c in TH["pairwise"]["contrasts"][m]}
+M("TrJevLunaAccPHolm", pval_hu(pw[("jev-1.13", "gpt-6-luna", "correct")]["p_holm"]))
+M("TrJevLunaWaPHolm", pval_hu(pw[("jev-1.13", "gpt-6-luna", "automatic_error")]["p_holm"]))
+M("TrLunaSolAccPHolm", pval_hu(pw[("gpt-6-luna", "gpt-6.1-sol", "correct")]["p_holm"]))
+M("TrLunaSolWaPHolm", pval_hu(pw[("gpt-6-luna", "gpt-6.1-sol", "automatic_error")]["p_holm"]))
+js = TAN["e_jev_vs_sol"]
+M("TrJevSolAccP", pval_hu(js["correct"]["p_exact_mcnemar"]))
+M("TrJevSolWaP", pval_hu(js["automatic_error"]["p_exact_mcnemar"]))
+rp = TAN["f_correct_automatic_reads_paired"]
+M("TrJevLunaReadsP", pval_hu(rp["jev-1.13_vs_gpt-6-luna"]["p_exact_mcnemar"]))
+M("TrJevSolReadsP", pval_hu(rp["jev-1.13_vs_gpt-6.1-sol"]["p_exact_mcnemar"]))
+M("TrMaxNimbleAccPHolm", pval_hu(r1t["nimble-9b"]["accuracy"]["p_holm"]))
+
+
+def trace_table():
+    lines = [r"\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}l l r r r r r r r r@{}}", r"\toprule",
+             r" & & \multicolumn{2}{c}{Accuracy} & \multicolumn{2}{c}{Wrong automatic} & & Correct"
+             r" & \multicolumn{2}{c}{Latency (ms)} \\",
+             r"\cmidrule(lr){3-4}\cmidrule(lr){5-6}\cmidrule(lr){9-10}",
+             r"Judge & form & correct & 95\,\% CI & count & upper & automatic & reads (of \TrReadCases) & p50 & p95 \\",
+             r"\midrule"]
+    order = sorted(TARMS, key=lambda a: (-TR2[a]["correct_automatic_reads"], TR2[a]["wrong_automatic"], a))
+    forms = TRUN["holdout"]["arm_forms"]
+    for arm in order:
+        t = "Tr" + TOK[arm]
+        name = NAME[arm] if arm != "jev-1.13" else r"\textbf{Jev 1.13}"
+        lines.append(f"{name} & {forms[arm]} & \\{t}AccK/\\TrN & \\{t}AccCI & \\{t}WaK & \\{t}WaUpper\\,\\% & "
+                     f"\\{t}CovK & \\{t}Reads & \\{t}Pfifty & \\{t}Pninetyfive \\\\")
+    lines += [r"\midrule",
+              r"\emph{Always fall back} & --- & \TrAlwaysK/\TrN & \TrAlwaysCI & 0 & --- & 0 & 0 & --- & --- \\",
+              r"\bottomrule", r"\end{tabular*}"]
+    return "\n".join(lines) + "\n"
+
+
+write(TABLES / "trace-holdout.tex", trace_table())
+
+
+
+# ---- figure: correct automatic reads vs wrong automatic reads, Wilson whiskers on both axes.
+# Judges at exactly the same point share one marker and one label (otherwise no label could be
+# nearer to "its own" marker than to an identical one).
+READS_X, READS_Y = (-1.0, 14.0), (-1.5, 22.0)
+groups: dict = {}
+for arm in TARMS:
+    key = (TR2[arm]["correct_automatic_reads"], TR2[arm]["wrong_automatic"])
+    groups.setdefault(key, []).append(arm)
+pts, rows = [], {"cloud": [], "jev": [], "local": []}
+for (x, y), arms in sorted(groups.items()):
+    arms = sorted(arms, key=lambda a: BASE.index(a))
+    label = ",\n".join(NAME[a] for a in arms)
+    key = "+".join(arms)
+    pts.append((key, label, float(x), float(y)))
+    fam = "jev" if "jev-1.13" in arms else ("cloud" if FAM[arms[0]] == "cloud" else "local")
+    lo_x, hi_x = wilson(x, reads)
+    lo_y, hi_y = wilson(y, TH["n_cases"])
+    rows[fam].append([x, f"{x - lo_x * reads:.3f}", f"{hi_x * reads - x:.3f}",
+                      y, f"{y - lo_y * TH['n_cases']:.3f}", f"{hi_y * TH['n_cases'] - y:.3f}"])
+for fam, rr in rows.items():
+    dat(f"reads-{fam}.dat", ["reads", "readsminus", "readsplus", "wa", "waminus", "waplus"], rr)
+M("TrSharedPoint", ", ".join(NAME[a] for a in sorted(groups[(0, 0)], key=BASE.index)) if (0, 0) in groups else "none")
+READS_ZONE = (int(MACROS["TrUsefulMinReads"]) - 0.5, READS_Y[0], READS_X[1], 0.5)  # rule 2's "useful" region
+for k, v in zip(("ZoneXa", "ZoneYa", "ZoneXb", "ZoneYb"), READS_ZONE):
+    M("Reads" + k, f"{v:g}")
+place_labels("reads-holdout", pts, READS_X, READS_Y, obstacles=[READS_ZONE])
+
+# ---- caching study
+def h2(v):
+    """Two decimals, half-up on the value as stored in results.json (1.305 -> 1.31, as its README states)."""
+    from decimal import ROUND_HALF_UP, Decimal
+    return str(Decimal(str(v)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
+
+
+def gm(g):
+    return h2(g["geomean"])
+
+
+def gci(g):
+    return f"{h2(g['ci95'][0])}--{h2(g['ci95'][1])}"
+
+
+CH = CR["headline"]
+CC = CH["corrections"]
+M("CaRuns", thousands(CH["runs_indexed"]))
+M("CaPairs", thousands(CH["pairs_total"]))
+M("CaRoutedPairs", CH["routed_pairs"])
+M("CaReceipts", CH["routed_pairs_with_efficiency_receipts"])
+pr = CR["inferred_prices"]
+for mdl, t in (("claude-opus-5-5", "Opus"), ("claude-sonnet-5", "Sonnet"), ("claude-fable-5-1", "Fable")):
+    for cls, ct in (("uncached", "In"), ("read", "Read"), ("write", "Write"), ("output", "Out")):
+        M(f"Ca{t}{ct}", f"{pr[mdl]['usd_per_mtok'][cls]:.2f}")
+M("CaReadPriceX", f"{pr['claude-sonnet-5']['usd_per_mtok']['read'] / pr['claude-opus-5-5']['usd_per_mtok']['read']:.1f}")
+M("CaOtherPriceX", h2(pr['claude-sonnet-5']['usd_per_mtok']['write'] / pr['claude-opus-5-5']['usd_per_mtok']['write']))
+cells = CC["same_cell_length_contrast"]["cells"]
+
+
+for cell, t in (("orch-default-opus vs plain-opus", "OpusRouted"), ("orch-default vs plain", "FableRouted"),
+                ("plain-sonnet vs plain-opus", "Control")):
+    for suite, st in (("S1-single", "One"), ("S1-multi", "Four")):
+        c = cells[cell][suite]
+        M(f"Ca{t}{st}", gm(c["cost"]))
+        M(f"Ca{t}{st}CI", gci(c["cost"]))
+        M(f"Ca{t}{st}Pairs", c["cost"]["n_pairs"])
+        M(f"Ca{t}{st}Time", gm(c["time"]))
+pv = CC["price_volume_plain_sonnet_vs_plain_opus"]
+M("CaPriceOne", h2(pv['S1-single']['price_factor_identical_tokens_pooled']))
+M("CaPriceFour", h2(pv['S1-multi']['price_factor_identical_tokens_pooled']))
+M("CaVolumeOne", h2(pv['S1-single']['volume_factor_geomean']['geomean']))
+M("CaVolumeFour", h2(pv['S1-multi']['volume_factor_geomean']['geomean']))
+M("CaRequestsFour", h2(pv['S1-multi']['requests_ratio_pooled']))
+M("CaCacheReadFour", h2(pv['S1-multi']['cache_read_tokens_ratio_pooled']))
+M("CaReadShareFour", pct(pv["S1-multi"]["per_class"]["read"]["share_of_opus_cost_on_anchor_tokens"]))
+M("CaReadShareOne", pct(pv["S1-single"]["per_class"]["read"]["share_of_opus_cost_on_anchor_tokens"]))
+M("CaPriceShare", pct(pv["change_1turn_to_4turn"]["price_share"]))
+M("CaVolumeShare", pct(pv["change_1turn_to_4turn"]["volume_share"]))
+rb = CC["rebuild_by_stratum"]["strata"]
+for k, t in (("S1 single-turn routed", "One"), ("S1 4-turn routed, Opus host", "FourOpus"),
+             ("S1 4-turn routed, Fable host", "FourFable"), ("S3 orch-primary (mid-turn escalation)", "Primary"),
+             ("S3 turn-start routers (jev, local, rules)", "Routers")):
+    M(f"CaRb{t}Pairs", rb[k]["pairs"])
+    M(f"CaRb{t}Switch", rb[k]["sessions_with_switch"])
+    M(f"CaRb{t}Share", pct(rb[k]["rebuild_share"], 1 if rb[k]["rebuild_share"] < 0.01 else 0))
+    M(f"CaRb{t}EffortShare", pct(rb[k]["rebuild_plus_effort_share"]))
+M("CaUniqueAnchors", CC["rebuild_by_stratum"]["unique_anchor_runs"])
+rbh = CH["rebuild"]
+M("CaSwitches", rbh["model_switches"])
+M("CaSwitchBoundary", rbh["at_turn_boundary"])
+M("CaSwitchMid", rbh["midturn"])
+ptm = CH["per_turn_multiturn"]
+M("CaTurns", len([k for k in ptm if k.startswith("opus_turn")]))
+M("CaTurnTwoSwitches", ptm["opus_turn2"]["switches_into_turn"] + ptm["fable_turn2"]["switches_into_turn"])
+for h in ("opus", "fable"):
+    T = h.capitalize()
+    M(f"Ca{T}TurnTwo", h2(ptm[h + '_turn2']['cost']['geomean']))
+    M(f"Ca{T}TurnTwoEx", h2(ptm[h + '_turn2']['cost_ex_rebuild']['geomean']))
+    M(f"Ca{T}TurnOne", h2(ptm[h + '_turn1']['cost']['geomean']))
+warm = CC["first_request_warmth"]["groups"]
+for g, t in (("S1-multi routed opus host", "Opus"), ("S1-multi routed fable host", "Fable"),
+             ("S1-multi plain-sonnet vs plain-opus", "Control")):
+    M(f"CaWarm{t}Raw", h2(warm[g]['raw']['geomean']))
+    M(f"CaWarm{t}Range", f"{h2(warm[g]['normalised_range'][0])}--{h2(warm[g]['normalised_range'][1])}")
+    M(f"CaWarm{t}Treat", pct(warm[g]["treat_first_request_warm_share"]))
+    M(f"CaWarm{t}Anchor", pct(warm[g]["anchor_first_request_warm_share"]))
+so = CC["multiturn_scenario_origin"]
+M("CaScenarios", len(so["opus"]["scenarios"]))
+M("CaDevScenarios", sum(s.startswith("scn_dev") for s in so["opus"]["scenarios"]))
+M("CaHoldScenarios", sum(s.startswith("scn_holdout") for s in so["opus"]["scenarios"]))
+M("CaOpusFourPairs", so["opus"]["pairs"])
+M("CaOpusFourDevPairs", so["opus"]["dev_scenarios"])
+M("CaFableFourPairs", so["fable"]["pairs"])
+M("CaFableFourDevPairs", so["fable"]["dev_scenarios"])
+g = CR["groups"]
+M("CaRulesSThree", gm(g["S3-routing|orch-router-rules|vs|plain"]["cost"]))
+M("CaRulesSThreeSwitches", g["S3-routing|orch-router-rules|vs|plain"]["switches"])
+cmd = CR["invocation"]
+M("CaBoot", thousands(cmd["boot"]))
+cread = CEV / "README.md"
+M("CaTurnGapS", grab(cread, r"about (\d+) s between\s+turns"))
+M("CaExpiryMin", grab(cread, r"it expires after (\d+) minutes"))
+M("CaPropUSD", grab(cread, r"Proposed experiment \(about \$(\d+),"))
+M("CaPropHours", grab(cread, r"Proposed experiment \(about \$\d+, about (\d+) h unattended"))
+M("CaPropTurns", grab(cread, r"(\d+)-turn\*\*\s+scenarios"))
+M("CaPropScenarios", grab(cread, r"\*\*Tasks:\*\* (\d+) new"))
+M("CaPropGapMin", grab(cread, r"(\d+) minutes between turns vs none"))
+M("CaPropReps", grab(cread, r"\*\*Reps:\*\* (\d+), cell order"))
 
 header = ("% Generated by build_assets.py from docs/evidence/2026-09-30-judge-benchmark/. Do not edit.\n"
           f"% {len(MACROS)} macros.\n")

@@ -27,6 +27,10 @@
     computer-use gate and added the side-effect guard and clause to \code{jev\_cua} after these
     measurements (\cref{sec:since}). This report describes the system as it was measured.
   \item \textbf{Decisions API not measured.} It returned HTTP \HoldProbeStatus; no claim is made about it.
+  \item \textbf{The follow-ups have their own limits.} The real-decision benchmark covers \TrN\ decisions
+    that an in-session judge had already declined, with strict labels and a clipped task view; the caching
+    re-analysis covers at most \CaTurns-turn synthetic sessions and does not isolate the switch. Both are
+    set out in \cref{sec:caveats,sec:caching}.
   \item \textbf{Only the first option order is scored.} The second order is logged but used only for
     latency and order-flip counts.
 \end{itemize}

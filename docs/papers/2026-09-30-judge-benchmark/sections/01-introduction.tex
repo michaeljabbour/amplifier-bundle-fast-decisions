@@ -51,10 +51,16 @@ automatically at all (coverage). A wrong answer that falls back to slow reasonin
     \DevN\ cases with no wrong automatic decisions did not hold up (\cref{sec:validate}).
 \end{itemize}
 
+\paragraph{Two follow-ups.} A reviewer asked whether the constructed cases are too easy, and whether prompt
+caching erases the saving of switching to a smaller model in longer chats. \Cref{sec:followup} answers
+both with new evidence: a preregistered benchmark on \TrN\ real decisions rebuilt from agent traces, in
+which no judge met the bar for the read shortcut to pay off, and a re-analysis of earlier runs in which
+routing on an Opus host stopped saving money as sessions grew longer. The results above are unchanged.
+
 \paragraph{How to read this report.} \Cref{sec:background} explains judges and automatic decisions
 with one worked example. \Cref{sec:method} describes the cases, labels, judges and statistics in plain
 terms. \Cref{sec:validate,sec:dev,sec:holdout} give the results; results from the development split
 are marked \screen\ and results from the holdout are marked \prereg. \Cref{sec:failures,sec:latency}
-explain \emph{why} judges fail and where their time goes. \Cref{sec:recs} gives recommendations, and
-\cref{sec:limits,sec:repro} state the limits and how to reproduce everything. A glossary is in
+explain \emph{why} judges fail and where their time goes. \Cref{sec:recs} gives recommendations,
+\cref{sec:followup} reports the two follow-up studies, and \cref{sec:limits,sec:repro} state the limits and how to reproduce everything. A glossary is in
 \cref{app:glossary}.

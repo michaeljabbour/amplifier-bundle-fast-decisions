@@ -49,6 +49,9 @@ half are labeled "a read was enough" by design, against roughly 1 in 6 in the fu
   `trace-dev` (rt-003, rt-028, rt-042; 9 arms incl. Jev, Luna, Sol; $0.02) ran about 2.5 minutes before that commit, to
   check the adapters. No holdout case was involved. The preregistration file is left unedited because the run guard
   pins it.
+- **Deviation.** The trace preregistration widened rule 1's wrong-automatic margin to +0.05; the scorer's `decisions`
+  block in `summary.json` still applies the earlier +0.03. The rule-1 outcome does not depend on it: no candidate was
+  better than Jev on any primary endpoint (all Holm-adjusted p > 0.05), which rule 1 also requires.
 
 ## Dev (21 cases, 3 repetitions; screen)
 
