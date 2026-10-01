@@ -40,7 +40,7 @@ from . import routing_levers
 from . import step_actions
 from .savings import DEFAULT_RATES
 from .backends import ask_many as backend_ask_many
-from .state import automatic_tools, tool_names
+from .state import automatic_tools, clip_head_tail, tool_names
 from .runtime import Runtime, get_runtime
 from .savings import DEFAULT_RATES
 from . import provenance
@@ -514,30 +514,6 @@ def _judge_context_needed(policy: Any) -> bool:
     )
 
 
-def _first_user_text(request: Any) -> str:
-    """Best-effort text of the FIRST user message in the request, or ``""``.
-    Never raises: a malformed message shape is simply skipped."""
-    try:
-        messages = list(field_value(request, "messages") or [])
-    except Exception:
-        return ""
-    for message in messages:
-        if field_value(message, "role") != "user":
-            continue
-        content = field_value(message, "content")
-        if isinstance(content, str):
-            return content
-        if isinstance(content, list):
-            parts = [
-                text
-                for block in content
-                if isinstance(text := field_value(block, "text"), str)
-            ]
-            return "".join(parts)
-        return ""
-    return ""
-
-
 def _turn_user_text(request: Any) -> str:
     """Text of the LATEST real user message (this turn's prompt), skipping
     tool-result carriers and messages that are only injected
@@ -759,11 +735,11 @@ def _judge_state(
     task_prompt_head) if the canonical serialization would still exceed
     ``max_state_chars``. Never raises."""
     state: dict[str, Any] = {
-        # _turn_user_text, not _first_user_text: in host sessions the first user
-        # message is the injected <system-reminders> envelope. _turn_user_text is
-        # the latest real user message with reminder blocks stripped -- the
-        # current turn's task, which is what the judge must see.
-        "task_prompt_head": _turn_user_text(request)[:_JUDGE_STATE_TASK_PROMPT_CHARS],
+        # The latest real user message (reminder envelopes stripped), i.e. the
+        # current turn's task -- in a multi-turn session that is this turn's
+        # message, not the session's first one. Kept as head + tail so the
+        # issue text after a block of rules stays visible.
+        "task_prompt_head": clip_head_tail(_turn_user_text(request), _JUDGE_STATE_TASK_PROMPT_CHARS),
         "phase": phase,
         "slow_requests_seen": turn.slow_requests_seen,
         "tool_names_used": sorted(turn.tool_names_used),

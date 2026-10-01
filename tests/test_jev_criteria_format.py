@@ -101,6 +101,27 @@ class CriteriaFormatTests(unittest.TestCase):
             self.assertIsInstance(seen[2]["read_readme"], str)
         self.assertEqual(first.action.choice, "read_readme")
 
+    def test_concurrent_requests_both_recover_from_rejection(self):
+        # B was sent as "object" before A flipped the backend to "string": B must
+        # still retry (the check uses the format B sent, not the live attribute).
+        async def both(backend):
+            return await asyncio.gather(backend.ask(_request()), backend.ask(_request()))
+        with running(True) as (url, seen):
+            backend = JevBackend(base_url=url, timeout_ms=5000)
+            first, second = asyncio.run(both(backend))
+        self.assertEqual(first.action.choice, "read_readme")
+        self.assertEqual(second.action.choice, "read_readme")
+        self.assertEqual(first.action.criteria_format, "string")
+        self.assertEqual(second.action.criteria_format, "string")
+
+    def test_decision_records_wire_format(self):
+        with running(False) as (url, _):
+            result = asyncio.run(JevBackend(base_url=url, timeout_ms=2000).ask(_request()))
+        self.assertEqual(result.action.criteria_format, "object")
+        with running(True) as (url, _):
+            result = asyncio.run(JevBackend(base_url=url, timeout_ms=2000, criteria_format="string").ask(_request()))
+        self.assertEqual(result.action.criteria_format, "string")
+
     def test_unrelated_400_does_not_retry(self):
         class H(http.server.BaseHTTPRequestHandler):
             hits = 0

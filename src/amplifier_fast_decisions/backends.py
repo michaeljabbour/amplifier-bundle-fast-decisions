@@ -9,6 +9,7 @@ batching, not proof of shared GPU work, lower latency, or answer invariance.
 from __future__ import annotations
 
 import asyncio
+from dataclasses import replace
 import http.client
 import json
 import os
@@ -175,6 +176,10 @@ def _build_questions(request: DecisionRequest,
     for question in request.questions:
         questions[question.name] = _question_payload(question)
     return questions, option_set_hash
+
+
+def _with_criteria_format(result: DecisionResult, fmt: str) -> DecisionResult:
+    return replace(result, action=replace(result.action, criteria_format=fmt))
 
 
 def _decision_from_answer(answer: Any, model: str, input_tokens: Any,
@@ -366,7 +371,8 @@ class JevBackend:
         # client, so this reflects whether *this* call reused an
         # already-authenticated, already-constructed client instance.
         had_client = self._client is not None
-        questions, option_set_hash = _build_questions(request, self.criteria_format)
+        sent_format = self.criteria_format
+        questions, option_set_hash = _build_questions(request, sent_format)
         result = await self._get_client().system_one(
             state=request.state,
             questions=questions,
@@ -383,7 +389,8 @@ class JevBackend:
         # docs/MODEL-SETUP.md for what is and is not verified here.
         self.last_connect_ms = None
         self.last_vendor_confidence = _vendor_confidence(result)
-        return _result_from_payload(result, self.model, request, option_set_hash)
+        return _with_criteria_format(
+            _result_from_payload(result, self.model, request, option_set_hash), sent_format)
 
     async def _ask_urllib(self, request: DecisionRequest) -> DecisionResult:
         """No-install fallback: a plain ``http.client`` POST over a
@@ -403,8 +410,8 @@ class JevBackend:
         }
         timeout_s = self.timeout_ms / 1000
 
-        async def post() -> tuple[dict[str, Any], str]:
-            questions, option_set_hash = _build_questions(request, self.criteria_format)
+        async def post(fmt: str) -> tuple[dict[str, Any], str]:
+            questions, option_set_hash = _build_questions(request, fmt)
             body = {"state": request.state, "model": model, "questions": questions}
             payload = await asyncio.to_thread(
                 self._post_keepalive, base_url, "/v1/systemone", headers,
@@ -412,17 +419,21 @@ class JevBackend:
             )
             return payload, option_set_hash
 
+        # The format THIS request was sent with, captured before the await: a
+        # concurrent request may flip self.criteria_format while we wait.
+        sent_format = self.criteria_format
         try:
-            payload, option_set_hash = await post()
+            payload, option_set_hash = await post(sent_format)
         except _CriteriaRejected:
-            if self.criteria_format == "string":
+            if sent_format == "string":
                 raise
             # Retry once with string criteria and remember it for this backend.
-            self.criteria_format = "string"
-            payload, option_set_hash = await post()
+            self.criteria_format = sent_format = "string"
+            payload, option_set_hash = await post("string")
         self.last_transport = "urllib"
         self.last_vendor_confidence = _vendor_confidence(payload)
-        return _result_from_payload(payload, model, request, option_set_hash)
+        return _with_criteria_format(
+            _result_from_payload(payload, model, request, option_set_hash), sent_format)
 
     def _new_connection(
         self, is_https: bool, host: str, port: int, timeout_s: float

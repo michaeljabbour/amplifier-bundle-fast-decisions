@@ -207,8 +207,8 @@ consent, exactly as for a read candidate) -- the caller sees this as an
 ordinary abstain and falls back to its deterministic rule.
 
 **Compact judge state (`orchestrator._judge_state`).** Both mechanisms send
-the same small, bounded, JSON-able state: a 300-char head of the first user
-message (`task_prompt_head`), the phase, this turn's slow-request count
+the same small, bounded, JSON-able state: a 300-char head+tail clip of the current
+turn's user message, reminder envelopes stripped (`task_prompt_head`), the phase, this turn's slow-request count
 (`slow_requests_seen`), the tool names used so far this turn
 (`tool_names_used`), a 600-char excerpt of the last tool result
 (`last_tool_result_excerpt`), and the two HC04 failure signals

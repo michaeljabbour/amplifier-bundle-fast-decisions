@@ -80,6 +80,43 @@ class CandidatePrefillTests(unittest.TestCase):
         with self.assertRaises(BackendUnavailable):
             ask(client)
 
+    def test_malformed_prefill_tokens_raise_backend_unavailable(self):
+        bad_tops = [
+            [{"token": 5, "logprob": -1.0}],
+            [{"token": "A"}],
+            [{"token": "A", "logprob": "x"}],
+            [{"token": "A", "logprob": True}],
+            [{"token": "A", "logprob": float("nan")}],
+            [{"token": "A", "logprob": 0.5}],
+            ["A"],
+        ]
+        for top in bad_tops:
+            with self.subTest(top=top):
+                chat = {"model": "m", "done": True, "logprobs": [{"top_logprobs": top}]}
+                with self.assertRaises(BackendUnavailable):
+                    ask(Client(reply([("We", .95)]), chat))
+        for logprobs in ([], ["x"], [{"top_logprobs": []}], [{"top_logprobs": "A"}], None):
+            with self.subTest(logprobs=logprobs):
+                chat = {"model": "m", "done": True, "logprobs": logprobs}
+                with self.assertRaises(BackendUnavailable):
+                    ask(Client(reply([("We", .95)]), chat))
+
+    def test_warmup_posts_to_chat_endpoint(self):
+        seen = []
+
+        class Resp:
+            def read(self):
+                return b"{}"
+
+        def fake_urlopen(req, timeout=None):
+            seen.append(req.full_url)
+            return Resp()
+
+        from unittest import mock
+        with mock.patch("urllib.request.urlopen", fake_urlopen):
+            asyncio.run(OllamaBackend(model="m", url="http://127.0.0.1:11434").warmup())
+        self.assertEqual(seen, ["http://127.0.0.1:11434/api/chat"])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -419,17 +419,23 @@ class OllamaBackend:
         if payload.get("model") != self.model or payload.get("done") is not True:
             raise BackendUnavailable("Unexpected model or incomplete local decision")
         records = payload.get("logprobs")
-        if not isinstance(records, list) or len(records) != 1:
+        if not isinstance(records, list) or len(records) != 1 or not isinstance(records[0], dict):
             raise BackendUnavailable("Expected exactly one scored token")
         top = records[0].get("top_logprobs")
         if not isinstance(top, list) or not top:
             raise BackendUnavailable("Backend omitted token probabilities")
-        if _letter_mass(top, letters, fold=True) < MIN_OPTION_MASS:
-            raise BackendUnavailable("Local candidate answer was not an option letter")
         folded: dict[str, float] = {}
         for item in top:
-            token, logprob = item["token"], item["logprob"]
+            # Same validation as score_tokens: never a ValueError/KeyError/AttributeError.
+            token = item.get("token") if isinstance(item, dict) else None
+            logprob = item.get("logprob") if isinstance(item, dict) else None
+            if (not isinstance(token, str) or isinstance(logprob, bool)
+                    or not isinstance(logprob, (int, float))
+                    or not math.isfinite(logprob) or logprob > 0):
+                raise BackendUnavailable("Invalid token probability")
             folded[token.strip()] = folded.get(token.strip(), 0.0) + math.exp(logprob)
+        if sum(folded[k] for k in letters if k in folded) < MIN_OPTION_MASS:
+            raise BackendUnavailable("Local candidate answer was not an option letter")
         merged = [{"token": key, "logprob": math.log(min(mass, 1.0))} for key, mass in folded.items()]
         return {**payload, "logprobs": [{"top_logprobs": merged}]}
 
@@ -438,7 +444,7 @@ class OllamaBackend:
         model (re)load -- ~0.6-3 s when the server had the model resident with a different context size --
         is absorbed before any budgeted decision runs. Errors are swallowed; the suite runner logs them."""
         req = urllib.request.Request(
-            f"{self.base_url}/api/chat",
+            self.url.replace("/api/generate", "/api/chat"),
             data=json.dumps({"model": self.model, "stream": False, "think": False, "keep_alive": "10m",
                              "messages": [{"role": "user", "content": "warm"}],
                              "options": {"temperature": 0, "num_predict": 1, "num_ctx": 4096}}).encode("utf-8"),

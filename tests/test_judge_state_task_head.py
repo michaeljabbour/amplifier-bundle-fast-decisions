@@ -21,6 +21,21 @@ class JudgeStateTaskHeadTests(unittest.TestCase):
         request = NS(messages=[{"role": "user", "content": "Do the thing"}])
         self.assertEqual(_judge_state(request, TurnState("t1"), "act", 12000)["task_prompt_head"], "Do the thing")
 
+    def test_long_task_keeps_head_and_tail(self):
+        task = "RULES " * 100 + "THE-ISSUE-END"
+        request = NS(messages=[{"role": "user", "content": task}])
+        head = _judge_state(request, TurnState("t1"), "act", 12000)["task_prompt_head"]
+        self.assertLessEqual(len(head), 300)
+        self.assertTrue(head.startswith("RULES"))
+        self.assertTrue(head.endswith("THE-ISSUE-END"))
+        self.assertIn("chars omitted", head)
+
+    def test_multi_turn_uses_latest_turn_message(self):
+        request = NS(messages=[{"role": "user", "content": "first task"},
+                               {"role": "assistant", "content": "ok"},
+                               {"role": "user", "content": "second task"}])
+        self.assertEqual(_judge_state(request, TurnState("t1"), "act", 12000)["task_prompt_head"], "second task")
+
 
 if __name__ == "__main__":
     unittest.main()
