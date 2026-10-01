@@ -3,7 +3,7 @@
 id: cachetools-params
 task_type: feature
 language: python
-split: main
+split: train
 source:
   desc: >-
     tkem/cachetools, cache_parameters() for the func decorators, added upstream in 6a70f80e (#164); workspace

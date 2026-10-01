@@ -2,7 +2,7 @@
 id: py-sgf-parsing
 task_type: mixed
 language: python
-split: main
+split: train
 default_gap_s: 10
 source:
   desc: "Aider polyglot-benchmark python/sgf-parsing (Exercism), outside the S2 slice"

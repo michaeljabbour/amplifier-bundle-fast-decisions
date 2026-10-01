@@ -2,7 +2,7 @@
 id: nanoid-explain
 task_type: explain
 language: javascript
-split: main
+split: train
 source:
   desc: 'ai/nanoid 6.0.1 at bb68abc: explain the ID generator internals, document them, verify the distribution empirically'
   repo: https://github.com/ai/nanoid.git

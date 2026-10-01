@@ -2,7 +2,7 @@
 id: py-book-store
 task_type: bugfix
 language: python
-split: main
+split: train
 default_gap_s: 10
 source:
   desc: "Aider polyglot-benchmark python/book-store (Exercism), outside the S2 slice"

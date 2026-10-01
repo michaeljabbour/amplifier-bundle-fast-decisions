@@ -3,7 +3,8 @@
 
 For every scenario: (1) loader parses; (2) snapshot materializes twice into fresh roots with an identical
 tree hash; (3) per turn, a reference answer/artifact passes all checks and a plausible-but-wrong one fails
-(proves checks discriminate); (4) keyed_facts are not satisfied by the prompt text itself (no give-away).
+(proves checks discriminate); (4) keyed_facts are not satisfied by the prompt text itself (no give-away);
+(5) the STARTING workspace (pristine snapshot, empty answer) FAILS every turn's checks, so no turn is satisfied by doing nothing.
 
 Reference layout (outside the repo): <ref-root>/<id>/turnN/{message.txt,files/**} and turnN/wrong/{message.txt,files/**}.
 Reference files accumulate across turns (the workspace evolves like a real session); the wrong variant of
@@ -19,11 +20,7 @@ REPO = HERE.parents[3]
 sys.path.insert(0, str(REPO / "scripts"))
 import paired_scenarios as ps  # noqa: E402
 
-# The checked-in loader (scripts/paired_scenarios.py) does not yet list split "main" or task_type "explain"/"docs".
-# Extend its tuples in-process so these scenarios can be validated; the loader needs the same additive change
-# before `paired.py plan` can load main-v1 (reported, loader intentionally not edited here).
-ps.SPLITS = tuple(dict.fromkeys(ps.SPLITS + ("main",)))
-ps.TASK_TYPES = tuple(dict.fromkeys(ps.TASK_TYPES + ("explain", "docs")))
+# The stock loader lists task types docs/explain and the files carry a real train/test split; no in-process patching.
 
 
 def overlay(src: Path, dst: Path):
@@ -35,7 +32,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--ids")
     ap.add_argument("--dir", default=str(HERE / "knowledge"))
-    ap.add_argument("--ref-root", default=str(Path.home() / "dev/afast-paired-src/reference/knowledge"))
+    ap.add_argument("--ref-root", default=str(Path.home() / "dev/afast-paired-refs/knowledge"))
     ap.add_argument("--network", action="store_true")
     ap.add_argument("--cap-gb", type=float, default=None, help="memory cap per grader run (default 4 GB; memguard)")
     ap.add_argument("--grader-timeout", type=float, default=None, help="seconds per grader run (default 300; memguard)")
@@ -69,6 +66,14 @@ def main():
             if h1 != h2: errs.append("unstable tree hash")
             ws = Path(ra) / "ws"
             shutil.copytree(snap / "workspace", ws)
+            start_ok = 0
+            for i, t in enumerate(spec.turns, 1):      # (5) the untouched start state must fail every turn
+                st = Path(ra) / "startws"
+                if st.exists(): shutil.rmtree(st)
+                shutil.copytree(snap / "workspace", st)
+                sr = ps.grade_turn(spec, i, st, "", snap)
+                if sr["failed"] == 0: errs.append(f"turn{i}: START state passes all checks (nothing to do)")
+                else: start_ok += 1
             refdir = Path(a.ref_root).expanduser() / spec.id
             kinds = set()
             for i, t in enumerate(spec.turns, 1):
@@ -90,7 +95,7 @@ def main():
                 rr = ps.grade_turn(spec, i, ws, (td / "message.txt").read_text(encoding="utf-8"), snap)
                 if rr["failed"] != 0 or rr["checks"] == 0:
                     errs.append(f"turn{i}: reference failed {rr['failure_labels']}")
-            summary.append((spec.id, n, longs, sorted(kinds), h1[:10], "OK" if not errs else "FAIL"))
+            summary.append((spec.id, n, longs, sorted(kinds), h1[:10], f"start-fails {start_ok}/{n} " + ("OK" if not errs else "FAIL")))
         for e in errs: print(f"  {spec.id}: {e}")
         bad += bool(errs)
     print(f"\n{'id':26} turns gaps        kinds{'':52} tree        result")

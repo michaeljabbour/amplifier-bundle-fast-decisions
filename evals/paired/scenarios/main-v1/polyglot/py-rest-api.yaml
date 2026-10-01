@@ -2,7 +2,7 @@
 id: py-rest-api
 task_type: feature
 language: python
-split: main
+split: test
 default_gap_s: 10
 source:
   desc: "Aider polyglot-benchmark python/rest-api (Exercism), outside the S2 slice"

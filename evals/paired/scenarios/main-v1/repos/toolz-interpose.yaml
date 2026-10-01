@@ -3,7 +3,7 @@
 id: toolz-interpose
 task_type: bugfix
 language: python
-split: main
+split: test
 source:
   desc: >-
     pytoolz/toolz, interpose() raised StopIteration for an empty sequence (#635), fixed upstream in

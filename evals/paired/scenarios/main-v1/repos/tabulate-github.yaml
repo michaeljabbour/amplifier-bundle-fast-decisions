@@ -3,7 +3,7 @@
 id: tabulate-github
 task_type: bugfix
 language: python
-split: main
+split: train
 source:
   desc: >-
     astanin/python-tabulate, the github table format dropped column alignment colons (#53), fixed

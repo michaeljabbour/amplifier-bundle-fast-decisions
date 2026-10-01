@@ -3,7 +3,7 @@
 id: sortedc-update
 task_type: bugfix
 language: python
-split: main
+split: train
 source:
   desc: >-
     grantjenks/python-sortedcontainers, update() ordered equal elements differently from add() (#159),
@@ -131,8 +131,8 @@ turns:
       update/add ordering fix and for `__rmul__` on SortedKeyList.
     checks:
       - {kind: file_regex, path: HISTORY.rst, pattern: '^2\.2\.3 \(unreleased\)\n-{10,}'}
-      - {kind: file_regex, path: HISTORY.rst, pattern: __rmul__|rmul}
-      - {kind: file_regex, path: HISTORY.rst, pattern: update}
+      - {kind: file_regex, path: HISTORY.rst, pattern: '^2\.2\.3 \(unreleased\)\n-{10,}\n(?:(?!\d+\.\d+\.\d+ \().*\n)*?.*(?:__rmul__|rmul)'}
+      - {kind: file_regex, path: HISTORY.rst, pattern: '^2\.2\.3 \(unreleased\)\n-{10,}\n(?:(?!\d+\.\d+\.\d+ \().*\n)*?.*update'}
   - prompt: >-
       Small feature: add `SortedList.count_between(minimum, maximum)` returning how many items lie between
       the two bounds, both inclusive, in the list's own ordering (for a SortedKeyList that is the key

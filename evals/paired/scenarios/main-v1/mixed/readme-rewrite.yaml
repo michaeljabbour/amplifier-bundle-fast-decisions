@@ -2,7 +2,7 @@
 id: readme-rewrite
 task_type: mixed
 language: python
-split: main
+split: test
 source:
   desc: 'Tiny unit-conversion lib with a sloppy README containing stale claims: find them, rewrite the README with verified examples, add contributor
     docs and a units reference.'

@@ -2,7 +2,7 @@
 id: support-workload
 task_type: mixed
 language: python
-split: main
+split: train
 source:
   desc: 'Support tickets CSV: workload table, weekly counts, forecast, SLA breaches and a staffing memo with exact values.'
   kind: self-authored deterministic workspace

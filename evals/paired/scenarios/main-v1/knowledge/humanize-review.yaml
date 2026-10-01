@@ -2,7 +2,7 @@
 id: humanize-review
 task_type: review
 language: python
-split: main
+split: test
 source:
   desc: python-humanize/humanize at 392aef7 plus two planted patches (rounding step-up removal, Oxford-comma change) and a generated _version.py
   repo: https://github.com/python-humanize/humanize.git

@@ -2,7 +2,7 @@
 id: timesheet-invoice
 task_type: mixed
 language: python
-split: main
+split: train
 source:
   desc: 'Timesheet CSV + rate/client JSON: compute invoices with exact totals, revise for a cap rule, notes, script.'
   kind: self-authored deterministic workspace

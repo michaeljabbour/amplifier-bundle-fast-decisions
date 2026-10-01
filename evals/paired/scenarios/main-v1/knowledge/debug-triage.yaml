@@ -2,7 +2,7 @@
 id: debug-triage
 task_type: mixed
 language: javascript
-split: main
+split: test
 source:
   desc: 'debug-js/debug 4.4.3 at f405ade: triage three planted bug reports from the code, then implement and test a small change'
   repo: https://github.com/debug-js/debug.git

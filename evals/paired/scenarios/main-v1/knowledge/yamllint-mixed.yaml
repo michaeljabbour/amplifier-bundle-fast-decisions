@@ -2,7 +2,7 @@
 id: yamllint-mixed
 task_type: mixed
 language: python
-split: main
+split: train
 source:
   desc: 'adrienverge/yamllint 1.38.0 at 96246fb: explain the CLI/config, then design and implement a small new rule'
   repo: https://github.com/adrienverge/yamllint.git

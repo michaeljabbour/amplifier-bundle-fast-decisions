@@ -2,7 +2,7 @@
 id: discrepancy-docs
 task_type: mixed
 language: python
-split: main
+split: test
 source:
   desc: 'Tiny config library with docs that disagree with the code (5 injected discrepancies): find, report, fix docs, pin with tests, small CLI
     change.'

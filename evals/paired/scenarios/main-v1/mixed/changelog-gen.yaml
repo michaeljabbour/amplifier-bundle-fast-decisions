@@ -2,7 +2,7 @@
 id: changelog-gen
 task_type: mixed
 language: python
-split: main
+split: train
 source:
   desc: 'Fake git log + tags: answer release questions, write CHANGELOG sections, finish a small changelog tool (parse, CLI, edge cases), docs.'
   kind: self-authored deterministic workspace

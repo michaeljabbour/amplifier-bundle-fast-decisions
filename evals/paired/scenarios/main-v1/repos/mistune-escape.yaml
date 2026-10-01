@@ -3,7 +3,7 @@
 id: mistune-escape
 task_type: bugfix
 language: python
-split: main
+split: test
 source:
   desc: >-
     lepture/mistune, create_markdown(escape=False) ignored when a custom HTMLRenderer instance is passed

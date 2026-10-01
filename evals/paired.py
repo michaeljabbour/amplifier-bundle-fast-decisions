@@ -135,8 +135,14 @@ def load_design(path=DEFAULT_DESIGN) -> dict:
     return d
 
 
+def scenario_dirs(design: dict):
+    """The design's scenario directory (str) or directories (list) as absolute paths."""
+    d = design["scenario_dir"]
+    return [_abs(REPO_ROOT, x) for x in d] if isinstance(d, list) else _abs(REPO_ROOT, d)
+
+
 def load_specs(design: dict) -> list:
-    return ps.load_dir(_abs(REPO_ROOT, design["scenario_dir"]))
+    return ps.load_dir(scenario_dirs(design))
 
 
 # ----------------------------------------------------------------------------------------- sessions
@@ -170,6 +176,22 @@ def make_nonce(plan_id: str, key: str, attempt: int) -> str:
     return str(uuid.UUID(bytes=raw, version=4))
 
 
+def subsample_keys(specs: list, reps: int, cfg: dict) -> set:
+    """Seeded subsample of (scenario, rep) for an arm that only runs in a fraction of them (the A/A noise arm).
+    Stratified by (split, has-long-gaps) so the noise estimate covers both halves of the preregistered split and both
+    gap patterns; per stratum round(fraction * size) scenario-reps, chosen with random.Random(seed) over sorted keys."""
+    rng = random.Random(cfg["seed"])
+    strata = {}
+    for spec in sorted(specs, key=lambda s: s.id):
+        for rep in range(1, reps + 1):
+            strata.setdefault((spec.split, spec.n_long_gaps > 0), []).append((spec.id, rep))
+    chosen = set()
+    for key in sorted(strata):
+        keys = strata[key]
+        chosen.update(rng.sample(keys, min(len(keys), round(cfg["fraction"] * len(keys)))))
+    return chosen
+
+
 def expand_sessions(design: dict, specs: list, *, reps: int, hosts: list, arms: list, scenarios=None) -> list:
     """Every session of the design, grouped into waves (scenario, rep, host-stratum). The host-independent
     control joins the first host's wave: one control session per scenario-rep, used for every stratum."""
@@ -177,12 +199,16 @@ def expand_sessions(design: dict, specs: list, *, reps: int, hosts: list, arms: 
     if not chosen:
         raise PairedError(EXIT_PRECONDITION, "no scenarios selected")
     sessions = []
+    sub_keys = {arm: subsample_keys(chosen, reps, design["arms"][arm]["subsample"])
+                for arm in arms if design["arms"][arm].get("subsample")}
     for spec in chosen:
         for rep in range(1, reps + 1):
             for hi, host in enumerate(hosts):
                 wave_id = f"{spec.id}-r{rep}-{host}"
                 for arm in arms:
                     a = design["arms"][arm]
+                    if arm in sub_keys and (spec.id, rep) not in sub_keys[arm]:
+                        continue                      # this arm only runs in a seeded subsample of scenario-reps
                     if a.get("host_independent"):
                         if hi != 0:
                             continue
@@ -225,7 +251,7 @@ def _turn_scale(table: dict, n: int) -> float:
     return y1 + (y1 - y0) * (n - x1) / (x1 - x0)
 
 
-def estimate_session_usd(design: dict, spec, arm: str, host: str, cell_hint: str | None = None) -> float:
+def estimate_session_usd(design: dict, spec, arm: str, host: str, cell_hint: str | None = None, n_turns: int | None = None) -> float:
     cm = design["cost_model"]
     unit = cm["unit_usd_4turn"]
     a = design["arms"][arm]
@@ -236,10 +262,47 @@ def estimate_session_usd(design: dict, spec, arm: str, host: str, cell_hint: str
         base = unit[a["cells"]["any"]]["usd"]
     else:
         base = unit[a["cells"][host]]["usd"]
-    n = len(spec.turns)
+    n = len(spec.turns) if n_turns is None else n_turns
     est = base * _turn_scale(cm["turn_scaling"], n) * cm["type_factor"][spec.task_type]
     est *= 1.0 + cm["long_gap_extra_fraction"] * spec.n_long_gaps
     return round(est, 4)
+
+
+def simulate_wall_hours(design: dict, waves: dict, order: list, specs_by_id: dict, parallel: int) -> float:
+    """FIFO wave admission (a wave starts when ALL its sessions fit under --parallel), the same rule `run` applies.
+    Session wall time = turns x minutes_per_turn + the scripted gaps; a wave lasts `wave_slowest_factor` x that (its
+    slowest arm). Estimates only: wall_model in the design carries the assumptions."""
+    wm = design.get("wall_model", {"minutes_per_turn": 1.0, "wave_slowest_factor": 1.4})
+    free, t, running = parallel, 0.0, []             # running: heap of (end_time, size)
+    import heapq
+    for wid in order:
+        sess = waves[wid]
+        spec = specs_by_id[sess[0].scenario if hasattr(sess[0], "scenario") else sess[0]["scenario"]]
+        dur = wm["wave_slowest_factor"] * (len(spec.turns) * wm["minutes_per_turn"] * 60 + sum(spec.gap_schedule))
+        size = len(sess)
+        while free < size:
+            end, sz = heapq.heappop(running)
+            t, free = max(t, end), free + sz
+        heapq.heappush(running, (t + dur, size))
+        free -= size
+    return round((max([e for e, _ in running] + [t])) / 3600, 1)
+
+
+def long_block_note(design: dict, specs_by_id: dict) -> dict | None:
+    """The 40-turn long-session block needs authored follow-up turns (not written yet): reported, never scheduled."""
+    lb = design.get("long_block")
+    if not lb:
+        return None
+    note = {"status": lb.get("status", "TODO"), "scheduled": False, "turns": lb.get("turns"), "hosts": lb.get("hosts"),
+            "scenarios": lb.get("candidates", [])}
+    try:
+        host = lb["hosts"][0]
+        est = sum(estimate_session_usd(design, specs_by_id[sid], arm, host, n_turns=lb["turns"])
+                  for sid in lb.get("candidates", []) for arm in lb.get("arms", []) if sid in specs_by_id)
+        note["est_usd_if_authored"] = round(est * lb.get("reps", 1), 2)
+    except (KeyError, IndexError):
+        pass
+    return note
 
 
 def build_plan(design: dict, specs: list, *, reps: int, hosts: list, arms: list, scenarios=None, seed: int,
@@ -267,6 +330,7 @@ def build_plan(design: dict, specs: list, *, reps: int, hosts: list, arms: list,
         raise PairedError(EXIT_PRECONDITION, f"--parallel {parallel} is smaller than a wave (all arms of a wave must "
                                              f"co-start): {too_big}")
     order = seeded_wave_order(list(waves), seed)
+    wall_h = simulate_wall_hours(design, waves, order, by_id, parallel)
     total = round(sum(s.est_usd for s in sessions), 2)
     reserve = round(total * design["cost_model"]["infra_retry_reserve_fraction"], 2)
     # R1: one prompt hash per scenario, shared by every arm of it (verified again after prepare, per session)
@@ -283,7 +347,7 @@ def build_plan(design: dict, specs: list, *, reps: int, hosts: list, arms: list,
         "waves": {w: [asdict(s) for s in waves[w]] for w in order},
         "n_sessions": len(sessions), "n_waves": len(waves), "est_total_usd": total,
         "est_infra_retry_reserve_usd": reserve, "est_with_reserve_usd": round(total + reserve, 2),
-        "budget_usd": budget_usd,
+        "budget_usd": budget_usd, "est_wall_hours": wall_h, "long_block": long_block_note(design, by_id),
         "cost_model_source": design["cost_model"]["source"],
     }
     if budget_usd is not None and plan["est_with_reserve_usd"] > budget_usd:
@@ -320,7 +384,13 @@ def render_plan(plan: dict) -> str:
               f"infra retry reserve      ${plan['est_infra_retry_reserve_usd']:.2f}",
               f"estimate incl. reserve   ${plan['est_with_reserve_usd']:.2f}"
               + (f"   budget ${plan['budget_usd']:.2f}" if plan.get("budget_usd") is not None else ""),
+              f"estimated wall time    {plan.get('est_wall_hours', '?')} h at --parallel {plan['parallel']} (FIFO waves; wall_model assumptions)",
               f"cost basis: {plan['cost_model_source']} (4-turn unit means, scaled to scenario turns/type; an estimate)"]
+    lb = plan.get("long_block")
+    if lb:
+        lines.append(f"long-session block: {lb['status']} - NOT scheduled ({lb['turns']} turns, hosts {lb['hosts']}, "
+                     f"{len(lb['scenarios'])} candidate scenarios"
+                     + (f", ~${lb['est_usd_if_authored']:.0f} if authored" if 'est_usd_if_authored' in lb else "") + ")")
     return "\n".join(lines)
 
 
@@ -950,7 +1020,8 @@ class ForgeBackend:
         import forge_e2e
         import forge_workloads
         spec_ids = sorted({s["scenario"] for s in sessions})
-        task_source = {"kind": "paired", "scenario_dir": str(_abs(REPO_ROOT, ctx.design["scenario_dir"])),
+        sdirs = scenario_dirs(ctx.design)
+        task_source = {"kind": "paired", "scenario_dir": [str(x) for x in sdirs] if isinstance(sdirs, list) else str(sdirs),
                        "snapshot_root": str(_abs(REPO_ROOT, ctx.design["snapshot_root"])), "ids": spec_ids}
         forge_workloads.register_source(**task_source)
         sides, runs = {}, []
@@ -1898,8 +1969,9 @@ def cmd_plan(args) -> int:
     reps = args.reps or design["default_reps"]
     parallel = args.parallel or design.get("default_parallel", DEFAULT_PARALLEL)
     scenarios = set(args.scenarios.split(",")) if args.scenarios else None
+    budget = args.budget_usd if args.budget_usd is not None else design.get("budget_usd")
     plan = build_plan(design, specs, reps=reps, hosts=hosts, arms=arms, scenarios=scenarios, seed=args.seed,
-                      budget_usd=args.budget_usd, parallel=parallel)
+                      budget_usd=budget, parallel=parallel)
     key_env, offsets = _kv(args.key_env), _kv(args.offset, int)
     if key_env:
         missing = {v for v in key_env.values()} - key_env_names_available()

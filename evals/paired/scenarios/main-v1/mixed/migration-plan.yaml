@@ -2,7 +2,7 @@
 id: migration-plan
 task_type: mixed
 language: python
-split: main
+split: train
 source:
   desc: 'SQLite schema v1->v2 migration: analyse seed data, write a plan, implement migrate.py in stages, idempotence, dry-run, tests, report.'
   kind: self-authored deterministic workspace

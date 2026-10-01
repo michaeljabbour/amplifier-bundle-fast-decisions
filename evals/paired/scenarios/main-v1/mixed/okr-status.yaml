@@ -2,7 +2,7 @@
 id: okr-status
 task_type: mixed
 language: python
-split: main
+split: train
 source:
   desc: 'Weekly status markdown + OKR JSON: metrics table, progress math, status report with revision, exec email, filing a late submission.'
   kind: self-authored deterministic workspace

@@ -2,7 +2,7 @@
 id: deps-audit
 task_type: mixed
 language: python
-split: main
+split: train
 source:
   desc: 'Two pinned requirements files, license table and policy: exact diff JSON, review queue, report, revision after a security pin, reusable
     script.'

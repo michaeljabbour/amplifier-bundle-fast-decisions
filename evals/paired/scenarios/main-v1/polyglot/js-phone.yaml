@@ -2,7 +2,7 @@
 id: js-phone
 task_type: bugfix
 language: javascript
-split: main
+split: test
 default_gap_s: 10
 source:
   desc: "Aider polyglot-benchmark javascript/phone-number (Exercism), outside the S2 slice"

@@ -2,7 +2,7 @@
 id: hr-salary-qa
 task_type: mixed
 language: python
-split: main
+split: train
 source:
   desc: 'HR employee CSV (anonymized, multi-currency): numeric Q&A into answer files, plant/division tables, data-quality revision, report, script.'
   kind: self-authored deterministic workspace

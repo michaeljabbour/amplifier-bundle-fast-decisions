@@ -2,7 +2,7 @@
 id: fastrand-explain
 task_type: explain
 language: rust
-split: main
+split: test
 source:
   desc: 'smol-rs/fastrand 2.5.0 at 7a1cc2c: explain WyRand/Lemire internals and pin seeded sequences (rustc-only, no cargo)'
   repo: https://github.com/smol-rs/fastrand.git

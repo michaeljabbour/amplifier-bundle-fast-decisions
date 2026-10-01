@@ -2,7 +2,7 @@
 id: js-tournament
 task_type: mixed
 language: javascript
-split: main
+split: train
 default_gap_s: 10
 source:
   desc: "Aider polyglot-benchmark javascript/tournament (Exercism), outside the S2 slice"

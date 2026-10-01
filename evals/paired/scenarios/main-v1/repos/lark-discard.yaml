@@ -3,7 +3,7 @@
 id: lark-discard
 task_type: bugfix
 language: python
-split: main
+split: test
 source:
   desc: >-
     lark-parser/lark, Transformer_NonRecursive corrupted the tree when a non-last node returned Discard,

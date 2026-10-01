@@ -7,7 +7,7 @@ Per scenario it checks that:
   2. the snapshot materializes and its tree hash is identical across two independent builds;
   3. turn-1 hidden tests FAIL on the pristine parent workspace;
   4. every turn's deterministic checks PASS against the reference solution (cumulative per-turn overlays under
-     ``~/dev/afast-paired-src/reference/repos/<id>/turnN/``; ``MESSAGE.txt`` is the reference final message);
+     ``~/dev/afast-paired-refs/repos/<id>/turnN/``; ``MESSAGE.txt`` is the reference final message);
   5. every hidden test file first used by a later turn (scenario-authored edge-case tests) FAILS on the
      previous turn's reference state and passes on its own turn;
   6. keyed-fact checks fail on a content-free message; file/doc checks are reported (note) when they already
@@ -32,7 +32,7 @@ import paired_scenarios as ps  # noqa: E402
 if "main" not in ps.SPLITS:
     ps.SPLITS = tuple(ps.SPLITS) + ("main",)
 
-REF_ROOTS = [Path.home() / "dev/afast-paired-refs/repos", Path.home() / "dev/afast-paired-src/reference/repos"]
+REF_ROOTS = [Path.home() / "dev/afast-paired-refs/repos"]       # the single consolidated reference root
 REF_ROOT = REF_ROOTS[0]
 
 

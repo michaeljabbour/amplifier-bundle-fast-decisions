@@ -2,7 +2,7 @@
 id: fatihcolor-docs
 task_type: docs
 language: go
-split: main
+split: train
 source:
   desc: 'fatih/color at 820c6eb: document the exact escape sequences (incl. the RGB reset quirk) from running the code'
   repo: https://github.com/fatih/color.git

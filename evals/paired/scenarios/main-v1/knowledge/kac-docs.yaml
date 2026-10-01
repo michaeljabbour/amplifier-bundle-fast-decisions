@@ -2,7 +2,7 @@
 id: kac-docs
 task_type: docs
 language: ruby
-split: main
+split: train
 source:
   desc: olivierlacan/keep-a-changelog at 08d0df5 (docs-heavy Middleman site, 2.0.0 era) plus a planted samples/draft.md for the prose linter
   repo: https://github.com/olivierlacan/keep-a-changelog.git

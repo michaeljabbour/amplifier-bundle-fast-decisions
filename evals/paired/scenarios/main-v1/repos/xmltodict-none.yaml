@@ -3,7 +3,7 @@
 id: xmltodict-none
 task_type: bugfix
 language: python
-split: main
+split: test
 source:
   desc: >-
     martinblech/xmltodict, unparse() wrote the text "None" for None text/attribute values, fixed

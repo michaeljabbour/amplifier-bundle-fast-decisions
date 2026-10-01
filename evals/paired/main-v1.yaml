@@ -1,0 +1,115 @@
+schema: fast-decisions-paired/design/v1
+id: main-v1
+description: >-
+  Main paired multi-turn measurement campaign (docs/design/parallel-measurement-mode.md): the 70 validated main-v1
+  scenarios (polyglot 20, repos 16, mixed 20, knowledge 14), preregistered 2/3 train + 1/3 test split
+  (evals/paired/scenarios/main-v1/SPLIT.md), 2 reps, two hosts. Every arm of a scenario-rep starts together from one
+  frozen workspace snapshot, isolated by a per-session cache nonce.
+
+scenario_dir:                                      # a list: the loader reads every directory
+  - evals/paired/scenarios/main-v1/polyglot
+  - evals/paired/scenarios/main-v1/repos
+  - evals/paired/scenarios/main-v1/mixed
+  - evals/paired/scenarios/main-v1/knowledge
+snapshot_root: ~/dev/afast-paired/snapshots
+campaign_root_base: ~/dev/afast-paired            # runs live here (STUDY-DESIGN 17.1: short paths)
+cells_file: evals/cells.yaml
+suite_for_argv: {suite: s1m, split: m-dev}         # only used to reuse run.cell_to_argv for cell -> side translation
+
+nonce_mode: per_session
+default_reps: 2
+default_parallel: 4                                # memory safety (2026-10-01 OOM events); the sonnet control gets its own wave
+budget_usd: 6500                                   # ledger hard stop; `plan` refuses an estimate (incl. retry reserve) above it
+max_wave_launch_spread_s: 60
+max_wave_attempts: 3
+deadline_seconds_per_turn: 900
+
+hosts:
+  opus:  claude-opus-5-5
+  fable: claude-fable-5-1
+
+# Arms (same cells as pilot-v1). `aa` (a second independent plain anchor: run-to-run noise) runs in a seeded 20% subsample
+# of scenario-reps, stratified by (split, has-long-gaps), on BOTH hosts of each selected scenario-rep: a cheap noise floor.
+arms:
+  anchor:  {kind: plain,  cells: {opus: plain-opus, fable: plain}, role: anchor}
+  aa:      {kind: plain,  cells: {opus: plain-opus, fable: plain}, role: noise, subsample: {fraction: 0.2, seed: 20261002}}
+  shipped: {kind: fd,     cells: {opus: orch-default-opus, fable: orch-default}}
+  sticky:  {kind: sticky, cells: {opus: {host: orch-pin-host-opus, cheap: orch-pin-cheap-opus},
+                                  fable: {host: orch-pin-host, cheap: orch-pin-cheap}}}
+  sonnet:  {kind: control, cells: {any: plain-sonnet}, host_independent: true}
+
+sticky:
+  policy_cell: orch-default
+  decide_on: turn1_prompt
+
+# Cost model (same 4-turn unit means as pilot-v1; see there). Scenarios here have 8-16 turns; beyond 12 the turn scaling
+# is the linear extrapolation of the 8->12 segment (assumption). docs/explain/review are read-heavy: factor 1.0.
+cost_model:
+  source: "sessions.csv (S1-multi, 4 turns), spec section 3; 16-turn point extrapolated"
+  unit_usd_4turn:
+    plain-opus:        {usd: 0.519, n: 48}
+    plain:             {usd: 1.343, n: 45}
+    orch-default-opus: {usd: 0.682, n: 45}
+    orch-default:      {usd: 0.847, n: 39}
+    plain-sonnet:      {usd: 0.702, n: 48}
+  sticky_over_anchor: {opus: 1.04, fable: 0.597}
+  turn_scaling: {4: 1.0, 8: 2.5, 12: 4.2, 16: 5.9}
+  type_factor: {feature: 1.2, bugfix: 1.5, review: 1.0, mixed: 1.2, knowledge: 1.0, docs: 1.0, explain: 1.0}
+  long_gap_extra_fraction: 0.10
+  infra_retry_reserve_fraction: 0.08
+
+# Wall-clock model for `plan` (assumptions; spec section 3: ~1 min/turn at 4 turns/min-session, slowest arm of a wave
+# ~1.4x the mean). Waves are admitted FIFO under --parallel, exactly as `run` does.
+wall_model: {minutes_per_turn: 1.0, wave_slowest_factor: 1.4}
+
+# 40-turn long-session block (spec: 6 train scenarios, Opus only, turns extended by scripted follow-ups). Extending a
+# 16-turn scenario to 40 turns needs ~24 AUTHORED follow-up turns per scenario with checks and reference solutions: not
+# written. TODO: author them under evals/paired/scenarios/main-v1/long/, then set status: ready and add the dir to
+# scenario_dir. Until then `plan` reports the block and never schedules it.
+long_block:
+  status: TODO
+  reason: needs authored follow-up turns + references + validators (24 turns x 6 scenarios)
+  turns: 40
+  hosts: [opus]
+  arms: [anchor, shipped, sticky]
+  reps: 1
+  candidates: ["hr-salary-qa", "fd-cli-docs", "js-tournament", "arch-explain", "rust-wordy", "pflag-mixed"]          # train scenarios with the most turns, <=2 per family, seeded tie-break (seed 20261002)
+
+# Preregistered analysis pointers (what is fixed BEFORE data): these files are the contract, not the results.
+analysis:
+  split: evals/paired/scenarios/main-v1/SPLIT.md           # seed 20261002; train = model fitting / design choices, test = confirmatory
+  split_machine_readable: evals/paired/scenarios/main-v1/split.json
+  validation: evals/paired/scenarios/main-v1/VALIDATION.md
+  spec: docs/design/parallel-measurement-mode.md             # sections 1-3: arms, estimands, cost model, pass criteria
+  primary_cost_basis: cost_usd_tools_normalized               # pairs.jsonl log_cost_ratio / delta_usd; raw ratios are secondary
+  confirmatory_set: test split only, valid pairs only (wave_valid, cost_valid, mechanism_engaged, cache_audit_clean)
+  noise_floor: aa arm (20% subsample) vs anchor
+  TODO_not_yet_written: [preregistration text with thresholds, measurement-model script (evals/measure_model.py)]
+
+# Campaign-owned provider (the isolation mechanism; see docs in forge_e2e.campaign_provider_entry). Every session's
+# generated profile.md declares ONLY this provider, so the user's global ~/.amplifier/settings.yaml provider list
+# (10 entries today, incl. gemini/openai/vllm) is neither mounted nor credential-validated. Mirrors what the earlier
+# campaigns effectively ran (the first provider-anthropic entry, `anthropic-primary`): same module source, 1M context
+# on, api.anthropic.com, prompt caching at the provider default, no reasoning_effort. The resolved module version/sha
+# is recorded by `preflight` and carried into every sessions.jsonl row (`provider_module`).
+campaign_provider:
+  id: campaign-anthropic            # unique id: no global provider entry can match and merge config into it
+  module: provider-anthropic
+  source: git+https://github.com/microsoft/amplifier-module-provider-anthropic@main
+  config:
+    api_key: "${ANTHROPIC_API_KEY}"          # env reference; per-arm key selection sets this var for that session only
+    base_url: https://api.anthropic.com
+    enable_1m_context: "true"
+    raw: true                                # request/response payloads in events (the CLI injects this default for
+                                             # settings-derived providers; rows need it to separate background calls)
+preflight:
+  scenario_dir: evals/paired/preflight
+  max_age_hours: 12
+  est_usd_per_session: 0.10
+
+# Shared tools-prefix allowance for the cache-read audit. The nonce leads the system prompt but the tools block comes
+# BEFORE it in the provider's prefix, so tools-only cache entries are shared across sessions of the same model.
+# Measured by the 2026-10-01 preflight (18 sessions, 2 runs): every first request read 32,029-32,033 tokens. Reads up to
+# this size on a request with no own earlier write are reported (cross_arm_read_tokens) but not flagged.
+cache_audit:
+  tools_prefix_tokens: 32100

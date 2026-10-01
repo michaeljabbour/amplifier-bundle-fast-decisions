@@ -2,7 +2,7 @@
 id: filelock-explain
 task_type: explain
 language: python
-split: main
+split: test
 source:
   desc: tox-dev/filelock at 9ed62ac (large modern version, src/filelock) plus a generated version.py
   repo: https://github.com/tox-dev/filelock.git

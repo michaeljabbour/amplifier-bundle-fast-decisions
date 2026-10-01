@@ -13,6 +13,21 @@ and are verified by tree hash on every use (frozen; never edited). The python-sl
 https://github.com/un33k/python-slugify.git at `c442cd4cb61763c85b078d6ea83b5959c3ff364a` (parent of upstream fix
 `8f9a550a906701412c8fc93e731582098f2caee2`); rebuilding from the network alone gives an identical tree hash.
 
+## main-v1 scenarios, references, split
+
+* 70 validated scenarios under `evals/paired/scenarios/main-v1/{polyglot,repos,mixed,knowledge}`; design `evals/paired/main-v1.yaml`
+  (`paired.py plan --dry-run --design evals/paired/main-v1.yaml`). Task types include `docs` and `explain`.
+* Split: `split: train|test` is written into every file by `assign_split.py` (seed 20261002, stratified by family and gap
+  pattern, same upstream repo => same split); see `SPLIT.md` / `split.json`; `assign_split.py --check` verifies the files.
+* **Reference solutions** (outside the repo, never given to agents) live ONLY under `~/dev/afast-paired-refs/<family>/<id>/`
+  (`polyglot`, `repos`, `mixed`, `knowledge`). All four validators default to that root (`--ref-root` overrides).
+  `~/dev/afast-paired-src/reference/` is no longer read.
+* Validators (`validate_polyglot.py`, `repos/validate_repos.py`, `validate_mixed.py`, `validate_knowledge.py`) run scenario
+  code only through memguard; run them serially: `--jobs 1 --cap-gb 4`, and only with `memory_pressure` >= 50% free.
+  `validate_knowledge.py` also checks that the untouched starting workspace fails every turn's checks.
+* `aa` runs in a seeded 20% subsample of scenario-reps (stratified by split and gap pattern, both hosts). The 40-turn
+  long-session block is a TODO in the design (needs authored follow-up turns) and is never scheduled.
+
 ## Memory safety (read before running anything)
 
 On 2026-10-01 an unguarded Go test binary (`dominoes.test`) grew to 120-470 GB and drove a 128 GB Mac out of memory four

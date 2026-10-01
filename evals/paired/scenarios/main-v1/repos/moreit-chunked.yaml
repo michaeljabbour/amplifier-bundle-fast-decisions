@@ -3,7 +3,7 @@
 id: moreit-chunked
 task_type: bugfix
 language: python
-split: main
+split: train
 source:
   desc: >-
     more-itertools/more-itertools, chunked() leaked an islice error for negative n, fixed upstream in

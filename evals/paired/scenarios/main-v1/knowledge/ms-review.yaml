@@ -2,7 +2,7 @@
 id: ms-review
 task_type: review
 language: javascript
-split: main
+split: train
 source:
   desc: vercel/ms at 4ff48ce (TypeScript, 4.0.0) plus two planted patches (plural threshold, month constant)
   repo: https://github.com/vercel/ms.git

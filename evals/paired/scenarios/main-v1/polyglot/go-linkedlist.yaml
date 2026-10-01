@@ -2,7 +2,7 @@
 id: go-linkedlist
 task_type: mixed
 language: go
-split: main
+split: test
 default_gap_s: 10
 source:
   desc: "Aider polyglot-benchmark go/simple-linked-list (Exercism), outside the S2 slice"

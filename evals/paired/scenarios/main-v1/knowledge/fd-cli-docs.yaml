@@ -2,7 +2,7 @@
 id: fd-cli-docs
 task_type: docs
 language: rust
-split: main
+split: train
 source:
   desc: 'sharkdp/fd 10.5.0 at ce97e47: understand and document a Rust CLI (cannot be built offline), plus a Python port of the size parser verified against Rust unit-test values'
   repo: https://github.com/sharkdp/fd.git

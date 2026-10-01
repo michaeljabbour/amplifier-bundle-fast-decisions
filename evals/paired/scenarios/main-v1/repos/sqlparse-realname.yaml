@@ -3,7 +3,7 @@
 id: sqlparse-realname
 task_type: bugfix
 language: python
-split: main
+split: train
 source:
   desc: >-
     andialbrecht/sqlparse, Identifier.get_real_name() returned an intermediate component for names with
@@ -124,8 +124,8 @@ turns:
       same bullet style: one for `get_real_name()` on names with more than two parts and one for the alias
       detection around spaced dots.
     checks:
-      - {kind: file_regex, path: CHANGELOG, pattern: 'Development Version\n(?:.*\n)+?\* .*get_real_name'}
-      - {kind: file_regex, path: CHANGELOG, pattern: 'Development Version\n(?:.*\n)+?\* .*(spaced|spaces|whitespace).*\n?.*(dot|alias)'}
+      - {kind: file_regex, path: CHANGELOG, pattern: 'Development Version\n-+\n(?:(?!Release ).*\n)*?\* .*get_real_name'}
+      - {kind: file_regex, path: CHANGELOG, pattern: 'Development Version\n-+\n(?:(?!Release ).*\n)*?\* .*(spaced|spaces|whitespace).*\n?.*(dot|alias)'}
   - prompt: >-
       Small feature: add `Identifier.get_name_parts()` returning the list of name components of a dotted
       identifier, in order, with quotes removed: `db.schema.tbl.col` -> ['db', 'schema', 'tbl', 'col'],

@@ -8,7 +8,7 @@ For every scenario YAML in ./polyglot (or --only ids):
         copy of the starter and every check of turn N must PASS (keyed_facts use turnN/MESSAGE.txt);
   * (c) DISCRIMINATION (informational): checks of turn N are also run on the state BEFORE turn N's
         overlay; a code/doc turn whose checks already pass there is reported as `weak` (not an error).
-Reference solutions live OUTSIDE the repo (default ~/dev/afast-paired-src/reference/polyglot/<id>/turnN/,
+Reference solutions live OUTSIDE the repo (default ~/dev/afast-paired-refs/polyglot/<id>/turnN/,
 optional turnN/_DELETE lists paths to remove). Re-run:
 
     python3 evals/paired/scenarios/main-v1/validate_polyglot.py [--only id,id] [--jobs 4] [--json out.json]
@@ -31,7 +31,7 @@ import paired_scenarios as ps  # noqa: E402
 if "main" not in ps.SPLITS:
     ps.SPLITS = tuple(ps.SPLITS) + ("main",)
 
-DEFAULT_REF = Path("~/dev/afast-paired-src/reference/polyglot").expanduser()
+DEFAULT_REF = Path("~/dev/afast-paired-refs/polyglot").expanduser()
 
 
 def overlay(ws: Path, tdir: Path):

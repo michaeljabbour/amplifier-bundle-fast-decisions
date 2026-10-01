@@ -2,7 +2,7 @@
 id: js-rationals
 task_type: feature
 language: javascript
-split: main
+split: train
 default_gap_s: 10
 source:
   desc: "Aider polyglot-benchmark javascript/rational-numbers (Exercism), outside the S2 slice"

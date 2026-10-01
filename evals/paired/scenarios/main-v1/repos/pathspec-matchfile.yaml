@@ -3,7 +3,7 @@
 id: pathspec-matchfile
 task_type: bugfix
 language: python
-split: main
+split: train
 source:
   desc: >-
     cpburnz/python-pathspec, PathSpec.match_file() returned None instead of False since 0.12.0 (issue
@@ -124,7 +124,7 @@ turns:
       again and bytes paths being accepted.
     checks:
       - {kind: file_regex, path: CHANGES.rst, pattern: ^0\.12\.1 \(TBD\)}
-      - {kind: file_regex, path: CHANGES.rst, pattern: match_file}
+      - {kind: file_regex, path: CHANGES.rst, pattern: '^0\.12\.1 \(TBD\)\n-+\n(?:(?!\d+\.\d+\.\d+ \().*\n)*?.*match_file'}
       - {kind: file_regex, path: CHANGES.rst, pattern: bytes}
   - prompt: >-
       Small feature: add `PathSpec.partition(files, separators=None)` which splits an iterable of paths
@@ -141,7 +141,7 @@ turns:
       tuple of two lists (matched, unmatched).
     checks:
       - {kind: file_regex, path: pathspec/pathspec.py, pattern: 'def partition\([^)]*\)[^\n]*:\n\s+"""'}
-      - {kind: file_regex, path: pathspec/pathspec.py, pattern: \*separators\*}
+      - {kind: file_regex, path: pathspec/pathspec.py, pattern: 'def partition\([^)]*\)[^\n]*:\n\s+"""(?:(?!""")[\s\S])*?\*separators\*'}
       - {kind: tests, runner: python, files: [tests, tests/test_01_util.py, tests/test_03_pathspec.py, tests/test_bytes_paths_hidden.py, tests/test_partition_hidden.py], restore: [tests/__init__.py, tests/test_01_util.py, tests/test_02_gitwildmatch.py, tests/test_03_pathspec.py, tests/test_04_gitignore.py, tests/util.py], hidden: [tests/test_01_util.py, tests/test_03_pathspec.py, tests/test_bytes_paths_hidden.py, tests/test_partition_hidden.py]}
   - prompt: >-
       Review the changes you made in this session as a code reviewer would: list each file you changed or

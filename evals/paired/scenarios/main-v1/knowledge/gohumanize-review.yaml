@@ -2,7 +2,7 @@
 id: gohumanize-review
 task_type: review
 language: go
-split: main
+split: train
 source:
   desc: dustin/go-humanize at a1b4e66 plus two planted patches (digit adjustment removal, kb table change)
   repo: https://github.com/dustin/go-humanize.git

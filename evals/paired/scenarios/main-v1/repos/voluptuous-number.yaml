@@ -3,7 +3,7 @@
 id: voluptuous-number
 task_type: bugfix
 language: python
-split: main
+split: train
 source:
   desc: >-
     alecthomas/voluptuous, Number(precision, scale) leaked a raw TypeError for Infinity/NaN input

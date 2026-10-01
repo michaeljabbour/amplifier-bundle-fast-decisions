@@ -2,7 +2,7 @@
 id: config-matrix
 task_type: mixed
 language: python
-split: main
+split: train
 source:
   desc: 'Four service JSON configs with planted policy violations: matrix CSV, issue list, fixes, ports table, validator script.'
   kind: self-authored deterministic workspace

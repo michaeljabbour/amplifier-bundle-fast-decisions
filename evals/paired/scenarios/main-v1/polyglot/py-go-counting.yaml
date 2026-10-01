@@ -2,7 +2,7 @@
 id: py-go-counting
 task_type: mixed
 language: python
-split: main
+split: test
 default_gap_s: 10
 source:
   desc: "Aider polyglot-benchmark python/go-counting (Exercism), outside the S2 slice"

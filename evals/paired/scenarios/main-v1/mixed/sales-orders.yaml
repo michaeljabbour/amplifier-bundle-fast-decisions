@@ -2,7 +2,7 @@
 id: sales-orders
 task_type: mixed
 language: python
-split: main
+split: test
 source:
   desc: 'Q1 sales CSVs: answer data questions, produce summary.json and report.md with exact values, revise for new data, small script, docs.'
   kind: self-authored deterministic workspace

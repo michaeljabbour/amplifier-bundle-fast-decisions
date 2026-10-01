@@ -2,7 +2,7 @@
 id: log-incident
 task_type: mixed
 language: python
-split: main
+split: train
 source:
   desc: 'Web server log around a bad deploy: answer incident questions, produce exact per-minute/endpoint tables, write a postmortem.'
   kind: self-authored deterministic workspace

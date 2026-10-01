@@ -2,7 +2,7 @@
 id: api-docs
 task_type: mixed
 language: python
-split: main
+split: test
 source:
   desc: 'Small route-table web API: explain the request flow, generate API.md and OpenAPI from the code, remove dead code, add a route, normalise
     errors.'

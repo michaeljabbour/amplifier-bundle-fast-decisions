@@ -2,7 +2,7 @@
 id: go-dominoes
 task_type: bugfix
 language: go
-split: main
+split: train
 default_gap_s: 10
 source:
   desc: "Aider polyglot-benchmark go/dominoes (Exercism), outside the S2 slice"

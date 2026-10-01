@@ -3,7 +3,7 @@
 id: jmespath-strcmp
 task_type: bugfix
 language: python
-split: main
+split: train
 source:
   desc: >-
     jmespath/jmespath.py, ordering comparisons on strings regressed in 0.9.1, restored upstream in b893fc2b
@@ -150,7 +150,7 @@ turns:
     pattern: ^Next Release\s*\n=+
   - kind: file_regex
     path: CHANGELOG.rst
-    pattern: (?i)string
+    pattern: '^Next Release\s*\n=+\n(?:(?!\d+\.\d+\.\d+\s*\n=).*\n)*?.*(?i:string)'
 - prompt: >-
     Add a short subsection to README.rst titled `Python specific behaviour` stating that ordering operators
     work on strings as well as numbers, and that comparing a string with a number yields null.

@@ -2,7 +2,7 @@
 id: arch-explain
 task_type: mixed
 language: python
-split: main
+split: train
 source:
   desc: 'Small multi-module CLI task tracker: explain architecture, write ARCHITECTURE.md with a verified dependency table, then three small code
     changes with docs.'

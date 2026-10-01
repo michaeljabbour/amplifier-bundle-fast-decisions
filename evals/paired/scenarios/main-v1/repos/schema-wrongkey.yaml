@@ -3,7 +3,7 @@
 id: schema-wrongkey
 task_type: bugfix
 language: python
-split: main
+split: train
 source:
   desc: >-
     keleshev/schema, a custom error= on a key schema was lost when the data key was reported as a wrong
@@ -134,7 +134,7 @@ turns:
       keys, and this includes keys wrapped in Optional.
     checks:
       - {kind: file_regex, path: CHANGELOG.md, pattern: Unreleased\n+### Fixes\n+\* .*(custom|key schema)}
-      - {kind: file_regex, path: CHANGELOG.md, pattern: Optional}
+      - {kind: file_regex, path: CHANGELOG.md, pattern: '^## Unreleased\n(?:(?!## v).*\n)*?.*Optional'}
   - prompt: >-
       Small feature: let `SchemaWrongKeyError` carry the offending keys. Add a `wrong_keys` attribute (a
       list, sorted by `repr` like the keys in the message) that `Schema.validate` fills when it raises
@@ -145,7 +145,7 @@ turns:
     checks:
       - {kind: tests, runner: python, files: [test_wrong_keys_attr_hidden.py], restore: [test_schema.py], hidden: [test_wrong_keys_attr_hidden.py]}
       - {kind: tests, runner: python, files: [test_schema.py, test_wrong_key_optional_hidden.py, test_wrong_keys_attr_hidden.py], restore: [test_schema.py], hidden: [test_schema.py, test_wrong_key_optional_hidden.py, test_wrong_keys_attr_hidden.py]}
-      - {kind: file_regex, path: schema/__init__.py, pattern: wrong_keys, min_count: 4}
+      - {kind: file_regex, path: schema/__init__.py, pattern: wrong_keys, min_count: 8}
   - prompt: >-
       Add `test_wrong_keys_attribute.py` (pytest style) with at least three test functions for the new
       `wrong_keys` attribute: filled and sorted on validation, empty for a hand-made error, and unchanged

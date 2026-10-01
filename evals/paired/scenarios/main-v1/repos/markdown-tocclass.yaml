@@ -3,7 +3,7 @@
 id: markdown-tocclass
 task_type: feature
 language: python
-split: main
+split: train
 source:
   desc: >-
     Python-Markdown/markdown, toc_class option for the TOC extension, added upstream in 93d17b9c (#1224);

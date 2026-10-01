@@ -2,7 +2,7 @@
 id: docstring-audit
 task_type: mixed
 language: python
-split: main
+split: test
 source:
   desc: 'Numeric helper module with six lying docstrings: audit to JSON, fix docstrings, doctests, then change code per feedback.'
   kind: self-authored deterministic workspace

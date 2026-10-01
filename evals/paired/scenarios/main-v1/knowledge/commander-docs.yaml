@@ -2,7 +2,7 @@
 id: commander-docs
 task_type: docs
 language: javascript
-split: main
+split: train
 source:
   desc: 'tj/commander.js 15.0.0 at ba6d13d: write a migration guide from 14 to 15, verified by running the library, plus a planted legacy CJS script'
   repo: https://github.com/tj/commander.js.git

@@ -3,7 +3,7 @@
 id: lark-template
 task_type: bugfix
 language: python
-split: main
+split: test
 source:
   desc: >-
     lark-parser/lark, Template.search() dropped matches of templates without variables so translate()

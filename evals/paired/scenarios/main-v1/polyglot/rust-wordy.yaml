@@ -2,7 +2,7 @@
 id: rust-wordy
 task_type: feature
 language: rust
-split: main
+split: train
 default_gap_s: 10
 source:
   desc: "Aider polyglot-benchmark rust/wordy (Exercism), outside the S2 slice"

@@ -3,7 +3,7 @@
 id: boltons-tableutils
 task_type: bugfix
 language: python
-split: main
+split: train
 source:
   desc: >-
     mahmoud/boltons, tableutils.Table.to_text crashes on degenerate tables, fixed upstream in eb659013;

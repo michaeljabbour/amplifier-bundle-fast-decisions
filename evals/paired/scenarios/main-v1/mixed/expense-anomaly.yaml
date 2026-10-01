@@ -2,7 +2,7 @@
 id: expense-anomaly
 task_type: mixed
 language: python
-split: main
+split: train
 source:
   desc: 'Expense CSV + policy: flag violations per rule, revise for new rule and changed limit, script, reports.'
   kind: self-authored deterministic workspace

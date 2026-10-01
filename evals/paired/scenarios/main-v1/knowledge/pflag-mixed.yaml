@@ -2,7 +2,7 @@
 id: pflag-mixed
 task_type: mixed
 language: go
-split: main
+split: train
 source:
   desc: 'spf13/pflag at c966cfe (UnknownFlagsHandling era): explain, document and test parser behaviour, triage a planted bool-flag issue'
   repo: https://github.com/spf13/pflag.git

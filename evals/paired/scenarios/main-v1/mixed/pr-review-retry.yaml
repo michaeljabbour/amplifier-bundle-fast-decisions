@@ -2,7 +2,7 @@
 id: pr-review-retry
 task_type: mixed
 language: python
-split: main
+split: train
 source:
   desc: Review a planted retry-decorator diff, emit schema-valid findings JSON, implement the intended change, tests that catch the buggy patch.
   kind: self-authored deterministic workspace

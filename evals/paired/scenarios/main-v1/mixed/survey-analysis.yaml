@@ -2,7 +2,7 @@
 id: survey-analysis
 task_type: mixed
 language: python
-split: main
+split: test
 source:
   desc: 'Customer survey CSV: NPS and averages, per-segment tables, comment extraction, exclusion revision, report and script.'
   kind: self-authored deterministic workspace

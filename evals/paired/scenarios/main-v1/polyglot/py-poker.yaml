@@ -2,7 +2,7 @@
 id: py-poker
 task_type: feature
 language: python
-split: main
+split: train
 default_gap_s: 10
 source:
   desc: "Aider polyglot-benchmark python/poker (Exercism), outside the S2 slice"

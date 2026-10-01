@@ -48,7 +48,7 @@ import memguard  # noqa: E402
 os.environ.setdefault(memguard.ENV_CAP, str(memguard.DEFAULT_CAP_GB))
 os.environ.setdefault(memguard.ENV_TIMEOUT, str(int(memguard.DEFAULT_TIMEOUT_S)))
 
-TASK_TYPES = ("feature", "bugfix", "review", "mixed", "knowledge")
+TASK_TYPES = ("feature", "bugfix", "review", "mixed", "knowledge", "docs", "explain")
 SPLITS = ("train", "test", "pilot")
 CHECK_KINDS = ("tests", "file_exists", "file_regex", "keyed_facts", "doc_sections")
 DEFAULT_GAP_S = 10
@@ -157,10 +157,13 @@ def parse(doc: dict, origin: str = "<doc>") -> ScenarioSpec:
 
 
 def load_dir(directory) -> list:
-    """All scenarios under ``directory`` (``*.yaml``), sorted by id. Duplicate ids are an error."""
-    directory = Path(directory).expanduser()
-    _require(directory.is_dir(), f"scenario dir not found: {directory}")
-    specs = [parse(yaml.safe_load(p.read_text(encoding="utf-8")), str(p)) for p in sorted(directory.glob("*.yaml"))]
+    """All scenarios under ``directory`` (``*.yaml``) -- or under every directory of a list -- sorted by id.
+    Duplicate ids are an error."""
+    dirs = [Path(d).expanduser() for d in (directory if isinstance(directory, (list, tuple)) else [directory])]
+    specs = []
+    for d in dirs:
+        _require(d.is_dir(), f"scenario dir not found: {d}")
+        specs += [parse(yaml.safe_load(p.read_text(encoding="utf-8")), str(p)) for p in sorted(d.glob("*.yaml"))]
     ids = [s.id for s in specs]
     _require(len(ids) == len(set(ids)), f"duplicate scenario ids in {directory}")
     return sorted(specs, key=lambda s: s.id)

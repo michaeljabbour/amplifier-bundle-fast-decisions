@@ -2,7 +2,7 @@
 id: js-listops
 task_type: feature
 language: javascript
-split: main
+split: test
 default_gap_s: 10
 source:
   desc: "Aider polyglot-benchmark javascript/list-ops (Exercism), outside the S2 slice"

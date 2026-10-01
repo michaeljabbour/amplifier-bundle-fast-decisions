@@ -2,7 +2,7 @@
 id: meeting-notes
 task_type: mixed
 language: python
-split: main
+split: train
 source:
   desc: 'Meeting notes markdown: extract open action items to a CSV, per-owner digest, reassignment revision, status email.'
   kind: self-authored deterministic workspace

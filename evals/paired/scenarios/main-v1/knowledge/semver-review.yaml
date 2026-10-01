@@ -2,7 +2,7 @@
 id: semver-review
 task_type: review
 language: rust
-split: main
+split: test
 source:
   desc: dtolnay/semver 1.0.28 at 280ebcb plus two planted patches to eval.rs (caret 0.0.x exactness, pre-release gate); checks via rustc since cargo dev-deps are unavailable offline
   repo: https://github.com/dtolnay/semver.git

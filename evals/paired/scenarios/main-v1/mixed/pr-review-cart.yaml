@@ -2,7 +2,7 @@
 id: pr-review-cart
 task_type: mixed
 language: python
-split: main
+split: train
 source:
   desc: Review a planted coupon diff with four defects, write the review, implement it correctly, test it against the buggy patch, document.
   kind: self-authored deterministic workspace
