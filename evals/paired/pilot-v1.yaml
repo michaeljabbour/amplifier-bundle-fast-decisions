@@ -58,3 +58,31 @@ cost_model:
   type_factor: {feature: 1.2, bugfix: 1.5, review: 1.0, mixed: 1.2, knowledge: 1.0}
   long_gap_extra_fraction: 0.10                      # assumed: cache rewrite after each >=5 min gap, fraction of session cost
   infra_retry_reserve_fraction: 0.08                 # spec section 3: expected infra retries ~8%
+
+# Campaign-owned provider (the isolation mechanism; see docs in forge_e2e.campaign_provider_entry). Every session's
+# generated profile.md declares ONLY this provider, so the user's global ~/.amplifier/settings.yaml provider list
+# (10 entries today, incl. gemini/openai/vllm) is neither mounted nor credential-validated. Mirrors what the earlier
+# campaigns effectively ran (the first provider-anthropic entry, `anthropic-primary`): same module source, 1M context
+# on, api.anthropic.com, prompt caching at the provider default, no reasoning_effort. The resolved module version/sha
+# is recorded by `preflight` and carried into every sessions.jsonl row (`provider_module`).
+campaign_provider:
+  id: campaign-anthropic            # unique id: no global provider entry can match and merge config into it
+  module: provider-anthropic
+  source: git+https://github.com/microsoft/amplifier-module-provider-anthropic@main
+  config:
+    api_key: "${ANTHROPIC_API_KEY}"          # env reference; per-arm key selection sets this var for that session only
+    base_url: https://api.anthropic.com
+    enable_1m_context: "true"
+    raw: true                                # request/response payloads in events (the CLI injects this default for
+                                             # settings-derived providers; rows need it to separate background calls)
+preflight:
+  scenario_dir: evals/paired/preflight
+  max_age_hours: 12
+  est_usd_per_session: 0.10
+
+# Shared tools-prefix allowance for the cache-read audit. The nonce leads the system prompt but the tools block comes
+# BEFORE it in the provider's prefix, so tools-only cache entries are shared across sessions of the same model.
+# Measured by the 2026-10-01 preflight (18 sessions, 2 runs): every first request read 32,029-32,033 tokens. Reads up to
+# this size on a request with no own earlier write are reported (cross_arm_read_tokens) but not flagged.
+cache_audit:
+  tools_prefix_tokens: 32100

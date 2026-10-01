@@ -115,7 +115,8 @@ def parse(doc: dict, origin: str = "<doc>") -> ScenarioSpec:
         _require(isinstance(ws.get("files"), dict) and ws["files"], f"{origin}: inline workspace needs files")
     default_gap = int(doc.get("default_gap_s", DEFAULT_GAP_S))
     turns_raw = doc.get("turns")
-    _require(isinstance(turns_raw, list) and len(turns_raw) >= 2, f"{origin}: need >=2 turns")
+    min_turns = 1 if doc.get("preflight") is True else 2      # only the preflight smoke scenario may be one turn
+    _require(isinstance(turns_raw, list) and len(turns_raw) >= min_turns, f"{origin}: need >={min_turns} turns")
     hidden = dict(doc.get("hidden_files") or {})
     turns = []
     for i, t in enumerate(turns_raw, start=1):

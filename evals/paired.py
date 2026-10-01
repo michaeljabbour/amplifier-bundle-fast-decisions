@@ -31,7 +31,7 @@ import threading
 import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor
-from dataclasses import dataclass, field, asdict
+from dataclasses import dataclass, field, asdict, replace
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -61,6 +61,51 @@ class PairedError(Exception):
 class BudgetExceeded(PairedError):
     def __init__(self, reason):
         super().__init__(EXIT_BUDGET, reason)
+
+
+class ConfigError(PairedError):
+    """A session failed BEFORE any model call and not for a transient reason: retrying cannot help, so the run
+    stops (exit 4) with the error tail instead of burning 3 identical attempts."""
+
+    def __init__(self, wave_id: str, tails: dict):
+        self.wave_id, self.tails = wave_id, tails
+        lines = [f"configuration error in wave {wave_id}: session(s) failed before any model call (no retry):"]
+        for key, tail in tails.items():
+            lines.append(f"  [{key}]")
+            lines += [f"    {l}" for l in (tail or "(no output captured)").splitlines()]
+        super().__init__(EXIT_PRECONDITION, "\n".join(lines))
+
+
+# ----------------------------------------------------------------------------------------- failure classification
+
+_NOISE = re.compile(r"FORGE_E2E_(STARTED|FINISHED)|^\s*$")
+_ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
+TRANSIENT_RE = re.compile(
+    r"overloaded|rate.?limit|\b(429|500|502|503|504|529)\b|timed? ?out|connection (reset|refused|aborted|error)|"
+    r"temporar(y|ily)|econn|forge launch failed|maximum sessions|posix_spawnp|cannot reach|empty response|"
+    r"could not resolve host|name or service not known", re.I)
+
+
+def clean_tail(text: str, lines: int = 14) -> str:
+    kept = [l.rstrip() for l in _ANSI.sub("", (text or "").replace("\r", "")).splitlines() if not _NOISE.search(l)]
+    return "\n".join(kept[-lines:])
+
+
+def classify_failure(result: dict | None, diag: dict) -> str:
+    """'config_error' | 'transient' for a session that failed infrastructure.
+
+    A failure is a configuration error when NO model call happened (no session, or a session with zero
+    llm:request events) and the error text carries no transient marker (overload, rate limit, 5xx, timeouts,
+    connection resets, Forge launch trouble). With nothing to go on (no result and no output) the failure is
+    treated as transient: absence of evidence is not evidence of a bad configuration."""
+    tail = diag.get("error_tail") or ""
+    if diag.get("model_calls", 0) > 0:
+        return "transient"
+    if TRANSIENT_RE.search(tail):
+        return "transient"
+    if result is None and not tail.strip():
+        return "transient"
+    return "config_error"
 
 
 # ----------------------------------------------------------------------------------------- config
@@ -361,14 +406,17 @@ def parse_events(session_dir) -> dict:
                 oc = raw.get("output_config")
                 pending[ev.get("request_id") or f"anon{len(pending)}"] = {
                     "ts_req": _ts(ev.get("ts") or ev.get("timestamp")), "model": d.get("model"),
-                    "main": bool(d.get("has_system")) and "tools" in raw,
+                    # `raw: true` on the provider puts the request payload in the event; with it, a main-loop request
+                    # is the one carrying tools (background calls such as session naming have none). Without it the
+                    # split is impossible, so every system-bearing request counts as main and has_raw is False.
+                    "has_raw": bool(raw), "main": bool(d.get("has_system")) and ("tools" in raw if raw else True),
                     "effort": oc.get("effort") if isinstance(oc, dict) else None,
                     "thinking": bool(d.get("thinking_enabled"))}
             elif name == "llm:response":
                 u = d.get("usage") or {}
                 rid = ev.get("request_id")
                 req = pending.pop(rid, None) or {"ts_req": None, "model": d.get("model"), "main": True,
-                                                 "effort": None, "thinking": False}
+                                                 "effort": None, "thinking": False, "has_raw": True}
                 inp, rd, wr = _num(u.get("input_tokens")), _num(u.get("cache_read_tokens")), _num(u.get("cache_write_tokens"))
                 out["requests"].append({
                     **req, "ts_resp": _ts(ev.get("ts") or ev.get("timestamp")), "model": d.get("model") or req["model"],
@@ -423,26 +471,60 @@ def merge_run_receipts(parsed: dict, run_events_dir) -> dict:
     return parsed
 
 
-def cache_audit(requests: list) -> dict:
+def cache_audit(requests: list, tools_prefix_tokens: float = 0.0) -> dict:
     """A cache read can only come from an entry written earlier by THIS session (same model, and on Sonnet the
     same effort level -- findings (e)/(f)). Any read beyond a session's own cumulative writes for that
     (model, effort) is foreign: it can only have been served from another session/arm. Main requests only
-    (background calls, e.g. session naming, have their own prefix)."""
-    own, flags, first_read, total_foreign = {}, [], None, 0.0
+    (background calls, e.g. session naming, have their own prefix).
+
+    ``tools_prefix_tokens``: the nonce leads the SYSTEM prompt, but the tools block precedes it in the provider's
+    prefix order, so an entry covering only the tools is shared across sessions of the same model (the spec's residual
+    risk; measured by `preflight`: ~32k tokens on every first request). Up to that many read tokens on a request that
+    has no own earlier write for its (model, effort) are the shared tools prefix, not a leak: they are reported in
+    ``cross_arm_read_tokens`` but not flagged. Anything beyond is flagged."""
+    own, credit, flags, first_read, total_foreign = {}, {}, [], None, 0.0
     main = [r for r in requests if r["main"]]
     for i, r in enumerate(main):
         key = (r["model"], r["effort"] if r["model"] and "sonnet" in str(r["model"]) else None)
         written = own.get(key, 0.0)
-        foreign = max(0.0, r["read"] - written)
+        if key not in credit:
+            # first request on this (model, effort): what it read was NOT written by this session; up to the
+            # allowance it is the shared tools prefix, and that prefix stays readable on every later request
+            credit[key] = min(r["read"], tools_prefix_tokens)
+        foreign = max(0.0, r["read"] - written - credit[key])
         if i == 0:
             first_read = r["read"]
         if foreign > 0:
             flags.append({"request_index": i + 1, "model": r["model"], "cache_read": r["read"],
-                          "own_written_before": written, "foreign_read_tokens": foreign})
+                          "own_written_before": written, "shared_prefix_credit": credit[key], "foreign_read_tokens": foreign})
             total_foreign += foreign
         own[key] = written + r["write"]
     return {"cross_arm_read_tokens": first_read or 0.0, "foreign_read_tokens_total": total_foreign,
             "foreign_read_requests": len(flags), "cache_audit_flags": flags, "cache_audit_clean": not flags}
+
+
+def tools_normalize(requests: list, tools_prefix_tokens: float) -> dict:
+    """Production-realistic repricing (primary cost basis): under one key the tools prefix is warm across sessions,
+    so on the first main request of each (model, effort-on-Sonnet) the tools-prefix tokens are a cache READ, not a
+    write. Per request: T = min(allowance, read + write); the part of T not already read (and actually written) moves
+    from the write to the read rate. Returns {request_index: {"tokens": n, "delta_usd": d}} for repriced requests
+    (delta_usd <= 0: normalized = recomputed + delta). Background requests are never touched."""
+    seen, out = set(), {}
+    sv = _rates()
+    for i, r in enumerate(requests):
+        if not r["main"]:
+            continue
+        key = (r["model"], r["effort"] if r["model"] and "sonnet" in str(r["model"]) else None)
+        if key in seen:
+            continue
+        seen.add(key)
+        rr = sv._rates_for(r["model"], sv.DEFAULT_RATES)
+        if not rr or tools_prefix_tokens <= 0:
+            continue
+        tokens = min(r["write"], max(0.0, min(tools_prefix_tokens, r["read"] + r["write"]) - r["read"]))
+        if tokens > 0:
+            out[i] = {"tokens": tokens, "delta_usd": -tokens * (rr[3] - rr[2]) / 1e6}
+    return out
 
 
 def switch_metrics(main: list, windows: list) -> dict:
@@ -493,7 +575,7 @@ COVARIATE_WHITELIST = (
     "rep", "scripted_turns", "gap_schedule", "n_long_gaps", "turn1_prompt_chars", "total_prompt_chars",
     "workspace_files", "workspace_bytes", "swe_difficulty", "turn_index", "turn_prompt_chars", "gap_before_s")
 ANCHOR_PROXY_PREFIX = "anchor_"
-OUTCOME_FIELDS = ("cache_hit_share", "model_switches", "cost_usd_provider", "cost_usd_recomputed", "n_req", "tokens",
+OUTCOME_FIELDS = ("cache_hit_share", "model_switches", "cost_usd_provider", "cost_usd_recomputed", "cost_usd_tools_normalized", "n_req", "tokens",
                   "wall_ms", "turn_pass_frac", "final_state_pass", "cross_arm_read_tokens")
 
 
@@ -539,7 +621,7 @@ def sessions_dir_for_workspace(workspace: Path) -> Path:
     return Path.home() / ".amplifier" / "projects" / slug / "sessions"
 
 
-def session_row(meta: dict, result: dict, parsed: dict, spec, snap_stats: dict, prov: dict) -> tuple:
+def session_row(meta: dict, result: dict, parsed: dict, spec, snap_stats: dict, prov: dict, tools_prefix_tokens: float = 0.0) -> tuple:
     """(session_row, [turn_rows]) for one finished session. ``meta`` is the schedule entry of the session."""
     reqs = parsed["requests"]
     main = [r for r in reqs if r["main"]]
@@ -556,7 +638,12 @@ def session_row(meta: dict, result: dict, parsed: dict, spec, snap_stats: dict, 
     cost_recomputed = sum(c for c in recomputed if c is not None)
     unpriced = sum(1 for c in recomputed if c is None)
     denom = sum(r["uncached"] + r["read"] + r["write"] for r in main)
-    audit = cache_audit(reqs)
+    audit = cache_audit(reqs, tools_prefix_tokens)
+    norm = tools_normalize(reqs, tools_prefix_tokens)
+    for i, r in enumerate(reqs):
+        r["_norm_tokens"] = norm.get(i, {}).get("tokens", 0.0)
+        r["_norm_delta"] = norm.get(i, {}).get("delta_usd", 0.0)
+    cost_normalized = cost_recomputed + sum(v["delta_usd"] for v in norm.values())
     sw = switch_metrics(main, windows)
     first = main[0] if main else None
     warm = None
@@ -592,6 +679,10 @@ def session_row(meta: dict, result: dict, parsed: dict, spec, snap_stats: dict, 
         "model_ids": [meta["model"]] if meta.get("model") else [], "served_models": served,
         "served_model_check": model_ids_ok,
         "cost_usd_provider": round(cost_provider, 6), "cost_usd_recomputed": round(cost_recomputed, 6),
+        # PRIMARY cost basis: tools prefix repriced as a cache read on each (model, effort) first request
+        "cost_usd_tools_normalized": round(cost_normalized, 6),
+        "tools_repriced_tokens": sum(v["tokens"] for v in norm.values()),
+        "tools_normalized_delta_usd": round(sum(v["delta_usd"] for v in norm.values()), 6),
         "cost_mismatch": abs(cost_provider - cost_recomputed) > 1e-6 or unpriced > 0, "unpriced_requests": unpriced,
         "tokens": tokens, "n_req": len(main), "n_bg": len(reqs) - len(main),
         "wall_ms": sum(t.get("elapsed_ms") or 0 for t in turns_res),
@@ -600,6 +691,7 @@ def session_row(meta: dict, result: dict, parsed: dict, spec, snap_stats: dict, 
         "cache_hit_share": (sum(r["read"] for r in main) / denom) if denom else None,
         "first_req_write_static": first["write"] if first else None,
         "warm_start_cost_usd": warm,
+        "tools_prefix_allowance_tokens": tools_prefix_tokens,
         **{k: audit[k] for k in ("cross_arm_read_tokens", "foreign_read_tokens_total", "foreign_read_requests",
                                  "cache_audit_flags", "cache_audit_clean")},
         "turn_pass_frac": (sum(passes) / len(passes)) if passes else 0.0, "final_state_pass": final_pass,
@@ -629,6 +721,10 @@ def session_row(meta: dict, result: dict, parsed: dict, spec, snap_stats: dict, 
             "cost_usd": round(sum(r["cost"] for r in in_turn), 6),
             "cost_usd_recomputed": round(sum(c for c in (recompute_cost(r["model"], r["uncached"], r["read"], r["write"], r["output"])
                                                          for r in in_turn) if c is not None), 6),
+            "cost_usd_tools_normalized": round(sum(c for c in (recompute_cost(r["model"], r["uncached"], r["read"], r["write"], r["output"])
+                                                               for r in in_turn) if c is not None) + sum(r["_norm_delta"] for r in in_turn), 6),
+            "tools_repriced_tokens": sum(r["_norm_tokens"] for r in in_turn),
+            "tools_normalized_delta_usd": round(sum(r["_norm_delta"] for r in in_turn), 6),
             "calls": len(tmain), "bg_calls": len(in_turn) - len(tmain), "wall_ms": t.get("elapsed_ms"),
             "working_ms": ((max(ends) - min(starts)) * 1000) if starts and ends else None,
             "switched_in": switched, "pass": bool(t.get("turn_passed")), "skipped": bool(t.get("skipped")),
@@ -636,6 +732,14 @@ def session_row(meta: dict, result: dict, parsed: dict, spec, snap_stats: dict, 
             "first_req_cache_read": tmain[0]["read"] if tmain else None,
             "first_req_cache_write": tmain[0]["write"] if tmain else None,
         })
+    row["_request_rows"] = [{
+        "schema": SCHEMA, "session_key": meta["key"], "scenario_id": meta["scenario"], "arm": meta["arm"], "host": meta["host"],
+        "rep": meta["rep"], "request_index": i, "turn_index": _turn_index(r, windows), "main": r["main"], "model": r["model"],
+        "effort": r["effort"], "tokens": {"input": r["uncached"], "cache_read": r["read"], "cache_write": r["write"], "output": r["output"]},
+        "cost_usd_provider": r["cost"], "cost_usd_recomputed": recompute_cost(r["model"], r["uncached"], r["read"], r["write"], r["output"]),
+        "cost_usd_tools_normalized": (recompute_cost(r["model"], r["uncached"], r["read"], r["write"], r["output"]) or 0.0) + r["_norm_delta"],
+        "tools_repriced_tokens": r["_norm_tokens"], "tools_normalized_delta_usd": round(r["_norm_delta"], 6)}
+        for i, r in enumerate(reqs, start=1)]
     return row, trows
 
 
@@ -653,21 +757,25 @@ def build_pairs(rows: list, turn_rows: list) -> list:
             a = anchors.get((r["scenario_id"], r["rep"], host))
             if a is None or r is a:
                 continue
-            ac = a["cost_usd_recomputed"]
+            norm = lambda x: x.get("cost_usd_tools_normalized", x["cost_usd_recomputed"])      # PRIMARY basis
+            ac, ac_raw = norm(a), a["cost_usd_recomputed"]
             if r["host"] != "any":
-                r["anchor_cost_usd"] = ac
+                r["anchor_cost_usd"], r["anchor_cost_usd_raw"] = ac, ac_raw
                 r["anchor_n_req"] = a["n_req"]
-                r["anchor_turn_costs"] = [t["cost_usd_recomputed"] for t in anchor_turns[(r["scenario_id"], r["rep"], host)]["anchor"]]
-            rc = r["cost_usd_recomputed"]
+                r["anchor_turn_costs"] = [norm(t) for t in anchor_turns[(r["scenario_id"], r["rep"], host)]["anchor"]]
+            rc, rc_raw = norm(r), r["cost_usd_recomputed"]
+            ratio = lambda x, y: round(__import__("math").log(x / y), 6) if x > 0 and y > 0 else None
             pairs.append({
                 "schema": SCHEMA, "scenario_id": r["scenario_id"], "rep": r["rep"], "host": host, "arm": r["arm"],
                 "task_type": r["task_type"], "n_long_gaps": r["n_long_gaps"],
-                "delta_usd": round(rc - ac, 6), "log_cost_ratio": (round(__import__("math").log(rc / ac), 6) if rc > 0 and ac > 0 else None),
+                "cost_basis": "tools_normalized",
+                "delta_usd": round(rc - ac, 6), "log_cost_ratio": ratio(rc, ac),
+                "delta_usd_raw": round(rc_raw - ac_raw, 6), "log_cost_ratio_raw": ratio(rc_raw, ac_raw),
                 "delta_s": round((r["wall_ms"] - a["wall_ms"]) / 1000, 3),
                 "delta_turn_pass": round(r["turn_pass_frac"] - a["turn_pass_frac"], 4),
                 "both_pass": bool(r["final_state_pass"] and a["final_state_pass"]),
                 "arm_failed_what_anchor_passed": (not r["final_state_pass"]) and a["final_state_pass"],
-                "anchor_cost_usd": ac, "arm_cost_usd": rc,
+                "anchor_cost_usd": ac, "arm_cost_usd": rc, "anchor_cost_usd_raw": ac_raw, "arm_cost_usd_raw": rc_raw,
                 "mechanism_engaged": r["mechanism_engaged"], "cache_audit_clean": r["cache_audit_clean"],
                 "valid": bool(r["wave_valid"] and a["wave_valid"] and r["status"] != "infra_fail" and a["status"] != "infra_fail")})
     return pairs
@@ -829,7 +937,7 @@ class ForgeBackend:
                                                           "extended_thinking": True},
                   "events_dir": str(forge_e2e.EVENTS), "host_python": str(forge_e2e.HOST_PYTHON),
                   "forge_py": str(forge_e2e.FORGE), "prompt": forge_e2e.PROMPT, "task_source": task_source,
-                  "turn_gap_seconds": 0}
+                  "turn_gap_seconds": 0, "campaign_provider": ctx.design.get("campaign_provider")}
         forge_e2e.prepare(root, config)
 
     def start(self, root: Path, name: str) -> None:
@@ -871,6 +979,23 @@ class ForgeBackend:
     def workspace(self, root: Path, name: str) -> Path:
         import forge_e2e
         return Path(root) / forge_e2e._slug(name) / "workspace"
+
+    def diagnose(self, root: Path, name: str, result: dict | None) -> dict:
+        """Evidence for failure classification: the error tail (forge-output.txt, else the first turn's stdout)
+        and how many model calls the session made (llm:request events)."""
+        run = self.run_dir(root, name)
+        tail = ""
+        for fname in ("forge-output.txt", "turn1-stdout.txt"):
+            f = run / fname
+            if f.exists():
+                tail = clean_tail(f.read_text(errors="replace"))
+                if tail:
+                    break
+        calls = 0
+        if result and result.get("session_id"):
+            sdir = sessions_dir_for_workspace(self.workspace(root, name)) / result["session_id"]
+            calls = len(parse_events(sdir)["requests"])
+        return {"error_tail": tail, "model_calls": calls}
 
     def run_dir(self, root: Path, name: str) -> Path:
         import forge_e2e
@@ -968,14 +1093,22 @@ def wave_cost(ctx: Ctx, backend, root: Path, sessions: list) -> float:
 
 
 def run_wave(ctx: Ctx, backend, state: State, ledger: Ledger, wid: str, policy_config: dict, resume: bool, log=print) -> str:
-    """All attempts of one wave. An infrastructure failure reruns the WHOLE wave (fresh nonces); a wave that
-    fails ctx.max_attempts times is excluded and reported. Returns 'done' | 'excluded'."""
+    """All attempts of one wave. A TRANSIENT infrastructure failure reruns the whole wave (fresh nonces); a wave
+    that fails ctx.max_attempts times is excluded and reported. A session that fails BEFORE any model call for a
+    non-transient reason is a configuration error: no retry, the wave is marked ``config_error`` (re-runnable
+    after the fix, not counted against the attempt limit) and ConfigError (exit 4, with the error tail) is raised.
+    Returns 'done' | 'excluded'."""
     w = state.wave(wid)
     base = ctx.plan["waves"][wid]
     idx = ctx.plan["wave_order"].index(wid)
-    while len(w["attempts"]) < ctx.max_attempts:
+
+    def failures() -> int:
+        return sum(1 for a in w["attempts"] if a["status"] == "infra_failed")
+
+    while failures() < ctx.max_attempts:
         adopt = bool(resume and w["attempts"] and w["attempts"][-1]["status"] == "running")
-        attempt_no = len(w["attempts"]) if adopt else len(w["attempts"]) + 1
+        last = max([a["attempt"] for a in w["attempts"]] + [w.get("attempt_offset", 0)])
+        attempt_no = last if adopt else last + 1
         if adopt:
             att = w["attempts"][-1]
             sessions, root = att["sessions"], Path(att["root"])
@@ -997,19 +1130,20 @@ def run_wave(ctx: Ctx, backend, state: State, ledger: Ledger, wid: str, policy_c
             state.save()
         launches, lock = {}, threading.Lock()
 
-        def one(s):
+        def one(s, root=root, adopt=adopt):
             st = backend.status(root, s["key"]) if adopt else "missing"
-            if st == "done":
-                return "done"
-            if st == "dead":
-                return "dead"
+            if st in ("done", "dead"):
+                return st
             if st == "missing":
                 off = ctx.offsets.get(s["arm"], 0)
                 if off:
                     ctx.sleep(off)
                 with lock:
                     launches[s["key"]] = ctx.now()
-                backend.start(root, s["key"])
+                try:
+                    backend.start(root, s["key"])
+                except Exception as exc:  # noqa: BLE001 -- a launcher hiccup is an infrastructure failure of this session
+                    return f"launch_error:{exc}"
             ok = backend.wait(root, s["key"], wave_timeout_s(ctx, s))
             backend.close(root, s["key"])
             return "done" if ok else "timeout"
@@ -1025,9 +1159,17 @@ def run_wave(ctx: Ctx, backend, state: State, ledger: Ledger, wid: str, policy_c
         spent = wave_cost(ctx, backend, root, sessions)
         ledger.settle(f"{wid}#a{attempt_no}", spent)
         if infra:
+            diag = {k: backend.diagnose(root, k, results[k]) for k in infra}
+            kinds = {k: classify_failure(results[k], diag[k]) for k in infra}
+            att["infra_failed_sessions"], att["failure_kinds"] = infra, kinds
+            cfg = {k: diag[k]["error_tail"] for k, v in kinds.items() if v == "config_error"}
+            if cfg:
+                att["status"], att["error_tail"] = "config_error", cfg
+                w["status"] = "config_error"
+                state.save()
+                raise ConfigError(wid, cfg)
             att["status"] = "infra_failed"
-            att["infra_failed_sessions"] = infra
-            log(f"[{wid}] attempt {attempt_no}: infrastructure failure in {infra}; rerunning the whole wave")
+            log(f"[{wid}] attempt {attempt_no}: transient infrastructure failure in {infra}; rerunning the whole wave")
             state.save()
             continue
         att["status"] = "done"
@@ -1039,6 +1181,25 @@ def run_wave(ctx: Ctx, backend, state: State, ledger: Ledger, wid: str, policy_c
     w["status"] = "excluded"
     state.save()
     return "excluded"
+
+
+def reset_waves(state: State, ids: list, log=print) -> list:
+    """Make waves runnable again (``run --reset-wave``): archive their attempts under ``history``, keep attempt
+    numbering and the ledger (spend is never forgotten), clear the status. 'excluded' resets every excluded or
+    config_error wave. Finished waves are refused: their data is accepted results."""
+    wanted = [w for w, v in state.d["waves"].items() if v["status"] in ("excluded", "config_error")] if ids == ["excluded"] else ids
+    done = []
+    for wid in wanted:
+        w = state.wave(wid)
+        if w["status"] == "done":
+            raise PairedError(EXIT_PRECONDITION, f"wave {wid} is done (accepted results); refusing to reset it")
+        w.setdefault("history", []).append({"status": w["status"], "attempts": w["attempts"]})
+        w["attempt_offset"] = max([a["attempt"] for a in w["attempts"]] + [w.get("attempt_offset", 0)])
+        w.update(status="pending", attempts=[], accepted_attempt=None)
+        done.append(wid)
+        log(f"reset wave {wid} (attempt numbering continues after {w['attempt_offset']}; ledger kept)")
+    state.save()
+    return done
 
 
 def check_prompt_hashes(root: Path, sessions: list, plan: dict) -> None:
@@ -1053,21 +1214,27 @@ def check_prompt_hashes(root: Path, sessions: list, plan: dict) -> None:
 
 
 def run_campaign(ctx: Ctx, backend, *, budget_usd: float, parallel: int, resume: bool, max_waves=None,
-                 policy_config: dict | None = None, log=print) -> int:
+                 policy_config: dict | None = None, reset_waves_ids: list | None = None, log=print) -> int:
     state, ledger = State(ctx.out / "state.json"), Ledger(ctx.out / "ledger.json", budget_usd)
     sha = settings_sha()
     if state.d.get("settings_sha256") not in (None, sha):
         raise PairedError(EXIT_PRECONDITION, "~/.amplifier/settings.yaml changed since the campaign started (STUDY-DESIGN 18.5)")
     state.d["settings_sha256"] = sha
     state.save()
+    if reset_waves_ids:
+        reset_waves(state, reset_waves_ids, log)
     todo = [w for w in ctx.plan["wave_order"] if state.wave(w)["status"] not in ("done", "excluded")]
     if max_waves is not None:
         todo = todo[:max_waves]
     slots, futures, code = Slots(parallel), [], EXIT_OK
+    stop, config_errors = threading.Event(), []
     with ThreadPoolExecutor(max_workers=parallel) as ex:
         for wid in todo:
             size = len(ctx.plan["waves"][wid])
             slots.acquire(size)
+            if stop.is_set():
+                slots.release(size)
+                break
             try:
                 need = sum(s["est_usd"] for s in ctx.plan["waves"][wid])
                 if ledger.committed() + need > budget_usd + 1e-9:
@@ -1081,6 +1248,10 @@ def run_campaign(ctx: Ctx, backend, *, budget_usd: float, parallel: int, resume:
             def job(wid=wid, size=size):
                 try:
                     return run_wave(ctx, backend, state, ledger, wid, policy_config or {}, resume, log)
+                except ConfigError as exc:
+                    config_errors.append(exc)
+                    stop.set()           # a configuration error is the same for every wave: launch no further wave
+                    return "config_error"
                 finally:
                     slots.release(size)
             futures.append(ex.submit(job))
@@ -1090,6 +1261,12 @@ def run_campaign(ctx: Ctx, backend, *, budget_usd: float, parallel: int, resume:
             except BudgetExceeded as exc:
                 log(f"STOP: {exc.reason}")
                 code = EXIT_BUDGET
+    if config_errors:
+        for exc in config_errors:
+            log(exc.reason)
+        log("No further wave was launched. Fix the configuration, then re-run `preflight` and `run` (the wave is not "
+            "counted as failed; add --reset-wave <id> only for waves that were excluded).")
+        return EXIT_PRECONDITION
     return code
 
 
@@ -1106,11 +1283,14 @@ def accepted_sessions(out: Path):
             yield wid, att, s
 
 
-def extract_rows(out: Path, backend=None, *, specs=None, snap_stats=None) -> dict:
+def extract_rows(out: Path, backend=None, *, specs=None, snap_stats=None, tools_prefix_tokens: float = 0.0) -> dict:
     out = Path(out)
     backend = backend or ForgeBackend()
     plan = _read_json(out / "schedule.json")
-    prov_base = {"price_table_sha": price_table_sha(), "nonce_mode": plan["nonce_mode"], "plan_id": plan["plan_id"]}
+    pf = _read_json(out / "preflight.json") or {}
+    prov_base = {"price_table_sha": price_table_sha(), "nonce_mode": plan["nonce_mode"], "plan_id": plan["plan_id"],
+                 "provider_module": pf.get("provider_module"), "campaign_provider": pf.get("campaign_provider"),
+                 "preflight_ok": pf.get("ok")}
     rows, trows, skipped = [], [], []
     for wid, att, s in accepted_sessions(out):
         root = Path(att["root"])
@@ -1125,16 +1305,18 @@ def extract_rows(out: Path, backend=None, *, specs=None, snap_stats=None) -> dic
                 "wave_valid": att.get("wave_valid", True), "concurrent_sessions": len(att["sessions"])}
         prov = {"build_sha": (res.get("source_expected") or {}).get("git_sha"),
                 "bundle_tree_sha": (res.get("source_expected") or {}).get("tree_sha256"), **prov_base}
-        row, tr = session_row(meta, res, parsed, spec, (snap_stats or {}).get(s["scenario"], {}), prov)
+        row, tr = session_row(meta, res, parsed, spec, (snap_stats or {}).get(s["scenario"], {}), prov, tools_prefix_tokens)
         rows.append(row)
         trows.extend(tr)
+    reqrows = [q for r in rows for q in r.pop("_request_rows")]
     pairs = build_pairs(rows, trows)
     d = out / "rows"
     d.mkdir(exist_ok=True)
-    for name, data in (("sessions", rows), ("turns", trows), ("pairs", pairs)):
+    for name, data in (("sessions", rows), ("turns", trows), ("requests", reqrows), ("pairs", pairs)):
         (d / f"{name}.jsonl").write_text("".join(json.dumps(r, default=str) + "\n" for r in data), encoding="utf-8")
     flagged = [r["session_key"] for r in rows if not r["cache_audit_clean"]]
-    summary = {"sessions": len(rows), "turns": len(trows), "pairs": len(pairs), "skipped_no_result": skipped,
+    summary = {"sessions": len(rows), "turns": len(trows), "requests": len(reqrows), "pairs": len(pairs),
+               "tools_normalized_delta_usd_total": round(sum(r["tools_normalized_delta_usd"] for r in rows), 6), "skipped_no_result": skipped,
                "cache_audit_flagged_sessions": flagged,
                "mechanism_failed": [r["session_key"] for r in rows if not r["mechanism_engaged"]],
                "cost_mismatch": [r["session_key"] for r in rows if r["cost_mismatch"]]}
@@ -1216,6 +1398,162 @@ def render_check(out: Path, backend=None, renderer=None) -> dict:
             report["ok"] = False
             report["problems"].append(f"group {g}: {len(distinct)} distinct masked system prompts")
     return report
+
+
+# ----------------------------------------------------------------------------------------- preflight
+
+_PROVIDER_SNIPPET = (
+    "import importlib, importlib.metadata as md, json, pathlib, subprocess\n"
+    "out = {'module': 'provider-anthropic'}\n"
+    "try:\n"
+    "    m = importlib.import_module('amplifier_module_provider_anthropic')\n"
+    "    p = pathlib.Path(m.__file__).resolve()\n"
+    "    out['path'] = str(p.parent)\n"
+    "    try:\n        out['version'] = md.version('amplifier-module-provider-anthropic')\n    except Exception:\n        out['version'] = None\n"
+    "    for par in p.parents:\n"
+    "        r = subprocess.run(['git', '-C', str(par), 'rev-parse', 'HEAD'], capture_output=True, text=True)\n"
+    "        if r.returncode == 0:\n            out['git_sha'] = r.stdout.strip(); out['git_root'] = str(par); break\n"
+    "except Exception as exc:\n    out['error'] = repr(exc)\n"
+    "print(json.dumps(out))\n")
+
+
+def provider_module_info(python=None) -> dict:
+    """Which provider-anthropic the host interpreter will import (module path, package version, git sha)."""
+    import forge_e2e
+    try:
+        proc = subprocess.run([str(python or forge_e2e.HOST_PYTHON), "-c", _PROVIDER_SNIPPET], capture_output=True,
+                              text=True, timeout=60, check=False)
+        info = json.loads(proc.stdout.strip().splitlines()[-1])
+    except (OSError, ValueError, IndexError, subprocess.TimeoutExpired) as exc:
+        info = {"module": "provider-anthropic", "error": repr(exc)}
+    return info
+
+
+def preflight_targets(ctx: Ctx) -> list:
+    """Distinct (cell, model, key) the planned waves will use. A sticky arm expands to BOTH of its pin cells (the
+    decision is only made at launch). Each target carries the set of models its first response may come from."""
+    cheap = "claude-sonnet-5"
+    seen, out = set(), []
+    for wave in ctx.plan["waves"].values():
+        for s in wave:
+            arm = ctx.design["arms"][s["arm"]]
+            if s["kind"] == "sticky":
+                variants = [(arm["cells"][s["host"]]["host"], "pin-host"), (arm["cells"][s["host"]]["cheap"], "pin-cheap")]
+            else:
+                variants = [(s["cell"], s["kind"])]
+            for cell, kind in variants:
+                _, cell_model, _ = cell_to_side(cell, ctx.cells_doc, ctx.suites_doc, baseline_source=ctx.baseline_source,
+                                                candidate_source=ctx.candidate_source, candidate_sha=ctx.candidate_sha)
+                model = s["model"] or cell_model
+                key_env = ctx.key_env.get(s["arm"])
+                ident = (cell, model, key_env)
+                if ident in seen:
+                    continue
+                seen.add(ident)
+                expected = {"pin-cheap": {cheap}, "fd": {model, cheap}}.get(kind, {model})
+                out.append({"cell": cell, "model": model, "key_env": key_env, "kind": "fd" if kind in ("fd", "pin-host", "pin-cheap") else kind,
+                            "variant": kind, "expected_models": sorted(expected), "arm": s["arm"], "host": s["host"]})
+    return out
+
+
+def preflight_fingerprint(ctx: Ctx, targets: list) -> str:
+    body = {"targets": sorted((t["cell"], t["model"], t["key_env"] or "") for t in targets),
+            "candidate": ctx.candidate_sha, "provider": ctx.design.get("campaign_provider")}
+    return hashlib.sha256(json.dumps(body, sort_keys=True).encode()).hexdigest()[:16]
+
+
+def run_preflight(ctx: Ctx, backend, ledger: Ledger, *, parallel: int, log=print, provider_info=None) -> dict:
+    """One minimal session ("Reply with OK.") per distinct (cell, model, key), in the SAME isolated provider
+    environment the campaign uses, concurrently. Passes only if every session completes and has an llm:response
+    from an expected model. Costs cents; the measured cost is recorded in the ledger. Writes preflight.json."""
+    targets = preflight_targets(ctx)
+    pdir = _abs(REPO_ROOT, ctx.design["preflight"]["scenario_dir"])
+    specs = {s.id: s for s in ps.load_dir(pdir)}
+    snap_root = _abs(REPO_ROOT, ctx.design["snapshot_root"])
+    pf_ctx = replace(ctx, design={**ctx.design, "scenario_dir": str(pdir)}, specs=specs,
+                     snapshots={"preflight": str(ps.materialize(specs["preflight"], snap_root))})
+    stamp = int(time.time() * 1000)
+    ledger_key = f"preflight#{stamp}"
+    ledger.reserve(ledger_key, round(ctx.design["preflight"]["est_usd_per_session"] * len(targets), 4))
+    sessions, key_env = [], {}
+    for i, t in enumerate(targets):
+        key = f"pf{i}"
+        key_env[key] = t["key_env"]
+        sessions.append({"key": key, "wave_id": "preflight", "scenario": "preflight", "rep": 1, "host": t["host"], "arm": key,
+                         "kind": t["kind"], "cell": t["cell"], "model": t["model"], "attempt": 1, "est_usd": 0.0,
+                         "nonce": make_nonce(ctx.plan["plan_id"], key, stamp) if ctx.plan["nonce_mode"] == "per_session" else None})
+    pf_ctx.key_env = {k: v for k, v in key_env.items() if v}
+    root = ctx.campaign_root / f"pf-{stamp}"
+    report = {"ok": False, "run_at": datetime.now(timezone.utc).isoformat(), "root": str(root), "sessions": [], "total_cost_usd": 0.0}
+    try:
+        backend.prepare_wave(pf_ctx, root, sessions)
+
+        def one(s):
+            try:
+                backend.start(root, s["key"])
+            except Exception as exc:  # noqa: BLE001
+                return f"launch_error:{exc}"
+            ok = backend.wait(root, s["key"], 900)
+            backend.close(root, s["key"])
+            return "done" if ok else "timeout"
+        with ThreadPoolExecutor(max_workers=max(1, min(parallel, len(sessions)))) as ex:
+            outcomes = dict(zip([s["key"] for s in sessions], ex.map(one, sessions)))
+        total = 0.0
+        for s, t in zip(sessions, targets):
+            res = backend.result(root, s["key"])
+            entry = {"cell": t["cell"], "model": t["model"], "key_env": t["key_env"], "variant": t["variant"], "outcome": outcomes[s["key"]]}
+            models, cost, raw_flags = [], 0.0, []
+            if res and res.get("session_id") and not res.get("infrastructure_failure"):
+                sdir = sessions_dir_for_workspace(backend.workspace(root, s["key"])) / res["session_id"]
+                parsed = parse_events(sdir)
+                models = sorted({r["model"] for r in parsed["requests"] if r["main"] and r["model"]})
+                raw_flags = [r["has_raw"] for r in parsed["requests"] if r["main"]]
+                cost = sum(c for c in (recompute_cost(r["model"], r["uncached"], r["read"], r["write"], r["output"])
+                                       for r in parsed["requests"]) if c is not None)
+            raw_ok = bool(raw_flags) and all(raw_flags)
+            entry.update(models_seen=models, cost_usd=round(cost, 6), raw_events=raw_ok,
+                         passed=bool(models) and set(models) <= set(t["expected_models"]) and raw_ok)
+            if not entry["passed"]:
+                diag = backend.diagnose(root, s["key"], res)
+                entry["error_tail"] = diag["error_tail"] or ("session produced no response from "
+                                                              f"{t['expected_models']} (models seen: {models})")
+                if models and not raw_ok:
+                    entry["error_tail"] = ("llm:request events carry no raw payload: the campaign provider needs `raw: true` "
+                                           "(background calls cannot be told from main-loop calls without it)")
+                    entry["failure_kind"] = "raw_events_missing"
+                else:
+                    entry["failure_kind"] = classify_failure(res, diag) if (res is None or res.get("infrastructure_failure")) else "unexpected_model"
+            total += cost
+            report["sessions"].append(entry)
+        report["total_cost_usd"] = round(total, 6)
+        report["ok"] = all(e["passed"] for e in report["sessions"])
+    finally:
+        ledger.settle(ledger_key, report["total_cost_usd"])
+    report["fingerprint"] = preflight_fingerprint(ctx, targets)
+    report["provider_module"] = provider_info() if callable(provider_info) else provider_module_info()
+    report["campaign_provider"] = {k: v for k, v in (ctx.design.get("campaign_provider") or {}).items() if k != "config"}
+    report["campaign_provider"]["config_keys"] = sorted((ctx.design.get("campaign_provider") or {}).get("config", {}))
+    _write_json(ctx.out / "preflight.json", report)
+    for e in report["sessions"]:
+        log(f"preflight {'PASS' if e['passed'] else 'FAIL'}  {e['cell']:22} {e['model']:20} key={e['key_env'] or 'default'}  "
+            f"models={','.join(e['models_seen']) or '-'}  ${e['cost_usd']:.4f}")
+        if not e["passed"]:
+            log("    " + "\n    ".join(e["error_tail"].splitlines()))
+    log(f"preflight {'PASSED' if report['ok'] else 'FAILED'}: {len(report['sessions'])} sessions, ${report['total_cost_usd']:.4f}")
+    return report
+
+
+def preflight_is_fresh(ctx: Ctx) -> bool:
+    rep = _read_json(ctx.out / "preflight.json")
+    if not rep or not rep.get("ok"):
+        return False
+    if rep.get("fingerprint") != preflight_fingerprint(ctx, preflight_targets(ctx)):
+        return False
+    try:
+        age_h = (datetime.now(timezone.utc) - datetime.fromisoformat(rep["run_at"])).total_seconds() / 3600
+    except (KeyError, ValueError):
+        return False
+    return age_h <= ctx.design["preflight"].get("max_age_hours", 12)
 
 
 # ----------------------------------------------------------------------------------------- CLI
@@ -1333,11 +1671,37 @@ def cmd_run(args) -> int:
             print(f"  {w}: " + ", ".join(s['arm'] for s in ctx.plan['waves'][w]))
         return EXIT_OK
     import forge_e2e
+    backend = ForgeBackend()
+    if not args.skip_preflight and not preflight_is_fresh(ctx):
+        rep = run_preflight(ctx, backend, Ledger(out / "ledger.json", budget), parallel=parallel)
+        if not rep["ok"]:
+            print("paired.py: preflight FAILED; no wave was launched (exit 4). Fix the cause above and re-run.", file=sys.stderr)
+            return EXIT_PRECONDITION
     policy = forge_e2e.composed_effective_config(ctx.candidate_source, {}) or {}
-    code = run_campaign(ctx, ForgeBackend(), budget_usd=budget, parallel=parallel, resume=args.resume,
-                        max_waves=args.waves, policy_config=policy)
+    reset = (args.reset_wave or None)
+    code = run_campaign(ctx, backend, budget_usd=budget, parallel=parallel, resume=args.resume,
+                        max_waves=args.waves, policy_config=policy, reset_waves_ids=reset)
     print(json.dumps({"exit": code, "state": str(out / "state.json"), "ledger": str(out / "ledger.json")}))
     return code
+
+
+def cmd_preflight(args) -> int:
+    out = Path(args.out).expanduser().resolve()
+    ctx = _ctx_from_schedule(out, args)
+    budget = args.budget_usd if args.budget_usd is not None else ctx.plan.get("budget_usd")
+    if budget is None:
+        raise PairedError(EXIT_PRECONDITION, "--budget-usd is required (the ledger hard stop)")
+    targets = preflight_targets(ctx)
+    if args.dry_run:
+        for t in targets:
+            print(f"{t['cell']:22} {t['model']:20} key={t['key_env'] or 'default':38} expects {','.join(t['expected_models'])}")
+        print(f"{len(targets)} preflight sessions (est ${ctx.design['preflight']['est_usd_per_session'] * len(targets):.2f})")
+        return EXIT_OK
+    rep = run_preflight(ctx, ForgeBackend(), Ledger(out / "ledger.json", budget), parallel=args.parallel or ctx.plan["parallel"])
+    pm = rep.get("provider_module") or {}
+    print(json.dumps({"ok": rep["ok"], "total_cost_usd": rep["total_cost_usd"], "sessions": len(rep["sessions"]),
+                      "provider_module": {k: pm.get(k) for k in ("version", "git_sha", "path", "error")}}, indent=2))
+    return EXIT_OK if rep["ok"] else EXIT_PRECONDITION
 
 
 def _specs_and_stats(out: Path, args):
@@ -1349,7 +1713,8 @@ def _specs_and_stats(out: Path, args):
 def cmd_rows(args) -> int:
     out = Path(args.out).expanduser().resolve()
     ctx, stats = _specs_and_stats(out, args)
-    summary = extract_rows(out, specs=ctx.specs, snap_stats=stats)
+    summary = extract_rows(out, specs=ctx.specs, snap_stats=stats,
+                           tools_prefix_tokens=ctx.design.get("cache_audit", {}).get("tools_prefix_tokens", 0))
     print(json.dumps(summary, indent=2))
     return EXIT_OK
 
@@ -1398,6 +1763,16 @@ def build_parser() -> argparse.ArgumentParser:
     r.add_argument("--waves", type=int, help="run only the first N unfinished waves")
     r.add_argument("--resume", action="store_true", help="adopt finished and live sessions")
     r.add_argument("--dry-run", action="store_true")
+    r.add_argument("--skip-preflight", action="store_true", help="do not run the preflight (not recommended)")
+    r.add_argument("--reset-wave", action="append", metavar="WAVE_ID",
+                   help="make an excluded / config_error wave runnable again ('excluded' = all of them); attempt "
+                        "numbering and the ledger are kept")
+    pf = sub.add_parser("preflight", help="one minimal session per distinct (cell, model, key); aborts (exit 4) on failure")
+    pf.add_argument("--out", required=True)
+    pf.add_argument("--design")
+    pf.add_argument("--parallel", type=int)
+    pf.add_argument("--budget-usd", type=float)
+    pf.add_argument("--dry-run", action="store_true", help="list what would run; no session, no spend")
     for name, help_ in (("rows", "extract sessions/turns/pairs datasets"), ("grade", "re-grade preserved turn snapshots (no model)"),
                         ("render-check", "offline system-prompt render + nonce check")):
         c = sub.add_parser(name, help=help_)
@@ -1412,7 +1787,7 @@ def main(argv=None) -> int:
     args = build_parser().parse_args(argv)
     try:
         return {"plan": cmd_plan, "run": cmd_run, "rows": cmd_rows, "grade": cmd_grade,
-                "render-check": cmd_render_check}[args.cmd](args)
+                "render-check": cmd_render_check, "preflight": cmd_preflight}[args.cmd](args)
     except PairedError as exc:
         print(f"paired.py: {exc.reason}", file=sys.stderr)
         return exc.code

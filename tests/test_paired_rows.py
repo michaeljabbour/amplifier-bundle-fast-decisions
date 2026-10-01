@@ -103,6 +103,16 @@ class CacheAuditTests(unittest.TestCase):
         self.assertEqual(a["cache_audit_flags"][0]["request_index"], 1)
         self.assertEqual(a["foreign_read_tokens_total"], 1400)   # 700 on request 1, then 1000 read vs 300 own writes
 
+    def test_shared_tools_prefix_is_reported_but_not_flagged_up_to_the_allowance(self):
+        r = self.reqs({"model": OPUS, "read": 700, "write": 300}, {"model": OPUS, "read": 1000, "write": 10})
+        a = paired.cache_audit(r, tools_prefix_tokens=700)
+        self.assertTrue(a["cache_audit_clean"])
+        self.assertEqual(a["cross_arm_read_tokens"], 700)             # still reported: the spec's P1 measurement
+        self.assertFalse(paired.cache_audit(r, tools_prefix_tokens=699)["cache_audit_clean"])
+        # the allowance never excuses a read on a request that follows an own write for that model
+        r2 = self.reqs({"model": OPUS, "read": 0, "write": 1000}, {"model": OPUS, "read": 1700, "write": 0})
+        self.assertEqual([f["foreign_read_tokens"] for f in paired.cache_audit(r2, tools_prefix_tokens=700)["cache_audit_flags"]], [700])
+
     def test_read_beyond_own_writes_is_flagged_even_mid_session(self):
         a = paired.cache_audit(self.reqs({"model": OPUS, "read": 0, "write": 1000}, {"model": OPUS, "read": 1600, "write": 0}))
         self.assertEqual([f["foreign_read_tokens"] for f in a["cache_audit_flags"]], [600])
@@ -186,6 +196,120 @@ class PairTests(unittest.TestCase):
         self.assertNotIn("anchor_cost_usd", rows[0])             # never for the anchor itself
         sonnet = [p for p in pairs if p["arm"] == "sonnet"]
         self.assertEqual(sorted(p["host"] for p in sonnet), ["fable", "opus"])      # the control pairs with each stratum
+
+
+class ToolsNormalizationTests(unittest.TestCase):
+    """cost_usd_tools_normalized: the first request's tools-prefix tokens are repriced as a cache READ in every session."""
+    ALLOW = 30_000
+
+    def session(self, first_read, first_write, allowance=None):
+        tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, tmp, True)
+        reqs = [{"t": T0 + 1, "model": OPUS, "uncached": 100, "read": first_read, "write": first_write, "output": 50},
+                {"t": T0 + 21, "model": OPUS, "uncached": 100, "read": 50_000, "write": 100, "output": 50},
+                {"t": T0 + 25, "model": "claude-haiku-4-5", "uncached": 300, "read": 0, "write": 500, "output": 20, "main": False}]
+        write_events(tmp / "events.jsonl", reqs)
+        return paired.session_row(meta(), result_doc([(T0, T0 + 10), (T0 + 20, T0 + 30)]), paired.parse_events(tmp), SPEC, {}, {},
+                                  self.ALLOW if allowance is None else allowance)
+
+    def test_cold_first_request_is_repriced_as_a_read(self):
+        row, trows = self.session(0, 40_000)
+        r = paired._rates()._rates_for(OPUS, paired._rates().DEFAULT_RATES)
+        expect_delta = -self.ALLOW * (r[3] - r[2]) / 1e6
+        self.assertEqual(row["tools_repriced_tokens"], self.ALLOW)
+        self.assertAlmostEqual(row["tools_normalized_delta_usd"], expect_delta, places=6)
+        self.assertAlmostEqual(row["cost_usd_tools_normalized"], row["cost_usd_recomputed"] + expect_delta, places=6)
+        self.assertGreater(row["cost_usd_recomputed"], row["cost_usd_tools_normalized"])
+        self.assertAlmostEqual(row["cost_usd_provider"], row["cost_usd_recomputed"], places=6)        # raw basis untouched
+        self.assertAlmostEqual(trows[0]["tools_normalized_delta_usd"], expect_delta, places=6)       # lands on turn 1 only
+        self.assertEqual((trows[1]["tools_repriced_tokens"], trows[1]["tools_normalized_delta_usd"]), (0, 0))
+        self.assertAlmostEqual(sum(t["cost_usd_tools_normalized"] for t in trows), row["cost_usd_tools_normalized"], places=6)
+
+    def test_a_session_that_already_read_the_prefix_is_not_repriced_twice(self):
+        warm, _ = self.session(self.ALLOW, 10_000)
+        self.assertEqual((warm["tools_repriced_tokens"], warm["tools_normalized_delta_usd"]), (0, 0))
+        self.assertEqual(warm["cost_usd_tools_normalized"], warm["cost_usd_recomputed"])
+        part, _ = self.session(12_000, 40_000)              # read 12k already: only the remaining 18k are repriced
+        self.assertEqual(part["tools_repriced_tokens"], self.ALLOW - 12_000)
+
+    def test_cold_and_warm_sessions_converge_to_the_same_normalized_first_request(self):
+        cold, _ = self.session(0, 40_000)
+        warm, _ = self.session(self.ALLOW, 10_000)
+        rc, rw = cold["cost_usd_tools_normalized"], warm["cost_usd_tools_normalized"]
+        self.assertAlmostEqual(rc, rw, places=6)                                    # normalized: identical
+        self.assertGreater(cold["cost_usd_recomputed"], warm["cost_usd_recomputed"])   # raw: the cold session paid the writes
+
+    def test_zero_allowance_disables_the_normalization_and_background_is_untouched(self):
+        row, _ = self.session(0, 40_000, allowance=0)
+        self.assertEqual((row["tools_repriced_tokens"], row["cost_usd_tools_normalized"]), (0, row["cost_usd_recomputed"]))
+        row, _ = self.session(0, 40_000)
+        self.assertEqual(row["n_bg"], 1)
+        self.assertEqual(sum(1 for q in row["_request_rows"] if q["tools_repriced_tokens"]), 1)      # only the first main request
+
+    def test_request_rows_sum_to_the_session_totals(self):
+        row, _ = self.session(0, 40_000)
+        self.assertAlmostEqual(sum(q["cost_usd_tools_normalized"] for q in row["_request_rows"]), row["cost_usd_tools_normalized"], places=6)
+        self.assertEqual([q["request_index"] for q in row["_request_rows"]], [1, 2, 3])
+
+    def test_a_model_switch_also_normalizes_the_new_models_first_request(self):
+        tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, tmp, True)
+        write_events(tmp / "events.jsonl", [
+            {"t": T0 + 1, "model": OPUS, "uncached": 10, "read": 0, "write": 40_000, "output": 5},
+            {"t": T0 + 21, "model": SONNET, "uncached": 10, "read": 0, "write": 41_000, "output": 5}])
+        row, _ = paired.session_row(meta(), result_doc([(T0, T0 + 10), (T0 + 20, T0 + 30)]), paired.parse_events(tmp), SPEC, {}, {}, self.ALLOW)
+        self.assertEqual(row["tools_repriced_tokens"], 2 * self.ALLOW)
+
+    def test_pairs_carry_raw_and_normalized_with_normalized_primary(self):
+        def row(arm, raw, norm, host="opus"):
+            return {"scenario_id": "s", "rep": 1, "host": host, "arm": arm, "task_type": "feature", "n_long_gaps": 0, "cost_usd_recomputed": raw,
+                    "cost_usd_tools_normalized": norm, "wall_ms": 1000, "turn_pass_frac": 1.0, "final_state_pass": True, "wave_valid": True,
+                    "status": "ok", "n_req": 1, "mechanism_engaged": True, "cache_audit_clean": True}
+        rows = [row("anchor", 1.0, 0.8), row("shipped", 0.9, 0.5)]
+        turns = [{"scenario_id": "s", "rep": 1, "host": "opus", "arm": "anchor", "cost_usd_recomputed": 1.0, "cost_usd_tools_normalized": 0.8}]
+        p = paired.build_pairs(rows, turns)[0]
+        self.assertEqual(p["cost_basis"], "tools_normalized")
+        self.assertAlmostEqual(p["delta_usd"], -0.3)
+        self.assertAlmostEqual(p["delta_usd_raw"], -0.1)
+        self.assertAlmostEqual(p["log_cost_ratio"], __import__("math").log(0.5 / 0.8), places=5)
+        self.assertAlmostEqual(p["log_cost_ratio_raw"], __import__("math").log(0.9), places=5)
+        self.assertEqual((p["anchor_cost_usd"], p["anchor_cost_usd_raw"]), (0.8, 1.0))
+        self.assertEqual(rows[1]["anchor_turn_costs"], [0.8])
+
+    def test_normalized_cost_is_an_outcome_not_a_covariate(self):
+        with self.assertRaises(ValueError):
+            paired.assert_covariates(["task_type", "cost_usd_tools_normalized"])
+        self.assertIn("cost_usd_tools_normalized", paired.OUTCOME_FIELDS)
+
+    def test_extract_rows_writes_requests_and_normalized_columns(self):
+        tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, tmp, True)
+        sess_root, root = tmp / "sessions", tmp / "camp" / "w000-a1"
+        sessions = []
+        for arm, kind, write in (("anchor", "plain", 40_000), ("shipped", "fd", 25_000)):
+            key = f"tiny-demo-r1-opus-{arm}"
+            sessions.append(meta(key=key, arm=arm, kind=kind, nonce=f"n-{arm}"))
+            (root / key / "workspace").mkdir(parents=True)
+            (root / key / "result.json").write_text(json.dumps(result_doc([(T0, T0 + 10), (T0 + 20, T0 + 30)], sid=f"sid-{arm}")))
+            extra = [{"ts": ts(T0 + 2), "event": "fast_decisions:difficulty_judged", "event_id": "e1", "data": {}}] if kind == "fd" else []
+            write_events(sess_root / f"sid-{arm}" / "events.jsonl", [
+                {"t": T0 + 1, "model": OPUS, "uncached": 10, "read": 25_000 if kind == "fd" else 0, "write": write, "output": 5},
+                {"t": T0 + 21, "model": OPUS, "uncached": 10, "read": 60_000, "write": 10, "output": 5}], extra)
+        out = tmp / "out"
+        out.mkdir()
+        (out / "schedule.json").write_text(json.dumps({"nonce_mode": "per_session", "plan_id": "p", "scenarios": {"tiny-demo": {"scenario_hash": "h"}}}))
+        (out / "state.json").write_text(json.dumps({"waves": {"w": {"status": "done", "accepted_attempt": 1, "attempts": [
+            {"attempt": 1, "root": str(root), "status": "done", "sessions": sessions, "wave_valid": True}]}}}))
+        with patch.object(paired, "sessions_dir_for_workspace", lambda ws: sess_root):
+            summary = paired.extract_rows(out, FakeBackend(tmp / "b", []), specs={"tiny-demo": SPEC}, snap_stats={}, tools_prefix_tokens=25_000)
+        self.assertEqual(summary["requests"], 4)
+        rows = {json.loads(l)["arm"]: json.loads(l) for l in (out / "rows" / "sessions.jsonl").read_text().splitlines()}
+        self.assertEqual(rows["anchor"]["tools_repriced_tokens"], 25_000)
+        self.assertEqual(rows["shipped"]["tools_repriced_tokens"], 0)            # already read the shared prefix
+        self.assertGreater(rows["anchor"]["cost_usd_recomputed"], rows["shipped"]["cost_usd_recomputed"] - 1)
+        pair = json.loads((out / "rows" / "pairs.jsonl").read_text().splitlines()[0])
+        self.assertNotEqual(pair["delta_usd"], pair["delta_usd_raw"])
+        self.assertEqual(len((out / "rows" / "requests.jsonl").read_text().splitlines()), 4)
 
 
 class ExtractEndToEnd(unittest.TestCase):

@@ -45,7 +45,7 @@ def write_events(path: Path, requests: list, extra_events: list | None = None) -
     lines = []
     for i, r in enumerate(requests):
         rid = f"req{i}"
-        raw = {"tools": [{"name": "x"}]} if r.get("main", True) else {}
+        raw = ({"tools": [{"name": "x"}]} if r.get("main", True) else {}) if not r.get("no_raw") else {}
         if r.get("effort"):
             raw["output_config"] = {"effort": r["effort"]}
         lines.append({"ts": ts(r["t"]), "event": "llm:request", "request_id": rid,
@@ -64,8 +64,10 @@ class FakeBackend:
     """Same interface as paired.ForgeBackend. Sessions 'run' in threads; a wave's sessions all block until every
     session of the wave has started (proves co-start), and in-flight concurrency is recorded."""
 
-    def __init__(self, tmp: Path, specs, fail_first: set | None = None, always_fail: set | None = None, hold=0.0):
+    def __init__(self, tmp: Path, specs, fail_first: set | None = None, always_fail: set | None = None, hold=0.0,
+                 diag: dict | None = None, events=None, sessions_root: Path | None = None):
         self.tmp, self.specs = Path(tmp), specs
+        self.diag, self.events, self.sessions_root = diag or {}, events, sessions_root
         self.fail_first, self.always_fail = fail_first or set(), always_fail or set()
         self.started, self.inflight, self.max_inflight, self.lock = [], 0, 0, threading.Lock()
         self.prepared, self.hold = [], hold
@@ -101,12 +103,10 @@ class FakeBackend:
             self.max_inflight = max(self.max_inflight, self.inflight)
 
     def wait(self, root, name, timeout):
-        try:
+        if Path(root).name.startswith("w"):         # waves co-start; preflight sessions are independent
             self.barriers[str(root)].wait()          # every arm of the wave has started before any finishes
-        finally:
-            pass
         time.sleep(self.hold)
-        attempt = int(Path(root).name.rsplit("-a", 1)[1])
+        attempt = int(Path(root).name.rsplit("-a", 1)[1]) if "-a" in Path(root).name else 1
         bad = name in self.always_fail or (name in self.fail_first and attempt == 1)
         self._write_result(Path(root), name, infra=bad)
         with self.lock:
@@ -115,6 +115,8 @@ class FakeBackend:
 
     def _write_result(self, root, name, infra):
         run = root / name
+        if not infra and self.events and self.sessions_root:
+            write_events(Path(self.sessions_root) / ("sid-" + name) / "events.jsonl", self.events(name))
         res = {"name": name, "session_id": None if infra else "sid-" + name, "infrastructure_failure": infra,
                "outcome_passed": not infra, "turns": [], "source_expected": {"git_sha": "abc", "tree_sha256": "def"},
                "started_at": ts(1000.0)}
@@ -129,6 +131,9 @@ class FakeBackend:
 
     def close(self, root, name):
         pass
+
+    def diagnose(self, root, name, result):
+        return self.diag.get(name, {"error_tail": "", "model_calls": 1})
 
 
 def make_design(tmp: Path, scenario_dir: Path) -> dict:

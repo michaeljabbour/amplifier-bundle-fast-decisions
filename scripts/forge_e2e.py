@@ -747,6 +747,24 @@ def _default_config():
     }
 
 
+def campaign_provider_entry(config, provider_config=None):
+    """The campaign-owned provider list entry (or None when the run uses the user's global provider settings).
+
+    Why: the CLI validates EVERY provider in the user's settings.yaml at session start, and settings scopes merge
+    provider lists by identity (a project/local scope can add or tweak providers but never remove one), so a
+    campaign cannot isolate itself from the global list through settings. A bundle that declares its own
+    ``providers`` is different: settings providers are then applied only as overrides to entries with a matching
+    id/module, and nothing else is mounted or validated. The entry gets its own ``id`` so no global provider
+    entry (key = id, else module) can match it and merge foreign config (e.g. a global reasoning_effort) in.
+    The api key is a ``${ENV}`` reference, so it is passed through the session environment for this provider only."""
+    entry = config.get('campaign_provider')
+    if not entry:
+        return None
+    entry = json.loads(json.dumps(entry))
+    entry['config'] = {**(entry.get('config') or {}), **(provider_config or {})}
+    return entry
+
+
 def _side_profile(name, side, task, workspace, config):
     upstream = {'max_iterations': config['limits']['max_iterations'], 'extended_thinking': config['limits']['extended_thinking']}
     source_root = Path(side['source_root'])
@@ -835,6 +853,9 @@ def _side_profile(name, side, task, workspace, config):
             'source': 'git+https://github.com/microsoft/amplifier-module-hooks-logging@main',
             'config': {'mode': 'session-only',
                        'session_log_template': '~/.amplifier/projects/{project}/sessions/{session_id}/events.jsonl'}})
+    campaign = campaign_provider_entry(config, provider_config)
+    if campaign:
+        providers = [campaign]
     if providers:
         profile['providers'] = providers
     return profile
@@ -854,7 +875,8 @@ def _composed_profile(name, side, task, workspace, config, upstream):
     source_root = Path(side['source_root'])
     orchestrator_config = {**side.get('decision_overrides', {}), **upstream,
                            'events_dir': config['events_dir'], 'observatory': {'enabled': False}}
-    return {
+    campaign = campaign_provider_entry(config)
+    profile = {
         'bundle': {'name': BENCHMARK_BUNDLE_NAME, 'version': '0.1.0'},
         'includes': [{'bundle': source_root.as_uri()}],
         'session': {'orchestrator': {
@@ -866,6 +888,9 @@ def _composed_profile(name, side, task, workspace, config, upstream):
                    'config': {'events_dir': config['events_dir'], 'session_label': f'Forge {task} / composed',
                               'observatory': {'enabled': False}}}],
     }
+    if campaign:
+        profile['providers'] = [campaign]
+    return profile
 
 
 def _deep_merge(base, overlay):
@@ -1003,6 +1028,7 @@ def prepare(root, config=None):
               'decision_model':DEFAULT_DECISION['model'],'decision_model_digest':local_digest,
               'amplifier_effort':config.get('amplifier_effort'),
               'amplifier_bundle':config.get('amplifier_bundle', 'foundation'),
+              'campaign_provider': config.get('campaign_provider'),
               'prompt':prompt,'prompt_sha256':hashlib.sha256(prompt.encode()).hexdigest(),
               'evaluator_sha256':hashlib.sha256(Path(__file__).with_name('forge_workloads.py').read_bytes()).hexdigest(),
               'sides': sides, 'upstream_loop_source': config.get('upstream_loop_source', UPSTREAM_LOOP_SOURCE),
@@ -1031,7 +1057,8 @@ def add_run(root, run_spec):
     config = {'events_dir': manifest['events_dir'], 'upstream_loop_source': manifest['upstream_loop_source'],
               'limits': manifest['limits'], 'prompt': manifest.get('prompt', PROMPT),
               'amplifier_effort': manifest.get('amplifier_effort'),
-              'amplifier_bundle': manifest.get('amplifier_bundle', 'foundation')}
+              'amplifier_bundle': manifest.get('amplifier_bundle', 'foundation'),
+              'campaign_provider': manifest.get('campaign_provider')}
     manifest['runs'][run_spec['name']] = _build_run(root, run_spec, config, manifest['sides'])
     manifest['run_order'].append(run_spec['name'])
     task, rep = run_spec['task'], run_spec.get('rep', 1)
