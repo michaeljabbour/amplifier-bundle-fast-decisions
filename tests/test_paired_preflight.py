@@ -14,7 +14,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from unittest.mock import patch
 
-from paired_helpers import REPO_ROOT, FakeBackend, make_design, paired, ps, write_events, write_inline_scenario
+from paired_helpers import REPO_ROOT, FakeBackend, FakeProbe, make_design, paired, ps, write_events, write_inline_scenario
 
 import forge_e2e
 import forge_workloads
@@ -366,8 +366,9 @@ class PreflightTests(Base):
         diag = {"pf0": {"error_tail": paired.clean_tail(CRED_TAIL), "model_calls": 0}}
         be = self.backend(always_fail={"pf0"}, diag=diag)
         with patch.object(paired, "ForgeBackend", lambda: be), patch.object(paired, "_ctx_from_schedule", lambda out, args=None: self.ctx_), \
+                patch.object(paired, "RealProbe", FakeProbe), \
                 redirect_stdout(io.StringIO()), redirect_stderr(io.StringIO()) as err:
-            code = paired.main(["run", "--out", str(self.ctx_.out), "--budget-usd", "100"])
+            code = paired.main(["run", "--out", str(self.ctx_.out), "--budget-usd", "100", "--parallel", "6"])
         self.assertEqual(code, paired.EXIT_PRECONDITION)
         self.assertEqual(len(be.prepared), 1)                                                # only the preflight root
         self.assertIn("pf-", be.prepared[0][0])
@@ -378,8 +379,8 @@ class PreflightTests(Base):
         self.pf(self.backend())
         be = FakeBackend(self.tmp / "w", self.specs)
         with patch.object(paired, "ForgeBackend", lambda: be), patch.object(paired, "_ctx_from_schedule", lambda out, args=None: self.ctx_), \
-                redirect_stdout(io.StringIO()):
-            code = paired.main(["run", "--out", str(self.ctx_.out), "--budget-usd", "1000", "--waves", "1"])
+                patch.object(paired, "RealProbe", FakeProbe), redirect_stdout(io.StringIO()):
+            code = paired.main(["run", "--out", str(self.ctx_.out), "--budget-usd", "1000", "--waves", "1", "--parallel", "6"])
         self.assertEqual(code, 0)
         self.assertTrue(all("pf-" not in root for root, _ in be.prepared))
         self.assertEqual(len(be.prepared), 1)

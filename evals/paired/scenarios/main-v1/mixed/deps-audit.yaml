@@ -1,0 +1,241 @@
+# Two pinned requirements files, license table and policy: exact diff JSON, review queue, report, revision after a security pin, reusable script.
+id: deps-audit
+task_type: mixed
+language: python
+split: main
+source:
+  desc: 'Two pinned requirements files, license table and policy: exact diff JSON, review queue, report, revision after a security pin, reusable
+    script.'
+  kind: self-authored deterministic workspace
+  adapted_from: [~/dev/amplifier-agent/.amplifier/evaluation/tasks/benchmark/git-changelog-generator/task.yaml (categorise a diff between two
+      refs) and automation-bench/finance tasks (table with exact values); data authored fresh]
+workspace:
+  kind: inline
+  files:
+    README.md: |
+      # Dependency audit
+
+      Compare `requirements.old.txt` (current) with `requirements.new.txt` (proposed). `licenses.csv` maps each package to its license; rules are in `policy.md`. Versions are semantic (major.minor.patch).
+    requirements.old.txt: |
+      requests==2.28.1
+      flask==2.2.2
+      numpy==1.23.5
+      pandas==1.5.2
+      pyyaml==5.4.1
+      click==8.1.3
+      jinja2==3.1.2
+      urllib3==1.26.13
+      pytest==7.2.0
+      black==22.12.0
+      rich==12.6.0
+      attrs==22.1.0
+      six==1.16.0
+      certifi==2022.12.7
+    requirements.new.txt: |
+      requests==2.31.0
+      flask==3.0.0
+      numpy==1.26.2
+      pandas==2.1.4
+      pyyaml==6.0.1
+      click==8.1.7
+      jinja2==3.1.2
+      urllib3==2.1.0
+      pytest==7.4.3
+      black==23.12.0
+      rich==13.7.0
+      attrs==22.1.0
+      httpx==0.25.2
+      tomli==2.0.1
+      readline-plus==1.0.0
+    licenses.csv: |
+      name,license
+      attrs,MIT
+      black,MIT
+      certifi,MPL-2.0
+      click,BSD-3-Clause
+      flask,BSD-3-Clause
+      httpx,BSD-3-Clause
+      jinja2,BSD-3-Clause
+      numpy,BSD-3-Clause
+      pandas,BSD-3-Clause
+      pytest,MIT
+      pyyaml,MIT
+      readline-plus,GPL-3.0
+      requests,Apache-2.0
+      rich,MIT
+      six,MIT
+      tomli,MIT
+      urllib3,MIT
+    policy.md: |
+      # Dependency policy
+
+      - Every major version bump needs a review ticket.
+      - Newly added packages must not use a GPL-family license.
+protected: [requirements.old.txt, licenses.csv, policy.md]
+hidden_files:
+  _grade.py: |
+    import csv, json, os, re, subprocess, sys
+    from pathlib import Path
+
+    W = Path(".")
+
+
+    def fail(msg):
+        print("FAIL:", msg)
+        sys.exit(1)
+
+
+    def need(cond, msg):
+        if not cond:
+            fail(msg)
+
+
+    def load_json(rel):
+        p = W / rel
+        need(p.exists(), f"missing {rel}")
+        try:
+            return json.loads(p.read_text(encoding="utf-8"))
+        except Exception as e:  # noqa: BLE001
+            fail(f"{rel} is not valid JSON: {e}")
+
+
+    def read(rel):
+        p = W / rel
+        need(p.exists(), f"missing {rel}")
+        return p.read_text(encoding="utf-8")
+
+
+    def close(a, b, tol=0.011):
+        try:
+            return abs(float(a) - float(b)) <= tol
+        except (TypeError, ValueError):
+            return False
+
+
+    def md_rows(rel, under=None):
+        """Table rows (lists of cells) of a markdown file; with `under`, only rows inside the first heading matching it."""
+        lines = read(rel).splitlines()
+        if under:
+            out, on, lvl = [], False, 0
+            for ln in lines:
+                m = re.match(r"^(#+)\s+(.*)", ln)
+                if m:
+                    if on and len(m.group(1)) <= lvl:
+                        break
+                    if not on and re.search(under, m.group(2), re.I):
+                        on, lvl = True, len(m.group(1))
+                    continue
+                if on:
+                    out.append(ln)
+            lines = out
+        rows = []
+        for ln in lines:
+            if ln.strip().startswith("|") and not re.match(r"^\s*\|[\s:|-]+\|\s*$", ln):
+                rows.append([c.strip() for c in ln.strip().strip("|").split("|")])
+        return rows
+
+
+    def num(s):
+        m = re.search(r"-?\d[\d,]*\.?\d*", str(s))
+        return float(m.group(0).replace(",", "")) if m else None
+
+
+    def run(cmd, timeout=60):
+        p = subprocess.run(cmd, shell=True, cwd=W, capture_output=True, text=True, timeout=timeout)
+        return p.returncode, p.stdout, p.stderr
+
+    EXP = {'d1': {'added': [{'name': 'httpx', 'version': '0.25.2'}, {'name': 'readline-plus', 'version': '1.0.0'}, {'name': 'tomli', 'version': '2.0.1'}], 'removed': [{'name': 'certifi', 'version': '2022.12.7'}, {'name': 'six', 'version': '1.16.0'}], 'upgraded': [{'name': 'black', 'from': '22.12.0', 'to': '23.12.0'}, {'name': 'click', 'from': '8.1.3', 'to': '8.1.7'}, {'name': 'flask', 'from': '2.2.2', 'to': '3.0.0'}, {'name': 'numpy', 'from': '1.23.5', 'to': '1.26.2'}, {'name': 'pandas', 'from': '1.5.2', 'to': '2.1.4'}, {'name': 'pytest', 'from': '7.2.0', 'to': '7.4.3'}, {'name': 'pyyaml', 'from': '5.4.1', 'to': '6.0.1'}, {'name': 'requests', 'from': '2.28.1', 'to': '2.31.0'}, {'name': 'rich', 'from': '12.6.0', 'to': '13.7.0'}, {'name': 'urllib3', 'from': '1.26.13', 'to': '2.1.0'}], 'unchanged': 2}, 'd7': {'added': [{'name': 'httpx', 'version': '0.25.2'}, {'name': 'readline-plus', 'version': '1.0.0'}, {'name': 'tomli', 'version': '2.0.1'}], 'removed': [{'name': 'certifi', 'version': '2022.12.7'}, {'name': 'six', 'version': '1.16.0'}], 'upgraded': [{'name': 'black', 'from': '22.12.0', 'to': '23.12.0'}, {'name': 'click', 'from': '8.1.3', 'to': '8.1.7'}, {'name': 'flask', 'from': '2.2.2', 'to': '3.0.0'}, {'name': 'numpy', 'from': '1.23.5', 'to': '1.26.2'}, {'name': 'pandas', 'from': '1.5.2', 'to': '2.1.4'}, {'name': 'pytest', 'from': '7.2.0', 'to': '7.4.3'}, {'name': 'requests', 'from': '2.28.1', 'to': '2.31.0'}, {'name': 'rich', 'from': '12.6.0', 'to': '13.7.0'}, {'name': 'urllib3', 'from': '1.26.13', 'to': '2.1.0'}], 'unchanged': 3}, 'q1': [['black', '22.12.0', '23.12.0', 'major'], ['click', '8.1.3', '8.1.7', 'patch'], ['flask', '2.2.2', '3.0.0', 'major'], ['numpy', '1.23.5', '1.26.2', 'minor'], ['pandas', '1.5.2', '2.1.4', 'major'], ['pytest', '7.2.0', '7.4.3', 'minor'], ['pyyaml', '5.4.1', '6.0.1', 'major'], ['requests', '2.28.1', '2.31.0', 'minor'], ['rich', '12.6.0', '13.7.0', 'major'], ['urllib3', '1.26.13', '2.1.0', 'major']], 'q7': [['black', '22.12.0', '23.12.0', 'major'], ['click', '8.1.3', '8.1.7', 'patch'], ['flask', '2.2.2', '3.0.0', 'major'], ['numpy', '1.23.5', '1.26.2', 'minor'], ['pandas', '1.5.2', '2.1.4', 'major'], ['pytest', '7.2.0', '7.4.3', 'minor'], ['requests', '2.28.1', '2.31.0', 'minor'], ['rich', '12.6.0', '13.7.0', 'major'], ['urllib3', '1.26.13', '2.1.0', 'major']], 'gpl': ['readline-plus'], 'majors1': ['black', 'flask', 'pandas', 'pyyaml', 'rich', 'urllib3'], 'majors7': ['black', 'flask', 'pandas', 'rich', 'urllib3'], 'old': {'requests': '2.28.1', 'flask': '2.2.2', 'numpy': '1.23.5', 'pandas': '1.5.2', 'pyyaml': '5.4.1', 'click': '8.1.3', 'jinja2': '3.1.2', 'urllib3': '1.26.13', 'pytest': '7.2.0', 'black': '22.12.0', 'rich': '12.6.0', 'attrs': '22.1.0', 'six': '1.16.0', 'certifi': '2022.12.7'}, 'new': {'requests': '2.31.0', 'flask': '3.0.0', 'numpy': '1.26.2', 'pandas': '2.1.4', 'pyyaml': '6.0.1', 'click': '8.1.7', 'jinja2': '3.1.2', 'urllib3': '2.1.0', 'pytest': '7.4.3', 'black': '23.12.0', 'rich': '13.7.0', 'attrs': '22.1.0', 'httpx': '0.25.2', 'tomli': '2.0.1', 'readline-plus': '1.0.0'}}
+    def _diff(d, key):
+        e = EXP[key]; need(isinstance(d, dict) and set(d) == {"added", "removed", "upgraded", "unchanged"}, f"keys must be exactly added, removed, upgraded, unchanged: {sorted(d) if isinstance(d, dict) else d}")
+        for k in ("added", "removed", "upgraded"): need(d[k] == e[k], f"{k} differs: {d[k]} != {e[k]}")
+        need(d["unchanged"] == e["unchanged"], f"unchanged {d['unchanged']} != {e['unchanged']}")
+    def t2(): _diff(load_json("out/deps_diff.json"), "d1")
+    def _queue(key):
+        p = W / "out/review_queue.csv"; need(p.exists(), "missing out/review_queue.csv")
+        rd = list(csv.DictReader(open(p, encoding="utf-8"))); need(rd and list(rd[0]) == ["package", "from", "to", "bump"], "bad header")
+        need([[r["package"], r["from"], r["to"], r["bump"]] for r in rd] == EXP[key], "queue rows differ")
+    def t4(): _queue("q1")
+    def t6():
+        txt = read("deps_report.md")
+        for h in ("Summary", "Added", "Removed", "Upgraded", "Policy violations"): need(re.search(r"^##\s+" + h, txt, re.M | re.I), "missing section " + h)
+        rows = md_rows("deps_report.md", "upgraded"); got = {r[0].strip("* `"): (r[1].strip(), r[2].strip()) for r in rows if len(r) >= 3}
+        for u in EXP["d1"]["upgraded"]: need(got.get(u["name"]) == (u["from"], u["to"]), f"{u['name']} row missing or wrong")
+        v = re.search(r"^##\s+Policy violations\s*\n(.*?)(?=^##|\Z)", txt, re.M | re.S | re.I).group(1)
+        for n in EXP["majors1"] + EXP["gpl"]: need(n in v, f"violation not listed: {n}")
+    def t7():
+        new = {}
+        for ln in read("requirements.new.txt").splitlines():
+            if ln.strip() and not ln.startswith("#"): n, v = ln.strip().split("=="); new[n] = v
+        need(new.get("pyyaml") == "5.4.1", "pyyaml must be pinned back to 5.4.1"); need({k: v for k, v in new.items() if k != "pyyaml"} == {k: v for k, v in EXP["new"].items() if k != "pyyaml"}, "other pins must not change")
+        _diff(load_json("out/deps_diff.json"), "d7"); _queue("q7")
+        txt = read("deps_report.md"); v = re.search(r"^##\s+Policy violations\s*\n(.*?)(?=^##|\Z)", txt, re.M | re.S | re.I).group(1)
+        need("pyyaml" not in v.lower(), "pyyaml is no longer a violation"); need(all(n in v for n in EXP["majors7"] + EXP["gpl"]), "remaining violations must still be listed")
+    def t8():
+        need((W / "scripts/depdiff.py").exists(), "missing scripts/depdiff.py")
+        rc, out, err = run("python3 scripts/depdiff.py requirements.old.txt requirements.new.txt"); need(rc == 0, "script failed: " + err[-300:]); _diff(json.loads(out), "d7")
+        (W / "t_old.txt").write_text("a==1.0.0\nb==2.0.0\nc==3.1.0\n", encoding="utf-8"); (W / "t_new.txt").write_text("# comment\na==1.0.0\nc==3.2.0\nd==0.1.0\n", encoding="utf-8")
+        try: rc, out, err = run("python3 scripts/depdiff.py t_old.txt t_new.txt")
+        finally: (W / "t_old.txt").unlink(); (W / "t_new.txt").unlink()
+        need(rc == 0, "script failed on the probe files: " + err[-300:]); d = json.loads(out)
+        need(d == {"added": [{"name": "d", "version": "0.1.0"}], "removed": [{"name": "b", "version": "2.0.0"}], "upgraded": [{"name": "c", "from": "3.1.0", "to": "3.2.0"}], "unchanged": 1}, f"probe diff wrong: {d}")
+
+
+    if __name__ == "__main__":
+        fn = globals().get(sys.argv[1]) if len(sys.argv) > 1 else None
+        need(callable(fn), "unknown check " + str(sys.argv[1:]))
+        fn()
+        print("OK")
+turns:
+- prompt: 'Compare requirements.old.txt and requirements.new.txt: how many packages does each list, which packages are added and which are removed?
+    Do not change any files.'
+  checks:
+  - kind: keyed_facts
+    all: ['(?<!\d)14(?!\d)', '(?<!\d)15(?!\d)', httpx, readline-plus, tomli, certifi, six]
+- prompt: Write out/deps_diff.json with exactly the keys added and removed (lists of {"name", "version"}), upgraded (list of {"name", "from",
+    "to"}) and unchanged (the number of packages with identical pins). Lists are sorted by package name.
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t2
+    hidden: [_grade.py]
+    timeout: 60
+- prompt: Which upgrades are major version bumps (first version number changes)? Name the packages. Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: [black, flask, pandas, pyyaml, rich, urllib3]
+- prompt: 'Create out/review_queue.csv with the header package,from,to,bump: one row per upgraded package sorted by name, with bump = major, minor
+    or patch (the most significant version number that changed).'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t4
+    hidden: [_grade.py]
+    timeout: 60
+- prompt: Using licenses.csv and policy.md, which newly added package violates the license rule, and what is its license? Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: [readline-plus, GPL-3\.0]
+- prompt: Write deps_report.md with level-2 sections Summary (counts of added, removed, upgraded, unchanged), Added, Removed, Upgraded (a table
+    with Package, From and To columns) and Policy violations (every major bump and every disallowed license, one bullet each).
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t6
+    hidden: [_grade.py]
+    timeout: 60
+- prompt: 'Security asked to keep pyyaml at its current version: pin pyyaml back to 5.4.1 in requirements.new.txt, then regenerate out/deps_diff.json,
+    out/review_queue.csv and deps_report.md (pyyaml is then no longer a violation).'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t7
+    hidden: [_grade.py]
+    timeout: 60
+- prompt: 'Create scripts/depdiff.py: `python3 scripts/depdiff.py OLD NEW` prints the same JSON as out/deps_diff.json for any two pin files (ignore
+    blank lines and # comments). Run it on the two requirements files.'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t8
+    hidden: [_grade.py]
+    timeout: 60

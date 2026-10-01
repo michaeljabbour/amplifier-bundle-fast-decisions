@@ -449,6 +449,33 @@ class TestGoJsonParsing(unittest.TestCase):
         result = pt._parse_go_json_output("")
         self.assertEqual(result["failure_labels"], ["build_failed"])
 
+    def test_a_test_that_started_but_never_finished_is_a_failure(self):
+        """The test binary exited under TestHdAGate (runaway-memory tripwire / os.Exit / kill): only a PACKAGE-level fail
+        event is emitted, never a per-test one. That must not be scored as a pass."""
+        lines = [
+            json.dumps({"Action": "run", "Test": "TestOk"}),
+            json.dumps({"Action": "pass", "Test": "TestOk"}),
+            json.dumps({"Action": "run", "Test": "TestHdAGate"}),
+            json.dumps({"Action": "output", "Test": "TestHdAGate", "Output": "--- FAIL: TestHdAGate (0.00s)\n"}),
+            json.dumps({"Action": "fail", "Package": "dominoes", "Elapsed": 0.2}),
+        ]
+        result = pt._parse_go_json_output("\n".join(lines))
+        self.assertEqual((result["passed"], result["failed"]), (1, 1))
+        self.assertEqual(result["failure_labels"], ["go_test_failures"])
+
+    def test_package_failure_with_every_reported_test_passing_is_never_a_pass(self):
+        lines = [json.dumps({"Action": "run", "Test": "TestOk"}), json.dumps({"Action": "pass", "Test": "TestOk"}),
+                 json.dumps({"Action": "fail", "Package": "p", "Elapsed": 0.1})]
+        result = pt._parse_go_json_output("\n".join(lines))
+        self.assertEqual((result["failed"], result["failure_labels"]), (1, ["go_package_failed"]))
+
+    def test_compile_failure_is_still_build_failed_and_a_clean_run_still_passes(self):
+        self.assertEqual(pt._parse_go_json_output(json.dumps({"Action": "fail", "Package": "p"}))["failure_labels"], ["build_failed"])
+        ok = [json.dumps({"Action": "run", "Test": "T"}), json.dumps({"Action": "pass", "Test": "T"}),
+              json.dumps({"Action": "pass", "Package": "p"})]
+        result = pt._parse_go_json_output("\n".join(ok))
+        self.assertEqual((result["passed"], result["failed"], result["failure_labels"]), (1, 0, []))
+
 
 class TestCatch2Parsing(unittest.TestCase):
     def test_all_passed_message(self):

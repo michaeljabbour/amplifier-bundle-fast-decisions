@@ -1,0 +1,146 @@
+# main-v1 real-repo scenario (8 turns): lepture/mistune, create_markdown(escape=False) ignored when a custom HTMLRenderer instance is passed (#420), fixed upstream in 1209f342; workspace is its parent
+# Workspace = parent of the upstream fix commit; hidden tests = the fix commit's tests (+ scenario-authored edge tests).
+id: mistune-escape
+task_type: bugfix
+language: python
+split: main
+source:
+  desc: >-
+    lepture/mistune, create_markdown(escape=False) ignored when a custom HTMLRenderer instance is passed
+    (#420), fixed upstream in 1209f342; workspace is its parent
+  repo: https://github.com/lepture/mistune.git
+  sha: b5dd9949baf3729a709ef8ae591eab86e72a9e46
+  fix_sha: 1209f3421e5057bb2525c7059c1a38ddf205ef2e
+workspace:
+  kind: git
+  repo: https://github.com/lepture/mistune.git
+  sha: b5dd9949baf3729a709ef8ae591eab86e72a9e46
+  local_hint: ~/dev/afast-paired-src/mistune
+hidden_files:
+  tests/test_misc.py:
+    from_git:
+      repo: https://github.com/lepture/mistune.git
+      sha: 1209f3421e5057bb2525c7059c1a38ddf205ef2e
+      path: tests/test_misc.py
+      local_hint: ~/dev/afast-paired-src/mistune
+  tests/test_shared_renderer_hidden.py: |
+    import mistune
+
+
+    def test_caller_renderer_is_not_mutated():
+        r = mistune.HTMLRenderer(escape=True)
+        unescaped = mistune.create_markdown(renderer=r, escape=False)
+        assert unescaped("<b>hi</b>").strip() == "<p><b>hi</b></p>"
+        again = mistune.create_markdown(renderer=r)
+        assert again("<b>hi</b>").strip() == "<p>&lt;b&gt;hi&lt;/b&gt;</p>"
+
+
+    def test_other_settings_survive_the_copy():
+        class Marked(mistune.HTMLRenderer):
+            def paragraph(self, text):
+                return "[" + text + "]"
+
+        r = Marked(escape=True)
+        md = mistune.create_markdown(renderer=r, escape=False)
+        assert md("<b>x</b>").strip() == "[<b>x</b>]"
+        assert mistune.create_markdown(renderer=r)("<b>x</b>").strip() == "[&lt;b&gt;x&lt;/b&gt;]"
+
+
+    def test_same_flag_returns_working_instance():
+        r = mistune.HTMLRenderer(escape=False)
+        assert mistune.create_markdown(renderer=r, escape=False)("<i>a</i>").strip() == "<p><i>a</i></p>"
+  tests/test_allow_harmful_hidden.py: |
+    import mistune
+
+    LINK = "[x](javascript:alert(1))"
+
+
+    def test_default_blocks_harmful_protocol():
+        assert 'href="#harmful-link"' in mistune.create_markdown()(LINK)
+
+
+    def test_true_allows_it_for_built_renderer():
+        assert 'href="javascript:alert(1)"' in mistune.create_markdown(allow_harmful_protocols=True)(LINK)
+
+
+    def test_list_allows_only_listed_protocols():
+        md = mistune.create_markdown(allow_harmful_protocols=["javascript:"])
+        out = md(LINK + " [y](vbscript:z)")
+        assert 'href="javascript:alert(1)"' in out and 'href="#harmful-link"' in out
+
+
+    def test_applies_to_instance_copy():
+        r = mistune.HTMLRenderer()
+        md = mistune.create_markdown(renderer=r, allow_harmful_protocols=True)
+        assert 'href="javascript:alert(1)"' in md(LINK)
+        assert 'href="#harmful-link"' in mistune.create_markdown(renderer=r)(LINK)
+
+
+    def test_none_keeps_instance_setting():
+        r = mistune.HTMLRenderer(allow_harmful_protocols=True)
+        assert 'href="javascript:alert(1)"' in mistune.create_markdown(renderer=r)(LINK)
+turns:
+  - prompt: >-
+      `mistune.create_markdown(renderer=CustomRenderer(), escape=False)` silently keeps HTML escaped when
+      `CustomRenderer` is a subclass of `HTMLRenderer`: `md("<b>hi</b>")` gives `&lt;b&gt;hi&lt;/b&gt;`.
+      The `escape` flag only seems to work when mistune builds the renderer itself. When a renderer
+      instance is passed, an explicit `escape=True/False` should be honored, and if no `escape` is given
+      the renderer must keep whatever setting it was constructed with (e.g. `CustomRenderer(escape=False)`
+      stays unescaped). Please find the cause in src/mistune/__init__.py and fix it. Run the tests from
+      this directory with `python3 -m pytest -q tests`.
+    checks:
+      - {kind: tests, runner: python, files: [tests, tests/test_misc.py], restore: [tests/__init__.py, tests/fixtures/__init__.py, tests/test_cli.py, tests/test_commonmark.py, tests/test_directives.py, tests/test_hooks.py, tests/test_misc.py, tests/test_plugins.py, tests/test_renderers.py, tests/test_security_edge_cases.py, tests/test_security_formatting.py, tests/test_security_image.py, tests/test_security_include.py, tests/test_security_inline.py, tests/test_security_math.py, tests/test_security_ref_links.py, tests/test_security_toc.py, tests/test_security_urls.py, tests/test_syntax.py], hidden: [tests/test_misc.py]}
+  - prompt: >-
+      In three to five sentences explain the root cause: which function, which branches pass the escape
+      flag on, and why a user-supplied renderer instance never saw it. Also say what the default of
+      `escape` has to become so that "not given" can be told apart from True. Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [create_markdown, renderer, escape], any: [None|sentinel|default, instance|HTMLRenderer]}
+  - prompt: >-
+      Add a regression test file `tests/test_create_markdown_escape.py` with at least three test
+      functions: an explicit `escape=False` with a custom renderer instance, an explicit `escape=True`
+      over a renderer built with `escape=False`, and no `escape` given (renderer keeps its own setting).
+      Run it.
+    checks:
+      - {kind: file_regex, path: tests/test_create_markdown_escape.py, pattern: ^\s*def test_, min_count: 3}
+      - {kind: tests, runner: python, files: [tests/test_create_markdown_escape.py]}
+  - prompt: >-
+      One more thing I noticed with your fix: it flips the setting on the renderer object I passed in, so
+      a renderer shared between several Markdown instances changes behaviour for all of them. With `r =
+      mistune.HTMLRenderer(escape=True)`, after `mistune.create_markdown(renderer=r, escape=False)`, a
+      later `mistune.create_markdown(renderer=r)` must still escape (and `r` itself must keep its original
+      setting). The first Markdown instance must of course still produce unescaped output. Please fix that
+      and add a test to tests/test_create_markdown_escape.py.
+    checks:
+      - {kind: tests, runner: python, files: [tests/test_shared_renderer_hidden.py], restore: [tests/__init__.py, tests/fixtures/__init__.py, tests/test_cli.py, tests/test_commonmark.py, tests/test_directives.py, tests/test_hooks.py, tests/test_misc.py, tests/test_plugins.py, tests/test_renderers.py, tests/test_security_edge_cases.py, tests/test_security_formatting.py, tests/test_security_image.py, tests/test_security_include.py, tests/test_security_inline.py, tests/test_security_math.py, tests/test_security_ref_links.py, tests/test_security_toc.py, tests/test_security_urls.py, tests/test_syntax.py], hidden: [tests/test_shared_renderer_hidden.py]}
+      - {kind: tests, runner: python, files: [tests, tests/test_misc.py, tests/test_shared_renderer_hidden.py], restore: [tests/__init__.py, tests/fixtures/__init__.py, tests/test_cli.py, tests/test_commonmark.py, tests/test_directives.py, tests/test_hooks.py, tests/test_misc.py, tests/test_plugins.py, tests/test_renderers.py, tests/test_security_edge_cases.py, tests/test_security_formatting.py, tests/test_security_image.py, tests/test_security_include.py, tests/test_security_inline.py, tests/test_security_math.py, tests/test_security_ref_links.py, tests/test_security_toc.py, tests/test_security_urls.py, tests/test_syntax.py], hidden: [tests/test_misc.py, tests/test_shared_renderer_hidden.py]}
+      - {kind: file_regex, path: tests/test_create_markdown_escape.py, pattern: ^\s*def test_, min_count: 4}
+  - prompt: >-
+      Add a release note to docs/changes.rst under the existing "Unreleased" heading: a bullet saying
+      `create_markdown()` now applies an explicit `escape` flag to a supplied HTMLRenderer instance
+      (without changing the caller's instance), and that `escape` now defaults to ``None``.
+    checks:
+      - {kind: file_regex, path: docs/changes.rst, pattern: 'Unreleased\n-+\n(?:.*\n){0,6}?\* .*escape'}
+  - prompt: >-
+      Small feature in the same spirit: `create_markdown()` should also take an `allow_harmful_protocols`
+      keyword (add it as the LAST parameter, default None, same type as HTMLRenderer's argument). None
+      keeps the renderer's own setting. When mistune builds the "html" renderer it is passed through
+      (`create_markdown(allow_harmful_protocols=True)` renders `[x](javascript:alert(1))` with
+      `href="javascript:alert(1)"`), and when an HTMLRenderer instance is supplied an explicit value is
+      applied to a copy of it, exactly like `escape`. Add tests to tests/test_create_markdown_escape.py.
+    checks:
+      - {kind: tests, runner: python, files: [tests/test_allow_harmful_hidden.py], restore: [tests/__init__.py, tests/fixtures/__init__.py, tests/test_cli.py, tests/test_commonmark.py, tests/test_directives.py, tests/test_hooks.py, tests/test_misc.py, tests/test_plugins.py, tests/test_renderers.py, tests/test_security_edge_cases.py, tests/test_security_formatting.py, tests/test_security_image.py, tests/test_security_include.py, tests/test_security_inline.py, tests/test_security_math.py, tests/test_security_ref_links.py, tests/test_security_toc.py, tests/test_security_urls.py, tests/test_syntax.py], hidden: [tests/test_allow_harmful_hidden.py]}
+      - {kind: tests, runner: python, files: [tests, tests/test_misc.py, tests/test_shared_renderer_hidden.py, tests/test_allow_harmful_hidden.py], restore: [tests/__init__.py, tests/fixtures/__init__.py, tests/test_cli.py, tests/test_commonmark.py, tests/test_directives.py, tests/test_hooks.py, tests/test_misc.py, tests/test_plugins.py, tests/test_renderers.py, tests/test_security_edge_cases.py, tests/test_security_formatting.py, tests/test_security_image.py, tests/test_security_include.py, tests/test_security_inline.py, tests/test_security_math.py, tests/test_security_ref_links.py, tests/test_security_toc.py, tests/test_security_urls.py, tests/test_syntax.py], hidden: [tests/test_misc.py, tests/test_shared_renderer_hidden.py, tests/test_allow_harmful_hidden.py]}
+      - {kind: file_regex, path: src/mistune/__init__.py, pattern: allow_harmful_protocols, min_count: 3}
+  - prompt: >-
+      Document the new argument in create_markdown()'s docstring: add a line starting with `:param
+      allow_harmful_protocols:` next to the other :param lines, saying what True, a list of protocols and
+      None do.
+    checks:
+      - {kind: file_regex, path: src/mistune/__init__.py, pattern: '^\s+:param allow_harmful_protocols:'}
+      - {kind: tests, runner: python, files: [tests, tests/test_misc.py, tests/test_shared_renderer_hidden.py, tests/test_allow_harmful_hidden.py], restore: [tests/__init__.py, tests/fixtures/__init__.py, tests/test_cli.py, tests/test_commonmark.py, tests/test_directives.py, tests/test_hooks.py, tests/test_misc.py, tests/test_plugins.py, tests/test_renderers.py, tests/test_security_edge_cases.py, tests/test_security_formatting.py, tests/test_security_image.py, tests/test_security_include.py, tests/test_security_inline.py, tests/test_security_math.py, tests/test_security_ref_links.py, tests/test_security_toc.py, tests/test_security_urls.py, tests/test_syntax.py], hidden: [tests/test_misc.py, tests/test_shared_renderer_hidden.py, tests/test_allow_harmful_hidden.py]}
+  - prompt: >-
+      Review the changes you made in this session as a code reviewer would: list each file you changed or
+      added, what changed, and any remaining edge case you did not cover. Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [__init__\.py, test, copy], any: [edge, risk, not cover, remaining]}

@@ -1,0 +1,135 @@
+# main-v1 real-repo scenario (8 turns): pytoolz/toolz, interpose() raised StopIteration for an empty sequence (#635), fixed upstream in d2eba037; workspace is its parent
+# Workspace = parent of the upstream fix commit; hidden tests = the fix commit's tests (+ scenario-authored edge tests).
+id: toolz-interpose
+task_type: bugfix
+language: python
+split: main
+source:
+  desc: >-
+    pytoolz/toolz, interpose() raised StopIteration for an empty sequence (#635), fixed upstream in
+    d2eba037; workspace is its parent
+  repo: https://github.com/pytoolz/toolz.git
+  sha: 55ce42dc3b6f786ed9d4e38633cc5cfe3622a526
+  fix_sha: d2eba0374a452c2b18fe188b04527e22bda3548c
+workspace:
+  kind: git
+  repo: https://github.com/pytoolz/toolz.git
+  sha: 55ce42dc3b6f786ed9d4e38633cc5cfe3622a526
+  local_hint: ~/dev/afast-paired-src/toolz
+  remove:
+  - toolz/tests/test_package.py
+hidden_files:
+  toolz/tests/test_itertoolz.py:
+    from_git:
+      repo: https://github.com/pytoolz/toolz.git
+      sha: d2eba0374a452c2b18fe188b04527e22bda3548c
+      path: toolz/tests/test_itertoolz.py
+      local_hint: ~/dev/afast-paired-src/toolz
+  toolz/tests/test_take_nth_hidden.py: |
+    import pytest
+
+    from toolz import take_nth
+
+
+    def test_zero_raises_at_call_time():
+        with pytest.raises(ValueError, match='n must be a positive integer'):
+            take_nth(0, [1, 2, 3])
+
+
+    def test_negative_raises():
+        with pytest.raises(ValueError, match='n must be a positive integer'):
+            take_nth(-2, iter([1, 2, 3]))
+
+
+    def test_positive_unchanged():
+        assert list(take_nth(2, [10, 20, 30, 40, 50])) == [10, 30, 50]
+        assert list(take_nth(1, 'abc')) == ['a', 'b', 'c']
+        assert list(take_nth(5, [])) == []
+  toolz/tests/test_interpose_trailing_hidden.py: |
+    import itertools
+
+    import toolz
+    from toolz import interpose
+    from toolz.curried import interpose as cinterpose
+
+
+    def test_trailing_separator():
+        assert list(interpose('a', [1, 2, 3], trailing=True)) == [1, 'a', 2, 'a', 3, 'a']
+
+
+    def test_trailing_edge_cases():
+        assert list(interpose('a', [], trailing=True)) == []
+        assert list(interpose('a', [1], trailing=True)) == [1, 'a']
+
+
+    def test_trailing_is_lazy():
+        out = interpose('-', itertools.count(), trailing=True)
+        assert list(itertools.islice(out, 5)) == [0, '-', 1, '-', 2]
+
+
+    def test_default_and_curried_unchanged():
+        assert list(interpose('a', [1, 2, 3])) == [1, 'a', 2, 'a', 3]
+        assert list(cinterpose('a')([1, 2])) == [1, 'a', 2]
+        assert list(toolz.interpose('a', [1, 2], trailing=False)) == [1, 'a', 2]
+turns:
+  - prompt: >-
+      `toolz.interpose(el, seq)` blows up when `seq` is empty: `list(interpose('a', []))` raises
+      StopIteration instead of returning `[]` (it also breaks when used inside generator code, where it
+      turns into a RuntimeError). Non-empty input works fine. Please find the cause in toolz/itertoolz.py
+      and fix it so an empty sequence gives an empty iterator. Run the tests from this directory with
+      `python3 -m pytest -q toolz`.
+    checks:
+      - {kind: tests, runner: python, files: [toolz, toolz/tests/test_itertoolz.py], restore: [toolz/sandbox/tests/__init__.py, toolz/sandbox/tests/test_core.py, toolz/sandbox/tests/test_parallel.py, toolz/tests/__init__.py, toolz/tests/test_compatibility.py, toolz/tests/test_curried.py, toolz/tests/test_curried_doctests.py, toolz/tests/test_dicttoolz.py, toolz/tests/test_functoolz.py, toolz/tests/test_inspect_args.py, toolz/tests/test_itertoolz.py, toolz/tests/test_package.py, toolz/tests/test_recipes.py, toolz/tests/test_serialization.py, toolz/tests/test_signatures.py, toolz/tests/test_tlz.py, toolz/tests/test_utils.py], hidden: [toolz/tests/test_itertoolz.py]}
+  - prompt: >-
+      In three to five sentences explain the root cause: what pipeline interpose builds, why it calls
+      next() on it, and what happens to that call when the sequence is empty. Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [interpose, next, StopIteration], any: [zip|repeat|concat, empty|first|separator]}
+  - prompt: >-
+      Add a regression test file `toolz/tests/test_interpose_empty.py` (pytest style) with at least three
+      test functions: an empty list, an empty generator, and a single-element sequence (separator must not
+      appear), and run it.
+    checks:
+      - {kind: file_regex, path: toolz/tests/test_interpose_empty.py, pattern: ^\s*def test_, min_count: 3}
+      - {kind: tests, runner: python, files: [toolz/tests/test_interpose_empty.py]}
+  - prompt: >-
+      Same family of problem: `take_nth(0, seq)` / `take_nth(-2, seq)` fail with an islice message ("Step
+      for islice() must be a positive integer or None"). Make `take_nth` raise `ValueError('n must be a
+      positive integer')` right when it is called (not lazily) for n <= 0. Positive n must behave exactly
+      as before. Add tests to toolz/tests/test_interpose_empty.py.
+    gap_before_s: 420
+    checks:
+      - {kind: tests, runner: python, files: [toolz/tests/test_take_nth_hidden.py], restore: [toolz/sandbox/tests/__init__.py, toolz/sandbox/tests/test_core.py, toolz/sandbox/tests/test_parallel.py, toolz/tests/__init__.py, toolz/tests/test_compatibility.py, toolz/tests/test_curried.py, toolz/tests/test_curried_doctests.py, toolz/tests/test_dicttoolz.py, toolz/tests/test_functoolz.py, toolz/tests/test_inspect_args.py, toolz/tests/test_itertoolz.py, toolz/tests/test_package.py, toolz/tests/test_recipes.py, toolz/tests/test_serialization.py, toolz/tests/test_signatures.py, toolz/tests/test_tlz.py, toolz/tests/test_utils.py], hidden: [toolz/tests/test_take_nth_hidden.py]}
+      - {kind: tests, runner: python, files: [toolz, toolz/tests/test_itertoolz.py, toolz/tests/test_take_nth_hidden.py], restore: [toolz/sandbox/tests/__init__.py, toolz/sandbox/tests/test_core.py, toolz/sandbox/tests/test_parallel.py, toolz/tests/__init__.py, toolz/tests/test_compatibility.py, toolz/tests/test_curried.py, toolz/tests/test_curried_doctests.py, toolz/tests/test_dicttoolz.py, toolz/tests/test_functoolz.py, toolz/tests/test_inspect_args.py, toolz/tests/test_itertoolz.py, toolz/tests/test_package.py, toolz/tests/test_recipes.py, toolz/tests/test_serialization.py, toolz/tests/test_signatures.py, toolz/tests/test_tlz.py, toolz/tests/test_utils.py], hidden: [toolz/tests/test_itertoolz.py, toolz/tests/test_take_nth_hidden.py]}
+      - {kind: file_regex, path: toolz/tests/test_interpose_empty.py, pattern: take_nth}
+  - prompt: >-
+      The repo keeps a plain-text `release-notes` file. Add an entry at the end of it in the same style: a
+      heading `New in Unreleased` followed by bullets for the `interpose` empty-sequence fix and the
+      `take_nth` input validation.
+    checks:
+      - {kind: file_regex, path: release-notes, pattern: ^New in Unreleased}
+      - {kind: file_regex, path: release-notes, pattern: interpose}
+      - {kind: file_regex, path: release-notes, pattern: take_nth}
+  - prompt: >-
+      Small feature: give `interpose` an optional keyword `trailing=False`. With `trailing=True` the
+      separator is also emitted after the last element: `list(interpose('a', [1, 2, 3], trailing=True))`
+      -> `[1, 'a', 2, 'a', 3, 'a']`. An empty sequence still gives `[]`, a single element gives `[1,
+      'a']`, and the result stays lazy (an infinite sequence must work with `itertools.islice`). Default
+      behaviour must not change, and `toolz.curried.interpose('a')` must keep working. Add tests to
+      toolz/tests/test_interpose_empty.py.
+    checks:
+      - {kind: tests, runner: python, files: [toolz/tests/test_interpose_trailing_hidden.py], restore: [toolz/sandbox/tests/__init__.py, toolz/sandbox/tests/test_core.py, toolz/sandbox/tests/test_parallel.py, toolz/tests/__init__.py, toolz/tests/test_compatibility.py, toolz/tests/test_curried.py, toolz/tests/test_curried_doctests.py, toolz/tests/test_dicttoolz.py, toolz/tests/test_functoolz.py, toolz/tests/test_inspect_args.py, toolz/tests/test_itertoolz.py, toolz/tests/test_package.py, toolz/tests/test_recipes.py, toolz/tests/test_serialization.py, toolz/tests/test_signatures.py, toolz/tests/test_tlz.py, toolz/tests/test_utils.py], hidden: [toolz/tests/test_interpose_trailing_hidden.py]}
+      - {kind: tests, runner: python, files: [toolz, toolz/tests/test_itertoolz.py, toolz/tests/test_take_nth_hidden.py, toolz/tests/test_interpose_trailing_hidden.py], restore: [toolz/sandbox/tests/__init__.py, toolz/sandbox/tests/test_core.py, toolz/sandbox/tests/test_parallel.py, toolz/tests/__init__.py, toolz/tests/test_compatibility.py, toolz/tests/test_curried.py, toolz/tests/test_curried_doctests.py, toolz/tests/test_dicttoolz.py, toolz/tests/test_functoolz.py, toolz/tests/test_inspect_args.py, toolz/tests/test_itertoolz.py, toolz/tests/test_package.py, toolz/tests/test_recipes.py, toolz/tests/test_serialization.py, toolz/tests/test_signatures.py, toolz/tests/test_tlz.py, toolz/tests/test_utils.py], hidden: [toolz/tests/test_itertoolz.py, toolz/tests/test_take_nth_hidden.py, toolz/tests/test_interpose_trailing_hidden.py]}
+      - {kind: file_regex, path: toolz/itertoolz.py, pattern: trailing, min_count: 2}
+  - prompt: >-
+      Update the docstring of `interpose` to document `trailing`, with a doctest example line exactly `>>>
+      list(interpose("a", [1, 2, 3], trailing=True))` followed by its expected output.
+    gap_before_s: 420
+    checks:
+      - {kind: file_regex, path: toolz/itertoolz.py, pattern: '>>> list\(interpose\("a", \[1, 2, 3\], trailing=True\)\)\n\s+\[1, \''a\'', 2, \''a\'', 3, \''a\''\]'}
+      - {kind: tests, runner: python, files: [toolz, toolz/tests/test_itertoolz.py, toolz/tests/test_take_nth_hidden.py, toolz/tests/test_interpose_trailing_hidden.py], restore: [toolz/sandbox/tests/__init__.py, toolz/sandbox/tests/test_core.py, toolz/sandbox/tests/test_parallel.py, toolz/tests/__init__.py, toolz/tests/test_compatibility.py, toolz/tests/test_curried.py, toolz/tests/test_curried_doctests.py, toolz/tests/test_dicttoolz.py, toolz/tests/test_functoolz.py, toolz/tests/test_inspect_args.py, toolz/tests/test_itertoolz.py, toolz/tests/test_package.py, toolz/tests/test_recipes.py, toolz/tests/test_serialization.py, toolz/tests/test_signatures.py, toolz/tests/test_tlz.py, toolz/tests/test_utils.py], hidden: [toolz/tests/test_itertoolz.py, toolz/tests/test_take_nth_hidden.py, toolz/tests/test_interpose_trailing_hidden.py]}
+  - prompt: >-
+      Review the changes you made in this session as a code reviewer would: list each file you changed or
+      added, what changed, and any remaining edge case you did not cover. Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [itertoolz\.py, test, trailing], any: [edge, risk, not cover, remaining]}

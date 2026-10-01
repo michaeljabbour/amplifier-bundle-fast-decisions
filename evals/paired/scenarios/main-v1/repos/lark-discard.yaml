@@ -1,0 +1,186 @@
+# main-v1 real-repo scenario (12 turns): lark-parser/lark, Transformer_NonRecursive corrupted the tree when a non-last node returned Discard, fixed upstream in 7d106dfd; workspace is its parent
+# Workspace = parent of the upstream fix commit; hidden tests = the fix commit's tests (+ scenario-authored edge tests).
+id: lark-discard
+task_type: bugfix
+language: python
+split: main
+source:
+  desc: >-
+    lark-parser/lark, Transformer_NonRecursive corrupted the tree when a non-last node returned Discard,
+    fixed upstream in 7d106dfd; workspace is its parent
+  repo: https://github.com/lark-parser/lark.git
+  sha: e1817787d2ed2a10477734b1f784cbc7eee8dfa4
+  fix_sha: 7d106dfd83065c9ea8e529ea365dcd2f393ff56d
+workspace:
+  kind: git
+  repo: https://github.com/lark-parser/lark.git
+  sha: e1817787d2ed2a10477734b1f784cbc7eee8dfa4
+  local_hint: ~/dev/afast-paired-src/lark
+  add_files:
+    pytest.ini: '[pytest]
+  
+      testpaths = tests
+  
+      '
+hidden_files:
+  tests/test_trees.py:
+    from_git:
+      repo: https://github.com/lark-parser/lark.git
+      sha: 7d106dfd83065c9ea8e529ea365dcd2f393ff56d
+      path: tests/test_trees.py
+      local_hint: ~/dev/afast-paired-src/lark
+  tests/test_root_discard_hidden.py: |
+    import copy
+    import unittest
+
+    from lark import Discard, Token, Tree, Transformer
+    from lark.visitors import Transformer_InPlace, Transformer_InPlaceRecursive, Transformer_NonRecursive
+
+    BASES = (Transformer, Transformer_InPlace, Transformer_NonRecursive, Transformer_InPlaceRecursive)
+
+
+    class RootDiscardTests(unittest.TestCase):
+        def test_root_discard_is_none_everywhere(self):
+            for base in BASES:
+                class T(base):
+                    def drop(self, children):
+                        return Discard
+
+                for tree in (Tree('drop', []), Tree('drop', [Tree('a', []), Token('T', 'x')])):
+                    with self.subTest(base=base.__name__):
+                        self.assertIsNone(T().transform(copy.deepcopy(tree)))
+
+        def test_in_place_does_not_leak_marker(self):
+            class T(Transformer_InPlace):
+                def drop(self, children):
+                    return Discard
+
+            self.assertIsNot(T().transform(Tree('drop', [])), Discard)
+
+        def test_non_root_behaviour_unchanged(self):
+            class T(Transformer_InPlace):
+                def drop(self, children):
+                    return Discard
+
+            out = T().transform(Tree('s', [Tree('a', []), Tree('drop', [])]))
+            self.assertEqual(out, Tree('s', [Tree('a', [])]))
+            class U(Transformer_InPlace):
+                def s(self, children):
+                    return len(children)
+
+            self.assertEqual(U().transform(Tree('s', [Tree('a', []), Tree('b', [])])), 2)
+  tests/test_tree_depth_hidden.py: |
+    import unittest
+
+    from lark import Token, Tree
+
+
+    class DepthTests(unittest.TestCase):
+        def test_leaf_tree(self):
+            self.assertEqual(Tree('a', []).depth(), 1)
+            self.assertEqual(Tree('a', [Token('T', 'x'), Token('U', 'y')]).depth(), 1)
+
+        def test_nested(self):
+            self.assertEqual(Tree('a', [Tree('b', [Tree('c', [])])]).depth(), 3)
+
+        def test_uses_longest_branch(self):
+            t = Tree('r', [Tree('a', []), Tree('b', [Tree('c', [Tree('d', [])])]), Token('T', 'x')])
+            self.assertEqual(t.depth(), 4)
+
+        def test_very_deep_chain_is_not_recursive(self):
+            t = Tree('a', [])
+            for _ in range(19999):
+                t = Tree('a', [t])
+            self.assertEqual(t.depth(), 20000)
+turns:
+  - prompt: >-
+      `Transformer_NonRecursive` silently corrupts trees when a callback returns `Discard` for a node that
+      is not the last one processed. With `tree = Tree('start', [Tree('keep', [Token('T', 'x')]),
+      Tree('wrap', [Tree('drop', [])])])` and a transformer whose `drop` method returns `Discard`, the
+      plain `Transformer` correctly gives `start[keep[x], wrap[]]`, but `Transformer_NonRecursive` gives
+      `start[wrap[keep]]`: nodes are dropped and re-parented. All four transformer variants are documented
+      to give the same result. Please find the cause in lark/visitors.py and fix it. Run the tests from
+      this directory with `python3 -m pytest -q tests/test_trees.py` (test_nearley and test_typing need
+      extras that are not installed).
+    checks:
+      - {kind: tests, runner: python, files: [tests/test_cache.py, tests/test_grammar.py, tests/test_lexer.py, tests/test_logger.py, tests/test_parser.py, tests/test_pattern_matching.py, tests/test_python_grammar.py, tests/test_reconstructor.py, tests/test_scan.py, tests/test_tools.py, tests/test_tree_forest_transformer.py, tests/test_tree_templates.py, tests/test_trees.py], restore: [tests/test_cache.py, tests/test_grammar.py, tests/test_lexer.py, tests/test_logger.py, tests/test_parser.py, tests/test_pattern_matching.py, tests/test_python_grammar.py, tests/test_reconstructor.py, tests/test_scan.py, tests/test_tools.py, tests/test_tree_forest_transformer.py, tests/test_tree_templates.py, tests/test_trees.py], hidden: [tests/test_trees.py]}
+  - prompt: >-
+      In three to five sentences explain the root cause: what Transformer_NonRecursive does with the
+      result of a discarded node, how a parent picks its children from the stack, and why the order of
+      siblings matters. Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [stack, Discard, children|size|len], any: ['slice|\[-', sibling|over|consum|steal]}
+  - prompt: >-
+      Add a regression test file `tests/test_discard_variants.py` (unittest style) with at least three
+      test functions that compare all four variants (Transformer, Transformer_InPlace,
+      Transformer_NonRecursive, Transformer_InPlaceRecursive) on: a discarded node with a preceding
+      sibling, several discarded siblings, and a discarded node nested inside a wrapper. Run it.
+    checks:
+      - {kind: file_regex, path: tests/test_discard_variants.py, pattern: ^\s*def test_, min_count: 3}
+      - {kind: tests, runner: python, files: [tests/test_discard_variants.py]}
+  - prompt: >-
+      Another variant mismatch: when the ROOT of the tree is discarded (a `drop` method returns `Discard`
+      and the tree is `Tree('drop', [...])`), `Transformer`, `Transformer_NonRecursive` and
+      `Transformer_InPlaceRecursive` return None, but `Transformer_InPlace.transform()` returns the
+      `Discard` marker object itself. Make it return None like the others. Non-root behaviour must not
+      change. Add a test to tests/test_discard_variants.py.
+    checks:
+      - {kind: tests, runner: python, files: [tests/test_root_discard_hidden.py], restore: [tests/test_cache.py, tests/test_grammar.py, tests/test_lexer.py, tests/test_logger.py, tests/test_parser.py, tests/test_pattern_matching.py, tests/test_python_grammar.py, tests/test_reconstructor.py, tests/test_scan.py, tests/test_tools.py, tests/test_tree_forest_transformer.py, tests/test_tree_templates.py, tests/test_trees.py], hidden: [tests/test_root_discard_hidden.py]}
+      - {kind: tests, runner: python, files: [tests/test_cache.py, tests/test_grammar.py, tests/test_lexer.py, tests/test_logger.py, tests/test_parser.py, tests/test_pattern_matching.py, tests/test_python_grammar.py, tests/test_reconstructor.py, tests/test_scan.py, tests/test_tools.py, tests/test_tree_forest_transformer.py, tests/test_tree_templates.py, tests/test_trees.py, tests/test_root_discard_hidden.py], restore: [tests/test_cache.py, tests/test_grammar.py, tests/test_lexer.py, tests/test_logger.py, tests/test_parser.py, tests/test_pattern_matching.py, tests/test_python_grammar.py, tests/test_reconstructor.py, tests/test_scan.py, tests/test_tools.py, tests/test_tree_forest_transformer.py, tests/test_tree_templates.py, tests/test_trees.py], hidden: [tests/test_trees.py, tests/test_root_discard_hidden.py]}
+      - {kind: file_regex, path: tests/test_discard_variants.py, pattern: RootDiscard|root}
+  - prompt: >-
+      Quick question: what does the `visit_tokens` option of `Transformer` do, what is its default, and
+      which methods get called for tokens when it is on? Answer from the code. Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [visit_tokens, 'True'], any: [Token|token, callback|method|type]}
+  - prompt: >-
+      The repo has a CHANGELOG.md. Add a new section at the very top headed `## Unreleased` with bullets
+      for the Transformer_NonRecursive Discard fix and for Transformer_InPlace returning None for a
+      discarded root.
+    checks:
+      - {kind: doc_sections, path: CHANGELOG.md, headings: [Unreleased]}
+      - {kind: file_regex, path: CHANGELOG.md, pattern: 'Unreleased\n(?:.*\n)+?.*Transformer_NonRecursive'}
+      - {kind: file_regex, path: CHANGELOG.md, pattern: Transformer_InPlace}
+  - prompt: >-
+      Small feature: add a method `Tree.depth()` that returns the depth of the tree as an int: a tree with
+      no Tree children has depth 1 (tokens do not count), `Tree('a', [Tree('b', [Tree('c', [])])])` has
+      depth 3. It must not be recursive: a chain of 20000 nested trees has to work. Put it right before
+      `find_pred`. (Docstring in a later step.) Tests come in the next step.
+    checks:
+      - {kind: tests, runner: python, files: [tests/test_tree_depth_hidden.py], restore: [tests/test_cache.py, tests/test_grammar.py, tests/test_lexer.py, tests/test_logger.py, tests/test_parser.py, tests/test_pattern_matching.py, tests/test_python_grammar.py, tests/test_reconstructor.py, tests/test_scan.py, tests/test_tools.py, tests/test_tree_forest_transformer.py, tests/test_tree_templates.py, tests/test_trees.py], hidden: [tests/test_tree_depth_hidden.py]}
+      - {kind: tests, runner: python, files: [tests/test_cache.py, tests/test_grammar.py, tests/test_lexer.py, tests/test_logger.py, tests/test_parser.py, tests/test_pattern_matching.py, tests/test_python_grammar.py, tests/test_reconstructor.py, tests/test_scan.py, tests/test_tools.py, tests/test_tree_forest_transformer.py, tests/test_tree_templates.py, tests/test_trees.py, tests/test_root_discard_hidden.py, tests/test_tree_depth_hidden.py], restore: [tests/test_cache.py, tests/test_grammar.py, tests/test_lexer.py, tests/test_logger.py, tests/test_parser.py, tests/test_pattern_matching.py, tests/test_python_grammar.py, tests/test_reconstructor.py, tests/test_scan.py, tests/test_tools.py, tests/test_tree_forest_transformer.py, tests/test_tree_templates.py, tests/test_trees.py], hidden: [tests/test_trees.py, tests/test_root_discard_hidden.py, tests/test_tree_depth_hidden.py]}
+      - {kind: file_regex, path: lark/tree.py, pattern: def depth\(self\)}
+  - prompt: >-
+      Add `tests/test_tree_depth.py` (unittest style) with at least three test functions for
+      `Tree.depth()`: a leaf tree, a nested tree, and a branch of unequal lengths. Run it.
+    checks:
+      - {kind: file_regex, path: tests/test_tree_depth.py, pattern: ^\s*def test_, min_count: 3}
+      - {kind: tests, runner: python, files: [tests/test_tree_depth.py]}
+  - prompt: >-
+      Small refactor, behaviour unchanged: in `Transformer_NonRecursive.transform`, move the part that
+      builds the reversed postfix list (the `rev_postfix` / queue loop) into a private method
+      `_to_postfix(self, tree)` that returns the nodes in postfix order, and iterate over what it returns.
+    checks:
+      - {kind: file_regex, path: lark/visitors.py, pattern: 'def _to_postfix\(self, tree'}
+      - {kind: file_regex, path: lark/visitors.py, pattern: self\._to_postfix\(tree\)}
+      - {kind: tests, runner: python, files: [tests/test_cache.py, tests/test_grammar.py, tests/test_lexer.py, tests/test_logger.py, tests/test_parser.py, tests/test_pattern_matching.py, tests/test_python_grammar.py, tests/test_reconstructor.py, tests/test_scan.py, tests/test_tools.py, tests/test_tree_forest_transformer.py, tests/test_tree_templates.py, tests/test_trees.py, tests/test_root_discard_hidden.py, tests/test_tree_depth_hidden.py], restore: [tests/test_cache.py, tests/test_grammar.py, tests/test_lexer.py, tests/test_logger.py, tests/test_parser.py, tests/test_pattern_matching.py, tests/test_python_grammar.py, tests/test_reconstructor.py, tests/test_scan.py, tests/test_tools.py, tests/test_tree_forest_transformer.py, tests/test_tree_templates.py, tests/test_trees.py], hidden: [tests/test_trees.py, tests/test_root_discard_hidden.py, tests/test_tree_depth_hidden.py]}
+  - prompt: >-
+      Add docstrings: give `Tree.depth()` a docstring saying what it returns (an int, tokens do not count,
+      iterative so deep trees are fine), and extend the `Transformer_NonRecursive` class docstring with a
+      sentence that mentions `Discard` (nodes returning Discard are removed from their parent's children,
+      like in the other transformers).
+    checks:
+      - {kind: file_regex, path: lark/tree.py, pattern: 'def depth\(self\) -> int:\n\s+"""'}
+      - {kind: file_regex, path: lark/visitors.py, pattern: 'class Transformer_NonRecursive[^\n]*\n\s+"""[^"]*Discard'}
+      - {kind: tests, runner: python, files: [tests/test_cache.py, tests/test_grammar.py, tests/test_lexer.py, tests/test_logger.py, tests/test_parser.py, tests/test_pattern_matching.py, tests/test_python_grammar.py, tests/test_reconstructor.py, tests/test_scan.py, tests/test_tools.py, tests/test_tree_forest_transformer.py, tests/test_tree_templates.py, tests/test_trees.py, tests/test_root_discard_hidden.py, tests/test_tree_depth_hidden.py], restore: [tests/test_cache.py, tests/test_grammar.py, tests/test_lexer.py, tests/test_logger.py, tests/test_parser.py, tests/test_pattern_matching.py, tests/test_python_grammar.py, tests/test_reconstructor.py, tests/test_scan.py, tests/test_tools.py, tests/test_tree_forest_transformer.py, tests/test_tree_templates.py, tests/test_trees.py], hidden: [tests/test_trees.py, tests/test_root_discard_hidden.py, tests/test_tree_depth_hidden.py]}
+  - prompt: >-
+      In docs/visitors.rst, extend the existing "Discard" section with a short paragraph that starts with
+      the words `Discarding the root` and says what happens when the root of the tree is discarded (all
+      transformer variants return None).
+    checks:
+      - {kind: file_regex, path: docs/visitors.rst, pattern: ^Discarding the root}
+  - prompt: >-
+      Review the changes you made in this session as a code reviewer would: list each file you changed or
+      added, what changed, and any remaining edge case you did not cover. Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [visitors\.py, tree\.py, test], any: [edge, risk, not cover, remaining]}

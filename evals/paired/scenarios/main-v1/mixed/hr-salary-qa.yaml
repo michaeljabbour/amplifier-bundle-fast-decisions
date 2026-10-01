@@ -1,0 +1,344 @@
+# HR employee CSV (anonymized, multi-currency): numeric Q&A into answer files, plant/division tables, data-quality revision, report, script.
+id: hr-salary-qa
+task_type: mixed
+language: python
+split: main
+source:
+  desc: 'HR employee CSV (anonymized, multi-currency): numeric Q&A into answer files, plant/division tables, data-quality revision, report, script.'
+  kind: self-authored deterministic workspace
+  adapted_from: [~/dev/amplifier-agent/.amplifier/evaluation/tasks/benchmark/pdf-hr-q1/task.yaml (division x plant average base salary written
+      to a one-line answer file), ~/dev/amplifier-agent/.amplifier/evaluation/tasks/benchmark/pdf-hr-q2..q5 (same HR-data question family; PDF
+      replaced by a CSV)]
+workspace:
+  kind: inline
+  files:
+    README.md: |
+      # HR extract
+
+      `data/employees.csv` is an anonymized extract. `config/fx.json` converts currencies to USD. Only `status = active` rows count toward headcount and salary statistics.
+    config/fx.json: |
+      {
+        "MXN": 0.058,
+        "CAD": 0.74,
+        "USD": 1.0,
+        "GBP": 1.27
+      }
+    data/employees.csv: |
+      emp_id,name,division,plant,job_level,base_salary,currency,status
+      H001,Ana Alvarez,Industrial Systems,Leeds,L2,0,GBP,active
+      H002,Ben Hale,Healthcare Devices,Dayton,L1,57600,USD,active
+      H003,Cleo Estrada,Consumer Home & Office Products,Mexico City,L2,423400,MXN,active
+      H004,Dev Bishop,Healthcare Devices,Toronto,L2,0,CAD,active
+      H005,Elio Ito,Consumer Home & Office Products,Dayton,L1,51700,USD,terminated
+      H006,Faye Fox,Healthcare Devices,Toronto,L5,132300,CAD,active
+      H007,Gus Cho,Industrial Systems,Toronto,L3,101000,CAD,active
+      H008,Hugo Jain,Consumer Home & Office Products,Toronto,L5,126600,CAD,active
+      H009,Iris Grant,Consumer Home & Office Products,Toronto,L5,128600,CAD,terminated
+      H010,Jon Dunn,Consumer Home & Office Products,Toronto,L4,120700,CAD,active
+      H011,Kira Alvarez,Healthcare Devices,Leeds,L4,70100,GBP,active
+      H012,Leo Hale,Industrial Systems,Toronto,L4,116100,CAD,active
+      H013,Mara Estrada,Healthcare Devices,Toronto,L2,83100,CAD,active
+      H014,Nico Bishop,Healthcare Devices,Leeds,L1,37700,GBP,active
+      H015,Opal Ito,Industrial Systems,Dayton,L4,0,USD,active
+      H016,Pia Fox,Consumer Home & Office Products,Toronto,L1,66000,CAD,active
+      H017,Quin Cho,Industrial Systems,Toronto,L1,63000,CAD,active
+      H018,Rosa Jain,Industrial Systems,Leeds,L1,37100,GBP,active
+      H019,Sven Grant,Healthcare Devices,Dayton,L3,82600,USD,active
+      H020,Tess Dunn,Industrial Systems,Toronto,L1,70400,CAD,active
+      H021,Ana Alvarez,Consumer Home & Office Products,Dayton,L4,90900,USD,active
+      H022,Ben Hale,Consumer Home & Office Products,Toronto,L2,78500,CAD,active
+      H023,Cleo Estrada,Industrial Systems,Mexico City,L2,418900,MXN,active
+      H024,Dev Bishop,Healthcare Devices,Toronto,L1,62700,CAD,active
+      H025,Elio Ito,Industrial Systems,Dayton,L2,68400,USD,active
+      H026,Faye Fox,Healthcare Devices,Mexico City,L3,538200,MXN,active
+      H027,Gus Cho,Healthcare Devices,Dayton,L5,113000,USD,active
+      H028,Hugo Jain,Consumer Home & Office Products,Dayton,L1,55500,USD,terminated
+      H029,Iris Grant,Industrial Systems,Leeds,L3,61100,GBP,active
+      H030,Jon Dunn,Industrial Systems,Leeds,L5,88000,GBP,active
+      H031,Kira Alvarez,Healthcare Devices,Dayton,L4,91600,USD,active
+      H032,Leo Hale,Industrial Systems,Leeds,L2,47700,GBP,active
+      H033,Mara Estrada,Healthcare Devices,Dayton,L5,110900,USD,active
+      H034,Nico Bishop,Healthcare Devices,Leeds,L3,59600,GBP,active
+      H035,Opal Ito,Consumer Home & Office Products,Toronto,L2,87500,CAD,active
+      H036,Pia Fox,Industrial Systems,Mexico City,L4,654900,MXN,active
+      H037,Quin Cho,Industrial Systems,Mexico City,L5,708200,MXN,active
+      H038,Rosa Jain,Healthcare Devices,Mexico City,L2,468400,MXN,active
+      H039,Sven Grant,Industrial Systems,Leeds,L1,36500,GBP,active
+      H040,Tess Dunn,Industrial Systems,Toronto,L1,69800,CAD,terminated
+      H041,Ana Alvarez,Healthcare Devices,Toronto,L2,86200,CAD,terminated
+      H042,Ben Hale,Industrial Systems,Mexico City,L4,658600,MXN,active
+      H043,Cleo Estrada,Consumer Home & Office Products,Leeds,L4,78200,GBP,active
+      H044,Dev Bishop,Industrial Systems,Mexico City,L5,752600,MXN,active
+      H045,Elio Ito,Consumer Home & Office Products,Toronto,L3,99200,CAD,active
+      H046,Faye Fox,Consumer Home & Office Products,Dayton,L2,64200,USD,active
+      H047,Gus Cho,Consumer Home & Office Products,Dayton,L4,98900,USD,active
+      H048,Hugo Jain,Industrial Systems,Dayton,L2,67500,USD,active
+      H049,Iris Grant,Consumer Home & Office Products,Dayton,L3,77000,USD,terminated
+      H050,Jon Dunn,Healthcare Devices,Leeds,L1,38500,GBP,active
+      H051,Kira Alvarez,Consumer Home & Office Products,Mexico City,L4,635200,MXN,active
+      H052,Leo Hale,Industrial Systems,Leeds,L5,86700,GBP,active
+      H053,Mara Estrada,Industrial Systems,Dayton,L1,50300,USD,active
+      H054,Nico Bishop,Industrial Systems,Leeds,L1,43800,GBP,active
+      H055,Opal Ito,Healthcare Devices,Leeds,L3,62700,GBP,terminated
+      H056,Pia Fox,Industrial Systems,Leeds,L2,49500,GBP,terminated
+      H057,Quin Cho,Healthcare Devices,Toronto,L1,69400,CAD,terminated
+      H058,Rosa Jain,Industrial Systems,Toronto,L3,102500,CAD,terminated
+      H059,Sven Grant,Industrial Systems,Leeds,L4,71700,GBP,active
+      H060,Tess Dunn,Healthcare Devices,Leeds,L1,43000,GBP,active
+      H061,Ana Alvarez,Industrial Systems,Toronto,L2,85200,CAD,active
+      H062,Ben Hale,Industrial Systems,Toronto,L1,69300,CAD,active
+      H063,Cleo Estrada,Consumer Home & Office Products,Dayton,L4,101200,USD,active
+      H064,Dev Bishop,Industrial Systems,Toronto,L1,74000,CAD,active
+      H065,Elio Ito,Healthcare Devices,Leeds,L5,81300,GBP,active
+      H066,Faye Fox,Healthcare Devices,Mexico City,L4,665000,MXN,active
+      H067,Gus Cho,Healthcare Devices,Dayton,L2,69600,USD,active
+      H068,Hugo Jain,Healthcare Devices,Mexico City,L1,386700,MXN,terminated
+      H069,Iris Grant,Healthcare Devices,Leeds,L4,74000,GBP,active
+      H070,Jon Dunn,Industrial Systems,Mexico City,L1,371800,MXN,active
+      H071,Kira Alvarez,Consumer Home & Office Products,Mexico City,L5,736200,MXN,active
+      H072,Leo Hale,Industrial Systems,Dayton,L2,65200,USD,active
+      H073,Mara Estrada,Industrial Systems,Toronto,L3,101000,CAD,terminated
+      H074,Nico Bishop,Healthcare Devices,Leeds,L5,84300,GBP,active
+      H075,Opal Ito,Healthcare Devices,Dayton,L5,106400,USD,active
+      H076,Pia Fox,Consumer Home & Office Products,Toronto,L3,100100,CAD,active
+      H077,Quin Cho,Healthcare Devices,Mexico City,L1,389700,MXN,active
+      H078,Rosa Jain,Consumer Home & Office Products,Mexico City,L4,621300,MXN,active
+      H079,Sven Grant,Healthcare Devices,Leeds,L1,36400,GBP,active
+      H080,Tess Dunn,Industrial Systems,Mexico City,L4,619700,MXN,active
+      H081,Ana Alvarez,Industrial Systems,Leeds,L4,78500,GBP,active
+      H082,Ben Hale,Healthcare Devices,Toronto,L2,87000,CAD,active
+      H083,Cleo Estrada,Industrial Systems,Toronto,L2,86100,CAD,terminated
+      H084,Dev Bishop,Healthcare Devices,Mexico City,L1,326600,MXN,active
+      H085,Elio Ito,Industrial Systems,Leeds,L4,72800,GBP,active
+      H086,Faye Fox,Industrial Systems,Toronto,L2,84800,CAD,active
+      H087,Gus Cho,Industrial Systems,Mexico City,L1,380000,MXN,active
+      H088,Hugo Jain,Industrial Systems,Dayton,L2,72500,USD,active
+      H089,Iris Grant,Consumer Home & Office Products,Dayton,L1,54800,USD,terminated
+      H090,Jon Dunn,Industrial Systems,Toronto,L3,101800,CAD,active
+      H091,Kira Alvarez,Industrial Systems,Mexico City,L2,463700,MXN,active
+      H092,Leo Hale,Consumer Home & Office Products,Dayton,L1,58100,USD,active
+      H093,Mara Estrada,Consumer Home & Office Products,Dayton,L5,114800,USD,terminated
+      H094,Nico Bishop,Industrial Systems,Dayton,L1,55400,USD,active
+      H095,Opal Ito,Healthcare Devices,Mexico City,L4,624200,MXN,active
+      H096,Pia Fox,Healthcare Devices,Toronto,L4,114500,CAD,active
+protected: [data/employees.csv, config/fx.json]
+hidden_files:
+  _grade.py: |
+    import csv, json, os, re, subprocess, sys
+    from pathlib import Path
+
+    W = Path(".")
+
+
+    def fail(msg):
+        print("FAIL:", msg)
+        sys.exit(1)
+
+
+    def need(cond, msg):
+        if not cond:
+            fail(msg)
+
+
+    def load_json(rel):
+        p = W / rel
+        need(p.exists(), f"missing {rel}")
+        try:
+            return json.loads(p.read_text(encoding="utf-8"))
+        except Exception as e:  # noqa: BLE001
+            fail(f"{rel} is not valid JSON: {e}")
+
+
+    def read(rel):
+        p = W / rel
+        need(p.exists(), f"missing {rel}")
+        return p.read_text(encoding="utf-8")
+
+
+    def close(a, b, tol=0.011):
+        try:
+            return abs(float(a) - float(b)) <= tol
+        except (TypeError, ValueError):
+            return False
+
+
+    def md_rows(rel, under=None):
+        """Table rows (lists of cells) of a markdown file; with `under`, only rows inside the first heading matching it."""
+        lines = read(rel).splitlines()
+        if under:
+            out, on, lvl = [], False, 0
+            for ln in lines:
+                m = re.match(r"^(#+)\s+(.*)", ln)
+                if m:
+                    if on and len(m.group(1)) <= lvl:
+                        break
+                    if not on and re.search(under, m.group(2), re.I):
+                        on, lvl = True, len(m.group(1))
+                    continue
+                if on:
+                    out.append(ln)
+            lines = out
+        rows = []
+        for ln in lines:
+            if ln.strip().startswith("|") and not re.match(r"^\s*\|[\s:|-]+\|\s*$", ln):
+                rows.append([c.strip() for c in ln.strip().strip("|").split("|")])
+        return rows
+
+
+    def num(s):
+        m = re.search(r"-?\d[\d,]*\.?\d*", str(s))
+        return float(m.group(0).replace(",", "")) if m else None
+
+
+    def run(cmd, timeout=60):
+        p = subprocess.run(cmd, shell=True, cwd=W, capture_output=True, text=True, timeout=timeout)
+        return p.returncode, p.stdout, p.stderr
+
+    EXP = {'q1': 604025.0, 'q3': 84800.0, 'ps1': {'Mexico City': (19, 550347.37), 'Toronto': (22, 87445.45), 'Dayton': (19, 74963.16), 'Leeds': (21, 58428.57)}, 'ps2': {'Mexico City': (19, 550347.37), 'Toronto': (21, 91609.52), 'Dayton': (18, 79127.78), 'Leeds': (20, 61350.0)}, 'du1': {'Consumer Home & Office Products': 67935.99, 'Industrial Systems': 56384.56, 'Healthcare Devices': 65283.17}, 'du2': {'Consumer Home & Office Products': 67935.99, 'Industrial Systems': 59701.3, 'Healthcare Devices': 67701.07}, 'bands': {'L1': (18942.8, 58100.0), 'L2': (24296.2, 72500.0), 'L3': (31215.6, 82600.0), 'L4': (35942.6, 101200.0), 'L5': (41075.6, 113000.0)}, 'zeros': ['H001', 'H004', 'H015'], 'cmd': {'avg|Consumer Home & Office Products|Mexico City': 604025.0, 'median|Industrial Systems|Toronto': 84800.0, 'avg|Healthcare Devices|Leeds': 58322.22}}
+
+    def _single(rel, v):
+        t = read(rel).strip(); need(re.fullmatch(r"[^\d-]{0,3}-?\d[\d,]*\.?\d*\s*[A-Za-z$]{0,4}", t), "file must contain just the number, got: " + t[:60])
+        need(close(num(t), v, 0.011), f"{rel}: {num(t)} != {v}")
+    def t1(): _single("answers/q1.txt", EXP["q1"])
+    def t3(): _single("answers/q3.txt", EXP["q3"])
+    def _ps(key):
+        p = W / "out/plant_summary.csv"; need(p.exists(), "missing out/plant_summary.csv")
+        rd = list(csv.DictReader(open(p, encoding="utf-8"))); need(rd and list(rd[0]) == ["plant", "active_headcount", "avg_base_salary_local"], "bad header")
+        need([r["plant"] for r in rd] == sorted(EXP[key]), "plants must be sorted rows, one per plant")
+        for r in rd:
+            n, a = EXP[key][r["plant"]]; need(int(r["active_headcount"]) == n and close(r["avg_base_salary_local"], a, 0.011), "bad row " + r["plant"])
+    def t5(): _ps("ps1")
+    def t9(): _ps("ps2")
+    def _du(key):
+        d = load_json("out/division_usd.json"); e = EXP[key]; need(set(d) == set(e), "division keys differ")
+        for k, v in e.items(): need(close(d[k], v, 0.02), f"{k}: {d[k]} != {v}")
+    def t6(): _du("du1")
+    def t10(): _du("du2")
+    def t12():
+        rows = md_rows("hr_report.md", "compensation"); need(rows, "no table under Compensation")
+        got = {r[0].strip("* `"): num(r[1]) for r in rows if len(r) >= 2 and num(r[1]) is not None}
+        for p, (n, a) in EXP["ps2"].items(): need(p in got and close(got[p], a, 0.011), f"{p}: {got.get(p)} != {a}")
+    def t14():
+        p = W / "out/level_bands.csv"; need(p.exists(), "missing out/level_bands.csv")
+        rd = list(csv.DictReader(open(p, encoding="utf-8"))); need(rd and list(rd[0]) == ["level", "min_usd", "max_usd"], "bad header")
+        need([r["level"] for r in rd] == sorted(EXP["bands"]), "levels must be L1..L5 sorted")
+        for r in rd:
+            a, b = EXP["bands"][r["level"]]; need(close(r["min_usd"], a, 0.02) and close(r["max_usd"], b, 0.02), "bad band " + r["level"])
+    def t15():
+        need((W / "scripts/hr_stats.py").exists(), "missing scripts/hr_stats.py")
+        for k, v in EXP["cmd"].items():
+            m, d, p = k.split("|"); rc, out, err = run(f'python3 scripts/hr_stats.py {m} "{d}" "{p}"'); need(rc == 0, "script failed: " + err[-200:])
+            need(close(num(out), v, 0.011), f"{k}: {out.strip()} != {v}")
+
+
+    if __name__ == "__main__":
+        fn = globals().get(sys.argv[1]) if len(sys.argv) > 1 else None
+        need(callable(fn), "unknown check " + str(sys.argv[1:]))
+        fn()
+        print("OK")
+turns:
+- prompt: From data/employees.csv, what is the average base salary of active employees in the "Consumer Home & Office Products" division at the
+    Mexico City plant (local currency)? Put just the number, rounded to 2 decimals, in answers/q1.txt.
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t1
+    hidden: [_grade.py]
+    timeout: 60
+- prompt: How many active employees does each plant have? Name the plant with the largest headcount. Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: [Toronto, 'Toronto\D{0,12}22(?!\d)']
+- prompt: What is the median base salary of active employees in the Industrial Systems division at the Toronto plant (local currency, 2 decimals)?
+    Put just the number in answers/q3.txt.
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t3
+    hidden: [_grade.py]
+    timeout: 60
+- prompt: Who is the highest-paid active employee once salaries are converted to USD with config/fx.json, and what is the USD figure? Do not change
+    any files.
+  checks:
+  - kind: keyed_facts
+    all: [H027|Gus Cho, '(?<![\d.,])1,?1,?3,?0,?0,?0(?:\.0+)?(?!\d)']
+- prompt: Create out/plant_summary.csv with the header plant,active_headcount,avg_base_salary_local and one row per plant sorted by plant name;
+    use every active row exactly as it appears in the file.
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t5
+    hidden: [_grade.py]
+    timeout: 60
+- prompt: Create out/division_usd.json mapping each division name to the average base salary in USD of its active employees (convert each salary
+    with config/fx.json first; round to 2 decimals; again use every active row as it appears).
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t6
+    hidden: [_grade.py]
+    timeout: 60
+- prompt: How many employees are terminated, and which plant has the highest share of terminated rows (terminated / all rows at that plant, 1
+    decimal)? Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: ['(?<!\d)15(?!\d)', Toronto, '(?<![\d.,])24\.10?(?!\d)']
+- prompt: Do any active employees have a base_salary of 0? List their emp_id values. Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: [H001, H004, H015]
+- prompt: Those zeros are placeholders, not real pay. Exclude active rows with base_salary 0 from salary averages (headcount should drop by them
+    too) and regenerate out/plant_summary.csv.
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t9
+    hidden: [_grade.py]
+    timeout: 60
+- prompt: Regenerate out/division_usd.json the same way, excluding the zero-salary placeholder rows.
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t10
+    hidden: [_grade.py]
+    timeout: 60
+- prompt: Write hr_report.md with level-2 sections Headcount, Compensation and Data quality (a few sentences each).
+  checks:
+  - kind: doc_sections
+    path: hr_report.md
+    headings: [Headcount, Compensation, Data quality]
+  - {kind: file_regex, path: hr_report.md, pattern: H001|H004|H015}
+- prompt: Under Compensation in hr_report.md add a markdown table with a row per plant (plant in the first column, average local base salary in
+    the second) using the figures from out/plant_summary.csv.
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t12
+    hidden: [_grade.py]
+    timeout: 60
+- prompt: Using out/division_usd.json, what is the ratio of the highest division average to the lowest (2 decimals)? Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: ['(?<![\d.,])1\.14(?!\d)']
+- prompt: 'Create out/level_bands.csv with the header level,min_usd,max_usd: for each job level (L1-L5, sorted) the lowest and highest USD-converted
+    base salary among active employees with a non-zero salary.'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t14
+    hidden: [_grade.py]
+    timeout: 60
+- prompt: 'Create scripts/hr_stats.py: `python3 scripts/hr_stats.py avg|median <division> <plant>` prints the local-currency statistic (2 decimals)
+    over active employees with non-zero salary, reading data/employees.csv. Try it on a couple of division/plant pairs.'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t15
+    hidden: [_grade.py]
+    timeout: 60
+- prompt: Update README.md with a Usage section for scripts/hr_stats.py and a Data quality section describing the zero-salary rows.
+  checks:
+  - kind: doc_sections
+    path: README.md
+    headings: [Usage, Data quality]
+  - {kind: file_regex, path: README.md, pattern: scripts/hr_stats\.py}

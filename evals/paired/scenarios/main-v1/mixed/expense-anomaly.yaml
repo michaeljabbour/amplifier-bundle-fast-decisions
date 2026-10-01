@@ -1,0 +1,315 @@
+# Expense CSV + policy: flag violations per rule, revise for new rule and changed limit, script, reports.
+id: expense-anomaly
+task_type: mixed
+language: python
+split: main
+source:
+  desc: 'Expense CSV + policy: flag violations per rule, revise for new rule and changed limit, script, reports.'
+  kind: self-authored deterministic workspace
+  adapted_from: ['~/dev/amplifier-agent/.amplifier/evaluation/tasks/automation-bench/finance-expense-anomaly-detection/meta.yaml (expense anomaly
+      detection; task body not vendored, so scenario authored from the title)']
+workspace:
+  kind: inline
+  files:
+    README.md: |
+      # Expense audit
+
+      `data/expenses.csv` holds March 2025 claims. `policy.md` lists the rules; per-category limits live in `config/limits.json`.
+    policy.md: |
+      # Expense policy
+
+      All amounts in USD. Evaluate every row of data/expenses.csv.
+
+      | Rule | Description |
+      |---|---|
+      | R1 | Amount is above the category limit in config/limits.json (Meals 75, Travel 600, Software 300, Office 150, Entertainment 250). |
+      | R2 | Amount above 25 with receipt = no. |
+      | R3 | Duplicate: same employee, vendor, amount and date as an earlier row; flag the later row only. |
+
+      A row can trigger several rules; each (expense_id, rule) pair is one flag.
+    config/limits.json: |
+      {
+        "Meals": 75,
+        "Travel": 600,
+        "Software": 300,
+        "Office": 150,
+        "Entertainment": 250
+      }
+    data/expenses.csv: |
+      expense_id,date,employee,category,amount,vendor,receipt
+      E001,2025-03-07,Finley,Software,252.00,DocSuite,yes
+      E002,2025-03-17,Drew,Entertainment,153.00,Bistro Nine,no
+      E003,2025-03-17,Blake,Meals,25.00,Grill 54,yes
+      E004,2025-03-10,Avery,Entertainment,196.00,Arena Tix,yes
+      E005,2025-03-29,Drew,Meals,20.00,Cafe Luna,yes
+      E006,2025-03-21,Emery,Office,12.00,DeskMart,yes
+      E007,2025-03-10,Drew,Meals,82.00,Grill 54,yes
+      E008,2025-03-17,Drew,Software,223.00,CodeHub,yes
+      E009,2025-03-04,Avery,Software,117.00,CodeHub,yes
+      E010,2025-03-03,Emery,Meals,28.00,Cafe Luna,yes
+      E011,2025-03-20,Blake,Travel,365.00,CityCab,yes
+      E012,2025-03-19,Blake,Entertainment,213.00,Arena Tix,yes
+      E013,2025-03-19,Blake,Entertainment,213.00,Arena Tix,yes
+      E014,2025-03-17,Finley,Travel,379.00,RailLink,yes
+      E015,2025-03-12,Casey,Travel,119.00,CityCab,yes
+      E016,2025-03-18,Blake,Travel,179.00,RailLink,yes
+      E017,2025-03-07,Avery,Office,30.00,DeskMart,yes
+      E018,2025-03-21,Drew,Entertainment,94.00,Arena Tix,yes
+      E019,2025-03-20,Finley,Meals,88.00,Noodle Bar,yes
+      E020,2025-03-17,Casey,Entertainment,82.00,Arena Tix,yes
+      E021,2025-03-19,Finley,Software,144.00,DocSuite,yes
+      E022,2025-03-20,Finley,Travel,192.00,SkyAir,yes
+      E023,2025-03-24,Avery,Meals,140.00,Cafe Luna,yes
+      E024,2025-03-11,Drew,Office,56.00,PaperCo,yes
+      E025,2025-03-24,Finley,Office,84.00,DeskMart,yes
+      E026,2025-03-07,Casey,Office,38.00,PaperCo,yes
+      E027,2025-03-22,Blake,Meals,45.00,Cafe Luna,yes
+      E028,2025-03-24,Avery,Entertainment,146.00,Arena Tix,yes
+      E029,2025-03-11,Blake,Office,103.00,DeskMart,yes
+      E030,2025-03-20,Emery,Meals,42.00,Cafe Luna,yes
+      E031,2025-03-14,Finley,Travel,745.00,SkyAir,yes
+      E032,2025-03-04,Finley,Office,69.00,PaperCo,yes
+      E033,2025-03-17,Emery,Office,116.00,PaperCo,yes
+      E034,2025-03-12,Avery,Meals,38.00,Noodle Bar,yes
+      E035,2025-03-20,Emery,Travel,470.00,CityCab,yes
+      E036,2025-03-11,Casey,Entertainment,116.00,Bistro Nine,yes
+      E037,2025-03-17,Drew,Office,240.00,DeskMart,yes
+      E038,2025-03-24,Emery,Travel,536.00,SkyAir,yes
+      E039,2025-03-03,Blake,Office,132.00,DeskMart,yes
+      E040,2025-03-07,Drew,Office,52.00,PaperCo,yes
+      E041,2025-03-07,Drew,Office,52.00,PaperCo,yes
+      E042,2025-03-10,Avery,Software,250.00,DocSuite,yes
+      E043,2025-03-10,Drew,Meals,54.00,Noodle Bar,yes
+      E044,2025-03-12,Emery,Software,399.00,CodeHub,yes
+      E045,2025-03-19,Avery,Meals,25.00,Noodle Bar,yes
+      E046,2025-03-17,Emery,Entertainment,160.00,Arena Tix,yes
+      E047,2025-03-20,Avery,Travel,380.00,SkyAir,yes
+      E048,2025-03-10,Blake,Meals,39.00,Cafe Luna,yes
+      E049,2025-03-10,Avery,Office,83.00,DeskMart,yes
+      E050,2025-03-04,Avery,Software,20.00,Grill 54,no
+      E051,2025-03-21,Drew,Software,196.00,DocSuite,yes
+      E052,2025-03-17,Casey,Meals,21.00,Noodle Bar,yes
+      E053,2025-03-03,Blake,Office,121.00,PaperCo,yes
+      E054,2025-03-20,Avery,Entertainment,133.00,Arena Tix,yes
+      E055,2025-03-17,Emery,Meals,45.00,Noodle Bar,yes
+      E056,2025-03-24,Finley,Entertainment,99.00,Bistro Nine,yes
+      E057,2025-03-10,Avery,Software,167.00,DocSuite,yes
+      E058,2025-03-24,Emery,Entertainment,310.00,Arena Tix,yes
+      E059,2025-03-11,Finley,Software,178.00,DocSuite,yes
+      E060,2025-03-10,Emery,Meals,19.00,Noodle Bar,yes
+      E061,2025-03-12,Blake,Office,15.00,CodeHub,no
+      E062,2025-03-20,Blake,Travel,96.00,RailLink,yes
+      E063,2025-03-18,Blake,Travel,495.00,SkyAir,yes
+      E064,2025-03-07,Drew,Entertainment,158.00,Arena Tix,no
+      E065,2025-03-07,Casey,Travel,481.00,RailLink,yes
+      E066,2025-03-08,Emery,Meals,45.00,Cafe Luna,yes
+      E067,2025-03-17,Emery,Office,102.00,PaperCo,yes
+      E068,2025-03-06,Drew,Meals,62.00,Grill 54,yes
+      E069,2025-03-11,Emery,Software,278.00,CodeHub,yes
+      E070,2025-03-04,Casey,Travel,132.00,RailLink,yes
+      E071,2025-03-04,Casey,Travel,132.00,RailLink,yes
+      E072,2025-03-19,Emery,Meals,19.00,Noodle Bar,yes
+      E073,2025-03-17,Avery,Meals,52.00,Cafe Luna,yes
+      E074,2025-03-21,Drew,Office,140.00,DeskMart,yes
+      E075,2025-03-10,Blake,Travel,409.00,RailLink,yes
+      E076,2025-03-14,Casey,Travel,88.00,RailLink,yes
+      E077,2025-03-07,Finley,Software,192.00,CodeHub,yes
+      E078,2025-03-13,Drew,Software,109.00,CodeHub,yes
+      E079,2025-03-10,Finley,Entertainment,190.00,Arena Tix,yes
+      E080,2025-03-18,Emery,Travel,81.00,CityCab,yes
+protected: [data/expenses.csv]
+hidden_files:
+  _grade.py: |
+    import csv, json, os, re, subprocess, sys
+    from pathlib import Path
+
+    W = Path(".")
+
+
+    def fail(msg):
+        print("FAIL:", msg)
+        sys.exit(1)
+
+
+    def need(cond, msg):
+        if not cond:
+            fail(msg)
+
+
+    def load_json(rel):
+        p = W / rel
+        need(p.exists(), f"missing {rel}")
+        try:
+            return json.loads(p.read_text(encoding="utf-8"))
+        except Exception as e:  # noqa: BLE001
+            fail(f"{rel} is not valid JSON: {e}")
+
+
+    def read(rel):
+        p = W / rel
+        need(p.exists(), f"missing {rel}")
+        return p.read_text(encoding="utf-8")
+
+
+    def close(a, b, tol=0.011):
+        try:
+            return abs(float(a) - float(b)) <= tol
+        except (TypeError, ValueError):
+            return False
+
+
+    def md_rows(rel, under=None):
+        """Table rows (lists of cells) of a markdown file; with `under`, only rows inside the first heading matching it."""
+        lines = read(rel).splitlines()
+        if under:
+            out, on, lvl = [], False, 0
+            for ln in lines:
+                m = re.match(r"^(#+)\s+(.*)", ln)
+                if m:
+                    if on and len(m.group(1)) <= lvl:
+                        break
+                    if not on and re.search(under, m.group(2), re.I):
+                        on, lvl = True, len(m.group(1))
+                    continue
+                if on:
+                    out.append(ln)
+            lines = out
+        rows = []
+        for ln in lines:
+            if ln.strip().startswith("|") and not re.match(r"^\s*\|[\s:|-]+\|\s*$", ln):
+                rows.append([c.strip() for c in ln.strip().strip("|").split("|")])
+        return rows
+
+
+    def num(s):
+        m = re.search(r"-?\d[\d,]*\.?\d*", str(s))
+        return float(m.group(0).replace(",", "")) if m else None
+
+
+    def run(cmd, timeout=60):
+        p = subprocess.run(cmd, shell=True, cwd=W, capture_output=True, text=True, timeout=timeout)
+        return p.returncode, p.stdout, p.stderr
+
+    EXP = {'f3': [('E002', 'R2'), ('E007', 'R1'), ('E013', 'R3'), ('E019', 'R1'), ('E023', 'R1'), ('E031', 'R1'), ('E037', 'R1'), ('E041', 'R3'), ('E044', 'R1'), ('E058', 'R1'), ('E064', 'R2'), ('E071', 'R3')], 'f4': [('E002', 'R2'), ('E005', 'R4'), ('E007', 'R1'), ('E013', 'R3'), ('E019', 'R1'), ('E023', 'R1'), ('E027', 'R4'), ('E031', 'R1'), ('E037', 'R1'), ('E041', 'R3'), ('E044', 'R1'), ('E058', 'R1'), ('E064', 'R2'), ('E066', 'R4'), ('E071', 'R3')], 'f5': [('E002', 'R2'), ('E005', 'R4'), ('E013', 'R3'), ('E023', 'R1'), ('E027', 'R4'), ('E031', 'R1'), ('E037', 'R1'), ('E041', 'R3'), ('E044', 'R1'), ('E058', 'R1'), ('E064', 'R2'), ('E066', 'R4'), ('E071', 'R3')], 'lim90': {'Meals': 90, 'Travel': 600, 'Software': 300, 'Office': 150, 'Entertainment': 250}, 'tot3': 12, 'csv': {'R1': (5, 1834.0), 'R2': (2, 311.0), 'R3': (3, 397.0), 'R4': (3, 110.0)}}
+
+    def _flags():
+        d = load_json("out/flags.json"); need(isinstance(d, list), "flags.json must be a list")
+        return sorted((x.get("id"), x.get("rule")) for x in d)
+
+    def t2(): need(_flags() == [tuple(x) for x in EXP["f3"]], "flag set differs (R1-R3)")
+    def t6(): need(_flags() == [tuple(x) for x in EXP["f4"]], "flag set differs (R1-R4)")
+    def t10():
+        lim = load_json("config/limits.json"); need(lim.get("Meals") == 90, "Meals limit must be 90 in config/limits.json")
+        need(_flags() == [tuple(x) for x in EXP["f5"]], "flag set differs after Meals=90")
+    def _rev(key):
+        txt = read("review.md")
+        for i, r in EXP[key]: need(i in txt, i + " missing from review.md")
+        m = re.search(r"^#+\s*Summary\s*\n(.*?)(?=^#|\Z)", txt, re.M | re.S | re.I); need(m, "no Summary")
+        n = len({i for i, _ in EXP[key]}); need(re.search(r"(?<!\d)%d(?!\d)" % n, m.group(1)), "distinct flagged count missing from Summary")
+    def t5(): _rev("f3")
+    def t8(): _rev("f4")
+    def t9():
+        need((W / "scripts/flag.py").exists(), "missing scripts/flag.py")
+        rc, out, err = run("python3 scripts/flag.py"); need(rc == 0, "script failed " + err[-200:])
+        got = sorted((x["id"], x["rule"]) for x in json.loads(out)); need(got == [tuple(x) for x in EXP["f4"]], "script output differs (limits 75)")
+        lim = json.loads((W / "config/limits.json").read_text()); lim["Meals"] = 90
+        (W / "config/limits.json").write_text(json.dumps(lim)); rc, out, err = run("python3 scripts/flag.py")
+        need(rc == 0, "script failed after limit edit")
+        got = sorted((x["id"], x["rule"]) for x in json.loads(out)); need(got == [tuple(x) for x in EXP["f5"]], "script must read config/limits.json")
+    def t12():
+        rows = list(csv.DictReader(open(W / "out/summary.csv", encoding="utf-8"))) if (W / "out/summary.csv").exists() else fail("missing out/summary.csv")
+        need([r["rule"] for r in rows] == ["R1", "R2", "R3", "R4"], "rows must be R1..R4 in order")
+        for r in rows:
+            c, a = EXP["csv"][r["rule"]]; need(int(r["count"]) == c and close(r["total_amount"], a, 0.011), "bad row " + r["rule"])
+
+
+    if __name__ == "__main__":
+        fn = globals().get(sys.argv[1]) if len(sys.argv) > 1 else None
+        need(callable(fn), "unknown check " + str(sys.argv[1:]))
+        fn()
+        print("OK")
+turns:
+- prompt: Following policy.md rule R1 and the limits in config/limits.json, how many rows of data/expenses.csv exceed their category limit, and
+    what is the total amount of those rows? Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: ['(?<!\d)7(?!\d)', '(?<![\d.,])2,?0,?0,?4(?:\.0+)?(?!\d)']
+- prompt: 'Create out/flags.json: a JSON list of objects {"id": <expense_id>, "rule": "R1"|"R2"|"R3"} with one entry per rule violated by each
+    row, applying rules R1, R2 and R3 from policy.md.'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t2
+    hidden: [_grade.py]
+    timeout: 60
+- prompt: Which employee has the most distinct flagged rows in out/flags.json, and how many? Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: [Drew, '(?<!\d)5(?!\d)']
+- prompt: What is the combined amount of all distinct flagged rows (count each row once even if it triggers several rules)? Do not change any
+    files.
+  checks:
+  - kind: keyed_facts
+    all: ['(?<![\d.,])2,?7,?1,?2(?:\.0+)?(?!\d)']
+- prompt: Write review.md with level-2 sections Summary, Flagged items and Recommendations; under Flagged items include a markdown table with
+    one row per distinct flagged expense_id.
+  checks:
+  - kind: doc_sections
+    path: review.md
+    headings: [Summary, Flagged items, Recommendations]
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t5
+    hidden: [_grade.py]
+    timeout: 60
+  gap_before_s: 420
+- prompt: 'Finance added rule R4: Meals dated on a Saturday or Sunday need manager approval. Add R4 to policy.md and regenerate out/flags.json
+    so it includes R4 flags as well (same format, still sorted-insensitive).'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t6
+    hidden: [_grade.py]
+    timeout: 60
+  - {kind: file_regex, path: policy.md, pattern: R4}
+- prompt: After adding R4, how many distinct rows are flagged in total and what is their combined amount? Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: ['(?<!\d)15(?!\d)', '(?<![\d.,])2,?8,?2,?2(?:\.0+)?(?!\d)']
+- prompt: Refresh the table under Flagged items in review.md so it also covers the R4 rows and make the Summary state the new distinct flagged-row
+    count.
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t8
+    hidden: [_grade.py]
+    timeout: 60
+- prompt: Create scripts/flag.py that applies rules R1-R4 to data/expenses.csv, reads the category limits from config/limits.json, and prints
+    the flags as JSON (same list format as out/flags.json) to stdout.
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t9
+    hidden: [_grade.py]
+    timeout: 60
+  gap_before_s: 420
+- prompt: Finance raised the Meals limit from 75 to 90. Update it in config/limits.json and in policy.md, then regenerate out/flags.json.
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t10
+    hidden: [_grade.py]
+    timeout: 60
+  - {kind: file_regex, path: policy.md, pattern: Meals 90}
+- prompt: Compared with the 75 limit, which expense ids lost their flag because of the Meals change? Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: [E007, E019]
+- prompt: 'Create out/summary.csv with the header rule,count,total_amount and exactly four rows (R1, R2, R3, R4, in that order): number of flags
+    per rule and the summed amount of those rows (2 decimals), using the current limits.'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t12
+    hidden: [_grade.py]
+    timeout: 60

@@ -39,6 +39,15 @@ SCRIPTS_DIR = Path(__file__).resolve().parent
 if str(SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPTS_DIR))
 
+import memguard  # noqa: E402
+
+# Every grader / hidden-test run executes scenario code under memguard: 4 GB cap on the whole process tree, 300 s,
+# system-memory floor. A memory kill is a FAILED CHECK labelled `resource_limit`, never an infrastructure failure.
+# (2026-10-01: an unguarded `dominoes.test` used 120-470 GB and OOMed the machine four times.) Override with
+# PAIRED_GRADER_CAP_GB / PAIRED_GRADER_TIMEOUT_S.
+os.environ.setdefault(memguard.ENV_CAP, str(memguard.DEFAULT_CAP_GB))
+os.environ.setdefault(memguard.ENV_TIMEOUT, str(int(memguard.DEFAULT_TIMEOUT_S)))
+
 TASK_TYPES = ("feature", "bugfix", "review", "mixed", "knowledge")
 SPLITS = ("train", "test", "pilot")
 CHECK_KINDS = ("tests", "file_exists", "file_regex", "keyed_facts", "doc_sections")
@@ -340,11 +349,14 @@ def _check_tests(args, workspace, snapshot):
             q = polyglot_tasks._rust_run(root, files)
         else:
             try:
-                p = subprocess.run(args["cmd"], shell=True, cwd=root, capture_output=True, text=True,
-                                   timeout=int(args.get("timeout", 120)),
-                                   env={**os.environ, "PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1"})
+                p = memguard.run(args["cmd"], shell=True, cwd=root, capture_output=True, text=True,
+                                 timeout=min(float(args.get("timeout", memguard.DEFAULT_TIMEOUT_S)),
+                                             float(os.environ.get(memguard.ENV_TIMEOUT, memguard.DEFAULT_TIMEOUT_S))),
+                                 env={**os.environ, "PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1"})
             except subprocess.TimeoutExpired:
                 return _result(False, "timeout")
+            except memguard.ResourceLimit:
+                return _result(False, "resource_limit")
             ok = p.returncode == 0 and (not args.get("expect_regex") or re.search(args["expect_regex"], p.stdout + p.stderr))
             return _result(bool(ok), "cmd_failed")
     return _result(q["failed"] == 0 and q["passed"] > 0, ",".join(q["failure_labels"]) or "tests_failed")

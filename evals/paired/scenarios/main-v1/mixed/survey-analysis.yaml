@@ -1,0 +1,304 @@
+# Customer survey CSV: NPS and averages, per-segment tables, comment extraction, exclusion revision, report and script.
+id: survey-analysis
+task_type: mixed
+language: python
+split: main
+source:
+  desc: 'Customer survey CSV: NPS and averages, per-segment tables, comment extraction, exclusion revision, report and script.'
+  kind: self-authored deterministic workspace
+  adapted_from: ['~/dev/amplifier-agent/.amplifier/evaluation/tasks/benchmark/product-review-finder, pdf-hr-q1 (data-question family) -- scenario
+      authored fresh around survey metrics']
+workspace:
+  kind: inline
+  files:
+    README.md: |
+      # Survey pack
+
+      `data/survey.csv`: one row per response. nps is 0-10; ease, support and value are 1-5 scores. Comments are free text.
+    data/survey.csv: |
+      response_id,date,segment,region,nps,ease,support,value,comment
+      R001,2025-03-20,Consumer,APAC,7,5,4,5,billing price surprises
+      R002,2025-02-25,Consumer,EMEA,8,3,5,1,support was slow
+      R003,2025-02-21,Enterprise,EMEA,9,5,4,1,support was slow
+      R004,2025-01-19,Consumer,AMER,8,4,1,5,reliable and fast
+      R005,2025-01-11,SMB,AMER,10,4,5,4,price is too high
+      R006,2025-01-22,SMB,AMER,4,4,5,3,friendly support team
+      R007,2025-01-21,Enterprise,AMER,10,4,1,5,love the dashboard
+      R008,2025-01-30,Enterprise,EMEA,4,5,4,5,price is too high
+      R009,2025-02-24,SMB,AMER,4,4,1,1,missing integrations
+      R010,2025-03-25,Consumer,EMEA,6,2,3,5,missing integrations
+      R011,2025-01-23,SMB,EMEA,7,4,3,4,billing price surprises
+      R012,2025-02-15,Enterprise,APAC,4,4,3,5,docs are confusing
+      R013,2025-03-13,SMB,EMEA,8,3,5,5,would recommend
+      R014,2025-03-18,SMB,AMER,4,3,3,1,needs better price tiers
+      R015,2025-03-13,Enterprise,AMER,6,5,1,1,missing integrations
+      R016,2025-03-13,Enterprise,EMEA,4,5,3,2,needs better price tiers
+      R017,2025-01-13,Enterprise,APAC,6,4,4,3,docs are confusing
+      R018,2025-02-04,Consumer,AMER,6,3,3,3,docs are confusing
+      R019,2025-03-20,SMB,APAC,10,4,4,4,would recommend
+      R020,2025-03-23,SMB,APAC,4,5,1,1,easy to use
+      R021,2025-03-19,Enterprise,AMER,6,4,2,5,price is too high
+      R022,2025-02-13,SMB,AMER,2,3,2,1,friendly support team
+      R023,2025-02-05,Enterprise,EMEA,8,5,3,1,love the dashboard
+      R024,2025-03-08,Consumer,EMEA,6,2,2,3,love the dashboard
+      R025,2025-01-17,SMB,APAC,3,2,1,5,docs are confusing
+      R026,2025-03-13,Enterprise,APAC,5,2,4,1,needs better price tiers
+      R027,2025-01-28,Enterprise,AMER,10,5,3,4,missing integrations
+      R028,2025-02-18,SMB,EMEA,3,3,3,3,needs better price tiers
+      R029,2025-03-02,SMB,AMER,10,1,4,1,needs better price tiers
+      R030,2025-01-09,Enterprise,EMEA,5,3,1,1,great onboarding
+      R031,2025-03-25,Consumer,AMER,7,4,4,3,easy to use
+      R032,2025-02-18,SMB,EMEA,6,2,1,3,price is too high
+      R033,2025-03-04,Enterprise,EMEA,7,2,1,1,needs better price tiers
+      R034,2025-03-19,Enterprise,APAC,10,5,3,4,love the dashboard
+      R035,2025-03-09,Consumer,APAC,8,1,2,2,docs are confusing
+      R036,2025-01-22,Consumer,AMER,6,3,2,2,billing price surprises
+      R037,2025-03-06,Consumer,APAC,9,3,4,3,support was slow
+      R038,2025-01-21,Consumer,APAC,8,3,1,5,billing price surprises
+      R039,2025-02-08,Enterprise,EMEA,5,2,1,3,billing price surprises
+      R040,2025-02-02,Enterprise,EMEA,6,5,4,1,love the dashboard
+      R041,2025-02-16,Enterprise,APAC,4,1,2,4,would recommend
+      R042,2025-03-01,Enterprise,APAC,3,2,5,4,docs are confusing
+      R043,2025-02-27,SMB,AMER,9,2,2,1,needs better price tiers
+      R044,2025-01-23,Consumer,EMEA,1,3,5,2,price is too high
+      R045,2025-02-13,Enterprise,AMER,10,5,5,1,easy to use
+      R046,2025-01-30,SMB,APAC,7,3,3,4,reliable and fast
+      R047,2025-01-17,Consumer,EMEA,1,2,1,4,friendly support team
+      R048,2025-03-23,Consumer,EMEA,9,3,5,3,missing integrations
+      R049,2025-03-03,Enterprise,AMER,4,2,5,1,docs are confusing
+      R050,2025-03-08,Consumer,APAC,2,5,4,3,friendly support team
+      R051,2025-02-10,Consumer,AMER,8,1,5,1,reliable and fast
+      R052,2025-03-23,Consumer,AMER,4,1,2,2,missing integrations
+      R053,2025-03-06,SMB,AMER,7,3,1,1,friendly support team
+      R054,2025-02-16,SMB,AMER,5,1,3,5,would recommend
+      R055,2025-03-05,Consumer,EMEA,2,5,2,4,missing integrations
+      R056,2025-03-17,Enterprise,EMEA,8,2,2,5,needs better price tiers
+      R057,2025-02-14,Consumer,AMER,5,2,2,2,billing price surprises
+      R058,2025-01-25,Enterprise,AMER,3,4,3,4,needs better price tiers
+      R059,2025-02-06,Consumer,EMEA,4,1,5,1,would recommend
+      R060,2025-02-05,Consumer,APAC,7,2,5,2,reliable and fast
+      R061,2025-02-20,Enterprise,APAC,4,4,5,3,friendly support team
+      R062,2025-01-29,SMB,AMER,6,5,3,1,price is too high
+      R063,2025-01-09,Enterprise,EMEA,9,1,5,1,price is too high
+      R064,2025-01-23,SMB,EMEA,2,2,1,5,docs are confusing
+      R065,2025-03-19,SMB,APAC,9,3,1,4,love the dashboard
+      R066,2025-03-17,SMB,APAC,6,2,2,1,reliable and fast
+      R067,2025-01-16,Enterprise,AMER,6,3,2,1,billing price surprises
+      R068,2025-02-05,SMB,EMEA,10,3,4,3,price is too high
+      R069,2025-03-16,SMB,AMER,8,3,3,1,great onboarding
+      R070,2025-02-27,Consumer,AMER,5,3,5,2,great onboarding
+      R071,2025-03-24,Consumer,EMEA,2,1,1,2,needs better price tiers
+      R072,2025-01-08,Consumer,APAC,2,5,2,1,missing integrations
+protected: [data/survey.csv]
+hidden_files:
+  _grade.py: |
+    import csv, json, os, re, subprocess, sys
+    from pathlib import Path
+
+    W = Path(".")
+
+
+    def fail(msg):
+        print("FAIL:", msg)
+        sys.exit(1)
+
+
+    def need(cond, msg):
+        if not cond:
+            fail(msg)
+
+
+    def load_json(rel):
+        p = W / rel
+        need(p.exists(), f"missing {rel}")
+        try:
+            return json.loads(p.read_text(encoding="utf-8"))
+        except Exception as e:  # noqa: BLE001
+            fail(f"{rel} is not valid JSON: {e}")
+
+
+    def read(rel):
+        p = W / rel
+        need(p.exists(), f"missing {rel}")
+        return p.read_text(encoding="utf-8")
+
+
+    def close(a, b, tol=0.011):
+        try:
+            return abs(float(a) - float(b)) <= tol
+        except (TypeError, ValueError):
+            return False
+
+
+    def md_rows(rel, under=None):
+        """Table rows (lists of cells) of a markdown file; with `under`, only rows inside the first heading matching it."""
+        lines = read(rel).splitlines()
+        if under:
+            out, on, lvl = [], False, 0
+            for ln in lines:
+                m = re.match(r"^(#+)\s+(.*)", ln)
+                if m:
+                    if on and len(m.group(1)) <= lvl:
+                        break
+                    if not on and re.search(under, m.group(2), re.I):
+                        on, lvl = True, len(m.group(1))
+                    continue
+                if on:
+                    out.append(ln)
+            lines = out
+        rows = []
+        for ln in lines:
+            if ln.strip().startswith("|") and not re.match(r"^\s*\|[\s:|-]+\|\s*$", ln):
+                rows.append([c.strip() for c in ln.strip().strip("|").split("|")])
+        return rows
+
+
+    def num(s):
+        m = re.search(r"-?\d[\d,]*\.?\d*", str(s))
+        return float(m.group(0).replace(",", "")) if m else None
+
+
+    def run(cmd, timeout=60):
+        p = subprocess.run(cmd, shell=True, cwd=W, capture_output=True, text=True, timeout=timeout)
+        return p.returncode, p.stdout, p.stderr
+
+    EXP = {'all': {'responses': 72, 'nps': -38.9, 'avg_ease': 3.12, 'avg_support': 2.94, 'avg_value': 2.71}, 'post': {'responses': 51, 'nps': -37.3, 'avg_ease': 2.98, 'avg_support': 3.06, 'avg_value': 2.47}, 'bs': {'Enterprise': {'responses': 25, 'promoters': 6, 'passives': 3, 'detractors': 16, 'nps': -40.0}, 'SMB': {'responses': 23, 'promoters': 6, 'passives': 5, 'detractors': 12, 'nps': -26.1}, 'Consumer': {'responses': 24, 'promoters': 2, 'passives': 8, 'detractors': 14, 'nps': -50.0}}, 'price': ['R001', 'R005', 'R008', 'R011', 'R014', 'R016', 'R021', 'R026', 'R028', 'R029', 'R032', 'R033', 'R036', 'R038', 'R039', 'R043', 'R044', 'R056', 'R057', 'R058', 'R062', 'R063', 'R067', 'R068', 'R071'], 'small': ['SMB', 16]}
+
+    def _kp(rel, e):
+        d = load_json(rel)
+        for k in ("responses", "nps", "avg_ease", "avg_support", "avg_value"): need(k in d and close(d[k], e[k], 0.011), f"{rel} {k}: {d.get(k)} != {e[k]}")
+    def t3(): _kp("out/kpis.json", EXP["all"])
+    def t10(): _kp("out/kpis_excl_pilot.json", EXP["post"])
+    def t5():
+        p = W / "out/nps_by_segment.csv"; need(p.exists(), "missing out/nps_by_segment.csv")
+        rd = list(csv.DictReader(open(p, encoding="utf-8"))); need(rd and list(rd[0]) == ["segment", "responses", "promoters", "passives", "detractors", "nps"], "bad header")
+        need([r["segment"] for r in rd] == sorted(EXP["bs"]), "segments must be sorted, one per row")
+        for r in rd:
+            e = EXP["bs"][r["segment"]]
+            need(all(int(r[k]) == e[k] for k in ("responses", "promoters", "passives", "detractors")) and close(r["nps"], e["nps"], 0.051), "bad row " + r["segment"])
+    def t7():
+        rows = md_rows("report.md", "results"); need(rows, "no table under Results")
+        got = {r[0].strip("* `"): num(r[1]) for r in rows if len(r) >= 2 and num(r[1]) is not None}
+        for g, e in EXP["bs"].items(): need(g in got and close(got[g], e["nps"], 0.051), f"{g}: {got.get(g)} != {e['nps']}")
+    def t9():
+        p = W / "out/price_comments.txt"; need(p.exists(), "missing out/price_comments.txt")
+        got = [l.strip() for l in p.read_text(encoding="utf-8").splitlines() if l.strip()]; need(got == EXP["price"], f"ids differ: {len(got)} vs {len(EXP['price'])}")
+    def t12():
+        txt = read("report.md"); need("2025-02-01" in txt and re.search(r"pilot|exclu", txt, re.I), "Method must mention the 2025-02-01 exclusion")
+        need(re.search('-(?<![\\d.,])37\\.30?(?!\\d)', txt), "new NPS missing"); need(re.search(r"(?<!\d)%d(?!\d)" % EXP["post"]["responses"], txt), "new response count missing")
+    def t13():
+        need((W / "scripts/survey_stats.py").exists(), "missing scripts/survey_stats.py")
+        for cmd, e in (("python3 scripts/survey_stats.py", EXP["all"]), ("python3 scripts/survey_stats.py --since 2025-02-01", EXP["post"])):
+            rc, out, err = run(cmd); need(rc == 0, "script failed: " + err[-200:]); d = json.loads(out)
+            for k in ("responses", "nps", "avg_ease", "avg_support", "avg_value"): need(close(d.get(k), e[k], 0.011), f"{cmd}: {k}")
+    def t15():
+        txt = read("report.md"); m = re.search(r"^#+\s*Limitations\s*\n(.*?)(?=^#|\Z)", txt, re.M | re.S | re.I); need(m, "no Limitations section")
+        b = m.group(1); s, n = EXP["small"]; need(re.search(s, b) and re.search(r"(?<!\d)%d(?!\d)" % n, b), "must name smallest segment and its count")
+        need(re.search(r"(?<!\d)%d(?!\d)" % EXP["post"]["responses"], b), "must state the remaining sample size")
+
+
+    if __name__ == "__main__":
+        fn = globals().get(sys.argv[1]) if len(sys.argv) > 1 else None
+        need(callable(fn), "unknown check " + str(sys.argv[1:]))
+        fn()
+        print("OK")
+turns:
+- prompt: Compute the overall Net Promoter Score from the nps column of data/survey.csv (promoters 9-10, detractors 0-6; NPS = %promoters - %detractors,
+    one decimal). Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: ['-(?<![\d.,])38\.90?(?!\d)']
+- prompt: What are the average ease, support and value scores across all responses (2 decimals each)? Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: ['(?<![\d.,])3\.12(?!\d)', '(?<![\d.,])2\.94(?!\d)', '(?<![\d.,])2\.71(?!\d)']
+- prompt: Write out/kpis.json with numeric keys responses, nps (1 decimal), avg_ease, avg_support and avg_value (2 decimals) over all rows.
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t3
+    hidden: [_grade.py]
+    timeout: 60
+- prompt: Which segment has the highest NPS and what is it (1 decimal)? Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: [SMB, '-(?<![\d.,])26\.10?(?!\d)']
+- prompt: Create out/nps_by_segment.csv with the header segment,responses,promoters,passives,detractors,nps and one row per segment sorted by
+    segment name (nps to 1 decimal).
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t5
+    hidden: [_grade.py]
+    timeout: 60
+- prompt: Create report.md with level-2 sections Overview, Method and Results.
+  checks:
+  - kind: doc_sections
+    path: report.md
+    headings: [Overview, Method, Results]
+- prompt: Under Results in report.md add a table of segment (first column) and NPS (second column) for each segment, matching out/nps_by_segment.csv.
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t7
+    hidden: [_grade.py]
+    timeout: 60
+- prompt: How many comments mention the word "price" (case-insensitive substring)? Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: ['(?<!\d)25(?!\d)']
+- prompt: Write out/price_comments.txt with the response_id of every comment that mentions "price", one per line, sorted ascending.
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t9
+    hidden: [_grade.py]
+    timeout: 60
+- prompt: 'The first weeks were a pilot: ignore every response dated before 2025-02-01. Write out/kpis_excl_pilot.json with the same keys as out/kpis.json
+    computed on the remaining rows.'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t10
+    hidden: [_grade.py]
+    timeout: 60
+- prompt: How many responses were dropped by that exclusion, and what is the overall NPS afterwards (1 decimal)? Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: ['(?<!\d)21(?!\d)', '-(?<![\d.,])37\.30?(?!\d)']
+- prompt: 'Update report.md: the Method section must mention the 2025-02-01 pilot cutoff, and the Results section must state the post-exclusion
+    NPS and response count.'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t12
+    hidden: [_grade.py]
+    timeout: 60
+- prompt: Create scripts/survey_stats.py reading data/survey.csv and printing the KPI JSON (responses, nps, avg_ease, avg_support, avg_value)
+    to stdout, with an optional `--since YYYY-MM-DD` argument that drops earlier rows. Run it both ways.
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t13
+    hidden: [_grade.py]
+    timeout: 60
+- prompt: Among Enterprise respondents only, which of the three scores (ease, support, value) has the highest average, and what is it (2 decimals)?
+    Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: [ease, '(?<![\d.,])3\.56(?!\d)']
+- prompt: Add a Limitations section to report.md that states the remaining sample size (after the pilot exclusion) and names the smallest segment
+    with its response count.
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t15
+    hidden: [_grade.py]
+    timeout: 60
+- prompt: Add a Usage section to README.md for scripts/survey_stats.py including the --since option.
+  checks:
+  - kind: doc_sections
+    path: README.md
+    headings: [Usage]
+  - {kind: file_regex, path: README.md, pattern: scripts/survey_stats\.py}
+  - {kind: file_regex, path: README.md, pattern: --since}

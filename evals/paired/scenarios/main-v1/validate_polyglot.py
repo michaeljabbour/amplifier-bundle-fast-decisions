@@ -104,7 +104,14 @@ def main():
     ap.add_argument("--only", default="")
     ap.add_argument("--jobs", type=int, default=3)
     ap.add_argument("--json", default=None)
+    ap.add_argument("--cap-gb", type=float, default=None, help="memory cap per grader run (default 4 GB; memguard)")
+    ap.add_argument("--grader-timeout", type=float, default=None, help="seconds per grader run (default 300; memguard)")
     a = ap.parse_args()
+    import os as _os  # memguard defaults (scripts/paired_scenarios.py sets 4 GB / 300 s); explicit flags win
+    if a.cap_gb is not None:
+        _os.environ["PAIRED_GRADER_CAP_GB"] = str(a.cap_gb)
+    if a.grader_timeout is not None:
+        _os.environ["PAIRED_GRADER_TIMEOUT_S"] = str(a.grader_timeout)
     only = {x for x in a.only.split(",") if x}
     files = [p for p in sorted(Path(a.dir).glob("*.yaml")) if not only or p.stem in only]
     tmp_ctx = tempfile.TemporaryDirectory(prefix="val-snap-") if not a.snapshots else None

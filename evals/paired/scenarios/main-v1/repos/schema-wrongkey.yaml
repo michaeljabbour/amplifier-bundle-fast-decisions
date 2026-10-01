@@ -1,0 +1,181 @@
+# main-v1 real-repo scenario (12 turns): keleshev/schema, a custom error= on a key schema was lost when the data key was reported as a wrong key (#345), fixed upstream in 15158c53; workspace is its parent
+# Workspace = parent of the upstream fix commit; hidden tests = the fix commit's tests (+ scenario-authored edge tests).
+id: schema-wrongkey
+task_type: bugfix
+language: python
+split: main
+source:
+  desc: >-
+    keleshev/schema, a custom error= on a key schema was lost when the data key was reported as a wrong
+    key (#345), fixed upstream in 15158c53; workspace is its parent
+  repo: https://github.com/keleshev/schema.git
+  sha: 27e268d4fc36a169b9a3296fe03d3b897fc0bf2f
+  fix_sha: 15158c5391eaacbc1e4813b3529ea035fd2cf03e
+workspace:
+  kind: git
+  repo: https://github.com/keleshev/schema.git
+  sha: 27e268d4fc36a169b9a3296fe03d3b897fc0bf2f
+  local_hint: ~/dev/afast-paired-src/schema
+hidden_files:
+  test_schema.py:
+    from_git:
+      repo: https://github.com/keleshev/schema.git
+      sha: 15158c5391eaacbc1e4813b3529ea035fd2cf03e
+      path: test_schema.py
+      local_hint: ~/dev/afast-paired-src/schema
+  test_wrong_key_optional_hidden.py: |
+    from pytest import raises
+
+    from schema import And, Optional, Regex, Schema, SchemaWrongKeyError
+
+
+    def test_optional_wrapped_regex_error_surfaces():
+        with raises(SchemaWrongKeyError) as exc:
+            Schema({Optional(Regex(r"^[A-Z]", error="must start upper")): int}).validate({"bar": 1})
+        assert exc.value.code == "must start upper"
+
+
+    def test_optional_wrapped_and_error_surfaces_with_valid_neighbour():
+        schema = Schema({Optional(And(str, str.isupper, error="must be upper")): int})
+        assert schema.validate({"FOO": 1}) == {"FOO": 1}
+        with raises(SchemaWrongKeyError) as exc:
+            schema.validate({"FOO": 1, "bar": 2})
+        assert exc.value.code == "must be upper"
+
+
+    def test_optional_without_custom_error_keeps_default():
+        with raises(SchemaWrongKeyError) as exc:
+            Schema({Optional(Regex(r"^[A-Z]")): int}).validate({"bar": 1})
+        assert exc.value.code == "Wrong key 'bar' in {'bar': 1}"
+
+
+    def test_optional_with_own_error_still_works():
+        with raises(SchemaWrongKeyError) as exc:
+            Schema({Optional(Regex(r"^[A-Z]"), error="optional says no"): int}).validate({"bar": 1})
+        assert exc.value.code == "optional says no"
+  test_wrong_keys_attr_hidden.py: |
+    from pytest import raises
+
+    from schema import Regex, Schema, SchemaWrongKeyError
+
+
+    def test_attribute_filled_and_sorted():
+        with raises(SchemaWrongKeyError) as exc:
+            Schema({"a": int}).validate({"a": 1, "z": 2, "b": 3})
+        assert exc.value.wrong_keys == ["b", "z"]
+
+
+    def test_mixed_key_types_sorted_by_repr():
+        with raises(SchemaWrongKeyError) as exc:
+            Schema({"a": int}).validate({"a": 1, 2: 1, "b": 2})
+        assert exc.value.wrong_keys == sorted([2, "b"], key=repr)
+
+
+    def test_manual_construction_defaults_to_empty():
+        err = SchemaWrongKeyError("msg")
+        assert err.wrong_keys == []
+        assert SchemaWrongKeyError("msg", None, wrong_keys=["x"]).wrong_keys == ["x"]
+
+
+    def test_code_unchanged_with_custom_error():
+        with raises(SchemaWrongKeyError) as exc:
+            Schema({Regex(r"^[A-Z]", error="custom"): int}).validate({"A": 1, "b": 2})
+        assert exc.value.code == "custom"
+        assert exc.value.wrong_keys == ["b"]
+
+
+    def test_default_code_unchanged():
+        with raises(SchemaWrongKeyError) as exc:
+            Schema({"a": int}).validate({"a": 1, "z": 2})
+        assert exc.value.code == "Wrong key 'z' in {'a': 1, 'z': 2}"
+turns:
+  - prompt: >-
+      I use a regex as a dict key schema with a custom message, e.g.
+      `Schema({Regex(r'^[A-Z][A-Za-z0-9]+$', error='Invalid profile name'): dict})`. Validating `{'Foo':
+      {}, 'bar': {}}` fails because of the key 'bar', but the error I get is the generic "Wrong key 'bar'
+      in {...}" and my 'Invalid profile name' never shows up. When no custom error is set the old message
+      must stay as it is, and it should work the same for `And(str, str.isupper, error='must be upper')`
+      key schemas. Please find the cause in schema/__init__.py and fix it. Run the tests from this
+      directory with `python3 -m pytest -q test_schema.py`.
+    checks:
+      - {kind: tests, runner: python, files: [test_schema.py], restore: [test_schema.py], hidden: [test_schema.py]}
+  - prompt: >-
+      In three to five sentences explain the root cause: where in `Schema.validate` the rejection of a
+      data key by a key schema is swallowed, and where the SchemaWrongKeyError is built afterwards without
+      knowing about it. Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [validate, except SchemaError, Wrong key|SchemaWrongKeyError], any: [pass|swallow|discard|ignore, custom|error]}
+  - prompt: >-
+      Add a regression test file `test_wrong_key_custom_error.py` (pytest style) with at least three test
+      functions: a Regex key schema with a custom error, the same Regex without a custom error (default
+      message must stay), and an And-based key schema with a custom error. Run it.
+    checks:
+      - {kind: file_regex, path: test_wrong_key_custom_error.py, pattern: ^\s*def test_, min_count: 3}
+      - {kind: tests, runner: python, files: [test_wrong_key_custom_error.py]}
+  - prompt: >-
+      The custom message is still lost when the key schema is wrapped in `Optional`:
+      `Schema({Optional(Regex(r'^[A-Z]', error='must start upper')): int}).validate({'bar': 1})` raises
+      the generic "Wrong key 'bar' in {'bar': 1}". An `Optional(...)` around a key schema that has its own
+      custom error should behave exactly like the unwrapped one. Please fix that (an Optional with no
+      custom error must keep the default message) and add a test to test_wrong_key_custom_error.py.
+    checks:
+      - {kind: tests, runner: python, files: [test_wrong_key_optional_hidden.py], restore: [test_schema.py], hidden: [test_wrong_key_optional_hidden.py]}
+      - {kind: tests, runner: python, files: [test_schema.py, test_wrong_key_optional_hidden.py], restore: [test_schema.py], hidden: [test_schema.py, test_wrong_key_optional_hidden.py]}
+      - {kind: file_regex, path: test_wrong_key_custom_error.py, pattern: Optional}
+  - prompt: >-
+      Quick question about the error classes: how does `SchemaError.code` decide which text to show when
+      both the automatic messages (autos) and the user supplied `error=` messages (errors) exist? Answer
+      from the code, and say how duplicates are handled. Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [code, errors, autos], any: [duplicate|uniq|seen, join|\\n|newline, None]}
+  - prompt: >-
+      CHANGELOG.md has an empty "Unreleased" section. Fill it with a `### Fixes` list (same bullet style
+      as the releases below) with two bullets: custom errors of key schemas are now reported for wrong
+      keys, and this includes keys wrapped in Optional.
+    checks:
+      - {kind: file_regex, path: CHANGELOG.md, pattern: Unreleased\n+### Fixes\n+\* .*(custom|key schema)}
+      - {kind: file_regex, path: CHANGELOG.md, pattern: Optional}
+  - prompt: >-
+      Small feature: let `SchemaWrongKeyError` carry the offending keys. Add a `wrong_keys` attribute (a
+      list, sorted by `repr` like the keys in the message) that `Schema.validate` fills when it raises
+      SchemaWrongKeyError, e.g. `['bar', 'baz']`. A SchemaWrongKeyError created by hand
+      (`SchemaWrongKeyError('msg')`) has `wrong_keys == []`, and an optional third constructor argument
+      `wrong_keys=None` sets it. Existing messages and `.code` must not change. Add tests to a new file
+      test_wrong_keys_attribute.py in the next step.
+    checks:
+      - {kind: tests, runner: python, files: [test_wrong_keys_attr_hidden.py], restore: [test_schema.py], hidden: [test_wrong_keys_attr_hidden.py]}
+      - {kind: tests, runner: python, files: [test_schema.py, test_wrong_key_optional_hidden.py, test_wrong_keys_attr_hidden.py], restore: [test_schema.py], hidden: [test_schema.py, test_wrong_key_optional_hidden.py, test_wrong_keys_attr_hidden.py]}
+      - {kind: file_regex, path: schema/__init__.py, pattern: wrong_keys, min_count: 4}
+  - prompt: >-
+      Add `test_wrong_keys_attribute.py` (pytest style) with at least three test functions for the new
+      `wrong_keys` attribute: filled and sorted on validation, empty for a hand-made error, and unchanged
+      `.code`. Run it.
+    checks:
+      - {kind: file_regex, path: test_wrong_keys_attribute.py, pattern: ^\s*def test_, min_count: 3}
+      - {kind: tests, runner: python, files: [test_wrong_keys_attribute.py]}
+  - prompt: >-
+      Small refactor, behaviour unchanged: in `Schema.validate`, move the list comprehension that collects
+      the remembered custom key errors for the wrong keys into a module-level helper
+      `_custom_key_errors(wrong_keys, key_errors)` (put it next to `_plural_s`) and call it from there.
+    checks:
+      - {kind: file_regex, path: schema/__init__.py, pattern: '^def _custom_key_errors\(wrong_keys, key_errors'}
+      - {kind: file_regex, path: schema/__init__.py, pattern: custom_errors = _custom_key_errors\(}
+      - {kind: tests, runner: python, files: [test_schema.py, test_wrong_key_optional_hidden.py, test_wrong_keys_attr_hidden.py], restore: [test_schema.py], hidden: [test_schema.py, test_wrong_key_optional_hidden.py, test_wrong_keys_attr_hidden.py]}
+  - prompt: >-
+      Replace the docstring of `SchemaWrongKeyError` with a proper one: what it signals, and that it
+      carries the offending keys in the `wrong_keys` attribute (sorted by repr).
+    checks:
+      - {kind: file_regex, path: schema/__init__.py, pattern: 'class SchemaWrongKeyError\(SchemaError\):\n\s+"""[^"]*wrong_keys'}
+      - {kind: tests, runner: python, files: [test_schema.py, test_wrong_key_optional_hidden.py, test_wrong_keys_attr_hidden.py], restore: [test_schema.py], hidden: [test_schema.py, test_wrong_key_optional_hidden.py, test_wrong_keys_attr_hidden.py]}
+  - prompt: >-
+      Add a short section at the end of README.rst titled `Custom errors for wrong keys` (reST heading
+      with a `-` underline) with a small example: a Regex key schema with `error=...` and how to read
+      `wrong_keys` from the caught SchemaWrongKeyError.
+    checks:
+      - {kind: file_regex, path: README.rst, pattern: '^Custom errors for wrong keys\n-{10,}'}
+      - {kind: file_regex, path: README.rst, pattern: wrong_keys}
+  - prompt: >-
+      Review the changes you made in this session as a code reviewer would: list each file you changed or
+      added, what changed, and any remaining edge case you did not cover. Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [__init__\.py, test, wrong_keys], any: [edge, risk, not cover, remaining]}

@@ -1,0 +1,296 @@
+# Support tickets CSV: workload table, weekly counts, forecast, SLA breaches and a staffing memo with exact values.
+id: support-workload
+task_type: mixed
+language: python
+split: main
+source:
+  desc: 'Support tickets CSV: workload table, weekly counts, forecast, SLA breaches and a staffing memo with exact values.'
+  kind: self-authored deterministic workspace
+  adapted_from: ['~/dev/amplifier-agent/.amplifier/evaluation/tasks/automation-bench/support-hiver-workload-forecast/meta.yaml (workload forecast;
+      body not vendored, authored from the title)']
+workspace:
+  kind: inline
+  files:
+    README.md: |
+      # Support desk export
+
+      `data/tickets.csv`: opened/closed are local timestamps (`YYYY-MM-DD HH:MM`); an empty `closed` means the ticket is still open. Open tickets count toward ticket totals but are excluded from resolution averages and SLA checks.
+      ISO weeks (Monday start) are used for weekly counts.
+    sla.md: |
+      # SLA
+
+      A closed ticket breaches the SLA when hours between opened and closed exceed the limit for its priority: high 8h, medium 24h, low 72h.
+    data/tickets.csv: |
+      ticket_id,opened,closed,agent,priority,channel
+      T0001,2025-02-19 13:41,2025-02-22 04:48,Mina,low,email
+      T0002,2025-02-27 10:55,2025-02-28 01:01,Tariq,low,email
+      T0003,2025-02-06 14:33,2025-02-06 18:14,Mina,high,email
+      T0004,2025-02-11 08:14,2025-02-11 16:32,Tariq,medium,email
+      T0005,2025-02-21 09:35,,Jonas,low,phone
+      T0006,2025-02-17 17:00,2025-02-20 02:26,Mina,low,phone
+      T0007,2025-02-28 16:45,2025-03-01 02:18,Hana,high,chat
+      T0008,2025-02-08 11:11,2025-02-09 07:41,Tariq,medium,chat
+      T0009,2025-02-05 11:49,2025-02-05 18:23,Jonas,high,email
+      T0010,2025-02-19 12:25,2025-02-19 20:03,Hana,high,phone
+      T0011,2025-02-07 15:36,2025-02-08 22:10,Lucia,low,email
+      T0012,2025-02-20 12:56,2025-02-21 19:09,Tariq,medium,chat
+      T0013,2025-02-06 16:47,2025-02-06 18:14,Lucia,high,phone
+      T0014,2025-02-09 10:25,2025-02-10 15:41,Jonas,medium,phone
+      T0015,2025-02-26 10:44,2025-02-28 23:55,Mina,low,email
+      T0016,2025-02-17 13:02,2025-02-18 09:48,Lucia,medium,phone
+      T0017,2025-02-25 16:39,2025-02-28 23:41,Mina,low,chat
+      T0018,2025-02-21 12:11,2025-02-24 19:36,Mina,low,chat
+      T0019,2025-02-17 11:18,2025-02-18 11:57,Hana,medium,email
+      T0020,2025-02-23 14:36,2025-02-24 04:59,Lucia,medium,chat
+      T0021,2025-03-01 16:39,2025-03-02 01:21,Hana,medium,email
+      T0022,2025-02-23 15:08,2025-02-23 22:37,Tariq,medium,chat
+      T0023,2025-02-16 12:10,2025-02-19 15:36,Jonas,low,email
+      T0024,2025-02-23 12:04,2025-02-24 06:20,Hana,medium,chat
+      T0025,2025-02-13 10:48,2025-02-14 03:10,Hana,medium,email
+      T0026,2025-02-08 10:33,2025-02-08 15:31,Mina,high,email
+      T0027,2025-02-03 15:04,2025-02-06 14:52,Jonas,low,chat
+      T0028,2025-02-14 08:01,2025-02-14 19:21,Tariq,high,email
+      T0029,2025-02-07 13:34,2025-02-10 04:29,Hana,low,chat
+      T0030,2025-02-13 10:49,2025-02-14 17:34,Tariq,medium,email
+      T0031,2025-02-16 15:36,2025-02-18 04:20,Lucia,low,email
+      T0032,2025-02-10 08:42,2025-02-11 12:14,Tariq,medium,phone
+      T0033,2025-03-01 11:17,2025-03-01 18:16,Mina,high,phone
+      T0034,2025-02-10 08:48,2025-02-11 03:14,Jonas,medium,phone
+      T0035,2025-02-15 12:40,2025-02-17 23:24,Mina,low,phone
+      T0036,2025-02-27 16:54,2025-03-02 00:53,Tariq,low,phone
+      T0037,2025-02-21 12:46,2025-02-24 04:35,Hana,low,phone
+      T0038,2025-02-05 08:39,2025-02-05 20:00,Tariq,high,email
+      T0039,2025-02-24 08:15,2025-02-25 07:56,Lucia,medium,email
+      T0040,2025-02-16 13:57,2025-02-17 11:50,Lucia,medium,phone
+      T0041,2025-02-09 12:24,2025-02-09 19:35,Jonas,medium,email
+      T0042,2025-02-22 08:26,2025-02-22 12:38,Hana,high,email
+      T0043,2025-02-03 16:41,2025-02-03 21:38,Jonas,medium,chat
+      T0044,2025-02-15 13:33,2025-02-15 23:41,Tariq,high,email
+      T0045,2025-03-02 13:29,2025-03-04 19:24,Jonas,low,chat
+      T0046,2025-02-27 10:16,2025-03-02 16:59,Jonas,low,chat
+      T0047,2025-02-20 08:14,2025-02-21 01:15,Mina,medium,phone
+      T0048,2025-02-12 15:09,,Hana,low,phone
+      T0049,2025-02-20 12:47,2025-02-21 16:46,Tariq,medium,email
+      T0050,2025-02-06 13:42,2025-02-07 06:31,Lucia,low,chat
+      T0051,2025-02-15 11:48,2025-02-15 13:16,Lucia,high,phone
+      T0052,2025-02-09 11:11,2025-02-12 06:53,Mina,low,chat
+      T0053,2025-02-13 08:31,2025-02-14 22:12,Tariq,low,phone
+      T0054,2025-02-14 14:20,2025-02-14 20:25,Tariq,high,email
+      T0055,2025-02-15 12:56,2025-02-16 11:54,Mina,medium,chat
+      T0056,2025-02-16 09:42,2025-02-16 15:52,Hana,high,email
+      T0057,2025-02-03 12:39,2025-02-05 01:08,Tariq,low,phone
+      T0058,2025-02-09 16:39,2025-02-10 02:03,Hana,medium,phone
+      T0059,2025-02-28 13:53,2025-03-01 15:00,Lucia,medium,email
+      T0060,2025-02-20 09:36,2025-02-22 21:54,Jonas,low,chat
+      T0061,2025-02-10 11:26,2025-02-11 03:13,Lucia,medium,chat
+      T0062,2025-03-02 09:40,2025-03-03 06:10,Jonas,medium,phone
+      T0063,2025-02-25 13:43,2025-02-25 20:18,Jonas,high,chat
+      T0064,2025-02-06 11:46,2025-02-09 00:44,Jonas,low,phone
+      T0065,2025-02-08 14:08,2025-02-10 22:35,Tariq,low,email
+      T0066,2025-02-22 12:51,2025-02-22 15:54,Hana,high,chat
+      T0067,2025-02-28 13:33,2025-03-01 00:20,Mina,high,phone
+      T0068,2025-02-05 10:19,2025-02-07 00:26,Jonas,low,phone
+      T0069,2025-02-13 10:29,2025-02-16 13:10,Lucia,low,chat
+      T0070,2025-02-21 08:37,2025-02-22 04:23,Tariq,medium,phone
+      T0071,2025-02-28 10:20,2025-03-01 17:44,Tariq,low,phone
+      T0072,2025-02-21 12:54,2025-02-22 07:01,Jonas,medium,email
+      T0073,2025-02-21 11:43,2025-02-24 19:23,Jonas,low,phone
+      T0074,2025-02-13 13:52,2025-02-14 06:26,Tariq,medium,chat
+      T0075,2025-02-21 12:00,2025-02-24 20:29,Mina,low,phone
+      T0076,2025-02-04 16:05,2025-02-05 05:36,Mina,medium,chat
+      T0077,2025-02-21 15:07,2025-02-22 11:20,Tariq,low,phone
+      T0078,2025-02-20 14:05,2025-02-23 00:24,Jonas,low,phone
+      T0079,2025-02-27 10:20,2025-03-01 22:08,Hana,low,email
+      T0080,2025-02-24 08:59,2025-02-25 07:42,Mina,medium,phone
+      T0081,2025-02-05 10:10,2025-02-05 18:41,Hana,high,email
+      T0082,2025-02-28 10:15,2025-03-01 10:57,Jonas,medium,email
+      T0083,2025-02-25 12:15,2025-02-25 19:24,Lucia,high,chat
+      T0084,2025-02-15 08:06,2025-02-16 07:52,Hana,low,chat
+      T0085,2025-02-25 12:52,2025-02-27 07:32,Tariq,low,phone
+      T0086,2025-02-20 14:53,2025-02-21 00:58,Tariq,medium,phone
+      T0087,2025-02-06 11:18,2025-02-07 01:23,Mina,low,email
+      T0088,2025-02-23 08:36,2025-02-24 19:09,Lucia,low,phone
+      T0089,2025-02-14 17:00,,Lucia,high,chat
+      T0090,2025-02-13 11:14,2025-02-15 10:08,Mina,low,phone
+      T0091,2025-02-14 10:12,2025-02-16 10:35,Hana,low,chat
+      T0092,2025-02-26 09:37,2025-02-26 17:42,Tariq,high,phone
+      T0093,2025-02-15 16:19,2025-02-16 13:06,Jonas,medium,chat
+      T0094,2025-02-17 08:00,2025-02-20 06:56,Lucia,low,email
+      T0095,2025-02-12 14:50,2025-02-13 18:46,Jonas,medium,email
+      T0096,2025-02-10 09:37,2025-02-12 02:00,Tariq,low,phone
+      T0097,2025-02-12 09:21,2025-02-14 09:43,Mina,low,chat
+      T0098,2025-02-08 14:11,2025-02-09 02:11,Mina,medium,phone
+      T0099,2025-02-24 10:32,2025-02-27 06:54,Hana,low,phone
+      T0100,2025-02-10 09:18,2025-02-11 11:09,Lucia,low,chat
+      T0101,2025-02-06 10:40,2025-02-07 12:24,Jonas,low,email
+      T0102,2025-02-23 10:07,,Lucia,low,email
+      T0103,2025-02-26 08:19,2025-02-27 13:19,Lucia,medium,phone
+      T0104,2025-03-02 15:04,2025-03-05 05:08,Jonas,low,chat
+      T0105,2025-02-28 09:05,2025-02-28 18:21,Jonas,high,email
+      T0106,2025-02-27 08:06,2025-02-28 06:56,Tariq,medium,phone
+      T0107,2025-02-18 12:36,2025-02-18 23:01,Hana,medium,chat
+      T0108,2025-02-26 11:44,2025-02-27 18:13,Tariq,medium,chat
+      T0109,2025-02-23 09:03,2025-02-24 09:41,Lucia,medium,chat
+      T0110,2025-02-28 15:26,2025-03-01 10:57,Mina,medium,email
+      T0111,2025-02-16 10:04,2025-02-16 23:47,Mina,medium,email
+      T0112,2025-02-03 13:24,2025-02-05 13:24,Tariq,low,chat
+      T0113,2025-02-12 13:57,2025-02-15 09:57,Hana,low,phone
+      T0114,2025-02-20 13:54,2025-02-21 11:28,Lucia,low,chat
+      T0115,2025-02-23 15:45,2025-02-25 23:26,Lucia,low,phone
+      T0116,2025-02-15 16:37,,Tariq,low,phone
+      T0117,2025-02-09 11:59,2025-02-12 12:03,Lucia,low,chat
+      T0118,2025-02-21 11:53,2025-02-21 17:03,Hana,high,chat
+      T0119,2025-02-03 14:51,2025-02-05 00:23,Hana,low,phone
+      T0120,2025-02-25 14:07,2025-02-25 21:41,Lucia,high,phone
+protected: [data/tickets.csv, sla.md]
+hidden_files:
+  _grade.py: |
+    import csv, json, os, re, subprocess, sys
+    from pathlib import Path
+
+    W = Path(".")
+
+
+    def fail(msg):
+        print("FAIL:", msg)
+        sys.exit(1)
+
+
+    def need(cond, msg):
+        if not cond:
+            fail(msg)
+
+
+    def load_json(rel):
+        p = W / rel
+        need(p.exists(), f"missing {rel}")
+        try:
+            return json.loads(p.read_text(encoding="utf-8"))
+        except Exception as e:  # noqa: BLE001
+            fail(f"{rel} is not valid JSON: {e}")
+
+
+    def read(rel):
+        p = W / rel
+        need(p.exists(), f"missing {rel}")
+        return p.read_text(encoding="utf-8")
+
+
+    def close(a, b, tol=0.011):
+        try:
+            return abs(float(a) - float(b)) <= tol
+        except (TypeError, ValueError):
+            return False
+
+
+    def md_rows(rel, under=None):
+        """Table rows (lists of cells) of a markdown file; with `under`, only rows inside the first heading matching it."""
+        lines = read(rel).splitlines()
+        if under:
+            out, on, lvl = [], False, 0
+            for ln in lines:
+                m = re.match(r"^(#+)\s+(.*)", ln)
+                if m:
+                    if on and len(m.group(1)) <= lvl:
+                        break
+                    if not on and re.search(under, m.group(2), re.I):
+                        on, lvl = True, len(m.group(1))
+                    continue
+                if on:
+                    out.append(ln)
+            lines = out
+        rows = []
+        for ln in lines:
+            if ln.strip().startswith("|") and not re.match(r"^\s*\|[\s:|-]+\|\s*$", ln):
+                rows.append([c.strip() for c in ln.strip().strip("|").split("|")])
+        return rows
+
+
+    def num(s):
+        m = re.search(r"-?\d[\d,]*\.?\d*", str(s))
+        return float(m.group(0).replace(",", "")) if m else None
+
+
+    def run(cmd, timeout=60):
+        p = subprocess.run(cmd, shell=True, cwd=W, capture_output=True, text=True, timeout=timeout)
+        return p.returncode, p.stdout, p.stderr
+
+    EXP = {'wl': {'Mina': (22, 36.6), 'Jonas': (24, 37.4), 'Lucia': (24, 28.7), 'Tariq': (28, 25.3), 'Hana': (22, 26.7)}, 'wk': {'2025-W08': 32, '2025-W09': 29, '2025-W06': 27, '2025-W07': 32}, 'fc': 31.0, 'br': {'T0007': (9.6, 8, 'high'), 'T0012': (30.2, 24, 'medium'), 'T0014': (29.3, 24, 'medium'), 'T0017': (79.0, 72, 'low'), 'T0018': (79.4, 72, 'low'), 'T0019': (24.6, 24, 'medium'), 'T0023': (75.4, 72, 'low'), 'T0028': (11.3, 8, 'high'), 'T0030': (30.8, 24, 'medium'), 'T0032': (27.5, 24, 'medium'), 'T0038': (11.3, 8, 'high'), 'T0044': (10.1, 8, 'high'), 'T0046': (78.7, 72, 'low'), 'T0049': (28.0, 24, 'medium'), 'T0059': (25.1, 24, 'medium'), 'T0067': (10.8, 8, 'high'), 'T0069': (74.7, 72, 'low'), 'T0073': (79.7, 72, 'low'), 'T0075': (80.5, 72, 'low'), 'T0081': (8.5, 8, 'high'), 'T0082': (24.7, 24, 'medium'), 'T0092': (8.1, 8, 'high'), 'T0095': (27.9, 24, 'medium'), 'T0103': (29.0, 24, 'medium'), 'T0105': (9.3, 8, 'high'), 'T0108': (30.5, 24, 'medium'), 'T0109': (24.6, 24, 'medium'), 'T0117': (72.1, 72, 'low')}}
+
+    def t2():
+        p = W / "out/workload.csv"; need(p.exists(), "missing out/workload.csv")
+        rd = list(csv.DictReader(open(p, encoding="utf-8"))); need(rd and list(rd[0]) == ["agent", "tickets", "avg_resolution_hours"], "bad header")
+        need(sorted(r["agent"] for r in rd) == sorted(EXP["wl"]), "agents differ")
+        for r in rd:
+            t, a = EXP["wl"][r["agent"]]; need(int(r["tickets"]) == t and close(r["avg_resolution_hours"], a, 0.051), "bad row " + r["agent"])
+    def t4():
+        d = load_json("out/weekly.json"); need(d == EXP["wk"], f"weekly counts differ: {d}")
+    def t5():
+        d = load_json("out/forecast.json"); need(d.get("week") == "2025-W10", "week must be 2025-W10")
+        need(close(d.get("forecast_tickets"), EXP["fc"], 0.051), f"forecast {d.get('forecast_tickets')} != {EXP['fc']}")
+    def t7():
+        p = W / "out/sla_breaches.csv"; need(p.exists(), "missing out/sla_breaches.csv")
+        rd = list(csv.DictReader(open(p, encoding="utf-8"))); need(rd and list(rd[0]) == ["ticket_id", "priority", "hours_to_close", "limit_hours"], "bad header")
+        need(sorted(r["ticket_id"] for r in rd) == sorted(EXP["br"]), "breach set differs")
+        for r in rd:
+            h, l, p_ = EXP["br"][r["ticket_id"]]; need(close(r["hours_to_close"], h, 0.051) and int(r["limit_hours"]) == l and r["priority"] == p_, "bad row " + r["ticket_id"])
+
+
+    if __name__ == "__main__":
+        fn = globals().get(sys.argv[1]) if len(sys.argv) > 1 else None
+        need(callable(fn), "unknown check " + str(sys.argv[1:]))
+        fn()
+        print("OK")
+turns:
+- prompt: How many tickets did each agent handle in data/tickets.csv, and who handled the most? Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: [Tariq, 'Tariq\D{0,12}28(?!\d)|28\D{0,12}Tariq']
+- prompt: 'Write out/workload.csv with the header agent,tickets,avg_resolution_hours: one row per agent (sorted by agent name), total tickets
+    and the average hours from opened to closed (1 decimal) over that agent''s closed tickets only.'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t2
+    hidden: [_grade.py]
+    timeout: 60
+- prompt: Which weekday had the most tickets opened, and how many? Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: [Thursday, '(?<!\d)24(?!\d)']
+- prompt: Create out/weekly.json mapping each ISO week label like "2025-W06" (by opened date) to the number of tickets opened in that week.
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t4
+    hidden: [_grade.py]
+    timeout: 60
+- prompt: 'Forecast the next week: write out/forecast.json with keys week ("2025-W10"), forecast_tickets (the mean of the last three weeks in
+    out/weekly.json, rounded to 1 decimal) and method (a short string).'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t5
+    hidden: [_grade.py]
+    timeout: 60
+- prompt: Using sla.md, how many closed tickets breached their SLA, and which agent has the most breaches? Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: [Tariq, '(?<!\d)28(?!\d)']
+- prompt: Write out/sla_breaches.csv with the header ticket_id,priority,hours_to_close,limit_hours (hours_to_close to 1 decimal), one row per
+    breaching closed ticket.
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t7
+    hidden: [_grade.py]
+    timeout: 60
+- prompt: Write staffing.md with level-2 sections Findings, Forecast and Recommendation. Findings must name the busiest weekday and the agent
+    with the most SLA breaches; Forecast must state the forecast figure from out/forecast.json.
+  checks:
+  - kind: doc_sections
+    path: staffing.md
+    headings: [Findings, Forecast, Recommendation]
+  - {kind: file_regex, path: staffing.md, pattern: Thursday}
+  - {kind: file_regex, path: staffing.md, pattern: Tariq}
+  - {kind: file_regex, path: staffing.md, pattern: '(?<![\d.,])31(?:\.0+)?(?!\d)'}

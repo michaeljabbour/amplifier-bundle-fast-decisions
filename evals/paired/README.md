@@ -13,6 +13,31 @@ and are verified by tree hash on every use (frozen; never edited). The python-sl
 https://github.com/un33k/python-slugify.git at `c442cd4cb61763c85b078d6ea83b5959c3ff364a` (parent of upstream fix
 `8f9a550a906701412c8fc93e731582098f2caee2`); rebuilding from the network alone gives an identical tree hash.
 
+## Memory safety (read before running anything)
+
+On 2026-10-01 an unguarded Go test binary (`dominoes.test`) grew to 120-470 GB and drove a 128 GB Mac out of memory four
+times (it also killed the Forge daemon mid-pilot). Nothing that executes scenario code may run unguarded now.
+
+* `scripts/memguard.py`: library + CLI (`python3 scripts/memguard.py run --cap-gb N --timeout S [--cwd D] -- cmd ...`).
+  Own process group; whole-tree RSS (group + descendants, setsid escapees included) polled every 0.25 s; SIGTERM, then
+  SIGKILL after 2 s, on cap / timeout / system-available-memory floor (default min(24 GB, 20% RAM)). Prints one JSON line
+  `{killed: memory|timeout|system_floor|null, peak_rss_gb, wall_s, returncode}`; exit 137 (memory/floor), 124 (timeout).
+  Also sets GOMEMLIMIT, GOFLAGS=-p=2, CARGO_BUILD_JOBS=2, NODE_OPTIONS=--max-old-space-size (and Linux RLIMIT_AS, loose).
+* Graders and hidden tests (`paired_scenarios._check_tests`, every `polyglot_tasks` runner, hence all four `validate_*.py`
+  validators) run under it: 4 GB, 300 s (env `PAIRED_GRADER_CAP_GB`, `PAIRED_GRADER_TIMEOUT_S`; validators take
+  `--cap-gb` / `--grader-timeout`). A memory kill is a failed check labelled `resource_limit`, never an infra failure.
+  At most 3 guarded runs execute at once per process (`MEMGUARD_MAX_CONCURRENT`).
+* `paired.py run`: refuses to start when system available memory < max(32 GB, 25% RAM) and prints the top consumers;
+  a watchdog thread (1 s) finds every process whose cwd is inside the campaign root, groups them per session workspace,
+  and (a) kills a session's agent tree above 8 GB (`--session-cap-gb`) - never the Forge worker, so the turn fails and the
+  session is kept with `killed_memory.json` -> rows get `killed_memory=true`, `cost_valid=false`; (b) pauses launching
+  waves below the pause floor (`--pause-floor-gb`); (c) below 16 GB (`--hard-floor-gb`) kills the newest session trees,
+  one per second, until above the floor. `--max-system-use-gb N` caps the campaign's total RSS the same way.
+  Default `--parallel` is 4 (the plain-sonnet control gets its own wave when a wave would not fit); a wave larger than
+  `--parallel` is refused, not deadlocked.
+* Agent sessions run with GOMEMLIMIT=4GiB, GOFLAGS=-p=2, CARGO_BUILD_JOBS=2, NODE_OPTIONS=--max-old-space-size=4096, the
+  same for every arm (no bias). Limits cannot see processes that leave the campaign root AND the parent chain.
+
 ## Provider isolation (why sessions do not use your global provider list)
 
 The Amplifier CLI validates every provider in `~/.amplifier/settings.yaml` at session start (`GOOGLE_API_KEY` for

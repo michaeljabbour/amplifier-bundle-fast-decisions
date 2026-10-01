@@ -1,0 +1,692 @@
+# Web server log around a bad deploy: answer incident questions, produce exact per-minute/endpoint tables, write a postmortem.
+id: log-incident
+task_type: mixed
+language: python
+split: main
+source:
+  desc: 'Web server log around a bad deploy: answer incident questions, produce exact per-minute/endpoint tables, write a postmortem.'
+  kind: self-authored deterministic workspace
+  adapted_from: [~/dev/amplifier-agent/.amplifier/evaluation/tasks/custom/session-recall/task.yaml (answer exact figures from local artefacts
+      for a review meeting) -- log data authored fresh]
+workspace:
+  kind: inline
+  files:
+    README.md: |
+      # Incident 2025-03-14
+
+      `logs/server.log` has one line per request: `<UTC timestamp> <LEVEL> <host> GET <path> <status> <latency>ms`, plus deploy/rollback marker lines. A 5xx is any status from 500 to 599.
+    logs/server.log: |
+      2025-03-14T10:00:02Z INFO web-2 GET /health 200 148ms
+      2025-03-14T10:00:05Z INFO web-1 GET /health 200 31ms
+      2025-03-14T10:00:07Z INFO web-1 GET /api/cart 200 170ms
+      2025-03-14T10:00:09Z INFO web-3 GET /api/search 200 158ms
+      2025-03-14T10:00:10Z INFO web-1 GET /health 200 162ms
+      2025-03-14T10:00:13Z INFO web-3 GET /api/search 200 104ms
+      2025-03-14T10:00:14Z INFO web-1 GET /health 200 73ms
+      2025-03-14T10:00:16Z INFO web-1 GET /api/orders 200 211ms
+      2025-03-14T10:00:18Z INFO web-2 GET /health 200 143ms
+      2025-03-14T10:00:21Z INFO web-2 GET /api/search 200 195ms
+      2025-03-14T10:00:22Z INFO web-3 GET /api/search 200 127ms
+      2025-03-14T10:00:25Z INFO web-3 GET /api/orders 200 207ms
+      2025-03-14T10:00:27Z INFO web-3 GET /api/users 200 61ms
+      2025-03-14T10:00:29Z INFO web-3 GET /api/orders 200 228ms
+      2025-03-14T10:00:30Z INFO web-1 GET /api/cart 200 55ms
+      2025-03-14T10:00:32Z INFO web-1 GET /api/orders 200 191ms
+      2025-03-14T10:00:33Z INFO web-2 GET /api/search 200 26ms
+      2025-03-14T10:00:34Z INFO web-3 GET /api/cart 200 234ms
+      2025-03-14T10:00:37Z INFO web-1 GET /health 200 230ms
+      2025-03-14T10:00:40Z INFO web-3 GET /api/orders 200 118ms
+      2025-03-14T10:00:41Z INFO web-2 GET /api/orders 200 74ms
+      2025-03-14T10:00:42Z INFO web-1 GET /api/cart 200 192ms
+      2025-03-14T10:00:44Z INFO web-3 GET /api/cart 200 51ms
+      2025-03-14T10:00:45Z INFO web-2 GET /health 200 198ms
+      2025-03-14T10:00:47Z INFO web-2 GET /api/search 200 59ms
+      2025-03-14T10:00:50Z INFO web-1 GET /health 200 145ms
+      2025-03-14T10:00:53Z INFO web-3 GET /api/orders 200 23ms
+      2025-03-14T10:00:54Z INFO web-3 GET /api/orders 200 145ms
+      2025-03-14T10:00:56Z INFO web-2 GET /api/cart 200 107ms
+      2025-03-14T10:00:59Z INFO web-2 GET /api/search 200 51ms
+      2025-03-14T10:01:00Z INFO web-3 GET /api/users 200 153ms
+      2025-03-14T10:01:03Z INFO web-2 GET /api/users 200 31ms
+      2025-03-14T10:01:04Z INFO web-1 GET /api/users 200 184ms
+      2025-03-14T10:01:05Z INFO web-1 GET /api/search 404 89ms
+      2025-03-14T10:01:08Z INFO web-2 GET /api/search 200 85ms
+      2025-03-14T10:01:10Z INFO web-3 GET /health 200 211ms
+      2025-03-14T10:01:11Z INFO web-1 GET /api/cart 200 122ms
+      2025-03-14T10:01:12Z INFO web-3 GET /api/cart 200 90ms
+      2025-03-14T10:01:15Z INFO web-2 GET /api/cart 200 173ms
+      2025-03-14T10:01:16Z INFO web-3 GET /health 200 164ms
+      2025-03-14T10:01:17Z INFO web-1 GET /api/orders 200 188ms
+      2025-03-14T10:01:20Z INFO web-3 GET /api/cart 200 177ms
+      2025-03-14T10:01:21Z INFO web-1 GET /api/cart 200 77ms
+      2025-03-14T10:01:22Z INFO web-1 GET /api/cart 200 97ms
+      2025-03-14T10:01:25Z INFO web-1 GET /api/orders 200 122ms
+      2025-03-14T10:01:27Z INFO web-1 GET /api/users 200 107ms
+      2025-03-14T10:01:29Z INFO web-3 GET /health 200 59ms
+      2025-03-14T10:01:31Z INFO web-1 GET /api/orders 200 52ms
+      2025-03-14T10:01:32Z INFO web-2 GET /api/orders 200 228ms
+      2025-03-14T10:01:35Z INFO web-2 GET /api/orders 200 220ms
+      2025-03-14T10:01:36Z INFO web-2 GET /api/cart 200 116ms
+      2025-03-14T10:01:37Z INFO web-1 GET /api/cart 200 180ms
+      2025-03-14T10:01:40Z INFO web-3 GET /health 200 58ms
+      2025-03-14T10:01:42Z INFO web-3 GET /api/orders 200 155ms
+      2025-03-14T10:01:45Z INFO web-2 GET /api/search 200 45ms
+      2025-03-14T10:01:47Z INFO web-3 GET /api/users 200 151ms
+      2025-03-14T10:01:48Z INFO web-2 GET /api/cart 200 200ms
+      2025-03-14T10:01:49Z INFO web-1 GET /api/users 200 154ms
+      2025-03-14T10:01:52Z INFO web-3 GET /api/users 200 147ms
+      2025-03-14T10:01:54Z INFO web-3 GET /api/cart 200 135ms
+      2025-03-14T10:01:57Z INFO web-1 GET /api/users 200 129ms
+      2025-03-14T10:01:59Z INFO web-1 GET /health 200 180ms
+      2025-03-14T10:02:00Z INFO web-2 GET /api/cart 200 55ms
+      2025-03-14T10:02:03Z INFO web-1 GET /api/orders 200 173ms
+      2025-03-14T10:02:04Z INFO web-2 GET /api/orders 200 70ms
+      2025-03-14T10:02:07Z INFO web-3 GET /api/search 200 123ms
+      2025-03-14T10:02:10Z INFO web-2 GET /health 200 233ms
+      2025-03-14T10:02:13Z INFO web-3 GET /api/search 200 43ms
+      2025-03-14T10:02:15Z INFO web-3 GET /api/search 200 131ms
+      2025-03-14T10:02:17Z INFO web-2 GET /api/users 200 192ms
+      2025-03-14T10:02:20Z INFO web-2 GET /health 200 169ms
+      2025-03-14T10:02:21Z INFO web-2 GET /api/cart 200 217ms
+      2025-03-14T10:02:23Z INFO web-1 GET /api/orders 200 146ms
+      2025-03-14T10:02:24Z INFO web-3 GET /api/orders 404 196ms
+      2025-03-14T10:02:27Z INFO web-2 GET /api/search 200 221ms
+      2025-03-14T10:02:28Z INFO web-1 GET /api/users 200 171ms
+      2025-03-14T10:02:30Z INFO web-3 GET /api/cart 200 118ms
+      2025-03-14T10:02:31Z INFO web-1 GET /api/cart 200 92ms
+      2025-03-14T10:02:34Z INFO web-2 GET /api/cart 200 66ms
+      2025-03-14T10:02:35Z INFO web-1 GET /api/users 200 186ms
+      2025-03-14T10:02:37Z INFO web-2 GET /api/cart 200 214ms
+      2025-03-14T10:02:39Z INFO web-3 GET /health 200 25ms
+      2025-03-14T10:02:40Z INFO web-1 GET /api/cart 200 92ms
+      2025-03-14T10:02:42Z INFO web-3 GET /api/search 200 186ms
+      2025-03-14T10:02:45Z INFO web-3 GET /api/cart 200 168ms
+      2025-03-14T10:02:48Z INFO web-3 GET /api/search 200 87ms
+      2025-03-14T10:02:51Z INFO web-2 GET /api/search 200 31ms
+      2025-03-14T10:02:54Z INFO web-1 GET /api/users 200 60ms
+      2025-03-14T10:02:56Z INFO web-2 GET /health 200 112ms
+      2025-03-14T10:02:58Z INFO web-2 GET /api/cart 200 215ms
+      2025-03-14T10:03:00Z INFO web-3 GET /api/orders 200 68ms
+      2025-03-14T10:03:01Z INFO web-3 GET /api/search 200 212ms
+      2025-03-14T10:03:04Z INFO web-3 GET /api/users 200 136ms
+      2025-03-14T10:03:07Z INFO web-3 GET /api/cart 200 115ms
+      2025-03-14T10:03:10Z INFO web-2 GET /api/users 200 235ms
+      2025-03-14T10:03:11Z INFO web-3 GET /api/orders 200 94ms
+      2025-03-14T10:03:12Z INFO web-2 GET /api/users 200 32ms
+      2025-03-14T10:03:15Z INFO web-2 GET /api/search 200 65ms
+      2025-03-14T10:03:16Z INFO web-2 GET /api/users 200 151ms
+      2025-03-14T10:03:17Z INFO web-3 GET /api/search 200 209ms
+      2025-03-14T10:03:20Z INFO web-2 GET /api/users 200 158ms
+      2025-03-14T10:03:23Z INFO web-1 GET /api/users 200 223ms
+      2025-03-14T10:03:24Z INFO web-1 GET /api/orders 200 135ms
+      2025-03-14T10:03:26Z INFO web-2 GET /api/orders 200 165ms
+      2025-03-14T10:03:29Z INFO web-2 GET /api/cart 404 105ms
+      2025-03-14T10:03:32Z INFO web-2 GET /api/cart 404 109ms
+      2025-03-14T10:03:33Z INFO web-3 GET /api/users 200 176ms
+      2025-03-14T10:03:34Z INFO web-2 GET /api/orders 200 155ms
+      2025-03-14T10:03:35Z INFO web-2 GET /health 200 145ms
+      2025-03-14T10:03:37Z INFO web-1 GET /api/search 200 89ms
+      2025-03-14T10:03:40Z INFO web-1 GET /api/cart 200 28ms
+      2025-03-14T10:03:43Z INFO web-2 GET /api/search 200 188ms
+      2025-03-14T10:03:45Z INFO web-3 GET /api/users 200 80ms
+      2025-03-14T10:03:46Z INFO web-1 GET /api/orders 200 120ms
+      2025-03-14T10:03:48Z INFO web-3 GET /api/cart 200 103ms
+      2025-03-14T10:03:50Z INFO web-2 GET /api/orders 200 66ms
+      2025-03-14T10:03:51Z INFO web-1 GET /health 200 52ms
+      2025-03-14T10:03:52Z INFO web-3 GET /api/search 200 205ms
+      2025-03-14T10:03:53Z INFO web-2 GET /api/cart 200 103ms
+      2025-03-14T10:03:56Z INFO web-2 GET /api/users 200 223ms
+      2025-03-14T10:03:57Z INFO web-2 GET /api/cart 200 52ms
+      2025-03-14T10:03:59Z INFO web-2 GET /api/search 200 216ms
+      2025-03-14T10:04:01Z INFO web-3 GET /api/cart 200 133ms
+      2025-03-14T10:04:02Z INFO web-2 GET /api/search 200 93ms
+      2025-03-14T10:04:03Z INFO web-1 GET /api/search 200 22ms
+      2025-03-14T10:04:04Z INFO web-3 GET /api/search 200 237ms
+      2025-03-14T10:04:05Z INFO web-2 GET /api/cart 200 81ms
+      2025-03-14T10:04:07Z INFO web-3 GET /api/orders 200 88ms
+      2025-03-14T10:04:10Z INFO web-3 GET /health 200 154ms
+      2025-03-14T10:04:13Z INFO web-2 GET /api/cart 200 228ms
+      2025-03-14T10:04:15Z INFO web-3 GET /api/search 200 206ms
+      2025-03-14T10:04:17Z INFO web-2 GET /api/users 200 235ms
+      2025-03-14T10:04:19Z INFO web-1 GET /api/orders 200 178ms
+      2025-03-14T10:04:20Z INFO web-1 GET /api/search 200 27ms
+      2025-03-14T10:04:21Z INFO web-2 GET /api/orders 200 192ms
+      2025-03-14T10:04:22Z INFO web-2 GET /api/cart 200 115ms
+      2025-03-14T10:04:23Z INFO web-3 GET /api/cart 200 155ms
+      2025-03-14T10:04:25Z INFO web-1 GET /api/users 200 199ms
+      2025-03-14T10:04:26Z INFO web-1 GET /health 200 181ms
+      2025-03-14T10:04:28Z INFO web-1 GET /api/orders 200 203ms
+      2025-03-14T10:04:30Z INFO web-1 GET /health 200 219ms
+      2025-03-14T10:04:32Z INFO web-3 GET /api/users 200 68ms
+      2025-03-14T10:04:34Z INFO web-1 GET /api/cart 200 129ms
+      2025-03-14T10:04:37Z INFO web-2 GET /api/cart 200 191ms
+      2025-03-14T10:04:39Z INFO web-2 GET /api/orders 200 35ms
+      2025-03-14T10:04:41Z INFO web-2 GET /health 200 44ms
+      2025-03-14T10:04:43Z INFO web-1 GET /api/orders 200 161ms
+      2025-03-14T10:04:46Z INFO web-2 GET /api/search 200 106ms
+      2025-03-14T10:04:49Z INFO web-2 GET /api/users 200 20ms
+      2025-03-14T10:04:51Z INFO web-2 GET /health 200 136ms
+      2025-03-14T10:04:52Z INFO web-2 GET /api/orders 200 112ms
+      2025-03-14T10:04:53Z INFO web-3 GET /health 200 21ms
+      2025-03-14T10:04:54Z INFO web-2 GET /api/orders 200 197ms
+      2025-03-14T10:04:57Z INFO web-2 GET /api/search 200 217ms
+      2025-03-14T10:04:58Z INFO web-3 GET /api/search 200 117ms
+      2025-03-14T10:05:01Z INFO web-1 GET /api/users 200 112ms
+      2025-03-14T10:05:03Z INFO web-3 GET /api/search 200 154ms
+      2025-03-14T10:05:06Z INFO web-1 GET /api/search 200 98ms
+      2025-03-14T10:05:07Z INFO web-1 GET /health 200 199ms
+      2025-03-14T10:05:10Z INFO web-1 GET /health 200 135ms
+      2025-03-14T10:05:12Z INFO web-2 GET /api/users 200 97ms
+      2025-03-14T10:05:15Z INFO web-3 GET /api/search 200 94ms
+      2025-03-14T10:05:17Z INFO web-2 GET /api/cart 200 197ms
+      2025-03-14T10:05:19Z INFO web-1 GET /health 200 109ms
+      2025-03-14T10:05:20Z INFO web-1 GET /api/cart 200 230ms
+      2025-03-14T10:05:22Z INFO web-2 GET /health 200 105ms
+      2025-03-14T10:05:23Z INFO web-3 GET /api/search 404 32ms
+      2025-03-14T10:05:25Z INFO web-2 GET /api/users 200 91ms
+      2025-03-14T10:05:26Z INFO web-1 GET /api/cart 404 123ms
+      2025-03-14T10:05:27Z INFO web-3 GET /health 200 130ms
+      2025-03-14T10:05:29Z INFO web-1 GET /api/users 200 206ms
+      2025-03-14T10:05:31Z INFO web-3 GET /api/search 200 193ms
+      2025-03-14T10:05:32Z INFO web-3 GET /api/orders 200 94ms
+      2025-03-14T10:05:34Z INFO web-3 GET /api/users 200 90ms
+      2025-03-14T10:05:35Z INFO web-2 GET /api/orders 200 36ms
+      2025-03-14T10:05:38Z INFO web-3 GET /api/search 404 180ms
+      2025-03-14T10:05:40Z INFO web-1 GET /api/cart 200 36ms
+      2025-03-14T10:05:41Z INFO web-2 GET /api/orders 200 40ms
+      2025-03-14T10:05:44Z INFO web-2 GET /api/search 404 129ms
+      2025-03-14T10:05:45Z INFO web-2 GET /api/orders 200 210ms
+      2025-03-14T10:05:47Z INFO web-2 GET /api/users 200 23ms
+      2025-03-14T10:05:50Z INFO web-1 GET /api/users 200 202ms
+      2025-03-14T10:05:53Z INFO web-1 GET /health 200 239ms
+      2025-03-14T10:05:56Z INFO web-3 GET /api/cart 200 127ms
+      2025-03-14T10:05:59Z INFO web-1 GET /health 200 95ms
+      2025-03-14T10:06:01Z INFO web-2 GET /api/search 200 206ms
+      2025-03-14T10:06:04Z INFO web-3 GET /api/users 200 80ms
+      2025-03-14T10:06:07Z INFO web-1 GET /api/search 200 73ms
+      2025-03-14T10:06:09Z INFO web-1 GET /health 200 40ms
+      2025-03-14T10:06:12Z INFO web-1 GET /api/orders 200 82ms
+      2025-03-14T10:06:14Z INFO web-1 GET /api/orders 200 36ms
+      2025-03-14T10:06:17Z INFO web-2 GET /api/search 200 224ms
+      2025-03-14T10:06:18Z INFO web-1 GET /api/search 200 153ms
+      2025-03-14T10:06:21Z INFO web-1 GET /health 200 165ms
+      2025-03-14T10:06:22Z INFO web-1 GET /health 200 148ms
+      2025-03-14T10:06:23Z INFO web-3 GET /api/orders 200 219ms
+      2025-03-14T10:06:26Z INFO web-2 GET /health 200 90ms
+      2025-03-14T10:06:28Z INFO web-2 GET /api/orders 200 126ms
+      2025-03-14T10:06:31Z INFO web-3 GET /api/search 200 120ms
+      2025-03-14T10:06:33Z INFO web-2 GET /api/orders 200 38ms
+      2025-03-14T10:06:36Z INFO web-3 GET /api/orders 200 169ms
+      2025-03-14T10:06:37Z INFO web-2 GET /api/search 200 29ms
+      2025-03-14T10:06:40Z INFO web-2 GET /api/cart 200 171ms
+      2025-03-14T10:06:43Z INFO web-1 GET /api/cart 200 93ms
+      2025-03-14T10:06:44Z INFO web-3 GET /api/users 200 76ms
+      2025-03-14T10:06:46Z INFO web-3 GET /api/users 200 223ms
+      2025-03-14T10:06:48Z INFO web-2 GET /health 200 42ms
+      2025-03-14T10:06:50Z INFO web-3 GET /health 200 25ms
+      2025-03-14T10:06:51Z INFO web-3 GET /api/search 200 239ms
+      2025-03-14T10:06:53Z INFO web-3 GET /api/search 200 109ms
+      2025-03-14T10:06:55Z INFO web-2 GET /api/search 200 109ms
+      2025-03-14T10:06:57Z INFO web-1 GET /api/users 200 39ms
+      2025-03-14T10:06:59Z INFO web-3 GET /api/users 404 232ms
+      2025-03-14T10:07:00Z INFO web-2 GET /api/orders 200 214ms
+      2025-03-14T10:07:03Z INFO web-3 GET /api/search 200 54ms
+      2025-03-14T10:07:05Z INFO deploy v2.4.1 started host=web-2
+      2025-03-14T10:07:06Z INFO web-1 GET /api/orders 200 48ms
+      2025-03-14T10:07:09Z INFO web-3 GET /api/search 200 146ms
+      2025-03-14T10:07:10Z INFO web-1 GET /api/cart 200 203ms
+      2025-03-14T10:07:11Z INFO web-3 GET /api/cart 200 125ms
+      2025-03-14T10:07:14Z INFO web-1 GET /api/orders 200 67ms
+      2025-03-14T10:07:15Z INFO web-2 GET /api/search 200 25ms
+      2025-03-14T10:07:15Z INFO deploy v2.4.1 started host=web-3
+      2025-03-14T10:07:17Z INFO web-1 GET /api/users 200 130ms
+      2025-03-14T10:07:19Z INFO web-1 GET /api/orders 200 189ms
+      2025-03-14T10:07:20Z ERROR web-2 GET /api/orders 502 1077ms
+      2025-03-14T10:07:23Z ERROR web-2 GET /api/cart 500 2784ms
+      2025-03-14T10:07:25Z INFO web-2 GET /api/users 200 167ms
+      2025-03-14T10:07:28Z INFO web-1 GET /api/search 200 220ms
+      2025-03-14T10:07:30Z INFO web-1 GET /api/search 200 46ms
+      2025-03-14T10:07:31Z INFO web-1 GET /api/orders 200 56ms
+      2025-03-14T10:07:34Z INFO web-2 GET /health 200 120ms
+      2025-03-14T10:07:37Z INFO web-3 GET /health 200 219ms
+      2025-03-14T10:07:38Z INFO web-1 GET /api/orders 200 140ms
+      2025-03-14T10:07:41Z ERROR web-3 GET /api/orders 500 1470ms
+      2025-03-14T10:07:44Z INFO web-1 GET /api/users 200 76ms
+      2025-03-14T10:07:46Z ERROR web-3 GET /api/orders 502 2092ms
+      2025-03-14T10:07:49Z INFO web-2 GET /api/search 200 114ms
+      2025-03-14T10:07:50Z ERROR web-2 GET /api/cart 502 1778ms
+      2025-03-14T10:07:51Z INFO web-3 GET /api/users 200 69ms
+      2025-03-14T10:07:52Z INFO web-1 GET /api/orders 200 86ms
+      2025-03-14T10:07:53Z INFO web-2 GET /api/orders 200 60ms
+      2025-03-14T10:07:56Z INFO web-2 GET /api/cart 200 84ms
+      2025-03-14T10:07:59Z ERROR web-3 GET /api/cart 503 938ms
+      2025-03-14T10:08:01Z ERROR web-2 GET /api/orders 502 2997ms
+      2025-03-14T10:08:03Z INFO web-1 GET /api/orders 200 230ms
+      2025-03-14T10:08:06Z ERROR web-3 GET /api/orders 500 1278ms
+      2025-03-14T10:08:07Z ERROR web-2 GET /api/orders 503 2774ms
+      2025-03-14T10:08:08Z INFO web-1 GET /api/users 200 127ms
+      2025-03-14T10:08:09Z INFO web-2 GET /health 200 118ms
+      2025-03-14T10:08:10Z INFO web-1 GET /api/users 200 166ms
+      2025-03-14T10:08:12Z INFO web-1 GET /health 200 88ms
+      2025-03-14T10:08:14Z ERROR web-3 GET /api/orders 502 2324ms
+      2025-03-14T10:08:17Z INFO web-2 GET /api/cart 200 119ms
+      2025-03-14T10:08:19Z INFO web-2 GET /api/users 200 89ms
+      2025-03-14T10:08:20Z ERROR web-2 GET /api/cart 502 1437ms
+      2025-03-14T10:08:23Z INFO web-1 GET /health 200 151ms
+      2025-03-14T10:08:24Z INFO web-3 GET /api/search 200 133ms
+      2025-03-14T10:08:25Z ERROR web-3 GET /api/cart 500 1872ms
+      2025-03-14T10:08:27Z INFO web-3 GET /api/orders 404 129ms
+      2025-03-14T10:08:29Z INFO web-1 GET /api/cart 200 164ms
+      2025-03-14T10:08:32Z INFO web-1 GET /api/users 200 235ms
+      2025-03-14T10:08:33Z INFO web-1 GET /api/users 200 221ms
+      2025-03-14T10:08:35Z INFO web-3 GET /api/users 200 211ms
+      2025-03-14T10:08:38Z INFO web-3 GET /api/users 200 129ms
+      2025-03-14T10:08:41Z INFO web-1 GET /api/orders 200 213ms
+      2025-03-14T10:08:44Z INFO web-3 GET /api/users 200 160ms
+      2025-03-14T10:08:45Z INFO web-3 GET /health 200 229ms
+      2025-03-14T10:08:48Z INFO web-2 GET /health 200 195ms
+      2025-03-14T10:08:51Z INFO web-3 GET /health 200 54ms
+      2025-03-14T10:08:52Z ERROR web-3 GET /api/orders 500 1902ms
+      2025-03-14T10:08:55Z INFO web-3 GET /health 200 164ms
+      2025-03-14T10:08:57Z ERROR web-2 GET /api/orders 502 1831ms
+      2025-03-14T10:08:59Z INFO web-2 GET /api/users 200 23ms
+      2025-03-14T10:09:00Z ERROR web-3 GET /api/cart 503 2645ms
+      2025-03-14T10:09:01Z INFO web-3 GET /api/search 200 211ms
+      2025-03-14T10:09:04Z ERROR web-2 GET /api/orders 502 1649ms
+      2025-03-14T10:09:05Z INFO web-1 GET /api/orders 404 182ms
+      2025-03-14T10:09:08Z ERROR web-2 GET /api/orders 500 2420ms
+      2025-03-14T10:09:09Z ERROR web-3 GET /api/orders 500 2181ms
+      2025-03-14T10:09:12Z INFO web-1 GET /api/cart 200 235ms
+      2025-03-14T10:09:13Z INFO web-2 GET /api/users 200 93ms
+      2025-03-14T10:09:15Z INFO web-1 GET /api/cart 200 227ms
+      2025-03-14T10:09:17Z ERROR web-2 GET /api/orders 503 2775ms
+      2025-03-14T10:09:18Z INFO web-1 GET /api/users 200 131ms
+      2025-03-14T10:09:20Z INFO web-1 GET /api/search 200 84ms
+      2025-03-14T10:09:23Z INFO web-2 GET /api/search 200 79ms
+      2025-03-14T10:09:24Z INFO web-1 GET /health 200 132ms
+      2025-03-14T10:09:25Z INFO web-2 GET /api/cart 200 72ms
+      2025-03-14T10:09:27Z INFO web-2 GET /api/search 200 25ms
+      2025-03-14T10:09:29Z ERROR web-3 GET /api/cart 500 1778ms
+      2025-03-14T10:09:31Z INFO web-1 GET /api/users 200 119ms
+      2025-03-14T10:09:32Z ERROR web-2 GET /api/orders 503 2211ms
+      2025-03-14T10:09:33Z ERROR web-2 GET /api/orders 502 2668ms
+      2025-03-14T10:09:34Z INFO web-1 GET /api/cart 200 70ms
+      2025-03-14T10:09:37Z INFO web-1 GET /api/cart 200 54ms
+      2025-03-14T10:09:38Z INFO web-1 GET /api/orders 200 88ms
+      2025-03-14T10:09:40Z ERROR web-2 GET /api/cart 502 2864ms
+      2025-03-14T10:09:41Z INFO web-2 GET /api/search 200 97ms
+      2025-03-14T10:09:42Z ERROR web-3 GET /api/orders 502 2848ms
+      2025-03-14T10:09:43Z ERROR web-2 GET /api/cart 503 1098ms
+      2025-03-14T10:09:45Z ERROR web-3 GET /api/cart 502 1466ms
+      2025-03-14T10:09:46Z INFO web-1 GET /api/users 200 126ms
+      2025-03-14T10:09:49Z INFO web-1 GET /health 200 22ms
+      2025-03-14T10:09:50Z INFO web-1 GET /api/users 200 195ms
+      2025-03-14T10:09:51Z INFO web-3 GET /health 200 37ms
+      2025-03-14T10:09:53Z INFO web-1 GET /api/search 200 74ms
+      2025-03-14T10:09:56Z INFO web-3 GET /api/search 200 205ms
+      2025-03-14T10:09:57Z ERROR web-2 GET /api/cart 500 2145ms
+      2025-03-14T10:09:59Z INFO web-3 GET /api/users 200 143ms
+      2025-03-14T10:10:00Z INFO web-1 GET /health 200 27ms
+      2025-03-14T10:10:01Z INFO web-2 GET /api/cart 200 165ms
+      2025-03-14T10:10:04Z INFO web-2 GET /api/search 200 76ms
+      2025-03-14T10:10:06Z INFO web-2 GET /api/users 200 89ms
+      2025-03-14T10:10:08Z ERROR web-3 GET /api/orders 503 2691ms
+      2025-03-14T10:10:10Z INFO web-1 GET /api/search 200 129ms
+      2025-03-14T10:10:12Z INFO web-1 GET /api/search 200 180ms
+      2025-03-14T10:10:13Z INFO web-1 GET /api/search 200 109ms
+      2025-03-14T10:10:15Z INFO web-2 GET /api/users 200 200ms
+      2025-03-14T10:10:17Z INFO web-2 GET /health 200 105ms
+      2025-03-14T10:10:18Z INFO web-3 GET /health 200 146ms
+      2025-03-14T10:10:21Z INFO web-3 GET /api/users 200 223ms
+      2025-03-14T10:10:23Z INFO web-1 GET /health 200 111ms
+      2025-03-14T10:10:26Z ERROR web-3 GET /api/cart 502 2672ms
+      2025-03-14T10:10:29Z ERROR web-2 GET /api/cart 502 2319ms
+      2025-03-14T10:10:32Z INFO web-2 GET /health 200 77ms
+      2025-03-14T10:10:34Z INFO web-1 GET /api/cart 200 110ms
+      2025-03-14T10:10:35Z INFO web-2 GET /api/search 200 235ms
+      2025-03-14T10:10:36Z INFO web-3 GET /health 200 34ms
+      2025-03-14T10:10:37Z ERROR web-2 GET /api/cart 503 2083ms
+      2025-03-14T10:10:40Z ERROR web-2 GET /api/cart 500 2439ms
+      2025-03-14T10:10:41Z INFO web-1 GET /health 200 117ms
+      2025-03-14T10:10:44Z INFO web-1 GET /api/cart 200 177ms
+      2025-03-14T10:10:46Z INFO web-2 GET /api/cart 200 158ms
+      2025-03-14T10:10:47Z INFO web-2 GET /health 200 44ms
+      2025-03-14T10:10:49Z INFO web-1 GET /api/orders 200 140ms
+      2025-03-14T10:10:51Z INFO web-2 GET /health 200 130ms
+      2025-03-14T10:10:52Z ERROR web-3 GET /api/cart 503 2159ms
+      2025-03-14T10:10:55Z INFO web-1 GET /api/search 200 134ms
+      2025-03-14T10:10:56Z INFO web-3 GET /health 200 117ms
+      2025-03-14T10:10:58Z INFO web-1 GET /api/search 200 152ms
+      2025-03-14T10:10:59Z INFO web-1 GET /api/cart 200 160ms
+      2025-03-14T10:11:00Z ERROR web-3 GET /api/cart 503 2572ms
+      2025-03-14T10:11:03Z INFO web-3 GET /api/search 200 132ms
+      2025-03-14T10:11:06Z ERROR web-2 GET /api/cart 503 1247ms
+      2025-03-14T10:11:08Z INFO web-2 GET /health 200 163ms
+      2025-03-14T10:11:09Z INFO web-1 GET /api/orders 200 231ms
+      2025-03-14T10:11:11Z INFO web-3 GET /api/users 200 191ms
+      2025-03-14T10:11:13Z INFO web-2 GET /api/search 200 220ms
+      2025-03-14T10:11:15Z INFO web-2 GET /api/search 200 84ms
+      2025-03-14T10:11:18Z INFO web-1 GET /api/cart 200 55ms
+      2025-03-14T10:11:20Z INFO web-1 GET /api/users 200 24ms
+      2025-03-14T10:11:21Z INFO web-2 GET /api/users 200 35ms
+      2025-03-14T10:11:23Z ERROR web-2 GET /api/orders 502 2793ms
+      2025-03-14T10:11:25Z INFO web-2 GET /health 200 194ms
+      2025-03-14T10:11:28Z INFO web-3 GET /api/users 200 124ms
+      2025-03-14T10:11:29Z INFO web-2 GET /api/search 200 156ms
+      2025-03-14T10:11:30Z INFO web-3 GET /health 200 172ms
+      2025-03-14T10:11:33Z INFO web-2 GET /api/search 200 137ms
+      2025-03-14T10:11:34Z INFO web-1 GET /api/cart 200 115ms
+      2025-03-14T10:11:36Z INFO web-2 GET /api/cart 200 39ms
+      2025-03-14T10:11:38Z INFO web-3 GET /health 200 92ms
+      2025-03-14T10:11:39Z INFO web-1 GET /api/users 200 199ms
+      2025-03-14T10:11:40Z INFO web-1 GET /api/search 200 153ms
+      2025-03-14T10:11:42Z INFO web-2 GET /health 200 40ms
+      2025-03-14T10:11:45Z INFO web-3 GET /api/users 200 238ms
+      2025-03-14T10:11:47Z INFO web-1 GET /health 200 93ms
+      2025-03-14T10:11:50Z INFO web-1 GET /api/cart 200 227ms
+      2025-03-14T10:11:52Z INFO web-3 GET /health 200 65ms
+      2025-03-14T10:11:54Z INFO web-1 GET /api/users 200 22ms
+      2025-03-14T10:11:55Z INFO web-2 GET /health 404 80ms
+      2025-03-14T10:11:56Z INFO web-2 GET /health 200 71ms
+      2025-03-14T10:11:58Z ERROR web-2 GET /api/orders 503 1200ms
+      2025-03-14T10:12:00Z INFO web-3 GET /api/users 200 89ms
+      2025-03-14T10:12:02Z ERROR web-2 GET /api/cart 500 1090ms
+      2025-03-14T10:12:03Z INFO web-1 GET /api/cart 200 60ms
+      2025-03-14T10:12:05Z INFO web-3 GET /health 200 74ms
+      2025-03-14T10:12:07Z ERROR web-2 GET /api/cart 500 1839ms
+      2025-03-14T10:12:09Z ERROR web-3 GET /api/cart 502 1740ms
+      2025-03-14T10:12:10Z INFO web-1 GET /api/orders 200 127ms
+      2025-03-14T10:12:13Z INFO web-2 GET /api/search 200 81ms
+      2025-03-14T10:12:14Z INFO web-3 GET /health 200 102ms
+      2025-03-14T10:12:16Z INFO web-1 GET /api/cart 200 70ms
+      2025-03-14T10:12:19Z ERROR web-2 GET /api/cart 500 1548ms
+      2025-03-14T10:12:20Z INFO web-2 GET /api/search 200 28ms
+      2025-03-14T10:12:21Z ERROR web-3 GET /api/orders 500 2928ms
+      2025-03-14T10:12:24Z INFO web-2 GET /health 200 215ms
+      2025-03-14T10:12:27Z INFO web-1 GET /api/search 200 228ms
+      2025-03-14T10:12:30Z ERROR web-3 GET /api/cart 503 1319ms
+      2025-03-14T10:12:31Z INFO web-1 GET /api/users 200 163ms
+      2025-03-14T10:12:34Z INFO web-1 GET /api/search 200 64ms
+      2025-03-14T10:12:37Z INFO web-2 GET /api/search 200 35ms
+      2025-03-14T10:12:40Z INFO web-1 GET /api/users 200 176ms
+      2025-03-14T10:12:41Z INFO web-3 GET /api/orders 200 25ms
+      2025-03-14T10:12:43Z INFO web-3 GET /api/cart 404 132ms
+      2025-03-14T10:12:45Z INFO web-2 GET /api/users 200 161ms
+      2025-03-14T10:12:46Z INFO web-1 GET /health 200 145ms
+      2025-03-14T10:12:48Z INFO web-3 GET /api/orders 200 233ms
+      2025-03-14T10:12:49Z INFO web-1 GET /api/users 200 78ms
+      2025-03-14T10:12:50Z INFO web-3 GET /api/users 200 215ms
+      2025-03-14T10:12:50Z WARN rollback to v2.4.0 started host=web-2
+      2025-03-14T10:12:51Z INFO web-2 GET /api/orders 200 184ms
+      2025-03-14T10:12:53Z INFO web-1 GET /api/cart 200 22ms
+      2025-03-14T10:12:55Z INFO web-2 GET /health 200 232ms
+      2025-03-14T10:12:57Z INFO web-2 GET /api/orders 200 190ms
+      2025-03-14T10:13:00Z INFO web-2 GET /api/users 200 128ms
+      2025-03-14T10:13:02Z INFO web-2 GET /api/users 200 39ms
+      2025-03-14T10:13:03Z INFO web-2 GET /api/orders 200 165ms
+      2025-03-14T10:13:05Z INFO web-3 GET /api/cart 200 143ms
+      2025-03-14T10:13:06Z INFO web-3 GET /api/users 200 130ms
+      2025-03-14T10:13:09Z INFO web-3 GET /api/users 200 85ms
+      2025-03-14T10:13:12Z INFO web-3 GET /api/orders 200 149ms
+      2025-03-14T10:13:14Z INFO web-1 GET /api/users 200 69ms
+      2025-03-14T10:13:17Z INFO web-1 GET /api/search 200 221ms
+      2025-03-14T10:13:18Z INFO web-1 GET /api/search 200 230ms
+      2025-03-14T10:13:20Z INFO web-3 GET /health 200 90ms
+      2025-03-14T10:13:22Z INFO web-1 GET /api/users 200 81ms
+      2025-03-14T10:13:25Z INFO web-2 GET /api/search 200 236ms
+      2025-03-14T10:13:27Z INFO web-2 GET /health 200 112ms
+      2025-03-14T10:13:30Z INFO web-2 GET /api/orders 200 180ms
+      2025-03-14T10:13:32Z INFO web-1 GET /health 200 191ms
+      2025-03-14T10:13:34Z INFO web-1 GET /api/search 200 30ms
+      2025-03-14T10:13:35Z INFO web-1 GET /api/cart 200 153ms
+      2025-03-14T10:13:37Z INFO web-3 GET /api/users 200 174ms
+      2025-03-14T10:13:39Z INFO web-2 GET /api/cart 200 195ms
+      2025-03-14T10:13:40Z INFO web-2 GET /api/users 200 205ms
+      2025-03-14T10:13:42Z INFO web-2 GET /api/cart 200 84ms
+      2025-03-14T10:13:45Z INFO web-1 GET /api/orders 200 220ms
+      2025-03-14T10:13:48Z INFO web-3 GET /api/orders 404 46ms
+      2025-03-14T10:13:51Z INFO web-1 GET /api/orders 200 76ms
+      2025-03-14T10:13:54Z INFO web-1 GET /api/cart 200 228ms
+      2025-03-14T10:13:57Z INFO web-2 GET /api/search 200 229ms
+      2025-03-14T10:14:00Z INFO web-3 GET /health 200 187ms
+      2025-03-14T10:14:02Z INFO web-3 GET /api/search 200 180ms
+      2025-03-14T10:14:03Z INFO web-3 GET /api/orders 200 183ms
+      2025-03-14T10:14:06Z INFO web-3 GET /api/users 200 113ms
+      2025-03-14T10:14:09Z INFO web-3 GET /api/orders 200 151ms
+      2025-03-14T10:14:10Z INFO web-2 GET /api/orders 200 60ms
+      2025-03-14T10:14:11Z INFO web-1 GET /api/search 200 143ms
+      2025-03-14T10:14:12Z INFO web-3 GET /api/search 200 175ms
+      2025-03-14T10:14:15Z INFO web-2 GET /api/users 200 93ms
+      2025-03-14T10:14:17Z INFO web-3 GET /api/users 200 202ms
+      2025-03-14T10:14:19Z INFO web-2 GET /api/orders 200 152ms
+      2025-03-14T10:14:21Z INFO web-1 GET /api/users 200 59ms
+      2025-03-14T10:14:23Z INFO web-1 GET /health 200 85ms
+      2025-03-14T10:14:25Z INFO web-1 GET /api/orders 404 170ms
+      2025-03-14T10:14:28Z INFO web-3 GET /api/cart 200 182ms
+      2025-03-14T10:14:30Z INFO web-1 GET /api/orders 200 233ms
+      2025-03-14T10:14:33Z INFO web-2 GET /health 200 60ms
+      2025-03-14T10:14:35Z INFO web-1 GET /api/orders 200 233ms
+      2025-03-14T10:14:38Z INFO web-3 GET /api/users 200 173ms
+      2025-03-14T10:14:40Z INFO web-3 GET /api/orders 200 64ms
+      2025-03-14T10:14:41Z INFO web-1 GET /api/orders 200 234ms
+      2025-03-14T10:14:44Z INFO web-3 GET /api/orders 200 218ms
+      2025-03-14T10:14:45Z INFO web-1 GET /api/search 200 153ms
+      2025-03-14T10:14:47Z INFO web-1 GET /api/users 200 210ms
+      2025-03-14T10:14:49Z INFO web-2 GET /api/search 200 113ms
+      2025-03-14T10:14:52Z INFO web-1 GET /api/orders 200 221ms
+      2025-03-14T10:14:55Z INFO web-1 GET /api/users 200 129ms
+      2025-03-14T10:14:57Z INFO web-3 GET /api/cart 200 96ms
+      2025-03-14T10:14:59Z INFO web-2 GET /api/search 200 27ms
+      2025-03-14T10:15:02Z INFO web-1 GET /api/cart 200 231ms
+      2025-03-14T10:15:04Z INFO web-3 GET /api/search 404 234ms
+      2025-03-14T10:15:05Z INFO web-3 GET /api/cart 200 106ms
+      2025-03-14T10:15:06Z INFO web-3 GET /api/users 200 111ms
+      2025-03-14T10:15:09Z INFO web-2 GET /health 200 32ms
+      2025-03-14T10:15:10Z INFO web-3 GET /health 200 192ms
+      2025-03-14T10:15:11Z INFO web-3 GET /health 200 101ms
+      2025-03-14T10:15:14Z INFO web-3 GET /api/orders 200 211ms
+      2025-03-14T10:15:15Z INFO web-1 GET /api/search 200 142ms
+      2025-03-14T10:15:17Z INFO web-2 GET /api/search 200 230ms
+      2025-03-14T10:15:18Z INFO web-1 GET /health 200 33ms
+      2025-03-14T10:15:19Z INFO web-2 GET /health 200 75ms
+      2025-03-14T10:15:21Z INFO web-3 GET /health 200 186ms
+      2025-03-14T10:15:24Z INFO web-3 GET /api/cart 200 162ms
+      2025-03-14T10:15:26Z INFO web-3 GET /health 200 155ms
+      2025-03-14T10:15:28Z INFO web-3 GET /api/search 200 231ms
+      2025-03-14T10:15:31Z INFO web-2 GET /api/search 200 37ms
+      2025-03-14T10:15:34Z INFO web-3 GET /api/orders 200 67ms
+      2025-03-14T10:15:36Z INFO web-2 GET /health 200 202ms
+      2025-03-14T10:15:39Z INFO web-2 GET /api/cart 200 110ms
+      2025-03-14T10:15:41Z INFO web-3 GET /api/users 200 180ms
+      2025-03-14T10:15:43Z INFO web-3 GET /api/search 200 22ms
+      2025-03-14T10:15:45Z INFO web-2 GET /api/search 200 70ms
+      2025-03-14T10:15:47Z INFO web-3 GET /api/search 200 36ms
+      2025-03-14T10:15:50Z INFO web-3 GET /api/orders 200 30ms
+      2025-03-14T10:15:51Z INFO web-1 GET /api/orders 200 195ms
+      2025-03-14T10:15:52Z INFO web-2 GET /api/search 200 211ms
+      2025-03-14T10:15:53Z INFO web-2 GET /api/search 200 116ms
+      2025-03-14T10:15:56Z INFO web-2 GET /api/users 200 31ms
+      2025-03-14T10:15:58Z INFO web-3 GET /api/search 200 197ms
+      2025-03-14T10:16:00Z INFO web-2 GET /api/orders 200 23ms
+      2025-03-14T10:16:02Z INFO web-1 GET /api/users 200 60ms
+      2025-03-14T10:16:04Z INFO web-2 GET /api/cart 200 125ms
+      2025-03-14T10:16:07Z INFO web-3 GET /api/cart 200 90ms
+      2025-03-14T10:16:08Z INFO web-1 GET /api/cart 200 223ms
+      2025-03-14T10:16:10Z INFO web-2 GET /api/cart 200 176ms
+      2025-03-14T10:16:11Z INFO web-3 GET /api/users 200 87ms
+      2025-03-14T10:16:14Z INFO web-2 GET /api/users 200 107ms
+      2025-03-14T10:16:16Z INFO web-1 GET /api/users 200 156ms
+      2025-03-14T10:16:17Z INFO web-3 GET /api/orders 200 235ms
+      2025-03-14T10:16:18Z INFO web-3 GET /api/cart 200 200ms
+      2025-03-14T10:16:20Z INFO web-1 GET /health 200 89ms
+      2025-03-14T10:16:23Z INFO web-1 GET /api/orders 200 109ms
+      2025-03-14T10:16:26Z INFO web-3 GET /api/cart 200 208ms
+      2025-03-14T10:16:28Z INFO web-2 GET /api/search 200 44ms
+      2025-03-14T10:16:31Z INFO web-1 GET /api/orders 200 33ms
+      2025-03-14T10:16:32Z INFO web-1 GET /health 200 131ms
+      2025-03-14T10:16:34Z INFO web-3 GET /api/cart 200 122ms
+      2025-03-14T10:16:37Z INFO web-3 GET /api/search 200 70ms
+      2025-03-14T10:16:38Z INFO web-3 GET /api/orders 200 219ms
+      2025-03-14T10:16:41Z INFO web-2 GET /api/orders 200 191ms
+      2025-03-14T10:16:43Z INFO web-3 GET /health 200 105ms
+      2025-03-14T10:16:44Z INFO web-1 GET /api/cart 200 102ms
+      2025-03-14T10:16:47Z INFO web-1 GET /api/orders 200 65ms
+      2025-03-14T10:16:49Z INFO web-1 GET /api/search 200 156ms
+      2025-03-14T10:16:51Z INFO web-2 GET /api/cart 200 178ms
+      2025-03-14T10:16:52Z INFO web-2 GET /health 200 168ms
+      2025-03-14T10:16:53Z INFO web-1 GET /api/orders 200 78ms
+      2025-03-14T10:16:55Z INFO web-2 GET /api/cart 200 223ms
+      2025-03-14T10:16:57Z INFO web-3 GET /health 404 131ms
+      2025-03-14T10:17:00Z INFO web-2 GET /api/search 200 50ms
+      2025-03-14T10:17:01Z INFO web-3 GET /api/cart 200 228ms
+protected: [logs/server.log]
+hidden_files:
+  _grade.py: |
+    import csv, json, os, re, subprocess, sys
+    from pathlib import Path
+
+    W = Path(".")
+
+
+    def fail(msg):
+        print("FAIL:", msg)
+        sys.exit(1)
+
+
+    def need(cond, msg):
+        if not cond:
+            fail(msg)
+
+
+    def load_json(rel):
+        p = W / rel
+        need(p.exists(), f"missing {rel}")
+        try:
+            return json.loads(p.read_text(encoding="utf-8"))
+        except Exception as e:  # noqa: BLE001
+            fail(f"{rel} is not valid JSON: {e}")
+
+
+    def read(rel):
+        p = W / rel
+        need(p.exists(), f"missing {rel}")
+        return p.read_text(encoding="utf-8")
+
+
+    def close(a, b, tol=0.011):
+        try:
+            return abs(float(a) - float(b)) <= tol
+        except (TypeError, ValueError):
+            return False
+
+
+    def md_rows(rel, under=None):
+        """Table rows (lists of cells) of a markdown file; with `under`, only rows inside the first heading matching it."""
+        lines = read(rel).splitlines()
+        if under:
+            out, on, lvl = [], False, 0
+            for ln in lines:
+                m = re.match(r"^(#+)\s+(.*)", ln)
+                if m:
+                    if on and len(m.group(1)) <= lvl:
+                        break
+                    if not on and re.search(under, m.group(2), re.I):
+                        on, lvl = True, len(m.group(1))
+                    continue
+                if on:
+                    out.append(ln)
+            lines = out
+        rows = []
+        for ln in lines:
+            if ln.strip().startswith("|") and not re.match(r"^\s*\|[\s:|-]+\|\s*$", ln):
+                rows.append([c.strip() for c in ln.strip().strip("|").split("|")])
+        return rows
+
+
+    def num(s):
+        m = re.search(r"-?\d[\d,]*\.?\d*", str(s))
+        return float(m.group(0).replace(",", "")) if m else None
+
+
+    def run(cmd, timeout=60):
+        p = subprocess.run(cmd, shell=True, cwd=W, capture_output=True, text=True, timeout=timeout)
+        return p.returncode, p.stdout, p.stderr
+
+    EXP = {'minutes': {'2025-03-14T10:00': (30, 0), '2025-03-14T10:01': (32, 0), '2025-03-14T10:02': (28, 0), '2025-03-14T10:03': (32, 0), '2025-03-14T10:04': (33, 0), '2025-03-14T10:05': (30, 0), '2025-03-14T10:06': (28, 0), '2025-03-14T10:07': (29, 6), '2025-03-14T10:08': (30, 8), '2025-03-14T10:09': (36, 13), '2025-03-14T10:10': (32, 6), '2025-03-14T10:11': (31, 4), '2025-03-14T10:12': (31, 6), '2025-03-14T10:13': (27, 0), '2025-03-14T10:14': (29, 0), '2025-03-14T10:15': (30, 0), '2025-03-14T10:16': (30, 0), '2025-03-14T10:17': (2, 0)}, 'ends': {'/health': {'requests': 93, 'errors': 0}, '/api/cart': {'requests': 114, 'errors': 23}, '/api/search': {'requests': 106, 'errors': 0}, '/api/orders': {'requests': 112, 'errors': 20}, '/api/users': {'requests': 95, 'errors': 0}}, 'first': '2025-03-14T10:07:20Z', 'last': '2025-03-14T10:12:30Z', 'n': 43}
+
+    def t3():
+        p = W / "out/errors_by_minute.csv"; need(p.exists(), "missing out/errors_by_minute.csv")
+        rd = list(csv.DictReader(open(p, encoding="utf-8"))); need(rd and list(rd[0]) == ["minute", "total", "errors"], "bad header")
+        got = {r["minute"]: (int(r["total"]), int(r["errors"])) for r in rd}; need(got == {k: tuple(v) for k, v in EXP["minutes"].items()}, "minute table differs")
+        need([r["minute"] for r in rd] == sorted(got), "rows must be sorted by minute")
+    def t5():
+        d = load_json("out/endpoints.json"); need(d == EXP["ends"], f"endpoint table differs: {d}")
+    def t6():
+        txt = read("postmortem.md"); need(EXP["first"] in txt and EXP["last"] in txt, "Timeline must carry first and last 5xx timestamps")
+        need(re.search(r"v2\.4\.1", txt), "root cause must name v2.4.1"); need(re.search(r"(?<!\d)%d(?!\d)" % EXP["n"], txt), "total 5xx count missing")
+    def t8():
+        txt = read("postmortem.md"); m = re.search(r"^#+\s*Action items\s*\n(.*?)(?=^#|\Z)", txt, re.M | re.S | re.I); need(m, "no Action items")
+        need(len(re.findall(r"^\s*[-*]\s+\S", m.group(1), re.M)) >= 3, "need at least 3 bullet action items")
+        need(re.search(r"canary|rollback|alert", m.group(1), re.I), "action items should address the cause")
+
+
+    if __name__ == "__main__":
+        fn = globals().get(sys.argv[1]) if len(sys.argv) > 1 else None
+        need(callable(fn), "unknown check " + str(sys.argv[1:]))
+        fn()
+        print("OK")
+turns:
+- prompt: In logs/server.log, what is the timestamp of the first 5xx response, and which host and path produced it? Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: ['2025\-03\-14T10:07:20Z', web\-2, /api/orders]
+- prompt: How many request lines are there in total (exclude deploy/rollback marker lines), how many are 5xx, and what share is that (1 decimal)?
+    Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: ['(?<!\d)520(?!\d)', '(?<!\d)43(?!\d)', '(?<![\d.,])8\.30?(?!\d)']
+- prompt: 'Create out/errors_by_minute.csv with the header minute,total,errors: one row per minute that has any request (minute formatted like
+    2025-03-14T10:07), request count and 5xx count, sorted by minute.'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t3
+    hidden: [_grade.py]
+    timeout: 60
+- prompt: Which host served the most 5xx responses, and how many? Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: [web-2, '(?<!\d)24(?!\d)']
+  gap_before_s: 420
+- prompt: 'Create out/endpoints.json mapping each path to an object {"requests": n, "errors": m} (errors = 5xx count).'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t5
+    hidden: [_grade.py]
+    timeout: 60
+- prompt: Write postmortem.md with level-2 sections Summary, Timeline, Impact, Root cause and Action items. Timeline must contain the exact timestamps
+    of the first and last 5xx; Root cause must name the deploy version seen in the log; Impact must state the total number of 5xx.
+  checks:
+  - kind: doc_sections
+    path: postmortem.md
+    headings: [Summary, Timeline, Impact, Root cause, Action items]
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t6
+    hidden: [_grade.py]
+    timeout: 60
+  gap_before_s: 420
+- prompt: 'What is the p95 latency in ms of the non-5xx requests (nearest-rank: sort ascending, take element ceil(0.95 * n) as 1-based position)?
+    Do not change any files.'
+  checks:
+  - kind: keyed_facts
+    all: ['(?<!\d)230(?!\d)']
+- prompt: Fill in the Action items section of postmortem.md with at least three bullet points that address how this incident could have been caught
+    or contained sooner.
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t8
+    hidden: [_grade.py]
+    timeout: 60

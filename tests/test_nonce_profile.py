@@ -135,6 +135,7 @@ class SpecWorkerTests(unittest.TestCase):
     def test_turn_gaps_resume_model_and_stable_profile(self):
         turns, sid, sleeps = self.run_turns()
         self.assertEqual(sid, "sid-123")
+        sleeps = [s for s in sleeps if s >= 1]                         # memguard polls with 0.25 s sleeps; gaps are >= 1 s
         self.assertEqual(sleeps, [10, 420])                            # turn 1 has no gap; turns 2,3 as scripted
         cmds = [c["command"] for c in FakePopen.calls]
         self.assertEqual(len({c[c.index("--bundle") + 1] for c in cmds}), 1)           # same profile (same nonce) every turn

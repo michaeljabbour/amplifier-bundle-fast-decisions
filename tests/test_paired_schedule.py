@@ -54,9 +54,20 @@ class PlanTests(Base):
     def test_wave_sizes_respect_parallel_or_plan_refuses(self):
         plan = self.plan()
         self.assertLessEqual(max(len(v) for v in plan["waves"].values()), 6)
+        self.assertFalse(plan["control_waves_split"])
         with self.assertRaises(paired.PairedError) as cm:
-            self.plan(parallel=4)
+            self.plan(parallel=3)
         self.assertEqual(cm.exception.code, paired.EXIT_PRECONDITION)
+
+    def test_default_parallel_is_4_and_the_control_gets_its_own_wave_when_a_wave_would_not_fit(self):
+        self.assertEqual(paired.DEFAULT_PARALLEL, 4)
+        self.assertEqual(self.design["default_parallel"], 4)
+        plan = self.plan(parallel=4)
+        self.assertTrue(plan["control_waves_split"])
+        self.assertLessEqual(max(len(v) for v in plan["waves"].values()), 4)
+        control = [w for w, v in plan["waves"].items() if any(s["arm"] == "sonnet" for s in v)]
+        self.assertTrue(all(w.endswith("-any") and len(plan["waves"][w]) == 1 for w in control))
+        self.assertEqual(len(control), 2)                            # one per scenario-rep (2 scenarios x 1 rep)
 
     def test_seeded_order_is_deterministic_and_seed_dependent(self):
         a, b = self.plan(seed=1)["wave_order"], self.plan(seed=1)["wave_order"]

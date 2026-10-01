@@ -1,0 +1,178 @@
+# main-v1 real-repo scenario (12 turns): grantjenks/python-sortedcontainers, update() ordered equal elements differently from add() (#159), fixed upstream in 7dc426c9; workspace is its parent
+# Workspace = parent of the upstream fix commit; hidden tests = the fix commit's tests (+ scenario-authored edge tests).
+id: sortedc-update
+task_type: bugfix
+language: python
+split: main
+source:
+  desc: >-
+    grantjenks/python-sortedcontainers, update() ordered equal elements differently from add() (#159),
+    fixed upstream in 7dc426c9; workspace is its parent
+  repo: https://github.com/grantjenks/python-sortedcontainers.git
+  sha: 13d30bc654eb9e6be092282ca502967fcb7f0113
+  fix_sha: 7dc426c95a0c329d5514e6198d92080f1ffc1e5e
+workspace:
+  kind: git
+  repo: https://github.com/grantjenks/python-sortedcontainers.git
+  sha: 13d30bc654eb9e6be092282ca502967fcb7f0113
+  local_hint: ~/dev/afast-paired-src/python-sortedcontainers
+hidden_files:
+  tests/test_coverage_sortedkeylist_modulo.py:
+    from_git:
+      repo: https://github.com/grantjenks/python-sortedcontainers.git
+      sha: 7dc426c95a0c329d5514e6198d92080f1ffc1e5e
+      path: tests/test_coverage_sortedkeylist_modulo.py
+      local_hint: ~/dev/afast-paired-src/python-sortedcontainers
+  tests/test_coverage_sortedkeylist_negate.py:
+    from_git:
+      repo: https://github.com/grantjenks/python-sortedcontainers.git
+      sha: 7dc426c95a0c329d5514e6198d92080f1ffc1e5e
+      path: tests/test_coverage_sortedkeylist_negate.py
+      local_hint: ~/dev/afast-paired-src/python-sortedcontainers
+  tests/test_rmul_hidden.py: |
+    from operator import neg
+
+    from sortedcontainers import SortedKeyList, SortedList
+
+
+    def test_rmul_honours_key():
+        skl = SortedKeyList([3, 2, 1], key=neg)
+        assert list(2 * skl) == [3, 3, 2, 2, 1, 1]
+        assert (2 * skl).key is neg
+
+
+    def test_rmul_equals_mul():
+        skl = SortedKeyList([(0, 'a'), (0, 'b'), (1, 'c')], key=lambda t: t[0])
+        assert list(3 * skl) == list(skl * 3)
+        assert type(3 * skl) is SortedKeyList
+
+
+    def test_rmul_zero_and_original_untouched():
+        skl = SortedKeyList([1, 2], key=neg)
+        assert list(0 * skl) == []
+        assert list(skl) == [2, 1]
+
+
+    def test_plain_sorted_list_unchanged():
+        sl = SortedList([3, 1, 2])
+        assert list(2 * sl) == [1, 1, 2, 2, 3, 3]
+        assert list(sl * 2) == [1, 1, 2, 2, 3, 3]
+  tests/test_count_between_hidden.py: |
+    from operator import neg
+
+    from sortedcontainers import SortedKeyList, SortedList
+
+
+    def test_inclusive_bounds_and_duplicates():
+        sl = SortedList([1, 2, 2, 3, 5])
+        assert sl.count_between(2, 3) == 3
+        assert sl.count_between(1, 5) == 5
+        assert sl.count_between(4, 4) == 0
+        assert sl.count_between(5, 5) == 1
+
+
+    def test_reversed_bounds_are_zero():
+        assert SortedList([1, 2, 3]).count_between(3, 1) == 0
+
+
+    def test_outside_range_and_empty():
+        assert SortedList([1, 2, 3]).count_between(-10, 100) == 3
+        assert SortedList().count_between(0, 1) == 0
+
+
+    def test_key_list_uses_key_order():
+        skl = SortedKeyList([1, 2, 3, 4], key=neg)
+        assert skl.count_between(4, 2) == 3
+        assert skl.count_between(2, 4) == 0
+turns:
+  - prompt: >-
+      `SortedKeyList.update()` and `add()` disagree about the order of elements that compare equal under
+      the key. With `key=lambda t: t[0]` and items like `(0, 'a')`, `(0, 'b')`, adding the items one by
+      one with `add()` keeps equal-key items in insertion order (new items go after existing ones), but
+      `update()` with a large enough iterable (the code path that rebuilds the list) puts the NEW items
+      before the existing equal ones. The same thing happens in `SortedList.update()` for equal-comparing
+      objects. `update()` must give exactly what repeated `add()` calls give. Please find the cause in
+      sortedcontainers/sortedlist.py and fix it for both classes. Run the tests from this directory with
+      `python3 -m pytest -q tests`.
+    checks:
+      - {kind: tests, runner: python, files: [tests, tests/test_coverage_sortedkeylist_modulo.py, tests/test_coverage_sortedkeylist_negate.py], restore: [tests/__init__.py, tests/benchmark.py, tests/benchmark_plot.py, tests/benchmark_scale.py, tests/benchmark_sorteddict.py, tests/benchmark_sortedlist.py, tests/benchmark_sortedset.py, tests/benchmark_splits_fill.py, tests/context.py, tests/issue_147.py, tests/plot_lengths_histogram_add.py, tests/plot_lengths_histogram_delitem.py, tests/sortedcollection.py, tests/test_coverage_sorteddict.py, tests/test_coverage_sortedkeylist_modulo.py, tests/test_coverage_sortedkeylist_negate.py, tests/test_coverage_sortedlist.py, tests/test_coverage_sortedset.py, tests/test_stress_sorteddict.py, tests/test_stress_sortedkeylist.py, tests/test_stress_sortedlist.py, tests/test_stress_sortedset.py], hidden: [tests/test_coverage_sortedkeylist_modulo.py, tests/test_coverage_sortedkeylist_negate.py]}
+  - prompt: >-
+      In three to five sentences explain the root cause: in the rebuild branch of `update()`, in which
+      order the new values and the existing sublists are concatenated before the sort, and why that
+      matters for elements that compare equal. Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [update, sort, stable|stability|equal], any: [values, extend|concat|order|before|after]}
+  - prompt: >-
+      Add a regression test file `tests/test_update_order.py` (pytest style) with at least three test
+      functions: SortedKeyList with a key and equal-key items (`update` equals repeated `add`), SortedList
+      with equal-comparing objects, and a small update that takes the other (add-based) path. Run it.
+    checks:
+      - {kind: file_regex, path: tests/test_update_order.py, pattern: ^\s*def test_, min_count: 3}
+      - {kind: tests, runner: python, files: [tests/test_update_order.py]}
+  - prompt: >-
+      A related bug: `2 * skl` ignores the key function of a `SortedKeyList` while `skl * 2` honours it.
+      With `from operator import neg`, `SortedKeyList([3, 2, 1], key=neg) * 2` is `[3, 3, 2, 2, 1, 1]` but
+      `2 * SortedKeyList([3, 2, 1], key=neg)` comes out ascending `[1, 1, 2, 2, 3, 3]` and the result's
+      `.key` is not neg. `2 * skl` must be identical to `skl * 2` (same elements, same order, same key),
+      and plain SortedList must stay as it is. Fix it and add a test to tests/test_update_order.py.
+    checks:
+      - {kind: tests, runner: python, files: [tests/test_rmul_hidden.py], restore: [tests/__init__.py, tests/benchmark.py, tests/benchmark_plot.py, tests/benchmark_scale.py, tests/benchmark_sorteddict.py, tests/benchmark_sortedlist.py, tests/benchmark_sortedset.py, tests/benchmark_splits_fill.py, tests/context.py, tests/issue_147.py, tests/plot_lengths_histogram_add.py, tests/plot_lengths_histogram_delitem.py, tests/sortedcollection.py, tests/test_coverage_sorteddict.py, tests/test_coverage_sortedkeylist_modulo.py, tests/test_coverage_sortedkeylist_negate.py, tests/test_coverage_sortedlist.py, tests/test_coverage_sortedset.py, tests/test_stress_sorteddict.py, tests/test_stress_sortedkeylist.py, tests/test_stress_sortedlist.py, tests/test_stress_sortedset.py], hidden: [tests/test_rmul_hidden.py]}
+      - {kind: tests, runner: python, files: [tests, tests/test_coverage_sortedkeylist_modulo.py, tests/test_coverage_sortedkeylist_negate.py, tests/test_rmul_hidden.py], restore: [tests/__init__.py, tests/benchmark.py, tests/benchmark_plot.py, tests/benchmark_scale.py, tests/benchmark_sorteddict.py, tests/benchmark_sortedlist.py, tests/benchmark_sortedset.py, tests/benchmark_splits_fill.py, tests/context.py, tests/issue_147.py, tests/plot_lengths_histogram_add.py, tests/plot_lengths_histogram_delitem.py, tests/sortedcollection.py, tests/test_coverage_sorteddict.py, tests/test_coverage_sortedkeylist_modulo.py, tests/test_coverage_sortedkeylist_negate.py, tests/test_coverage_sortedlist.py, tests/test_coverage_sortedset.py, tests/test_stress_sorteddict.py, tests/test_stress_sortedkeylist.py, tests/test_stress_sortedlist.py, tests/test_stress_sortedset.py], hidden: [tests/test_coverage_sortedkeylist_modulo.py, tests/test_coverage_sortedkeylist_negate.py, tests/test_rmul_hidden.py]}
+      - {kind: file_regex, path: tests/test_update_order.py, pattern: 2 \* SortedKeyList|rmul}
+  - prompt: >-
+      Quick question: how does `SortedList.update()` decide between adding the new values one at a time
+      and rebuilding the whole list, and what is `_update` in this class? Answer from the code. Do not
+      change any files.
+    checks:
+      - {kind: keyed_facts, all: [update, add], any: [\* 4|four|4, _update, rebuild|sort|_clear]}
+  - prompt: >-
+      Add a release-history entry at the top of HISTORY.rst, above the 2.2.2 section: a new section titled
+      `2.2.3 (unreleased)` (same reST underline style) with a **Bugfixes** list containing bullets for the
+      update/add ordering fix and for `__rmul__` on SortedKeyList.
+    checks:
+      - {kind: file_regex, path: HISTORY.rst, pattern: '^2\.2\.3 \(unreleased\)\n-{10,}'}
+      - {kind: file_regex, path: HISTORY.rst, pattern: __rmul__|rmul}
+      - {kind: file_regex, path: HISTORY.rst, pattern: update}
+  - prompt: >-
+      Small feature: add `SortedList.count_between(minimum, maximum)` returning how many items lie between
+      the two bounds, both inclusive, in the list's own ordering (for a SortedKeyList that is the key
+      ordering). `SortedList([1, 2, 2, 3, 5]).count_between(2, 3)` is 3 and `(4, 4)` is 0; if `minimum` is
+      after `maximum` in the ordering the result is 0 (never negative); `SortedKeyList([1, 2, 3, 4],
+      key=neg).count_between(4, 2)` is 3. Put it right before `__getitem__` in SortedList. (Docstring and
+      docs in later steps.)
+    checks:
+      - {kind: tests, runner: python, files: [tests/test_count_between_hidden.py], restore: [tests/__init__.py, tests/benchmark.py, tests/benchmark_plot.py, tests/benchmark_scale.py, tests/benchmark_sorteddict.py, tests/benchmark_sortedlist.py, tests/benchmark_sortedset.py, tests/benchmark_splits_fill.py, tests/context.py, tests/issue_147.py, tests/plot_lengths_histogram_add.py, tests/plot_lengths_histogram_delitem.py, tests/sortedcollection.py, tests/test_coverage_sorteddict.py, tests/test_coverage_sortedkeylist_modulo.py, tests/test_coverage_sortedkeylist_negate.py, tests/test_coverage_sortedlist.py, tests/test_coverage_sortedset.py, tests/test_stress_sorteddict.py, tests/test_stress_sortedkeylist.py, tests/test_stress_sortedlist.py, tests/test_stress_sortedset.py], hidden: [tests/test_count_between_hidden.py]}
+      - {kind: tests, runner: python, files: [tests, tests/test_coverage_sortedkeylist_modulo.py, tests/test_coverage_sortedkeylist_negate.py, tests/test_rmul_hidden.py, tests/test_count_between_hidden.py], restore: [tests/__init__.py, tests/benchmark.py, tests/benchmark_plot.py, tests/benchmark_scale.py, tests/benchmark_sorteddict.py, tests/benchmark_sortedlist.py, tests/benchmark_sortedset.py, tests/benchmark_splits_fill.py, tests/context.py, tests/issue_147.py, tests/plot_lengths_histogram_add.py, tests/plot_lengths_histogram_delitem.py, tests/sortedcollection.py, tests/test_coverage_sorteddict.py, tests/test_coverage_sortedkeylist_modulo.py, tests/test_coverage_sortedkeylist_negate.py, tests/test_coverage_sortedlist.py, tests/test_coverage_sortedset.py, tests/test_stress_sorteddict.py, tests/test_stress_sortedkeylist.py, tests/test_stress_sortedlist.py, tests/test_stress_sortedset.py], hidden: [tests/test_coverage_sortedkeylist_modulo.py, tests/test_coverage_sortedkeylist_negate.py, tests/test_rmul_hidden.py, tests/test_count_between_hidden.py]}
+      - {kind: file_regex, path: sortedcontainers/sortedlist.py, pattern: def count_between}
+  - prompt: >-
+      Add `tests/test_count_between.py` (pytest style) with at least three test functions for
+      `count_between`: inclusive bounds with duplicates, reversed bounds, and a SortedKeyList. Run it.
+    checks:
+      - {kind: file_regex, path: tests/test_count_between.py, pattern: ^\s*def test_, min_count: 3}
+      - {kind: tests, runner: python, files: [tests/test_count_between.py]}
+  - prompt: >-
+      Small refactor, behaviour unchanged: `SortedList.__mul__` and `SortedList.__imul__` both compute
+      `reduce(iadd, self._lists, [])`. Add a private method `_values(self)` to SortedList (put it right
+      before `__rmul__ = __mul__`) that returns that flattened list, and use it in those two methods.
+    checks:
+      - {kind: file_regex, path: sortedcontainers/sortedlist.py, pattern: def _values\(self\)}
+      - {kind: file_regex, path: sortedcontainers/sortedlist.py, pattern: self\._values\(\) \* num, min_count: 2}
+      - {kind: tests, runner: python, files: [tests, tests/test_coverage_sortedkeylist_modulo.py, tests/test_coverage_sortedkeylist_negate.py, tests/test_rmul_hidden.py, tests/test_count_between_hidden.py], restore: [tests/__init__.py, tests/benchmark.py, tests/benchmark_plot.py, tests/benchmark_scale.py, tests/benchmark_sorteddict.py, tests/benchmark_sortedlist.py, tests/benchmark_sortedset.py, tests/benchmark_splits_fill.py, tests/context.py, tests/issue_147.py, tests/plot_lengths_histogram_add.py, tests/plot_lengths_histogram_delitem.py, tests/sortedcollection.py, tests/test_coverage_sorteddict.py, tests/test_coverage_sortedkeylist_modulo.py, tests/test_coverage_sortedkeylist_negate.py, tests/test_coverage_sortedlist.py, tests/test_coverage_sortedset.py, tests/test_stress_sorteddict.py, tests/test_stress_sortedkeylist.py, tests/test_stress_sortedlist.py, tests/test_stress_sortedset.py], hidden: [tests/test_coverage_sortedkeylist_modulo.py, tests/test_coverage_sortedkeylist_negate.py, tests/test_rmul_hidden.py, tests/test_count_between_hidden.py]}
+  - prompt: >-
+      Give `SortedList.count_between` a docstring in the style of the neighbouring methods: a summary
+      line, runtime complexity (O(log(n))), a short doctest with `SortedList([1, 2, 2, 3, 5])`, and the
+      :param / :return: lines.
+    checks:
+      - {kind: file_regex, path: sortedcontainers/sortedlist.py, pattern: 'def count_between\(self, minimum, maximum\):\n\s+"""'}
+      - {kind: file_regex, path: sortedcontainers/sortedlist.py, pattern: '>>> sl\.count_between\(2, 3\)'}
+      - {kind: tests, runner: python, files: [tests, tests/test_coverage_sortedkeylist_modulo.py, tests/test_coverage_sortedkeylist_negate.py, tests/test_rmul_hidden.py, tests/test_count_between_hidden.py], restore: [tests/__init__.py, tests/benchmark.py, tests/benchmark_plot.py, tests/benchmark_scale.py, tests/benchmark_sorteddict.py, tests/benchmark_sortedlist.py, tests/benchmark_sortedset.py, tests/benchmark_splits_fill.py, tests/context.py, tests/issue_147.py, tests/plot_lengths_histogram_add.py, tests/plot_lengths_histogram_delitem.py, tests/sortedcollection.py, tests/test_coverage_sorteddict.py, tests/test_coverage_sortedkeylist_modulo.py, tests/test_coverage_sortedkeylist_negate.py, tests/test_coverage_sortedlist.py, tests/test_coverage_sortedset.py, tests/test_stress_sorteddict.py, tests/test_stress_sortedkeylist.py, tests/test_stress_sortedlist.py, tests/test_stress_sortedset.py], hidden: [tests/test_coverage_sortedkeylist_modulo.py, tests/test_coverage_sortedkeylist_negate.py, tests/test_rmul_hidden.py, tests/test_count_between_hidden.py]}
+  - prompt: >-
+      In docs/sortedlist.rst, add `.. automethod:: count_between` to the SortedList method list, directly
+      after the `count` entry (same indentation).
+    checks:
+      - {kind: file_regex, path: docs/sortedlist.rst, pattern: '^\s+\.\. automethod:: count\n\s+\.\. automethod:: count_between'}
+  - prompt: >-
+      Review the changes you made in this session as a code reviewer would: list each file you changed or
+      added, what changed, and any remaining edge case you did not cover. Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [sortedlist\.py, test, count_between|rmul], any: [edge, risk, not cover, remaining]}

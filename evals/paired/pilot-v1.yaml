@@ -13,7 +13,7 @@ suite_for_argv: {suite: s1m, split: m-dev}         # only used to reuse run.cell
 
 nonce_mode: per_session                            # per_session | none (none is only for the P2 contrast)
 default_reps: 1
-default_parallel: 6
+default_parallel: 4     # memory safety (2026-10-01 OOM events); waves larger than this are split or refused
 max_wave_launch_spread_s: 60
 max_wave_attempts: 3
 deadline_seconds_per_turn: 900

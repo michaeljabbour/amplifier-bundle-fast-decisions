@@ -32,7 +32,16 @@ import paired_scenarios as ps  # noqa: E402
 if "main" not in ps.SPLITS:
     ps.SPLITS = tuple(ps.SPLITS) + ("main",)
 
-REF_ROOT = Path.home() / "dev/afast-paired-src/reference/repos"
+REF_ROOTS = [Path.home() / "dev/afast-paired-refs/repos", Path.home() / "dev/afast-paired-src/reference/repos"]
+REF_ROOT = REF_ROOTS[0]
+
+
+def _ref_root(sid):
+    """First reference root that has this scenario (new campaign refs, then the earlier drafts' location)."""
+    for r in REF_ROOTS:
+        if (r / sid).is_dir():
+            return r
+    return REF_ROOTS[0]
 
 
 def _apply(ws: Path, turn_dir: Path):
@@ -76,7 +85,7 @@ def validate(spec, keep=False):
         shutil.copytree(snap_a / "workspace", ws)
         seen_hidden: set = set()
         for i, turn in enumerate(spec.turns, start=1):
-            tdir = REF_ROOT / spec.id / f"turn{i}"
+            tdir = _ref_root(spec.id) / spec.id / f"turn{i}"
             if not tdir.is_dir():
                 prob(f"turn{i}: missing reference dir {tdir}")
                 continue
@@ -116,7 +125,14 @@ def main():
     ap.add_argument("--ids")
     ap.add_argument("--jobs", type=int, default=4)
     ap.add_argument("--keep", action="store_true")
+    ap.add_argument("--cap-gb", type=float, default=None, help="memory cap per grader run (default 4 GB; memguard)")
+    ap.add_argument("--grader-timeout", type=float, default=None, help="seconds per grader run (default 300; memguard)")
     a = ap.parse_args()
+    import os as _os  # memguard defaults (scripts/paired_scenarios.py sets 4 GB / 300 s); explicit flags win
+    if a.cap_gb is not None:
+        _os.environ["PAIRED_GRADER_CAP_GB"] = str(a.cap_gb)
+    if a.grader_timeout is not None:
+        _os.environ["PAIRED_GRADER_TIMEOUT_S"] = str(a.grader_timeout)
     specs = ps.load_dir(HERE)  # also proves the loader parses every YAML in this directory
     if a.ids:
         want = set(a.ids.split(","))

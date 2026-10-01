@@ -1,0 +1,176 @@
+# main-v1 polyglot 9/20: go/protein-translation, 8 turns, short gaps.
+id: go-protein
+task_type: feature
+language: go
+split: main
+default_gap_s: 10
+source:
+  desc: "Aider polyglot-benchmark go/protein-translation (Exercism), outside the S2 slice"
+  repo: https://github.com/Aider-AI/polyglot-benchmark
+  sha: 7e0611e77b54e2dea774cdc0aa00cf9f7ed6144f
+workspace:
+  kind: git
+  repo: https://github.com/Aider-AI/polyglot-benchmark
+  sha: 7e0611e77b54e2dea774cdc0aa00cf9f7ed6144f
+  subdir: go/exercises/practice/protein-translation
+  local_hint: ~/dev/afast-campaign-corrected-polyglot-20260919/polyglot/polyglot-benchmark
+  remove: [.meta]
+protected: [protein_translation_test.go]
+hidden_files:
+  hidden_codons_test.go: |
+    package protein
+
+    import (
+    	"reflect"
+    	"testing"
+    )
+
+    func TestHCodonsSplits(t *testing.T) {
+    	got, err := Codons("AUGUUUUAA")
+    	if err != nil || !reflect.DeepEqual(got, []string{"AUG", "UUU", "UAA"}) {
+    		t.Fatalf("got %v, %v", got, err)
+    	}
+    }
+
+    func TestHCodonsEmpty(t *testing.T) {
+    	got, err := Codons("")
+    	if err != nil || len(got) != 0 {
+    		t.Fatalf("got %v, %v", got, err)
+    	}
+    }
+
+    func TestHCodonsPartialIsInvalid(t *testing.T) {
+    	for _, in := range []string{"A", "AU", "AUGU", "AUGUU"} {
+    		if got, err := Codons(in); err != ErrInvalidBase || got != nil {
+    			t.Fatalf("Codons(%q) = %v, %v", in, got, err)
+    		}
+    	}
+    }
+
+    func TestHCodonsDoesNotStopAtStop(t *testing.T) {
+    	got, err := Codons("UAAAUG")
+    	if err != nil || len(got) != 2 {
+    		t.Fatalf("got %v, %v", got, err)
+    	}
+    }
+  hidden_case_test.go: |
+    package protein
+
+    import (
+    	"reflect"
+    	"testing"
+    )
+
+    func TestHLowerCaseCodon(t *testing.T) {
+    	cases := map[string]string{"aug": "Methionine", "uUu": "Phenylalanine", "ugg": "Tryptophan", "UCa": "Serine"}
+    	for in, want := range cases {
+    		got, err := FromCodon(in)
+    		if err != nil || got != want {
+    			t.Errorf("FromCodon(%q) = %q, %v; want %q", in, got, err, want)
+    		}
+    	}
+    	if _, err := FromCodon("uaa"); err != ErrStop {
+    		t.Errorf("lower-case stop codon: %v", err)
+    	}
+    	if _, err := FromCodon("abc"); err != ErrInvalidBase {
+    		t.Errorf("lower-case invalid: %v", err)
+    	}
+    }
+
+    func TestHLowerCaseRNA(t *testing.T) {
+    	got, err := FromRNA("auguuuuaaaug")
+    	if err != nil || !reflect.DeepEqual(got, []string{"Methionine", "Phenylalanine"}) {
+    		t.Fatalf("got %v, %v", got, err)
+    	}
+    }
+
+    func TestHCodonsUpperCased(t *testing.T) {
+    	got, err := Codons("augUuu")
+    	if err != nil || !reflect.DeepEqual(got, []string{"AUG", "UUU"}) {
+    		t.Fatalf("got %v, %v", got, err)
+    	}
+    }
+  hidden_translate_test.go: |
+    package protein
+
+    import "testing"
+
+    func TestHTranslate(t *testing.T) {
+    	cases := []struct {
+    		in, want string
+    	}{
+    		{"AUGUUUUAA", "Methionine-Phenylalanine"},
+    		{"augugg", "Methionine-Tryptophan"},
+    		{"UAAAUG", ""},
+    		{"", ""},
+    		{"UUA", "Leucine"},
+    	}
+    	for _, tc := range cases {
+    		got, err := Translate(tc.in)
+    		if err != nil || got != tc.want {
+    			t.Errorf("Translate(%q) = %q, %v; want %q", tc.in, got, err, tc.want)
+    		}
+    	}
+    }
+
+    func TestHTranslateError(t *testing.T) {
+    	got, err := Translate("AUGXXX")
+    	if err != ErrInvalidBase || got != "" {
+    		t.Fatalf("got %q, %v", got, err)
+    	}
+    }
+turns:
+  - prompt: >-
+      Read .docs/instructions.md and implement `FromCodon` and `FromRNA` (plus the `ErrStop` and
+      `ErrInvalidBase` errors) in protein_translation.go so that `go test ./...` passes. Do not edit
+      the provided test file.
+    checks:
+      - {kind: tests, runner: go, restore: [protein_translation_test.go]}
+  - prompt: >-
+      In three to five sentences, explain how `FromRNA` treats a stop codon versus an unknown codon,
+      and why the two cases use different error values. Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [ErrStop, ErrInvalidBase, stop, invalid|unknown]}
+  - prompt: >-
+      Add `func Codons(rna string) ([]string, error)` that splits an RNA strand into its three-letter
+      codons without translating them and without stopping at stop codons. An empty strand gives an
+      empty result and no error; a strand whose length is not a multiple of three returns a nil slice
+      and `ErrInvalidBase`.
+    checks:
+      - {kind: tests, runner: go, restore: [protein_translation_test.go], hidden: [hidden_codons_test.go]}
+  - prompt: >-
+      Make `FromCodon`, `FromRNA` and `Codons` case-insensitive: lower or mixed case input such as
+      "aug" or "uUu" is accepted. `Codons` returns its codons in upper case.
+    checks:
+      - {kind: tests, runner: go, restore: [protein_translation_test.go], hidden: [hidden_codons_test.go, hidden_case_test.go]}
+  - prompt: >-
+      Add your own tests in a new file `extra_test.go` (package protein): at least five test functions
+      covering `Codons`, case-insensitivity and stop-codon handling. Run `go test ./...`.
+    checks:
+      - {kind: file_regex, path: extra_test.go, pattern: ^func Test, min_count: 5}
+      - {kind: tests, runner: go, restore: [protein_translation_test.go], hidden: [hidden_codons_test.go, hidden_case_test.go]}
+  - prompt: >-
+      Refactor protein_translation.go for clarity: replace the codon `switch` with a package-level
+      lookup table named `codonTable` (a map from codon to amino acid name). No behaviour change; keep
+      all tests passing.
+    checks:
+      - {kind: file_regex, path: protein_translation.go, pattern: 'codonTable\s*=\s*map\[string\]'}
+      - {kind: file_regex, path: protein_translation.go, pattern: switch codon, absent: true}
+      - {kind: tests, runner: go, restore: [protein_translation_test.go], hidden: [hidden_codons_test.go, hidden_case_test.go]}
+  - prompt: >-
+      Add `func Translate(rna string) (string, error)` returning the protein names from `FromRNA`
+      joined with "-" (for example "Methionine-Phenylalanine"). A strand that translates to nothing
+      gives ""; errors are passed through with an empty string.
+    checks:
+      - {kind: tests, runner: go, restore: [protein_translation_test.go], hidden: [hidden_codons_test.go, hidden_case_test.go, hidden_translate_test.go]}
+  - prompt: >-
+      Document the package: add Go doc comments to `FromCodon`, `FromRNA`, `Codons` and `Translate`
+      (each starting with the function name), and create README.md with a `## Usage` section and a `##
+      Errors` section.
+    checks:
+      - {kind: file_regex, path: protein_translation.go, pattern: '^// FromCodon '}
+      - {kind: file_regex, path: protein_translation.go, pattern: '^// FromRNA '}
+      - {kind: file_regex, path: protein_translation.go, pattern: '^// Codons '}
+      - {kind: file_regex, path: protein_translation.go, pattern: '^// Translate '}
+      - {kind: doc_sections, path: README.md, headings: [usage, errors]}
+      - {kind: tests, runner: go, restore: [protein_translation_test.go], hidden: [hidden_codons_test.go, hidden_case_test.go, hidden_translate_test.go]}

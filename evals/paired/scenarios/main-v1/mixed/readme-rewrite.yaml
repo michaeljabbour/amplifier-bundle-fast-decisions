@@ -1,0 +1,255 @@
+# Tiny unit-conversion lib with a sloppy README containing stale claims: find them, rewrite the README with verified examples, add contributor docs and a units reference.
+id: readme-rewrite
+task_type: mixed
+language: python
+split: main
+source:
+  desc: 'Tiny unit-conversion lib with a sloppy README containing stale claims: find them, rewrite the README with verified examples, add contributor
+    docs and a units reference.'
+  kind: self-authored deterministic workspace
+  adapted_from: ['~/dev/amplifier-agent/.amplifier/evaluation/tasks/benchmark/code-discrepancy-tutorials-grasp/task.yaml and code-discrepancy-docs-knack
+      (docs vs implementation), benchmark/markdown-deck-converter/task.yaml (README with clear examples as a deliverable); library authored fresh']
+workspace:
+  kind: inline
+  files:
+    README.md: |
+      unitconv
+      =======
+
+      tiny unit converter!!
+
+      install: copy the folder. no deps.
+
+      usage:
+
+          from unitconv import convert
+          convert(1, "lb", "kg")   # 0.5
+          convert(32, "f", "c")    # 0.0
+
+      units: m km cm mi ft kg g lb oz c f k
+
+      if you pass something it doesnt know you get a KeyError
+
+      tests: `python -m unittest`
+    unitconv/__init__.py: |
+      """unitconv."""
+      from .core import convert, supported_units
+
+      __all__ = ["convert", "supported_units"]
+    unitconv/core.py: |
+      """Unit conversion helpers."""
+
+      LENGTH = {"m": 1.0, "km": 1000.0, "cm": 0.01, "mi": 1609.344, "ft": 0.3048}
+      MASS = {"kg": 1.0, "g": 0.001, "lb": 0.45359237}
+      TEMP = ("c", "f", "k")
+
+
+      def supported_units():
+          """Sorted list of every unit symbol that `convert` accepts."""
+          return sorted(list(LENGTH) + list(MASS) + list(TEMP))
+
+
+      def _to_kelvin(value, unit):
+          if unit == "c":
+              return value + 273.15
+          if unit == "f":
+              return (value - 32) * 5 / 9 + 273.15
+          return value
+
+
+      def _from_kelvin(value, unit):
+          if unit == "c":
+              return value - 273.15
+          if unit == "f":
+              return (value - 273.15) * 9 / 5 + 32
+          return value
+
+
+      def convert(value, src, dst):
+          """Convert `value` from unit `src` to unit `dst` (both lower-case symbols of the same kind)."""
+          if src in LENGTH and dst in LENGTH:
+              return value * LENGTH[src] / LENGTH[dst]
+          if src in MASS and dst in MASS:
+              return value * MASS[src] / MASS[dst]
+          if src in TEMP and dst in TEMP:
+              return _from_kelvin(_to_kelvin(value, src), dst)
+          raise ValueError(f"cannot convert {src} to {dst}")
+    tests/test_core.py: |
+      import unittest
+
+      from unitconv import convert, supported_units
+
+
+      class CoreTests(unittest.TestCase):
+          def test_length(self):
+              self.assertAlmostEqual(convert(1, "mi", "km"), 1.609344)
+
+          def test_temperature(self):
+              self.assertAlmostEqual(convert(100, "c", "f"), 212.0)
+
+          def test_units_listed(self):
+              self.assertIn("lb", supported_units())
+
+
+      if __name__ == "__main__":
+          unittest.main()
+    tests/__init__.py: ''
+protected: [unitconv/core.py, unitconv/__init__.py, tests/test_core.py]
+hidden_files:
+  _grade.py: |
+    import csv, json, os, re, subprocess, sys
+    from pathlib import Path
+
+    W = Path(".")
+
+
+    def fail(msg):
+        print("FAIL:", msg)
+        sys.exit(1)
+
+
+    def need(cond, msg):
+        if not cond:
+            fail(msg)
+
+
+    def load_json(rel):
+        p = W / rel
+        need(p.exists(), f"missing {rel}")
+        try:
+            return json.loads(p.read_text(encoding="utf-8"))
+        except Exception as e:  # noqa: BLE001
+            fail(f"{rel} is not valid JSON: {e}")
+
+
+    def read(rel):
+        p = W / rel
+        need(p.exists(), f"missing {rel}")
+        return p.read_text(encoding="utf-8")
+
+
+    def close(a, b, tol=0.011):
+        try:
+            return abs(float(a) - float(b)) <= tol
+        except (TypeError, ValueError):
+            return False
+
+
+    def md_rows(rel, under=None):
+        """Table rows (lists of cells) of a markdown file; with `under`, only rows inside the first heading matching it."""
+        lines = read(rel).splitlines()
+        if under:
+            out, on, lvl = [], False, 0
+            for ln in lines:
+                m = re.match(r"^(#+)\s+(.*)", ln)
+                if m:
+                    if on and len(m.group(1)) <= lvl:
+                        break
+                    if not on and re.search(under, m.group(2), re.I):
+                        on, lvl = True, len(m.group(1))
+                    continue
+                if on:
+                    out.append(ln)
+            lines = out
+        rows = []
+        for ln in lines:
+            if ln.strip().startswith("|") and not re.match(r"^\s*\|[\s:|-]+\|\s*$", ln):
+                rows.append([c.strip() for c in ln.strip().strip("|").split("|")])
+        return rows
+
+
+    def num(s):
+        m = re.search(r"-?\d[\d,]*\.?\d*", str(s))
+        return float(m.group(0).replace(",", "")) if m else None
+
+
+    def run(cmd, timeout=60):
+        p = subprocess.run(cmd, shell=True, cwd=W, capture_output=True, text=True, timeout=timeout)
+        return p.returncode, p.stdout, p.stderr
+
+    EXP = {'units': ['cm', 'c', 'f', 'ft', 'g', 'k', 'kg', 'km', 'lb', 'm', 'mi'], 'calls': [[1, 'mi', 'km'], [100, 'c', 'f'], [1, 'lb', 'kg'], [250, 'g', 'lb'], [0, 'k', 'c']], 'res': [1.609344, 212.0, 0.45359237, 0.5511556554621939, -273.15], 'len': {'m': 1.0, 'km': 1000.0, 'cm': 0.01, 'mi': 1609.344, 'ft': 0.3048}, 'mass': {'kg': 1.0, 'g': 0.001, 'lb': 0.45359237}}
+    def t3():
+        txt = read("README.md")
+        for h in ("Overview", "Installation", "Quick start", "Supported units", "Errors", "Development"): need(re.search(r"^##\s+" + h, txt, re.M | re.I), "missing section " + h)
+        need(len(re.findall(r"^```", txt, re.M)) >= 2, "need at least one fenced code block")
+        sec = re.search(r"^##\s+Supported units\s*\n(.*?)(?=^##|\Z)", txt, re.M | re.S | re.I).group(1)
+        for u in EXP["units"]: need(re.search(r"(?<![A-Za-z])%s(?![A-Za-z])" % re.escape(u), sec), f"unit {u} missing from Supported units")
+        need(not re.search(r"(?<![A-Za-z])oz(?![A-Za-z])", txt), "oz is not supported and must not appear"); need("ValueError" in txt and "KeyError" not in txt, "errors section must say ValueError, never KeyError")
+    def t4():
+        rows = md_rows("README.md", "quick start"); got = {}
+        for r in rows:
+            m = re.search(r"convert\(\s*(-?[\d.]+)\s*,\s*[\"']([a-z]+)[\"']\s*,\s*[\"']([a-z]+)[\"']\s*\)", r[0]) if r else None
+            if m and len(r) >= 2 and num(r[1]) is not None: got[(float(m.group(1)), m.group(2), m.group(3))] = num(r[1])
+        for c, e in zip(EXP["calls"], EXP["res"]):
+            k = (float(c[0]), c[1], c[2]); need(k in got, f"row for convert{tuple(c)} missing"); need(abs(got[k] - e) <= 0.00051, f"{k}: {got[k]} != {e:.4f}")
+    def t6():
+        txt = read("CONTRIBUTING.md")
+        for h in ("Setup", "Running tests", "Style"): need(re.search(r"^##\s+" + h, txt, re.M | re.I), "missing section " + h)
+        need(re.search(r"python3? -m unittest", txt), "must give the unittest command")
+        rc, out, err = run("python3 -m unittest discover -s tests 2>&1"); need(rc == 0, "the documented test command does not pass")
+    def t8():
+        rows = md_rows("docs/units.md"); got = {r[0].strip("* `"): r for r in rows if len(r) >= 3}
+        for u, f in {**EXP["len"], **EXP["mass"]}.items():
+            need(u in got and num(got[u][-1]) is not None and abs(num(got[u][-1]) - f) <= 1e-9 * max(1, f), f"{u}: factor wrong or missing")
+        for u in ("c", "f", "k"): need(u in got, f"temperature unit {u} missing")
+
+
+    if __name__ == "__main__":
+        fn = globals().get(sys.argv[1]) if len(sys.argv) > 1 else None
+        need(callable(fn), "unknown check " + str(sys.argv[1:]))
+        fn()
+        print("OK")
+turns:
+- prompt: What does the unitconv package offer? Summarise its public API and the kinds of units it can convert, based on the code. Do not change
+    any files.
+  checks:
+  - kind: keyed_facts
+    all: [convert, supported_units, length, mass, temperature]
+- prompt: Compare the current README.md with the code. Which statements in it are wrong? Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: [\boz\b, KeyError, ValueError, 0\.45]
+- prompt: Rewrite README.md properly in markdown with level-2 sections Overview, Installation, Quick start, Supported units, Errors and Development
+    (at least one fenced code block). Only document what the code really does.
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t3
+    hidden: [_grade.py]
+    timeout: 60
+- prompt: 'Under Quick start in README.md add a markdown table with columns Call and Result for exactly these calls, with the results computed
+    by running the code and shown to 4 decimals: convert(1, "mi", "km"), convert(100, "c", "f"), convert(1, "lb", "kg"), convert(250, "g", "lb"),
+    convert(0, "k", "c").'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t4
+    hidden: [_grade.py]
+    timeout: 60
+- prompt: Which names does the unitconv package export from its top level (`from unitconv import ...`)? Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: [convert, supported_units]
+- prompt: Create CONTRIBUTING.md with level-2 sections Setup, Running tests and Style. Running tests must give the exact command that passes in
+    this repository.
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t6
+    hidden: [_grade.py]
+    timeout: 60
+- prompt: Create CHANGELOG.md with a `## [Unreleased]` section and a `### Fixed` list recording the README corrections you made (the unsupported
+    unit, the wrong example and the error type).
+  checks:
+  - {kind: file_regex, path: CHANGELOG.md, pattern: '^##\s+\[Unreleased\]'}
+  - {kind: file_regex, path: CHANGELOG.md, pattern: ^###\s+Fixed}
+  - {kind: file_regex, path: CHANGELOG.md, pattern: \boz\b}
+  - {kind: file_regex, path: CHANGELOG.md, pattern: KeyError|ValueError}
+- prompt: 'Create docs/units.md: a markdown table with columns Unit, Kind and Factor to base, one row per supported unit. Length factors are relative
+    to the metre and mass factors to the kilogram (read them from the code); temperature rows say n/a.'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t8
+    hidden: [_grade.py]
+    timeout: 60

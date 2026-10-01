@@ -1,0 +1,131 @@
+# main-v1 real-repo scenario (8 turns): more-itertools/more-itertools, chunked() leaked an islice error for negative n, fixed upstream in 0e6acdf9; workspace is its parent
+# Workspace = parent of the upstream fix commit; hidden tests = the fix commit's tests (+ scenario-authored edge tests).
+id: moreit-chunked
+task_type: bugfix
+language: python
+split: main
+source:
+  desc: >-
+    more-itertools/more-itertools, chunked() leaked an islice error for negative n, fixed upstream in
+    0e6acdf9; workspace is its parent
+  repo: https://github.com/more-itertools/more-itertools.git
+  sha: 516f0a80fb7c2c8562dbb5e318fc2a3d44f4171f
+  fix_sha: 0e6acdf9b60765ecf9634d6f5c132ac1bebc616b
+workspace:
+  kind: git
+  repo: https://github.com/more-itertools/more-itertools.git
+  sha: 516f0a80fb7c2c8562dbb5e318fc2a3d44f4171f
+  local_hint: ~/dev/afast-paired-src/more-itertools
+hidden_files:
+  tests/test_more.py:
+    from_git:
+      repo: https://github.com/more-itertools/more-itertools.git
+      sha: 0e6acdf9b60765ecf9634d6f5c132ac1bebc616b
+      path: tests/test_more.py
+      local_hint: ~/dev/afast-paired-src/more-itertools
+  tests/test_ichunked_edge_hidden.py: |
+    from unittest import TestCase
+
+    import more_itertools as mi
+
+
+    class IchunkedEdgeTests(TestCase):
+        def test_negative_raises(self):
+            with self.assertRaisesRegex(ValueError, 'n must be at least 0'):
+                list(mi.ichunked('ABCDE', -1))
+
+        def test_zero_yields_no_chunks(self):
+            self.assertEqual(list(mi.ichunked('ABCDE', 0)), [])
+            self.assertEqual(list(mi.ichunked([], 0)), [])
+
+        def test_matches_chunked_for_n_zero(self):
+            self.assertEqual([list(c) for c in mi.ichunked('ABC', 0)], list(mi.chunked('ABC', 0)))
+
+        def test_normal_use_unchanged(self):
+            self.assertEqual([list(c) for c in mi.ichunked('ABCDE', 2)], [['A', 'B'], ['C', 'D'], ['E']])
+  tests/test_chunked_drop_last_hidden.py: |
+    from unittest import TestCase
+
+    import more_itertools as mi
+
+
+    class DropLastTests(TestCase):
+        def test_short_tail_dropped(self):
+            self.assertEqual(list(mi.chunked('ABCDEFG', 3, drop_last=True)), [['A', 'B', 'C'], ['D', 'E', 'F']])
+
+        def test_exact_multiple_unchanged(self):
+            self.assertEqual(list(mi.chunked('ABCDEF', 3, drop_last=True)), [['A', 'B', 'C'], ['D', 'E', 'F']])
+
+        def test_shorter_than_n_yields_nothing(self):
+            self.assertEqual(list(mi.chunked('AB', 3, drop_last=True)), [])
+
+        def test_none_keeps_single_chunk(self):
+            self.assertEqual(list(mi.chunked('ABC', None, drop_last=True)), [['A', 'B', 'C']])
+
+        def test_strict_and_drop_last_conflict_at_call_time(self):
+            with self.assertRaisesRegex(ValueError, 'mutually exclusive'):
+                mi.chunked('ABC', 2, strict=True, drop_last=True)
+
+        def test_default_keeps_tail(self):
+            self.assertEqual(list(mi.chunked('ABCDEFG', 3)), [['A', 'B', 'C'], ['D', 'E', 'F'], ['G']])
+turns:
+  - prompt: >-
+      `more_itertools.chunked('ABCDE', -1)` fails with a confusing message that leaks an internal detail
+      ("Stop argument for islice() must be None or an integer: 0 <= x <= sys.maxsize"). The neighbouring
+      `sliced()` and `tail()` raise `ValueError('n must be at least 0')` for a negative size, so
+      `chunked()` should do the same, up front. `n=None` (one single chunk) and `n=0` must keep working as
+      before. Please find where it goes wrong in more_itertools/more.py and fix it. Run the tests from
+      this directory with `python3 -m pytest -q tests`.
+    checks:
+      - {kind: tests, runner: python, files: [tests, tests/test_more.py], restore: [tests/__init__.py, tests/test_more.py, tests/test_recipes.py], hidden: [tests/test_more.py]}
+  - prompt: >-
+      In three to five sentences explain why that islice message appears: which call inside chunked() ends
+      up in islice, and why `n=0` and `n=None` were fine. Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [chunked, take, islice], any: ['negative|-1|< ?0', 'iter\(|sentinel|\[\]']}
+  - prompt: >-
+      Add a regression test file `tests/test_chunked_negative.py` with at least three test functions:
+      negative n raises ValueError with the message 'n must be at least 0' (also with strict=True), n=0
+      still yields nothing, and n=None still yields one chunk. Run it.
+    checks:
+      - {kind: file_regex, path: tests/test_chunked_negative.py, pattern: ^\s*def test_, min_count: 3}
+      - {kind: tests, runner: python, files: [tests/test_chunked_negative.py]}
+  - prompt: >-
+      `ichunked()` has the same problem: `list(ichunked('ABCDE', -1))` leaks an islice message and
+      `ichunked('ABCDE', 0)` fails with another one. Make it consistent with `chunked()`: a negative n
+      raises `ValueError('n must be at least 0')` (when the generator is first advanced is fine), and n=0
+      yields no chunks at all. Normal use must not change. Add tests to tests/test_chunked_negative.py.
+    checks:
+      - {kind: tests, runner: python, files: [tests/test_ichunked_edge_hidden.py], restore: [tests/__init__.py, tests/test_more.py, tests/test_recipes.py], hidden: [tests/test_ichunked_edge_hidden.py]}
+      - {kind: tests, runner: python, files: [tests, tests/test_more.py, tests/test_ichunked_edge_hidden.py], restore: [tests/__init__.py, tests/test_more.py, tests/test_recipes.py], hidden: [tests/test_more.py, tests/test_ichunked_edge_hidden.py]}
+      - {kind: file_regex, path: tests/test_chunked_negative.py, pattern: ichunked}
+  - prompt: >-
+      Add a release note: in docs/versions.rst, under the existing "Unreleased" heading, add a bullet in
+      the "Changes to existing functions" list for :func:`chunked` and :func:`ichunked` (negative n now
+      raises ValueError('n must be at least 0'); ichunked with n=0 yields nothing).
+    checks:
+      - {kind: file_regex, path: docs/versions.rst, pattern: 'Unreleased\n-+\n(?:.*\n){0,8}?.*:func:`chunked`'}
+      - {kind: file_regex, path: docs/versions.rst, pattern: 'Unreleased\n-+\n(?:.*\n){0,8}?.*:func:`ichunked`'}
+  - prompt: >-
+      Small feature: give `chunked()` an optional keyword `drop_last=False`. When True, a final chunk that
+      is shorter than n is discarded: `list(chunked('ABCDEFG', 3, drop_last=True))` ->
+      `[['A','B','C'],['D','E','F']]`; an exact multiple is unchanged; `n=None` still returns the one
+      chunk. Combining `strict=True` with `drop_last=True` must raise `ValueError('strict and drop_last
+      are mutually exclusive.')` immediately (at call time, before iterating). Default behaviour must not
+      change. Add tests to tests/test_chunked_negative.py.
+    checks:
+      - {kind: tests, runner: python, files: [tests/test_chunked_drop_last_hidden.py], restore: [tests/__init__.py, tests/test_more.py, tests/test_recipes.py], hidden: [tests/test_chunked_drop_last_hidden.py]}
+      - {kind: tests, runner: python, files: [tests, tests/test_more.py, tests/test_ichunked_edge_hidden.py, tests/test_chunked_drop_last_hidden.py], restore: [tests/__init__.py, tests/test_more.py, tests/test_recipes.py], hidden: [tests/test_more.py, tests/test_ichunked_edge_hidden.py, tests/test_chunked_drop_last_hidden.py]}
+      - {kind: file_regex, path: more_itertools/more.py, pattern: drop_last, min_count: 4}
+  - prompt: >-
+      Document `drop_last` in chunked()'s docstring: add a paragraph that starts with the literal text `If
+      *drop_last* is ``True``,` and says that a final shorter chunk is discarded and that it cannot be
+      combined with *strict*.
+    checks:
+      - {kind: file_regex, path: more_itertools/more.py, pattern: '^\s+If \*drop_last\* is ``True``,'}
+      - {kind: tests, runner: python, files: [tests, tests/test_more.py, tests/test_ichunked_edge_hidden.py, tests/test_chunked_drop_last_hidden.py], restore: [tests/__init__.py, tests/test_more.py, tests/test_recipes.py], hidden: [tests/test_more.py, tests/test_ichunked_edge_hidden.py, tests/test_chunked_drop_last_hidden.py]}
+  - prompt: >-
+      Review the changes you made in this session as a code reviewer would: list each file you changed or
+      added, what changed, and any remaining edge case you did not cover. Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [more\.py, test, drop_last], any: [edge, risk, not cover, remaining]}

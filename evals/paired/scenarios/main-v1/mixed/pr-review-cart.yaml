@@ -1,0 +1,320 @@
+# Review a planted coupon diff with four defects, write the review, implement it correctly, test it against the buggy patch, document.
+id: pr-review-cart
+task_type: mixed
+language: python
+split: main
+source:
+  desc: Review a planted coupon diff with four defects, write the review, implement it correctly, test it against the buggy patch, document.
+  kind: self-authored deterministic workspace
+  adapted_from: ['~/dev/amplifier-agent/.amplifier/evaluation/tasks/benchmark/code-discrepancy-*-grasp/task.yaml (planted defects the reviewer
+      must find, graded by keyed topics); review-a-diff shape follows pilot-v1/slugify-review.yaml']
+workspace:
+  kind: inline
+  files:
+    README.md: |
+      # shop
+
+      Exact-money shopping cart (`shop/cart.py`).
+    shop/__init__.py: ''
+    shop/cart.py: |
+      """Shopping cart with exact money arithmetic."""
+      from decimal import Decimal, ROUND_HALF_UP
+
+      CENT = Decimal("0.01")
+
+
+      def money(value):
+          """Quantize to cents using ROUND_HALF_UP."""
+          return Decimal(value).quantize(CENT, rounding=ROUND_HALF_UP)
+
+
+      class Cart:
+          """A list of line items; all money is Decimal."""
+
+          def __init__(self):
+              self.items = []
+
+          def add(self, sku, unit_price, qty=1):
+              if qty <= 0:
+                  raise ValueError("qty must be positive")
+              self.items.append((sku, money(unit_price), qty))
+
+          def subtotal(self):
+              return money(sum((p * q for _, p, q in self.items), Decimal("0")))
+
+          def total(self, shipping=Decimal("0")):
+              return money(self.subtotal() + Decimal(shipping))
+    tests/test_cart.py: |
+      import unittest
+      from decimal import Decimal
+
+      from shop.cart import Cart
+
+
+      class CartTests(unittest.TestCase):
+          def test_subtotal(self):
+              c = Cart()
+              c.add("A", Decimal("2.50"), 2)
+              c.add("B", Decimal("1.00"))
+              self.assertEqual(c.subtotal(), Decimal("6.00"))
+
+          def test_qty_must_be_positive(self):
+              with self.assertRaises(ValueError):
+                  Cart().add("A", Decimal("1.00"), 0)
+
+          def test_total_with_shipping(self):
+              c = Cart()
+              c.add("A", Decimal("10.00"))
+              self.assertEqual(c.total(Decimal("4.99")), Decimal("14.99"))
+
+          def test_half_up_rounding(self):
+              c = Cart()
+              c.add("A", Decimal("0.125"), 1)
+              self.assertEqual(c.subtotal(), Decimal("0.13"))
+
+
+      if __name__ == "__main__":
+          unittest.main()
+    patches/coupon.diff: "--- a/shop/cart.py\n+++ b/shop/cart.py\n@@ -2,6 +2,7 @@\n from decimal import Decimal, ROUND_HALF_UP\n \n CENT = Decimal(\"\
+      0.01\")\n+COUPONS = {\"SAVE10\": (\"pct\", 10), \"FIVEOFF\": (\"flat\", 5)}\n \n \n def money(value):\n@@ -12,8 +13,12 @@\n class Cart:\n\
+      \     \"\"\"A list of line items; all money is Decimal.\"\"\"\n \n-    def __init__(self):\n+    def __init__(self, coupons=[]):\n     \
+      \    self.items = []\n+        self.coupons = coupons\n+\n+    def apply_coupon(self, code):\n+        self.coupons.append(COUPONS[code])\n\
+      \ \n     def add(self, sku, unit_price, qty=1):\n         if qty <= 0:\n@@ -24,4 +29,10 @@\n         return money(sum((p * q for _, p, q\
+      \ in self.items), Decimal(\"0\")))\n \n     def total(self, shipping=Decimal(\"0\")):\n-        return money(self.subtotal() + Decimal(shipping))\n\
+      +        total = self.subtotal() + Decimal(shipping)\n+        for kind, value in self.coupons:\n+            if kind == \"pct\":\n+   \
+      \             total = total * (1 - value / 100)\n+            else:\n+                total = total - Decimal(value)\n+        return money(total)\n"
+protected: [patches/coupon.diff, tests/test_cart.py]
+hidden_files:
+  _grade.py: |
+    import csv, json, os, re, subprocess, sys
+    from pathlib import Path
+
+    W = Path(".")
+
+
+    def fail(msg):
+        print("FAIL:", msg)
+        sys.exit(1)
+
+
+    def need(cond, msg):
+        if not cond:
+            fail(msg)
+
+
+    def load_json(rel):
+        p = W / rel
+        need(p.exists(), f"missing {rel}")
+        try:
+            return json.loads(p.read_text(encoding="utf-8"))
+        except Exception as e:  # noqa: BLE001
+            fail(f"{rel} is not valid JSON: {e}")
+
+
+    def read(rel):
+        p = W / rel
+        need(p.exists(), f"missing {rel}")
+        return p.read_text(encoding="utf-8")
+
+
+    def close(a, b, tol=0.011):
+        try:
+            return abs(float(a) - float(b)) <= tol
+        except (TypeError, ValueError):
+            return False
+
+
+    def md_rows(rel, under=None):
+        """Table rows (lists of cells) of a markdown file; with `under`, only rows inside the first heading matching it."""
+        lines = read(rel).splitlines()
+        if under:
+            out, on, lvl = [], False, 0
+            for ln in lines:
+                m = re.match(r"^(#+)\s+(.*)", ln)
+                if m:
+                    if on and len(m.group(1)) <= lvl:
+                        break
+                    if not on and re.search(under, m.group(2), re.I):
+                        on, lvl = True, len(m.group(1))
+                    continue
+                if on:
+                    out.append(ln)
+            lines = out
+        rows = []
+        for ln in lines:
+            if ln.strip().startswith("|") and not re.match(r"^\s*\|[\s:|-]+\|\s*$", ln):
+                rows.append([c.strip() for c in ln.strip().strip("|").split("|")])
+        return rows
+
+
+    def num(s):
+        m = re.search(r"-?\d[\d,]*\.?\d*", str(s))
+        return float(m.group(0).replace(",", "")) if m else None
+
+
+    def run(cmd, timeout=60):
+        p = subprocess.run(cmd, shell=True, cwd=W, capture_output=True, text=True, timeout=timeout)
+        return p.returncode, p.stdout, p.stderr
+
+    from decimal import Decimal as D
+    import importlib, sys
+    def _cart():
+        sys.path.insert(0, str(W)); import shop.cart as m; importlib.reload(m); return m.Cart
+    def t3(): pass
+    def t4():
+        txt = read("REVIEW.md"); items = re.findall(r"^\s*(?:\d+[.)]|[-*])\s+\S", txt, re.M); need(len(items) >= 4, f"need >=4 findings, got {len(items)}")
+        topics = [r"TypeError|float", r"negative|below zero|floor|less than zero", r"shipping", r"mutable|shared|default argument|leak"]
+        for t in topics: need(re.search(t, txt, re.I), "review misses topic " + t)
+    def t5():
+        C = _cart(); c = C(); c.add("A", D("50.00"), 2); c.apply_coupon("SAVE10"); need(c.total(D("5.00")) == D("95.00"), "SAVE10 total wrong: %s" % c.total(D("5.00")))
+        c = C(); c.add("A", D("3.00")); c.apply_coupon("FIVEOFF"); need(c.total(D("2.00")) == D("2.00"), "FIVEOFF must floor the subtotal at zero")
+        a = C(); b = C(); a.add("A", D("10.00")); b.add("A", D("10.00")); a.apply_coupon("SAVE10"); need(b.total() == D("10.00"), "coupons leak between carts")
+        try: C().apply_coupon("NOPE"); fail("unknown coupon must raise ValueError")
+        except ValueError: pass
+        c = C(); c.add("A", D("10.00")); need(c.total(D("1.00")) == D("11.00"), "no-coupon total changed")
+    def t6():
+        p = W / "tests/test_coupon.py"; need(p.exists(), "missing tests/test_coupon.py"); txt = p.read_text(encoding="utf-8")
+        need(len(re.findall(r"def test_", txt)) >= 4, "need >= 4 tests")
+        rc, out, err = run("python3 -m unittest discover -s tests 2>&1"); need(rc == 0, "tests fail on your implementation: " + out[-300:])
+        cart = W / "shop/cart.py"; good = cart.read_text(encoding="utf-8"); cart.write_text(read("_buggy_cart.py"), encoding="utf-8")
+        try: rc, out, err = run("python3 -m unittest discover -s tests -p 'test_coupon.py' 2>&1")
+        finally: cart.write_text(good, encoding="utf-8")
+        need(rc != 0, "your tests do not detect the buggy patch from patches/coupon.diff")
+    def t8():
+        txt = read("REVIEW.md"); body = re.search(r"^#+\s*Findings\s*\n(.*?)(?=^#|\Z)", txt, re.M | re.S | re.I); need(body, "no Findings")
+        lines = [l for l in body.group(1).splitlines() if re.match(r"^\s*(?:\d+[.)]|[-*])\s+", l)]; need(len(lines) >= 4, "need >=4 findings")
+        need(all(re.search(r"\b(high|medium|low)\b", l, re.I) for l in lines), "every finding line needs a severity (High/Medium/Low)")
+    def t9():
+        txt = read("REVIEW.md"); m = re.search(r"^##\s*Resolution\s*\n(.*?)(?=^#|\Z)", txt, re.M | re.S | re.I); need(m, "no Resolution section")
+        need(len(re.findall(r"^\s*[-*]\s+\S", m.group(1), re.M)) >= 4 and "shop/cart.py" in m.group(1), "Resolution needs >=4 bullets mentioning shop/cart.py")
+
+
+    if __name__ == "__main__":
+        fn = globals().get(sys.argv[1]) if len(sys.argv) > 1 else None
+        need(callable(fn), "unknown check " + str(sys.argv[1:]))
+        fn()
+        print("OK")
+  _buggy_cart.py: |
+    """Shopping cart with exact money arithmetic."""
+    from decimal import Decimal, ROUND_HALF_UP
+
+    CENT = Decimal("0.01")
+    COUPONS = {"SAVE10": ("pct", 10), "FIVEOFF": ("flat", 5)}
+
+
+    def money(value):
+        """Quantize to cents using ROUND_HALF_UP."""
+        return Decimal(value).quantize(CENT, rounding=ROUND_HALF_UP)
+
+
+    class Cart:
+        """A list of line items; all money is Decimal."""
+
+        def __init__(self, coupons=[]):
+            self.items = []
+            self.coupons = coupons
+
+        def apply_coupon(self, code):
+            self.coupons.append(COUPONS[code])
+
+        def add(self, sku, unit_price, qty=1):
+            if qty <= 0:
+                raise ValueError("qty must be positive")
+            self.items.append((sku, money(unit_price), qty))
+
+        def subtotal(self):
+            return money(sum((p * q for _, p, q in self.items), Decimal("0")))
+
+        def total(self, shipping=Decimal("0")):
+            total = self.subtotal() + Decimal(shipping)
+            for kind, value in self.coupons:
+                if kind == "pct":
+                    total = total * (1 - value / 100)
+                else:
+                    total = total - Decimal(value)
+            return money(total)
+turns:
+- prompt: How does shop/cart.py represent money and which rounding mode does it use? Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: [Decimal, 'ROUND_HALF_UP|half.?up']
+- prompt: How many tests are in tests/test_cart.py? Run them and tell me whether they pass. Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: ['(?<!\d)4(?!\d)|four', pass|OK]
+- prompt: patches/coupon.diff is a proposed change to shop/cart.py. Review it critically and list every defect you can find, with how each would
+    show up for a customer. Do not apply it.
+  checks:
+  - kind: keyed_facts
+    any: [TypeError|float, negative|below zero|floor|less than zero, shipping, mutable|shared|default argument|leak]
+    min_any: 3
+- prompt: Write your review of that diff to REVIEW.md with level-2 sections Summary, Findings and Recommendation; put each defect as its own numbered
+    or bulleted item under Findings (at least four).
+  checks:
+  - kind: doc_sections
+    path: REVIEW.md
+    headings: [Summary, Findings, Recommendation]
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t4
+    hidden: [_grade.py]
+    timeout: 60
+- prompt: 'Now implement the coupon feature correctly in shop/cart.py: `Cart.apply_coupon(code)` with SAVE10 (10% off the subtotal) and FIVEOFF
+    (5.00 off), discounts on the subtotal only (never shipping), the discounted subtotal never below zero, no state shared between carts, and
+    ValueError for unknown codes. Keep the existing API working.'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t5
+    hidden: [_grade.py]
+    timeout: 60
+  gap_before_s: 420
+- prompt: 'Add tests/test_coupon.py (unittest) with at least four tests covering the defects from your review. They must really guard the behaviour:
+    they have to fail against the code in patches/coupon.diff. Run the whole suite.'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t6
+    hidden: [_grade.py, _buggy_cart.py]
+    timeout: 60
+- prompt: Using the fixed code, what is the total for a cart with 3 units of a 19.99 item, coupon SAVE10 and shipping of 4.50? Run it to confirm.
+    Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: ['(?<![\d.,])58\.47(?!\d)']
+- prompt: Add a severity (High, Medium or Low) to each finding line in the Findings section of REVIEW.md.
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t8
+    hidden: [_grade.py]
+    timeout: 60
+- prompt: Append a `## Resolution` section to REVIEW.md with at least four bullets saying how each finding was resolved, naming shop/cart.py.
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t9
+    hidden: [_grade.py]
+    timeout: 60
+  gap_before_s: 420
+- prompt: Add a Coupons section to README.md that names both coupon codes and states that discounts apply to the subtotal only and cannot go below
+    zero.
+  checks:
+  - kind: doc_sections
+    path: README.md
+    headings: [Coupons]
+  - {kind: file_regex, path: README.md, pattern: SAVE10}
+  - {kind: file_regex, path: README.md, pattern: FIVEOFF}
+  - {kind: file_regex, path: README.md, pattern: subtotal}
+- prompt: Which public methods does `Cart` have now (names not starting with an underscore)? Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: [\badd\b, subtotal, \btotal\b, apply_coupon]
+- prompt: Write PR_DESCRIPTION.md with a `# ` title line and level-2 sections What, Why and Testing; Testing must give the exact command to run
+    the suite (python3 -m unittest ...).
+  checks:
+  - kind: doc_sections
+    path: PR_DESCRIPTION.md
+    headings: [What, Why, Testing]
+  - {kind: file_regex, path: PR_DESCRIPTION.md, pattern: python3 -m unittest}
+  - {kind: file_regex, path: PR_DESCRIPTION.md, pattern: ^# \S}

@@ -1,0 +1,180 @@
+# main-v1 real-repo scenario (12 turns): alecthomas/voluptuous, Number(precision, scale) leaked a raw TypeError for Infinity/NaN input (#541), fixed upstream in 44593ce7; workspace is its parent
+# Workspace = parent of the upstream fix commit; hidden tests = the fix commit's tests (+ scenario-authored edge tests).
+id: voluptuous-number
+task_type: bugfix
+language: python
+split: main
+source:
+  desc: >-
+    alecthomas/voluptuous, Number(precision, scale) leaked a raw TypeError for Infinity/NaN input
+    (#541), fixed upstream in 44593ce7; workspace is its parent
+  repo: https://github.com/alecthomas/voluptuous.git
+  sha: 73237e9014f53da32fd6f90630976f5e8279b420
+  fix_sha: 44593ce7c330faf9418252c4b5448f4736144a7f
+workspace:
+  kind: git
+  repo: https://github.com/alecthomas/voluptuous.git
+  sha: 73237e9014f53da32fd6f90630976f5e8279b420
+  local_hint: ~/dev/afast-paired-src/voluptuous
+hidden_files:
+  voluptuous/tests/tests.py:
+    from_git:
+      repo: https://github.com/alecthomas/voluptuous.git
+      sha: 44593ce7c330faf9418252c4b5448f4736144a7f
+      path: voluptuous/tests/tests.py
+      local_hint: ~/dev/afast-paired-src/voluptuous
+  voluptuous/tests/test_number_exponent_hidden.py: |
+    import pytest
+
+    from voluptuous import MultipleInvalid, Number, Schema
+
+
+    def test_positive_exponent_counts_trailing_zeros():
+        assert Schema(Number(precision=3, scale=0))("1E+2") == "1E+2"
+        assert Schema(Number(precision=4, scale=0))("12e2") == "12e2"
+
+
+    def test_positive_exponent_wrong_precision_still_rejected():
+        with pytest.raises(MultipleInvalid) as exc:
+            Schema(Number(precision=1, scale=0))("1E+2")
+        assert "Precision must be equal to 1" in str(exc.value)
+
+
+    def test_scale_is_never_negative():
+        with pytest.raises(MultipleInvalid) as exc:
+            Schema(Number(scale=1))("1E+2")
+        assert "Scale must be equal to 1" in str(exc.value)
+        assert Schema(Number(scale=0))("1E+2") == "1E+2"
+
+
+    def test_ordinary_numbers_unchanged():
+        assert Schema(Number(precision=6, scale=2))("1234.01") == "1234.01"
+        assert Schema(Number(precision=2, scale=3))("1.5E-2") == "1.5E-2"
+        assert Schema(Number(precision=3, scale=0))("100") == "100"
+  voluptuous/tests/test_number_yield_float_hidden.py: |
+    import pytest
+
+    from voluptuous import Invalid, MultipleInvalid, Number, Schema
+
+
+    def test_yield_float_returns_float():
+        out = Schema(Number(precision=6, scale=2, yield_float=True))("1234.01")
+        assert out == 1234.01 and isinstance(out, float)
+
+
+    def test_yield_float_still_validates():
+        with pytest.raises(MultipleInvalid):
+            Schema(Number(precision=6, scale=2, yield_float=True))("12.3")
+        with pytest.raises(MultipleInvalid):
+            Schema(Number(precision=6, scale=2, yield_float=True))("Infinity")
+
+
+    def test_both_yield_flags_conflict():
+        with pytest.raises(ValueError, match="mutually exclusive"):
+            Number(yield_decimal=True, yield_float=True)
+
+
+    def test_defaults_unchanged():
+        assert Schema(Number(precision=6, scale=2))("1234.01") == "1234.01"
+        from decimal import Decimal
+        assert Schema(Number(precision=6, scale=2, yield_decimal=True))("1234.01") == Decimal("1234.01")
+
+
+    def test_validator_called_directly():
+        assert Number(yield_float=True)("2.5") == 2.5
+turns:
+  - prompt: >-
+      `Number(precision=6, scale=2)` is documented to raise `Invalid` for bad input, but
+      `Schema({'number': Number(precision=6, scale=2)})({'number': 'Infinity'})` (and '-Infinity', 'NaN')
+      leaks a raw `TypeError("infinity and NaN have no precision")` instead of a validation error. It
+      should be rejected like any other unusable number, with the same message as non-numeric strings get
+      ("Value must be a number enclosed with string" in the MultipleInvalid text). Please find the cause
+      in voluptuous/validators.py and fix it. Run the tests from this directory with `python3 -m pytest -q
+      voluptuous/tests`.
+    checks:
+      - {kind: tests, runner: python, files: [voluptuous/tests, voluptuous/tests/tests.py], restore: [voluptuous/tests/__init__.py, voluptuous/tests/test_dataclasses.py, voluptuous/tests/tests.py], hidden: [voluptuous/tests/tests.py]}
+  - prompt: >-
+      In three to five sentences explain the root cause: why `Decimal('Infinity')` passes the first
+      try/except in `_get_precision_scale`, what `as_tuple().exponent` is for such values, and which
+      branch then raises the TypeError. Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [_get_precision_scale, exponent|exp, TypeError], any: [str|string|not an int|isinstance, Infinity|NaN]}
+  - prompt: >-
+      Add a regression test file `voluptuous/tests/test_number_nonfinite.py` (pytest style) with at least
+      three test functions: 'Infinity' and '-Infinity', 'NaN', and a float('nan') input, all through
+      `Schema(Number(precision=6, scale=2))`, expecting `MultipleInvalid` whose message contains "Value
+      must be a number enclosed with string". Run it.
+    checks:
+      - {kind: file_regex, path: voluptuous/tests/test_number_nonfinite.py, pattern: ^\s*def test_, min_count: 3}
+      - {kind: tests, runner: python, files: [voluptuous/tests/test_number_nonfinite.py]}
+  - prompt: >-
+      Related: numbers written in scientific notation with a positive exponent are mis-measured.
+      `Number(precision=3, scale=0)('1E+2')` is rejected ("Precision must be equal to 3") because
+      Decimal('1E+2') has one digit and exponent 2, so it is reported as precision 1 / scale -2. The value
+      is the integer 100: it should count as precision 3 and scale 0 (digits plus the positive exponent,
+      scale never negative). Negative exponents and ordinary decimals must keep working ('1234.01' is
+      still precision 6, scale 2; '1.5E-2' is still precision 2, scale 3). Fix it and add a test to
+      voluptuous/tests/test_number_nonfinite.py.
+    checks:
+      - {kind: tests, runner: python, files: [voluptuous/tests/test_number_exponent_hidden.py], restore: [voluptuous/tests/__init__.py, voluptuous/tests/test_dataclasses.py, voluptuous/tests/tests.py], hidden: [voluptuous/tests/test_number_exponent_hidden.py]}
+      - {kind: tests, runner: python, files: [voluptuous/tests, voluptuous/tests/tests.py, voluptuous/tests/test_number_exponent_hidden.py], restore: [voluptuous/tests/__init__.py, voluptuous/tests/test_dataclasses.py, voluptuous/tests/tests.py], hidden: [voluptuous/tests/tests.py, voluptuous/tests/test_number_exponent_hidden.py]}
+      - {kind: file_regex, path: voluptuous/tests/test_number_nonfinite.py, pattern: 1E\+2}
+  - prompt: >-
+      Quick question: what does `Number.__call__` return when it succeeds, depending on `yield_decimal`,
+      and which two checks can make it raise Invalid? Answer from the code. Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [yield_decimal, Decimal, precision, scale], any: ['returns? v|original|input', msg|Invalid]}
+  - prompt: >-
+      Add changelog entries under "[Unreleased]" -> "**Fixes**:" in CHANGELOG.md, same bullet style as the
+      existing ones. The Infinity/NaN fix already has a bullet there, so add one new bullet for positive
+      exponents in scientific notation now being measured as integers by `Number`.
+    gap_before_s: 420
+    checks:
+      - {kind: file_regex, path: CHANGELOG.md, pattern: '\[Unreleased\]\n+\*\*Fixes\*\*:\n(?:.*\n)*?\* .*(exponent|scientific)'}
+  - prompt: >-
+      Small feature: add `yield_float=False` to `Number`, as the last constructor argument after
+      `yield_decimal`. When True the validator returns `float(value)` instead of the original string
+      (`Schema(Number(precision=6, scale=2, yield_float=True))('1234.01') == 1234.01`, a float). Passing
+      both `yield_decimal=True` and `yield_float=True` raises `ValueError('yield_decimal and yield_float
+      are mutually exclusive')` at construction. Defaults and the other behaviours must not change. Tests
+      for it come in the next step.
+    checks:
+      - {kind: tests, runner: python, files: [voluptuous/tests/test_number_yield_float_hidden.py], restore: [voluptuous/tests/__init__.py, voluptuous/tests/test_dataclasses.py, voluptuous/tests/tests.py], hidden: [voluptuous/tests/test_number_yield_float_hidden.py]}
+      - {kind: tests, runner: python, files: [voluptuous/tests, voluptuous/tests/tests.py, voluptuous/tests/test_number_exponent_hidden.py, voluptuous/tests/test_number_yield_float_hidden.py], restore: [voluptuous/tests/__init__.py, voluptuous/tests/test_dataclasses.py, voluptuous/tests/tests.py], hidden: [voluptuous/tests/tests.py, voluptuous/tests/test_number_exponent_hidden.py, voluptuous/tests/test_number_yield_float_hidden.py]}
+      - {kind: file_regex, path: voluptuous/validators.py, pattern: yield_float, min_count: 4}
+  - prompt: >-
+      Add `voluptuous/tests/test_number_yield_float.py` (pytest style) with at least three test functions
+      for `yield_float`: returns a float, the conflict with yield_decimal raises ValueError, and invalid
+      input is still rejected. Run it.
+    checks:
+      - {kind: file_regex, path: voluptuous/tests/test_number_yield_float.py, pattern: ^\s*def test_, min_count: 3}
+      - {kind: tests, runner: python, files: [voluptuous/tests/test_number_yield_float.py]}
+  - prompt: >-
+      Small refactor, behaviour unchanged: in `Number.__call__`, move the precision/scale mismatch checks
+      (everything between `_get_precision_scale(v)` and the yield handling) into a private method
+      `_check_precision_scale(self, precision, scale)` and call it.
+    gap_before_s: 420
+    checks:
+      - {kind: file_regex, path: voluptuous/validators.py, pattern: 'def _check_precision_scale\(self, precision, scale\)'}
+      - {kind: file_regex, path: voluptuous/validators.py, pattern: 'self\._check_precision_scale\(precision, scale\)'}
+      - {kind: tests, runner: python, files: [voluptuous/tests, voluptuous/tests/tests.py, voluptuous/tests/test_number_exponent_hidden.py, voluptuous/tests/test_number_yield_float_hidden.py], restore: [voluptuous/tests/__init__.py, voluptuous/tests/test_dataclasses.py, voluptuous/tests/tests.py], hidden: [voluptuous/tests/tests.py, voluptuous/tests/test_number_exponent_hidden.py, voluptuous/tests/test_number_yield_float_hidden.py]}
+  - prompt: >-
+      Document the constructor arguments in the `Number` class docstring: add `:param precision:`, `:param
+      scale:`, `:param msg:`, `:param yield_decimal:` and `:param yield_float:` lines (the last one must
+      say it is mutually exclusive with yield_decimal).
+    checks:
+      - {kind: file_regex, path: voluptuous/validators.py, pattern: '^\s+:param yield_float:'}
+      - {kind: file_regex, path: voluptuous/validators.py, pattern: '^\s+:param precision:'}
+      - {kind: tests, runner: python, files: [voluptuous/tests, voluptuous/tests/tests.py, voluptuous/tests/test_number_exponent_hidden.py, voluptuous/tests/test_number_yield_float_hidden.py], restore: [voluptuous/tests/__init__.py, voluptuous/tests/test_dataclasses.py, voluptuous/tests/tests.py], hidden: [voluptuous/tests/tests.py, voluptuous/tests/test_number_exponent_hidden.py, voluptuous/tests/test_number_yield_float_hidden.py]}
+  - prompt: >-
+      Add a doctest example for yield_float to the `Number` class docstring, directly after the existing
+      `yield_decimal` example: a line with `>>> schema = Schema(Number(precision=6, scale=2,
+      yield_float=True))` and one that shows `schema('1234.01')` returning `1234.01`.
+    checks:
+      - {kind: file_regex, path: voluptuous/validators.py, pattern: '>>> schema = Schema\(Number\(precision=6, scale=2, yield_float=True\)\)\n\s+>>> schema\(\''1234\.01\''\)\n\s+1234\.01'}
+      - {kind: tests, runner: python, files: [voluptuous/tests, voluptuous/tests/tests.py, voluptuous/tests/test_number_exponent_hidden.py, voluptuous/tests/test_number_yield_float_hidden.py], restore: [voluptuous/tests/__init__.py, voluptuous/tests/test_dataclasses.py, voluptuous/tests/tests.py], hidden: [voluptuous/tests/tests.py, voluptuous/tests/test_number_exponent_hidden.py, voluptuous/tests/test_number_yield_float_hidden.py]}
+  - prompt: >-
+      Review the changes you made in this session as a code reviewer would: list each file you changed or
+      added, what changed, and any remaining edge case you did not cover. Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [validators\.py, test, yield_float], any: [edge, risk, not cover, remaining]}

@@ -72,11 +72,52 @@ hidden_files:
     package dominoes
 
     import (
+        "fmt"
+        "os"
+        "runtime"
         "testing"
         "time"
     )
 
     var hdSlow bool
+
+    // hdBounded runs MakeChain in a goroutine and watches it. A solution that tries every ordering of the stones
+    // materialises n! permutations; on 10 stones that is ~0.7 GB and on 13 stones over a terabyte. The goroutine cannot be
+    // cancelled, so a runaway search ends the whole test binary (after printing the failure line `go test -json` turns into
+    // a failed TestHd...) instead of eating the machine's memory. Limits: 400 MB of live heap or 2 s.
+    func hdBounded(t *testing.T, input []Domino) ([]Domino, bool) {
+        type res struct {
+            chain []Domino
+            ok    bool
+        }
+        done := make(chan res, 1)
+        go func() {
+            c, ok := MakeChain(input)
+            done <- res{c, ok}
+        }()
+        tick := time.NewTicker(5 * time.Millisecond)
+        defer tick.Stop()
+        deadline := time.After(2 * time.Second)
+        var ms runtime.MemStats
+        for {
+            select {
+            case r := <-done:
+                return r.chain, r.ok
+            case <-tick.C:
+                runtime.ReadMemStats(&ms)
+                if ms.HeapAlloc > 400<<20 {
+                    hdAbort(t, "live heap above 400 MB: the search is factorial")
+                }
+            case <-deadline:
+                hdAbort(t, "MakeChain ran for more than 2 s")
+            }
+        }
+    }
+
+    func hdAbort(t *testing.T, why string) {
+        fmt.Printf("--- FAIL: %s (0.00s)\n    runaway MakeChain: %s\nFAIL\n", t.Name(), why)
+        os.Exit(1)
+    }
 
     func hdRing(n int) []Domino {
         ds := make([]Domino, n)
@@ -104,7 +145,8 @@ hidden_files:
         }
     }
 
-    // TestHdAGate must stay first: it runs a 10-stone set that a permutation search needs seconds for.
+    // TestHdAGate must stay first: a brute-force ordering search needs ~0.2 s and ~0.7 GB for these 10 stones, an Euler
+    // circuit search microseconds. It is memory-bounded (hdBounded) so even a factorial solution cannot run away.
     func TestHdAGate(t *testing.T) {
         var input []Domino
         for i := 0; i < 5; i++ {
@@ -113,9 +155,9 @@ hidden_files:
             }
         }
         start := time.Now()
-        chain, ok := MakeChain(input)
+        chain, ok := hdBounded(t, input)
         elapsed := time.Since(start)
-        if elapsed > 300*time.Millisecond {
+        if elapsed > 100*time.Millisecond {
             hdSlow = true
             t.Fatalf("MakeChain on 10 stones took %v", elapsed)
         }
@@ -129,7 +171,7 @@ hidden_files:
         hdGate(t)
         input := hdRing(300)
         start := time.Now()
-        chain, ok := MakeChain(input)
+        chain, ok := hdBounded(t, input)
         if !ok {
             t.Fatal("a ring of stones must chain")
         }
@@ -142,7 +184,7 @@ hidden_files:
     func TestHdOddDegreeIsRejectedQuickly(t *testing.T) {
         hdGate(t)
         input := append(hdRing(12), Domino{0, 5})
-        if chain, ok := MakeChain(input); ok {
+        if chain, ok := hdBounded(t, input); ok {
             t.Fatalf("unexpected chain %v", chain)
         }
     }
@@ -153,7 +195,7 @@ hidden_files:
         for i := 0; i < 6; i++ {
             input = append(input, Domino{i, (i + 1) % 6}, Domino{10 + i, 10 + (i+1)%6})
         }
-        if chain, ok := MakeChain(input); ok {
+        if chain, ok := hdBounded(t, input); ok {
             t.Fatalf("unexpected chain %v", chain)
         }
     }
@@ -161,11 +203,11 @@ hidden_files:
     func TestHdDoublesAndRepeats(t *testing.T) {
         hdGate(t)
         input := []Domino{{0, 0}, {0, 1}, {1, 1}, {1, 2}, {2, 0}, {2, 2}, {0, 0}, {3, 3}, {3, 3}}
-        if _, ok := MakeChain(input); ok {
+        if _, ok := hdBounded(t, input); ok {
             t.Fatal("stone 3|3 is isolated, no chain expected")
         }
         input = input[:7]
-        chain, ok := MakeChain(input)
+        chain, ok := hdBounded(t, input)
         if !ok {
             t.Fatal("expected a chain")
         }

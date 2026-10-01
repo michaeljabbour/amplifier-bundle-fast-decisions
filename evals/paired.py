@@ -42,6 +42,7 @@ for _p in (REPO_ROOT / "scripts", REPO_ROOT / "evals"):
     if str(_p) not in sys.path:
         sys.path.insert(0, str(_p))
 
+import memguard  # noqa: E402
 import paired_scenarios as ps  # noqa: E402
 
 SCHEMA = "fast-decisions-paired/v1"
@@ -253,6 +254,14 @@ def build_plan(design: dict, specs: list, *, reps: int, hosts: list, arms: list,
         if nonce_mode == "per_session":
             s.nonce = make_nonce(plan_id, s.key, s.attempt)
     waves = waves_of(sessions)
+    split = False
+    if any(len(v) > parallel for v in waves.values()):
+        # the host-independent control does not need to co-start with a host stratum: give it its own wave rather than
+        # forcing a larger --parallel (memory safety: default parallel is 4)
+        for s in sessions:
+            if s.host == "any":
+                s.wave_id = f"{s.scenario}-r{s.rep}-any"
+        waves, split = waves_of(sessions), True
     too_big = {w: len(v) for w, v in waves.items() if len(v) > parallel}
     if too_big:
         raise PairedError(EXIT_PRECONDITION, f"--parallel {parallel} is smaller than a wave (all arms of a wave must "
@@ -264,7 +273,7 @@ def build_plan(design: dict, specs: list, *, reps: int, hosts: list, arms: list,
     prompt_hashes = {sid: ps.prompt_hash(by_id[sid]) for sid in {s.scenario for s in sessions}}
     plan = {
         "schema": SCHEMA, "plan_id": plan_id, "design": design["id"], "seed": seed, "reps": reps, "hosts": hosts,
-        "arms": arms, "parallel": parallel, "nonce_mode": nonce_mode,
+        "arms": arms, "parallel": parallel, "nonce_mode": nonce_mode, "control_waves_split": split,
         "scenarios": {sid: {"scenario_hash": ps.scenario_hash(by_id[sid]), "prompt_sha256": prompt_hashes[sid],
                             "turns": len(by_id[sid].turns), "gap_schedule": by_id[sid].gap_schedule,
                             "n_long_gaps": by_id[sid].n_long_gaps, "task_type": by_id[sid].task_type,
@@ -292,6 +301,8 @@ def render_plan(plan: dict) -> str:
     lines.append(f"{'scenario':16} {'type':8} {'lang':7} {'turns':5} {'gaps>=5m':8}")
     for sid, m in plan["scenarios"].items():
         lines.append(f"{sid:16} {m['task_type']:8} {m['language']:7} {m['turns']:5d} {m['n_long_gaps']:8d}")
+    if plan.get("control_waves_split"):
+        lines.append(f"(the plain-sonnet control runs in its own wave per scenario-rep: --parallel {plan['parallel']} < 5)")
     lines += ["", f"{'wave (seeded order)':34} {'sessions':>8} {'est $':>8}"]
     for w in plan["wave_order"]:
         v = plan["waves"][w]
@@ -716,6 +727,9 @@ def session_row(meta: dict, result: dict, parsed: dict, spec, snap_stats: dict, 
         "turn_pass_frac": (sum(passes) / len(passes)) if passes else 0.0, "final_state_pass": final_pass,
         "critical": critical, "failure_labels": labels, "receipt_usd_saved_sum": round(sum(parsed["efficiency"]), 6),
         "fd_receipt_counts": parsed["fd_counts"], **gate, "status": status,
+        # a watchdog memory kill is a TASK outcome (the session is kept, the turn failed) but its cost is not comparable
+        "killed_memory": bool(meta.get("killed_memory_info")), "killed_memory_info": meta.get("killed_memory_info"),
+        "cost_valid": not meta.get("killed_memory_info"),
         "scheduled_start": meta.get("scheduled_start"), "actual_start": result.get("started_at"),
         "concurrent_sessions": meta.get("concurrent_sessions"), "wave_valid": meta.get("wave_valid", True),
     }
@@ -796,7 +810,9 @@ def build_pairs(rows: list, turn_rows: list) -> list:
                 "arm_failed_what_anchor_passed": (not r["final_state_pass"]) and a["final_state_pass"],
                 "anchor_cost_usd": ac, "arm_cost_usd": rc, "anchor_cost_usd_raw": ac_raw, "arm_cost_usd_raw": rc_raw,
                 "mechanism_engaged": r["mechanism_engaged"], "cache_audit_clean": r["cache_audit_clean"],
-                "valid": bool(r["wave_valid"] and a["wave_valid"] and r["status"] != "infra_fail" and a["status"] != "infra_fail")})
+                "cost_valid": bool(r.get("cost_valid", True) and a.get("cost_valid", True)),
+                "valid": bool(r["wave_valid"] and a["wave_valid"] and r["status"] != "infra_fail" and a["status"] != "infra_fail"
+                              and r.get("cost_valid", True) and a.get("cost_valid", True))})
     return pairs
 
 
@@ -1254,7 +1270,12 @@ def check_prompt_hashes(root: Path, sessions: list, plan: dict) -> None:
 
 
 def run_campaign(ctx: Ctx, backend, *, budget_usd: float, parallel: int, resume: bool, max_waves=None,
-                 policy_config: dict | None = None, reset_waves_ids: list | None = None, log=print) -> int:
+                 policy_config: dict | None = None, reset_waves_ids: list | None = None, watchdog=None, log=print) -> int:
+    too_big = {w: len(v) for w, v in ctx.plan["waves"].items() if len(v) > parallel}
+    if too_big:
+        raise PairedError(EXIT_PRECONDITION, f"--parallel {parallel} is smaller than waves {too_big}: every arm of a wave must "
+                                             "co-start. Pass --parallel N (N >= the largest wave) deliberately; the memory watchdog "
+                                             "applies at any setting.")
     state, ledger = State(ctx.out / "state.json"), Ledger(ctx.out / "ledger.json", budget_usd)
     sha = settings_sha()
     if state.d.get("settings_sha256") not in (None, sha):
@@ -1268,9 +1289,13 @@ def run_campaign(ctx: Ctx, backend, *, budget_usd: float, parallel: int, resume:
         todo = todo[:max_waves]
     slots, futures, code = Slots(parallel), [], EXIT_OK
     stop, config_errors = threading.Event(), []
+    if watchdog is not None and not watchdog.is_alive():
+        watchdog.start()
     with ThreadPoolExecutor(max_workers=parallel) as ex:
         for wid in todo:
             size = len(ctx.plan["waves"][wid])
+            if watchdog is not None:
+                watchdog.gate(log)                  # no wave is admitted while system memory is short
             slots.acquire(size)
             if stop.is_set():
                 slots.release(size)
@@ -1301,6 +1326,8 @@ def run_campaign(ctx: Ctx, backend, *, budget_usd: float, parallel: int, resume:
             except BudgetExceeded as exc:
                 log(f"STOP: {exc.reason}")
                 code = EXIT_BUDGET
+    if watchdog is not None:
+        watchdog.stop()
     if config_errors:
         for exc in config_errors:
             log(exc.reason)
@@ -1341,8 +1368,9 @@ def extract_rows(out: Path, backend=None, *, specs=None, snap_stats=None, tools_
         spec = specs[s["scenario"]]
         sdir = sessions_dir_for_workspace(backend.workspace(root, s["key"])) / (res.get("session_id") or "none")
         parsed = merge_run_receipts(parse_events(sdir), backend.run_dir(root, s["key"]) / "events")
+        km = _read_json(backend.run_dir(root, s["key"]) / KILL_MARKER)
         meta = {**s, "scenario_hash": plan["scenarios"][s["scenario"]]["scenario_hash"],
-                "wave_valid": att.get("wave_valid", True), "concurrent_sessions": len(att["sessions"])}
+                "wave_valid": att.get("wave_valid", True), "concurrent_sessions": len(att["sessions"]), "killed_memory_info": km}
         prov = {"build_sha": (res.get("source_expected") or {}).get("git_sha"),
                 "bundle_tree_sha": (res.get("source_expected") or {}).get("tree_sha256"), **prov_base}
         row, tr = session_row(meta, res, parsed, spec, (snap_stats or {}).get(s["scenario"], {}), prov, tools_prefix_tokens)
@@ -1359,6 +1387,7 @@ def extract_rows(out: Path, backend=None, *, specs=None, snap_stats=None, tools_
                "tools_normalized_delta_usd_total": round(sum(r["tools_normalized_delta_usd"] for r in rows), 6), "skipped_no_result": skipped,
                "cache_audit_flagged_sessions": flagged,
                "mechanism_failed": [r["session_key"] for r in rows if not r["mechanism_engaged"]],
+               "killed_memory": [r["session_key"] for r in rows if r["killed_memory"]],
                "cost_mismatch": [r["session_key"] for r in rows if r["cost_mismatch"]]}
     _write_json(d / "summary.json", summary)
     return summary
@@ -1438,6 +1467,235 @@ def render_check(out: Path, backend=None, renderer=None) -> dict:
             report["ok"] = False
             report["problems"].append(f"group {g}: {len(distinct)} distinct masked system prompts")
     return report
+
+
+# ----------------------------------------------------------------------------------------- memory safety
+
+DEFAULT_PARALLEL = 4
+SESSION_CAP_GB = 8.0          # hard per-session cap on the agent process tree (campaign watchdog)
+HARD_FLOOR_GB = 16.0          # system available memory below this: kill the newest session trees until above the pause floor
+KILL_MARKER = "killed_memory.json"
+
+
+def pause_floor_bytes(total: int | None = None) -> int:
+    """Launch gate: no new wave while system AVAILABLE memory is below max(32 GB, 25% of RAM)."""
+    total = memguard.total_memory_bytes() if total is None else total
+    return int(max(32 * memguard.GB, 0.25 * total))
+
+
+class RealProbe:
+    """What the watchdog looks at. Injectable so tests use fake process tables."""
+
+    def table(self, root: Path) -> list:
+        """Every process as {pid, ppid, rss, cwd, started} (cwd None when unreadable)."""
+        rows = []
+        if memguard.psutil is not None:
+            ps_ = memguard.psutil
+            for p in ps_.process_iter(["pid", "ppid", "memory_info", "create_time"]):
+                try:
+                    mi = p.info["memory_info"]
+                    if mi is None:
+                        continue
+                    try:
+                        cwd = p.cwd()
+                    except (ps_.Error, OSError):
+                        cwd = None
+                    rows.append({"pid": p.info["pid"], "ppid": p.info["ppid"], "rss": int(mi.rss), "cwd": cwd,
+                                 "started": p.info["create_time"]})
+                except (ps_.Error, OSError):
+                    continue
+            return rows
+        cwds = {}
+        out = subprocess.run(["lsof", "-a", "-d", "cwd", "-Fpn"], capture_output=True, text=True, check=False).stdout
+        pid = None
+        for line in out.splitlines():
+            if line.startswith("p"):
+                pid = int(line[1:])
+            elif line.startswith("n") and pid is not None:
+                cwds[pid] = line[1:]
+        out = subprocess.run(["ps", "-Ao", "pid=,ppid=,rss=,etime="], capture_output=True, text=True, check=False).stdout
+        now = time.time()
+        for line in out.splitlines():
+            parts = line.split()
+            if len(parts) == 4 and parts[0].isdigit():
+                rows.append({"pid": int(parts[0]), "ppid": int(parts[1]), "rss": int(parts[2]) * 1024, "cwd": cwds.get(int(parts[0])),
+                             "started": now - _etime_seconds(parts[3])})
+        return rows
+
+    def available(self) -> int:
+        return memguard.available_memory_bytes()
+
+    def total(self) -> int:
+        return memguard.total_memory_bytes()
+
+
+def _etime_seconds(text: str) -> int:
+    days, _, rest = text.partition("-") if "-" in text else ("0", "", text)
+    parts = [int(x) for x in rest.split(":")]
+    while len(parts) < 3:
+        parts.insert(0, 0)
+    return int(days) * 86400 + parts[0] * 3600 + parts[1] * 60 + parts[2]
+
+
+def top_consumers(table: list, n: int = 8) -> list:
+    return sorted(table, key=lambda r: -r["rss"])[:n]
+
+
+def _worker_protected(run_dir: Path, rows_by_pid: dict) -> set:
+    """The Forge worker (running.json controller_pid) and its ancestors: killing them would lose result.json and turn
+    a task outcome into a fake infrastructure failure. Only the agent subtree below the worker is ever killed."""
+    try:
+        pid = json.loads((run_dir / "running.json").read_text()).get("controller_pid")
+    except (OSError, ValueError):
+        return set()
+    out, depth = set(), 0
+    while pid and pid in rows_by_pid and depth < 30:
+        out.add(pid)
+        pid, depth = rows_by_pid[pid]["ppid"], depth + 1
+    return out
+
+
+class Watchdog(threading.Thread):
+    """Campaign memory watchdog. Every ``interval`` s: (a) find every process whose cwd is inside the campaign root,
+    group them by session workspace (<root>/<wave>/<session>/...), children inherit their parent's session; kill a
+    session's agent process tree above ``session_cap_gb`` and write ``killed_memory.json`` into its run dir (a task
+    outcome: the worker survives, the turn fails, the session is kept but flagged invalid for cost); (b) pause launching
+    new waves while system available memory < ``pause_floor``; below ``hard_floor`` (or when the campaign uses more
+    than 115% of ``max_system_use_gb``) kill the most recently started session trees, one per tick, until above the
+    floor. ``tick()`` is deterministic and testable; the thread just calls it."""
+
+    def __init__(self, campaign_root, *, session_cap_gb: float = SESSION_CAP_GB, pause_floor_gb: float | None = None,
+                 hard_floor_gb: float = HARD_FLOOR_GB, max_system_use_gb: float | None = None, probe=None, kill=None,
+                 log=print, interval: float = 1.0, sleep=time.sleep, now=time.time):
+        super().__init__(daemon=True, name="paired-watchdog")
+        self.root = Path(campaign_root).resolve()
+        self.session_cap = int(session_cap_gb * memguard.GB)
+        self.probe = probe or RealProbe()
+        self.pause_floor = int(pause_floor_gb * memguard.GB) if pause_floor_gb is not None else pause_floor_bytes(self.probe.total())
+        self.hard_floor = int(hard_floor_gb * memguard.GB)
+        self.max_use = int(max_system_use_gb * memguard.GB) if max_system_use_gb else None
+        self.kill, self.log, self.interval, self.sleep, self.now = kill or memguard.kill_pids, log, interval, sleep, now
+        self.stop_event, self.ok_to_launch = threading.Event(), threading.Event()
+        self.ok_to_launch.set()
+        self.killed, self.peak, self.paused_log = [], {}, []
+
+    # -- one observation -------------------------------------------------------------------------------------------
+    def sessions(self, rows: list) -> dict:
+        """{'<wave>/<session>': {run_dir, rows, agent}} for processes in (or descended from processes in) the root."""
+        by_pid = {r["pid"]: r for r in rows}
+        owner = {}
+        for r in rows:
+            cwd = r.get("cwd")
+            if not cwd:
+                continue
+            try:
+                rel = Path(cwd).resolve().relative_to(self.root)
+            except (ValueError, OSError):
+                continue
+            if len(rel.parts) >= 2:
+                owner[r["pid"]] = f"{rel.parts[0]}/{rel.parts[1]}"
+        for r in rows:
+            if r["pid"] in owner:
+                continue
+            pid, depth = r["ppid"], 0
+            while pid in by_pid and depth < 25:
+                if pid in owner:
+                    owner[r["pid"]] = owner[pid]
+                    break
+                pid, depth = by_pid[pid]["ppid"], depth + 1
+        groups = {}
+        for pid, key in owner.items():
+            g = groups.setdefault(key, {"run_dir": self.root / key.split("/")[0] / key.split("/")[1], "rows": []})
+            g["rows"].append(by_pid[pid])
+        for key, g in groups.items():
+            prot = _worker_protected(g["run_dir"], by_pid)
+            g["agent"] = [r for r in g["rows"] if r["pid"] not in prot]
+            g["rss"] = sum(r["rss"] for r in g["agent"])
+            g["started"] = min((r["started"] for r in g["agent"]), default=0)
+        return groups
+
+    def _kill_session(self, key: str, g: dict, reason: str, avail: int) -> None:
+        pids = [r["pid"] for r in g["agent"]]
+        self.kill(pids)
+        info = {"at": datetime.now(timezone.utc).isoformat(), "reason": reason, "rss_gb": round(g["rss"] / memguard.GB, 2),
+                "session_cap_gb": round(self.session_cap / memguard.GB, 2), "available_gb": round(avail / memguard.GB, 1),
+                "pids": pids}
+        try:
+            (g["run_dir"] / KILL_MARKER).write_text(json.dumps(info, indent=2) + "\n", encoding="utf-8")
+        except OSError:
+            pass
+        self.killed.append({"session": key, **info})
+        self.log(f"WATCHDOG killed {key} ({reason}): agent tree {info['rss_gb']} GB, system available {info['available_gb']} GB")
+
+    def tick(self) -> dict:
+        rows = self.probe.table(self.root)
+        groups = self.sessions(rows)
+        avail = self.probe.available()
+        for key, g in groups.items():
+            self.peak[key] = max(self.peak.get(key, 0), g["rss"])
+        for key, g in list(groups.items()):
+            if g["rss"] > self.session_cap and g["agent"]:
+                self._kill_session(key, g, "session_cap", avail)
+                groups.pop(key)
+        used = sum(g["rss"] for g in groups.values())
+        low = avail < self.pause_floor
+        busy = self.max_use is not None and used > self.max_use
+        was_paused = not self.ok_to_launch.is_set()
+        if low or busy:
+            self.ok_to_launch.clear()
+            if not was_paused:
+                msg = (f"WATCHDOG pausing wave launches: available {avail / memguard.GB:.1f} GB (floor {self.pause_floor / memguard.GB:.0f}), "
+                       f"campaign uses {used / memguard.GB:.1f} GB")
+                self.paused_log.append(msg)
+                self.log(msg)
+        else:
+            if was_paused:
+                self.log("WATCHDOG resuming wave launches")
+            self.ok_to_launch.set()
+        hard = avail < self.hard_floor or (self.max_use is not None and used > 1.15 * self.max_use)
+        if hard and groups:
+            newest = max(groups.items(), key=lambda kv: kv[1]["started"])
+            self._kill_session(newest[0], newest[1], "system_floor", avail)
+        return {"available": avail, "used": used, "paused": not self.ok_to_launch.is_set(),
+                "sessions": {k: g["rss"] for k, g in groups.items()}}
+
+    def gate(self, log=None, poll_s: float = 1.0) -> None:
+        """Block while launches are paused (called before each wave is admitted)."""
+        announced = False
+        while not self.ok_to_launch.is_set() and not self.stop_event.is_set():
+            if not announced and log:
+                log("waiting for system memory before launching the next wave ...")
+                announced = True
+            self.sleep(poll_s)
+
+    def run(self) -> None:
+        while not self.stop_event.is_set():
+            try:
+                self.tick()
+            except Exception as exc:  # noqa: BLE001 -- the watchdog must never die silently, nor crash the campaign
+                self.log(f"WATCHDOG tick failed: {exc!r}")
+            self.stop_event.wait(self.interval)
+
+    def stop(self) -> None:
+        self.stop_event.set()
+        self.ok_to_launch.set()
+
+
+class MemorySafetyError(PairedError):
+    pass
+
+
+def memory_safety_check(probe=None, floor_bytes: int | None = None) -> dict:
+    """Refuse to start a campaign when the machine is already short of memory; print what is using it."""
+    probe = probe or RealProbe()
+    floor = pause_floor_bytes(probe.total()) if floor_bytes is None else floor_bytes
+    avail = probe.available()
+    if avail >= floor:
+        return {"ok": True, "available_gb": round(avail / memguard.GB, 1), "floor_gb": round(floor / memguard.GB, 1)}
+    top = top_consumers(probe.table(Path("/nonexistent-root")), 8)
+    lines = [f"  {r['rss'] / memguard.GB:6.2f} GB  pid {r['pid']}  cwd {r.get('cwd') or '?'}" for r in top]
+    raise MemorySafetyError(EXIT_PRECONDITION, f"refusing to start: system available memory {avail / memguard.GB:.1f} GB is below the "
+                                               f"floor {floor / memguard.GB:.0f} GB. Top memory consumers:\n" + "\n".join(lines))
 
 
 # ----------------------------------------------------------------------------------------- preflight
@@ -1638,7 +1896,7 @@ def cmd_plan(args) -> int:
         if a not in design["arms"]:
             raise PairedError(EXIT_PRECONDITION, f"unknown arm {a!r}")
     reps = args.reps or design["default_reps"]
-    parallel = args.parallel or design["default_parallel"]
+    parallel = args.parallel or design.get("default_parallel", DEFAULT_PARALLEL)
     scenarios = set(args.scenarios.split(",")) if args.scenarios else None
     plan = build_plan(design, specs, reps=reps, hosts=hosts, arms=arms, scenarios=scenarios, seed=args.seed,
                       budget_usd=args.budget_usd, parallel=parallel)
@@ -1704,13 +1962,15 @@ def cmd_run(args) -> int:
     budget = args.budget_usd if args.budget_usd is not None else ctx.plan.get("budget_usd")
     if budget is None:
         raise PairedError(EXIT_PRECONDITION, "--budget-usd is required (the hard stop)")
-    parallel = args.parallel or ctx.plan["parallel"]
+    parallel = args.parallel or DEFAULT_PARALLEL
     if args.dry_run:
         print(f"would run {len(ctx.plan['wave_order'])} waves (parallel {parallel}, budget ${budget:.2f}); first waves:")
         for w in ctx.plan["wave_order"][:5]:
             print(f"  {w}: " + ", ".join(s['arm'] for s in ctx.plan['waves'][w]))
         return EXIT_OK
     import forge_e2e
+    safety = memory_safety_check(floor_bytes=int(args.pause_floor_gb * memguard.GB) if args.pause_floor_gb else None)
+    print(f"memory check ok: {safety['available_gb']} GB available (floor {safety['floor_gb']} GB)")
     backend = ForgeBackend()
     if not args.skip_preflight and not preflight_is_fresh(ctx):
         rep = run_preflight(ctx, backend, Ledger(out / "ledger.json", budget), parallel=parallel)
@@ -1719,8 +1979,10 @@ def cmd_run(args) -> int:
             return EXIT_PRECONDITION
     policy = forge_e2e.composed_effective_config(ctx.candidate_source, {}) or {}
     reset = (args.reset_wave or None)
+    wd = Watchdog(ctx.campaign_root, session_cap_gb=args.session_cap_gb, pause_floor_gb=args.pause_floor_gb,
+                  hard_floor_gb=args.hard_floor_gb, max_system_use_gb=args.max_system_use_gb)
     code = run_campaign(ctx, backend, budget_usd=budget, parallel=parallel, resume=args.resume,
-                        max_waves=args.waves, policy_config=policy, reset_waves_ids=reset)
+                        max_waves=args.waves, policy_config=policy, reset_waves_ids=reset, watchdog=wd)
     print(json.dumps({"exit": code, "state": str(out / "state.json"), "ledger": str(out / "ledger.json")}))
     return code
 
@@ -1737,7 +1999,7 @@ def cmd_preflight(args) -> int:
             print(f"{t['cell']:22} {t['model']:20} key={t['key_env'] or 'default':38} expects {','.join(t['expected_models'])}")
         print(f"{len(targets)} preflight sessions (est ${ctx.design['preflight']['est_usd_per_session'] * len(targets):.2f})")
         return EXIT_OK
-    rep = run_preflight(ctx, ForgeBackend(), Ledger(out / "ledger.json", budget), parallel=args.parallel or ctx.plan["parallel"])
+    rep = run_preflight(ctx, ForgeBackend(), Ledger(out / "ledger.json", budget), parallel=args.parallel or DEFAULT_PARALLEL)
     pm = rep.get("provider_module") or {}
     print(json.dumps({"ok": rep["ok"], "total_cost_usd": rep["total_cost_usd"], "sessions": len(rep["sessions"]),
                       "provider_module": {k: pm.get(k) for k in ("version", "git_sha", "path", "error")}}, indent=2))
@@ -1786,7 +2048,7 @@ def build_parser() -> argparse.ArgumentParser:
     pl.add_argument("--arms", help="comma list from the design (default: all)")
     pl.add_argument("--scenarios", help="comma list of scenario ids")
     pl.add_argument("--budget-usd", type=float)
-    pl.add_argument("--parallel", type=int)
+    pl.add_argument("--parallel", type=int, help=f"default {DEFAULT_PARALLEL} (memory safety)")
     pl.add_argument("--nonce-mode", choices=["per_session", "none"])
     pl.add_argument("--candidate-source")
     pl.add_argument("--candidate-sha")
@@ -1804,6 +2066,10 @@ def build_parser() -> argparse.ArgumentParser:
     r.add_argument("--resume", action="store_true", help="adopt finished and live sessions")
     r.add_argument("--dry-run", action="store_true")
     r.add_argument("--skip-preflight", action="store_true", help="do not run the preflight (not recommended)")
+    r.add_argument("--session-cap-gb", type=float, default=SESSION_CAP_GB, help="watchdog: kill a session's agent tree above this RSS")
+    r.add_argument("--pause-floor-gb", type=float, help="no new wave while system available memory is below this (default max(32, 25%% of RAM))")
+    r.add_argument("--hard-floor-gb", type=float, default=HARD_FLOOR_GB, help="below this, kill the newest session trees until above the pause floor")
+    r.add_argument("--max-system-use-gb", type=float, help="cap on total RSS of all campaign session processes (pause above, kill newest at 115%%)")
     r.add_argument("--reset-wave", action="append", metavar="WAVE_ID",
                    help="make an excluded / config_error wave runnable again ('excluded' = all of them); attempt "
                         "numbering and the ledger are kept")

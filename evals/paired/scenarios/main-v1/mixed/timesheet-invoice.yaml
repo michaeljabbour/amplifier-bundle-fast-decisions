@@ -1,0 +1,261 @@
+# Timesheet CSV + rate/client JSON: compute invoices with exact totals, revise for a cap rule, notes, script.
+id: timesheet-invoice
+task_type: mixed
+language: python
+split: main
+source:
+  desc: 'Timesheet CSV + rate/client JSON: compute invoices with exact totals, revise for a cap rule, notes, script.'
+  kind: self-authored deterministic workspace
+  adapted_from: ['~/dev/amplifier-agent/.amplifier/evaluation/tasks/automation-bench/finance-timesheet-to-invoice/meta.yaml (timesheet -> invoice;
+      task body not vendored, scenario authored from the title)']
+workspace:
+  kind: inline
+  files:
+    README.md: |
+      # March billing
+
+      `data/timesheets.csv` lists billable rows. Rates are in `config/rates.json`, per-client discount and tax in `config/clients.json`.
+      Invoice math: subtotal = sum(hours x rate); discount = subtotal x discount%; tax = (subtotal - discount) x tax%; all rounded to 2 decimals.
+    config/rates.json: |
+      {
+        "Ivy Chen": 140.0,
+        "Omar Reyes": 125.0,
+        "Priya Nair": 160.0,
+        "Sam Okafor": 110.0
+      }
+    config/clients.json: |
+      {
+        "acme": {
+          "discount_pct": 10,
+          "tax_pct": 8.25
+        },
+        "bluebird": {
+          "discount_pct": 0,
+          "tax_pct": 6.0
+        },
+        "cobalt": {
+          "discount_pct": 5,
+          "tax_pct": 0.0
+        }
+      }
+    data/timesheets.csv: |
+      date,consultant,client,hours,task
+      2025-03-03,Ivy Chen,acme,5.0,design
+      2025-03-03,Omar Reyes,bluebird,4.0,review
+      2025-03-04,Ivy Chen,cobalt,5.0,design
+      2025-03-04,Sam Okafor,acme,2.5,review
+      2025-03-06,Ivy Chen,cobalt,3.5,design
+      2025-03-07,Ivy Chen,cobalt,4.5,meeting
+      2025-03-07,Sam Okafor,acme,3.5,meeting
+      2025-03-10,Ivy Chen,cobalt,3.0,meeting
+      2025-03-10,Omar Reyes,acme,1.0,design
+      2025-03-10,Omar Reyes,bluebird,6.0,design
+      2025-03-10,Omar Reyes,acme,7.0,meeting
+      2025-03-10,Priya Nair,acme,7.0,design
+      2025-03-10,Priya Nair,bluebird,3.0,support
+      2025-03-10,Priya Nair,bluebird,5.0,build
+      2025-03-11,Ivy Chen,acme,3.0,meeting
+      2025-03-11,Omar Reyes,cobalt,2.5,design
+      2025-03-11,Sam Okafor,cobalt,1.5,meeting
+      2025-03-12,Omar Reyes,cobalt,1.0,review
+      2025-03-12,Omar Reyes,cobalt,3.5,design
+      2025-03-12,Priya Nair,bluebird,6.0,review
+      2025-03-13,Ivy Chen,bluebird,4.5,design
+      2025-03-13,Omar Reyes,bluebird,2.0,support
+      2025-03-13,Priya Nair,bluebird,6.0,build
+      2025-03-13,Priya Nair,bluebird,1.5,review
+      2025-03-14,Ivy Chen,bluebird,1.5,meeting
+      2025-03-14,Sam Okafor,bluebird,13.5,meeting
+      2025-03-14,Sam Okafor,cobalt,1.0,meeting
+      2025-03-17,Ivy Chen,cobalt,6.0,meeting
+      2025-03-17,Ivy Chen,cobalt,8.0,build
+      2025-03-17,Ivy Chen,acme,3.0,support
+      2025-03-17,Ivy Chen,bluebird,4.0,design
+      2025-03-17,Ivy Chen,bluebird,1.0,meeting
+      2025-03-17,Omar Reyes,cobalt,2.0,build
+      2025-03-17,Priya Nair,acme,2.0,support
+      2025-03-17,Priya Nair,acme,4.5,meeting
+      2025-03-17,Sam Okafor,acme,5.5,design
+      2025-03-19,Ivy Chen,bluebird,5.5,design
+      2025-03-19,Sam Okafor,cobalt,5.0,build
+      2025-03-21,Priya Nair,bluebird,1.5,review
+      2025-03-21,Priya Nair,acme,6.5,build
+      2025-03-21,Priya Nair,cobalt,6.5,meeting
+      2025-03-21,Sam Okafor,bluebird,6.5,build
+      2025-03-24,Ivy Chen,cobalt,8.0,meeting
+      2025-03-24,Omar Reyes,cobalt,1.5,support
+      2025-03-24,Priya Nair,bluebird,4.5,build
+      2025-03-24,Sam Okafor,bluebird,4.0,review
+      2025-03-24,Sam Okafor,acme,3.0,meeting
+      2025-03-25,Ivy Chen,cobalt,7.5,build
+      2025-03-25,Ivy Chen,acme,5.0,review
+      2025-03-26,Ivy Chen,acme,14.0,meeting
+      2025-03-27,Ivy Chen,cobalt,8.0,build
+      2025-03-27,Ivy Chen,bluebird,7.5,support
+      2025-03-27,Omar Reyes,cobalt,5.5,design
+      2025-03-28,Sam Okafor,cobalt,2.0,meeting
+protected: [data/timesheets.csv, config/rates.json, config/clients.json]
+hidden_files:
+  _grade.py: |
+    import csv, json, os, re, subprocess, sys
+    from pathlib import Path
+
+    W = Path(".")
+
+
+    def fail(msg):
+        print("FAIL:", msg)
+        sys.exit(1)
+
+
+    def need(cond, msg):
+        if not cond:
+            fail(msg)
+
+
+    def load_json(rel):
+        p = W / rel
+        need(p.exists(), f"missing {rel}")
+        try:
+            return json.loads(p.read_text(encoding="utf-8"))
+        except Exception as e:  # noqa: BLE001
+            fail(f"{rel} is not valid JSON: {e}")
+
+
+    def read(rel):
+        p = W / rel
+        need(p.exists(), f"missing {rel}")
+        return p.read_text(encoding="utf-8")
+
+
+    def close(a, b, tol=0.011):
+        try:
+            return abs(float(a) - float(b)) <= tol
+        except (TypeError, ValueError):
+            return False
+
+
+    def md_rows(rel, under=None):
+        """Table rows (lists of cells) of a markdown file; with `under`, only rows inside the first heading matching it."""
+        lines = read(rel).splitlines()
+        if under:
+            out, on, lvl = [], False, 0
+            for ln in lines:
+                m = re.match(r"^(#+)\s+(.*)", ln)
+                if m:
+                    if on and len(m.group(1)) <= lvl:
+                        break
+                    if not on and re.search(under, m.group(2), re.I):
+                        on, lvl = True, len(m.group(1))
+                    continue
+                if on:
+                    out.append(ln)
+            lines = out
+        rows = []
+        for ln in lines:
+            if ln.strip().startswith("|") and not re.match(r"^\s*\|[\s:|-]+\|\s*$", ln):
+                rows.append([c.strip() for c in ln.strip().strip("|").split("|")])
+        return rows
+
+
+    def num(s):
+        m = re.search(r"-?\d[\d,]*\.?\d*", str(s))
+        return float(m.group(0).replace(",", "")) if m else None
+
+
+    def run(cmd, timeout=60):
+        p = subprocess.run(cmd, shell=True, cwd=W, capture_output=True, text=True, timeout=timeout)
+        return p.returncode, p.stdout, p.stderr
+
+    EXP = {'ac_lines': [('Ivy Chen', 30.0, 140.0, 4200.0), ('Omar Reyes', 8.0, 125.0, 1000.0), ('Priya Nair', 20.0, 160.0, 3200.0), ('Sam Okafor', 14.5, 110.0, 1595.0)], 'ac': {'subtotal': 9995.0, 'discount': 999.5, 'tax': 742.13, 'total': 9737.63}, 'all': {'acme': {'subtotal': 9995.0, 'discount': 999.5, 'tax': 742.13, 'total': 9737.63}, 'bluebird': {'subtotal': 11900.0, 'discount': 0.0, 'tax': 714.0, 'total': 12614.0}, 'cobalt': {'subtotal': 11575.0, 'discount': 578.75, 'tax': 0.0, 'total': 10996.25}}, 'cap': {'acme': {'subtotal': 9715.0, 'discount': 971.5, 'tax': 721.34, 'total': 9464.84}, 'bluebird': {'subtotal': 11735.0, 'discount': 0.0, 'tax': 704.1, 'total': 12439.1}, 'cobalt': {'subtotal': 11575.0, 'discount': 578.75, 'tax': 0.0, 'total': 10996.25}}, 'dates': ['2025-03-14', '2025-03-26'], 'ac_hours': 72.5}
+
+    def t2():
+        p = W / "invoices/acme.csv"; need(p.exists(), "missing invoices/acme.csv")
+        rd = list(csv.DictReader(open(p, encoding="utf-8"))); need(rd and list(rd[0].keys()) == ["consultant", "hours", "rate", "amount"], "bad header")
+        need([r["consultant"] for r in rd] == [l[0] for l in EXP["ac_lines"]], "rows must be one per consultant, sorted by name")
+        for r, l in zip(rd, EXP["ac_lines"]):
+            need(close(r["hours"], l[1], 0.001) and close(r["rate"], l[2]) and close(r["amount"], l[3]), "bad line " + r["consultant"])
+
+    def _inv(c, e):
+        d = load_json(f"invoices/{c}.json")
+        for k in ("subtotal", "discount", "tax", "total"): need(k in d and close(d[k], e[k], 0.011), f"{c}.{k}: {d.get(k)} != {e[k]}")
+    def t3(): _inv("acme", EXP["ac"])
+    def t4():
+        for c, e in EXP["all"].items(): _inv(c, e)
+    def t6():
+        for c, e in EXP["cap"].items(): _inv(c, e)
+    def t7():
+        txt = read("INVOICE_NOTES.md")
+        for d in EXP["dates"]: need(d in txt, d + " missing from notes")
+    def t8():
+        need((W / "scripts/invoice.py").exists(), "missing scripts/invoice.py")
+        for c, e in EXP["cap"].items():
+            rc, out, err = run(f"python3 scripts/invoice.py {c}"); need(rc == 0, "script failed for " + c + ": " + err[-200:])
+            d = json.loads(out)
+            for k in ("subtotal", "discount", "tax", "total"): need(close(d.get(k), e[k]), f"{c}.{k}")
+
+
+    if __name__ == "__main__":
+        fn = globals().get(sys.argv[1]) if len(sys.argv) > 1 else None
+        need(callable(fn), "unknown check " + str(sys.argv[1:]))
+        fn()
+        print("OK")
+turns:
+- prompt: How many hours in data/timesheets.csv are billed to the acme client in total? Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: ['(?<![\d.])72.5(?:\.0)?(?![\d])']
+- prompt: 'Create invoices/acme.csv with the header consultant,hours,rate,amount and one row per consultant who billed acme (sorted by name):
+    total hours, hourly rate from config/rates.json and amount = hours x rate.'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t2
+    hidden: [_grade.py]
+    timeout: 60
+- prompt: Write invoices/acme.json with numeric keys subtotal, discount, tax and total for acme, using the invoice math described in README.md
+    and the acme settings in config/clients.json.
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t3
+    hidden: [_grade.py]
+    timeout: 60
+- prompt: 'Do the same for every client: write invoices/<client>.json (same four keys) for acme, bluebird and cobalt.'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t4
+    hidden: [_grade.py]
+    timeout: 60
+- prompt: Are there any rows in data/timesheets.csv with more than 12 hours on a single line? List their dates. Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: ['2025-03-14', '2025-03-26']
+- prompt: 'Billing policy: no single timesheet row may bill more than 12 hours. Do not edit the timesheet; apply the cap when computing, and regenerate
+    all three invoices/<client>.json.'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t6
+    hidden: [_grade.py]
+    timeout: 60
+- prompt: Write INVOICE_NOTES.md with level-2 sections Method, Assumptions and Exceptions; under Exceptions list the date of every row that was
+    capped.
+  checks:
+  - kind: doc_sections
+    path: INVOICE_NOTES.md
+    headings: [Method, Assumptions, Exceptions]
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t7
+    hidden: [_grade.py]
+    timeout: 60
+- prompt: Create scripts/invoice.py taking a client name as its only argument and printing that client's invoice JSON (the four keys, with the
+    12-hour cap applied) to stdout, reading everything from data/ and config/. Run it for each client to check it matches invoices/*.json.
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t8
+    hidden: [_grade.py]
+    timeout: 60

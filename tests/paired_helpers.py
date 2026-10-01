@@ -150,3 +150,19 @@ def write_inline_scenario(dirpath: Path, **over) -> Path:
     doc = {**INLINE_SCENARIO, **over}
     (dirpath / f"{doc['id']}.yaml").write_text(yaml.safe_dump(doc), encoding="utf-8")
     return dirpath
+
+
+class FakeProbe:
+    """Fake process table / memory for watchdog tests. rows: [{pid, ppid, rss, cwd, started}]."""
+
+    def __init__(self, rows=None, available_gb=100.0, total_gb=128.0):
+        self.rows, self.avail, self.tot = list(rows or []), int(available_gb * 2**30), int(total_gb * 2**30)
+
+    def table(self, root):
+        return [dict(r) for r in self.rows]
+
+    def available(self):
+        return self.avail
+
+    def total(self):
+        return self.tot

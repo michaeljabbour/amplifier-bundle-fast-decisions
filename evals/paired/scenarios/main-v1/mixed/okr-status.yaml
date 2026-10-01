@@ -1,0 +1,317 @@
+# Weekly status markdown + OKR JSON: metrics table, progress math, status report with revision, exec email, filing a late submission.
+id: okr-status
+task_type: mixed
+language: python
+split: main
+source:
+  desc: 'Weekly status markdown + OKR JSON: metrics table, progress math, status report with revision, exec email, filing a late submission.'
+  kind: self-authored deterministic workspace
+  adapted_from: ['~/dev/amplifier-agent/.amplifier/evaluation/tasks/automation-bench/marketing-campaign-launch-checklist + operations-notion-gmail-checklist-update
+      (status tracking), benchmark/email-drafting/task.yaml (short stakeholder email); data authored fresh']
+workspace:
+  kind: inline
+  files:
+    status/2025-W10.md: |
+      # Weekly status 2025-W10
+
+      ## Metrics
+      - Signups: 118
+      - Activations: 52
+      - Churned: 9
+      - NPS: 31
+
+      ## Blockers
+      - Staging environment unstable
+    status/2025-W11.md: |
+      # Weekly status 2025-W11
+
+      ## Metrics
+      - Signups: 131
+      - Activations: 55
+      - Churned: 11
+      - NPS: 33
+
+      ## Blockers
+      - Vendor API rate limits
+      - Hiring freeze on design
+    status/2025-W12.md: |
+      # Weekly status 2025-W12
+
+      ## Metrics
+      - Signups: 127
+      - Activations: 61
+      - Churned: 8
+      - NPS: 36
+
+      ## Blockers
+      - Pending legal review
+    status/2025-W13.md: |
+      # Weekly status 2025-W13
+
+      ## Metrics
+      - Signups: 149
+      - Activations: 64
+      - Churned: 12
+      - NPS: 35
+
+      ## Blockers
+      - Vendor API rate limits
+      - Pending legal review
+    status/2025-W14.md: |
+      # Weekly status 2025-W14
+
+      ## Metrics
+      - Signups: 160
+      - Activations: 68
+      - Churned: 7
+      - NPS: 39
+
+      ## Blockers
+      - Vendor API rate limits
+    status/2025-W15.md: |
+      # Weekly status 2025-W15
+
+      ## Metrics
+      - Signups: 172
+      - Activations: 71
+      - Churned: 10
+      - NPS: 41
+
+      ## Blockers
+      - None
+    incoming/2025-W16.md: |
+      # Weekly status 2025-W16
+
+      ## Metrics
+      - Signups: 181
+      - Activations: 77
+      - Churned: 6
+      - NPS: 43
+
+      ## Blockers
+      - Vendor API rate limits
+    okrs.json: |
+      {
+        "objectives": [
+          {
+            "id": "O1",
+            "title": "Grow the base",
+            "key_results": [
+              {
+                "id": "KR1",
+                "metric": "signups",
+                "target": 200
+              },
+              {
+                "id": "KR2",
+                "metric": "activations",
+                "target": 90
+              }
+            ]
+          },
+          {
+            "id": "O2",
+            "title": "Delight users",
+            "key_results": [
+              {
+                "id": "KR3",
+                "metric": "nps",
+                "target": 50
+              }
+            ]
+          }
+        ]
+      }
+    README.md: |
+      # Weekly status pack
+
+      `status/` holds one markdown file per week (Metrics and Blockers sections). `okrs.json` lists key results with targets; all three are higher-is-better. `incoming/` holds late submissions that are not filed yet.
+protected: [okrs.json, status/2025-W10.md, status/2025-W11.md, status/2025-W12.md, status/2025-W13.md, status/2025-W14.md, status/2025-W15.md]
+hidden_files:
+  _grade.py: |
+    import csv, json, os, re, subprocess, sys
+    from pathlib import Path
+
+    W = Path(".")
+
+
+    def fail(msg):
+        print("FAIL:", msg)
+        sys.exit(1)
+
+
+    def need(cond, msg):
+        if not cond:
+            fail(msg)
+
+
+    def load_json(rel):
+        p = W / rel
+        need(p.exists(), f"missing {rel}")
+        try:
+            return json.loads(p.read_text(encoding="utf-8"))
+        except Exception as e:  # noqa: BLE001
+            fail(f"{rel} is not valid JSON: {e}")
+
+
+    def read(rel):
+        p = W / rel
+        need(p.exists(), f"missing {rel}")
+        return p.read_text(encoding="utf-8")
+
+
+    def close(a, b, tol=0.011):
+        try:
+            return abs(float(a) - float(b)) <= tol
+        except (TypeError, ValueError):
+            return False
+
+
+    def md_rows(rel, under=None):
+        """Table rows (lists of cells) of a markdown file; with `under`, only rows inside the first heading matching it."""
+        lines = read(rel).splitlines()
+        if under:
+            out, on, lvl = [], False, 0
+            for ln in lines:
+                m = re.match(r"^(#+)\s+(.*)", ln)
+                if m:
+                    if on and len(m.group(1)) <= lvl:
+                        break
+                    if not on and re.search(under, m.group(2), re.I):
+                        on, lvl = True, len(m.group(1))
+                    continue
+                if on:
+                    out.append(ln)
+            lines = out
+        rows = []
+        for ln in lines:
+            if ln.strip().startswith("|") and not re.match(r"^\s*\|[\s:|-]+\|\s*$", ln):
+                rows.append([c.strip() for c in ln.strip().strip("|").split("|")])
+        return rows
+
+
+    def num(s):
+        m = re.search(r"-?\d[\d,]*\.?\d*", str(s))
+        return float(m.group(0).replace(",", "")) if m else None
+
+
+    def run(cmd, timeout=60):
+        p = subprocess.run(cmd, shell=True, cwd=W, capture_output=True, text=True, timeout=timeout)
+        return p.returncode, p.stdout, p.stderr
+
+    EXP = {'m6': {'2025-W10': (118, 52, 9, 31), '2025-W11': (131, 55, 11, 33), '2025-W12': (127, 61, 8, 36), '2025-W13': (149, 64, 12, 35), '2025-W14': (160, 68, 7, 39), '2025-W15': (172, 71, 10, 41)}, 'm7': {'2025-W10': (118, 52, 9, 31), '2025-W11': (131, 55, 11, 33), '2025-W12': (127, 61, 8, 36), '2025-W13': (149, 64, 12, 35), '2025-W14': (160, 68, 7, 39), '2025-W15': (172, 71, 10, 41), '2025-W16': (181, 77, 6, 43)}, 'prog': {'KR1': 86.0, 'KR2': 78.9, 'KR3': 82.0}, 'krs': {'KR1': ('signups', 200), 'KR2': ('activations', 90), 'KR3': ('nps', 50)}, 'latest': (172, 71, 10, 41), 'rec': ['Pending legal review', 'Vendor API rate limits'], 'on': 2}
+    def _csv(key):
+        p = W / "out/metrics.csv"; need(p.exists(), "missing out/metrics.csv")
+        rd = list(csv.DictReader(open(p, encoding="utf-8"))); need(rd and list(rd[0]) == ["week", "signups", "activations", "churned", "nps"], "bad header")
+        e = EXP[key]; need([r["week"] for r in rd] == sorted(e), f"weeks wrong: {[r['week'] for r in rd]}")
+        for r in rd: need(tuple(int(r[k]) for k in ("signups", "activations", "churned", "nps")) == tuple(e[r["week"]]), "bad row " + r["week"])
+    def t3(): _csv("m6")
+    def t5():
+        d = load_json("out/okr_progress.json"); need(set(d) == set(EXP["prog"]), f"keys must be the KR ids: {sorted(d)}")
+        for k, v in EXP["prog"].items(): need(close(d[k], v, 0.051), f"{k}: {d[k]} != {v}")
+    def t6():
+        txt = read("status.md")
+        for h in ("Highlights", "Metrics", "OKR progress", "Risks"): need(re.search(r"^##\s+" + h, txt, re.M | re.I), "missing section " + h)
+        rows = md_rows("status.md", "metrics"); got = {r[0].strip("* `").lower(): num(r[-1]) for r in rows if len(r) >= 2 and num(r[-1]) is not None}
+        for name, i in (("signups", 0), ("activations", 1), ("churned", 2), ("nps", 3)): need(got.get(name) == EXP["latest"][i], f"{name}: {got.get(name)} != {EXP['latest'][i]}")
+    def t8():
+        rows = md_rows("status.md", "okr"); got = {r[0].strip("* `"): r for r in rows if r and re.match(r"KR\d", r[0].strip("* `"))}
+        for k, (m, t) in EXP["krs"].items():
+            need(k in got, k + " missing from the OKR table"); need(any(re.fullmatch(r"\s*%d\s*/\s*%d\s*" % (EXP["latest"][{"signups": 0, "activations": 1, "churned": 2, "nps": 3}[m]], t), c) for c in got[k]), f"{k}: needs a 'latest / target' cell")
+    def t10():
+        txt = read("status.md"); m = re.search(r"^##\s+Risks\s*\n(.*?)(?=^##|\Z)", txt, re.M | re.S | re.I); need(m, "no Risks section")
+        for b in EXP["rec"]: need(b.lower() in m.group(1).lower(), f"recurring blocker missing from Risks: {b}")
+        need("hiring freeze" not in m.group(1).lower() and "staging" not in m.group(1).lower(), "only recurring blockers belong under Risks")
+    def t11():
+        txt = read("exec_email.md"); need(re.match(r"\s*Subject:", txt), "first line must be Subject:"); body = txt.split("\n", 1)[1]
+        need(len(txt.split()) <= 120, "email over 120 words"); need(re.search(r"(?<!\d)%d(?!\d)" % EXP["latest"][0], body), "latest signups missing")
+        need(re.search(r"(?<!\d)%d(?!\d)\s*(of|/)\s*3|(?<!\d)%d(?!\d)\s+key results" % (EXP["on"], EXP["on"]), body), "number of KRs on track missing")
+    def t12():
+        need((W / "status/2025-W16.md").exists(), "2025-W16.md must be moved into status/"); need(not (W / "incoming/2025-W16.md").exists(), "incoming/2025-W16.md must be moved, not copied")
+        _csv("m7")
+
+
+    if __name__ == "__main__":
+        fn = globals().get(sys.argv[1]) if len(sys.argv) > 1 else None
+        need(callable(fn), "unknown check " + str(sys.argv[1:]))
+        fn()
+        print("OK")
+turns:
+- prompt: What were the Signups in the most recent weekly status file under status/, and how did that change from the previous week? Do not change
+    any files.
+  checks:
+  - kind: keyed_facts
+    all: ['(?<!\d)172(?!\d)', '(?<!\d)12(?!\d)']
+- prompt: Counting every bullet under a Blockers heading in status/ (ignore the `None` placeholder), how many blockers were reported across all
+    weeks? Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: ['(?<!\d)7(?!\d)']
+- prompt: Create out/metrics.csv with the header week,signups,activations,churned,nps and one row per weekly file in status/, sorted by week,
+    using the numbers from each file's Metrics section.
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t3
+    hidden: [_grade.py]
+    timeout: 60
+- prompt: Which week had the largest week-over-week increase in signups, and by how much? Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: [2025-W13, '(?<!\d)22(?!\d)']
+- prompt: okrs.json lists three key results with targets. Write out/okr_progress.json mapping each key result id (KR1, KR2, KR3) to its progress
+    in percent, 1 decimal, computed as the latest week's value for its metric divided by the target times 100.
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t5
+    hidden: [_grade.py]
+    timeout: 60
+- prompt: Write status.md with level-2 sections Highlights, Metrics, OKR progress and Risks. Under Metrics put a table of the latest week's numbers
+    (metric in the first column, value in the last); under OKR progress put a table of KR id and progress percent.
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t6
+    hidden: [_grade.py]
+    timeout: 60
+- prompt: Which key results are on track, meaning progress of at least 80%? Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: [KR1, KR3]
+- prompt: 'The execs want to see the raw numbers too: add a second table under OKR progress with the columns KR and `Latest / Target` (cells like
+    `172 / 200`) for each key result.'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t8
+    hidden: [_grade.py]
+    timeout: 60
+- prompt: Which blockers show up in more than one week? List them. Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: [Pending\ legal\ review, Vendor\ API\ rate\ limits]
+- prompt: Replace the placeholder under Risks in status.md with one bullet per recurring blocker (only those, using the wording from the status
+    files).
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t10
+    hidden: [_grade.py]
+    timeout: 60
+- prompt: 'Write exec_email.md of at most 120 words: first line `Subject: ...`, then a short body that states the latest signups and how many
+    of the three key results are on track.'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t11
+    hidden: [_grade.py]
+    timeout: 60
+- prompt: 'A late submission arrived: move incoming/2025-W16.md into status/ (move, do not copy) and regenerate out/metrics.csv so it includes
+    that week too.'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t12
+    hidden: [_grade.py]
+    timeout: 60

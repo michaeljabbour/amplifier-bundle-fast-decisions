@@ -1,0 +1,406 @@
+# main-v1 polyglot 13/20: rust/ocr-numbers, 16 turns, two 7-minute gaps (before turns 5, 10).
+id: rust-ocr
+task_type: mixed
+language: rust
+split: main
+default_gap_s: 10
+source:
+  desc: "Aider polyglot-benchmark rust/ocr-numbers (Exercism), outside the S2 slice"
+  repo: https://github.com/Aider-AI/polyglot-benchmark
+  sha: 7e0611e77b54e2dea774cdc0aa00cf9f7ed6144f
+workspace:
+  kind: git
+  repo: https://github.com/Aider-AI/polyglot-benchmark
+  sha: 7e0611e77b54e2dea774cdc0aa00cf9f7ed6144f
+  subdir: rust/exercises/practice/ocr-numbers
+  local_hint: ~/dev/afast-campaign-corrected-polyglot-20260919/polyglot/polyglot-benchmark
+  remove: [.meta]
+protected: [tests/ocr-numbers.rs]
+hidden_files:
+  tests/hidden_lines.rs: |
+    use ocr_numbers::*;
+
+    const FONT: [[&str; 3]; 10] = [
+        [" _ ", "| |", "|_|"],
+        ["   ", "  |", "  |"],
+        [" _ ", " _|", "|_ "],
+        [" _ ", " _|", " _|"],
+        ["   ", "|_|", "  |"],
+        [" _ ", "|_ ", " _|"],
+        [" _ ", "|_ ", "|_|"],
+        [" _ ", "  |", "  |"],
+        [" _ ", "|_|", "|_|"],
+        [" _ ", "|_|", " _|"],
+    ];
+
+    fn draw(lines: &[&str]) -> String {
+        let mut out: Vec<String> = Vec::new();
+        for line in lines {
+            let mut rows = [String::new(), String::new(), String::new(), String::from("")];
+            for ch in line.chars() {
+                let cell: [&str; 3] = match ch.to_digit(10) {
+                    Some(d) => FONT[d as usize],
+                    None => ["   ", "  _", "  |"],
+                };
+                for r in 0..3 {
+                    rows[r].push_str(cell[r]);
+                }
+                rows[3].push_str("   ");
+            }
+            out.extend(rows);
+        }
+        out.join("\n")
+    }
+
+    #[test]
+    fn hidden_lines_are_separate() {
+        let text = draw(&["123", "456", "789"]);
+        assert_eq!(convert_lines(&text), Ok(vec!["123".to_string(), "456".to_string(), "789".to_string()]));
+        assert_eq!(convert(&text), Ok("123,456,789".to_string()));
+    }
+
+    #[test]
+    fn hidden_single_line() {
+        assert_eq!(convert_lines(&draw(&["0"])), Ok(vec!["0".to_string()]));
+    }
+
+    #[test]
+    fn hidden_lines_errors_match_convert() {
+        assert_eq!(convert_lines(" _ \n| |\n   "), Err(Error::InvalidRowCount(3)));
+        assert_eq!(convert_lines("    \n   |\n   |\n    "), Err(Error::InvalidColumnCount(4)));
+    }
+
+    #[test]
+    fn hidden_lines_keep_question_marks() {
+        assert_eq!(convert_lines(&draw(&["1?3"])), Ok(vec!["1?3".to_string()]));
+    }
+  tests/hidden_newlines.rs: |
+    use ocr_numbers::*;
+
+    const FONT: [[&str; 3]; 10] = [
+        [" _ ", "| |", "|_|"],
+        ["   ", "  |", "  |"],
+        [" _ ", " _|", "|_ "],
+        [" _ ", " _|", " _|"],
+        ["   ", "|_|", "  |"],
+        [" _ ", "|_ ", " _|"],
+        [" _ ", "|_ ", "|_|"],
+        [" _ ", "  |", "  |"],
+        [" _ ", "|_|", "|_|"],
+        [" _ ", "|_|", " _|"],
+    ];
+
+    fn draw(lines: &[&str]) -> String {
+        let mut out: Vec<String> = Vec::new();
+        for line in lines {
+            let mut rows = [String::new(), String::new(), String::new(), String::from("")];
+            for ch in line.chars() {
+                let cell: [&str; 3] = match ch.to_digit(10) {
+                    Some(d) => FONT[d as usize],
+                    None => ["   ", "  _", "  |"],
+                };
+                for r in 0..3 {
+                    rows[r].push_str(cell[r]);
+                }
+                rows[3].push_str("   ");
+            }
+            out.extend(rows);
+        }
+        out.join("\n")
+    }
+
+    #[test]
+    fn hidden_trailing_newline_is_ignored() {
+        let text = format!("{}\n", draw(&["0"]));
+        assert_eq!(convert(&text), Ok("0".to_string()));
+    }
+
+    #[test]
+    fn hidden_crlf_line_endings() {
+        let text = draw(&["12", "34"]).replace('\n', "\r\n");
+        assert_eq!(convert(&text), Ok("12,34".to_string()));
+        let text = format!("{}\r\n", text);
+        assert_eq!(convert(&text), Ok("12,34".to_string()));
+    }
+
+    #[test]
+    fn hidden_errors_still_reported() {
+        assert_eq!(convert(" _ \n| |\n   \n"), Err(Error::InvalidRowCount(3)));
+    }
+  tests/hidden_display.rs: |
+    use ocr_numbers::*;
+
+    #[test]
+    fn hidden_error_display() {
+        assert_eq!(Error::InvalidRowCount(3).to_string(), "input has 3 rows, expected a multiple of 4");
+        assert_eq!(Error::InvalidColumnCount(4).to_string(), "input has 4 columns, expected a multiple of 3");
+    }
+
+    #[test]
+    fn hidden_error_is_std_error() {
+        fn takes(_: &dyn std::error::Error) {}
+        takes(&Error::InvalidRowCount(1));
+        fn run() -> Result<String, Box<dyn std::error::Error>> {
+            Ok(convert("   \n  |\n  |\n   ")?)
+        }
+        assert_eq!(run().unwrap(), "1");
+    }
+  tests/hidden_render.rs: |
+    use ocr_numbers::*;
+
+    const FONT: [[&str; 3]; 10] = [
+        [" _ ", "| |", "|_|"],
+        ["   ", "  |", "  |"],
+        [" _ ", " _|", "|_ "],
+        [" _ ", " _|", " _|"],
+        ["   ", "|_|", "  |"],
+        [" _ ", "|_ ", " _|"],
+        [" _ ", "|_ ", "|_|"],
+        [" _ ", "  |", "  |"],
+        [" _ ", "|_|", "|_|"],
+        [" _ ", "|_|", " _|"],
+    ];
+
+    fn draw(lines: &[&str]) -> String {
+        let mut out: Vec<String> = Vec::new();
+        for line in lines {
+            let mut rows = [String::new(), String::new(), String::new(), String::from("")];
+            for ch in line.chars() {
+                let cell: [&str; 3] = match ch.to_digit(10) {
+                    Some(d) => FONT[d as usize],
+                    None => ["   ", "  _", "  |"],
+                };
+                for r in 0..3 {
+                    rows[r].push_str(cell[r]);
+                }
+                rows[3].push_str("   ");
+            }
+            out.extend(rows);
+        }
+        out.join("\n")
+    }
+
+    #[test]
+    fn hidden_render_known() {
+        assert_eq!(render("0"), Some(" _ \n| |\n|_|\n   ".to_string()));
+        assert_eq!(render("1"), Some("   \n  |\n  |\n   ".to_string()));
+        assert_eq!(render("10"), Some("    _ \n  || |\n  ||_|\n      ".to_string()));
+    }
+
+    #[test]
+    fn hidden_render_roundtrip() {
+        for s in ["1234567890", "123,456,789", "7", "00,11"] {
+            let text = render(s).unwrap();
+            assert_eq!(convert(&text), Ok(s.to_string()), "roundtrip of {s}");
+        }
+    }
+
+    #[test]
+    fn hidden_render_matches_reference_font() {
+        assert_eq!(render("123,456").unwrap(), draw(&["123", "456"]));
+    }
+
+    #[test]
+    fn hidden_render_rejects_non_digits() {
+        assert_eq!(render("1x"), None);
+        assert_eq!(render("12 3"), None);
+    }
+  tests/hidden_garbled.rs: |
+    use ocr_numbers::*;
+
+    const FONT: [[&str; 3]; 10] = [
+        [" _ ", "| |", "|_|"],
+        ["   ", "  |", "  |"],
+        [" _ ", " _|", "|_ "],
+        [" _ ", " _|", " _|"],
+        ["   ", "|_|", "  |"],
+        [" _ ", "|_ ", " _|"],
+        [" _ ", "|_ ", "|_|"],
+        [" _ ", "  |", "  |"],
+        [" _ ", "|_|", "|_|"],
+        [" _ ", "|_|", " _|"],
+    ];
+
+    fn draw(lines: &[&str]) -> String {
+        let mut out: Vec<String> = Vec::new();
+        for line in lines {
+            let mut rows = [String::new(), String::new(), String::new(), String::from("")];
+            for ch in line.chars() {
+                let cell: [&str; 3] = match ch.to_digit(10) {
+                    Some(d) => FONT[d as usize],
+                    None => ["   ", "  _", "  |"],
+                };
+                for r in 0..3 {
+                    rows[r].push_str(cell[r]);
+                }
+                rows[3].push_str("   ");
+            }
+            out.extend(rows);
+        }
+        out.join("\n")
+    }
+
+    #[test]
+    fn hidden_garbled_positions() {
+        let text = draw(&["1?3", "45?"]);
+        assert_eq!(garbled_positions(&text), Ok(vec![(0, 1), (1, 2)]));
+    }
+
+    #[test]
+    fn hidden_no_garbled() {
+        assert_eq!(garbled_positions(&draw(&["123"])), Ok(vec![]));
+    }
+
+    #[test]
+    fn hidden_garbled_errors() {
+        assert_eq!(garbled_positions(" _ \n| |\n   "), Err(Error::InvalidRowCount(3)));
+    }
+  tests/hidden_number.rs: |
+    use ocr_numbers::*;
+
+    const FONT: [[&str; 3]; 10] = [
+        [" _ ", "| |", "|_|"],
+        ["   ", "  |", "  |"],
+        [" _ ", " _|", "|_ "],
+        [" _ ", " _|", " _|"],
+        ["   ", "|_|", "  |"],
+        [" _ ", "|_ ", " _|"],
+        [" _ ", "|_ ", "|_|"],
+        [" _ ", "  |", "  |"],
+        [" _ ", "|_|", "|_|"],
+        [" _ ", "|_|", " _|"],
+    ];
+
+    fn draw(lines: &[&str]) -> String {
+        let mut out: Vec<String> = Vec::new();
+        for line in lines {
+            let mut rows = [String::new(), String::new(), String::new(), String::from("")];
+            for ch in line.chars() {
+                let cell: [&str; 3] = match ch.to_digit(10) {
+                    Some(d) => FONT[d as usize],
+                    None => ["   ", "  _", "  |"],
+                };
+                for r in 0..3 {
+                    rows[r].push_str(cell[r]);
+                }
+                rows[3].push_str("   ");
+            }
+            out.extend(rows);
+        }
+        out.join("\n")
+    }
+
+    #[test]
+    fn hidden_number_ok() {
+        assert_eq!(convert_number(&draw(&["1234567890"])), Ok(1234567890));
+        assert_eq!(convert_number(&draw(&["0"])), Ok(0));
+        assert_eq!(convert_number(&draw(&["007"])), Ok(7));
+        assert_eq!(convert_number(&draw(&["1234567890123456789"])), Ok(1234567890123456789));
+    }
+
+    #[test]
+    fn hidden_number_errors() {
+        assert_eq!(convert_number(&draw(&["12345678901234567890"])), Err(NumberError::TooLong));
+        assert_eq!(convert_number(&draw(&["12", "34"])), Err(NumberError::Multiple));
+        assert_eq!(convert_number(&draw(&["1?3"])), Err(NumberError::Garbled));
+        assert_eq!(convert_number(" _ \n| |\n   "), Err(NumberError::Ocr(Error::InvalidRowCount(3))));
+    }
+turns:
+  - prompt: >-
+      Read .docs/instructions.md and implement `convert` and the `Error` enum in src/lib.rs so the
+      provided tests in tests/ocr-numbers.rs pass (some are marked #[ignore]; run them all with `cargo
+      test --offline -- --include-ignored`). Do not edit the provided test file.
+    checks:
+      - {kind: tests, runner: rust, files: [tests/ocr-numbers.rs], restore: [tests/ocr-numbers.rs]}
+  - prompt: >-
+      In three to five sentences, explain how `convert` recognises a digit from a 3x3 cell, and when
+      it returns each of the two errors versus a `?`. Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [InvalidRowCount, InvalidColumnCount, '\?', cell|pattern]}
+  - prompt: >-
+      Add `pub fn convert_lines(input: &str) -> Result<Vec<String>, Error>` that returns one string
+      per line of digits instead of joining them with commas; it reports the same errors and keeps `?`
+      for garbled cells. `convert` keeps its behaviour.
+    checks:
+      - {kind: tests, runner: rust, files: [tests/ocr-numbers.rs], restore: [tests/ocr-numbers.rs], hidden: [tests/hidden_lines.rs]}
+  - prompt: >-
+      Fix an edge case: input that has Windows line endings (\r\n) or a single trailing newline must
+      be accepted and give the same result as without them. A wrong row count must still be an error.
+    checks:
+      - {kind: tests, runner: rust, files: [tests/ocr-numbers.rs], restore: [tests/ocr-numbers.rs], hidden: [tests/hidden_lines.rs, tests/hidden_newlines.rs]}
+  - prompt: >-
+      Make `Error` a proper error type: implement `std::fmt::Display` ("input has 3 rows, expected a
+      multiple of 4" for `InvalidRowCount(3)`, "input has 4 columns, expected a multiple of 3" for
+      `InvalidColumnCount(4)`) and `std::error::Error`.
+    gap_before_s: 420
+    checks:
+      - {kind: tests, runner: rust, files: [tests/ocr-numbers.rs], restore: [tests/ocr-numbers.rs], hidden: [tests/hidden_lines.rs, tests/hidden_newlines.rs, tests/hidden_display.rs]}
+  - prompt: >-
+      Add unit tests inside src/lib.rs in a `#[cfg(test)] mod tests` block: at least four `#[test]`
+      functions covering a digit, a garbled cell, both errors and `convert_lines`. Run `cargo test
+      --offline`.
+    checks:
+      - {kind: file_regex, path: src/lib.rs, pattern: '#\[test\]', min_count: 4}
+      - {kind: tests, runner: rust, files: [tests/ocr-numbers.rs], restore: [tests/ocr-numbers.rs], hidden: [tests/hidden_lines.rs, tests/hidden_newlines.rs, tests/hidden_display.rs]}
+  - prompt: >-
+      Refactor src/lib.rs: replace the big `match` with a `const DIGITS: [[&str; 3]; 10]` table and a
+      private `fn recognize` that looks a cell up in it. No behaviour change; keep all tests passing.
+    checks:
+      - {kind: file_regex, path: src/lib.rs, pattern: const DIGITS}
+      - {kind: file_regex, path: src/lib.rs, pattern: ^\s*fn recognize\(}
+      - {kind: tests, runner: rust, files: [tests/ocr-numbers.rs], restore: [tests/ocr-numbers.rs], hidden: [tests/hidden_lines.rs, tests/hidden_newlines.rs, tests/hidden_display.rs]}
+  - prompt: >-
+      New requirement: add `pub fn render(digits: &str) -> Option<String>` that draws digits in the
+      same font (the inverse of `convert`): "0" renders as " _ \n| |\n|_|\n ", several lines separated
+      by commas are stacked, and any character other than a digit or comma makes it return `None`.
+      `convert(&render(s).unwrap())` must give s back.
+    checks:
+      - {kind: tests, runner: rust, files: [tests/ocr-numbers.rs], restore: [tests/ocr-numbers.rs], hidden: [tests/hidden_lines.rs, tests/hidden_newlines.rs, tests/hidden_display.rs, tests/hidden_render.rs]}
+  - prompt: >-
+      Create README.md with a `## Format` section describing the 3x4 cells and a `## Errors` section
+      describing the two error variants and the `?` for unrecognised cells.
+    checks:
+      - {kind: doc_sections, path: README.md, headings: [format, errors]}
+      - {kind: file_regex, path: README.md, pattern: InvalidRowCount}
+      - {kind: tests, runner: rust, files: [tests/ocr-numbers.rs], restore: [tests/ocr-numbers.rs], hidden: [tests/hidden_lines.rs, tests/hidden_newlines.rs, tests/hidden_display.rs, tests/hidden_render.rs]}
+  - prompt: >-
+      In three or four sentences, explain how `render` and `convert` share the font table and why that
+      makes the round trip a useful property to test. Do not change any files.
+    gap_before_s: 420
+    checks:
+      - {kind: keyed_facts, all: [render, convert, DIGITS|table, 'round.?trip|inverse']}
+  - prompt: >-
+      Add `pub fn garbled_positions(input: &str) -> Result<Vec<(usize, usize)>, Error>` returning the
+      (line index, digit index) of every cell that converts to `?`, both zero-based, in reading order.
+    checks:
+      - {kind: tests, runner: rust, files: [tests/ocr-numbers.rs], restore: [tests/ocr-numbers.rs], hidden: [tests/hidden_lines.rs, tests/hidden_newlines.rs, tests/hidden_display.rs, tests/hidden_render.rs, tests/hidden_garbled.rs]}
+  - prompt: >-
+      Add integration tests in a new file `tests/extra.rs`: at least five `#[test]` functions covering
+      `render` round trips, `convert_lines`, `garbled_positions`, CRLF input and an error message. Run
+      `cargo test --offline`.
+    checks:
+      - {kind: file_regex, path: tests/extra.rs, pattern: '#\[test\]', min_count: 5}
+      - {kind: tests, runner: rust, files: [tests/ocr-numbers.rs], restore: [tests/ocr-numbers.rs], hidden: [tests/hidden_lines.rs, tests/hidden_newlines.rs, tests/hidden_display.rs, tests/hidden_render.rs, tests/hidden_garbled.rs]}
+  - prompt: >-
+      Add rustdoc comments (`///`) with an `# Examples` section containing a doctest for both
+      `convert` and `render`. Run `cargo test --offline --doc`.
+    checks:
+      - {kind: file_regex, path: src/lib.rs, pattern: '# Examples', min_count: 2}
+      - {kind: tests, runner: cmd, cmd: cargo test --offline --doc, expect_regex: 'test result: ok\. [1-9]', restore: [tests/ocr-numbers.rs], hidden: [tests/hidden_lines.rs, tests/hidden_newlines.rs, tests/hidden_display.rs, tests/hidden_render.rs, tests/hidden_garbled.rs]}
+  - prompt: >-
+      Add `pub enum NumberError { Ocr(Error), Garbled, Multiple, TooLong }` (derive Debug, PartialEq,
+      Eq) and `pub fn convert_number(input: &str) -> Result<u64, NumberError>` for a single line of
+      digits: size problems are `Ocr(..)`, more than one line is `Multiple`, any `?` is `Garbled`,
+      more than 19 digits is `TooLong`; leading zeros are fine ("007" is 7).
+    checks:
+      - {kind: tests, runner: rust, files: [tests/ocr-numbers.rs], restore: [tests/ocr-numbers.rs], hidden: [tests/hidden_lines.rs, tests/hidden_newlines.rs, tests/hidden_display.rs, tests/hidden_render.rs, tests/hidden_garbled.rs, tests/hidden_number.rs]}
+  - prompt: >-
+      In four or five sentences, explain why `convert_number` limits input to 19 digits, and the order
+      in which it checks for the different errors. Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: ['19', u64, Multiple, Garbled]}
+  - prompt: >-
+      Finish with a short summary for a reviewer, in four to six sentences, of the public functions of
+      this crate and what each one returns on bad input. Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [convert_lines, render, garbled_positions, convert_number]}

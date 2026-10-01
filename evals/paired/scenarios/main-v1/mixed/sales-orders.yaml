@@ -1,0 +1,332 @@
+# Q1 sales CSVs: answer data questions, produce summary.json and report.md with exact values, revise for new data, small script, docs.
+id: sales-orders
+task_type: mixed
+language: python
+split: main
+source:
+  desc: 'Q1 sales CSVs: answer data questions, produce summary.json and report.md with exact values, revise for new data, small script, docs.'
+  kind: self-authored deterministic workspace
+  adapted_from: [~/dev/amplifier-agent/.amplifier/evaluation/tasks/benchmark/pdf-hr-q1/task.yaml (answer a numeric data question into a file),
+    ~/dev/amplifier-agent/.amplifier/evaluation/tasks/automation-bench/finance-qb-invoice-from-orders/meta.yaml (orders -> totals), ~/dev/amplifier-agent/.amplifier/evaluation/tasks/benchmark/energy-forecast-new-england/task.yaml
+      (data + model_report.md + README deliverables)]
+workspace:
+  kind: inline
+  files:
+    README.md: |
+      # Sales data pack
+
+      Q1 2025 order exports.
+
+      - `data/orders.csv`: one row per order (`status` is `shipped` or `cancelled`)
+      - `data/products.csv`: category and unit cost per product
+      - `data/orders_extra.csv`: late export, not yet merged into any report
+
+      Revenue = qty * unit_price. Cancelled orders never count as revenue.
+    data/orders.csv: |
+      order_id,date,region,product,qty,unit_price,status
+      A1001,2025-02-19,West,Gadget,11,39.00,shipped
+      A1002,2025-01-22,East,Gizmo,9,28.50,shipped
+      A1003,2025-01-13,East,Gadget,10,39.00,shipped
+      A1004,2025-03-23,North,Gizmo,11,28.50,shipped
+      A1005,2025-02-27,East,Widget,3,15.00,shipped
+      A1006,2025-03-15,East,Widget,12,15.00,shipped
+      A1007,2025-01-15,East,Doohickey,8,7.50,shipped
+      A1008,2025-03-02,South,Gizmo,11,28.50,shipped
+      A1009,2025-02-06,East,Gizmo,12,28.50,shipped
+      A1010,2025-03-17,North,Gadget,3,39.00,shipped
+      A1011,2025-01-26,North,Doohickey,11,7.50,shipped
+      A1012,2025-02-10,West,Gizmo,3,28.50,shipped
+      A1013,2025-03-07,East,Sprocket,4,9.00,cancelled
+      A1014,2025-03-10,North,Doohickey,3,7.50,shipped
+      A1015,2025-03-12,East,Sprocket,2,9.00,shipped
+      A1016,2025-03-03,South,Sprocket,2,9.00,shipped
+      A1017,2025-02-10,East,Sprocket,8,9.00,shipped
+      A1018,2025-03-04,North,Doohickey,12,7.50,shipped
+      A1019,2025-02-26,West,Gizmo,6,28.50,shipped
+      A1020,2025-01-01,West,Doohickey,5,7.50,shipped
+      A1021,2025-02-25,East,Gadget,4,39.00,shipped
+      A1022,2025-02-02,North,Sprocket,12,9.00,shipped
+      A1023,2025-01-24,East,Sprocket,7,9.00,shipped
+      A1024,2025-02-17,West,Sprocket,3,9.00,shipped
+      A1025,2025-02-15,East,Widget,7,15.00,shipped
+      A1026,2025-03-27,East,Sprocket,10,9.00,shipped
+      A1027,2025-02-11,South,Widget,8,15.00,cancelled
+      A1028,2025-01-20,East,Doohickey,12,7.50,shipped
+      A1029,2025-02-11,South,Sprocket,2,9.00,shipped
+      A1030,2025-01-08,East,Widget,4,15.00,shipped
+      A1031,2025-01-14,East,Widget,12,15.00,shipped
+      A1032,2025-02-06,South,Sprocket,4,9.00,shipped
+      A1033,2025-02-16,South,Widget,11,15.00,shipped
+      A1034,2025-01-02,North,Widget,3,15.00,shipped
+      A1035,2025-01-13,North,Sprocket,5,9.00,shipped
+      A1036,2025-02-14,East,Gizmo,3,28.50,shipped
+      A1037,2025-03-03,West,Gadget,8,39.00,shipped
+      A1038,2025-02-01,East,Doohickey,3,7.50,shipped
+      A1039,2025-03-19,South,Widget,3,15.00,shipped
+      A1040,2025-02-26,North,Widget,6,15.00,cancelled
+      A1041,2025-03-18,East,Gizmo,5,28.50,shipped
+      A1042,2025-03-19,North,Gadget,3,39.00,cancelled
+      A1043,2025-03-16,South,Widget,11,15.00,shipped
+      A1044,2025-03-14,North,Gizmo,4,28.50,shipped
+      A1045,2025-02-16,North,Widget,12,15.00,cancelled
+      A1046,2025-03-13,North,Doohickey,7,7.50,shipped
+      A1047,2025-01-15,South,Sprocket,6,9.00,shipped
+      A1048,2025-02-04,West,Widget,12,15.00,shipped
+      A1049,2025-03-03,East,Sprocket,4,9.00,shipped
+      A1050,2025-03-16,East,Gadget,4,39.00,shipped
+      A1051,2025-01-27,East,Gizmo,4,28.50,shipped
+      A1052,2025-03-12,South,Widget,3,15.00,cancelled
+      A1053,2025-03-28,South,Widget,12,15.00,shipped
+      A1054,2025-02-28,East,Gizmo,4,28.50,shipped
+      A1055,2025-01-17,North,Gadget,8,39.00,shipped
+      A1056,2025-03-07,East,Gizmo,1,28.50,shipped
+      A1057,2025-01-02,East,Gadget,2,39.00,shipped
+      A1058,2025-02-10,North,Gadget,12,39.00,cancelled
+      A1059,2025-02-17,North,Gizmo,2,28.50,shipped
+      A1060,2025-01-06,North,Gadget,3,39.00,shipped
+    data/products.csv: |
+      product,category,unit_cost
+      Widget,Hardware,8.00
+      Gadget,Electronics,21.50
+      Gizmo,Electronics,14.00
+      Doohickey,Accessories,3.25
+      Sprocket,Hardware,5.00
+    data/orders_extra.csv: |
+      order_id,date,region,product,qty,unit_price,status
+      A1004,2025-04-03,South,Gizmo,6,28.50,cancelled
+      A1018,2025-04-06,North,Sprocket,11,9.00,shipped
+      A1042,2025-04-14,East,Doohickey,3,7.50,cancelled
+      A2004,2025-04-24,South,Gizmo,7,28.50,shipped
+      A2005,2025-04-03,South,Sprocket,2,9.00,shipped
+      A2006,2025-04-01,East,Gadget,4,39.00,shipped
+      A2007,2025-04-26,West,Sprocket,12,9.00,shipped
+      A2008,2025-04-24,South,Gadget,5,39.00,cancelled
+      A2009,2025-04-21,West,Gadget,5,39.00,shipped
+      A2010,2025-03-11,North,Sprocket,3,9.00,shipped
+      A2011,2025-04-17,West,Doohickey,2,7.50,shipped
+      A2012,2025-04-07,South,Gadget,2,39.00,shipped
+protected: [data/orders.csv, data/products.csv, data/orders_extra.csv]
+hidden_files:
+  _grade.py: |
+    import csv, json, os, re, subprocess, sys
+    from pathlib import Path
+
+    W = Path(".")
+
+
+    def fail(msg):
+        print("FAIL:", msg)
+        sys.exit(1)
+
+
+    def need(cond, msg):
+        if not cond:
+            fail(msg)
+
+
+    def load_json(rel):
+        p = W / rel
+        need(p.exists(), f"missing {rel}")
+        try:
+            return json.loads(p.read_text(encoding="utf-8"))
+        except Exception as e:  # noqa: BLE001
+            fail(f"{rel} is not valid JSON: {e}")
+
+
+    def read(rel):
+        p = W / rel
+        need(p.exists(), f"missing {rel}")
+        return p.read_text(encoding="utf-8")
+
+
+    def close(a, b, tol=0.011):
+        try:
+            return abs(float(a) - float(b)) <= tol
+        except (TypeError, ValueError):
+            return False
+
+
+    def md_rows(rel, under=None):
+        """Table rows (lists of cells) of a markdown file; with `under`, only rows inside the first heading matching it."""
+        lines = read(rel).splitlines()
+        if under:
+            out, on, lvl = [], False, 0
+            for ln in lines:
+                m = re.match(r"^(#+)\s+(.*)", ln)
+                if m:
+                    if on and len(m.group(1)) <= lvl:
+                        break
+                    if not on and re.search(under, m.group(2), re.I):
+                        on, lvl = True, len(m.group(1))
+                    continue
+                if on:
+                    out.append(ln)
+            lines = out
+        rows = []
+        for ln in lines:
+            if ln.strip().startswith("|") and not re.match(r"^\s*\|[\s:|-]+\|\s*$", ln):
+                rows.append([c.strip() for c in ln.strip().strip("|").split("|")])
+        return rows
+
+
+    def num(s):
+        m = re.search(r"-?\d[\d,]*\.?\d*", str(s))
+        return float(m.group(0).replace(",", "")) if m else None
+
+
+    def run(cmd, timeout=60):
+        p = subprocess.run(cmd, shell=True, cwd=W, capture_output=True, text=True, timeout=timeout)
+        return p.returncode, p.stdout, p.stderr
+
+    EXP = {'s1': {'total_revenue': 6597.0, 'orders_counted': 53, 'cancelled_orders': 7, 'revenue_by_region': {'North': 1476.0, 'South': 994.5, 'East': 2884.5, 'West': 1242.0}}, 's2': {'total_revenue': 6597.0, 'orders_counted': 53, 'cancelled_orders': 7, 'revenue_by_region': {'North': 1476.0, 'South': 994.5, 'East': 2884.5, 'West': 1242.0}, 'gross_margin_pct': 48.0}, 's3': {'total_revenue': 6597.0, 'orders_counted': 53, 'cancelled_orders': 7, 'revenue_by_region': {'North': 1476.0, 'South': 994.5, 'East': 2884.5, 'West': 1242.0}, 'gross_margin_pct': 48.0, 'total_revenue_incl_extra': 7492.5}, 's4': {'total_revenue': 6597.0, 'orders_counted': 53, 'cancelled_orders': 7, 'revenue_by_region': {'North': 1476.0, 'South': 994.5, 'East': 2884.5, 'West': 1242.0}, 'gross_margin_pct': 48.0, 'total_revenue_incl_extra': 7492.5, 'total_revenue_dedup': 7393.5}, 'cli': {'total_revenue': 6597.0, 'orders_counted': 53, 'cancelled_orders': 7, 'revenue_by_region': {'North': 1476.0, 'South': 994.5, 'East': 2884.5, 'West': 1242.0}, 'gross_margin_pct': 48.0}, 'reg': {'North': 1476.0, 'South': 994.5, 'East': 2884.5, 'West': 1242.0}, 'months': {'2025-01': 1984.5, '2025-02': 2218.5, '2025-03': 2394.0}}
+
+    def _summ(key, extra=()):
+        d = load_json("out/summary.json"); e = EXP[key]
+        for k in ("total_revenue", "orders_counted", "cancelled_orders") + tuple(extra):
+            need(k in d and close(d[k], e[k], 0.051), f"{k}: {d.get(k)} != {e[k]}")
+        need(isinstance(d.get("revenue_by_region"), dict), "revenue_by_region must be an object")
+        for g, v in e["revenue_by_region"].items():
+            need(g in d["revenue_by_region"] and close(d["revenue_by_region"][g], v, 0.051), f"region {g}")
+
+    def t3(): _summ("s1")
+    def t7(): _summ("s2", ("gross_margin_pct",))
+    def t9(): _summ("s3", ("gross_margin_pct", "total_revenue_incl_extra"))
+    def t11(): _summ("s4", ("gross_margin_pct", "total_revenue_incl_extra", "total_revenue_dedup"))
+
+    def _table(under, exp):
+        rows = md_rows("report.md", under); need(rows, "no table under " + under)
+        got = {r[0].strip("* `"): num(r[1]) for r in rows if len(r) >= 2 and num(r[1]) is not None}
+        for k, v in exp.items():
+            need(k in got and close(got[k], v, 0.051), f"{k}: {got.get(k)} != {v}")
+
+    def t6(): _table("region", EXP["reg"])
+    def t12(): _table("month", EXP["months"])
+
+    def t13():
+        need((W / "scripts/summarize.py").exists(), "missing scripts/summarize.py")
+        rc, out, err = run("python3 scripts/summarize.py"); need(rc == 0, "script failed: " + err[-200:])
+        try: d = json.loads(out)
+        except Exception as e: fail("stdout is not JSON: " + str(e))
+        e = EXP["cli"]
+        for k in ("total_revenue", "orders_counted", "cancelled_orders", "gross_margin_pct"):
+            need(k in d and close(d[k], e[k], 0.051), f"{k}: {d.get(k)} != {e[k]}")
+        for g, v in e["revenue_by_region"].items(): need(close(d["revenue_by_region"].get(g), v, 0.051), g)
+
+    def t15():
+        txt = read("report.md"); m = re.search(r"^#+\s*Executive summary\s*\n(.*?)(?=^#|\Z)", txt, re.M | re.S | re.I)
+        need(m, "no Executive summary section"); body = m.group(1)
+        need(len(body.split()) <= 120, "summary over 120 words"); need(len(body.split()) >= 15, "summary too short")
+        need(re.search('East', body), "top region missing")
+        need(any(close(num(x), EXP["s1"]["total_revenue"], 0.51) for x in re.findall(r"\d[\d,]*\.?\d*", body)), "total revenue missing")
+        need(txt.index(m.group(0)) < txt.lower().index("## overview"), "Executive summary must come first")
+
+
+    if __name__ == "__main__":
+        fn = globals().get(sys.argv[1]) if len(sys.argv) > 1 else None
+        need(callable(fn), "unknown check " + str(sys.argv[1:]))
+        fn()
+        print("OK")
+turns:
+- prompt: Using data/orders.csv (revenue = qty * unit_price, cancelled orders excluded), which region has the highest total revenue, and what
+    is that figure? Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: [East, '(?<![\d.,])2,?8,?8,?4\.50?(?!\d)']
+- prompt: Which product sold the most units across non-cancelled orders in data/orders.csv, and how many units? Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: [Widget, '(?<!\d)90(?!\d)']
+- prompt: Create out/summary.json with the keys total_revenue, orders_counted, cancelled_orders and revenue_by_region (an object keyed by region
+    name). Revenue figures are numbers rounded to 2 decimals, computed from data/orders.csv with cancelled orders excluded.
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t3
+    hidden: [_grade.py]
+    timeout: 60
+- prompt: How many orders in data/orders.csv are cancelled, and what percentage of all orders is that (one decimal)? Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: ['(?<!\d)7(?!\d)', '(?<![\d.,])11\.70?(?!\d)']
+- prompt: Write report.md with level-2 sections Overview, Revenue by region, Top products and Caveats. Keep it factual and short.
+  checks:
+  - kind: doc_sections
+    path: report.md
+    headings: [Overview, Revenue by region, Top products, Caveats]
+- prompt: Under the Revenue by region section of report.md add a markdown table with one row per region (region name in the first column, revenue
+    in the second) using the same figures as out/summary.json.
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t6
+    hidden: [_grade.py]
+    timeout: 60
+- prompt: 'Add a gross_margin_pct key to out/summary.json: overall gross margin in percent, rounded to 1 decimal, where margin = (revenue - cost)
+    / revenue and cost = qty * unit_cost from data/products.csv, over non-cancelled orders. Keep the existing keys.'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t7
+    hidden: [_grade.py]
+    timeout: 60
+- prompt: Which product category (from data/products.csv) has the lowest gross margin percentage over non-cancelled orders, and what is it to
+    one decimal? Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: [Hardware, '(?<![\d.,])46(?:\.0+)?(?!\d)']
+- prompt: 'data/orders_extra.csv is a late export. Add total_revenue_incl_extra to out/summary.json: total revenue when every non-cancelled row
+    of data/orders_extra.csv is added to the orders.csv total. Keep all existing keys unchanged.'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t9
+    hidden: [_grade.py]
+    timeout: 60
+- prompt: Do any order_id values in data/orders_extra.csv also appear in data/orders.csv? List each shared id. Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: [A1004, A1018, A1042]
+- prompt: 'Those shared ids are double counts. Add total_revenue_dedup to out/summary.json: the orders.csv total plus only the non-cancelled rows
+    of data/orders_extra.csv whose order_id is not already in orders.csv. Keep every other key.'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t11
+    hidden: [_grade.py]
+    timeout: 60
+- prompt: 'Management wants a monthly view: add a level-2 section Revenue by month to report.md with a table of month (rows labelled 2025-01,
+    2025-02, 2025-03) and revenue from data/orders.csv, non-cancelled orders only.'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t12
+    hidden: [_grade.py]
+    timeout: 60
+- prompt: Create scripts/summarize.py that reads data/orders.csv and data/products.csv (paths relative to the repository root) and prints to stdout
+    the JSON object with total_revenue, orders_counted, cancelled_orders, revenue_by_region and gross_margin_pct. Run it to check it matches out/summary.json.
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t13
+    hidden: [_grade.py]
+    timeout: 60
+- prompt: In which month of data/orders.csv was non-cancelled revenue highest, and by what percentage (one decimal) does it exceed the lowest
+    month? Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: [2025-03, '(?<![\d.,])20\.60?(?!\d)']
+- prompt: Put a level-2 section named Executive summary at the very top of report.md (before Overview), at most 120 words, stating the total revenue
+    and which region led.
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t15
+    hidden: [_grade.py]
+    timeout: 60
+- prompt: Update README.md with a Usage section explaining how to run scripts/summarize.py and where report.md and out/summary.json come from.
+  checks:
+  - kind: doc_sections
+    path: README.md
+    headings: [Usage]
+  - {kind: file_regex, path: README.md, pattern: scripts/summarize\.py}
+  - {kind: file_regex, path: README.md, pattern: out/summary\.json}

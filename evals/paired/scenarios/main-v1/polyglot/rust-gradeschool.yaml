@@ -1,0 +1,230 @@
+# main-v1 polyglot 15/20: rust/grade-school, 12 turns, two 7-minute gaps (before turns 5, 8).
+id: rust-gradeschool
+task_type: feature
+language: rust
+split: main
+default_gap_s: 10
+source:
+  desc: "Aider polyglot-benchmark rust/grade-school (Exercism), outside the S2 slice"
+  repo: https://github.com/Aider-AI/polyglot-benchmark
+  sha: 7e0611e77b54e2dea774cdc0aa00cf9f7ed6144f
+workspace:
+  kind: git
+  repo: https://github.com/Aider-AI/polyglot-benchmark
+  sha: 7e0611e77b54e2dea774cdc0aa00cf9f7ed6144f
+  subdir: rust/exercises/practice/grade-school
+  local_hint: ~/dev/afast-campaign-corrected-polyglot-20260919/polyglot/polyglot-benchmark
+  remove: [.meta]
+protected: [tests/grade-school.rs]
+hidden_files:
+  tests/hidden_remove.rs: |
+    use grade_school::*;
+
+    #[test]
+    fn hidden_remove_present_and_absent() {
+        let mut s = School::new();
+        s.add(2, "Blair");
+        s.add(2, "James");
+        assert!(s.remove("Blair"));
+        assert_eq!(s.grade(2), vec!["James"]);
+        assert!(!s.remove("Blair"));
+        assert!(!s.remove("Nobody"));
+    }
+
+    #[test]
+    fn hidden_empty_grade_leaves_grades() {
+        let mut s = School::new();
+        s.add(2, "Blair");
+        s.add(4, "Paul");
+        assert!(s.remove("Blair"));
+        assert_eq!(s.grades(), vec![4]);
+        assert_eq!(s.grade(2), Vec::<String>::new());
+    }
+
+    #[test]
+    fn hidden_can_readd_after_remove_in_another_grade() {
+        let mut s = School::new();
+        s.add(2, "Blair");
+        s.remove("Blair");
+        s.add(5, "Blair");
+        assert_eq!(s.grade(5), vec!["Blair"]);
+        assert_eq!(s.grade(2), Vec::<String>::new());
+    }
+  tests/hidden_move.rs: |
+    use grade_school::*;
+
+    #[test]
+    fn hidden_move_existing() {
+        let mut s = School::new();
+        s.add(2, "Blair");
+        s.add(2, "James");
+        assert!(s.move_student("Blair", 5));
+        assert_eq!(s.grade(2), vec!["James"]);
+        assert_eq!(s.grade(5), vec!["Blair"]);
+        assert_eq!(s.grades(), vec![2, 5]);
+    }
+
+    #[test]
+    fn hidden_move_last_student_drops_old_grade() {
+        let mut s = School::new();
+        s.add(2, "Blair");
+        assert!(s.move_student("Blair", 5));
+        assert_eq!(s.grades(), vec![5]);
+    }
+
+    #[test]
+    fn hidden_move_unknown_and_same_grade() {
+        let mut s = School::new();
+        s.add(2, "Blair");
+        assert!(!s.move_student("Nobody", 3));
+        assert_eq!(s.grades(), vec![2]);
+        assert!(s.move_student("Blair", 2));
+        assert_eq!(s.grade(2), vec!["Blair"]);
+    }
+  tests/hidden_gradeof.rs: |
+    use grade_school::*;
+
+    #[test]
+    fn hidden_grade_of() {
+        let mut s = School::new();
+        s.add(2, "Blair");
+        s.add(7, "Paul");
+        assert_eq!(s.grade_of("Blair"), Some(2));
+        assert_eq!(s.grade_of("Paul"), Some(7));
+        assert_eq!(s.grade_of("Nobody"), None);
+        s.remove("Paul");
+        assert_eq!(s.grade_of("Paul"), None);
+    }
+  tests/hidden_case.rs: |
+    use grade_school::*;
+
+    #[test]
+    fn hidden_case_insensitive_duplicates() {
+        let mut s = School::new();
+        s.add(2, "James");
+        s.add(3, "james");
+        s.add(2, "JAMES");
+        assert_eq!(s.grade(2), vec!["James"]);
+        assert_eq!(s.grade(3), Vec::<String>::new());
+    }
+
+    #[test]
+    fn hidden_names_are_trimmed() {
+        let mut s = School::new();
+        s.add(2, "  Paul ");
+        assert_eq!(s.grade(2), vec!["Paul"]);
+    }
+
+    #[test]
+    fn hidden_blank_names_ignored() {
+        let mut s = School::new();
+        s.add(2, "");
+        s.add(2, "   ");
+        assert!(s.grades().is_empty());
+    }
+
+    #[test]
+    fn hidden_lookups_ignore_case() {
+        let mut s = School::new();
+        s.add(4, "Blair");
+        assert_eq!(s.grade_of("BLAIR"), Some(4));
+        assert!(s.move_student("blair", 6));
+        assert_eq!(s.grade(6), vec!["Blair"]);
+        assert!(s.remove(" BLAIR "));
+        assert!(s.grades().is_empty());
+    }
+  tests/hidden_roster.rs: |
+    use grade_school::*;
+
+    #[test]
+    fn hidden_roster_is_ordered() {
+        let mut s = School::new();
+        s.add(5, "Franklin");
+        s.add(1, "Jeff");
+        s.add(5, "Bradley");
+        assert_eq!(
+            s.roster(),
+            vec![(1, "Jeff".to_string()), (5, "Bradley".to_string()), (5, "Franklin".to_string())]
+        );
+    }
+
+    #[test]
+    fn hidden_roster_empty() {
+        assert!(School::new().roster().is_empty());
+    }
+turns:
+  - prompt: >-
+      Read .docs/instructions.md and implement `School` in src/lib.rs so the provided tests in
+      tests/grade-school.rs pass (some are marked #[ignore]; run them all with `cargo test --offline
+      -- --include-ignored`). Do not edit the provided test file.
+    checks:
+      - {kind: tests, runner: rust, files: [tests/grade-school.rs], restore: [tests/grade-school.rs]}
+  - prompt: >-
+      In three to five sentences, explain how your `School` stores students, how it keeps grades and
+      names sorted, and what happens when a student is added twice. Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [sort, grade, duplicate|twice|already|ignored]}
+  - prompt: >-
+      Add `pub fn remove(&mut self, student: &str) -> bool` that removes a student from whichever
+      grade they are in and returns whether they were enrolled. A grade with no students left must no
+      longer appear in `grades()`.
+    checks:
+      - {kind: tests, runner: rust, files: [tests/grade-school.rs], restore: [tests/grade-school.rs], hidden: [tests/hidden_remove.rs]}
+  - prompt: >-
+      Add `pub fn move_student(&mut self, student: &str, to_grade: u32) -> bool` that moves an
+      enrolled student to another grade (returning true, also when it is the same grade) or returns
+      false for an unknown student.
+    checks:
+      - {kind: tests, runner: rust, files: [tests/grade-school.rs], restore: [tests/grade-school.rs], hidden: [tests/hidden_remove.rs, tests/hidden_move.rs]}
+  - prompt: >-
+      Add unit tests inside src/lib.rs in a `#[cfg(test)] mod tests` block: at least four `#[test]`
+      functions covering sorted names, a duplicate add, `remove`, `move_student` and an emptied grade.
+      Run `cargo test --offline`.
+    gap_before_s: 420
+    checks:
+      - {kind: file_regex, path: src/lib.rs, pattern: '#\[test\]', min_count: 4}
+      - {kind: tests, runner: rust, files: [tests/grade-school.rs], restore: [tests/grade-school.rs], hidden: [tests/hidden_remove.rs, tests/hidden_move.rs]}
+  - prompt: >-
+      Refactor src/lib.rs: store the roster as a `BTreeMap<u32, BTreeSet<String>>` (grade to names) so
+      that ordering comes from the data structure instead of sorting on every query. No behaviour
+      change; keep all tests passing.
+    checks:
+      - {kind: file_regex, path: src/lib.rs, pattern: 'BTreeMap<u32, BTreeSet<String>>'}
+      - {kind: tests, runner: rust, files: [tests/grade-school.rs], restore: [tests/grade-school.rs], hidden: [tests/hidden_remove.rs, tests/hidden_move.rs]}
+  - prompt: >-
+      Add `pub fn grade_of(&self, student: &str) -> Option<u32>` returning the grade a student is
+      enrolled in.
+    checks:
+      - {kind: tests, runner: rust, files: [tests/grade-school.rs], restore: [tests/grade-school.rs], hidden: [tests/hidden_remove.rs, tests/hidden_move.rs, tests/hidden_gradeof.rs]}
+  - prompt: >-
+      New requirement: student names are matched case-insensitively and with surrounding whitespace
+      trimmed, everywhere (`add`, `remove`, `move_student`, `grade_of`). Adding "james" when "James"
+      is enrolled is a duplicate and ignored; the first spelling is kept; names are stored trimmed;
+      blank names are ignored.
+    gap_before_s: 420
+    checks:
+      - {kind: tests, runner: rust, files: [tests/grade-school.rs], restore: [tests/grade-school.rs], hidden: [tests/hidden_remove.rs, tests/hidden_move.rs, tests/hidden_gradeof.rs, tests/hidden_case.rs]}
+  - prompt: >-
+      Add `pub fn roster(&self) -> Vec<(u32, String)>` returning every (grade, student) pair ordered
+      by grade and then by name.
+    checks:
+      - {kind: tests, runner: rust, files: [tests/grade-school.rs], restore: [tests/grade-school.rs], hidden: [tests/hidden_remove.rs, tests/hidden_move.rs, tests/hidden_gradeof.rs, tests/hidden_case.rs, tests/hidden_roster.rs]}
+  - prompt: >-
+      Add rustdoc comments (`///`) with an `# Examples` section containing a doctest for `add`,
+      `grade` and `roster`. Run `cargo test --offline --doc`.
+    checks:
+      - {kind: file_regex, path: src/lib.rs, pattern: '# Examples', min_count: 3}
+      - {kind: tests, runner: cmd, cmd: cargo test --offline --doc, expect_regex: 'test result: ok\. [1-9]', restore: [tests/grade-school.rs], hidden: [tests/hidden_remove.rs, tests/hidden_move.rs, tests/hidden_gradeof.rs, tests/hidden_case.rs, tests/hidden_roster.rs]}
+  - prompt: >-
+      Add integration tests in a new file `tests/extra.rs`: at least five `#[test]` functions covering
+      sorted grades, `move_student` with `grade_of`, removing an unknown student, `roster` order and
+      blank names. Run `cargo test --offline`.
+    checks:
+      - {kind: file_regex, path: tests/extra.rs, pattern: '#\[test\]', min_count: 5}
+      - {kind: tests, runner: rust, files: [tests/grade-school.rs], restore: [tests/grade-school.rs], hidden: [tests/hidden_remove.rs, tests/hidden_move.rs, tests/hidden_gradeof.rs, tests/hidden_case.rs, tests/hidden_roster.rs]}
+  - prompt: >-
+      In three or four sentences, explain the cost of `add` and `grade_of` now that names are matched
+      case-insensitively, and what you would change to make them O(log n) again. Do not change any
+      files.
+    checks:
+      - {kind: keyed_facts, all: [O\(, case, BTreeMap|index|HashMap|lowercase|normalized|normalised]}

@@ -1,0 +1,239 @@
+# SQLite schema v1->v2 migration: analyse seed data, write a plan, implement migrate.py in stages, idempotence, dry-run, tests, report.
+id: migration-plan
+task_type: mixed
+language: python
+split: main
+source:
+  desc: 'SQLite schema v1->v2 migration: analyse seed data, write a plan, implement migrate.py in stages, idempotence, dry-run, tests, report.'
+  kind: self-authored deterministic workspace
+  adapted_from: ['~/dev/amplifier-agent/.amplifier/evaluation/tasks/benchmark/cross-repo-improvement-tool + automation-bench operations/finance
+      tasks (multi-step plan then deliverable); migration-plan workflow authored fresh, graded by running the migration on the seed DB']
+workspace:
+  kind: inline
+  files:
+    README.md: |
+      # taskshop DB
+
+      `db/schema_v1.sql` and `db/seed_v1.sql` define the current database; `docs/requirements_v2.md` describes the target schema.
+    db/schema_v1.sql: |
+      PRAGMA user_version = 1;
+      CREATE TABLE customers (
+        id INTEGER PRIMARY KEY,
+        name TEXT NOT NULL,
+        email TEXT NOT NULL,
+        created_at TEXT NOT NULL
+      );
+      CREATE TABLE orders (
+        id INTEGER PRIMARY KEY,
+        customer_id INTEGER NOT NULL REFERENCES customers(id),
+        total_cents INTEGER NOT NULL,
+        items TEXT NOT NULL
+      );
+    db/seed_v1.sql: |
+      INSERT INTO customers VALUES (1, 'Ada Lovelace', 'ada@example.com', '2024-01-10');
+      INSERT INTO customers VALUES (2, 'Grace Hopper', 'grace@example.com', '2024-02-11');
+      INSERT INTO customers VALUES (3, 'Bob Stone', 'Bob@Example.com', '2024-03-12');
+      INSERT INTO customers VALUES (4, 'Cher', 'cher@example.com', '2024-04-13');
+      INSERT INTO customers VALUES (5, 'Mary Jane Watson', 'mj@example.com', '2024-05-14');
+      INSERT INTO customers VALUES (6, 'Bob  Stone', 'dan@example.com', '2024-06-15');
+      INSERT INTO customers VALUES (7, 'Linus T', 'linus@example.com', '2024-07-16');
+      INSERT INTO customers VALUES (8, 'Eve Adams', 'eve@example.com', '2024-08-17');
+      INSERT INTO customers VALUES (9, 'Rob Stone', 'bob@example.com', '2024-09-18');
+      INSERT INTO customers VALUES (10, 'Ivy Chen', 'ivy@example.com', '2024-01-10');
+      INSERT INTO customers VALUES (11, 'Eve Adams', 'EVE@example.com', '2024-02-11');
+      INSERT INTO customers VALUES (12, 'Kit Marlow', 'kit@example.com', '2024-03-12');
+      INSERT INTO orders VALUES (1, 1, 1999, 'A1:2;B2:1');
+      INSERT INTO orders VALUES (2, 2, 500, 'C3:1');
+      INSERT INTO orders VALUES (3, 3, 7500, 'A1:1;D4:3');
+      INSERT INTO orders VALUES (4, 9, 1200, 'B2:2');
+      INSERT INTO orders VALUES (5, 4, 300, '');
+      INSERT INTO orders VALUES (6, 5, 4500, 'E5:1;A1:1');
+      INSERT INTO orders VALUES (7, 3, 999, 'F6:4');
+      INSERT INTO orders VALUES (8, 6, 2500, 'C3:2');
+      INSERT INTO orders VALUES (9, 7, 810, 'G7:1');
+      INSERT INTO orders VALUES (10, 8, 3300, 'A1:3;B2:3');
+      INSERT INTO orders VALUES (11, 11, 150, 'D4:1');
+      INSERT INTO orders VALUES (12, 9, 60, 'H8:6');
+      INSERT INTO orders VALUES (13, 10, 9900, 'E5:2');
+      INSERT INTO orders VALUES (14, 12, 640, 'F6:1;G7:2');
+      INSERT INTO orders VALUES (15, 3, 100, '');
+      INSERT INTO orders VALUES (16, 2, 2250, 'A1:5');
+      INSERT INTO orders VALUES (17, 8, 4000, 'B2:1;C3:1;D4:1');
+      INSERT INTO orders VALUES (18, 11, 770, 'H8:1');
+      INSERT INTO orders VALUES (19, 1, 85, 'G7:1');
+      INSERT INTO orders VALUES (20, 10, 1500, 'F6:2');
+    docs/requirements_v2.md: |
+      # Schema v2 requirements
+
+      Target: SQLite, `PRAGMA user_version = 2`.
+
+      1. **customers**: replace `name` with `first_name` and `last_name`. Split the old name at the first space; a one-word name puts the word in `first_name` and an empty string in `last_name`. Columns become `(id, first_name, last_name, email, created_at)`.
+      2. **customers.email** is stored lower-cased and must be unique. Rows whose emails collide case-insensitively are one person: keep the lowest id and re-point that person's orders to it.
+      3. **order_items**: new table `(order_id, sku, qty)` with primary key `(order_id, sku)`, filled from the old `orders.items` text (`sku:qty;sku:qty`, empty string means no items). `orders.items` is dropped.
+      4. **orders.status**: new `TEXT NOT NULL DEFAULT 'paid'` column restricted to `paid`, `refunded` or `pending`. Existing orders become `paid`. Order columns become `(id, customer_id, total_cents, status)`.
+    app/queries.py: |
+      """Application queries written against schema v1."""
+
+
+      def customer_name(con, cid):
+          return con.execute("SELECT name FROM customers WHERE id = ?", (cid,)).fetchone()[0]
+
+
+      def order_skus(con, order_id):
+          raw = con.execute("SELECT items FROM orders WHERE id = ?", (order_id,)).fetchone()[0]
+          return [part.split(":")[0] for part in raw.split(";") if part]
+    tests/__init__.py: ''
+protected: [db/schema_v1.sql, db/seed_v1.sql, docs/requirements_v2.md]
+hidden_files:
+  _grade.py: "import csv, json, os, re, subprocess, sys\nfrom pathlib import Path\n\nW = Path(\".\")\n\n\ndef fail(msg):\n    print(\"FAIL:\"\
+    , msg)\n    sys.exit(1)\n\n\ndef need(cond, msg):\n    if not cond:\n        fail(msg)\n\n\ndef load_json(rel):\n    p = W / rel\n    need(p.exists(),\
+    \ f\"missing {rel}\")\n    try:\n        return json.loads(p.read_text(encoding=\"utf-8\"))\n    except Exception as e:  # noqa: BLE001\n\
+    \        fail(f\"{rel} is not valid JSON: {e}\")\n\n\ndef read(rel):\n    p = W / rel\n    need(p.exists(), f\"missing {rel}\")\n    return\
+    \ p.read_text(encoding=\"utf-8\")\n\n\ndef close(a, b, tol=0.011):\n    try:\n        return abs(float(a) - float(b)) <= tol\n    except (TypeError,\
+    \ ValueError):\n        return False\n\n\ndef md_rows(rel, under=None):\n    \"\"\"Table rows (lists of cells) of a markdown file; with `under`,\
+    \ only rows inside the first heading matching it.\"\"\"\n    lines = read(rel).splitlines()\n    if under:\n        out, on, lvl = [], False,\
+    \ 0\n        for ln in lines:\n            m = re.match(r\"^(#+)\\s+(.*)\", ln)\n            if m:\n                if on and len(m.group(1))\
+    \ <= lvl:\n                    break\n                if not on and re.search(under, m.group(2), re.I):\n                    on, lvl = True,\
+    \ len(m.group(1))\n                continue\n            if on:\n                out.append(ln)\n        lines = out\n    rows = []\n    for\
+    \ ln in lines:\n        if ln.strip().startswith(\"|\") and not re.match(r\"^\\s*\\|[\\s:|-]+\\|\\s*$\", ln):\n            rows.append([c.strip()\
+    \ for c in ln.strip().strip(\"|\").split(\"|\")])\n    return rows\n\n\ndef num(s):\n    m = re.search(r\"-?\\d[\\d,]*\\.?\\d*\", str(s))\n\
+    \    return float(m.group(0).replace(\",\", \"\")) if m else None\n\n\ndef run(cmd, timeout=60):\n    p = subprocess.run(cmd, shell=True,\
+    \ cwd=W, capture_output=True, text=True, timeout=timeout)\n    return p.returncode, p.stdout, p.stderr\n\nEXP = {'cust': [(1, 'Ada', 'Lovelace',\
+    \ 'ada@example.com', '2024-01-10'), (2, 'Grace', 'Hopper', 'grace@example.com', '2024-02-11'), (3, 'Bob', 'Stone', 'bob@example.com', '2024-03-12'),\
+    \ (4, 'Cher', '', 'cher@example.com', '2024-04-13'), (5, 'Mary', 'Jane Watson', 'mj@example.com', '2024-05-14'), (6, 'Bob', ' Stone', 'dan@example.com',\
+    \ '2024-06-15'), (7, 'Linus', 'T', 'linus@example.com', '2024-07-16'), (8, 'Eve', 'Adams', 'eve@example.com', '2024-08-17'), (10, 'Ivy', 'Chen',\
+    \ 'ivy@example.com', '2024-01-10'), (12, 'Kit', 'Marlow', 'kit@example.com', '2024-03-12')], 'ord': [(1, 1, 1999), (2, 2, 500), (3, 3, 7500),\
+    \ (4, 3, 1200), (5, 4, 300), (6, 5, 4500), (7, 3, 999), (8, 6, 2500), (9, 7, 810), (10, 8, 3300), (11, 8, 150), (12, 3, 60), (13, 10, 9900),\
+    \ (14, 12, 640), (15, 3, 100), (16, 2, 2250), (17, 8, 4000), (18, 8, 770), (19, 1, 85), (20, 10, 1500)], 'items': [(1, 'A1', 2), (1, 'B2',\
+    \ 1), (2, 'C3', 1), (3, 'A1', 1), (3, 'D4', 3), (4, 'B2', 2), (6, 'A1', 1), (6, 'E5', 1), (7, 'F6', 4), (8, 'C3', 2), (9, 'G7', 1), (10, 'A1',\
+    \ 3), (10, 'B2', 3), (11, 'D4', 1), (12, 'H8', 6), (13, 'E5', 2), (14, 'F6', 1), (14, 'G7', 2), (16, 'A1', 5), (17, 'B2', 1), (17, 'C3', 1),\
+    \ (17, 'D4', 1), (18, 'H8', 1), (19, 'G7', 1), (20, 'F6', 2)], 'remap': {9: 3, 11: 8}, 'n_items': 25, 'report': {'customers_before': 12, 'customers_after':\
+    \ 10, 'merged_customers': [{'removed': 9, 'kept': 3}, {'removed': 11, 'kept': 8}], 'orders': 20, 'order_items': 25, 'user_version': 2}}\n\
+    import sqlite3, shutil\nDB = \"tmp_mig.db\"\ndef _build():\n    if (W / DB).exists(): (W / DB).unlink()\n    con = sqlite3.connect(W / DB);\
+    \ con.executescript(read(\"db/schema_v1.sql\") + read(\"db/seed_v1.sql\")); con.commit(); con.close()\ndef _mig(*extra):\n    rc, out, err\
+    \ = run(f\"python3 migrate.py {DB} \" + \" \".join(extra)); return rc, out, err\ndef _con(): return sqlite3.connect(W / DB)\ndef _cols(con,\
+    \ t): return [r[1] for r in con.execute(f\"PRAGMA table_info({t})\")]\ndef _clean():\n    for n in (DB,): \n        if (W / n).exists(): (W\
+    \ / n).unlink()\ndef t4():\n    txt = read(\"MIGRATION_PLAN.md\")\n    for h in (\"Scope\", \"Steps\", \"Risks\", \"Rollback\", \"Verification\"\
+    ): need(re.search(r\"^##\\s+\" + h, txt, re.M | re.I), \"missing section \" + h)\n    m = re.search(r\"^##\\s+Steps\\s*\\n(.*?)(?=^##|\\Z)\"\
+    , txt, re.M | re.S | re.I); need(len(re.findall(r\"^\\s*\\d+[.)]\\s+\\S\", m.group(1), re.M)) >= 5, \"Steps needs >= 5 numbered items\")\n\
+    \    need(re.search(r\"duplicate\", txt, re.I) and re.search(r\"user_version\", txt), \"plan must cover duplicate emails and user_version\"\
+    )\ndef _customers_ok(con):\n    need(_cols(con, \"customers\") == [\"id\", \"first_name\", \"last_name\", \"email\", \"created_at\"], f\"\
+    customers columns: {_cols(con, 'customers')}\")\n    got = con.execute(\"SELECT id, first_name, last_name, email, created_at FROM customers\
+    \ ORDER BY id\").fetchall(); need(got == [tuple(x) for x in EXP[\"cust\"]], f\"customers rows differ: {got[:3]}...\")\n    try: con.execute(\"\
+    INSERT INTO customers (first_name, last_name, email, created_at) VALUES ('x', 'y', 'ada@example.com', 'z')\"); fail(\"email must be unique\"\
+    )\n    except sqlite3.IntegrityError: pass\n    got = con.execute(\"SELECT id, customer_id, total_cents FROM orders ORDER BY id\").fetchall();\
+    \ need(got == [tuple(x) for x in EXP[\"ord\"]], \"orders were not re-pointed to the surviving customers\")\ndef t5():\n    _build(); rc, out,\
+    \ err = _mig(); need(rc == 0, \"migrate.py failed: \" + (out + err)[-300:])\n    con = _con()\n    try: _customers_ok(con)\n    finally: con.close();\
+    \ _clean()\ndef t6():\n    _build(); rc, out, err = _mig(); need(rc == 0, \"migrate.py failed: \" + (out + err)[-300:]); con = _con()\n  \
+    \  try:\n        _customers_ok(con)\n        need(_cols(con, \"orders\") == [\"id\", \"customer_id\", \"total_cents\", \"status\"], f\"orders\
+    \ columns: {_cols(con, 'orders')}\")\n        need(_cols(con, \"order_items\") == [\"order_id\", \"sku\", \"qty\"], \"order_items columns\"\
+    )\n        got = con.execute(\"SELECT order_id, sku, qty FROM order_items ORDER BY order_id, sku\").fetchall(); need(got == [tuple(x) for\
+    \ x in EXP[\"items\"]], \"order_items rows differ\")\n        need(con.execute(\"SELECT DISTINCT status FROM orders\").fetchall() == [(\"\
+    paid\",)], \"all orders must be paid\")\n        try: con.execute(\"INSERT INTO orders (customer_id, total_cents, status) VALUES (1, 1, 'bogus')\"\
+    ); fail(\"status CHECK missing\")\n        except sqlite3.IntegrityError: pass\n        need(con.execute(\"PRAGMA user_version\").fetchone()[0]\
+    \ == 2, \"user_version must be 2\")\n    finally: con.close(); _clean()\ndef t7():\n    _build(); rc, out, err = _mig(); need(rc == 0, \"\
+    first run failed\")\n    con = _con(); before = list(con.iterdump()); con.close()\n    rc, out, err = _mig(); need(rc == 0, \"second run must\
+    \ exit 0: \" + (out + err)[-200:]); need(re.search(r\"already migrated\", out, re.I), \"second run must print 'already migrated'\")\n    con\
+    \ = _con(); after = list(con.iterdump()); con.close(); _clean(); need(before == after, \"second run changed the database\")\ndef t9():\n \
+    \   _build(); con = _con(); before = list(con.iterdump()); con.close()\n    rc, out, err = _mig(\"--dry-run\"); need(rc == 0, \"dry run failed:\
+    \ \" + (out + err)[-300:])\n    con = _con(); after = list(con.iterdump()); uv = con.execute(\"PRAGMA user_version\").fetchone()[0]; con.close();\
+    \ _clean()\n    need(before == after and uv == 1, \"dry run must not modify the database\")\n    need(re.search(r\"dry.?run\", out, re.I),\
+    \ \"output must say dry run\")\n    need(re.search(r\"customers:\\s*12\\s*->\\s*%d\\b\" % len(EXP[\"cust\"]), out), \"customers line missing\"\
+    ); need(re.search(r\"orders:\\s*20\\s*->\\s*20\\b\", out), \"orders line missing\")\n    need(re.search(r\"order_items:\\s*0\\s*->\\s*%d\\\
+    b\" % EXP[\"n_items\"], out), \"order_items line missing\")\ndef t10():\n    p = W / \"tests/test_migrate.py\"; need(p.exists(), \"missing\
+    \ tests/test_migrate.py\"); need(len(re.findall(r\"def test_\", p.read_text(encoding=\"utf-8\"))) >= 4, \"need >= 4 tests\")\n    rc, out,\
+    \ err = run(\"python3 -m unittest discover -s tests -p 'test_migrate.py' 2>&1\"); need(rc == 0, \"tests fail: \" + out[-300:])\ndef t11():\n\
+    \    txt = read(\"MIGRATION_PLAN.md\"); m = re.search(r\"^##\\s+Verification\\s*\\n(.*?)(?=^##|\\Z)\", txt, re.M | re.S | re.I); need(m, \"\
+    no Verification section\"); b = m.group(1)\n    for n in (len(EXP[\"cust\"]), len(EXP[\"ord\"]), EXP[\"n_items\"]): need(re.search(r\"(?<!\\\
+    d)%d(?!\\d)\" % n, b), f\"Verification must state {n}\")\ndef t12():\n    d = load_json(\"out/migration_report.json\"); e = EXP[\"report\"\
+    ]\n    for k in (\"customers_before\", \"customers_after\", \"orders\", \"order_items\", \"user_version\"): need(d.get(k) == e[k], f\"{k}:\
+    \ {d.get(k)} != {e[k]}\")\n    need(sorted((x[\"removed\"], x[\"kept\"]) for x in d[\"merged_customers\"]) == sorted((x[\"removed\"], x[\"\
+    kept\"]) for x in e[\"merged_customers\"]), \"merged_customers differ\")\n\n\nif __name__ == \"__main__\":\n    fn = globals().get(sys.argv[1])\
+    \ if len(sys.argv) > 1 else None\n    need(callable(fn), \"unknown check \" + str(sys.argv[1:]))\n    fn()\n    print(\"OK\")\n"
+turns:
+- prompt: Read docs/requirements_v2.md. Which tables are affected by the v2 schema, and how many numbered requirements does it list? Do not change
+    any files.
+  checks:
+  - kind: keyed_facts
+    all: [customers, orders, order_items, '(?<!\d)4(?!\d)|four']
+- prompt: 'Look at db/seed_v1.sql: which customer emails collide when compared case-insensitively? Give the lower-cased emails. Do not change
+    any files.'
+  checks:
+  - kind: keyed_facts
+    all: [bob@example\.com, eve@example\.com]
+- prompt: How many orders in the seed data belong to the customers that will be merged away (the higher id of each duplicate pair)? Do not change
+    any files.
+  checks:
+  - kind: keyed_facts
+    all: ['(?<!\d)4(?!\d)']
+- prompt: Write MIGRATION_PLAN.md with level-2 sections Scope, Steps, Risks, Rollback and Verification. Steps must be a numbered list of at least
+    five steps; the plan must cover duplicate emails and PRAGMA user_version.
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t4
+    hidden: [_grade.py]
+    timeout: 60
+- prompt: 'Create migrate.py (stdlib sqlite3) taking a database path: `python3 migrate.py DB`. In this first step implement only requirements
+    1 and 2 (customers split, lower-cased unique emails, merge duplicates and re-point their orders). Run it on a scratch copy built from db/schema_v1.sql
+    and db/seed_v1.sql, not on anything checked in.'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t5
+    hidden: [_grade.py]
+    timeout: 60
+  gap_before_s: 420
+- prompt: Extend migrate.py with requirements 3 and 4 (order_items table, orders.status with its CHECK, drop orders.items) and set PRAGMA user_version
+    = 2. Keep everything in one transaction.
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t6
+    hidden: [_grade.py]
+    timeout: 60
+- prompt: 'Make migrate.py idempotent: if the database is already at user_version 2 print `already migrated` and exit 0 without touching it.'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t7
+    hidden: [_grade.py]
+    timeout: 60
+- prompt: For the seed data, how many order_items rows does the migration produce, and which surviving customer id owns the most orders afterwards
+    (and how many)? Run the migration on a scratch copy to confirm. Do not change checked-in files.
+  checks:
+  - kind: keyed_facts
+    all: ['(?<!\d)25(?!\d)', '(?<!\d)3(?!\d)', '(?<!\d)5(?!\d)']
+- prompt: 'Add a `--dry-run` flag: migrate an in-memory copy and print `dry run: nothing written` plus the lines `customers: <before> -> <after>`,
+    `orders: <before> -> <after>` and `order_items: 0 -> <n>`; the database file must stay untouched.'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t9
+    hidden: [_grade.py]
+    timeout: 60
+  gap_before_s: 420
+- prompt: 'Add tests/test_migrate.py (unittest, building a temporary database from db/schema_v1.sql and db/seed_v1.sql) with at least four tests:
+    duplicate merge, single-word name, order_items content, idempotence or dry run. Run them.'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t10
+    hidden: [_grade.py]
+    timeout: 60
+- prompt: Update the Verification section of MIGRATION_PLAN.md with the exact expected counts for the seed data (customers, orders and order_items
+    rows) and the expected user_version.
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t11
+    hidden: [_grade.py]
+    timeout: 60
+- prompt: 'Run the migration on a scratch copy of the seed database and write out/migration_report.json with keys customers_before, customers_after,
+    merged_customers (a list of {"removed": id, "kept": id}), orders, order_items and user_version.'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t12
+    hidden: [_grade.py]
+    timeout: 60

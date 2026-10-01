@@ -1,0 +1,301 @@
+# Review a planted retry-decorator diff, emit schema-valid findings JSON, implement the intended change, tests that catch the buggy patch.
+id: pr-review-retry
+task_type: mixed
+language: python
+split: main
+source:
+  desc: Review a planted retry-decorator diff, emit schema-valid findings JSON, implement the intended change, tests that catch the buggy patch.
+  kind: self-authored deterministic workspace
+  adapted_from: [~/dev/amplifier-agent/.amplifier/evaluation/tasks/benchmark/code-discrepancy-docstrings-grasp/task.yaml (planted defects + findings
+      file) and pilot-v1/slugify-review.yaml (review a planted diff)]
+workspace:
+  kind: inline
+  files:
+    README.md: |
+      # retry
+
+      A tiny retry decorator (`retry.py`).
+    retry.py: |
+      """Retry decorator with exponential backoff."""
+      import functools
+      import time
+
+
+      def retry(max_attempts=3, delay=1.0, backoff=2.0, sleep=time.sleep):
+          """Call the wrapped function up to `max_attempts` times, sleeping `delay` (times `backoff` each round) between tries."""
+
+          def deco(fn):
+              @functools.wraps(fn)
+              def wrapper(*args, **kwargs):
+                  d = delay
+                  for attempt in range(1, max_attempts + 1):
+                      try:
+                          return fn(*args, **kwargs)
+                      except Exception:
+                          if attempt == max_attempts:
+                              raise
+                          sleep(d)
+                          d *= backoff
+
+              return wrapper
+
+          return deco
+    schemas/findings.schema.json: |
+      {
+        "type": "array",
+        "minItems": 1,
+        "items": {
+          "type": "object",
+          "required": [
+            "file",
+            "line",
+            "severity",
+            "issue",
+            "suggestion"
+          ],
+          "properties": {
+            "file": {
+              "type": "string"
+            },
+            "line": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "severity": {
+              "enum": [
+                "high",
+                "medium",
+                "low"
+              ]
+            },
+            "issue": {
+              "type": "string"
+            },
+            "suggestion": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    patches/retry_v2.diff: "--- a/retry.py\n+++ b/retry.py\n@@ -1,23 +1,21 @@\n \"\"\"Retry decorator with exponential backoff.\"\"\"\n-import\
+      \ functools\n import time\n \n \n-def retry(max_attempts=3, delay=1.0, backoff=2.0, sleep=time.sleep):\n+def retry(max_attempts=3, delay=1.0,\
+      \ backoff=2.0, sleep=time.sleep, retry_on=(Exception,), max_delay=None):\n     \"\"\"Call the wrapped function up to `max_attempts` times,\
+      \ sleeping `delay` (times `backoff` each round) between tries.\"\"\"\n \n     def deco(fn):\n-        @functools.wraps(fn)\n         def\
+      \ wrapper(*args, **kwargs):\n             d = delay\n-            for attempt in range(1, max_attempts + 1):\n+            for attempt in\
+      \ range(1, max_attempts):\n                 try:\n                     return fn(*args, **kwargs)\n-                except Exception:\n\
+      -                    if attempt == max_attempts:\n-                        raise\n+                except BaseException:\n             \
+      \        sleep(d)\n                     d *= backoff\n+                    if max_delay is not None:\n+                        d = min(d,\
+      \ max_delay)\n \n         return wrapper\n \n"
+    tests/__init__.py: ''
+protected: [patches/retry_v2.diff, schemas/findings.schema.json]
+hidden_files:
+  _grade.py: |
+    import csv, json, os, re, subprocess, sys
+    from pathlib import Path
+
+    W = Path(".")
+
+
+    def fail(msg):
+        print("FAIL:", msg)
+        sys.exit(1)
+
+
+    def need(cond, msg):
+        if not cond:
+            fail(msg)
+
+
+    def load_json(rel):
+        p = W / rel
+        need(p.exists(), f"missing {rel}")
+        try:
+            return json.loads(p.read_text(encoding="utf-8"))
+        except Exception as e:  # noqa: BLE001
+            fail(f"{rel} is not valid JSON: {e}")
+
+
+    def read(rel):
+        p = W / rel
+        need(p.exists(), f"missing {rel}")
+        return p.read_text(encoding="utf-8")
+
+
+    def close(a, b, tol=0.011):
+        try:
+            return abs(float(a) - float(b)) <= tol
+        except (TypeError, ValueError):
+            return False
+
+
+    def md_rows(rel, under=None):
+        """Table rows (lists of cells) of a markdown file; with `under`, only rows inside the first heading matching it."""
+        lines = read(rel).splitlines()
+        if under:
+            out, on, lvl = [], False, 0
+            for ln in lines:
+                m = re.match(r"^(#+)\s+(.*)", ln)
+                if m:
+                    if on and len(m.group(1)) <= lvl:
+                        break
+                    if not on and re.search(under, m.group(2), re.I):
+                        on, lvl = True, len(m.group(1))
+                    continue
+                if on:
+                    out.append(ln)
+            lines = out
+        rows = []
+        for ln in lines:
+            if ln.strip().startswith("|") and not re.match(r"^\s*\|[\s:|-]+\|\s*$", ln):
+                rows.append([c.strip() for c in ln.strip().strip("|").split("|")])
+        return rows
+
+
+    def num(s):
+        m = re.search(r"-?\d[\d,]*\.?\d*", str(s))
+        return float(m.group(0).replace(",", "")) if m else None
+
+
+    def run(cmd, timeout=60):
+        p = subprocess.run(cmd, shell=True, cwd=W, capture_output=True, text=True, timeout=timeout)
+        return p.returncode, p.stdout, p.stderr
+
+    import importlib, sys
+    def _mod(name="retry"):
+        sys.path.insert(0, str(W)); import retry as m; importlib.reload(m); return m
+    class Flaky:
+        def __init__(s, fails, exc=ValueError): s.calls, s.fails, s.exc = 0, fails, exc
+        def __call__(s):
+            s.calls += 1
+            if s.calls <= s.fails: raise s.exc("boom")
+            return "ok"
+    def _items():
+        d = load_json("out/findings.json"); need(isinstance(d, list) and len(d) >= 4, "findings must be a list of >=4 objects")
+        for i, x in enumerate(d):
+            need(isinstance(x, dict), f"item {i} is not an object")
+            for k in ("file", "line", "severity", "issue", "suggestion"): need(k in x, f"item {i} missing {k}")
+            need(isinstance(x["line"], int) and not isinstance(x["line"], bool) and x["line"] >= 1, f"item {i}: line must be a positive integer")
+            need(x["severity"] in ("high", "medium", "low"), f"item {i}: bad severity {x['severity']!r}")
+            need(all(isinstance(x[k], str) and x[k].strip() for k in ("file", "issue", "suggestion")), f"item {i}: empty text")
+        return d
+    def t3():
+        d = _items(); txt = " ".join(x["issue"] + " " + x["suggestion"] for x in d)
+        topics = [r"off.by.one|max_attempts|one (fewer|less)|range", r"BaseException|KeyboardInterrupt|SystemExit", r"return(s)? None|re-?rais|swallow|silently|exhaust", r"wraps|__name__|metadata|docstring"]
+        need(sum(1 for t in topics if re.search(t, txt, re.I)) >= 3, "findings must cover at least 3 of the 4 planted defects")
+        need(any(x["severity"] == "high" for x in d), "at least one high severity expected")
+    def t4():
+        m = _mod(); import functools
+        f = Flaky(10)
+        try: m.retry(max_attempts=3, sleep=lambda s: None)(f)(); fail("must raise after exhausting attempts")
+        except ValueError: pass
+        need(f.calls == 3, f"expected 3 attempts, got {f.calls}")
+        need(m.retry(max_attempts=3, sleep=lambda s: None)(Flaky(2))() == "ok", "must return the value after recovery")
+        f = Flaky(5, KeyboardInterrupt)
+        try: m.retry(max_attempts=3, sleep=lambda s: None)(f)(); fail("KeyboardInterrupt must propagate")
+        except KeyboardInterrupt: pass
+        need(f.calls == 1, "KeyboardInterrupt must not be retried")
+        @m.retry()
+        def my_function(): "doc"
+        need(my_function.__name__ == "my_function" and my_function.__doc__ == "doc", "functools.wraps lost")
+        slept = []; m.retry(max_attempts=4, delay=1.0, backoff=2.0, sleep=slept.append)(Flaky(3))(); need(slept == [1.0, 2.0, 4.0], f"plain backoff delays wrong: {slept}")
+        slept = []; m.retry(max_attempts=4, delay=1.0, backoff=2.0, max_delay=3.0, sleep=slept.append)(Flaky(3))(); need(slept == [1.0, 2.0, 3.0], f"max_delay cap wrong: {slept}")
+        f = Flaky(5, TypeError)
+        try: m.retry(max_attempts=3, retry_on=(ValueError,), sleep=lambda s: None)(f)(); fail("TypeError must propagate")
+        except TypeError: pass
+        need(f.calls == 1, "non-listed exception must not be retried")
+    def t5():
+        p = W / "tests/test_retry_v2.py"; need(p.exists(), "missing tests/test_retry_v2.py"); need(len(re.findall(r"def test_", p.read_text(encoding="utf-8"))) >= 5, "need >= 5 tests")
+        rc, out, err = run("python3 -m unittest discover -s tests -p 'test_retry_v2.py' 2>&1"); need(rc == 0, "tests fail on your implementation: " + out[-300:])
+        r = W / "retry.py"; good = r.read_text(encoding="utf-8"); r.write_text(read("_buggy_retry.py"), encoding="utf-8")
+        try: rc, out, err = run("python3 -m unittest discover -s tests -p 'test_retry_v2.py' 2>&1")
+        finally: r.write_text(good, encoding="utf-8")
+        need(rc != 0, "your tests do not detect the buggy patch")
+    def t8():
+        d = _items(); need(all(x.get("status") == "fixed" for x in d), "every finding needs status == 'fixed'"); need(len(d) >= 4, "findings were dropped")
+
+
+    if __name__ == "__main__":
+        fn = globals().get(sys.argv[1]) if len(sys.argv) > 1 else None
+        need(callable(fn), "unknown check " + str(sys.argv[1:]))
+        fn()
+        print("OK")
+  _buggy_retry.py: |
+    """Retry decorator with exponential backoff."""
+    import time
+
+
+    def retry(max_attempts=3, delay=1.0, backoff=2.0, sleep=time.sleep, retry_on=(Exception,), max_delay=None):
+        """Call the wrapped function up to `max_attempts` times, sleeping `delay` (times `backoff` each round) between tries."""
+
+        def deco(fn):
+            def wrapper(*args, **kwargs):
+                d = delay
+                for attempt in range(1, max_attempts):
+                    try:
+                        return fn(*args, **kwargs)
+                    except BaseException:
+                        sleep(d)
+                        d *= backoff
+                        if max_delay is not None:
+                            d = min(d, max_delay)
+
+            return wrapper
+
+        return deco
+turns:
+- prompt: 'Explain what `retry` in retry.py does: how many times does it call the function, how does the delay evolve, and what happens when the
+    last attempt fails? Do not change any files.'
+  checks:
+  - kind: keyed_facts
+    all: [max_attempts, backoff|multipl, raise|propagat]
+- prompt: patches/retry_v2.diff is a proposed rewrite of retry.py that adds `retry_on` and `max_delay`. Review it critically and list the defects,
+    saying how each would show up at runtime. Do not apply it.
+  checks:
+  - kind: keyed_facts
+    any: ['off.by.one|one (fewer|less)|max_attempts - 1|range\(1, max_attempts\)', BaseException|KeyboardInterrupt, 'returns? None|never re-?raise|swallow',
+      wraps|__name__]
+    min_any: 3
+- prompt: 'Write out/findings.json: a JSON array of objects with keys file, line (positive integer), severity (high|medium|low), issue and suggestion,
+    one per defect you found (schemas/findings.schema.json describes the shape). Use line numbers from the diff''s new file.'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t3
+    hidden: [_grade.py]
+    timeout: 60
+- prompt: 'Implement the intended v2 behaviour correctly in retry.py: add `retry_on` (tuple of exception types to retry, default `(Exception,)`)
+    and `max_delay` (cap in seconds for each sleep, default None), keep exactly `max_attempts` attempts, re-raise the last error, keep functools.wraps,
+    and never swallow KeyboardInterrupt.'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t4
+    hidden: [_grade.py]
+    timeout: 60
+- prompt: Add tests/test_retry_v2.py (unittest) with at least five tests for the defects you found. They must fail against the code in patches/retry_v2.diff.
+    Inject a fake `sleep` so nothing really waits. Run them.
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t5
+    hidden: [_grade.py, _buggy_retry.py]
+    timeout: 60
+- prompt: With max_attempts=4, delay=1, backoff=3 and max_delay=5, which sleeps happen when the function fails three times and then succeeds?
+    Run it to confirm. Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: ['(?<![\d.])1(\.0)?\D{1,12}3(\.0)?\D{1,12}5(\.0)?(?![\d])']
+- prompt: Add a `## Retry` section to README.md that documents the signature and explains retry_on and max_delay.
+  checks:
+  - kind: doc_sections
+    path: README.md
+    headings: [Retry]
+  - {kind: file_regex, path: README.md, pattern: retry_on}
+  - {kind: file_regex, path: README.md, pattern: max_delay}
+- prompt: 'Mark every entry in out/findings.json as resolved by adding the key "status": "fixed" to each object (keep all other keys and entries).'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t8
+    hidden: [_grade.py]
+    timeout: 60

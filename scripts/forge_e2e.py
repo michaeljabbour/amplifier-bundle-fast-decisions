@@ -35,6 +35,7 @@ import time
 import urllib.request
 
 import forge_workloads
+import memguard
 from forge_workloads import SPECS, STARTERS, PUBLIC, evaluate
 
 FORGE = Path.home()/'.agents/skills/amplifier-skill-forge/tools/forge.py'
@@ -42,6 +43,7 @@ CACHE = Path.home()/'.amplifier/cache/amplifier-bundle-fast-decisions-703c3edc7c
 EVENTS = Path.home()/'.amplifier/fast-decisions/events'
 HOST_PYTHON = Path.home()/'.local/share/uv/tools/amplifier/bin/python'
 BENCHMARK_BUNDLE_NAME = 'afast-benchmark-run'
+SESSION_MEM_CAP_GB = 4.0   # soft runtime limits for agent sessions (see _worker_scenario)
 
 PROMPT = ('Read README.md first, then repair the implementation to satisfy its full contract. '
           'Work directly in this workspace without delegating or using the network. '
@@ -641,6 +643,10 @@ def _worker_scenario(root, name, manifest, item, workspace, source_root, run):
     sessions = Path.home()/'.amplifier/projects'/slug/'sessions'
     env = dict(os.environ, AFAST_OBSERVATORY='off', AMPLIFIER_MEMORY_CAPTURE='off', AFAST_TRAFFIC='test')
     env['PYTHONPATH'] = str(source_root/'src')
+    # Agent sessions run `go test` / `cargo test` / `node` through their bash tool. Same limits for EVERY arm (so no
+    # bias): GOMEMLIMIT=4GiB, GOFLAGS=-p=2, CARGO_BUILD_JOBS=2, NODE_OPTIONS=--max-old-space-size=4096. The campaign
+    # watchdog (evals/paired.py) enforces a hard per-session RSS cap on top of these soft limits.
+    env = memguard.resource_env(SESSION_MEM_CAP_GB, env)
     side_cfg = manifest['sides'][item['side']]
     key_fingerprint = _apply_side_api_key(env, side_cfg)
     _assert_bundle_uri_safe(run/'profile.md')

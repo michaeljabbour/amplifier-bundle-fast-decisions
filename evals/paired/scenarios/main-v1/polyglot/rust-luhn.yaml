@@ -1,0 +1,136 @@
+# main-v1 polyglot 14/20: rust/luhn-from, 8 turns, short gaps.
+id: rust-luhn
+task_type: feature
+language: rust
+split: main
+default_gap_s: 10
+source:
+  desc: "Aider polyglot-benchmark rust/luhn-from (Exercism), outside the S2 slice"
+  repo: https://github.com/Aider-AI/polyglot-benchmark
+  sha: 7e0611e77b54e2dea774cdc0aa00cf9f7ed6144f
+workspace:
+  kind: git
+  repo: https://github.com/Aider-AI/polyglot-benchmark
+  sha: 7e0611e77b54e2dea774cdc0aa00cf9f7ed6144f
+  subdir: rust/exercises/practice/luhn-from
+  local_hint: ~/dev/afast-campaign-corrected-polyglot-20260919/polyglot/polyglot-benchmark
+  remove: [.meta]
+protected: [tests/luhn-from.rs]
+hidden_files:
+  tests/hidden_check.rs: |
+    use luhn_from::*;
+
+    #[test]
+    fn hidden_check_digit_known() {
+        assert_eq!(Luhn::check_digit("04645428"), Some(6));
+        assert_eq!(Luhn::check_digit("8273 1232 7352 056"), Some(2));
+        assert_eq!(Luhn::check_digit("1"), Some(8));
+        assert_eq!(Luhn::check_digit("0"), Some(0));
+    }
+
+    #[test]
+    fn hidden_check_digit_none() {
+        assert_eq!(Luhn::check_digit(""), None);
+        assert_eq!(Luhn::check_digit("12a"), None);
+    }
+
+    #[test]
+    fn hidden_check_digit_completes_a_valid_number() {
+        for s in ["123", "98765", "4111 1111 1111 111"] {
+            let c = Luhn::check_digit(s).unwrap();
+            assert!(Luhn::from(format!("{s}{c}")).is_valid(), "{s}{c}");
+        }
+    }
+  tests/hidden_ws.rs: |
+    use luhn_from::*;
+
+    #[test]
+    fn hidden_only_spaces_separate() {
+        assert!(!Luhn::from("046\t454 286").is_valid());
+        assert!(!Luhn::from("046 454 286\n").is_valid());
+        assert!(!Luhn::from("046\u{00a0}454 286").is_valid());
+    }
+
+    #[test]
+    fn hidden_spaces_still_fine() {
+        assert!(Luhn::from(" 059 ").is_valid());
+        assert!(Luhn::from("0 5 9").is_valid());
+    }
+
+    #[test]
+    fn hidden_non_ascii_digits_are_invalid() {
+        assert!(!Luhn::from("\u{ff10}\u{ff14}\u{ff16}").is_valid());
+    }
+  tests/hidden_fromstr.rs: |
+    use luhn_from::*;
+
+    #[test]
+    fn hidden_parse_ok() {
+        let l: Luhn = "046 454 286".parse().unwrap();
+        assert!(l.is_valid());
+        let l = "046 454 287".parse::<Luhn>().unwrap();
+        assert!(!l.is_valid());
+        assert!(!"1".parse::<Luhn>().unwrap().is_valid());
+    }
+
+    #[test]
+    fn hidden_parse_errors() {
+        assert_eq!("04a".parse::<Luhn>().err(), Some(ParseLuhnError));
+        assert_eq!("".parse::<Luhn>().err(), Some(ParseLuhnError));
+        assert_eq!("046\t454".parse::<Luhn>().err(), Some(ParseLuhnError));
+    }
+turns:
+  - prompt: >-
+      Read .docs/instructions.md and implement `Luhn::is_valid` and the conversions in src/lib.rs so
+      the provided tests in tests/luhn-from.rs pass (some are marked #[ignore]; run them all with
+      `cargo test --offline -- --include-ignored`). `Luhn::from` must work for strings and for every
+      integer type the tests use. Do not edit the provided test file.
+    checks:
+      - {kind: tests, runner: rust, files: [tests/luhn-from.rs], restore: [tests/luhn-from.rs]}
+  - prompt: >-
+      In three to five sentences, explain how a single `From` implementation covers `&str`, `String`
+      and the integer types, and what the trade-off of that choice is. Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [ToString, From, generic]}
+  - prompt: >-
+      Add an associated function `Luhn::check_digit(partial: &str) -> Option<u8>` that returns the
+      single digit which, appended to `partial`, makes a valid Luhn number (spaces in `partial` are
+      ignored). It returns `None` when `partial` is empty or contains anything but digits and spaces.
+    checks:
+      - {kind: tests, runner: rust, files: [tests/luhn-from.rs], restore: [tests/luhn-from.rs], hidden: [tests/hidden_check.rs]}
+  - prompt: >-
+      Fix an edge case: only the space character may separate digits. A tab, a newline, a non-breaking
+      space or any other whitespace anywhere in the input makes the number invalid, as do non-ASCII
+      digits. Spaces at the start or end are still fine.
+    checks:
+      - {kind: tests, runner: rust, files: [tests/luhn-from.rs], restore: [tests/luhn-from.rs], hidden: [tests/hidden_check.rs, tests/hidden_ws.rs]}
+  - prompt: >-
+      Add unit tests inside src/lib.rs in a `#[cfg(test)] mod tests` block: at least four `#[test]`
+      functions covering a valid number, an invalid number, an integer input, `check_digit` and a tab
+      separator. Run `cargo test --offline`.
+    checks:
+      - {kind: file_regex, path: src/lib.rs, pattern: '#\[test\]', min_count: 4}
+      - {kind: tests, runner: rust, files: [tests/luhn-from.rs], restore: [tests/luhn-from.rs], hidden: [tests/hidden_check.rs, tests/hidden_ws.rs]}
+  - prompt: >-
+      Refactor src/lib.rs: extract two private helpers, `fn parse_digits(s: &str) -> Option<Vec<u32>>`
+      (ignoring spaces) and `fn luhn_sum(digits: &[u32]) -> u32`, and use them in `is_valid`. No
+      behaviour change; keep all tests passing.
+    checks:
+      - {kind: file_regex, path: src/lib.rs, pattern: ^\s*fn parse_digits\(}
+      - {kind: file_regex, path: src/lib.rs, pattern: ^\s*fn luhn_sum\(}
+      - {kind: tests, runner: rust, files: [tests/luhn-from.rs], restore: [tests/luhn-from.rs], hidden: [tests/hidden_check.rs, tests/hidden_ws.rs]}
+  - prompt: >-
+      Implement `std::str::FromStr` for `Luhn` so `"046 454 286".parse::<Luhn>()` works. Parsing fails
+      with a new public unit struct `ParseLuhnError` (derive Debug, PartialEq, Eq) for an empty string
+      or any character other than a digit or a space; a number that is merely invalid (such as "1")
+      still parses.
+    checks:
+      - {kind: tests, runner: rust, files: [tests/luhn-from.rs], restore: [tests/luhn-from.rs], hidden: [tests/hidden_check.rs, tests/hidden_ws.rs, tests/hidden_fromstr.rs]}
+  - prompt: >-
+      Document the crate: add rustdoc comments with an `# Examples` doctest to `is_valid` and
+      `check_digit`, and create README.md with a `## Usage` section and a `## Rules` section. Run
+      `cargo test --offline --doc`.
+    checks:
+      - {kind: file_regex, path: src/lib.rs, pattern: '# Examples', min_count: 2}
+      - {kind: doc_sections, path: README.md, headings: [usage, rules]}
+      - {kind: tests, runner: cmd, cmd: cargo test --offline --doc, expect_regex: 'test result: ok\. [1-9]', restore: [tests/luhn-from.rs], hidden: [tests/hidden_check.rs, tests/hidden_ws.rs, tests/hidden_fromstr.rs]}

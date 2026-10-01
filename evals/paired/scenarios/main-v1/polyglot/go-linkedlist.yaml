@@ -1,0 +1,401 @@
+# main-v1 polyglot 11/20: go/simple-linked-list, 16 turns, two 7-minute gaps (before turns 5, 11).
+id: go-linkedlist
+task_type: mixed
+language: go
+split: main
+default_gap_s: 10
+source:
+  desc: "Aider polyglot-benchmark go/simple-linked-list (Exercism), outside the S2 slice"
+  repo: https://github.com/Aider-AI/polyglot-benchmark
+  sha: 7e0611e77b54e2dea774cdc0aa00cf9f7ed6144f
+workspace:
+  kind: git
+  repo: https://github.com/Aider-AI/polyglot-benchmark
+  sha: 7e0611e77b54e2dea774cdc0aa00cf9f7ed6144f
+  subdir: go/exercises/practice/simple-linked-list
+  local_hint: ~/dev/afast-campaign-corrected-polyglot-20260919/polyglot/polyglot-benchmark
+  remove: [.meta]
+protected: [simple_linked_list_test.go]
+hidden_files:
+  hidden_err_test.go: |
+    package linkedlist
+
+    import (
+    	"errors"
+    	"testing"
+    )
+
+    func TestHErrEmptyListExported(t *testing.T) {
+    	if ErrEmptyList == nil {
+    		t.Fatal("ErrEmptyList must be non-nil")
+    	}
+    }
+
+    func TestHPopEmptyReturnsSentinel(t *testing.T) {
+    	if _, err := New(nil).Pop(); !errors.Is(err, ErrEmptyList) {
+    		t.Fatalf("Pop on empty list: %v", err)
+    	}
+    }
+
+    func TestHPeek(t *testing.T) {
+    	l := New([]int{1, 2, 3})
+    	v, err := l.Peek()
+    	if err != nil || v != 3 || l.Size() != 3 {
+    		t.Fatalf("Peek = %d, %v, size %d", v, err, l.Size())
+    	}
+    	if _, err := New([]int{}).Peek(); !errors.Is(err, ErrEmptyList) {
+    		t.Fatalf("Peek on empty list: %v", err)
+    	}
+    }
+  hidden_find_test.go: |
+    package linkedlist
+
+    import "testing"
+
+    func TestHFind(t *testing.T) {
+    	l := New([]int{5, 6, 7, 6})
+    	cases := map[int]int{5: 0, 6: 1, 7: 2, 8: -1}
+    	for v, want := range cases {
+    		if got := l.Find(v); got != want {
+    			t.Errorf("Find(%d) = %d, want %d", v, got, want)
+    		}
+    	}
+    	if New(nil).Find(1) != -1 {
+    		t.Error("Find on empty list must be -1")
+    	}
+    }
+  hidden_perf_test.go: |
+    package linkedlist
+
+    import (
+    	"reflect"
+    	"testing"
+    	"time"
+    )
+
+    func TestHPushAndSizeAreConstantTime(t *testing.T) {
+    	const n = 100000
+    	start := time.Now()
+    	l := New(nil)
+    	for i := 0; i < n; i++ {
+    		l.Push(i)
+    		_ = l.Size()
+    	}
+    	if elapsed := time.Since(start); elapsed > time.Second {
+    		t.Fatalf("%d pushes with Size took %v; Push and Size must be O(1)", n, elapsed)
+    	}
+    	if l.Size() != n {
+    		t.Fatalf("size %d", l.Size())
+    	}
+    }
+
+    func TestHInterleavedPushPopKeepsTailAndSize(t *testing.T) {
+    	l := New([]int{1, 2, 3})
+    	if v, _ := l.Pop(); v != 3 || l.Size() != 2 {
+    		t.Fatalf("pop %d size %d", v, l.Size())
+    	}
+    	l.Push(4)
+    	if !reflect.DeepEqual(l.Array(), []int{1, 2, 4}) || l.Size() != 3 {
+    		t.Fatalf("%v %d", l.Array(), l.Size())
+    	}
+    	for i := 0; i < 3; i++ {
+    		if _, err := l.Pop(); err != nil {
+    			t.Fatal(err)
+    		}
+    	}
+    	if l.Size() != 0 {
+    		t.Fatalf("size %d after draining", l.Size())
+    	}
+    	if _, err := l.Pop(); err == nil {
+    		t.Fatal("expected error from empty list")
+    	}
+    	l.Push(9)
+    	if !reflect.DeepEqual(l.Array(), []int{9}) || l.Size() != 1 {
+    		t.Fatalf("%v %d", l.Array(), l.Size())
+    	}
+    	if v, err := l.Peek(); err != nil || v != 9 {
+    		t.Fatalf("peek %d %v", v, err)
+    	}
+    }
+
+    func TestHReverseKeepsSizeAndTail(t *testing.T) {
+    	r := New([]int{1, 2, 3}).Reverse()
+    	if r.Size() != 3 {
+    		t.Fatalf("size %d", r.Size())
+    	}
+    	r.Push(0)
+    	if !reflect.DeepEqual(r.Array(), []int{3, 2, 1, 0}) {
+    		t.Fatalf("%v", r.Array())
+    	}
+    }
+  hidden_clone_test.go: |
+    package linkedlist
+
+    import (
+    	"reflect"
+    	"testing"
+    )
+
+    func TestHCloneEqualAndIndependent(t *testing.T) {
+    	a := New([]int{1, 2, 3})
+    	b := a.Clone()
+    	if !reflect.DeepEqual(a.Array(), b.Array()) || b.Size() != 3 {
+    		t.Fatalf("%v vs %v", a.Array(), b.Array())
+    	}
+    	b.Push(4)
+    	a.Pop()
+    	if !reflect.DeepEqual(a.Array(), []int{1, 2}) || !reflect.DeepEqual(b.Array(), []int{1, 2, 3, 4}) {
+    		t.Fatalf("not independent: %v %v", a.Array(), b.Array())
+    	}
+    }
+
+    func TestHCloneEmpty(t *testing.T) {
+    	c := New(nil).Clone()
+    	if c == nil || c.Size() != 0 {
+    		t.Fatal("clone of empty list")
+    	}
+    	c.Push(1)
+    	if c.Size() != 1 {
+    		t.Fatal("clone of empty list must accept pushes")
+    	}
+    }
+  hidden_string_test.go: |
+    package linkedlist
+
+    import (
+    	"fmt"
+    	"testing"
+    )
+
+    func TestHStringer(t *testing.T) {
+    	if got := fmt.Sprint(New([]int{1, 2, 3})); got != "[1 2 3]" {
+    		t.Fatalf("got %q", got)
+    	}
+    	if got := fmt.Sprintf("%v", New(nil)); got != "[]" {
+    		t.Fatalf("got %q", got)
+    	}
+    	if got := New([]int{7}).String(); got != "[7]" {
+    		t.Fatalf("got %q", got)
+    	}
+    }
+  hidden_insert_test.go: |
+    package linkedlist
+
+    import (
+    	"errors"
+    	"reflect"
+    	"testing"
+    )
+
+    func TestHInsertPositions(t *testing.T) {
+    	l := New([]int{1, 2, 3})
+    	steps := []struct {
+    		idx, v int
+    		want   []int
+    	}{
+    		{0, 0, []int{0, 1, 2, 3}},
+    		{2, 9, []int{0, 1, 9, 2, 3}},
+    		{5, 4, []int{0, 1, 9, 2, 3, 4}},
+    	}
+    	for _, s := range steps {
+    		if err := l.Insert(s.idx, s.v); err != nil {
+    			t.Fatalf("Insert(%d,%d): %v", s.idx, s.v, err)
+    		}
+    		if got := l.Array(); !reflect.DeepEqual(got, s.want) || l.Size() != len(s.want) {
+    			t.Fatalf("after Insert(%d,%d): %v size %d, want %v", s.idx, s.v, got, l.Size(), s.want)
+    		}
+    	}
+    }
+
+    func TestHInsertOutOfRange(t *testing.T) {
+    	l := New([]int{1})
+    	for _, idx := range []int{-1, 2, 100} {
+    		if err := l.Insert(idx, 5); !errors.Is(err, ErrIndexOutOfRange) {
+    			t.Errorf("Insert(%d): %v", idx, err)
+    		}
+    	}
+    	if l.Size() != 1 {
+    		t.Fatalf("size %d after failed inserts", l.Size())
+    	}
+    }
+
+    func TestHInsertIntoEmptyAndAtEndUpdatesTail(t *testing.T) {
+    	l := New(nil)
+    	if err := l.Insert(0, 1); err != nil {
+    		t.Fatal(err)
+    	}
+    	if err := l.Insert(1, 2); err != nil {
+    		t.Fatal(err)
+    	}
+    	if v, err := l.Pop(); err != nil || v != 2 {
+    		t.Fatalf("pop %d %v", v, err)
+    	}
+    	l.Push(3)
+    	if !reflect.DeepEqual(l.Array(), []int{1, 3}) {
+    		t.Fatalf("%v", l.Array())
+    	}
+    }
+  hidden_conc_test.go: |
+    package linkedlist
+
+    import (
+    	"sync"
+    	"testing"
+    )
+
+    func TestHConcurrentPushAndRead(t *testing.T) {
+    	l := New(nil)
+    	var wg sync.WaitGroup
+    	for g := 0; g < 8; g++ {
+    		wg.Add(1)
+    		go func(g int) {
+    			defer wg.Done()
+    			for i := 0; i < 500; i++ {
+    				l.Push(g*1000 + i)
+    				_ = l.Size()
+    				if i%50 == 0 {
+    					_ = l.Array()
+    				}
+    			}
+    		}(g)
+    	}
+    	wg.Wait()
+    	if l.Size() != 8*500 || len(l.Array()) != 8*500 {
+    		t.Fatalf("size %d, array %d", l.Size(), len(l.Array()))
+    	}
+    }
+
+    func TestHConcurrentPushPop(t *testing.T) {
+    	l := New(nil)
+    	var wg sync.WaitGroup
+    	for g := 0; g < 4; g++ {
+    		wg.Add(2)
+    		go func() {
+    			defer wg.Done()
+    			for i := 0; i < 300; i++ {
+    				l.Push(i)
+    			}
+    		}()
+    		go func() {
+    			defer wg.Done()
+    			for i := 0; i < 300; i++ {
+    				_, _ = l.Pop()
+    			}
+    		}()
+    	}
+    	wg.Wait()
+    	if l.Size() != len(l.Array()) {
+    		t.Fatalf("size %d does not match %d elements", l.Size(), len(l.Array()))
+    	}
+    }
+turns:
+  - prompt: >-
+      Read .docs/instructions.md and implement the singly linked list in simple_linked_list.go
+      (`List`, `Element`, `New`, `Size`, `Push`, `Pop`, `Array`, `Reverse`) so that `go test ./...`
+      passes. Do not edit the provided test file.
+    checks:
+      - {kind: tests, runner: go, restore: [simple_linked_list_test.go]}
+  - prompt: >-
+      In four to six sentences, explain how your list is laid out in memory and which of its
+      operations have to walk the whole list. Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [next, head, O\(n\)|linear|walk], any: [Push, Size, Pop], min_any: 2}
+  - prompt: >-
+      Add an exported error `ErrEmptyList`, return it from `Pop` on an empty list, and add `func (l
+      *List) Peek() (int, error)` that returns the last element without removing it (and
+      `ErrEmptyList` when the list is empty).
+    checks:
+      - {kind: tests, runner: go, restore: [simple_linked_list_test.go], hidden: [hidden_err_test.go]}
+  - prompt: >-
+      Add `func (l *List) Find(v int) int` returning the zero-based index of the first element equal
+      to v, or -1 when v is absent.
+    checks:
+      - {kind: tests, runner: go, restore: [simple_linked_list_test.go], hidden: [hidden_err_test.go, hidden_find_test.go]}
+  - prompt: >-
+      Add your own tests in a new file `extra_test.go` (package linkedlist): at least five test
+      functions covering `Pop`, `Peek`, `Find` and `Reverse` leaving the original list unchanged. Run
+      `go test ./...`.
+    gap_before_s: 420
+    checks:
+      - {kind: file_regex, path: extra_test.go, pattern: ^func Test, min_count: 5}
+      - {kind: tests, runner: go, restore: [simple_linked_list_test.go], hidden: [hidden_err_test.go, hidden_find_test.go]}
+  - prompt: >-
+      Refactor simple_linked_list.go: extract the walk to the last node into an unexported method
+      `func (l *List) tail() *Element` and use it in `Push` and `Peek`. No behaviour change; keep all
+      tests passing.
+    checks:
+      - {kind: file_regex, path: simple_linked_list.go, pattern: func \(l \*List\) tail\(\) \*Element}
+      - {kind: file_regex, path: simple_linked_list.go, pattern: l\.tail\(\), min_count: 2}
+      - {kind: tests, runner: go, restore: [simple_linked_list_test.go], hidden: [hidden_err_test.go, hidden_find_test.go]}
+  - prompt: >-
+      Performance change: make `Push` and `Size` O(1) (keep a tail pointer and a size counter in
+      `List`) without breaking `Pop`, `Peek`, `Reverse` or `Array`. 100000 pushes interleaved with
+      `Size` calls must finish in well under a second.
+    checks:
+      - {kind: tests, runner: go, restore: [simple_linked_list_test.go], hidden: [hidden_err_test.go, hidden_find_test.go, hidden_perf_test.go]}
+  - prompt: >-
+      Add `func (l *List) Clone() *List` that returns an independent copy: changes to either list
+      afterwards must not affect the other, and cloning an empty list gives a usable empty list.
+    checks:
+      - {kind: tests, runner: go, restore: [simple_linked_list_test.go], hidden: [hidden_err_test.go, hidden_find_test.go, hidden_perf_test.go, hidden_clone_test.go]}
+  - prompt: >-
+      Make `*List` implement `fmt.Stringer`: `fmt.Sprint(list)` for a list holding 1, 2, 3 must give
+      "[1 2 3]" and an empty list gives "[]".
+    checks:
+      - {kind: tests, runner: go, restore: [simple_linked_list_test.go], hidden: [hidden_err_test.go, hidden_find_test.go, hidden_perf_test.go, hidden_clone_test.go, hidden_string_test.go]}
+  - prompt: >-
+      New requirement: add `func (l *List) Insert(index, v int) error` that inserts v so it ends up at
+      position index (0 puts it first, Size() appends). An index below 0 or above Size() returns a new
+      exported error `ErrIndexOutOfRange` and leaves the list unchanged. Size and Pop must stay
+      correct afterwards.
+    checks:
+      - {kind: tests, runner: go, restore: [simple_linked_list_test.go], hidden: [hidden_err_test.go, hidden_find_test.go, hidden_perf_test.go, hidden_clone_test.go, hidden_string_test.go, hidden_insert_test.go]}
+  - prompt: >-
+      In four or five sentences, explain why you kept a tail pointer but `Pop` still has to walk the
+      list, and what it would cost to make `Pop` O(1). Do not change any files.
+    gap_before_s: 420
+    checks:
+      - {kind: keyed_facts, all: [tail, Pop, previous|prev|second-to-last|predecessor, doubly|prev]}
+  - prompt: >-
+      Add a benchmark `BenchmarkPush` in a new file `bench_test.go` that pushes 1000 values onto a
+      fresh list, and run it once with `go test -run xxx -bench Push -benchtime 1x ./...`.
+    checks:
+      - {kind: file_regex, path: bench_test.go, pattern: func BenchmarkPush}
+      - {kind: tests, runner: cmd, cmd: go test -run xxx -bench Push -benchtime 1x ./..., expect_regex: BenchmarkPush, restore: [simple_linked_list_test.go], hidden: [hidden_err_test.go, hidden_find_test.go, hidden_perf_test.go, hidden_clone_test.go, hidden_string_test.go, hidden_insert_test.go]}
+  - prompt: >-
+      Make `List` safe for concurrent use by several goroutines (guard its state with a
+      `sync.RWMutex`), then run `go test -race ./...`. The race detector must report nothing.
+    checks:
+      - {kind: tests, runner: go, restore: [simple_linked_list_test.go], hidden: [hidden_err_test.go, hidden_find_test.go, hidden_perf_test.go, hidden_clone_test.go, hidden_string_test.go, hidden_insert_test.go, hidden_conc_test.go]}
+      - {kind: tests, runner: cmd, cmd: go test -race -run TestHConcurrent ./..., expect_regex: ok\s+linkedlist, restore: [simple_linked_list_test.go], hidden: [hidden_err_test.go, hidden_find_test.go, hidden_perf_test.go, hidden_clone_test.go, hidden_string_test.go, hidden_insert_test.go, hidden_conc_test.go], timeout: 240}
+  - prompt: >-
+      Document the package: add Go doc comments (starting with the identifier name) to `List`, `New`,
+      `Size`, `Push`, `Pop`, `Peek`, `Find`, `Insert`, `Clone`, `Reverse` and `Array`, and create
+      README.md with a `## Usage` section and a `## Complexity` section.
+    checks:
+      - {kind: file_regex, path: simple_linked_list.go, pattern: '^// List '}
+      - {kind: file_regex, path: simple_linked_list.go, pattern: '^// New '}
+      - {kind: file_regex, path: simple_linked_list.go, pattern: '^// Size '}
+      - {kind: file_regex, path: simple_linked_list.go, pattern: '^// Push '}
+      - {kind: file_regex, path: simple_linked_list.go, pattern: '^// Pop '}
+      - {kind: file_regex, path: simple_linked_list.go, pattern: '^// Peek '}
+      - {kind: file_regex, path: simple_linked_list.go, pattern: '^// Find '}
+      - {kind: file_regex, path: simple_linked_list.go, pattern: '^// Insert '}
+      - {kind: file_regex, path: simple_linked_list.go, pattern: '^// Clone '}
+      - {kind: file_regex, path: simple_linked_list.go, pattern: '^// Reverse '}
+      - {kind: file_regex, path: simple_linked_list.go, pattern: '^// Array '}
+      - {kind: doc_sections, path: README.md, headings: [usage, complexity]}
+      - {kind: tests, runner: go, restore: [simple_linked_list_test.go], hidden: [hidden_err_test.go, hidden_find_test.go, hidden_perf_test.go, hidden_clone_test.go, hidden_string_test.go, hidden_insert_test.go, hidden_conc_test.go]}
+  - prompt: >-
+      Add an example test `ExampleList_Reverse` in a new file `example_test.go` (package linkedlist)
+      with an `// Output:` comment showing a reversed list and the unchanged original, and run `go
+      test ./...`.
+    checks:
+      - {kind: file_regex, path: example_test.go, pattern: func ExampleList_Reverse}
+      - {kind: file_regex, path: example_test.go, pattern: '// Output:'}
+      - {kind: tests, runner: cmd, cmd: go test -run Example -v ./..., expect_regex: 'PASS: ExampleList_Reverse', restore: [simple_linked_list_test.go], hidden: [hidden_err_test.go, hidden_find_test.go, hidden_perf_test.go, hidden_clone_test.go, hidden_string_test.go, hidden_insert_test.go, hidden_conc_test.go]}
+  - prompt: >-
+      Finish with a short summary for a reviewer, in four to six sentences: the time complexity of
+      Push, Pop, Find and Size, and how concurrent use is made safe. Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [O\(1\), O\(n\), Pop, RWMutex|mutex|lock]}
