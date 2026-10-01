@@ -1,0 +1,635 @@
+{
+ "labels": {
+  "rt-001": {
+   "decision": "agreed",
+   "hard_to_answer": false,
+   "label": "reason",
+   "outcome_label": "reason",
+   "reviewer_A": "reason",
+   "reviewer_B": "reason",
+   "why": "both reviewers and the outcome label agree"
+  },
+  "rt-002": {
+   "decision": "agreed",
+   "hard_to_answer": false,
+   "label": "reason",
+   "outcome_label": "reason",
+   "reviewer_A": "reason",
+   "reviewer_B": "reason",
+   "why": "both reviewers and the outcome label agree"
+  },
+  "rt-003": {
+   "decision": "adjudicated",
+   "hard_to_answer": false,
+   "label": "read_d82ab49f91a6",
+   "outcome_label": "read_5b3ed89dffe5",
+   "reviewer_A": "read_d82ab49f91a6",
+   "reviewer_B": "read_d82ab49f91a6",
+   "why": "both reviewers agree and override the outcome-derived label (the state does not justify the host action)"
+  },
+  "rt-004": {
+   "decision": "dropped",
+   "hard_to_answer": true,
+   "label": null,
+   "outcome_label": "win_16c8196b3d0a",
+   "reviewer_A": "reason",
+   "reviewer_B": "win_16c8196b3d0a",
+   "why": "reviewers disagree (one flagged unanswerable)"
+  },
+  "rt-005": {
+   "decision": "agreed",
+   "hard_to_answer": false,
+   "label": "reason",
+   "outcome_label": "reason",
+   "reviewer_A": "reason",
+   "reviewer_B": "reason",
+   "why": "both reviewers and the outcome label agree"
+  },
+  "rt-006": {
+   "decision": "adjudicated",
+   "hard_to_answer": false,
+   "label": "read_d82ab49f91a6",
+   "outcome_label": "read_7a8fbafb7167",
+   "reviewer_A": "read_d82ab49f91a6",
+   "reviewer_B": "read_d82ab49f91a6",
+   "why": "both reviewers agree and override the outcome-derived label (the state does not justify the host action)"
+  },
+  "rt-007": {
+   "decision": "adjudicated",
+   "hard_to_answer": false,
+   "label": "read_d82ab49f91a6",
+   "outcome_label": "read_15d387f73c92",
+   "reviewer_A": "read_d82ab49f91a6",
+   "reviewer_B": "read_d82ab49f91a6",
+   "why": "both reviewers agree and override the outcome-derived label (the state does not justify the host action)"
+  },
+  "rt-008": {
+   "decision": "dropped",
+   "hard_to_answer": false,
+   "label": null,
+   "outcome_label": "win_8a235c624c51",
+   "reviewer_A": "win_8a235c624c51",
+   "reviewer_B": "reason",
+   "why": "reviewers disagree"
+  },
+  "rt-009": {
+   "decision": "adjudicated",
+   "hard_to_answer": false,
+   "label": "read_c18d1bf6339d",
+   "outcome_label": "reason",
+   "reviewer_A": "read_c18d1bf6339d",
+   "reviewer_B": "read_c18d1bf6339d",
+   "why": "both reviewers agree and override the outcome-derived label (the state does not justify the host action)"
+  },
+  "rt-010": {
+   "decision": "agreed",
+   "hard_to_answer": true,
+   "label": "reason",
+   "outcome_label": "reason",
+   "reviewer_A": "reason",
+   "reviewer_B": "reason",
+   "why": "both reviewers and the outcome label agree; flagged hard to answer"
+  },
+  "rt-011": {
+   "decision": "dropped",
+   "hard_to_answer": false,
+   "label": null,
+   "outcome_label": "win_8a235c624c51",
+   "reviewer_A": "win_8a235c624c51",
+   "reviewer_B": "reason",
+   "why": "reviewers disagree"
+  },
+  "rt-012": {
+   "decision": "agreed",
+   "hard_to_answer": false,
+   "label": "reason",
+   "outcome_label": "reason",
+   "reviewer_A": "reason",
+   "reviewer_B": "reason",
+   "why": "both reviewers and the outcome label agree"
+  },
+  "rt-013": {
+   "decision": "agreed",
+   "hard_to_answer": false,
+   "label": "reason",
+   "outcome_label": "reason",
+   "reviewer_A": "reason",
+   "reviewer_B": "reason",
+   "why": "both reviewers and the outcome label agree"
+  },
+  "rt-014": {
+   "decision": "agreed",
+   "hard_to_answer": false,
+   "label": "win_c098d4dfa785",
+   "outcome_label": "win_c098d4dfa785",
+   "reviewer_A": "win_c098d4dfa785",
+   "reviewer_B": "win_c098d4dfa785",
+   "why": "both reviewers and the outcome label agree"
+  },
+  "rt-015": {
+   "decision": "adjudicated",
+   "hard_to_answer": true,
+   "label": "reason",
+   "outcome_label": "win_1df23a318b02",
+   "reviewer_A": "reason",
+   "reviewer_B": "reason",
+   "why": "both reviewers agree and override the outcome-derived label (the state does not justify the host action); flagged hard to answer"
+  },
+  "rt-016": {
+   "decision": "agreed",
+   "hard_to_answer": false,
+   "label": "reason",
+   "outcome_label": "reason",
+   "reviewer_A": "reason",
+   "reviewer_B": "reason",
+   "why": "both reviewers and the outcome label agree"
+  },
+  "rt-017": {
+   "decision": "agreed",
+   "hard_to_answer": false,
+   "label": "win_afbcd0e0f1f5",
+   "outcome_label": "win_afbcd0e0f1f5",
+   "reviewer_A": "win_afbcd0e0f1f5",
+   "reviewer_B": "win_afbcd0e0f1f5",
+   "why": "both reviewers and the outcome label agree"
+  },
+  "rt-018": {
+   "decision": "dropped",
+   "hard_to_answer": false,
+   "label": null,
+   "outcome_label": "reason",
+   "reviewer_A": "win_48b667b6c596",
+   "reviewer_B": "reason",
+   "why": "reviewers disagree"
+  },
+  "rt-019": {
+   "decision": "dropped",
+   "hard_to_answer": true,
+   "label": null,
+   "outcome_label": "win_b27c6e238cde",
+   "reviewer_A": "reason",
+   "reviewer_B": "win_b27c6e238cde",
+   "why": "reviewers disagree (one flagged unanswerable)"
+  },
+  "rt-020": {
+   "decision": "agreed",
+   "hard_to_answer": false,
+   "label": "reason",
+   "outcome_label": "reason",
+   "reviewer_A": "reason",
+   "reviewer_B": "reason",
+   "why": "both reviewers and the outcome label agree"
+  },
+  "rt-021": {
+   "decision": "agreed",
+   "hard_to_answer": true,
+   "label": "reason",
+   "outcome_label": "reason",
+   "reviewer_A": "reason",
+   "reviewer_B": "reason",
+   "why": "both reviewers and the outcome label agree; flagged hard to answer"
+  },
+  "rt-022": {
+   "decision": "agreed",
+   "hard_to_answer": false,
+   "label": "reason",
+   "outcome_label": "reason",
+   "reviewer_A": "reason",
+   "reviewer_B": "reason",
+   "why": "both reviewers and the outcome label agree"
+  },
+  "rt-023": {
+   "decision": "adjudicated",
+   "hard_to_answer": true,
+   "label": "reason",
+   "outcome_label": "win_3074938d755a",
+   "reviewer_A": "reason",
+   "reviewer_B": "reason",
+   "why": "both reviewers agree and override the outcome-derived label (the state does not justify the host action); flagged hard to answer"
+  },
+  "rt-024": {
+   "decision": "adjudicated",
+   "hard_to_answer": false,
+   "label": "read_d82ab49f91a6",
+   "outcome_label": "read_930533b818d7",
+   "reviewer_A": "read_d82ab49f91a6",
+   "reviewer_B": "read_d82ab49f91a6",
+   "why": "both reviewers agree and override the outcome-derived label (the state does not justify the host action)"
+  },
+  "rt-025": {
+   "decision": "agreed",
+   "hard_to_answer": false,
+   "label": "win_7b1ccfa5152e",
+   "outcome_label": "win_7b1ccfa5152e",
+   "reviewer_A": "win_7b1ccfa5152e",
+   "reviewer_B": "win_7b1ccfa5152e",
+   "why": "both reviewers and the outcome label agree"
+  },
+  "rt-026": {
+   "decision": "adjudicated",
+   "hard_to_answer": false,
+   "label": "read_d82ab49f91a6",
+   "outcome_label": "read_15d387f73c92",
+   "reviewer_A": "read_d82ab49f91a6",
+   "reviewer_B": "read_d82ab49f91a6",
+   "why": "both reviewers agree and override the outcome-derived label (the state does not justify the host action)"
+  },
+  "rt-027": {
+   "decision": "agreed",
+   "hard_to_answer": false,
+   "label": "reason",
+   "outcome_label": "reason",
+   "reviewer_A": "reason",
+   "reviewer_B": "reason",
+   "why": "both reviewers and the outcome label agree"
+  },
+  "rt-028": {
+   "decision": "agreed",
+   "hard_to_answer": false,
+   "label": "win_d2fa5c322e9e",
+   "outcome_label": "win_d2fa5c322e9e",
+   "reviewer_A": "win_d2fa5c322e9e",
+   "reviewer_B": "win_d2fa5c322e9e",
+   "why": "both reviewers and the outcome label agree"
+  },
+  "rt-029": {
+   "decision": "agreed",
+   "hard_to_answer": false,
+   "label": "reason",
+   "outcome_label": "reason",
+   "reviewer_A": "reason",
+   "reviewer_B": "reason",
+   "why": "both reviewers and the outcome label agree"
+  },
+  "rt-030": {
+   "decision": "adjudicated",
+   "hard_to_answer": false,
+   "label": "reason",
+   "outcome_label": "read_c18d1bf6339d",
+   "reviewer_A": "reason",
+   "reviewer_B": "reason",
+   "why": "both reviewers agree and override the outcome-derived label (the state does not justify the host action)"
+  },
+  "rt-031": {
+   "decision": "agreed",
+   "hard_to_answer": false,
+   "label": "reason",
+   "outcome_label": "reason",
+   "reviewer_A": "reason",
+   "reviewer_B": "reason",
+   "why": "both reviewers and the outcome label agree"
+  },
+  "rt-032": {
+   "decision": "agreed",
+   "hard_to_answer": false,
+   "label": "reason",
+   "outcome_label": "reason",
+   "reviewer_A": "reason",
+   "reviewer_B": "reason",
+   "why": "both reviewers and the outcome label agree"
+  },
+  "rt-033": {
+   "decision": "agreed",
+   "hard_to_answer": false,
+   "label": "reason",
+   "outcome_label": "reason",
+   "reviewer_A": "reason",
+   "reviewer_B": "reason",
+   "why": "both reviewers and the outcome label agree"
+  },
+  "rt-034": {
+   "decision": "adjudicated",
+   "hard_to_answer": true,
+   "label": "reason",
+   "outcome_label": "win_95e20aad7fe7",
+   "reviewer_A": "reason",
+   "reviewer_B": "reason",
+   "why": "both reviewers agree and override the outcome-derived label (the state does not justify the host action); flagged hard to answer"
+  },
+  "rt-035": {
+   "decision": "agreed",
+   "hard_to_answer": false,
+   "label": "win_db8348036367",
+   "outcome_label": "win_db8348036367",
+   "reviewer_A": "win_db8348036367",
+   "reviewer_B": "win_db8348036367",
+   "why": "both reviewers and the outcome label agree"
+  },
+  "rt-036": {
+   "decision": "agreed",
+   "hard_to_answer": false,
+   "label": "reason",
+   "outcome_label": "reason",
+   "reviewer_A": "reason",
+   "reviewer_B": "reason",
+   "why": "both reviewers and the outcome label agree"
+  },
+  "rt-037": {
+   "decision": "agreed",
+   "hard_to_answer": false,
+   "label": "reason",
+   "outcome_label": "reason",
+   "reviewer_A": "reason",
+   "reviewer_B": "reason",
+   "why": "both reviewers and the outcome label agree"
+  },
+  "rt-038": {
+   "decision": "agreed",
+   "hard_to_answer": false,
+   "label": "reason",
+   "outcome_label": "reason",
+   "reviewer_A": "reason",
+   "reviewer_B": "reason",
+   "why": "both reviewers and the outcome label agree"
+  },
+  "rt-039": {
+   "decision": "agreed",
+   "hard_to_answer": false,
+   "label": "reason",
+   "outcome_label": "reason",
+   "reviewer_A": "reason",
+   "reviewer_B": "reason",
+   "why": "both reviewers and the outcome label agree"
+  },
+  "rt-040": {
+   "decision": "agreed",
+   "hard_to_answer": false,
+   "label": "reason",
+   "outcome_label": "reason",
+   "reviewer_A": "reason",
+   "reviewer_B": "reason",
+   "why": "both reviewers and the outcome label agree"
+  },
+  "rt-041": {
+   "decision": "adjudicated",
+   "hard_to_answer": false,
+   "label": "read_d82ab49f91a6",
+   "outcome_label": "read_930533b818d7",
+   "reviewer_A": "read_d82ab49f91a6",
+   "reviewer_B": "read_d82ab49f91a6",
+   "why": "both reviewers agree and override the outcome-derived label (the state does not justify the host action)"
+  },
+  "rt-042": {
+   "decision": "adjudicated",
+   "hard_to_answer": false,
+   "label": "read_d82ab49f91a6",
+   "outcome_label": "read_5d5fe3e05fe9",
+   "reviewer_A": "read_d82ab49f91a6",
+   "reviewer_B": "read_d82ab49f91a6",
+   "why": "both reviewers agree and override the outcome-derived label (the state does not justify the host action)"
+  },
+  "rt-043": {
+   "decision": "agreed",
+   "hard_to_answer": false,
+   "label": "win_41f31361be9c",
+   "outcome_label": "win_41f31361be9c",
+   "reviewer_A": "win_41f31361be9c",
+   "reviewer_B": "win_41f31361be9c",
+   "why": "both reviewers and the outcome label agree"
+  },
+  "rt-044": {
+   "decision": "agreed",
+   "hard_to_answer": false,
+   "label": "win_588ed8f3271b",
+   "outcome_label": "win_588ed8f3271b",
+   "reviewer_A": "win_588ed8f3271b",
+   "reviewer_B": "win_588ed8f3271b",
+   "why": "both reviewers and the outcome label agree"
+  },
+  "rt-045": {
+   "decision": "adjudicated",
+   "hard_to_answer": true,
+   "label": "reason",
+   "outcome_label": "win_f77c02d32da8",
+   "reviewer_A": "reason",
+   "reviewer_B": "reason",
+   "why": "both reviewers agree and override the outcome-derived label (the state does not justify the host action); flagged hard to answer"
+  },
+  "rt-046": {
+   "decision": "agreed",
+   "hard_to_answer": false,
+   "label": "reason",
+   "outcome_label": "reason",
+   "reviewer_A": "reason",
+   "reviewer_B": "reason",
+   "why": "both reviewers and the outcome label agree"
+  },
+  "rt-047": {
+   "decision": "agreed",
+   "hard_to_answer": false,
+   "label": "read_773501a732dd",
+   "outcome_label": "read_773501a732dd",
+   "reviewer_A": "read_773501a732dd",
+   "reviewer_B": "read_773501a732dd",
+   "why": "both reviewers and the outcome label agree"
+  },
+  "rt-048": {
+   "decision": "agreed",
+   "hard_to_answer": false,
+   "label": "reason",
+   "outcome_label": "reason",
+   "reviewer_A": "reason",
+   "reviewer_B": "reason",
+   "why": "both reviewers and the outcome label agree"
+  },
+  "rt-049": {
+   "decision": "agreed",
+   "hard_to_answer": true,
+   "label": "reason",
+   "outcome_label": "reason",
+   "reviewer_A": "reason",
+   "reviewer_B": "reason",
+   "why": "both reviewers and the outcome label agree; flagged hard to answer"
+  },
+  "rt-050": {
+   "decision": "agreed",
+   "hard_to_answer": false,
+   "label": "reason",
+   "outcome_label": "reason",
+   "reviewer_A": "reason",
+   "reviewer_B": "reason",
+   "why": "both reviewers and the outcome label agree"
+  },
+  "rt-051": {
+   "decision": "agreed",
+   "hard_to_answer": false,
+   "label": "win_ca242d5fca3a",
+   "outcome_label": "win_ca242d5fca3a",
+   "reviewer_A": "win_ca242d5fca3a",
+   "reviewer_B": "win_ca242d5fca3a",
+   "why": "both reviewers and the outcome label agree"
+  },
+  "rt-052": {
+   "decision": "agreed",
+   "hard_to_answer": false,
+   "label": "win_0c0cb44b7075",
+   "outcome_label": "win_0c0cb44b7075",
+   "reviewer_A": "win_0c0cb44b7075",
+   "reviewer_B": "win_0c0cb44b7075",
+   "why": "both reviewers and the outcome label agree"
+  },
+  "rt-053": {
+   "decision": "agreed",
+   "hard_to_answer": false,
+   "label": "reason",
+   "outcome_label": "reason",
+   "reviewer_A": "reason",
+   "reviewer_B": "reason",
+   "why": "both reviewers and the outcome label agree"
+  },
+  "rt-054": {
+   "decision": "agreed",
+   "hard_to_answer": false,
+   "label": "win_f7afebd2552d",
+   "outcome_label": "win_f7afebd2552d",
+   "reviewer_A": "win_f7afebd2552d",
+   "reviewer_B": "win_f7afebd2552d",
+   "why": "both reviewers and the outcome label agree"
+  },
+  "rt-055": {
+   "decision": "adjudicated",
+   "hard_to_answer": false,
+   "label": "read_d82ab49f91a6",
+   "outcome_label": "read_23bced1743b5",
+   "reviewer_A": "read_d82ab49f91a6",
+   "reviewer_B": "read_d82ab49f91a6",
+   "why": "both reviewers agree and override the outcome-derived label (the state does not justify the host action)"
+  },
+  "rt-056": {
+   "decision": "agreed",
+   "hard_to_answer": false,
+   "label": "reason",
+   "outcome_label": "reason",
+   "reviewer_A": "reason",
+   "reviewer_B": "reason",
+   "why": "both reviewers and the outcome label agree"
+  },
+  "rt-057": {
+   "decision": "agreed",
+   "hard_to_answer": false,
+   "label": "win_e739553e2d41",
+   "outcome_label": "win_e739553e2d41",
+   "reviewer_A": "win_e739553e2d41",
+   "reviewer_B": "win_e739553e2d41",
+   "why": "both reviewers and the outcome label agree"
+  },
+  "rt-058": {
+   "decision": "adjudicated",
+   "hard_to_answer": true,
+   "label": "reason",
+   "outcome_label": "win_3074938d755a",
+   "reviewer_A": "reason",
+   "reviewer_B": "reason",
+   "why": "both reviewers agree and override the outcome-derived label (the state does not justify the host action); flagged hard to answer"
+  },
+  "rt-059": {
+   "decision": "adjudicated",
+   "hard_to_answer": true,
+   "label": "reason",
+   "outcome_label": "win_167d35311f2f",
+   "reviewer_A": "reason",
+   "reviewer_B": "reason",
+   "why": "both reviewers agree and override the outcome-derived label (the state does not justify the host action); flagged hard to answer"
+  },
+  "rt-060": {
+   "decision": "dropped",
+   "hard_to_answer": false,
+   "label": null,
+   "outcome_label": "reason",
+   "reviewer_A": "win_1b3e43e8802f",
+   "reviewer_B": "reason",
+   "why": "reviewers disagree"
+  },
+  "rt-061": {
+   "decision": "dropped",
+   "hard_to_answer": true,
+   "label": null,
+   "outcome_label": "win_ba513b56c3a5",
+   "reviewer_A": "reason",
+   "reviewer_B": "win_ba513b56c3a5",
+   "why": "reviewers disagree (one flagged unanswerable)"
+  },
+  "rt-062": {
+   "decision": "agreed",
+   "hard_to_answer": false,
+   "label": "reason",
+   "outcome_label": "reason",
+   "reviewer_A": "reason",
+   "reviewer_B": "reason",
+   "why": "both reviewers and the outcome label agree"
+  },
+  "rt-063": {
+   "decision": "agreed",
+   "hard_to_answer": false,
+   "label": "read_c18d1bf6339d",
+   "outcome_label": "read_c18d1bf6339d",
+   "reviewer_A": "read_c18d1bf6339d",
+   "reviewer_B": "read_c18d1bf6339d",
+   "why": "both reviewers and the outcome label agree"
+  },
+  "rt-064": {
+   "decision": "agreed",
+   "hard_to_answer": false,
+   "label": "reason",
+   "outcome_label": "reason",
+   "reviewer_A": "reason",
+   "reviewer_B": "reason",
+   "why": "both reviewers and the outcome label agree"
+  },
+  "rt-065": {
+   "decision": "agreed",
+   "hard_to_answer": false,
+   "label": "reason",
+   "outcome_label": "reason",
+   "reviewer_A": "reason",
+   "reviewer_B": "reason",
+   "why": "both reviewers and the outcome label agree"
+  },
+  "rt-066": {
+   "decision": "agreed",
+   "hard_to_answer": true,
+   "label": "reason",
+   "outcome_label": "reason",
+   "reviewer_A": "reason",
+   "reviewer_B": "reason",
+   "why": "both reviewers and the outcome label agree; flagged hard to answer"
+  },
+  "rt-067": {
+   "decision": "adjudicated",
+   "hard_to_answer": false,
+   "label": "read_d82ab49f91a6",
+   "outcome_label": "read_23bced1743b5",
+   "reviewer_A": "read_d82ab49f91a6",
+   "reviewer_B": "read_d82ab49f91a6",
+   "why": "both reviewers agree and override the outcome-derived label (the state does not justify the host action)"
+  },
+  "rt-068": {
+   "decision": "adjudicated",
+   "hard_to_answer": false,
+   "label": "read_d82ab49f91a6",
+   "outcome_label": "read_23bced1743b5",
+   "reviewer_A": "read_d82ab49f91a6",
+   "reviewer_B": "read_d82ab49f91a6",
+   "why": "both reviewers agree and override the outcome-derived label (the state does not justify the host action)"
+  },
+  "rt-069": {
+   "decision": "agreed",
+   "hard_to_answer": false,
+   "label": "reason",
+   "outcome_label": "reason",
+   "reviewer_A": "reason",
+   "reviewer_B": "reason",
+   "why": "both reviewers and the outcome label agree"
+  },
+  "rt-070": {
+   "decision": "adjudicated",
+   "hard_to_answer": true,
+   "label": "reason",
+   "outcome_label": "win_b3dba97270fd",
+   "reviewer_A": "reason",
+   "reviewer_B": "reason",
+   "why": "both reviewers agree and override the outcome-derived label (the state does not justify the host action); flagged hard to answer"
+  }
+ },
+ "rule": "Final label = the blind reviewers' shared label when they agree (decision agreed if it matches the outcome-derived label, adjudicated if it overrides it); cases where reviewers disagree are dropped. outcome_label (the host model's actual next read, or reason) is kept as a secondary endpoint. Fixed before any judge saw these cases."
+}

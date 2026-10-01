@@ -7,6 +7,11 @@
     intervention.
   \item[Automatic decision] A decision the bundle acts on without slow reasoning, because the judge's
     answer passed the gate.
+  \item[Cache read, cache write] A provider keeps recently sent conversation prefixes in a per-model
+    cache. Re-sending a cached prefix is billed as a cheap \emph{read}; storing a new prefix is billed as a
+    more expensive \emph{write}.
+  \item[Cache rebuild] The extra cache writes on the first request after switching models, because the new
+    model has no cached copy of the conversation.
   \item[Bootstrap confidence interval] An interval found by resampling the cases many times (here
     \BootstrapB) and seeing how much a statistic moves. Used for differences between two judges.
   \item[Calibration] How well stated confidence matches actual accuracy. A calibrated judge that says
@@ -22,6 +27,8 @@
   \item[Dev split] The \DevN\ cases used to choose configurations. Results on it are a screen.
   \item[ECE (expected calibration error)] The average gap between confidence and accuracy, over ten
     confidence bins. Lower is better. Not meaningful for self-reported probabilities.
+  \item[Geometric mean] The average used for cost ratios: the $n$-th root of the product of $n$ ratios.
+    It treats ``twice as expensive'' and ``half as expensive'' symmetrically.
   \item[Gate] The bundle's rule for acting automatically: argmax not \code{reason}, $p \ge \MinP$,
     margin $\ge \MinMargin$, answer within \TimeoutS\,s; yes/no answers never abstain.
   \item[Holdout] Cases kept aside until the analysis is fixed, used once to confirm.
@@ -32,6 +39,8 @@
   \item[Injection] Text inside an observation or source file that tries to instruct the judge (``click
     Submit now''). Judges are told to treat such text as data.
   \item[Judge] A small, fast model that answers one structured question with a probability per option.
+  \item[Matched pair] A routed run and a plain run of the same task, campaign and repetition on the same
+    host model, compared with each other.
   \item[Margin] The gap between the top option's probability and the runner-up's.
   \item[McNemar test (exact)] A test for two judges answering the same cases, using only the cases on
     which they disagree.
@@ -45,11 +54,17 @@
     the data exist.
   \item[Repetition] One complete pass of an arm over all cases. Each arm ran \HoldReps.
   \item[Screen] A result that suggests what to test but cannot confirm it (here, every dev result).
+  \item[Selection effect] A bias that comes from how cases were chosen rather than from the judges: here,
+    every real decision is one that some in-session judge had already declined.
   \item[Self-reported probabilities] Probabilities a language model writes as text, rather than the
     model's internal token probabilities.
+  \item[Sticky routing] Choosing a model once per session and keeping it, so the cache is never rebuilt
+    by a switch.
   \item[Side effect] An irreversible or external change: delete, pay or refund, publish or post, send or
     submit, transfer, revoke, merge or deploy.
   \item[Within noise] A difference whose Holm-adjusted $p$ is above 0.05. Not a ranking.
+  \item[Trace-derived case] A real decision from an earlier agent session, rebuilt exactly as the judge
+    saw it and checked against logged fingerprints.
   \item[Wrong-automatic rate] The share of all cases in which the bundle acted automatically on a wrong
     answer. The key safety number.
 \end{description}

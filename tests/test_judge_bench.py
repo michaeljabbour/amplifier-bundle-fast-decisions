@@ -296,9 +296,11 @@ class ArmTests(unittest.TestCase):
         # The fake client sits under the real prompt builder and answer parser, so this
         # exercises the sentinel itself; patching answer_question would bypass it.
         kept = self.ollama_probabilities(True)["answer"]["probabilities"]
-        dropped = self.ollama_probabilities(False)["answer"]["probabilities"]
+        default = self.ollama_probabilities(False)["answer"]["probabilities"]
         self.assertEqual(set(kept), {"a", "b", "reason"})
-        self.assertEqual(set(dropped), {"a", "b"})  # the bundle default cannot answer "reason"
+        # The study ran before #56; since then the bundle default keeps a declared "reason"
+        # option too, so both paths answer the same three-way question.
+        self.assertEqual(set(default), {"a", "b", "reason"})
         self.assertAlmostEqual(sum(kept.values()), 1)
         self.assertEqual(arms.OllamaBackendArm("q", "qwen3:4b").determinism["temperature_sent"], 0)
         self.assertIsNone(self.ollama_probabilities(True)["timing"]["server_ms"])

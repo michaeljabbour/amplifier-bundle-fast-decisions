@@ -79,4 +79,10 @@ suites:
       dev:     { expected_task_count: 90, source: "evals/laya_quality.fixtures + evals/laya_holdout.cases" }
       holdout: { expected_task_count: 63, source: "evals/judge_bench/holdout/cases.json",
                  preregistration: "evals/judge_bench/holdout/PREREGISTRATION.md" }
+      # trace-* (2026-10-01): real read-shortcut decisions from session traces, replayed in each judge's
+      # native request form (evals/judge_bench/native.py). No expected_task_count: the count is whatever
+      # survives the blind review (labels_final.json drops cases), so judges.py reads it at run time.
+      trace-dev:     { source: "evals/judge_bench/traces/pool.json (split dev) + labels_final.json" }
+      trace-holdout: { source: "evals/judge_bench/traces/pool.json (split holdout) + labels_final.json",
+                       preregistration: "evals/judge_bench/traces/PREREGISTRATION.md" }
     required_toolchains: [python3]

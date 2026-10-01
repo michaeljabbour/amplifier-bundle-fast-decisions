@@ -1,0 +1,562 @@
+[
+ {
+  "id": "rt-001",
+  "label": "reason",
+  "confidence": 0.85,
+  "confidence_label": "high",
+  "unanswerable": false,
+  "rationale": "All three named files already read; next step is writing the rewrite, so re-reading adds nothing."
+ },
+ {
+  "id": "rt-002",
+  "label": "reason",
+  "confidence": 0.9,
+  "confidence_label": "high",
+  "unanswerable": false,
+  "rationale": "Fix written and tests plus edge checks pass; the next move is the final reply, not another read of solution.py."
+ },
+ {
+  "id": "rt-003",
+  "label": "read_d82ab49f91a6",
+  "confidence": 0.7,
+  "confidence_label": "medium",
+  "unanswerable": false,
+  "rationale": "Task says read README first; nothing read yet. README states the contract needed before locating the scoring.py bug."
+ },
+ {
+  "id": "rt-004",
+  "label": "win_16c8196b3d0a",
+  "confidence": 0.5,
+  "confidence_label": "low",
+  "unanswerable": false,
+  "rationale": "Dense window covers both dense _loop_size hits (lines 125, 152) and the first-listed file; host read this region before editing."
+ },
+ {
+  "id": "rt-005",
+  "label": "reason",
+  "confidence": 0.9,
+  "confidence_label": "high",
+  "unanswerable": false,
+  "rationale": "src/lib.rs was just edited and cargo check passes; next step is running fmt/clippy/tests, not re-reading."
+ },
+ {
+  "id": "rt-006",
+  "label": "read_d82ab49f91a6",
+  "confidence": 0.7,
+  "confidence_label": "medium",
+  "unanswerable": false,
+  "rationale": "Task instructs README first; nothing read yet. README defines expected tag_util behavior before diagnosing the bug."
+ },
+ {
+  "id": "rt-007",
+  "label": "read_d82ab49f91a6",
+  "confidence": 0.7,
+  "confidence_label": "medium",
+  "unanswerable": false,
+  "rationale": "Task instructs README first; nothing yet read. README gives the contract needed to find the session_ttl.py bug."
+ },
+ {
+  "id": "rt-008",
+  "label": "reason",
+  "confidence": 0.5,
+  "confidence_label": "low",
+  "unanswerable": false,
+  "rationale": "Only doc windows offered; code fix for nonform class lives in forms/formsets source, needing a search rather than these docs reads."
+ },
+ {
+  "id": "rt-009",
+  "label": "read_c18d1bf6339d",
+  "confidence": 0.55,
+  "confidence_label": "medium",
+  "unanswerable": false,
+  "rationale": "Tests already shown; the stub src/lib.rs (module layout/signatures) is the unseen file needed before implementing the DSL."
+ },
+ {
+  "id": "rt-010",
+  "label": "reason",
+  "confidence": 0.65,
+  "confidence_label": "medium",
+  "unanswerable": false,
+  "rationale": "Solution and tests were read; host went straight to planning/writing. README presumably read earlier (older observation dropped), so no read is needed."
+ },
+ {
+  "id": "rt-011",
+  "label": "reason",
+  "confidence": 0.5,
+  "confidence_label": "low",
+  "unanswerable": false,
+  "rationale": "Docs-only windows; the issue needs the formsets code located. A docs read is not clearly the best next step."
+ },
+ {
+  "id": "rt-012",
+  "label": "reason",
+  "confidence": 0.9,
+  "confidence_label": "high",
+  "unanswerable": false,
+  "rationale": "Offered files (rust/latex/python/llvmjit printers) are not the fix location; host ran tests and found bug in mathml.py, unoffered."
+ },
+ {
+  "id": "rt-013",
+  "label": "reason",
+  "confidence": 0.65,
+  "confidence_label": "medium",
+  "unanswerable": false,
+  "rationale": "Four unrelated keep_attrs windows from a 39-match grep; issue text not visible, none clearly sufficient. Host searched further."
+ },
+ {
+  "id": "rt-014",
+  "label": "win_c098d4dfa785",
+  "confidence": 0.65,
+  "confidence_label": "medium",
+  "unanswerable": false,
+  "rationale": "Grep located the single _parse_annotation definition at line 71; the window covers it and is the natural next read."
+ },
+ {
+  "id": "rt-015",
+  "label": "reason",
+  "confidence": 0.5,
+  "confidence_label": "low",
+  "unanswerable": true,
+  "rationale": "Four sibling DB backend client files; which one matters depends on the clipped issue. Host read postgresql first, then base."
+ },
+ {
+  "id": "rt-016",
+  "label": "reason",
+  "confidence": 0.85,
+  "confidence_label": "high",
+  "unanswerable": false,
+  "rationale": "solution.py was just written; next step is running the unit tests, not reading the file back."
+ },
+ {
+  "id": "rt-017",
+  "label": "win_afbcd0e0f1f5",
+  "confidence": 0.65,
+  "confidence_label": "medium",
+  "unanswerable": false,
+  "rationale": "Window covers HasKeyLookup (line 172) and its as_mysql/as_oracle/as_sqlite methods, the located match; host read nearly the same range."
+ },
+ {
+  "id": "rt-018",
+  "label": "reason",
+  "confidence": 0.5,
+  "confidence_label": "low",
+  "unanswerable": false,
+  "rationale": "Host read a different region (215-290) before editing; the offered 58-157 window is not clearly what is needed next."
+ },
+ {
+  "id": "rt-019",
+  "label": "win_b27c6e238cde",
+  "confidence": 0.5,
+  "confidence_label": "low",
+  "unanswerable": false,
+  "rationale": "Dense __getitem__ window; dense and sparse are near-identical siblings, dense listed first and host read it. Host also needed ndim_array."
+ },
+ {
+  "id": "rt-020",
+  "label": "reason",
+  "confidence": 0.8,
+  "confidence_label": "high",
+  "unanswerable": false,
+  "rationale": "Both windows are tests; the autodoc source holds docstring-signature logic. Host read a test fixture and changelog instead."
+ },
+ {
+  "id": "rt-021",
+  "label": "reason",
+  "confidence": 0.55,
+  "confidence_label": "medium",
+  "unanswerable": false,
+  "rationale": "File list spans response.py, cookie.py, sessions middleware; whole-file reads with unclear relevance. Host ran a targeted grep instead."
+ },
+ {
+  "id": "rt-022",
+  "label": "reason",
+  "confidence": 0.9,
+  "confidence_label": "high",
+  "unanswerable": false,
+  "rationale": "Cargo tests/fmt done and todos complete; next is the final summary, no need to read lib.rs."
+ },
+ {
+  "id": "rt-023",
+  "label": "reason",
+  "confidence": 0.5,
+  "confidence_label": "low",
+  "unanswerable": true,
+  "rationale": "Three clear_denoms implementations in different classes; the right one depends on the clipped issue. Host read polyclasses then grepped densetools."
+ },
+ {
+  "id": "rt-024",
+  "label": "read_d82ab49f91a6",
+  "confidence": 0.7,
+  "confidence_label": "medium",
+  "unanswerable": false,
+  "rationale": "Task says read README first; nothing read yet. README sets the config_merge contract before looking at code."
+ },
+ {
+  "id": "rt-025",
+  "label": "win_7b1ccfa5152e",
+  "confidence": 0.6,
+  "confidence_label": "medium",
+  "unanswerable": false,
+  "rationale": "Unique grep hit at computation.py:1832; window covers the keep_attrs lambda and following call; host read an overlapping range."
+ },
+ {
+  "id": "rt-026",
+  "label": "read_d82ab49f91a6",
+  "confidence": 0.7,
+  "confidence_label": "medium",
+  "unanswerable": false,
+  "rationale": "Task instructs README first and nothing is read yet; README gives the session_ttl contract."
+ },
+ {
+  "id": "rt-027",
+  "label": "reason",
+  "confidence": 0.95,
+  "confidence_label": "high",
+  "unanswerable": false,
+  "rationale": "Offered files are CONTRIBUTING/CODE_OF_CONDUCT/GOVERNANCE, irrelevant to resolving the issue. Host started environment setup."
+ },
+ {
+  "id": "rt-028",
+  "label": "win_d2fa5c322e9e",
+  "confidence": 0.5,
+  "confidence_label": "low",
+  "unanswerable": false,
+  "rationale": "Located DocstringSig fixture at test root after a failed grep; window shows the docstring forms to handle before editing _find_signature."
+ },
+ {
+  "id": "rt-029",
+  "label": "reason",
+  "confidence": 0.9,
+  "confidence_label": "high",
+  "unanswerable": false,
+  "rationale": "Off-by-one already fixed and the test passes; next step is the final DONE line."
+ },
+ {
+  "id": "rt-030",
+  "label": "reason",
+  "confidence": 0.5,
+  "confidence_label": "low",
+  "unanswerable": false,
+  "rationale": "Tests pass and scratch test removed; next is finishing checks or answer. A full lib.rs read is not clearly the needed step."
+ },
+ {
+  "id": "rt-031",
+  "label": "reason",
+  "confidence": 0.85,
+  "confidence_label": "high",
+  "unanswerable": false,
+  "rationale": "Offered files (uncertainty, time, spectral, angles) are not where the fix lies; host grepped the masked array_ufunc."
+ },
+ {
+  "id": "rt-032",
+  "label": "reason",
+  "confidence": 0.55,
+  "confidence_label": "medium",
+  "unanswerable": false,
+  "rationale": "Only a FunctionDocumenter window offered; host searched format_signature then read elsewhere (1355). Not clearly sufficient."
+ },
+ {
+  "id": "rt-033",
+  "label": "reason",
+  "confidence": 0.8,
+  "confidence_label": "high",
+  "unanswerable": false,
+  "rationale": "Four unrelated __init__.py windows; none is the collection logic. Host read python.py and grepped Package, not offered."
+ },
+ {
+  "id": "rt-034",
+  "label": "reason",
+  "confidence": 0.5,
+  "confidence_label": "low",
+  "unanswerable": true,
+  "rationale": "delete_cookie spans response.py and cookie.py windows; issue clipped, so cannot tell which. Host read cookie.py and edited."
+ },
+ {
+  "id": "rt-035",
+  "label": "win_db8348036367",
+  "confidence": 0.8,
+  "confidence_label": "high",
+  "unanswerable": false,
+  "rationale": "Unique grep hit def add at defaultfilters.py:675; window covers the whole filter; host read it and edited directly."
+ },
+ {
+  "id": "rt-036",
+  "label": "reason",
+  "confidence": 0.85,
+  "confidence_label": "high",
+  "unanswerable": false,
+  "rationale": "README, solution and tests already read; host went straight to writing solution.py."
+ },
+ {
+  "id": "rt-037",
+  "label": "reason",
+  "confidence": 0.8,
+  "confidence_label": "high",
+  "unanswerable": false,
+  "rationale": "Offered files (latex, matrices test, pretty, tensor) read whole are not clearly useful; host ran tensor tests/stash instead."
+ },
+ {
+  "id": "rt-038",
+  "label": "reason",
+  "confidence": 0.9,
+  "confidence_label": "high",
+  "unanswerable": false,
+  "rationale": "Tests pass and todos done; the next action is the final reply."
+ },
+ {
+  "id": "rt-039",
+  "label": "reason",
+  "confidence": 0.85,
+  "confidence_label": "high",
+  "unanswerable": false,
+  "rationale": "Offered windows are categorical/axisgrid get_offsets, unrelated to tick-offset formatting. Host probed matplotlib instead."
+ },
+ {
+  "id": "rt-040",
+  "label": "reason",
+  "confidence": 0.85,
+  "confidence_label": "high",
+  "unanswerable": false,
+  "rationale": "Both files were just written; reading them back is not needed. Host rewrote solution.py and formatted."
+ },
+ {
+  "id": "rt-041",
+  "label": "read_d82ab49f91a6",
+  "confidence": 0.7,
+  "confidence_label": "medium",
+  "unanswerable": false,
+  "rationale": "Task instructs README first and nothing is read yet; README defines the paginate contract."
+ },
+ {
+  "id": "rt-042",
+  "label": "read_d82ab49f91a6",
+  "confidence": 0.85,
+  "confidence_label": "high",
+  "unanswerable": false,
+  "rationale": "Task: read README then make the exact change it describes; README is the unambiguous first step."
+ },
+ {
+  "id": "rt-043",
+  "label": "win_41f31361be9c",
+  "confidence": 0.5,
+  "confidence_label": "low",
+  "unanswerable": false,
+  "rationale": "Unique grep hit def fill at _axes.py:5134; window covers the method; host read adjacent ranges next."
+ },
+ {
+  "id": "rt-044",
+  "label": "win_588ed8f3271b",
+  "confidence": 0.45,
+  "confidence_label": "low",
+  "unanswerable": false,
+  "rationale": "Single test hit &#39; in test_addslashes; reading it enables the test edit the host made. Source change presumably done; moderately useful."
+ },
+ {
+  "id": "rt-045",
+  "label": "reason",
+  "confidence": 0.55,
+  "confidence_label": "medium",
+  "unanswerable": false,
+  "rationale": "Three test-side linter fixture windows; issue clipped so which matters is unclear. Host read conftest and a similar test."
+ },
+ {
+  "id": "rt-046",
+  "label": "reason",
+  "confidence": 0.85,
+  "confidence_label": "high",
+  "unanswerable": false,
+  "rationale": "Offered windows are unrelated tests; host ran tests and sed pylinter.py instead."
+ },
+ {
+  "id": "rt-047",
+  "label": "read_773501a732dd",
+  "confidence": 0.5,
+  "confidence_label": "low",
+  "unanswerable": false,
+  "rationale": "lib.rs is already written; Cargo.toml is the other file the task says to modify and has not been read. Host read it next."
+ },
+ {
+  "id": "rt-048",
+  "label": "reason",
+  "confidence": 0.8,
+  "confidence_label": "high",
+  "unanswerable": false,
+  "rationale": "Whole-file reads of html fixture/tests are not useful; host checked git diff and ran test suites."
+ },
+ {
+  "id": "rt-049",
+  "label": "reason",
+  "confidence": 0.5,
+  "confidence_label": "low",
+  "unanswerable": false,
+  "rationale": "Mix of docs, storage.py and global_settings windows with the issue cut off; host read tests and settings instead."
+ },
+ {
+  "id": "rt-050",
+  "label": "reason",
+  "confidence": 0.85,
+  "confidence_label": "high",
+  "unanswerable": false,
+  "rationale": "Windows are release-note mentions; host searched management-command docs, not these."
+ },
+ {
+  "id": "rt-051",
+  "label": "win_ca242d5fca3a",
+  "confidence": 0.5,
+  "confidence_label": "low",
+  "unanswerable": false,
+  "rationale": "Grep located apply_dataset_vfunc at line 423; window covers it and is the natural next read, though host then grepped further."
+ },
+ {
+  "id": "rt-052",
+  "label": "win_0c0cb44b7075",
+  "confidence": 0.55,
+  "confidence_label": "medium",
+  "unanswerable": false,
+  "rationale": "Window covers base_stealth_options (226) edit target and nearby parser setup; host read a superset then edited line 226."
+ },
+ {
+  "id": "rt-053",
+  "label": "reason",
+  "confidence": 0.8,
+  "confidence_label": "high",
+  "unanswerable": false,
+  "rationale": "Offered _legend windows do not match the offset-formatting issue; host grepped get_offset and probed matplotlib."
+ },
+ {
+  "id": "rt-054",
+  "label": "win_f7afebd2552d",
+  "confidence": 0.55,
+  "confidence_label": "medium",
+  "unanswerable": false,
+  "rationale": "Window covers ReadOnlyPasswordHashField including __init__, the edit target; host read a superset then edited it."
+ },
+ {
+  "id": "rt-055",
+  "label": "read_d82ab49f91a6",
+  "confidence": 0.7,
+  "confidence_label": "medium",
+  "unanswerable": false,
+  "rationale": "Task says read README then repair; nothing read yet. README is the documented contract to read first."
+ },
+ {
+  "id": "rt-056",
+  "label": "reason",
+  "confidence": 0.75,
+  "confidence_label": "medium",
+  "unanswerable": false,
+  "rationale": "Listed files (permutation importance, spectral embedding) not clearly relevant; host grepped TransformerMixin in base.py."
+ },
+ {
+  "id": "rt-057",
+  "label": "win_e739553e2d41",
+  "confidence": 0.8,
+  "confidence_label": "high",
+  "unanswerable": false,
+  "rationale": "Unique class Paginator hit at line 27; window covers class header and methods; host read it and added __iter__."
+ },
+ {
+  "id": "rt-058",
+  "label": "reason",
+  "confidence": 0.5,
+  "confidence_label": "low",
+  "unanswerable": true,
+  "rationale": "Three clear_denoms implementations; right one depends on the clipped issue. Host read polyclasses then grepped densetools."
+ },
+ {
+  "id": "rt-059",
+  "label": "reason",
+  "confidence": 0.55,
+  "confidence_label": "medium",
+  "unanswerable": false,
+  "rationale": "plot.py/scales.py windows with the issue cut off; host read plot.py then ran a probe script. Not clearly sufficient."
+ },
+ {
+  "id": "rt-060",
+  "label": "reason",
+  "confidence": 0.55,
+  "confidence_label": "medium",
+  "unanswerable": false,
+  "rationale": "Window ends at 1918 before IndexVariable.copy region host later read (1900-1970); needs further search."
+ },
+ {
+  "id": "rt-061",
+  "label": "win_ba513b56c3a5",
+  "confidence": 0.5,
+  "confidence_label": "low",
+  "unanswerable": false,
+  "rationale": "Docs-scoped grep; settings.txt window around line 1480 holds the setting's default text, which host read then edited."
+ },
+ {
+  "id": "rt-062",
+  "label": "reason",
+  "confidence": 0.85,
+  "confidence_label": "high",
+  "unanswerable": false,
+  "rationale": "Checks ran and solution exists; host went to todo update and final reply, no re-read needed."
+ },
+ {
+  "id": "rt-063",
+  "label": "read_c18d1bf6339d",
+  "confidence": 0.55,
+  "confidence_label": "medium",
+  "unanswerable": false,
+  "rationale": "Clippy warnings cite many src/lib.rs lines; reading lib.rs is the needed step before patching. Host read it then patched."
+ },
+ {
+  "id": "rt-064",
+  "label": "reason",
+  "confidence": 0.9,
+  "confidence_label": "high",
+  "unanswerable": false,
+  "rationale": "Whole-file reads of unrelated filter tests; host grepped forms tests for &#39; instead."
+ },
+ {
+  "id": "rt-065",
+  "label": "reason",
+  "confidence": 0.6,
+  "confidence_label": "medium",
+  "unanswerable": false,
+  "rationale": "Host edited unittest_similar.py directly (already read), so no read is needed; offered windows are tests."
+ },
+ {
+  "id": "rt-066",
+  "label": "reason",
+  "confidence": 0.5,
+  "confidence_label": "low",
+  "unanswerable": false,
+  "rationale": "Docs-heavy windows with global_settings among them; issue cut off. Host read settings docs then edited global_settings."
+ },
+ {
+  "id": "rt-067",
+  "label": "read_d82ab49f91a6",
+  "confidence": 0.7,
+  "confidence_label": "medium",
+  "unanswerable": false,
+  "rationale": "Task instructs README first; nothing read yet. README gives the contract for repairing solution.py."
+ },
+ {
+  "id": "rt-068",
+  "label": "read_d82ab49f91a6",
+  "confidence": 0.7,
+  "confidence_label": "medium",
+  "unanswerable": false,
+  "rationale": "Task instructs README first; nothing read yet. README gives the contract for repairing solution.py."
+ },
+ {
+  "id": "rt-069",
+  "label": "reason",
+  "confidence": 0.8,
+  "confidence_label": "high",
+  "unanswerable": false,
+  "rationale": "Window centers on an irrelevant noisy None grep hit; host read elsewhere (line 1280) and grepped typehints."
+ },
+ {
+  "id": "rt-070",
+  "label": "reason",
+  "confidence": 0.5,
+  "confidence_label": "low",
+  "unanswerable": true,
+  "rationale": "Four candidate __init__.py windows; issue clipped, so cannot tell which matters. Host read python.py near line 150-220."
+ }
+]

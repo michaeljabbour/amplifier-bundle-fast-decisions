@@ -40,6 +40,7 @@ CLASS_NOTES = {
     "accepted_wrong_code": "Search: the judge said the source implements the behaviour when it does not.",
     "rejected_correct_code": "Search: the judge said the source does not implement the behaviour when it does.",
 }
+TRACE_LABELS = REPO / "evals" / "judge_bench" / "traces" / "labels_final.json"
 RUN_KEYS_DEFAULT = ("git_sha", "ollama_version", "host", "host_load", "openai_decisions_probe",
                     "arm_determinism", "argv", "dates", "budget")
 
@@ -124,12 +125,16 @@ def _tags_for(split: str, manifest: dict) -> dict:
     return {c["id"]: c.get("tags") or {} for c in cases if isinstance(c, dict) and "id" in c}
 
 
-def _family(arm: str, summary_arm: dict, models: list[str]) -> str:
+def _family(arm: str, summary_arm: dict, models: list[str], specs: dict | None = None) -> str:
     flags = summary_arm.get("flags", {})
+    adapters, spec = [], (specs or {}).get(arm)
+    while spec:
+        adapters.append(spec.get("adapter"))
+        spec = (specs or {}).get(spec.get("base"))
     costs = [r.get("cost", {}).get("usd_per_1m_decisions") or 0 for r in summary_arm.get("reps", {}).values()]
     if any(c > 0 for c in costs):
         return "hosted"
-    if flags.get("order_flip_comparable") is False:
+    if flags.get("order_flip_comparable") is False or "ollama_backend" in adapters:
         return "generic"
     return "system_one"
 
@@ -226,7 +231,7 @@ def load_split(d: Path, name: str) -> dict | None:
         m = metrics(prim_maps[a])
         base = a.split("+", 1)[0] if "+" in a else None
         judges.append({
-            "arm": a, "short": _short(a), "family": _family(a, sa, sorted(models.get(a, []))),
+            "arm": a, "short": _short(a), "family": _family(a, sa, sorted(models.get(a, [])), (_read_json(d / "run.json") or {}).get("specs")),
             "base": base if base in ai else None,
             "models": sorted(models.get(a, [])), "flags": sa.get("flags", {}),
             **m,
@@ -243,7 +248,8 @@ def load_split(d: Path, name: str) -> dict | None:
 
     # ---- per-case dataset for client-side explorer / calculator / drill-down
     case_out = []
-    audit = _load_audit(d.parent, name, case_ids, by_id)
+    trace = any("native" in c for c in cases)  # trace-derived split: real decisions replayed in native form
+    audit = _trace_audit(case_ids, by_id) if trace else _load_audit(d.parent, name, case_ids, by_id)
     for c in cases:
         dec = c["payload"]["questions"]["decision"]
         try:
@@ -332,7 +338,7 @@ def load_split(d: Path, name: str) -> dict | None:
             "classes": classes, "matrix": matrix, "declared": declared, "safe": safe, "variants": variants,
             "fail": fail_tbl, "ref": ref, "run": _read_json(d / "run.json"), "summary_policies": summary.get("policies", []),
             "prices": manifest.get("prices_usd_per_mtok"), "audit_note_present": bool(audit),
-            "primary_policy": primary}
+            "primary_policy": primary, **({"trace": True} if trace else {})}
 
 
 def _count(cases, key):
@@ -340,6 +346,19 @@ def _count(cases, key):
     for c in cases:
         out[str(c.get(key))] = out.get(str(c.get(key)), 0) + 1
     return dict(sorted(out.items()))
+
+
+def _trace_audit(case_ids, by_id) -> dict:
+    """Per-case review notes for trace cases, from traces/labels_final.json (the preregistered final labels)."""
+    labels = (_read_json(TRACE_LABELS, {}) or {}).get("labels", {})
+    out = {}
+    for cid in case_ids:
+        e = labels.get(cid) or {}
+        out[cid] = {"trace": True, "frozen": by_id[cid]["expected"], "outcome_label": e.get("outcome_label"),
+                    "A": {"label": e.get("reviewer_A")}, "B": {"label": e.get("reviewer_B")},
+                    "decision": e.get("decision"), "hard_to_answer": bool(e.get("hard_to_answer")),
+                    "why": e.get("why")}
+    return out
 
 
 def _load_audit(root: Path, split: str, case_ids, by_id) -> dict:
@@ -748,6 +767,11 @@ def limits_html(splits: dict, audit, lat) -> str:
                 ag = sec.get("A_vs_frozen") or {}
                 items.append(f"<li><b>{k} label audit:</b> reviewers &mdash; {esc(rv)}; reviewer A vs frozen label agreement "
                              f"{pct(ag.get('agreement'))} (kappa {ag.get('kappa')}) over {ag.get('n')} cases.</li>")
+    elif any(sp and sp.get("trace") for sp in splits.values()):
+        items.append("<li><b>Labels:</b> the final label is the two blind reviewers' shared label (cases where they disagree "
+                     "are dropped); the host model's actual next read is kept as the outcome label and shown beside it in the "
+                     "case drill-down. Labels are reviewer judgements of sufficiency from the judge's view, not ground truth; "
+                     "reviewers are Anthropic models. All cases come from this bundle's own benchmark sessions.</li>")
     else:
         items.append("<li><b>Labels:</b> label-audit/agreement.json not found; label quality is unaudited.</li>")
     if lat:
@@ -757,6 +781,60 @@ def limits_html(splits: dict, audit, lat) -> str:
     items.append("<li><b>Cost:</b> hosted prices come from the manifest; local judges show $0 because hardware, power and "
                  "operations are not modelled.</li>")
     return "<ul class='notes'>" + "".join(items) + "</ul>"
+
+
+# ----------------------------------------------------------------------------- trace mode
+# Copy and drill-down changes for trace-derived splits (cases that carry `native`). Constructed splits never
+# pass through these replacements, so their pages stay byte-identical.
+def _swap(text: str, old: str, new: str) -> str:
+    if old not in text:
+        raise SystemExit(f"report.py: trace-mode copy anchor not found: {old[:60]!r}")
+    return text.replace(old, new)
+
+
+TRACE_JS = (
+    ("  for (const k of Object.keys(cs.state)) { const v = String(cs.state[k]); st.append(",
+     "  for (const k of Object.keys(cs.state)) { if (k === 'observations' && Array.isArray(cs.state[k])) { cs.state[k].forEach((o, n) => st.append(h('div', {}, h('b', {text: 'Observation ' + (n + 1) + ' (' + (o.role || '?') + '): '}), h('pre', {class: 'st', text: String(o.text)})))); continue; } const v = String(cs.state[k]); st.append("),
+    ("text: k + ': ' + cs.options[k]}",
+     "text: k + ': ' + cs.options[k] + (cs.audit && cs.audit.outcome_label === k ? '  [the host\\'s actual next read]' : '')}"),
+    ("  if (a) {\n    const l = h('ul', {});",
+     "  if (a && a.trace) {\n    const l = h('ul', {});\n"
+     "    l.append(h('li', {text: 'Final label (scored): ' + JSON.stringify(a.frozen) + ' \\u2014 decision: ' + (a.decision || 'n/a')}));\n"
+     "    l.append(h('li', {text: 'Outcome label (the host\\'s actual next read, or reason): ' + JSON.stringify(a.outcome_label)}));\n"
+     "    for (const who of ['A', 'B']) l.append(h('li', {text: 'Reviewer ' + who + ': ' + JSON.stringify(a[who].label)}));\n"
+     "    l.append(h('li', {text: 'Flags: ' + (a.hard_to_answer ? 'hard to answer' : 'none') + (a.why ? '. ' + a.why : '')}));\n"
+     "    p.append(l);\n  } else if (a) {\n    const l = h('ul', {});"),
+)
+
+
+def trace_template(body: str, js: str, n_by_split: dict) -> tuple[str, str]:
+    """Swap the constructed-benchmark copy for trace-split copy; returns (template, js)."""
+    counts = " and ".join(f"{n} ({k})" for k, n in n_by_split.items())
+    body = _swap(body, "given only 90 or 63 cases", f"given only {counts} cases")
+    body = _swap(body, "for example clicking <em>Buy now</em> when the task never said to buy",
+                 "for example reading a file that was not the right next step")
+    body = _swap(body, "The wrong-action projections assume the benchmark's case mix, which is deliberately adversarial (heavy on side-effect, injection and fallback cases), not real traffic. Treat them as upper-bound stress numbers, not forecasts; real traffic will usually produce far fewer wrong automatic actions.",
+                 "The cases are real decisions the in-session judge sent to the host; reads have no side effects, so a wrong automatic decision here is an unnecessary read, not an irreversible action. They come from this bundle's own benchmark sessions, so the mix is not your traffic.")
+    body = _swap(body, "<b>Read the wrong-action numbers as a stress test, not a forecast.</b>",
+                 "<b>Read the wrong-action numbers as a measurement on these cases, not a forecast.</b>")
+    body = _swap(body, "Cost per million decisions is the mean billed-token cost at listed prices; local judges list $0 and exclude hardware.",
+                 "Cost per million decisions is the mean over repetitions of each repetition's mean billed-token cost at listed prices (the real states are about 1,100 tokens); local judges list $0 and exclude hardware.")
+    body = _swap(body, " It is shown a task and what is on screen (or a search query and a code snippet), plus a few prepared options, and returns",
+                 " It is shown the agent's task and recent tool output, plus a few prepared reads, and returns")
+    body = _swap(body, " Yes/no questions (\"does this code do what was asked?\") return one probability and have no <code>reason</code> option.", "")
+    body = _swap(body, " <b>Yes/no answers have no abstention in the bundle:</b> they are always acted on unless the call times out.", "")
+    body = _swap(body, " (When these runs were measured, the computer-use variant relaxed the probability bar to @@CUA_P@@ with no margin rule; since PR #56, main uses the same 0.90 / 0.20 gate for computer use. See the change history.)", "")
+    body = body.replace("frozen label", "final label").replace("label-audit notes", "reviewer labels")
+    js = js.replace("frozen label", "final label").replace("label-audit notes", "reviewer labels")
+    js = _swap(js, "Wrong-action counts assume this benchmark's adversarial case mix, so they are upper-bound stress numbers.",
+               "Wrong-action counts come from real decisions in this bundle's own benchmark sessions (reads have no side effects), not from your traffic.")
+    for old, new in TRACE_JS:
+        js = _swap(js, old, new)
+    return body, js
+
+
+def trace_css(css: str) -> str:
+    return _swap(css, "(frozen label)", "(final label)")
 
 
 # ----------------------------------------------------------------------------- assembly
@@ -810,7 +888,9 @@ def build(root: Path) -> str:
     for name, sp in splits.items():
         hl += f"<h3>{esc(name)}</h3>" + headline_table(sp)
 
-    body = TEMPLATE
+    body, js = TEMPLATE, JS
+    if dev.get("trace"):
+        body, js = trace_template(body, js, {k: len(v["cases"]) for k, v in splits.items() if v})
     repl = {
         "@@POLICY_READ@@": f"{read['min_p']:.2f}", "@@MARGIN@@": f"{read['min_margin']:.2f}", "@@TIMEOUT_S@@": f"{to_s:g}",
         "@@CUA_P@@": f"{cua['min_p']:.2f}", "@@HEADLINE_TABLES@@": hl,
@@ -824,7 +904,7 @@ def build(root: Path) -> str:
         "@@CHANGES@@": changes_html(changes),
         "@@LIMITS@@": limits_html(splits, audit, lat),
         "@@N_DEV@@": str(n_dev), "@@POLICY_NAME@@": esc(dev["primary_policy"]),
-        "@@CSS@@": _css(), "@@JS@@": JS,
+        "@@CSS@@": trace_css(_css()) if dev.get("trace") else _css(), "@@JS@@": js,
         "@@DATA@@": json.dumps(data, sort_keys=True, separators=(",", ":")).replace("</", "<\\/").replace("<!--", "<\\!--"),
     }
     for k, v in repl.items():

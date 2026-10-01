@@ -80,6 +80,29 @@ What \textbf{is} distinguishable: Jev is more accurate than every local judge on
 \MaxLocalAccPHolmDev$); on the holdout Jev makes fewer wrong automatic decisions than every local judge
 except nimble 9B, and is more accurate than every local judge except nimble 9B and tev1 4B.
 
+\subsection{What the follow-up studies add}\label{sec:recs-followup}
+
+The two follow-ups in \cref{sec:followup} leave the recommendations above in place and add two.
+\begin{itemize}
+  \item \textbf{Jev stays the default.} On \TrN\ real decisions nothing replaced it, and Jev, Luna and Sol
+    were within noise (\cref{sec:traceresults}).
+  \item \textbf{Keep the host guard.} The real read decisions offered no side-effect actions, so they
+    neither support nor weaken the guard; the constructed holdout's confirmation stands.
+  \item \textbf{The read shortcut is not yet shown to pay off on real traffic.} Under the preregistered
+    rule, \TrNUseful\ of \NumBase\ judges were useful: every judge that captured at least
+    \TrUsefulMinReads\ sufficient reads also made wrong automatic reads. The next step is measurement on
+    live traffic, not tuning on this holdout: a mode that runs \emph{both} paths for the same decision
+    (the judge's pick and the host's own next step) and records whether the read was enough and what it
+    saved. The bundle owner wants such a ``parallel'' or ``counterfactual'' mode; it is future work, and
+    nothing here builds or measures it.
+  \item \textbf{Route at session start, or stick with a choice.} On Opus-class hosts, routing stopped
+    saving money in longer sessions (\CaOpusRoutedOne$\times$ to \CaOpusRoutedFour$\times$), and switching
+    models mid-session pays a cache rebuild on top. Choosing the model at the start of a session, or
+    keeping a sticky choice, avoids the rebuild; the shipped default router already made no mid-turn
+    switches on SWE-bench. This is a recommendation pending the proposed caching experiment
+    (\cref{sec:caching}), which has not been run.
+\end{itemize}
+
 \subsection{What would change these recommendations}
 
 \begin{itemize}
@@ -91,6 +114,10 @@ except nimble 9B, and is more accurate than every local judge except nimble 9B a
     more can be detected. A real accuracy advantage for Luna or Sol of that size or smaller is
     compatible with these data.
   \item \textbf{Live-traffic receipts} that disagree with this constructed benchmark.
+  \item \textbf{A parallel (counterfactual) measurement on live traffic} showing that a judge captures
+    sufficient reads without misfiring, which would revive the read shortcut.
+  \item \textbf{The proposed caching experiment} (\CaPropTurns-turn sessions, cache expiry and a sticky
+    arm), which could confirm or overturn the advice to avoid mid-session switches.
 \end{itemize}
 Any changed configuration needs a \emph{new} holdout; this one is now spent.
 
