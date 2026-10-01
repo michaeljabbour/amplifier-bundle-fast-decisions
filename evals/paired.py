@@ -2013,7 +2013,15 @@ def _ctx_from_schedule(out: Path, args=None) -> Ctx:
     plan = _read_json(Path(out) / "schedule.json")
     if plan is None:
         raise PairedError(EXIT_PRECONDITION, f"{out}/schedule.json not found (run `plan` first)")
-    design = load_design(args.design if args is not None and getattr(args, "design", None) else DEFAULT_DESIGN)
+    if args is not None and getattr(args, "design", None):
+        design_path = args.design
+    else:
+        # The schedule names its design; use it so `run`/`rows` never silently fall back to the pilot design.
+        candidate = REPO_ROOT / "evals" / "paired" / f"{plan.get('design', '')}.yaml"
+        design_path = candidate if plan.get("design") and candidate.exists() else DEFAULT_DESIGN
+    design = load_design(design_path)
+    if plan.get("design") and design.get("id") != plan["design"]:
+        raise PairedError(EXIT_PRECONDITION, f"design {design.get('id')!r} does not match the schedule's {plan['design']!r}")
     import run as evals_run
     specs = {s.id: s for s in load_specs(design)}
     for sid, m in plan["scenarios"].items():
