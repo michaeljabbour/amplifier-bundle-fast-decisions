@@ -19,7 +19,7 @@ from .stats import (SEED, bootstrap_ci, brier_decomposition, ece, holm, mcnemar_
                     wilson)
 
 SCHEMA = "fast-decisions-evals/judge-summary/v1"
-KINDS = ("select", "search", "cua")
+KINDS = ("select", "search", "cua", "read_shortcut")
 OUTCOME_KEYS = ("correct", "automatic", "automatic_error")
 
 
@@ -243,15 +243,21 @@ def summarize(rows, cases, tags, policies, specs=None, contrasts=None, primary=N
     primary_policy = next(p for p in policies if p["name"] == primary)
     screens = sorted({c.get("screen") for c in cases if c.get("screen")})
     if split is None:
-        split = "holdout" if screens == ["holdout"] else "dev"
-    label = "preregistered" if split == "holdout" else "screen"
+        split = screens[0] if screens in (["holdout"], ["trace-dev"], ["trace-holdout"]) else "dev"
+    label = "preregistered" if split in ("holdout", "trace-holdout") else "screen"
 
     summary = {"schema": SCHEMA, "split": split, "label": label, "primary_policy": primary,
                "n_cases": len(cases), "policies": [p["name"] for p in policies], "arms": {}}
     for arm in ctx.arms:
         adapters = _adapters(arm, specs)
+        forms = sorted({r.get("form") for (a, _, _), d in ctx.index.items() if a == arm for r in d.values()
+                        if r.get("form")})
+        # The question-mode OllamaBackend averages both option orders in one call, so its two passes are
+        # the same request; the native candidate path asks one order per call, so flips are real.
         flags = {"self_reported_probabilities": "chat" in adapters,
-                 "order_flip_comparable": "ollama_backend" not in adapters}
+                 "order_flip_comparable": "ollama_backend" not in adapters or forms == ["native"]}
+        if forms:  # only trace runs log a form; omitting it keeps committed summaries replaying byte for byte
+            flags["forms"] = forms
         detail = {"self_reported": flags["self_reported_probabilities"], "tags": tags}
         reps = ctx.reps(arm)
         arm_out = {"flags": flags, "reps": {}, "policies": {}}

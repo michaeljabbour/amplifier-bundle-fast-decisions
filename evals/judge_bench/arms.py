@@ -14,6 +14,8 @@ import math
 import os
 import re
 
+from . import native as nat
+
 JEV_URL = "https://api.typesafe.ai/v1/systemone"
 OLLAMA_SYSTEMONE = "http://127.0.0.1:11434/v1/systemone"
 LAYA_URL = "http://127.0.0.1:8090/v1/decide"
@@ -54,12 +56,28 @@ def _result(answer, model, tin, tout, timing_ms, status, **extra) -> dict:
     return out
 
 
+async def _adapted(arm, client, case, order) -> dict:
+    """The bench choice-question form (`payload`), marked as adapted for trace cases."""
+    from .cases import reorder
+    result = await arm.decide(client, reorder(case["payload"], order))
+    result["form"] = nat.ADAPTED
+    return result
+
+
+async def decide_case(arm, client, case, order) -> dict:
+    """Ask `arm` about a trace case in its native request form when one exists, else adapted.
+    The result carries `form`: "native" | "adapted"."""
+    method = getattr(arm, "decide_case", None)
+    return await (method(client, case, order) if method else _adapted(arm, client, case, order))
+
+
 class SystemOneArm:
     """System One protocol (Jev, Ollama /v1/systemone, local Laya /v1/decide)."""
 
     SENT = {"temperature_sent": None, "seed_sent": None}
 
-    def __init__(self, name, url, model, token=None):
+    def __init__(self, name, url, model, token=None, native_form=None):
+        self.native_form, self._laya = native_form, None
         self.name, self.url, self.model, self.token = name, url, model, token
 
     @property
@@ -84,6 +102,46 @@ class SystemOneArm:
                            server_ms(response.headers), response.status_code)
         except Exception as exc:
             raise ArmParseError(f"{type(exc).__name__}: {exc}", usage_pair, response.status_code) from exc
+
+
+    async def decide_case(self, client, case, order):
+        if case.get("native") is None or self.native_form is None:
+            return await _adapted(self, client, case, order)
+        native = nat.reorder_native(case["native"], order)
+        if self.native_form == "systemone_body":
+            return await self._native_systemone(client, native)
+        if self.native_form == "laya_backend":
+            return await self._native_laya(native)
+        raise KeyError(f"arm {self.name}: unknown native_form {self.native_form!r}")
+
+    async def _native_systemone(self, client, native):
+        """The body JevBackend._ask_urllib sends (state, model, questions with next_action)."""
+        headers = {"User-Agent": "amplifier-fast-decisions/0.1"}
+        if self.token:
+            headers["Authorization"] = "Bearer " + self.token
+        response = await client.post(self.url, json=nat.systemone_request_body(native, self.model), headers=headers)
+        response.raise_for_status()
+        usage_pair = (None, None)
+        try:
+            data = response.json()
+            if not data.get("model"):
+                raise ValueError("Missing model identity")
+            usage = data.get("usage") or {}
+            usage_pair = (usage.get("input_tokens"), usage.get("output_tokens"))
+            return _result(nat.systemone_answer(data), data["model"], usage_pair[0], usage_pair[1],
+                           server_ms(response.headers), response.status_code, form=nat.NATIVE)
+        except Exception as exc:
+            raise ArmParseError(f"{type(exc).__name__}: {exc}", usage_pair, response.status_code) from exc
+
+    async def _native_laya(self, native):
+        """The real LayaBackend candidate path: its own criteria/instructions, validation and renormalizing."""
+        if self._laya is None:
+            from amplifier_fast_decisions.local_backend import LayaBackend
+            base = self.url[:-len("/v1/decide")] if self.url.endswith("/v1/decide") else self.url
+            self._laya = LayaBackend(url=base, timeout_ms=60000)
+        result = await self._laya.ask(nat.decision_request(native))
+        return _result(nat.decision_answer(result), result.model, result.input_tokens, result.output_tokens,
+                       None, None, form=nat.NATIVE)
 
 
 _slow_depth = 0
@@ -114,9 +172,10 @@ class OllamaBackendArm:
     SENT = {"temperature_sent": 0, "seed_sent": None}
 
     def __init__(self, name, model, keep_reason_option: bool = True, url: str = OLLAMA_ORIGIN,
-                 client=None, timeout_ms: int = 60000):
+                 client=None, timeout_ms: int = 60000, native_form=None):
         from amplifier_fast_decisions.local_backend import OllamaBackend
         self.name, self.model, self.keep_reason_option = name, model, keep_reason_option
+        self.native_form = native_form
         self.backend = OllamaBackend(model=model, url=url, timeout_ms=timeout_ms, client=client)
 
     @property
@@ -147,6 +206,16 @@ class OllamaBackendArm:
             decision = {"type": "choice", "probabilities": probabilities,
                         "choice": max(probabilities, key=probabilities.get)}
         return _result(decision, self.model, None, None, None, None)
+
+
+    async def decide_case(self, client, case, order):
+        if case.get("native") is None or self.native_form != "ollama_backend":
+            return await _adapted(self, client, case, order)
+        # The production candidate path, unmodified: letter-coded options, "Z. None of the above", SLOW residual.
+        # No sentinel swap here: in the bundle `reason` really is the abstain option.
+        result = await self.backend.ask(nat.decision_request(nat.reorder_native(case["native"], order)))
+        return _result(nat.decision_answer(result), self.model, result.input_tokens, result.output_tokens,
+                       None, None, form=nat.NATIVE)
 
 
 class ChatJudgeArm:
@@ -314,6 +383,24 @@ class InstructionClauseArm:
     async def decide(self, client, payload):
         return await self.base.decide(client, self.patch(payload))
 
+    async def decide_case(self, client, case, order):
+        """System One native bodies take the clause in next_action.instructions. The Ollama and Laya
+        candidate paths have fixed prompts with no instruction slot, so the clause can only travel in
+        the adapted question form."""
+        if case.get("native") is not None and getattr(self.base, "native_form", None) == "systemone_body":
+            return await self.base.decide_case(client, nat.patch_clause(case, self.clause), order)
+        from .cases import reorder
+        result = await self.base.decide(client, reorder(self.patch(case["payload"]), order))
+        result["form"] = nat.ADAPTED
+        return result
+
+
+def native_form_of(arm) -> str | None:
+    """The native request form this arm uses on trace cases (None: it runs adapted)."""
+    if isinstance(arm, InstructionClauseArm):
+        return "systemone_body" if getattr(arm.base, "native_form", None) == "systemone_body" else None
+    return getattr(arm, "native_form", None)
+
 
 def build_arm(spec: dict, specs: dict | None = None, env=None):
     """Construct an arm from a judges.yaml entry (keys come from env only)."""
@@ -329,10 +416,10 @@ def build_arm(spec: dict, specs: dict | None = None, env=None):
         return env[var]
 
     if adapter == "systemone":
-        return SystemOneArm(name, spec["url"], spec.get("model"), key())
+        return SystemOneArm(name, spec["url"], spec.get("model"), key(), spec.get("native_form"))
     if adapter == "ollama_backend":
         return OllamaBackendArm(name, spec["model"], spec.get("keep_reason_option", True),
-                                spec.get("url", OLLAMA_ORIGIN))
+                                spec.get("url", OLLAMA_ORIGIN), native_form=spec.get("native_form"))
     if adapter == "chat":
         return ChatJudgeArm(name, spec["model"], key("OPENAI_API_KEY"), spec.get("effort", "none"),
                             spec.get("max_tokens", 200), spec.get("service_tier"), spec.get("url", OPENAI_URL))

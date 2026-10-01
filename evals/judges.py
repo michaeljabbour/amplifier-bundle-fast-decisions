@@ -32,12 +32,16 @@ for extra in (str(ROOT), str(ROOT / "src")):
         sys.path.insert(0, extra)
 
 from evals.judge_bench import cases as case_lib  # noqa: E402
-from evals.judge_bench.arms import ArmUnavailable, OpenAIDecisionsArm, build_arm  # noqa: E402
+from evals.judge_bench.arms import (ArmUnavailable, OpenAIDecisionsArm, build_arm, decide_case,  # noqa: E402
+                                    native_form_of)
 from evals.judge_bench.scoring import resolve_policy, validate_answer  # noqa: E402
 from evals.judge_bench.summarize import summarize  # noqa: E402
 
 CONFIG = Path(__file__).resolve().parent / "judges.yaml"
 HOLDOUT_DIR = ROOT / "evals" / "judge_bench" / "holdout"
+TRACES_DIR = ROOT / "evals" / "judge_bench" / "traces"
+SPLITS = ("dev", "holdout", "trace-dev", "trace-holdout")
+PREREGISTERED_SPLITS = ("holdout", "trace-holdout")
 SCHEMA = "fast-decisions-evals/judges/v1"
 SECRET_ENV = ("TYPESAFE_API_KEY", "OPENAI_API_KEY")
 
@@ -109,15 +113,23 @@ def _git(root: Path, *args: str) -> subprocess.CompletedProcess:
     return subprocess.run(["git", "-C", str(root), *args], capture_output=True, text=True)
 
 
-def check_holdout_guard(root: Path = ROOT, holdout_dir: Path | None = None) -> str:
-    """Refuse unless the preregistration and cases are committed, unmodified, and
-    the preregistered cases_sha256 matches the cases on disk. Returns the sha."""
-    holdout_dir = Path(holdout_dir) if holdout_dir else HOLDOUT_DIR
-    prereg, cases_file = holdout_dir / "PREREGISTRATION.md", holdout_dir / "cases.json"
-    for f in (prereg, cases_file):
+def check_holdout_guard(root: Path = ROOT, holdout_dir: Path | None = None, split: str = "holdout") -> str:
+    """Refuse unless the preregistration and the case files are committed, unmodified, and the
+    preregistered cases_sha256 matches the cases on disk. Returns the sha.
+
+    holdout:       <holdout dir>/PREREGISTRATION.md + cases.json
+    trace-holdout: <traces dir>/PREREGISTRATION.md + pool.json + labels_final.json (the final labels are
+                   what `expected` is built from, so they are pinned like the cases)."""
+    trace = split == "trace-holdout"
+    holdout_dir = Path(holdout_dir) if holdout_dir else (TRACES_DIR if trace else HOLDOUT_DIR)
+    prereg = holdout_dir / "PREREGISTRATION.md"
+    data_files = ([holdout_dir / "pool.json", holdout_dir / "labels_final.json"] if trace
+                  else [holdout_dir / "cases.json"])
+    for f in (prereg, *data_files):
         if not f.exists():
-            raise GuardError(f"holdout guard: {f} does not exist; write and commit the preregistration first")
-    for f in (prereg, cases_file):
+            raise GuardError(f"holdout guard: {f} does not exist; write and commit the preregistration"
+                             + (" and the final labels" if trace else "") + " first")
+    for f in (prereg, *data_files):
         rel = str(f.resolve().relative_to(Path(root).resolve()))
         if _git(root, "ls-files", "--error-unmatch", rel).returncode != 0:
             raise GuardError(f"holdout guard: {rel} is not tracked by git; commit it first")
@@ -132,7 +144,12 @@ def check_holdout_guard(root: Path = ROOT, holdout_dir: Path | None = None) -> s
     match = re.search(r"^cases_sha256:\s*([0-9a-f]{64})\s*$", prereg.read_text(encoding="utf-8"), re.MULTILINE)
     if not match:
         raise GuardError("holdout guard: PREREGISTRATION.md has no 'cases_sha256: <64 hex>' line")
-    actual = case_lib.cases_sha256(case_lib.holdout_cases(cases_file))
+    try:
+        cases = (case_lib.trace_cases("trace-holdout", data_files[0], data_files[1]) if trace
+                 else case_lib.holdout_cases(data_files[0]))
+    except (ValueError, KeyError) as exc:
+        raise GuardError(f"holdout guard: the cases do not load: {exc}") from exc
+    actual = case_lib.cases_sha256(cases)
     if actual != match.group(1):
         raise GuardError(f"holdout guard: cases hash {actual} does not match preregistered {match.group(1)}")
     return actual
@@ -227,6 +244,13 @@ def _scrub(text: str) -> str:
     return text
 
 
+async def _ask(arm, client, case, order) -> dict:
+    """Trace cases go through the arm's native form when it has one; other cases use the bench payload."""
+    if case.get("native") is not None:
+        return await decide_case(arm, client, case, order)
+    return await arm.decide(client, case_lib.reorder(case["payload"], order))
+
+
 def _charge_unusable(exc, name, specs, spend, row=None) -> None:
     """An HTTP 2xx whose body could not be parsed was still billed: charge the usage it reported."""
     usage = getattr(exc, "usage", None)
@@ -245,8 +269,8 @@ async def _one(arm, name, case, order, rep, client, log, spend, specs, sem):
                "expected": case["expected"], "order": order, "valid": False}
         start = time.perf_counter()
         try:
-            result = await arm.decide(client, case_lib.reorder(case["payload"], order))
-            row.update(elapsed_ms=(time.perf_counter() - start) * 1000, model=result["model"],
+            result = await _ask(arm, client, case, order)
+            row.update(form=result.get("form", "bench"), elapsed_ms=(time.perf_counter() - start) * 1000, model=result["model"],
                        answer=result["answer"], input_tokens=result["input_tokens"],
                        output_tokens=result["output_tokens"], timing=result["timing"],
                        http_status=result["http_status"])
@@ -269,7 +293,7 @@ async def _block(arm, name, cases, rep, client, log, spend, specs, cfg, concurre
         if spend.exceeded():
             return
         try:
-            result = await arm.decide(client, case_lib.reorder(cases[0]["payload"], 0))
+            result = await _ask(arm, client, cases[0], 0)
             spend.total += request_cost(name, specs, result["input_tokens"], result["output_tokens"])
         except Exception as exc:
             _charge_unusable(exc, name, specs, spend)
@@ -367,6 +391,8 @@ async def run(args, cfg, cases, tags, split, arm_names, probe_decisions, prereg_
                   "reps": args.reps, "concurrency": args.concurrency, "arms": list(arm_names),
                   "cases": len(cases), "openai_decisions_probe": None,
                   "arm_determinism": {n: arms[n].determinism for n in arms}}
+    if cases and cases[0].get("native") is not None:
+        invocation["arm_forms"] = {n: ("native" if native_form_of(a) else "adapted") for n, a in arms.items()}
     meta = _meta_from_cfg(cfg)
 
     def write_run_doc() -> None:
@@ -446,7 +472,7 @@ def main(argv=None) -> int:
     # Benchmark traffic must never count toward production efficiency receipts (docs/GOAL.md).
     os.environ.setdefault("AFAST_TRAFFIC", "test")
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--split", choices=("dev", "holdout"), default="dev")
+    parser.add_argument("--split", choices=SPLITS, default="dev")
     parser.add_argument("--arms", nargs="+")
     parser.add_argument("--reps", type=int)
     parser.add_argument("--append", action="store_true", help="add or replace the selected arms in an existing run")
@@ -475,18 +501,21 @@ def main(argv=None) -> int:
     except (KeyError, ValueError) as exc:
         print(f"refusing: invalid policy configuration: {exc}", file=sys.stderr)
         return 2
-    if args.split == "holdout" and args.limit:
-        print("refusing: --limit is not allowed with --split holdout (the preregistered cases run whole)",
+    if args.split in PREREGISTERED_SPLITS and args.limit:
+        print(f"refusing: --limit is not allowed with --split {args.split} (the preregistered cases run whole)",
               file=sys.stderr)
         return 2
     prereg_sha = None
     try:
-        if args.split == "holdout":
-            prereg_sha = check_holdout_guard()
-            cases = case_lib.holdout_cases()
+        if args.split in PREREGISTERED_SPLITS:
+            prereg_sha = check_holdout_guard(split=args.split)
+            cases = (case_lib.holdout_cases() if args.split == "holdout"
+                     else case_lib.trace_cases(args.split))
+        elif args.split == "trace-dev":
+            cases = case_lib.trace_cases("trace-dev")
         else:
             cases = case_lib.dev_cases()
-    except (GuardError, FileNotFoundError) as exc:
+    except (GuardError, FileNotFoundError, ValueError) as exc:
         print(f"refusing: {exc}", file=sys.stderr)
         return 2
     expected = _expected_task_count(args.split)
@@ -507,7 +536,7 @@ def main(argv=None) -> int:
         if probe_decisions:
             extra.append("openai-decisions: probed at run start (POST /v1/decisions); runs only on HTTP 200, "
                          "otherwise recorded as unavailable; not in this estimate (unpriced)")
-        if args.split == "holdout":
+        if args.split in PREREGISTERED_SPLITS:
             extra.append("holdout guard: passed")
         print_plan(plan, args.split, len(cases), args, extra)
     if over:
