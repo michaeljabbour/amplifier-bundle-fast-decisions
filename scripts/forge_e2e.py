@@ -253,6 +253,11 @@ def _task_kind(task):
     except ImportError:
         return 'code'
     entry = getattr(battery_tasks, 'TASKS', {}).get(task)
+    if entry is None:
+        try:
+            entry = forge_workloads.get_task(task)  # registered extra source (e.g. 'paired')
+        except KeyError:
+            entry = None
     return getattr(entry, 'kind', 'code') if entry is not None else 'code'
 
 
@@ -431,6 +436,8 @@ def _run_scenario_turns(root, name, manifest, item, task, workspace, sessions, e
     only -- no session discovered), stops launching further turns and marks
     every remaining turn 'skipped' rather than guessing at their outcome.
     """
+    if getattr(task, 'spec', None):
+        return _run_spec_scenario_turns(root, name, manifest, item, task, workspace, sessions, env, run)
     import battery_tasks
     turn_prompts = battery_tasks.scenario_turn_prompts(task.subtasks)
     expected_prompt = battery_tasks.SCENARIO_TURN_SEPARATOR.join(turn_prompts)
@@ -517,18 +524,125 @@ def _run_scenario_turns(root, name, manifest, item, task, workspace, sessions, e
     return turns, sid
 
 
+def _snapshot_workspace(workspace, dest):
+    """Tarball of the workspace as it stands after a turn (re-gradable with no model: `paired.py grade`)."""
+    import tarfile
+    skip = ('.git', '__pycache__', 'target', 'node_modules', 'build', '.pytest_cache', '.amplifier')
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    with tarfile.open(dest, 'w:gz') as tar:
+        tar.add(workspace, arcname='ws', filter=lambda ti: None if any(s in Path(ti.name).parts for s in skip) else ti)
+
+
+def _run_spec_scenario_turns(root, name, manifest, item, task, workspace, sessions, env, run):
+    """Spec-based (paired) scenario: fixed scripted prompts, per-turn gaps from the spec, the same session
+    --resume'd between turns, and each turn graded + snapshotted RIGHT AFTER it ends (a later turn changes
+    the workspace). Returns (turns, sid) like `_run_scenario_turns`."""
+    import paired_scenarios
+    spec, snapshot = task.spec
+    prompts = paired_scenarios.turn_prompts(spec)
+    if paired_scenarios.TURN_SEPARATOR.join(prompts) != item.get('prompt'):
+        raise SystemExit('worker: spec turn prompts do not reconstruct the preregistered scenario prompt; refusing to launch')
+    side = manifest['sides'][item['side']]
+    model = side.get('model') or manifest['model']
+    deadline_seconds = item.get('deadline_seconds') or manifest['limits']['timeout_seconds']
+    bundle_uri = (run/'profile.md').as_uri()
+    sid, turns, failed = None, [], False
+    for i, tspec in enumerate(spec.turns, start=1):
+        if failed:
+            turns.append({'index': i, 'subtask': f't{i}', 'started_at': None, 'ended_at': None, 'exit_code': None,
+                           'timed_out': False, 'final_message': None, 'skipped': True, 'gap_before_s': tspec.gap_before_s})
+            continue
+        if i > 1 and tspec.gap_before_s:
+            time.sleep(tspec.gap_before_s)
+        command = [manifest.get('host_python', str(HOST_PYTHON)), '-m', 'amplifier_app_cli', 'run', '--bundle', bundle_uri,
+                   '--mode', 'single', '--provider', manifest['provider'], '--model', model, '--output-format', 'json']
+        if i > 1:
+            if sid is None:
+                raise SystemExit(f'worker: cannot --resume turn {i} of {name!r} -- no session id')
+            command += ['--resume', sid]
+        command += [prompts[i-1]]
+        before = set(sessions.iterdir()) if sessions.exists() else set()
+        started_at = datetime.now(timezone.utc).isoformat()
+        started = time.perf_counter()
+        stdout_path = run/f'turn{i}-stdout.txt'
+        with stdout_path.open('w') as fh:
+            process = subprocess.Popen(command, cwd=workspace, env=env, stdout=fh)
+            dump(run/'running.json', {'started_at': started_at, 'name': name, 'controller_pid': os.getpid(),
+                                       'pid': process.pid, 'attempt': item.get('attempt', 1),
+                                       'deadline_seconds': deadline_seconds, 'turn': i, 'tty': sys.stdout.isatty()})
+            print('FORGE_E2E_STARTED '+name, flush=True)
+            timed_out = False
+            try:
+                code = process.wait(timeout=deadline_seconds)
+            except subprocess.TimeoutExpired:
+                timed_out = True
+                process.terminate()
+                try:
+                    code = process.wait(timeout=15)
+                except subprocess.TimeoutExpired:
+                    process.kill()
+                    code = process.wait()
+        elapsed_ms = (time.perf_counter()-started)*1000
+        ended_at = datetime.now(timezone.utc).isoformat()
+        if i == 1:
+            found = [p for p in sessions.iterdir() if p not in before and (p/'events.jsonl').exists()] if sessions.exists() else []
+            sid = found[0].name if len(found) == 1 else None
+        session_dir = (sessions/sid) if sid else None
+        try:
+            stdout_text = stdout_path.read_text()
+        except OSError:
+            stdout_text = ''
+        final_message = _parse_amplifier_stdout_response(stdout_text)
+        source = 'stdout_response' if final_message is not None else None
+        if final_message is None and session_dir is not None:
+            final_message = _extract_final_message_window(session_dir, started_at, ended_at)
+            source = 'events_window' if final_message is not None else None
+        turn_ok = (code == 0) and not timed_out and (sid is not None)
+        entry = {'index': i, 'subtask': f't{i}', 'started_at': started_at, 'ended_at': ended_at, 'exit_code': code,
+                 'timed_out': timed_out, 'elapsed_ms': elapsed_ms, 'gap_before_s': tspec.gap_before_s,
+                 'final_message': final_message[:4000] if isinstance(final_message, str) else final_message,
+                 'final_message_source': source, 'skipped': False}
+        try:
+            _snapshot_workspace(workspace, run/'turn-snapshots'/f't{i}.tar.gz')
+            q = paired_scenarios.grade_turn(spec, i, workspace, final_message, snapshot)
+        except Exception as exc:  # noqa: BLE001 -- a grader must never crash the worker
+            q = {'checks': 1, 'passed': 0, 'failed': 1, 'failure_labels': [f'turn_evaluate_error:{exc}']}
+        entry['quality'] = q
+        entry['turn_passed'] = turn_ok and q['failed'] == 0
+        turns.append(entry)
+        if not turn_ok:
+            failed = True
+    return turns, sid
+
+
+def _apply_side_api_key(env, side_cfg, source_env=None):
+    """Per-arm key selection (paired pilot P2). The provider reads ANTHROPIC_API_KEY; the
+    ANTHROPIC_PROVIDER_ANTHROPIC_API_KEY alias is set too so the choice is unambiguous. ``side_cfg['api_key_env']``
+    is the NAME of the variable holding the key; only a sha256 prefix is returned/recorded, never the value."""
+    source_env = os.environ if source_env is None else source_env
+    if side_cfg.get('api_key_env'):
+        value = source_env.get(side_cfg['api_key_env'])
+        if not value:
+            raise SystemExit(f"worker: api_key_env {side_cfg['api_key_env']} is not set in the environment")
+        env['ANTHROPIC_API_KEY'] = value
+        env['ANTHROPIC_PROVIDER_ANTHROPIC_API_KEY'] = value
+    return hashlib.sha256(env['ANTHROPIC_API_KEY'].encode()).hexdigest()[:10] if env.get('ANTHROPIC_API_KEY') else None
+
+
 def _worker_scenario(root, name, manifest, item, workspace, source_root, run):
     """worker()'s multi-turn path: launch every scenario turn (see
     `_run_scenario_turns`), fold per-turn grading, and write result.json in
     the same shape single-turn runs use, plus a `turns` breakdown.
     """
     import battery_tasks
-    task = battery_tasks.TASKS[item['task']]
+    task = forge_workloads.get_task(item['task'])
     _warm_local_scorer(manifest['sides'][item['side']])
     slug = str(workspace.resolve()).replace('/', '-').replace('\\', '-').replace(':', '')
     sessions = Path.home()/'.amplifier/projects'/slug/'sessions'
     env = dict(os.environ, AFAST_OBSERVATORY='off', AMPLIFIER_MEMORY_CAPTURE='off', AFAST_TRAFFIC='test')
     env['PYTHONPATH'] = str(source_root/'src')
+    side_cfg = manifest['sides'][item['side']]
+    key_fingerprint = _apply_side_api_key(env, side_cfg)
     _assert_bundle_uri_safe(run/'profile.md')
 
     turns, sid = _run_scenario_turns(root, name, manifest, item, task, workspace, sessions, env, run)
@@ -538,8 +652,9 @@ def _worker_scenario(root, name, manifest, item, workspace, source_root, run):
     events_dir = run/'events' if (run/'events').is_dir() else Path(manifest.get('events_dir', str(EVENTS)))
     measured = extract_receipts(source_root, events_dir, sid, run) if sid else None
 
+    spec_task = getattr(task, 'spec', None)
     quality_parts = []
-    for t in turns:
+    for t in (turns if not spec_task else []):
         subtask_name = t['subtask']
         turn_label = battery_tasks.scenario_turn_dir(t['index'], subtask_name)
         if t.get('skipped'):
@@ -554,7 +669,13 @@ def _worker_scenario(root, name, manifest, item, workspace, source_root, run):
         quality_parts.append((turn_label, q))
         t['quality'] = q
         t['turn_passed'] = (not t['timed_out']) and t['exit_code'] == 0 and q['failed'] == 0
-    quality = battery_tasks.fold_scenario_qualities(quality_parts)
+    if spec_task:
+        quality = battery_tasks.fold_scenario_qualities(
+            [(f"t{t['index']}", t['quality'] if not t.get('skipped') else
+              {'checks': 1, 'passed': 0, 'failed': 1, 'failure_labels': ['turn_skipped_after_earlier_failure']})
+             for t in turns])
+    else:
+        quality = battery_tasks.fold_scenario_qualities(quality_parts)
 
     protected = _task_protected(item['task'])
     files = _task_files(item['task'])
@@ -591,7 +712,9 @@ def _worker_scenario(root, name, manifest, item, workspace, source_root, run):
               'mode_match': mode_match, 'retry_count': native['provider_retries'] if native else None,
               'effort_receipts': effort, 'new_session_dirs': 1 if sid else 0,
               'infrastructure_failure': infrastructure_failure, 'harness': harness, 'model': model,
-              'final_message': final_message, 'turns': turns}
+              'final_message': final_message, 'turns': turns,
+              'nonce': item.get('nonce'), 'key_fingerprint': key_fingerprint,
+              'requested_model': side_cfg.get('model') or manifest['model']}
     outcome_passed = (not infrastructure_failure and not any_timed_out and quality['failed'] == 0
                        and all(unchanged.values()) and all(t.get('turn_passed', False) for t in turns))
     result['outcome_passed'] = outcome_passed
@@ -776,13 +899,34 @@ def composed_effective_config(source_root, overrides=None):
 def _build_workspace(run_dir, task):
     workspace = run_dir/'workspace'
     (workspace/'.amplifier').mkdir(parents=True, exist_ok=True)
-    for relpath, content in _task_files(task).items():
-        target = workspace/relpath
-        target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text(content)
+    snapshot = forge_workloads.task_snapshot(task) if hasattr(forge_workloads, 'task_snapshot') else None
+    if snapshot:
+        # Spec-based scenario: copy the frozen snapshot byte-for-byte (binary-safe, e.g. vendored packages).
+        shutil.copytree(Path(snapshot)/'workspace', workspace, dirs_exist_ok=True)
+    else:
+        for relpath, content in _task_files(task).items():
+            target = workspace/relpath
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(content)
     (workspace/'.amplifier/settings.local.yaml').write_text('bundle:\n  app: []\n')
     subprocess.run(['git', 'init', '-q', str(workspace)], check=True)
     return workspace
+
+
+_BASE_INSTRUCTION_SNIPPET = (
+    "import asyncio,sys\n"
+    "from amplifier_foundation import load_bundle\n"
+    "b=asyncio.run(load_bundle(sys.argv[1]))\n"
+    "sys.stdout.write(b.instruction or '')\n")
+
+
+def _base_instruction(profile_path):
+    """The system instruction the composed profile has WITHOUT a body (offline; no model call)."""
+    proc = subprocess.run([str(HOST_PYTHON), '-c', _BASE_INSTRUCTION_SNIPPET, Path(profile_path).as_uri()],
+                          capture_output=True, text=True, timeout=180)
+    if proc.returncode != 0 or not proc.stdout.strip():
+        raise RuntimeError(f'cannot determine base instruction for {profile_path}: {proc.stderr[-300:]}')
+    return proc.stdout
 
 
 def _build_run(root, run_spec, config, sides):
@@ -798,6 +942,15 @@ def _build_run(root, run_spec, config, sides):
     config = {**config, 'events_dir': str(run/'events')}
     profile = _side_profile(name, side, task, workspace, config)
     (run/'profile.md').write_text('---\n'+json.dumps(profile, indent=2)+'\n---\n')
+    nonce = run_spec.get('nonce')
+    if nonce:
+        # Per-session cache nonce (docs/design/parallel-measurement-mode.md 1.2). The profile body IS the
+        # bundle instruction and a root instruction REPLACES an included one, so the body is
+        # `run-nonce: <uuid>` + the instruction the profile would otherwise have (read offline from the
+        # composed bundle). The nonce leads the system prompt, so every cache entry containing the
+        # system block is session-unique, while the rest of the prompt stays byte-identical across arms.
+        base = _base_instruction(run/'profile.md')
+        (run/'profile.md').write_text((run/'profile.md').read_text()+f'run-nonce: {nonce}\n\n{base}\n')
     if side.get('composition') == 'composed':
         effective = composed_effective_config(side['source_root'], profile['session']['orchestrator']['config'])
         if effective is not None:
@@ -809,6 +962,10 @@ def _build_run(root, run_spec, config, sides):
         'workspace_hash': hash_files(workspace), 'profile_sha256': hashlib.sha256((run/'profile.md').read_bytes()).hexdigest(),
         'prompt_sha256': hashlib.sha256(prompt.encode()).hexdigest(),
     }
+    if nonce:
+        text = (run/'profile.md').read_text()
+        item['nonce'] = nonce
+        item['profile_sans_nonce_sha256'] = hashlib.sha256(text.replace(nonce, '<NONCE>').encode()).hexdigest()
     if 'prompt' in run_spec:
         item['prompt'] = run_spec['prompt']
     if 'deadline_seconds' in run_spec:

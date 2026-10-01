@@ -1,0 +1,81 @@
+# Pilot scenario 3/5: small bugfix in a pinned small public Python repo, with follow-up turns.
+# Workspace = python-slugify at the PARENT of upstream fix commit 8f9a550 (the buggy state); the hidden
+# tests are that fix commit's tests/test_release.py. text-unidecode (its only dependency) is vendored
+# into the snapshot so no network/pip is needed at run time.
+id: slugify-bugfix
+task_type: bugfix
+language: python
+split: pilot
+source:
+  desc: "un33k/python-slugify, bug fixed upstream in 8f9a550 (#200); workspace is its parent c442cd4"
+  repo: https://github.com/un33k/python-slugify.git
+  sha: c442cd4cb61763c85b078d6ea83b5959c3ff364a
+  fix_sha: 8f9a550a906701412c8fc93e731582098f2caee2
+workspace:
+  kind: git
+  repo: https://github.com/un33k/python-slugify.git
+  sha: c442cd4cb61763c85b078d6ea83b5959c3ff364a
+  local_hint: ~/dev/afast-paired-src/python-slugify
+  remove: [docs/release-9/historical-evidence.json, docs/release-9/recent-evidence.json]
+  pip_vendor: ["text-unidecode==1.3"]
+hidden_files:
+  tests/test_release.py:
+    from_git:
+      repo: https://github.com/un33k/python-slugify.git
+      sha: 8f9a550a906701412c8fc93e731582098f2caee2
+      path: tests/test_release.py
+      local_hint: ~/dev/afast-paired-src/python-slugify
+turns:
+  - prompt: >-
+      There is a bug in the modern algorithm of this library. A hard cut by `max_length` through
+      repeated post-replacement delimiters leaves a trailing separator:
+      `slugify('value', replacements=[('value', 'one--two')], replacement_stage='post', allow_unicode=True, max_length=5, algorithm='modern')`
+      returns 'one-' but should return 'one' (the same happens with multi-character separators,
+      e.g. separator='::'). Find the cause in slugify/slugify.py and fix it. The dependency is
+      vendored, so run tests from this directory with `python3 -m pytest -q tests`.
+    checks:
+      - {kind: tests, runner: python, files: [tests], hidden: [tests/test_release.py]}
+  - prompt: >-
+      In three to five sentences explain the root cause of that bug: which function, which
+      variable or expression produced the trailing delimiter, and why the old code did that. Do not
+      change any files.
+    checks:
+      - {kind: keyed_facts, all: ['_modern_truncate', 'delimiter|separator', 'empty|blank|repeated|consecutive']}
+  - prompt: >-
+      Add a regression test file `tests/test_trailing_delimiter.py` (unittest or pytest style) with
+      at least three test functions that reproduce the bug through the public `slugify()` call with
+      algorithm='modern', and run it.
+    checks:
+      - {kind: file_regex, path: tests/test_trailing_delimiter.py, pattern: '^\s*def test_', min_count: 3}
+      - {kind: tests, runner: python, files: [tests/test_trailing_delimiter.py]}
+  - prompt: >-
+      Now check word_boundary=True with save_order both False and True: a hard cut must not leave
+      a trailing or leading separator there either. Fix anything that is still wrong and add one
+      test per case to tests/test_trailing_delimiter.py.
+    checks:
+      - {kind: file_regex, path: tests/test_trailing_delimiter.py, pattern: 'word_boundary', min_count: 2}
+      - {kind: tests, runner: python, files: [tests], hidden: [tests/test_release.py]}
+  - prompt: >-
+      Refactor `_modern_truncate` for clarity without changing behaviour (for example a small
+      helper for the hard-cut loop). The whole test suite must still pass.
+    checks:
+      - {kind: file_regex, path: slugify/slugify.py, pattern: 'def _modern_truncate'}
+      - {kind: tests, runner: python, files: [tests], hidden: [tests/test_release.py]}
+  - prompt: >-
+      Give `_modern_truncate` a proper docstring: purpose, each parameter, and the rule for how
+      delimiters are kept or dropped at a hard cut.
+    checks:
+      - {kind: file_regex, path: slugify/slugify.py, pattern: 'def _modern_truncate\([^)]*\)[^\n]*:\n\s+("""|'')', min_count: 1}
+      - {kind: tests, runner: python, files: [tests], hidden: [tests/test_release.py]}
+  - prompt: >-
+      Add a CHANGELOG.md entry for this fix under a new top-level heading `## Unreleased`, in the
+      style of the existing entries (say it affects modern mode only).
+    checks:
+      - {kind: doc_sections, path: CHANGELOG.md, headings: ['Unreleased']}
+      - {kind: file_regex, path: CHANGELOG.md, pattern: '[Mm]odern'}
+  - prompt: >-
+      Review the changes you made in this session as a code reviewer would: list each file you
+      changed, what changed, and any remaining risk or edge case you did not cover. Do not change
+      any files.
+    checks:
+      - {kind: keyed_facts, all: ['slugify\.py', 'test'], any: ['risk', 'edge', 'remaining', 'not cover'], min_any: 1}

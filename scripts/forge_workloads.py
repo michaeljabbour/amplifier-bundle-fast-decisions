@@ -177,6 +177,11 @@ def register_source(kind, **opts):
         tasks = polyglot_tasks.load(opts['root'], languages=opts.get('languages'))
         _extra_tasks.update(tasks)
         return tasks
+    if kind == 'paired':
+        import paired_scenarios
+        tasks = paired_scenarios.load_task_source(opts['scenario_dir'], opts['snapshot_root'], ids=opts.get('ids'))
+        _extra_tasks.update(tasks)
+        return tasks
     raise ValueError(f'unknown task source kind: {kind}')
 
 
@@ -202,6 +207,14 @@ def all_tasks():
     merged = dict(battery_tasks.TASKS)
     merged.update(_extra_tasks)
     return merged
+
+
+def task_snapshot(task):
+    """Frozen snapshot dir (binary-safe workspace + hidden files) of a spec-based paired scenario, else None."""
+    if task in SPECS:
+        return None
+    spec = getattr(get_task(task), 'spec', None)
+    return spec[1] if spec else None
 
 
 def task_files(task):

@@ -1,0 +1,60 @@
+schema: fast-decisions-paired/design/v1
+id: pilot-v1
+description: >-
+  Pilot of the paired multi-turn measurement campaign (docs/design/parallel-measurement-mode.md section 5):
+  5 scenarios x 8 turns, every arm of a scenario-rep started together from one frozen workspace snapshot,
+  each session isolated by a per-session cache nonce.
+
+scenario_dir: evals/paired/scenarios/pilot-v1
+snapshot_root: ~/dev/afast-paired/snapshots
+campaign_root_base: ~/dev/afast-paired            # runs live here (STUDY-DESIGN 17.1: short paths)
+cells_file: evals/cells.yaml
+suite_for_argv: {suite: s1m, split: m-dev}         # only used to reuse run.cell_to_argv for cell -> side translation
+
+nonce_mode: per_session                            # per_session | none (none is only for the P2 contrast)
+default_reps: 1
+default_parallel: 6
+max_wave_launch_spread_s: 60
+max_wave_attempts: 3
+deadline_seconds_per_turn: 900
+
+hosts:
+  opus:  claude-opus-5-5
+  fable: claude-fable-5-1
+
+# Arms. `cells` maps host -> cells.yaml cell. `kind`: plain | fd | sticky | control.
+#  anchor   plain host model alone (A0)
+#  aa       a second, independent plain anchor: measures run-to-run noise (A/A)
+#  shipped  the shipped fast-decisions profile on each host (A1)
+#  sticky   decide the model ONCE at session start in the harness (sticky_decision), then run the whole
+#           session on it with no switching (A2). Resolved to one of the pin cells below; no orchestrator edit.
+#  sonnet   plain claude-sonnet-5 control, host-independent: one session per scenario-rep (A3)
+arms:
+  anchor:  {kind: plain,  cells: {opus: plain-opus, fable: plain}, role: anchor}
+  aa:      {kind: plain,  cells: {opus: plain-opus, fable: plain}, role: noise}
+  shipped: {kind: fd,     cells: {opus: orch-default-opus, fable: orch-default}}
+  sticky:  {kind: sticky, cells: {opus: {host: orch-pin-host-opus, cheap: orch-pin-cheap-opus},
+                                  fable: {host: orch-pin-host, cheap: orch-pin-cheap}}}
+  sonnet:  {kind: control, cells: {any: plain-sonnet}, host_independent: true}
+
+sticky:
+  policy_cell: orch-default          # the frozen shipped policy whose turn-start decision is read
+  decide_on: turn1_prompt
+
+# Cost model for `plan`. Unit costs are MEANS OF 4-TURN s1m SESSIONS (non-infra, session_ok) from
+# docs/evidence/2026-10-01-caching/sessions.csv on origin/eval/judge-realistic (n in brackets). Sticky and
+# A/A have no measured unit cost: A/A = anchor; sticky = anchor x the spec's section 3 ratio (Opus 2.70/2.60,
+# Fable 4.00/6.70). Everything else is the spec's section 3 scaling, labelled as an assumption in plan output.
+cost_model:
+  source: "sessions.csv (S1-multi, 4 turns), spec section 3"
+  unit_usd_4turn:
+    plain-opus:        {usd: 0.519, n: 48}
+    plain:             {usd: 1.343, n: 45}
+    orch-default-opus: {usd: 0.682, n: 45}
+    orch-default:      {usd: 0.847, n: 39}
+    plain-sonnet:      {usd: 0.702, n: 48}
+  sticky_over_anchor: {opus: 1.04, fable: 0.597}
+  turn_scaling: {4: 1.0, 8: 2.5, 12: 4.2}          # linear in between; spec section 3 (extrapolated from the caching README)
+  type_factor: {feature: 1.2, bugfix: 1.5, review: 1.0, mixed: 1.2, knowledge: 1.0}
+  long_gap_extra_fraction: 0.10                      # assumed: cache rewrite after each >=5 min gap, fraction of session cost
+  infra_retry_reserve_fraction: 0.08                 # spec section 3: expected infra retries ~8%

@@ -1,0 +1,1425 @@
+"""Paired multi-turn cost-savings measurement driver (pilot build).
+
+One scripted multi-turn session per ARM, all arms of a scenario-rep started together from the same frozen
+workspace snapshot, compared against the anchor arm. Spec: docs/design/parallel-measurement-mode.md (v2).
+
+Subcommands (exit codes as battery.py: 0 ok, 3 budget, 4 precondition):
+  plan          arms x scenarios x reps x hosts, per-session cost estimate, budget check, schedule.json
+                (--dry-run prints the plan and writes nothing, touches no network)
+  run           launch waves (bounded by --parallel), per-session nonce, turn gaps, budget reservation and
+                hard stop, resumable (adopts finished and live sessions)
+  rows          extract sessions.jsonl / turns.jsonl / pairs.jsonl (+ cache-read audit, mechanism gates)
+  grade         re-grade preserved per-turn workspace snapshots (no model call; P7 determinism)
+  render-check  offline render of each profile's system prompt: nonce leads it, prompts match across arms
+
+Reuses (adds, does not fork): scripts/forge_e2e.py (prepare / launch_run / wait_for_result / worker),
+scripts/battery.py (_freeze_candidate_source), evals/run.py (cell_to_argv: cell -> side translation),
+scripts/paired_scenarios.py (spec, snapshots, graders).
+"""
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import os
+import random
+import re
+import subprocess
+import sys
+import tempfile
+import threading
+import time
+import uuid
+from concurrent.futures import ThreadPoolExecutor
+from dataclasses import dataclass, field, asdict
+from datetime import datetime, timezone
+from pathlib import Path
+
+import yaml
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+for _p in (REPO_ROOT / "scripts", REPO_ROOT / "evals"):
+    if str(_p) not in sys.path:
+        sys.path.insert(0, str(_p))
+
+import paired_scenarios as ps  # noqa: E402
+
+SCHEMA = "fast-decisions-paired/v1"
+DEFAULT_DESIGN = REPO_ROOT / "evals" / "paired" / "pilot-v1.yaml"
+EXIT_OK, EXIT_BUDGET, EXIT_PRECONDITION = 0, 3, 4
+MAX_ENCODED_WORKSPACE_LEN = 240        # STUDY-DESIGN 17.1 (macOS NAME_MAX 255)
+KEY_ENV_NAMES = ("ANTHROPIC_API_KEY", "ANTHROPIC_PROVIDER_ANTHROPIC_API_KEY")  # names only, never values
+FD_RECEIPT_EVENTS = ("difficulty_judged", "scored", "model_routed", "effort_routed", "efficiency", "turn_planned")
+
+
+class PairedError(Exception):
+    def __init__(self, code: int, reason: str):
+        super().__init__(reason)
+        self.code, self.reason = code, reason
+
+
+class BudgetExceeded(PairedError):
+    def __init__(self, reason):
+        super().__init__(EXIT_BUDGET, reason)
+
+
+# ----------------------------------------------------------------------------------------- config
+
+def _abs(base: Path, value) -> Path:
+    p = Path(str(value)).expanduser()
+    return p if p.is_absolute() else base / p
+
+
+def load_design(path=DEFAULT_DESIGN) -> dict:
+    path = Path(path)
+    d = yaml.safe_load(path.read_text(encoding="utf-8"))
+    if d.get("schema") != "fast-decisions-paired/design/v1":
+        raise PairedError(EXIT_PRECONDITION, f"{path}: unexpected design schema {d.get('schema')!r}")
+    d["_path"] = str(path)
+    return d
+
+
+def load_specs(design: dict) -> list:
+    return ps.load_dir(_abs(REPO_ROOT, design["scenario_dir"]))
+
+
+# ----------------------------------------------------------------------------------------- sessions
+
+@dataclass
+class Session:
+    key: str                 # run name: <scenario>-r<rep>-<host>-<arm>   (short: path-length defect)
+    wave_id: str
+    scenario: str
+    rep: int
+    host: str                # opus | fable | any (host-independent control)
+    arm: str
+    kind: str                # plain | fd | sticky | control
+    cell: str | None         # None for sticky until the decision is made
+    model: str
+    nonce: str | None = None
+    attempt: int = 1
+    est_usd: float = 0.0
+    sticky_decision: str | None = None
+
+
+def _short(n: int, s: str) -> str:
+    return s if len(s) <= n else s[:n]
+
+
+def make_nonce(plan_id: str, key: str, attempt: int) -> str:
+    """Per-session nonce: unique per (plan, session, attempt) and stable across that session's --resume turns
+    (it is written once into the session's profile). A rerun attempt gets a NEW nonce so it can never read
+    the failed attempt's cache."""
+    raw = hashlib.sha256(f"{plan_id}|{key}|{attempt}".encode()).digest()[:16]
+    return str(uuid.UUID(bytes=raw, version=4))
+
+
+def expand_sessions(design: dict, specs: list, *, reps: int, hosts: list, arms: list, scenarios=None) -> list:
+    """Every session of the design, grouped into waves (scenario, rep, host-stratum). The host-independent
+    control joins the first host's wave: one control session per scenario-rep, used for every stratum."""
+    chosen = [s for s in specs if scenarios is None or s.id in scenarios]
+    if not chosen:
+        raise PairedError(EXIT_PRECONDITION, "no scenarios selected")
+    sessions = []
+    for spec in chosen:
+        for rep in range(1, reps + 1):
+            for hi, host in enumerate(hosts):
+                wave_id = f"{spec.id}-r{rep}-{host}"
+                for arm in arms:
+                    a = design["arms"][arm]
+                    if a.get("host_independent"):
+                        if hi != 0:
+                            continue
+                        shost, cell = "any", a["cells"]["any"]
+                        model = None
+                    else:
+                        shost, cell = host, a["cells"][host]
+                        model = design["hosts"][host]
+                    if a["kind"] == "sticky":
+                        cell = None
+                    sessions.append(Session(key=f"{spec.id}-r{rep}-{shost}-{arm}", wave_id=wave_id, scenario=spec.id,
+                                            rep=rep, host=shost, arm=arm, kind=a["kind"], cell=cell,
+                                            model=model or "", ))
+    return sessions
+
+
+def waves_of(sessions: list) -> dict:
+    out = {}
+    for s in sessions:
+        out.setdefault(s.wave_id, []).append(s)
+    return out
+
+
+def seeded_wave_order(wave_ids: list, seed: int) -> list:
+    ids = sorted(wave_ids)
+    random.Random(seed).shuffle(ids)
+    return ids
+
+
+# ----------------------------------------------------------------------------------------- cost model
+
+def _turn_scale(table: dict, n: int) -> float:
+    pts = sorted((int(k), float(v)) for k, v in table.items())
+    if n <= pts[0][0]:
+        return pts[0][1] * n / pts[0][0]
+    for (x0, y0), (x1, y1) in zip(pts, pts[1:]):
+        if n <= x1:
+            return y0 + (y1 - y0) * (n - x0) / (x1 - x0)
+    (x0, y0), (x1, y1) = pts[-2], pts[-1]
+    return y1 + (y1 - y0) * (n - x1) / (x1 - x0)
+
+
+def estimate_session_usd(design: dict, spec, arm: str, host: str, cell_hint: str | None = None) -> float:
+    cm = design["cost_model"]
+    unit = cm["unit_usd_4turn"]
+    a = design["arms"][arm]
+    if a["kind"] == "sticky":
+        anchor_cell = design["arms"]["anchor"]["cells"][host]
+        base = unit[anchor_cell]["usd"] * cm["sticky_over_anchor"][host]
+    elif a["kind"] == "control":
+        base = unit[a["cells"]["any"]]["usd"]
+    else:
+        base = unit[a["cells"][host]]["usd"]
+    n = len(spec.turns)
+    est = base * _turn_scale(cm["turn_scaling"], n) * cm["type_factor"][spec.task_type]
+    est *= 1.0 + cm["long_gap_extra_fraction"] * spec.n_long_gaps
+    return round(est, 4)
+
+
+def build_plan(design: dict, specs: list, *, reps: int, hosts: list, arms: list, scenarios=None, seed: int,
+               budget_usd: float | None, parallel: int, plan_id: str | None = None) -> dict:
+    by_id = {s.id: s for s in specs}
+    sessions = expand_sessions(design, specs, reps=reps, hosts=hosts, arms=arms, scenarios=scenarios)
+    plan_id = plan_id or uuid.uuid4().hex[:12]
+    nonce_mode = design.get("nonce_mode", "per_session")
+    for s in sessions:
+        spec = by_id[s.scenario]
+        s.est_usd = estimate_session_usd(design, spec, s.arm, s.host if s.host != "any" else hosts[0])
+        if nonce_mode == "per_session":
+            s.nonce = make_nonce(plan_id, s.key, s.attempt)
+    waves = waves_of(sessions)
+    too_big = {w: len(v) for w, v in waves.items() if len(v) > parallel}
+    if too_big:
+        raise PairedError(EXIT_PRECONDITION, f"--parallel {parallel} is smaller than a wave (all arms of a wave must "
+                                             f"co-start): {too_big}")
+    order = seeded_wave_order(list(waves), seed)
+    total = round(sum(s.est_usd for s in sessions), 2)
+    reserve = round(total * design["cost_model"]["infra_retry_reserve_fraction"], 2)
+    # R1: one prompt hash per scenario, shared by every arm of it (verified again after prepare, per session)
+    prompt_hashes = {sid: ps.prompt_hash(by_id[sid]) for sid in {s.scenario for s in sessions}}
+    plan = {
+        "schema": SCHEMA, "plan_id": plan_id, "design": design["id"], "seed": seed, "reps": reps, "hosts": hosts,
+        "arms": arms, "parallel": parallel, "nonce_mode": nonce_mode,
+        "scenarios": {sid: {"scenario_hash": ps.scenario_hash(by_id[sid]), "prompt_sha256": prompt_hashes[sid],
+                            "turns": len(by_id[sid].turns), "gap_schedule": by_id[sid].gap_schedule,
+                            "n_long_gaps": by_id[sid].n_long_gaps, "task_type": by_id[sid].task_type,
+                            "language": by_id[sid].language, "split": by_id[sid].split}
+                      for sid in sorted(prompt_hashes)},
+        "wave_order": order,
+        "waves": {w: [asdict(s) for s in waves[w]] for w in order},
+        "n_sessions": len(sessions), "n_waves": len(waves), "est_total_usd": total,
+        "est_infra_retry_reserve_usd": reserve, "est_with_reserve_usd": round(total + reserve, 2),
+        "budget_usd": budget_usd,
+        "cost_model_source": design["cost_model"]["source"],
+    }
+    if budget_usd is not None and plan["est_with_reserve_usd"] > budget_usd:
+        raise BudgetExceeded(f"estimated ${plan['est_with_reserve_usd']:.2f} (incl. "
+                             f"{design['cost_model']['infra_retry_reserve_fraction']:.0%} retry reserve) exceeds "
+                             f"--budget-usd {budget_usd:.2f}")
+    return plan
+
+
+def render_plan(plan: dict) -> str:
+    lines = [f"plan {plan['plan_id']}  design={plan['design']}  seed={plan['seed']}  reps={plan['reps']}  "
+             f"hosts={','.join(plan['hosts'])}  parallel={plan['parallel']}  nonce={plan['nonce_mode']}",
+             f"arms: {', '.join(plan['arms'])}",
+             f"{plan['n_sessions']} sessions in {plan['n_waves']} waves", ""]
+    lines.append(f"{'scenario':16} {'type':8} {'lang':7} {'turns':5} {'gaps>=5m':8}")
+    for sid, m in plan["scenarios"].items():
+        lines.append(f"{sid:16} {m['task_type']:8} {m['language']:7} {m['turns']:5d} {m['n_long_gaps']:8d}")
+    lines += ["", f"{'wave (seeded order)':34} {'sessions':>8} {'est $':>8}"]
+    for w in plan["wave_order"]:
+        v = plan["waves"][w]
+        lines.append(f"{w:34} {len(v):8d} {sum(s['est_usd'] for s in v):8.2f}")
+    per_arm = {}
+    for w in plan["waves"].values():
+        for s in w:
+            k = (s["arm"], s["host"])
+            c, u = per_arm.get(k, (0, 0.0))
+            per_arm[k] = (c + 1, u + s["est_usd"])
+    lines += ["", f"{'arm':10} {'host':6} {'n':>3} {'est $':>9}"]
+    for (arm, host), (c, u) in sorted(per_arm.items()):
+        lines.append(f"{arm:10} {host:6} {c:3d} {u:9.2f}")
+    lines += ["", f"estimate (sessions)      ${plan['est_total_usd']:.2f}",
+              f"infra retry reserve      ${plan['est_infra_retry_reserve_usd']:.2f}",
+              f"estimate incl. reserve   ${plan['est_with_reserve_usd']:.2f}"
+              + (f"   budget ${plan['budget_usd']:.2f}" if plan.get("budget_usd") is not None else ""),
+              f"cost basis: {plan['cost_model_source']} (4-turn unit means, scaled to scenario turns/type; an estimate)"]
+    return "\n".join(lines)
+
+
+# ----------------------------------------------------------------------------------------- ledger
+
+class Ledger:
+    """Budget reservation and hard stop (STUDY-DESIGN R6). Reserve before every wave launch; settle with the
+    measured (recomputed) cost afterwards. Single-writer under a lock; persisted after every change."""
+
+    def __init__(self, path: Path, budget_usd: float):
+        self.path, self.lock = Path(path), threading.Lock()
+        if self.path.exists():
+            self.d = json.loads(self.path.read_text(encoding="utf-8"))
+            self.d["budget_usd"] = budget_usd
+        else:
+            self.d = {"budget_usd": budget_usd, "reserved": {}, "spent": {}}
+        self._save()
+
+    def _save(self):
+        tmp = self.path.with_suffix(".tmp")
+        tmp.write_text(json.dumps(self.d, indent=2) + "\n", encoding="utf-8")
+        tmp.replace(self.path)
+
+    def committed(self) -> float:
+        return sum(self.d["spent"].values()) + sum(self.d["reserved"].values())
+
+    def reserve(self, wave_key: str, usd: float):
+        with self.lock:
+            if self.committed() + usd > self.d["budget_usd"] + 1e-9:
+                raise BudgetExceeded(f"reserving ${usd:.2f} for {wave_key} would exceed the hard stop "
+                                     f"${self.d['budget_usd']:.2f} (committed ${self.committed():.2f})")
+            self.d["reserved"][wave_key] = round(usd, 4)
+            self._save()
+
+    def settle(self, wave_key: str, spent_usd: float):
+        with self.lock:
+            self.d["reserved"].pop(wave_key, None)
+            self.d["spent"][wave_key] = round(spent_usd, 4)
+            self._save()
+
+    def release(self, wave_key: str):
+        with self.lock:
+            self.d["reserved"].pop(wave_key, None)
+            self._save()
+
+
+# ----------------------------------------------------------------------------------------- events / rows
+
+def _num(x) -> float:
+    try:
+        return float(x)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _ts(value):
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(str(value).replace("Z", "+00:00")).timestamp()
+    except ValueError:
+        return None
+
+
+def _rates():
+    src = str(REPO_ROOT / "src")
+    if src not in sys.path:
+        sys.path.insert(0, src)
+    from amplifier_fast_decisions import savings
+    return savings
+
+
+def price_table_sha() -> str:
+    return hashlib.sha256(json.dumps(_rates().DEFAULT_RATES, sort_keys=True).encode()).hexdigest()[:16]
+
+
+def recompute_cost(model, uncached, read, write, output) -> float | None:
+    sv = _rates()
+    # savings.price: input_tokens INCLUDES cache reads (Amplifier convention); fresh = input - read
+    return sv.price(model, {"input": uncached + read, "cache_read": read, "cache_write": write, "output": output},
+                    sv.DEFAULT_RATES)
+
+
+def parse_events(session_dir) -> dict:
+    """Per-request records and fast_decisions receipt counts from one session's events.jsonl.
+    Requests are paired by request_id (llm:request <-> llm:response); message bodies are never kept."""
+    path = Path(session_dir) / "events.jsonl"
+    out = {"requests": [], "fd_counts": {}, "efficiency": [], "error": None}
+    if not path.exists():
+        out["error"] = "no events.jsonl"
+        return out
+    pending, seen_eff = {}, set()
+    with path.open(encoding="utf-8", errors="replace") as fh:
+        for line in fh:
+            if '"llm:' not in line and '"fast_decisions:' not in line:
+                continue
+            try:
+                ev = json.loads(line)
+            except ValueError:
+                continue
+            name, d = ev.get("event"), ev.get("data") or {}
+            if name == "llm:request":
+                raw = d.get("raw") if isinstance(d.get("raw"), dict) else {}
+                oc = raw.get("output_config")
+                pending[ev.get("request_id") or f"anon{len(pending)}"] = {
+                    "ts_req": _ts(ev.get("ts") or ev.get("timestamp")), "model": d.get("model"),
+                    "main": bool(d.get("has_system")) and "tools" in raw,
+                    "effort": oc.get("effort") if isinstance(oc, dict) else None,
+                    "thinking": bool(d.get("thinking_enabled"))}
+            elif name == "llm:response":
+                u = d.get("usage") or {}
+                rid = ev.get("request_id")
+                req = pending.pop(rid, None) or {"ts_req": None, "model": d.get("model"), "main": True,
+                                                 "effort": None, "thinking": False}
+                inp, rd, wr = _num(u.get("input_tokens")), _num(u.get("cache_read_tokens")), _num(u.get("cache_write_tokens"))
+                out["requests"].append({
+                    **req, "ts_resp": _ts(ev.get("ts") or ev.get("timestamp")), "model": d.get("model") or req["model"],
+                    "uncached": max(inp - rd, 0.0), "read": rd, "write": wr, "output": _num(u.get("output_tokens")),
+                    "cost": _num(u.get("cost_usd")), "has_cost": u.get("cost_usd") is not None,
+                    "duration_ms": _num(ev.get("duration_ms")), "request_id": rid})
+            elif isinstance(name, str) and name.startswith("fast_decisions:"):
+                short = name.split(":", 1)[1]
+                eid = ev.get("event_id")
+                if eid is not None:
+                    if (short, eid) in seen_eff:
+                        continue
+                    seen_eff.add((short, eid))
+                out["fd_counts"][short] = out["fd_counts"].get(short, 0) + 1
+                if short == "efficiency":
+                    out["efficiency"].append(_num(d.get("usd_saved")))
+    return out
+
+
+def merge_run_receipts(parsed: dict, run_events_dir) -> dict:
+    """Fold in fast_decisions receipts from the per-run events dir (STUDY-DESIGN 18.5). The session file and
+    the run dir usually hold the same receipts, so per kind the LARGER count wins (never the sum); event ids
+    are de-duplicated within the run dir."""
+    d = Path(run_events_dir)
+    if not d.is_dir():
+        return parsed
+    seen, counts, eff = set(), {}, []
+    for f in sorted(d.glob("*.jsonl")):
+        with f.open(encoding="utf-8", errors="replace") as fh:
+            for line in fh:
+                if '"fast_decisions:' not in line:
+                    continue
+                try:
+                    ev = json.loads(line)
+                except ValueError:
+                    continue
+                name = ev.get("event", "")
+                if not name.startswith("fast_decisions:"):
+                    continue
+                short, eid = name.split(":", 1)[1], ev.get("event_id")
+                if eid is not None:
+                    if (short, eid) in seen:
+                        continue
+                    seen.add((short, eid))
+                counts[short] = counts.get(short, 0) + 1
+                if short == "efficiency":
+                    eff.append(_num((ev.get("data") or {}).get("usd_saved")))
+    for short, n in counts.items():
+        parsed["fd_counts"][short] = max(parsed["fd_counts"].get(short, 0), n)
+    if len(eff) > len(parsed["efficiency"]):
+        parsed["efficiency"] = eff
+    return parsed
+
+
+def cache_audit(requests: list) -> dict:
+    """A cache read can only come from an entry written earlier by THIS session (same model, and on Sonnet the
+    same effort level -- findings (e)/(f)). Any read beyond a session's own cumulative writes for that
+    (model, effort) is foreign: it can only have been served from another session/arm. Main requests only
+    (background calls, e.g. session naming, have their own prefix)."""
+    own, flags, first_read, total_foreign = {}, [], None, 0.0
+    main = [r for r in requests if r["main"]]
+    for i, r in enumerate(main):
+        key = (r["model"], r["effort"] if r["model"] and "sonnet" in str(r["model"]) else None)
+        written = own.get(key, 0.0)
+        foreign = max(0.0, r["read"] - written)
+        if i == 0:
+            first_read = r["read"]
+        if foreign > 0:
+            flags.append({"request_index": i + 1, "model": r["model"], "cache_read": r["read"],
+                          "own_written_before": written, "foreign_read_tokens": foreign})
+            total_foreign += foreign
+        own[key] = written + r["write"]
+    return {"cross_arm_read_tokens": first_read or 0.0, "foreign_read_tokens_total": total_foreign,
+            "foreign_read_requests": len(flags), "cache_audit_flags": flags, "cache_audit_clean": not flags}
+
+
+def switch_metrics(main: list, windows: list) -> dict:
+    """Model switches between consecutive main requests (survey definition): at a turn boundary vs mid-turn,
+    plus the cache rebuild they cost (excess write tokens over the new-content expectation)."""
+    def turn_of(r):
+        return _turn_index(r, windows)
+
+    sw = tb = mt = 0
+    rb_write = rb_excess = rb_usd = 0.0
+    for i in range(1, len(main)):
+        prev, r = main[i - 1], main[i]
+        if r["model"] == prev["model"]:
+            continue
+        sw += 1
+        if turn_of(r) != turn_of(prev):
+            tb += 1
+        else:
+            mt += 1
+        expected_new = max((r["uncached"] + r["read"] + r["write"]) - (prev["uncached"] + prev["read"] + prev["write"]), 0.0)
+        excess = max(r["write"] - expected_new, 0.0)
+        rb_write += r["write"]
+        rb_excess += excess
+        rates = _rates()
+        rr = rates._rates_for(r["model"], rates.DEFAULT_RATES)
+        if rr:
+            rb_usd += excess * (rr[3] - rr[2]) / 1e6
+    return {"model_switches": sw, "switches_turn_boundary": tb, "switches_midturn": mt,
+            "rebuild_write_tokens": rb_write, "rebuild_excess_write_tokens": rb_excess, "rebuild_usd": rb_usd}
+
+
+def _turn_index(req: dict, windows: list) -> int:
+    t = req.get("ts_req") or req.get("ts_resp")
+    if t is None:
+        return 0
+    for i, w in enumerate(windows, start=1):
+        if w[0] is not None and w[0] - 1.0 <= t <= (w[1] or w[0]) + 3.0:
+            return i
+    return 0
+
+
+def turn_windows(result: dict) -> list:
+    return [(_ts(t.get("started_at")), _ts(t.get("ended_at"))) for t in result.get("turns") or []]
+
+
+COVARIATE_WHITELIST = (
+    "scenario_id", "scenario_hash", "source", "task_type", "language", "split", "host_model", "host", "arm", "cell",
+    "rep", "scripted_turns", "gap_schedule", "n_long_gaps", "turn1_prompt_chars", "total_prompt_chars",
+    "workspace_files", "workspace_bytes", "swe_difficulty", "turn_index", "turn_prompt_chars", "gap_before_s")
+ANCHOR_PROXY_PREFIX = "anchor_"
+OUTCOME_FIELDS = ("cache_hit_share", "model_switches", "cost_usd_provider", "cost_usd_recomputed", "n_req", "tokens",
+                  "wall_ms", "turn_pass_frac", "final_state_pass", "cross_arm_read_tokens")
+
+
+def assert_covariates(columns) -> None:
+    """Post-treatment outcomes may be described or mediated but never used as covariates; only the
+    pre-session whitelist and anchor_* proxies (the A0 session's numbers) may enter a model."""
+    bad = [c for c in columns if c not in COVARIATE_WHITELIST and not c.startswith(ANCHOR_PROXY_PREFIX)]
+    if bad:
+        raise ValueError(f"not allowed as covariates (post-treatment outcomes?): {bad}")
+
+
+def mechanism_gate(session: dict, counts: dict, switches: int, main_models: list) -> dict:
+    """STUDY-DESIGN R4 per arm kind. fd arms must show routing receipts; plain arms none; sticky must never
+    switch, judge at most once, and keep every main request on the decided model."""
+    kind = session["kind"]
+    receipts = sum(counts.get(k, 0) for k in FD_RECEIPT_EVENTS)
+    ok, why = True, []
+    if kind in ("plain", "control"):
+        if receipts:
+            ok, why = False, [f"plain arm emitted {receipts} fast_decisions receipts (profile leaked)"]
+    elif kind == "fd":
+        if counts.get("difficulty_judged", 0) < 1:
+            ok, why = False, ["no fast_decisions:difficulty_judged receipt"]
+    elif kind == "sticky":
+        if receipts < 1:
+            ok = False
+            why.append("no fast_decisions receipts (orchestrator not engaged)")
+        if counts.get("difficulty_judged", 0) > 1:
+            ok = False
+            why.append("more than one difficulty_judged in a sticky session")
+        if switches:
+            ok = False
+            why.append(f"sticky session switched models {switches}x")
+        want = session.get("expected_main_model")
+        if want and any(m != want for m in main_models):
+            ok = False
+            why.append(f"requested model {want} not on every main request (saw {sorted(set(main_models))})")
+    return {"mechanism_engaged": ok, "mechanism_reasons": why, "fd_receipts": receipts}
+
+
+def sessions_dir_for_workspace(workspace: Path) -> Path:
+    slug = str(Path(workspace).resolve()).replace("/", "-").replace("\\", "-").replace(":", "")
+    return Path.home() / ".amplifier" / "projects" / slug / "sessions"
+
+
+def session_row(meta: dict, result: dict, parsed: dict, spec, snap_stats: dict, prov: dict) -> tuple:
+    """(session_row, [turn_rows]) for one finished session. ``meta`` is the schedule entry of the session."""
+    reqs = parsed["requests"]
+    main = [r for r in reqs if r["main"]]
+    windows = turn_windows(result)
+    tokens = {}
+    for r in main:
+        t = tokens.setdefault(r["model"], {"input": 0.0, "cache_read": 0.0, "cache_write": 0.0, "output": 0.0})
+        t["input"] += r["uncached"]
+        t["cache_read"] += r["read"]
+        t["cache_write"] += r["write"]
+        t["output"] += r["output"]
+    cost_provider = sum(r["cost"] for r in reqs)
+    recomputed = [recompute_cost(r["model"], r["uncached"], r["read"], r["write"], r["output"]) for r in reqs]
+    cost_recomputed = sum(c for c in recomputed if c is not None)
+    unpriced = sum(1 for c in recomputed if c is None)
+    denom = sum(r["uncached"] + r["read"] + r["write"] for r in main)
+    audit = cache_audit(reqs)
+    sw = switch_metrics(main, windows)
+    first = main[0] if main else None
+    warm = None
+    if first:
+        rr = _rates()._rates_for(first["model"], _rates().DEFAULT_RATES)
+        if rr:
+            warm = cost_recomputed - first["write"] * (rr[3] - rr[2]) / 1e6
+    turns_res = result.get("turns") or []
+    passes = [bool(t.get("turn_passed")) for t in turns_res]
+    labels = [l for t in turns_res for l in ((t.get("quality") or {}).get("failure_labels") or [])]
+    last = turns_res[-1] if turns_res else {}
+    last_q = last.get("quality") or {}
+    final_pass = bool(turns_res) and not last.get("skipped") and last_q.get("failed", 1) == 0 and bool(last.get("turn_passed"))
+    critical = (any(l.startswith("protected_modified") for l in labels)
+                or any("evaluate_error" in l for l in labels))
+    status = "infra_fail" if result.get("infrastructure_failure") else ("ok" if result.get("outcome_passed") else "agent_fail")
+    gate = mechanism_gate({**meta, "expected_main_model": meta.get("expected_main_model")}, parsed["fd_counts"],
+                          sw["model_switches"], [r["model"] for r in main])
+    served = sorted({r["model"] for r in main if r["model"]})
+    model_ids_ok = (not meta.get("model")) or all(m == meta["model"] or str(m).startswith(meta["model"]) or
+                                                   meta["kind"] in ("fd", "sticky") for m in served)
+    row = {
+        "schema": SCHEMA, "session_key": meta["key"], "wave_id": meta["wave_id"], "attempt": meta.get("attempt", 1),
+        "scenario_id": meta["scenario"], "scenario_hash": meta["scenario_hash"], "source": spec.source.get("desc"),
+        "task_type": spec.task_type, "language": spec.language, "split": spec.split,
+        "host": meta["host"], "host_model": meta["model"], "arm": meta["arm"], "kind": meta["kind"],
+        "cell": meta.get("cell"), "rep": meta["rep"], "sticky_decision": meta.get("sticky_decision"),
+        "scripted_turns": len(spec.turns), "gap_schedule": spec.gap_schedule, "n_long_gaps": spec.n_long_gaps,
+        "turn1_prompt_chars": len(ps.turn_prompts(spec)[0]), "total_prompt_chars": sum(map(len, ps.turn_prompts(spec))),
+        **snap_stats, "swe_difficulty": None,
+        **prov,
+        "nonce": result.get("nonce") or meta.get("nonce"), "key_fingerprint": result.get("key_fingerprint"),
+        "model_ids": [meta["model"]] if meta.get("model") else [], "served_models": served,
+        "served_model_check": model_ids_ok,
+        "cost_usd_provider": round(cost_provider, 6), "cost_usd_recomputed": round(cost_recomputed, 6),
+        "cost_mismatch": abs(cost_provider - cost_recomputed) > 1e-6 or unpriced > 0, "unpriced_requests": unpriced,
+        "tokens": tokens, "n_req": len(main), "n_bg": len(reqs) - len(main),
+        "wall_ms": sum(t.get("elapsed_ms") or 0 for t in turns_res),
+        "exec_ms": sum(max(((r["ts_resp"] or 0) - (r["ts_req"] or 0)) * 1000, r["duration_ms"]) for r in main),
+        **sw,
+        "cache_hit_share": (sum(r["read"] for r in main) / denom) if denom else None,
+        "first_req_write_static": first["write"] if first else None,
+        "warm_start_cost_usd": warm,
+        **{k: audit[k] for k in ("cross_arm_read_tokens", "foreign_read_tokens_total", "foreign_read_requests",
+                                 "cache_audit_flags", "cache_audit_clean")},
+        "turn_pass_frac": (sum(passes) / len(passes)) if passes else 0.0, "final_state_pass": final_pass,
+        "critical": critical, "failure_labels": labels, "receipt_usd_saved_sum": round(sum(parsed["efficiency"]), 6),
+        "fd_receipt_counts": parsed["fd_counts"], **gate, "status": status,
+        "scheduled_start": meta.get("scheduled_start"), "actual_start": result.get("started_at"),
+        "concurrent_sessions": meta.get("concurrent_sessions"), "wave_valid": meta.get("wave_valid", True),
+    }
+    trows = []
+    prev_model = None
+    for i, t in enumerate(turns_res, start=1):
+        in_turn = [r for r in reqs if _turn_index(r, windows) == i]
+        tmain = [r for r in in_turn if r["main"]]
+        toks = {"input": sum(r["uncached"] for r in tmain), "cache_read": sum(r["read"] for r in tmain),
+                "cache_write": sum(r["write"] for r in tmain), "output": sum(r["output"] for r in tmain)}
+        starts = [r["ts_req"] for r in tmain if r["ts_req"]]
+        ends = [r["ts_resp"] for r in tmain if r["ts_resp"]]
+        switched = bool(tmain) and prev_model is not None and tmain[0]["model"] != prev_model
+        if tmain:
+            prev_model = tmain[-1]["model"]
+        trows.append({
+            "schema": SCHEMA, "session_key": meta["key"], "scenario_id": meta["scenario"], "arm": meta["arm"],
+            "host": meta["host"], "rep": meta["rep"], "wave_id": meta["wave_id"], "turn_index": i,
+            "turn_prompt_chars": len(ps.turn_prompts(spec)[i - 1]), "gap_before_s": t.get("gap_before_s", 0),
+            "models_used": sorted({r["model"] for r in tmain if r["model"]}),
+            "efforts_used": sorted({str(r["effort"]) for r in tmain}), "tokens": toks,
+            "cost_usd": round(sum(r["cost"] for r in in_turn), 6),
+            "cost_usd_recomputed": round(sum(c for c in (recompute_cost(r["model"], r["uncached"], r["read"], r["write"], r["output"])
+                                                         for r in in_turn) if c is not None), 6),
+            "calls": len(tmain), "bg_calls": len(in_turn) - len(tmain), "wall_ms": t.get("elapsed_ms"),
+            "working_ms": ((max(ends) - min(starts)) * 1000) if starts and ends else None,
+            "switched_in": switched, "pass": bool(t.get("turn_passed")), "skipped": bool(t.get("skipped")),
+            "checks": (t.get("quality") or {}).get("checks"), "failure_labels": (t.get("quality") or {}).get("failure_labels"),
+            "first_req_cache_read": tmain[0]["read"] if tmain else None,
+            "first_req_cache_write": tmain[0]["write"] if tmain else None,
+        })
+    return row, trows
+
+
+def build_pairs(rows: list, turn_rows: list) -> list:
+    """(scenario, rep, host, arm) vs the anchor (A0) of the same scenario/rep/host; the host-independent
+    control is paired against each host's anchor. Also attaches anchor_* proxies to the session rows."""
+    anchors = {(r["scenario_id"], r["rep"], r["host"]): r for r in rows if r["arm"] == "anchor"}
+    anchor_turns = {}
+    for t in turn_rows:
+        anchor_turns.setdefault((t["scenario_id"], t["rep"], t["host"]), {}).setdefault(t["arm"], []).append(t)
+    pairs = []
+    for r in rows:
+        hosts = [r["host"]] if r["host"] != "any" else sorted({h for (_, _, h) in anchors})
+        for host in hosts:
+            a = anchors.get((r["scenario_id"], r["rep"], host))
+            if a is None or r is a:
+                continue
+            ac = a["cost_usd_recomputed"]
+            if r["host"] != "any":
+                r["anchor_cost_usd"] = ac
+                r["anchor_n_req"] = a["n_req"]
+                r["anchor_turn_costs"] = [t["cost_usd_recomputed"] for t in anchor_turns[(r["scenario_id"], r["rep"], host)]["anchor"]]
+            rc = r["cost_usd_recomputed"]
+            pairs.append({
+                "schema": SCHEMA, "scenario_id": r["scenario_id"], "rep": r["rep"], "host": host, "arm": r["arm"],
+                "task_type": r["task_type"], "n_long_gaps": r["n_long_gaps"],
+                "delta_usd": round(rc - ac, 6), "log_cost_ratio": (round(__import__("math").log(rc / ac), 6) if rc > 0 and ac > 0 else None),
+                "delta_s": round((r["wall_ms"] - a["wall_ms"]) / 1000, 3),
+                "delta_turn_pass": round(r["turn_pass_frac"] - a["turn_pass_frac"], 4),
+                "both_pass": bool(r["final_state_pass"] and a["final_state_pass"]),
+                "arm_failed_what_anchor_passed": (not r["final_state_pass"]) and a["final_state_pass"],
+                "anchor_cost_usd": ac, "arm_cost_usd": rc,
+                "mechanism_engaged": r["mechanism_engaged"], "cache_audit_clean": r["cache_audit_clean"],
+                "valid": bool(r["wave_valid"] and a["wave_valid"] and r["status"] != "infra_fail" and a["status"] != "infra_fail")})
+    return pairs
+
+
+# ----------------------------------------------------------------------------------------- sticky arm (A2)
+
+def sticky_decision(turn1_prompt: str, policy_config: dict, *, workspace_dir, decide_fn=None) -> str:
+    """Decide ONCE, at session start, in the harness: 'host' or 'cheap'. Reads the existing turn-start decision
+    (orchestrator.decide_start_tier) with the frozen shipped policy and a stub service; the orchestrator is not
+    touched and the result is only recorded + mapped to a pin cell. ``decide_fn(prompt, workspace, config)``
+    returns the orchestrator's tier ('cheap' | 'strong') and is injectable for tests."""
+    tier = (decide_fn or _decide_with_orchestrator)(turn1_prompt, str(workspace_dir), policy_config)
+    if tier not in ("cheap", "strong"):
+        raise PairedError(EXIT_PRECONDITION, f"unexpected start tier {tier!r}")
+    return "cheap" if tier == "cheap" else "host"
+
+
+def _decide_with_orchestrator(prompt: str, workspace_dir: str, config: dict) -> str:
+    import asyncio
+    from types import SimpleNamespace
+    _rates()  # puts REPO/src on sys.path
+    from amplifier_fast_decisions.demo import DemoCoordinator
+    from amplifier_fast_decisions.orchestrator import decide_start_tier
+    from amplifier_fast_decisions.runtime import get_runtime
+
+    class Coordinator(DemoCoordinator):
+        def get_capability(self, key):
+            return workspace_dir if key == "session.working_dir" else super().get_capability(key)
+
+    async def go():
+        with tempfile.TemporaryDirectory() as events:
+            cfg = {**config, "events_dir": events, "mode": "active"}
+            runtime, _ = get_runtime(Coordinator(), cfg)
+            try:
+                request = SimpleNamespace(messages=[{"role": "user", "content": prompt}])
+                return await decide_start_tier(runtime.service, request, cfg["model_routing"], None)
+            finally:
+                await runtime.close()
+    return asyncio.run(go())
+
+
+# ----------------------------------------------------------------------------------------- cell -> side
+
+def _parse_argv_for_side(argv: list) -> dict:
+    out = {"overrides": {}, "backend": None, "allow_external_state": False, "composition": "explicit"}
+    import battery
+    i = 0
+    while i < len(argv):
+        a = argv[i]
+        if a == "--fd-override":
+            k, _, v = argv[i + 1].partition("=")
+            out["overrides"][k] = battery._coerce(v)
+            i += 1
+        elif a == "--fd-backend":
+            out["backend"] = argv[i + 1]
+            i += 1
+        elif a == "--fd-composition":
+            out["composition"] = argv[i + 1]
+            i += 1
+        elif a == "--allow-external-state":
+            out["allow_external_state"] = True
+        i += 1
+    return out
+
+
+def cell_to_side(cell_id: str, cells_doc: dict, suites_doc: dict, *, baseline_source, candidate_source,
+                 candidate_sha) -> tuple:
+    """(side dict for forge_e2e, model, amplifier_bundle) for a cells.yaml cell. Reuses evals/run.cell_to_argv, so
+    the arm is exactly what the existing campaigns run for that cell (add, don't fork)."""
+    import run as evals_run
+    cell = cells_doc["cells"][cell_id]
+    model = cell.get("amplifier_model") or cells_doc.get("defaults", {}).get("amplifier_model")
+    bundle = cell.get("amplifier_bundle") or "foundation"
+    if "amplifier-fd" not in cell["harnesses"]:
+        return {"source_root": str(baseline_source), "mode": "off"}, model, bundle
+    argv = evals_run.cell_to_argv(cell_id, cells_doc, suites_doc, "s1m", "m-dev", 1, out_root="/unused", base_seed=0,
+                                  baseline_source=baseline_source, candidate_source=candidate_source,
+                                  candidate_sha=candidate_sha)
+    p = _parse_argv_for_side(argv)
+    overrides = dict(p["overrides"])
+    if p["backend"]:
+        overrides["backend"] = p["backend"]
+    if p["allow_external_state"]:
+        overrides["allow_external_state"] = True
+    return ({"source_root": str(candidate_source), "mode": "active", "decision_overrides": overrides,
+             "composition": p["composition"]}, model, bundle)
+
+
+# ----------------------------------------------------------------------------------------- run context
+
+@dataclass
+class Ctx:
+    out: Path
+    design: dict
+    cells_doc: dict
+    suites_doc: dict
+    specs: dict                      # id -> ScenarioSpec
+    snapshots: dict                  # id -> snapshot dir
+    plan: dict
+    campaign_root: Path
+    candidate_source: str
+    candidate_sha: str | None
+    baseline_source: str
+    seed: int
+    key_env: dict = field(default_factory=dict)      # arm -> env var NAME holding that arm's key
+    offsets: dict = field(default_factory=dict)      # arm -> start offset seconds (P2 contrast only)
+    decide_fn: object = None
+    now: object = time.time
+    sleep: object = time.sleep
+    deadline_s: int = 900
+    max_spread_s: float = 60.0
+    max_attempts: int = 3
+
+
+def encoded_workspace_len(root: Path, name: str) -> int:
+    import forge_e2e
+    ws = Path(root) / forge_e2e._slug(name) / "workspace"
+    return len(str(ws).replace("/", "-").replace("\\", "-").replace(":", ""))
+
+
+def check_path_lengths(campaign_root: Path, sessions: list, wave_ids=None) -> int:
+    """STUDY-DESIGN 17.1: fail BEFORE any launch if an encoded workspace path would exceed the limit."""
+    worst = 0
+    for s in sessions:
+        n = encoded_workspace_len(campaign_root / "w000-a9", s["key"])
+        worst = max(worst, n)
+        if n > MAX_ENCODED_WORKSPACE_LEN:
+            raise PairedError(EXIT_PRECONDITION, f"workspace path too long ({n} > {MAX_ENCODED_WORKSPACE_LEN}) for {s['key']}")
+    return worst
+
+
+class ForgeBackend:
+    """The real launcher: forge_e2e.prepare / launch_run / wait_for_result (as battery.py does)."""
+
+    def prepare_wave(self, ctx: Ctx, root: Path, sessions: list) -> None:
+        import forge_e2e
+        import forge_workloads
+        spec_ids = sorted({s["scenario"] for s in sessions})
+        task_source = {"kind": "paired", "scenario_dir": str(_abs(REPO_ROOT, ctx.design["scenario_dir"])),
+                       "snapshot_root": str(_abs(REPO_ROOT, ctx.design["snapshot_root"])), "ids": spec_ids}
+        forge_workloads.register_source(**task_source)
+        sides, runs = {}, []
+        bundle = "foundation"
+        for s in sessions:
+            side, model, bundle = cell_to_side(s["cell"], ctx.cells_doc, ctx.suites_doc, baseline_source=ctx.baseline_source,
+                                               candidate_source=ctx.candidate_source, candidate_sha=ctx.candidate_sha)
+            side = {**side, "model": s["model"] or model}
+            s["model"] = side["model"]
+            if ctx.key_env.get(s["arm"]):
+                side["api_key_env"] = ctx.key_env[s["arm"]]
+            sides[s["arm"]] = side
+            spec = ctx.specs[s["scenario"]]
+            runs.append({"name": s["key"], "task": s["scenario"], "side": s["arm"], "rep": s["rep"],
+                         "attempt": s["attempt"], "block": None, "seed": ctx.seed, "nonce": s.get("nonce"),
+                         "prompt": ps.TURN_SEPARATOR.join(ps.turn_prompts(spec)), "deadline_seconds": ctx.deadline_s})
+        config = {"runs": runs, "sides": sides, "provider": "anthropic", "model": sessions[0]["model"],
+                  "amplifier_bundle": bundle, "limits": {"timeout_seconds": ctx.deadline_s, "max_iterations": 30,
+                                                          "extended_thinking": True},
+                  "events_dir": str(forge_e2e.EVENTS), "host_python": str(forge_e2e.HOST_PYTHON),
+                  "forge_py": str(forge_e2e.FORGE), "prompt": forge_e2e.PROMPT, "task_source": task_source,
+                  "turn_gap_seconds": 0}
+        forge_e2e.prepare(root, config)
+
+    def start(self, root: Path, name: str) -> None:
+        import forge_e2e
+        forge_e2e.launch_run(root, name)
+
+    def wait(self, root: Path, name: str, timeout: float) -> bool:
+        import forge_e2e
+        return forge_e2e.wait_for_result(root, name, timeout)
+
+    def status(self, root: Path, name: str) -> str:
+        import forge_e2e
+        run = Path(root) / forge_e2e._slug(name)
+        if (run / "result.json").exists():
+            return "done"
+        running = run / "running.json"
+        if running.exists():
+            try:
+                os.kill(json.loads(running.read_text()).get("controller_pid", 0), 0)
+                return "live"
+            except (ProcessLookupError, ValueError, TypeError):
+                return "dead"
+            except OSError:
+                return "live"
+        return "missing"
+
+    def result(self, root: Path, name: str) -> dict | None:
+        import forge_e2e
+        p = Path(root) / forge_e2e._slug(name) / "result.json"
+        return json.loads(p.read_text(encoding="utf-8")) if p.exists() else None
+
+    def close(self, root: Path, name: str) -> None:
+        import forge_e2e
+        try:
+            forge_e2e.close_worker_terminal(root, name)
+        except Exception:  # noqa: BLE001 -- terminal cleanup must never fail a wave
+            pass
+
+    def workspace(self, root: Path, name: str) -> Path:
+        import forge_e2e
+        return Path(root) / forge_e2e._slug(name) / "workspace"
+
+    def run_dir(self, root: Path, name: str) -> Path:
+        import forge_e2e
+        return Path(root) / forge_e2e._slug(name)
+
+
+# ----------------------------------------------------------------------------------------- run
+
+class Slots:
+    """FIFO admission: a wave starts only when ALL its sessions fit under --parallel, so every arm of a wave
+    co-starts and in-flight sessions never exceed the bound."""
+
+    def __init__(self, n: int):
+        self.n, self.cv = n, threading.Condition()
+
+    def acquire(self, k: int):
+        with self.cv:
+            while self.n < k:
+                self.cv.wait()
+            self.n -= k
+
+    def release(self, k: int):
+        with self.cv:
+            self.n += k
+            self.cv.notify_all()
+
+
+def _read_json(p: Path, default=None):
+    return json.loads(p.read_text(encoding="utf-8")) if p.exists() else default
+
+
+def _write_json(p: Path, value) -> None:
+    tmp = Path(str(p) + ".tmp")
+    tmp.write_text(json.dumps(value, indent=2, default=str) + "\n", encoding="utf-8")
+    tmp.replace(p)
+
+
+class State:
+    def __init__(self, path: Path):
+        self.path, self.lock = Path(path), threading.Lock()
+        self.d = _read_json(self.path, {"settings_sha256": None, "waves": {}})
+
+    def save(self):
+        with self.lock:
+            _write_json(self.path, self.d)
+
+    def wave(self, wid: str) -> dict:
+        return self.d["waves"].setdefault(wid, {"status": "pending", "attempts": [], "accepted_attempt": None})
+
+
+def settings_sha(path=None) -> str | None:
+    p = Path(path or Path.home() / ".amplifier" / "settings.yaml")
+    return hashlib.sha256(p.read_bytes()).hexdigest()[:16] if p.exists() else None
+
+
+def decisions_path(out: Path) -> Path:
+    return Path(out) / "decisions.jsonl"
+
+
+def resolve_sticky(ctx: Ctx, sess: dict, policy_config: dict) -> None:
+    """Make (or reuse, on a wave rerun/resume) the session's one-time sticky decision and pick its pin cell."""
+    path = decisions_path(ctx.out)
+    prior = [json.loads(l) for l in path.read_text().splitlines() if l.strip()] if path.exists() else []
+    hit = next((d for d in prior if d["scenario"] == sess["scenario"] and d["rep"] == sess["rep"] and d["host"] == sess["host"]), None)
+    if hit is None:
+        spec = ctx.specs[sess["scenario"]]
+        decision = sticky_decision(ps.turn_prompts(spec)[0], policy_config,
+                                   workspace_dir=Path(ctx.snapshots[sess["scenario"]]) / "workspace", decide_fn=ctx.decide_fn)
+        hit = {"scenario": sess["scenario"], "rep": sess["rep"], "host": sess["host"], "decision": decision,
+               "turn1_prompt_sha256": hashlib.sha256(ps.turn_prompts(spec)[0].encode()).hexdigest(),
+               "policy_cell": ctx.design["sticky"]["policy_cell"], "decided_at": datetime.now(timezone.utc).isoformat()}
+        with decisions_path(ctx.out).open("a", encoding="utf-8") as fh:
+            fh.write(json.dumps(hit) + "\n")
+    sess["sticky_decision"] = hit["decision"]
+    sess["cell"] = ctx.design["arms"][sess["arm"]]["cells"][sess["host"]][hit["decision"]]
+    sess["expected_main_model"] = ctx.design["hosts"][sess["host"]] if hit["decision"] == "host" else "claude-sonnet-5"
+
+
+def wave_timeout_s(ctx: Ctx, sess: dict) -> float:
+    spec = ctx.specs[sess["scenario"]]
+    return len(spec.turns) * ctx.deadline_s + sum(spec.gap_schedule) + 900
+
+
+def wave_cost(ctx: Ctx, backend, root: Path, sessions: list) -> float:
+    total = 0.0
+    for s in sessions:
+        res = backend.result(root, s["key"])
+        if not res or not res.get("session_id"):
+            continue
+        sdir = sessions_dir_for_workspace(backend.workspace(root, s["key"])) / res["session_id"]
+        parsed = parse_events(sdir)
+        total += sum(c for c in (recompute_cost(r["model"], r["uncached"], r["read"], r["write"], r["output"])
+                                 for r in parsed["requests"]) if c is not None)
+    return total
+
+
+def run_wave(ctx: Ctx, backend, state: State, ledger: Ledger, wid: str, policy_config: dict, resume: bool, log=print) -> str:
+    """All attempts of one wave. An infrastructure failure reruns the WHOLE wave (fresh nonces); a wave that
+    fails ctx.max_attempts times is excluded and reported. Returns 'done' | 'excluded'."""
+    w = state.wave(wid)
+    base = ctx.plan["waves"][wid]
+    idx = ctx.plan["wave_order"].index(wid)
+    while len(w["attempts"]) < ctx.max_attempts:
+        adopt = bool(resume and w["attempts"] and w["attempts"][-1]["status"] == "running")
+        attempt_no = len(w["attempts"]) if adopt else len(w["attempts"]) + 1
+        if adopt:
+            att = w["attempts"][-1]
+            sessions, root = att["sessions"], Path(att["root"])
+        else:
+            sessions = [dict(s) for s in base]
+            for s in sessions:
+                s["attempt"] = attempt_no
+                if ctx.plan["nonce_mode"] == "per_session":
+                    s["nonce"] = make_nonce(ctx.plan["plan_id"], s["key"], attempt_no)
+                if s["kind"] == "sticky":
+                    resolve_sticky(ctx, s, policy_config)
+            root = ctx.campaign_root / f"w{idx:03d}-a{attempt_no}"
+            ledger.reserve(f"{wid}#a{attempt_no}", sum(s["est_usd"] for s in sessions))
+            backend.prepare_wave(ctx, root, sessions)
+            check_prompt_hashes(root, sessions, ctx.plan)
+            att = {"attempt": attempt_no, "root": str(root), "status": "running", "sessions": sessions}
+            w["attempts"].append(att)
+            w["status"] = "running"
+            state.save()
+        launches, lock = {}, threading.Lock()
+
+        def one(s):
+            st = backend.status(root, s["key"]) if adopt else "missing"
+            if st == "done":
+                return "done"
+            if st == "dead":
+                return "dead"
+            if st == "missing":
+                off = ctx.offsets.get(s["arm"], 0)
+                if off:
+                    ctx.sleep(off)
+                with lock:
+                    launches[s["key"]] = ctx.now()
+                backend.start(root, s["key"])
+            ok = backend.wait(root, s["key"], wave_timeout_s(ctx, s))
+            backend.close(root, s["key"])
+            return "done" if ok else "timeout"
+
+        with ThreadPoolExecutor(max_workers=max(1, len(sessions))) as ex:
+            outcomes = dict(zip([s["key"] for s in sessions], ex.map(one, sessions)))
+        results = {s["key"]: backend.result(root, s["key"]) for s in sessions}
+        infra = [k for k, r in results.items() if r is None or r.get("infrastructure_failure")]
+        spread = (max(launches.values()) - min(launches.values())) if len(launches) > 1 else 0.0
+        att["launch_spread_s"] = round(spread, 2)
+        att["wave_valid"] = bool(not ctx.offsets) and spread <= ctx.max_spread_s
+        att["outcomes"] = outcomes
+        spent = wave_cost(ctx, backend, root, sessions)
+        ledger.settle(f"{wid}#a{attempt_no}", spent)
+        if infra:
+            att["status"] = "infra_failed"
+            att["infra_failed_sessions"] = infra
+            log(f"[{wid}] attempt {attempt_no}: infrastructure failure in {infra}; rerunning the whole wave")
+            state.save()
+            continue
+        att["status"] = "done"
+        w["status"], w["accepted_attempt"] = "done", attempt_no
+        state.save()
+        if not att["wave_valid"]:
+            log(f"[{wid}] WARNING launch spread {spread:.1f}s > {ctx.max_spread_s}s (or staggered): rows marked wave_valid=false")
+        return "done"
+    w["status"] = "excluded"
+    state.save()
+    return "excluded"
+
+
+def check_prompt_hashes(root: Path, sessions: list, plan: dict) -> None:
+    """R1 after prepare: every session's recorded prompt hash equals its scenario's hash, so all arms of a
+    scenario got byte-identical prompts. A mismatch refuses the launch (nothing paid has run yet)."""
+    man = _read_json(Path(root) / "manifest.json")
+    for s in sessions:
+        item = man["runs"][s["key"]]
+        want = plan["scenarios"][s["scenario"]]["prompt_sha256"]
+        if item["prompt_sha256"] != want:
+            raise PairedError(EXIT_PRECONDITION, f"prompt hash mismatch for {s['key']}: {item['prompt_sha256']} != {want}")
+
+
+def run_campaign(ctx: Ctx, backend, *, budget_usd: float, parallel: int, resume: bool, max_waves=None,
+                 policy_config: dict | None = None, log=print) -> int:
+    state, ledger = State(ctx.out / "state.json"), Ledger(ctx.out / "ledger.json", budget_usd)
+    sha = settings_sha()
+    if state.d.get("settings_sha256") not in (None, sha):
+        raise PairedError(EXIT_PRECONDITION, "~/.amplifier/settings.yaml changed since the campaign started (STUDY-DESIGN 18.5)")
+    state.d["settings_sha256"] = sha
+    state.save()
+    todo = [w for w in ctx.plan["wave_order"] if state.wave(w)["status"] not in ("done", "excluded")]
+    if max_waves is not None:
+        todo = todo[:max_waves]
+    slots, futures, code = Slots(parallel), [], EXIT_OK
+    with ThreadPoolExecutor(max_workers=parallel) as ex:
+        for wid in todo:
+            size = len(ctx.plan["waves"][wid])
+            slots.acquire(size)
+            try:
+                need = sum(s["est_usd"] for s in ctx.plan["waves"][wid])
+                if ledger.committed() + need > budget_usd + 1e-9:
+                    raise BudgetExceeded(f"hard stop: ${ledger.committed():.2f} committed + ${need:.2f} for {wid} > ${budget_usd:.2f}")
+            except BudgetExceeded as exc:
+                slots.release(size)
+                log(f"STOP: {exc.reason}")
+                code = EXIT_BUDGET
+                break
+
+            def job(wid=wid, size=size):
+                try:
+                    return run_wave(ctx, backend, state, ledger, wid, policy_config or {}, resume, log)
+                finally:
+                    slots.release(size)
+            futures.append(ex.submit(job))
+        for f in futures:
+            try:
+                f.result()
+            except BudgetExceeded as exc:
+                log(f"STOP: {exc.reason}")
+                code = EXIT_BUDGET
+    return code
+
+
+# ----------------------------------------------------------------------------------------- rows / grade
+
+def accepted_sessions(out: Path):
+    """(wave_id, attempt dict, session dict) for the accepted attempt of every done wave."""
+    state = _read_json(Path(out) / "state.json", {"waves": {}})
+    for wid, w in state["waves"].items():
+        if w.get("accepted_attempt") is None:
+            continue
+        att = next(a for a in w["attempts"] if a["attempt"] == w["accepted_attempt"])
+        for s in att["sessions"]:
+            yield wid, att, s
+
+
+def extract_rows(out: Path, backend=None, *, specs=None, snap_stats=None) -> dict:
+    out = Path(out)
+    backend = backend or ForgeBackend()
+    plan = _read_json(out / "schedule.json")
+    prov_base = {"price_table_sha": price_table_sha(), "nonce_mode": plan["nonce_mode"], "plan_id": plan["plan_id"]}
+    rows, trows, skipped = [], [], []
+    for wid, att, s in accepted_sessions(out):
+        root = Path(att["root"])
+        res = backend.result(root, s["key"])
+        if res is None:
+            skipped.append(s["key"])
+            continue
+        spec = specs[s["scenario"]]
+        sdir = sessions_dir_for_workspace(backend.workspace(root, s["key"])) / (res.get("session_id") or "none")
+        parsed = merge_run_receipts(parse_events(sdir), backend.run_dir(root, s["key"]) / "events")
+        meta = {**s, "scenario_hash": plan["scenarios"][s["scenario"]]["scenario_hash"],
+                "wave_valid": att.get("wave_valid", True), "concurrent_sessions": len(att["sessions"])}
+        prov = {"build_sha": (res.get("source_expected") or {}).get("git_sha"),
+                "bundle_tree_sha": (res.get("source_expected") or {}).get("tree_sha256"), **prov_base}
+        row, tr = session_row(meta, res, parsed, spec, (snap_stats or {}).get(s["scenario"], {}), prov)
+        rows.append(row)
+        trows.extend(tr)
+    pairs = build_pairs(rows, trows)
+    d = out / "rows"
+    d.mkdir(exist_ok=True)
+    for name, data in (("sessions", rows), ("turns", trows), ("pairs", pairs)):
+        (d / f"{name}.jsonl").write_text("".join(json.dumps(r, default=str) + "\n" for r in data), encoding="utf-8")
+    flagged = [r["session_key"] for r in rows if not r["cache_audit_clean"]]
+    summary = {"sessions": len(rows), "turns": len(trows), "pairs": len(pairs), "skipped_no_result": skipped,
+               "cache_audit_flagged_sessions": flagged,
+               "mechanism_failed": [r["session_key"] for r in rows if not r["mechanism_engaged"]],
+               "cost_mismatch": [r["session_key"] for r in rows if r["cost_mismatch"]]}
+    _write_json(d / "summary.json", summary)
+    return summary
+
+
+def regrade(out: Path, backend, specs, snapshots, *, passes: int = 1) -> dict:
+    """Re-grade every preserved per-turn workspace tarball with no model call. ``passes`` > 1 grades repeatedly
+    and reports whether all passes agree (P7: grader determinism)."""
+    import tarfile
+    results = []
+    for _ in range(passes):
+        one = {}
+        for wid, att, s in accepted_sessions(out):
+            root, spec = Path(att["root"]), specs[s["scenario"]]
+            res = backend.result(root, s["key"]) or {}
+            for t in res.get("turns") or []:
+                tar = backend.run_dir(root, s["key"]) / "turn-snapshots" / f"t{t['index']}.tar.gz"
+                if t.get("skipped") or not tar.exists():
+                    continue
+                with tempfile.TemporaryDirectory() as tmp:
+                    with tarfile.open(tar) as tf:
+                        tf.extractall(tmp)
+                    one[f"{s['key']}#t{t['index']}"] = ps.grade_turn(spec, t["index"], Path(tmp) / "ws",
+                                                                      t.get("final_message"), snapshots[s["scenario"]])
+        results.append(one)
+    stored = {}
+    for wid, att, s in accepted_sessions(out):
+        res = backend.result(Path(att["root"]), s["key"]) or {}
+        for t in res.get("turns") or []:
+            if t.get("quality"):
+                stored[f"{s['key']}#t{t['index']}"] = t["quality"]
+    deterministic = all(r == results[0] for r in results)
+    mismatches = [k for k, v in results[0].items() if k in stored and stored[k] != v]
+    summary = {"graded_turns": len(results[0]), "passes": passes, "deterministic": deterministic,
+               "differs_from_recorded": mismatches}
+    _write_json(Path(out) / "regrade.json", {"summary": summary, "grades": results[0]})
+    return summary
+
+
+_RENDER_SNIPPET = (
+    "import asyncio,sys\nfrom pathlib import Path\nfrom amplifier_foundation import load_bundle\n"
+    "async def main():\n"
+    "    b=await load_bundle(sys.argv[1]); p=await b.prepare()\n"
+    "    class S:\n        coordinator=None\n"
+    "    f=p._create_system_prompt_factory(b,S(),Path(sys.argv[2]))\n"
+    "    sys.stdout.write(await f())\nasyncio.run(main())\n")
+
+
+def render_system_prompt(profile: Path, workspace: Path, python=None) -> str:
+    import forge_e2e
+    proc = subprocess.run([str(python or forge_e2e.HOST_PYTHON), "-c", _RENDER_SNIPPET, Path(profile).as_uri(), str(workspace)],
+                          capture_output=True, text=True, timeout=300)
+    if proc.returncode != 0:
+        raise PairedError(EXIT_PRECONDITION, f"render failed for {profile}: {proc.stderr[-300:]}")
+    return proc.stdout
+
+
+def render_check(out: Path, backend=None, renderer=None) -> dict:
+    """Offline (no model call): render every session's system prompt. The nonce must lead it; with the nonce
+    masked, prompts must be byte-identical across sessions of the same cell kind (plain vs fd), proving the
+    nonce is the ONLY per-session difference and every arm shares the same prompt otherwise."""
+    backend, renderer = backend or ForgeBackend(), renderer or render_system_prompt
+    groups, report = {}, {"ok": True, "problems": [], "groups": {}}
+    for wid, att, s in accepted_sessions(out) if (Path(out) / "state.json").exists() else []:
+        run = backend.run_dir(Path(att["root"]), s["key"])
+        text = renderer(run / "profile.md", backend.workspace(Path(att["root"]), s["key"]))
+        nonce = s.get("nonce")
+        if nonce and not text.startswith(f"run-nonce: {nonce}"):
+            report["ok"] = False
+            report["problems"].append(f"{s['key']}: nonce is not the first line of the system prompt")
+        masked = text.replace(nonce, "<NONCE>") if nonce else text
+        groups.setdefault("fd" if s["kind"] in ("fd", "sticky") else "plain", {})[s["key"]] = hashlib.sha256(masked.encode()).hexdigest()
+    for g, members in groups.items():
+        distinct = set(members.values())
+        report["groups"][g] = {"sessions": len(members), "distinct_prompt_hashes": len(distinct)}
+        if len(distinct) != 1:
+            report["ok"] = False
+            report["problems"].append(f"group {g}: {len(distinct)} distinct masked system prompts")
+    return report
+
+
+# ----------------------------------------------------------------------------------------- CLI
+
+def key_env_names_available() -> set:
+    """NAMES of key variables available (process env + ~/.amplifier/keys.env). Values are never read or printed."""
+    names = {k for k in os.environ if k.endswith("API_KEY")}
+    kp = Path.home() / ".amplifier" / "keys.env"
+    if kp.exists():
+        for line in kp.read_text(errors="replace").splitlines():
+            m = re.match(r"\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=", line)
+            if m:
+                names.add(m.group(1))
+    return names
+
+
+def _kv(items, cast=str) -> dict:
+    out = {}
+    for it in items or []:
+        k, _, v = it.partition("=")
+        if not k or not v:
+            raise PairedError(EXIT_PRECONDITION, f"expected ARM=VALUE, got {it!r}")
+        out[k] = cast(v)
+    return out
+
+
+def _common(args):
+    design = load_design(args.design)
+    if getattr(args, "nonce_mode", None):
+        design["nonce_mode"] = args.nonce_mode
+    return design, load_specs(design)
+
+
+def cmd_plan(args) -> int:
+    design, specs = _common(args)
+    hosts = [h.strip() for h in args.hosts.split(",")] if args.hosts else list(design["hosts"])
+    arms = [a.strip() for a in args.arms.split(",")] if args.arms else list(design["arms"])
+    for h in hosts:
+        if h not in design["hosts"]:
+            raise PairedError(EXIT_PRECONDITION, f"unknown host {h!r}")
+    for a in arms:
+        if a not in design["arms"]:
+            raise PairedError(EXIT_PRECONDITION, f"unknown arm {a!r}")
+    reps = args.reps or design["default_reps"]
+    parallel = args.parallel or design["default_parallel"]
+    scenarios = set(args.scenarios.split(",")) if args.scenarios else None
+    plan = build_plan(design, specs, reps=reps, hosts=hosts, arms=arms, scenarios=scenarios, seed=args.seed,
+                      budget_usd=args.budget_usd, parallel=parallel)
+    key_env, offsets = _kv(args.key_env), _kv(args.offset, int)
+    if key_env:
+        missing = {v for v in key_env.values()} - key_env_names_available()
+        if missing:
+            raise PairedError(EXIT_PRECONDITION, f"key env var(s) not found (names checked only): {sorted(missing)}")
+    print(render_plan(plan))
+    if args.dry_run:
+        return EXIT_OK
+    if not args.out:
+        raise PairedError(EXIT_PRECONDITION, "--out is required unless --dry-run")
+    out = Path(args.out).expanduser().resolve()
+    if (out / "schedule.json").exists():
+        raise PairedError(EXIT_PRECONDITION, f"{out} already has a schedule.json (plans are frozen; use a new --out)")
+    out.mkdir(parents=True, exist_ok=True)
+    camp_root = _abs(Path.cwd(), args.campaign_root) if args.campaign_root else _abs(REPO_ROOT, design["campaign_root_base"]) / out.name
+    camp_root.mkdir(parents=True, exist_ok=True)
+    flat = [s for w in plan["waves"].values() for s in w]
+    plan["max_encoded_workspace_len"] = check_path_lengths(camp_root, flat)
+    snap_root = _abs(REPO_ROOT, design["snapshot_root"])
+    snaps = {}
+    for spec in specs:
+        if spec.id in plan["scenarios"]:
+            snaps[spec.id] = str(ps.materialize(spec, snap_root))
+    import battery
+    cand = Path(args.candidate_source or REPO_ROOT).expanduser().resolve()
+    frozen, info = battery._freeze_candidate_source(str(cand), camp_root, candidate_sha=args.candidate_sha)
+    plan.update({"candidate": {"requested": str(cand), "frozen_source": frozen, "info": info},
+                 "baseline_source": str(Path(args.baseline_source).expanduser().resolve()) if args.baseline_source else frozen,
+                 "campaign_root": str(camp_root), "snapshots": snaps,
+                 "key_env": key_env, "offsets": offsets, "settings_sha256": settings_sha(),
+                 "created_at": datetime.now(timezone.utc).isoformat()})
+    _write_json(out / "schedule.json", plan)
+    (out / "plan.txt").write_text(render_plan(plan) + "\n", encoding="utf-8")
+    print(f"\nwrote {out/'schedule.json'} (campaign root {camp_root}, widest encoded workspace path {plan['max_encoded_workspace_len']} bytes)")
+    return EXIT_OK
+
+
+def _ctx_from_schedule(out: Path, args=None) -> Ctx:
+    plan = _read_json(Path(out) / "schedule.json")
+    if plan is None:
+        raise PairedError(EXIT_PRECONDITION, f"{out}/schedule.json not found (run `plan` first)")
+    design = load_design(args.design if args is not None and getattr(args, "design", None) else DEFAULT_DESIGN)
+    import run as evals_run
+    specs = {s.id: s for s in load_specs(design)}
+    for sid, m in plan["scenarios"].items():
+        if ps.scenario_hash(specs[sid]) != m["scenario_hash"]:
+            raise PairedError(EXIT_PRECONDITION, f"scenario {sid} changed since the plan was frozen (hash mismatch)")
+    return Ctx(out=Path(out), design=design, cells_doc=evals_run.load_cells(_abs(REPO_ROOT, design["cells_file"])),
+               suites_doc=evals_run.load_suites(), specs=specs, snapshots=plan["snapshots"], plan=plan,
+               campaign_root=Path(plan["campaign_root"]), candidate_source=plan["candidate"]["frozen_source"],
+               candidate_sha=plan["candidate"]["info"]["git_sha"] if plan["candidate"].get("info") else None,
+               baseline_source=plan["baseline_source"], seed=plan["seed"], key_env=plan.get("key_env") or {},
+               offsets=plan.get("offsets") or {}, deadline_s=design.get("deadline_seconds_per_turn", 900),
+               max_spread_s=design.get("max_wave_launch_spread_s", 60), max_attempts=design.get("max_wave_attempts", 3))
+
+
+def cmd_run(args) -> int:
+    out = Path(args.out).expanduser().resolve()
+    ctx = _ctx_from_schedule(out, args)
+    budget = args.budget_usd if args.budget_usd is not None else ctx.plan.get("budget_usd")
+    if budget is None:
+        raise PairedError(EXIT_PRECONDITION, "--budget-usd is required (the hard stop)")
+    parallel = args.parallel or ctx.plan["parallel"]
+    if args.dry_run:
+        print(f"would run {len(ctx.plan['wave_order'])} waves (parallel {parallel}, budget ${budget:.2f}); first waves:")
+        for w in ctx.plan["wave_order"][:5]:
+            print(f"  {w}: " + ", ".join(s['arm'] for s in ctx.plan['waves'][w]))
+        return EXIT_OK
+    import forge_e2e
+    policy = forge_e2e.composed_effective_config(ctx.candidate_source, {}) or {}
+    code = run_campaign(ctx, ForgeBackend(), budget_usd=budget, parallel=parallel, resume=args.resume,
+                        max_waves=args.waves, policy_config=policy)
+    print(json.dumps({"exit": code, "state": str(out / "state.json"), "ledger": str(out / "ledger.json")}))
+    return code
+
+
+def _specs_and_stats(out: Path, args):
+    ctx = _ctx_from_schedule(out, args)
+    stats = {sid: ps.workspace_stats(Path(p)) for sid, p in ctx.snapshots.items()}
+    return ctx, stats
+
+
+def cmd_rows(args) -> int:
+    out = Path(args.out).expanduser().resolve()
+    ctx, stats = _specs_and_stats(out, args)
+    summary = extract_rows(out, specs=ctx.specs, snap_stats=stats)
+    print(json.dumps(summary, indent=2))
+    return EXIT_OK
+
+
+def cmd_grade(args) -> int:
+    out = Path(args.out).expanduser().resolve()
+    ctx, _ = _specs_and_stats(out, args)
+    summary = regrade(out, ForgeBackend(), ctx.specs, {k: Path(v) for k, v in ctx.snapshots.items()}, passes=args.passes)
+    print(json.dumps(summary, indent=2))
+    return EXIT_OK if summary["deterministic"] else EXIT_PRECONDITION
+
+
+def cmd_render_check(args) -> int:
+    out = Path(args.out).expanduser().resolve()
+    rep = render_check(out)
+    print(json.dumps(rep, indent=2))
+    return EXIT_OK if rep["ok"] else EXIT_PRECONDITION
+
+
+def build_parser() -> argparse.ArgumentParser:
+    p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    sub = p.add_subparsers(dest="cmd", required=True)
+    pl = sub.add_parser("plan", help="schedule + cost estimate (+ budget refusal); --dry-run touches nothing")
+    pl.add_argument("--design", default=str(DEFAULT_DESIGN))
+    pl.add_argument("--out")
+    pl.add_argument("--seed", type=int, default=20261002)
+    pl.add_argument("--reps", type=int)
+    pl.add_argument("--hosts", help="comma list from the design (default: all)")
+    pl.add_argument("--arms", help="comma list from the design (default: all)")
+    pl.add_argument("--scenarios", help="comma list of scenario ids")
+    pl.add_argument("--budget-usd", type=float)
+    pl.add_argument("--parallel", type=int)
+    pl.add_argument("--nonce-mode", choices=["per_session", "none"])
+    pl.add_argument("--candidate-source")
+    pl.add_argument("--candidate-sha")
+    pl.add_argument("--baseline-source")
+    pl.add_argument("--campaign-root")
+    pl.add_argument("--key-env", action="append", metavar="ARM=ENVVAR", help="per-arm API key: env var NAME")
+    pl.add_argument("--offset", action="append", metavar="ARM=SECONDS", help="delay an arm's start (P2 contrast only)")
+    pl.add_argument("--dry-run", action="store_true")
+    r = sub.add_parser("run", help="launch waves (bounded concurrency, budget hard stop, resumable)")
+    r.add_argument("--out", required=True)
+    r.add_argument("--design")
+    r.add_argument("--parallel", type=int)
+    r.add_argument("--budget-usd", type=float)
+    r.add_argument("--waves", type=int, help="run only the first N unfinished waves")
+    r.add_argument("--resume", action="store_true", help="adopt finished and live sessions")
+    r.add_argument("--dry-run", action="store_true")
+    for name, help_ in (("rows", "extract sessions/turns/pairs datasets"), ("grade", "re-grade preserved turn snapshots (no model)"),
+                        ("render-check", "offline system-prompt render + nonce check")):
+        c = sub.add_parser(name, help=help_)
+        c.add_argument("--out", required=True)
+        c.add_argument("--design")
+        if name == "grade":
+            c.add_argument("--passes", type=int, default=2)
+    return p
+
+
+def main(argv=None) -> int:
+    args = build_parser().parse_args(argv)
+    try:
+        return {"plan": cmd_plan, "run": cmd_run, "rows": cmd_rows, "grade": cmd_grade,
+                "render-check": cmd_render_check}[args.cmd](args)
+    except PairedError as exc:
+        print(f"paired.py: {exc.reason}", file=sys.stderr)
+        return exc.code
+    except ps.ScenarioError as exc:
+        print(f"paired.py: scenario error: {exc}", file=sys.stderr)
+        return EXIT_PRECONDITION
+
+
+if __name__ == "__main__":
+    sys.exit(main())
