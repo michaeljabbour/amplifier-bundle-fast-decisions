@@ -1,5 +1,6 @@
 """Build bounded task state from the actual provider request, not a stale hook."""
 from __future__ import annotations
+import re
 from typing import Any
 from .contracts import field_value, jsonable, canonical, digest
 from .privacy import scrub
@@ -64,6 +65,33 @@ def _injected_only(message: Any) -> bool:
     return not is_user_turn(message)
 
 
+_LEADING_REMINDERS = re.compile(
+    r"\A\s*(?:<system-reminders\b.*?</system-reminders>|<system-reminder\b.*?</system-reminder>)\s*", re.S)
+# Scrub the task whole (not the 2000-char default): the clip below keeps
+# its head AND tail, so the tail must still exist when it is chosen.
+_TASK_SCRUB_CHARS = 200_000
+_TASK_HEAD_SHARE = 3  # head gets 1/3 of the kept task chars, tail 2/3
+
+
+def _strip_leading_reminders(text: str) -> str:
+    """Drop host boilerplate envelopes that precede the real task text."""
+    while True:
+        stripped = _LEADING_REMINDERS.sub("", text, count=1)
+        if stripped == text:
+            return text
+        text = stripped
+
+
+def _head_tail(text: str, keep: int) -> str:
+    """``keep`` chars of ``text`` as head + omission marker + tail (tail larger)."""
+    if keep >= len(text):
+        return text
+    head = keep // _TASK_HEAD_SHARE
+    tail = keep - head
+    omitted = len(text) - keep
+    return text[:head] + f"…[{omitted} chars omitted]…" + (text[-tail:] if tail else "")
+
+
 def build_state(request: Any, max_chars: int = 12000, stats: dict[str, Any] | None = None,
                 instruction: str | None = None) -> dict[str, Any]:
     messages = field_value(request, "messages", []) or []
@@ -85,7 +113,11 @@ def build_state(request: Any, max_chars: int = 12000, stats: dict[str, Any] | No
             continue
         text = message_text(message)
         if text:
-            available[index] = {"role": role, "text": scrub(text, 2000)}
+            if index == task_index:
+                available[index] = {"role": role,
+                                    "text": scrub(_strip_leading_reminders(text), _TASK_SCRUB_CHARS)}
+            else:
+                available[index] = {"role": role, "text": scrub(text, 2000)}
     state = {"observations": [], "instruction": instruction or _DEFAULT_INSTRUCTION}
     if len(canonical(state)) > max_chars:
         raise ValueError("State budget cannot hold the routing instructions")
@@ -95,18 +127,26 @@ def build_state(request: Any, max_chars: int = 12000, stats: dict[str, Any] | No
     def include(index: int, limit: int) -> None:
         item = available[index]
         text = item["text"]
+        # The task keeps head and tail (the issue usually follows the rules);
+        # everything else keeps its head.
+        if index == task_index:
+            def render(n: int) -> str:
+                return _head_tail(text, n)
+        else:
+            def render(n: int) -> str:
+                return text[:n] + ("…" if n < len(text) else "")
         # Measure the serialized state, including escaping and field overhead.
         low, high = 0, len(text)
         while low < high:
             middle = (low + high + 1) // 2
-            selected[index] = {**item, "text": text[:middle] + ("…" if middle < len(text) else "")}
+            selected[index] = {**item, "text": render(middle)}
             state["observations"] = [selected[i] for i in sorted(selected)]
             if len(canonical(state)) <= limit:
                 low = middle
             else:
                 high = middle - 1
         if low:
-            selected[index] = {**item, "text": text[:low] + ("…" if low < len(text) else "")}
+            selected[index] = {**item, "text": render(low)}
             if low < len(text):
                 clipped.add(index)
         else:

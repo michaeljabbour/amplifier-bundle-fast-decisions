@@ -759,7 +759,11 @@ def _judge_state(
     task_prompt_head) if the canonical serialization would still exceed
     ``max_state_chars``. Never raises."""
     state: dict[str, Any] = {
-        "task_prompt_head": _first_user_text(request)[:_JUDGE_STATE_TASK_PROMPT_CHARS],
+        # _turn_user_text, not _first_user_text: in host sessions the first user
+        # message is the injected <system-reminders> envelope. _turn_user_text is
+        # the latest real user message with reminder blocks stripped -- the
+        # current turn's task, which is what the judge must see.
+        "task_prompt_head": _turn_user_text(request)[:_JUDGE_STATE_TASK_PROMPT_CHARS],
         "phase": phase,
         "slow_requests_seen": turn.slow_requests_seen,
         "tool_names_used": sorted(turn.tool_names_used),
