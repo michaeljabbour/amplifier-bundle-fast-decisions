@@ -331,6 +331,7 @@ def _build_backend(config: dict[str, Any], policy: Policy) -> Any:
             base_url_env=config.get("jev_url_env"),
             api_key_env=config.get("jev_key_env"),
             label=config.get("backend_label"),
+            criteria_format=config.get("criteria_format", "object"),
         )
     elif backend_name == "anyjev":
         from .anyjev_backend import AnyJevBackend, DEFAULT_URL

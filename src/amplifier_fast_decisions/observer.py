@@ -311,7 +311,8 @@ class ShadowScorer:
                            "candidate_count": 0}
             )
             return None
-        state = build_state(pseudo_request, service.policy.max_state_chars)
+        state = build_state(pseudo_request, service.policy.max_state_chars,
+                            task_chars=service.policy.max_task_chars)
         if self._turn_id is None:
             self._turn_id = uuid4().hex
         return ShadowJob(

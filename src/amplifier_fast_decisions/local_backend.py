@@ -171,6 +171,20 @@ def local_url(url: str) -> str:
     return _validate_loopback_origin(url) + "/api/generate"
 
 
+def _letter_mass(top: list, letters: set[str], *, fold: bool) -> float:
+    """First-token probability mass sitting on the option letters. ``fold``
+    strips whitespace (chat-prefilled answers arrive as " A")."""
+    total = 0.0
+    for item in top:
+        token, logprob = item.get("token"), item.get("logprob")
+        if not isinstance(token, str) or isinstance(logprob, bool) \
+                or not isinstance(logprob, (int, float)) or not math.isfinite(logprob):
+            continue
+        if (token.strip() if fold else token) in letters:
+            total += math.exp(logprob)
+    return total
+
+
 def score_tokens(payload: dict, labels: dict[str, str]) -> dict[str, float]:
     records = payload.get("logprobs")
     if not isinstance(records, list) or len(records) != 1:
@@ -368,6 +382,13 @@ class OllamaBackend:
         if payload.get("eval_count") != 1 or payload.get("thinking"):
             raise BackendUnavailable("Local decision was not a single non-thinking token")
         probabilities = score_tokens(payload, labels)
+        letters = set(labels) | {"Z"}  # Z is the declared "None of the above" abstention
+        if _letter_mass(payload["logprobs"][0]["top_logprobs"], letters, fold=False) < MIN_OPTION_MASS:
+            # The model opened with prose ("We", "First"): every option scored ~0 and
+            # score_tokens would put it all on SLOW -- a fake, fully confident abstain.
+            # Mirror the question path: retry once with an assistant "Answer:" prefill.
+            payload = await self._candidate_prefill(body, letters)
+            probabilities = score_tokens(payload, labels)
         choice = max(probabilities, key=probabilities.get)
         decision = Decision(choice=choice, probabilities=probabilities, model=self.model,
                             input_tokens=payload.get("prompt_eval_count"),
@@ -377,12 +398,53 @@ class OllamaBackend:
         return DecisionResult(action=decision, model=self.model,
                               input_tokens=decision.input_tokens, output_tokens=1)
 
+    async def _candidate_prefill(self, body: dict, letters: set[str]) -> dict:
+        """Chat-form retry for the candidate path. Returns a payload shaped for
+        ``score_tokens`` (whitespace-folded letter tokens). Raises
+        BackendUnavailable when the option letters still hold too little mass."""
+        chat_body = {"model": self.model, "stream": False, "think": False, "logprobs": True,
+                     "top_logprobs": 20, "keep_alive": "10m", "options": body["options"],
+                     "messages": [{"role": "system", "content": body["system"]},
+                                  {"role": "user", "content": body["prompt"]},
+                                  {"role": "assistant", "content": "Answer:"}]}
+        async with asyncio.timeout(self.timeout_ms / 1000):
+            async with self._lock:
+                response = await self._client.post(self.url.replace("/api/generate", "/api/chat"),
+                                                   json=chat_body)
+                if response.status_code != 200:
+                    raise BackendUnavailable("Local decision request failed")
+                if len(response.content) > 1_000_000:
+                    raise BackendUnavailable("Local decision response too large")
+                payload = response.json()
+        if payload.get("model") != self.model or payload.get("done") is not True:
+            raise BackendUnavailable("Unexpected model or incomplete local decision")
+        records = payload.get("logprobs")
+        if not isinstance(records, list) or len(records) != 1 or not isinstance(records[0], dict):
+            raise BackendUnavailable("Expected exactly one scored token")
+        top = records[0].get("top_logprobs")
+        if not isinstance(top, list) or not top:
+            raise BackendUnavailable("Backend omitted token probabilities")
+        folded: dict[str, float] = {}
+        for item in top:
+            # Same validation as score_tokens: never a ValueError/KeyError/AttributeError.
+            token = item.get("token") if isinstance(item, dict) else None
+            logprob = item.get("logprob") if isinstance(item, dict) else None
+            if (not isinstance(token, str) or isinstance(logprob, bool)
+                    or not isinstance(logprob, (int, float))
+                    or not math.isfinite(logprob) or logprob > 0):
+                raise BackendUnavailable("Invalid token probability")
+            folded[token.strip()] = folded.get(token.strip(), 0.0) + math.exp(logprob)
+        if sum(folded[k] for k in letters if k in folded) < MIN_OPTION_MASS:
+            raise BackendUnavailable("Local candidate answer was not an option letter")
+        merged = [{"token": key, "logprob": math.log(min(mass, 1.0))} for key, mass in folded.items()]
+        return {**payload, "logprobs": [{"top_logprobs": merged}]}
+
     async def warmup(self) -> None:
         """One request with the SAME options as real decisions (num_ctx etc.), with a generous timeout, so a
         model (re)load -- ~0.6-3 s when the server had the model resident with a different context size --
         is absorbed before any budgeted decision runs. Errors are swallowed; the suite runner logs them."""
         req = urllib.request.Request(
-            f"{self.base_url}/api/chat",
+            self.url.replace("/api/generate", "/api/chat"),
             data=json.dumps({"model": self.model, "stream": False, "think": False, "keep_alive": "10m",
                              "messages": [{"role": "user", "content": "warm"}],
                              "options": {"temperature": 0, "num_predict": 1, "num_ctx": 4096}}).encode("utf-8"),

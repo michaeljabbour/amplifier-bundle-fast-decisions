@@ -181,6 +181,7 @@ class ShadowWorker:
             "reported_confidence": decision.reported_confidence,
             "confidence_kind": decision.confidence_kind,
             "option_set_hash": decision.option_set_hash,
+            "criteria_format": decision.criteria_format,
             "selected_probability": p,
             "margin": margin,
             "duration_ms": duration,
