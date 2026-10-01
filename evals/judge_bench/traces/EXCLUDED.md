@@ -18,7 +18,7 @@ reasons: its payload is unfit, or no honest label exists.
 |---|---|---|
 | Fast-routed steps | 226 decisions | The executed action was the logged judge's own pick. The host model never saw the step, so the label would be circular |
 | Suite X (ad-hoc tooling runs) | 176 sessions | Most workspaces lived in `/private/tmp` and are gone, so candidates cannot be regenerated or verified; not a benchmark suite |
-| Rebuild not exact | 17 decisions | At least one of the 5 state scalars or the candidate ids / order hash failed to match |
+| Rebuild not exact | 18 decisions | At least one of the 5 state scalars or the candidate ids / order hash failed to match |
 | Exact duplicates | 271 decisions | Same state (modulo workspace path) and same candidates as a kept decision, usually another arm or rep of the same task |
 | Shadow-mode proposals (`shadow_proposed`) | 1,646 | Built by a different path (`observer._snapshot`) that was not rebuilt or verified. The logged `shadow_agreement` requires an exact tool + argument-hash match, so `read_file` never matches a `fast_workspace` candidate |
 
@@ -27,3 +27,12 @@ reasons: its payload is unfit, or no honest label exists.
 - **difficulty**: an annotated source disjoint from the tuning set, or a suite with a cheap-model arm where the cheap tier actually fails.
 - **escalation / phase**: fix the task head first (see the finding), then run the judges live in shadow so real payloads are logged.
 - **tool-risk**: a payload that carries a redacted command shape, not just argument keys.
+
+## Note on `pool.json` meta
+
+`pool.json` is hash-pinned by the preregistration, so its `meta.arm_forms` text is left as written when the pool was
+built. It is stale in two ways: the `status` lines say the native adapters are still to be written (they exist:
+`evals/judge_bench/native.py`), and it lists nimble and tev1 under the System One native form. In the run they
+were replayed in the bench choice shape (`form: adapted`) because Ollama 0.35's System One endpoint rejects the
+bundle's object-valued criteria with HTTP 400. The authoritative record of which arm ran in which form is
+`run.json` (`invocations[].arm_forms`) next to each result set.
