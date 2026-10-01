@@ -24,8 +24,9 @@ labels, case pool and findings in \path{evals/judge_bench/traces/}. Its holdout 
 needs local session logs that are not committed.
 
 \paragraph{Replaying the numbers.} Summaries are pure functions of the request logs: the repository test
-\path{tests/test_judge_replay.py} recomputes every committed \code{summary.json}, byte for byte, from its
-\code{requests.jsonl}. The commands are:
+\path{tests/test_judge_replay.py} recomputes every committed \code{summary.json} from its \code{requests.jsonl}: every count, label and
+key exactly, and every float to within $10^{-9}$ relative, because platform math libraries differ in the
+last digit. The commands are:
 \begin{lstlisting}
 PYTHONPATH=src:. python3 evals/judges.py --split dev --reps 3
 PYTHONPATH=src:. python3 evals/judges.py --split holdout --budget-usd 3

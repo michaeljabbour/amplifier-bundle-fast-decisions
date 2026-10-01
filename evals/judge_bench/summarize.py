@@ -1,7 +1,8 @@
 """Deterministic summary of a request log: pure function of rows, cases, tags, policies.
 
 Scores are recomputed here from raw answers, never read from the log, so a replay
-of requests.jsonl reproduces summary.json byte for byte.
+of requests.jsonl reproduces summary.json (byte for byte on one platform; floats can
+differ in the last digit across platform math libraries).
 
 The preregistered unit is the per-case outcome (`case_outcomes`): the denominator is EVERY case
 in the manifest; for each case and repetition a missing, invalid or unscorable row counts as

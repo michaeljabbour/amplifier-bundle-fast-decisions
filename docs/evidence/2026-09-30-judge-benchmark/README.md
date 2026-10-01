@@ -144,7 +144,7 @@ PYTHONPATH=src:. python3 evals/judges.py --replay docs/evidence/2026-09-30-judge
 PYTHONPATH=src:. python3 evals/judge_bench/report.py docs/evidence/2026-09-30-judge-benchmark
 ```
 
-`tests/test_judge_replay.py` recomputes every committed `summary.json` here byte for byte from its `requests.jsonl`.
+`tests/test_judge_replay.py` recomputes every committed `summary.json` here from its `requests.jsonl`: every count, label and key exactly, every float to within 1e-9 relative (platform math libraries differ in the last digit).
 The dev run's raw rows came from commit `4cefdf2`; its summary is recomputed with the current scorer (the review fixes
 changed summaries, not requests).
 
