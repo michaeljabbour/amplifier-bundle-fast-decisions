@@ -1,0 +1,61 @@
+# dustin/go-humanize at a1b4e66 plus two planted patches (digit adjustment removal, kb table change)
+id: gohumanize-review
+task_type: review
+language: go
+split: main
+source:
+  desc: dustin/go-humanize at a1b4e66 plus two planted patches (digit adjustment removal, kb table change)
+  repo: https://github.com/dustin/go-humanize.git
+  sha: a1b4e66b9a6d890e9e15e7091cf16c8032367d6e
+workspace:
+  kind: git
+  repo: https://github.com/dustin/go-humanize.git
+  sha: a1b4e66b9a6d890e9e15e7091cf16c8032367d6e
+  local_hint: ~/dev/afast-paired-src/go-humanize
+  add_files:
+    patches/bytes_min_digits.diff: "--- a/bytes.go\n+++ b/bytes.go\n@@ -96,10 +96,6 @@\n \t// Rounding may have carried into an additional integer digit (e.g.\n \t// 9.996 -> 10.0), which means fewer decimal places should be shown\n \t// than originally computed.\n-\tif newIntDigits := countDigits(int64(val)); newIntDigits > intDigits {\n-\t\tdigits = max(digits-(newIntDigits-intDigits), 0)\n-\t}\n-\n \tff := \"%%.%df %%s\"\n \tf := fmt.Sprintf(ff, digits)\n \treturn fmt.Sprintf(f, val, suffix)\n"
+    patches/kb_table.diff: "--- a/bytes.go\n+++ b/bytes.go\n@@ -35,7 +35,7 @@\n var bytesSizeTable = map[string]uint64{\n \t\"b\":   Byte,\n \t\"kib\": KiByte,\n-\t\"kb\":  KByte,\n+\t\"kb\":  KiByte,\n \t\"mib\": MiByte,\n \t\"mb\":  MByte,\n \t\"gib\": GiByte,\n"
+turns:
+- prompt: 'Explain `humanateBytes` in bytes.go: the small-value shortcut, how the exponent is chosen, and what `minDigits` controls (and what value Bytes passes). Do not change any files.'
+  checks:
+  - {kind: keyed_facts, all: ['< ?10', logn|math\.Log|logarithm, minDigits, \b2\b]}
+- prompt: 'Run a throwaway Go test: what do `Bytes(82854982)` and `IBytes(82854982)` return? Do not leave files behind.'
+  checks:
+  - {kind: keyed_facts, all: [83 MB, 79 MiB]}
+- prompt: In `humanateBytes` there is a block after the rounding that compares `newIntDigits` with `intDigits`. What does it prevent? Show the output for Bytes(9999) (run it). Do not change any files.
+  checks:
+  - {kind: keyed_facts, all: [newIntDigits|countDigits, 10 kB, carry|extra digit|more digits|too many]}
+- prompt: 'Review patches/bytes_min_digits.diff against bytes.go: what output changes, with a concrete input and before/after values, and what would you ask the author? Do not apply it.'
+  checks:
+  - {kind: keyed_facts, all: [10\.0 kB, '9999', newIntDigits|intDigits|digits]}
+- prompt: 'Review patches/kb_table.diff: what does it do to ParseBytes? Give two concrete inputs with the old and new results and say whether it is acceptable. Do not apply it.'
+  checks:
+  - {kind: keyed_facts, all: ['1536', 1000|1500, KByte|KiByte|kb]}
+- prompt: Write REVIEW.md with level-2 sections Summary, Patch 1 and Patch 2, quoting the concrete changed outputs.
+  checks:
+  - {kind: doc_sections, path: REVIEW.md, headings: [Summary, Patch 1, Patch 2]}
+  - {kind: file_regex, path: REVIEW.md, pattern: 10\.0 kB}
+  - {kind: file_regex, path: REVIEW.md, pattern: '1536'}
+- prompt: Is there an inconsistency in `Bytes` for values just below a unit boundary? Run Bytes(999999) and Bytes(999500) and explain why. Do not change any files.
+  checks:
+  - {kind: keyed_facts, all: [1000 kB, boundary|unit|step|promot|next suffix, round]}
+- prompt: Add bytes_boundary_test.go (package humanize) with tests named TestBoundary* that pin the digit-adjustment block and the unit table of ParseBytes (`KB` vs `KiB`). Run `go test -run TestBoundary .`. The tests must fail if either of the two patches you reviewed is applied.
+  checks:
+  - {kind: file_regex, path: bytes_boundary_test.go, pattern: func TestBoundary, min_count: 2}
+  - {kind: tests, runner: cmd, cmd: 'go test -count=1 -run TestBoundary -v . && cp bytes.go bytes.go.bak && perl -pi -e ''s/digits = max\(digits-\(newIntDigits-intDigits\), 0\)/digits = digits/'' bytes.go && ! go test -count=1 -run TestBoundary . && cp bytes.go.bak bytes.go && perl -pi -e ''s/"kb":\s+KByte/"kb": KiByte/'' bytes.go && ! go test -count=1 -run TestBoundary .', expect_regex: PASS, timeout: 300}
+- prompt: How does si.go map exponents to prefixes, what is the prefix for -6 and for 30, and where are the min/max exponents derived? Do not change any files.
+  checks:
+  - {kind: keyed_facts, all: [siPrefixTable, \u00b5|micro, quetta|\"Q\"|Q\b, minSIExponent|maxSIExponent]}
+- prompt: 'Explain the relative-time table `defaultMagnitudes` in times.go: what are Month and Year defined as in days, and what does RelTime return for 90 minutes ago? Do not change any files.'
+  checks:
+  - {kind: keyed_facts, all: [defaultMagnitudes, '30', 360|12 \* Month|12 months, 1 hour]}
+- prompt: Write docs/formats.md with level-2 sections Bytes, Parsing, Numbers and Time containing verified example outputs (including the 83 MB / 79 MiB pair and ParseBytes of 1.5KB).
+  checks:
+  - {kind: doc_sections, path: docs/formats.md, headings: [Bytes, Parsing, Numbers, Time]}
+  - {kind: file_regex, path: docs/formats.md, pattern: 83 MB}
+  - {kind: file_regex, path: docs/formats.md, pattern: 79 MiB}
+  - {kind: file_regex, path: docs/formats.md, pattern: '1500'}
+- prompt: Add example_units_test.go (package humanize_test) with `func ExampleParseBytes_units()` that prints ParseBytes("1.5KB"), ParseBytes("1KiB") and Bytes(999999) on one line, with an `// Output:` comment. Run it.
+  checks:
+  - {kind: file_regex, path: example_units_test.go, pattern: '// Output:'}
+  - {kind: tests, runner: cmd, cmd: go test -count=1 -run ExampleParseBytes_units -v ., expect_regex: '--- PASS: ExampleParseBytes_units', timeout: 240}

@@ -1,0 +1,97 @@
+#!/usr/bin/env python3
+"""Offline validation of the knowledge/ scenarios (no model calls).
+
+For every scenario: (1) loader parses; (2) snapshot materializes twice into fresh roots with an identical
+tree hash; (3) per turn, a reference answer/artifact passes all checks and a plausible-but-wrong one fails
+(proves checks discriminate); (4) keyed_facts are not satisfied by the prompt text itself (no give-away).
+
+Reference layout (outside the repo): <ref-root>/<id>/turnN/{message.txt,files/**} and turnN/wrong/{message.txt,files/**}.
+Reference files accumulate across turns (the workspace evolves like a real session); the wrong variant of
+turn N is graded on the reference workspace of turns < N plus its own wrong files.
+
+  validate_knowledge.py [--ids a,b] [--ref-root DIR] [--network]   (--network: ignore local_hint, fetch by sha)
+"""
+import argparse, copy, json, shutil, sys, tempfile
+from pathlib import Path
+
+HERE = Path(__file__).resolve().parent
+REPO = HERE.parents[3]
+sys.path.insert(0, str(REPO / "scripts"))
+import paired_scenarios as ps  # noqa: E402
+
+# The checked-in loader (scripts/paired_scenarios.py) does not yet list split "main" or task_type "explain"/"docs".
+# Extend its tuples in-process so these scenarios can be validated; the loader needs the same additive change
+# before `paired.py plan` can load main-v1 (reported, loader intentionally not edited here).
+ps.SPLITS = tuple(dict.fromkeys(ps.SPLITS + ("main",)))
+ps.TASK_TYPES = tuple(dict.fromkeys(ps.TASK_TYPES + ("explain", "docs")))
+
+
+def overlay(src: Path, dst: Path):
+    if src.is_dir():
+        shutil.copytree(src, dst, dirs_exist_ok=True)
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--ids")
+    ap.add_argument("--dir", default=str(HERE / "knowledge"))
+    ap.add_argument("--ref-root", default=str(Path.home() / "dev/afast-paired-src/reference/knowledge"))
+    ap.add_argument("--network", action="store_true")
+    a = ap.parse_args()
+    specs = ps.load_dir(a.dir)
+    if a.ids:
+        want = set(a.ids.split(","))
+        specs = [s for s in specs if s.id in want]
+    bad = 0
+    summary = []
+    for spec in specs:
+        errs = []
+        if a.network:
+            spec = copy.deepcopy(spec)
+            object.__setattr__(spec, "workspace", {k: v for k, v in spec.workspace.items() if k != "local_hint"})
+        n = len(spec.turns)
+        if not 8 <= n <= 16: errs.append(f"turns={n} outside 8-16")
+        longs = [i for i, g in enumerate(spec.gap_schedule, 1) if g >= 300]
+        if len(longs) not in (0, 2) or any(spec.gap_schedule[i - 1] != 420 for i in longs):
+            errs.append(f"gaps {longs}")
+        with tempfile.TemporaryDirectory(prefix="vk-") as ra, tempfile.TemporaryDirectory(prefix="vk-") as rb:
+            snap = ps.materialize(spec, ra)
+            snap2 = ps.materialize(spec, rb)
+            h1 = json.loads((snap / "snapshot.json").read_text())["tree_sha256"]
+            h2 = json.loads((snap2 / "snapshot.json").read_text())["tree_sha256"]
+            if h1 != h2: errs.append("unstable tree hash")
+            ws = Path(ra) / "ws"
+            shutil.copytree(snap / "workspace", ws)
+            refdir = Path(a.ref_root).expanduser() / spec.id
+            kinds = set()
+            for i, t in enumerate(spec.turns, 1):
+                kinds |= {c.kind for c in t.checks}
+                if not t.checks: errs.append(f"turn{i}: no checks")
+                td = refdir / f"turn{i}"
+                if not td.is_dir(): errs.append(f"turn{i}: missing reference"); continue
+                for c in t.checks:  # prompt-echo guard
+                    if c.kind == "keyed_facts" and ps._check_keyed_facts(c.args, t.prompt)["failed"] == 0:
+                        errs.append(f"turn{i}: keyed_facts satisfied by the prompt itself")
+                wtmp = Path(ra) / "wrongws"
+                if wtmp.exists(): shutil.rmtree(wtmp)
+                shutil.copytree(ws, wtmp)
+                overlay(td / "wrong" / "files", wtmp)
+                wm = td / "wrong" / "message.txt"
+                wr = ps.grade_turn(spec, i, wtmp, wm.read_text(encoding="utf-8") if wm.exists() else "", snap)
+                if wr["failed"] == 0: errs.append(f"turn{i}: WRONG answer passed all checks")
+                overlay(td / "files", ws)
+                rr = ps.grade_turn(spec, i, ws, (td / "message.txt").read_text(encoding="utf-8"), snap)
+                if rr["failed"] != 0 or rr["checks"] == 0:
+                    errs.append(f"turn{i}: reference failed {rr['failure_labels']}")
+            summary.append((spec.id, n, longs, sorted(kinds), h1[:10], "OK" if not errs else "FAIL"))
+        for e in errs: print(f"  {spec.id}: {e}")
+        bad += bool(errs)
+    print(f"\n{'id':26} turns gaps        kinds{'':52} tree        result")
+    for sid, n, longs, kinds, h, r in summary:
+        print(f"{sid:26} {n:<5} {str(longs):11} {','.join(kinds):57} {h}  {r}")
+    print(f"\n{len(specs) - bad}/{len(specs)} scenarios valid")
+    sys.exit(1 if bad else 0)
+
+
+if __name__ == "__main__":
+    main()

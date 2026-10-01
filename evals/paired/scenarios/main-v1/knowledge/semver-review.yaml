@@ -1,0 +1,54 @@
+# dtolnay/semver 1.0.28 at 280ebcb plus two planted patches to eval.rs (caret 0.0.x exactness, pre-release gate); checks via rustc since cargo dev-deps are unavailable offline
+id: semver-review
+task_type: review
+language: rust
+split: main
+source:
+  desc: dtolnay/semver 1.0.28 at 280ebcb plus two planted patches to eval.rs (caret 0.0.x exactness, pre-release gate); checks via rustc since cargo dev-deps are unavailable offline
+  repo: https://github.com/dtolnay/semver.git
+  sha: 280ebcb6edac3aa4cdc545dbff8a26c5ac4861fe
+workspace:
+  kind: git
+  repo: https://github.com/dtolnay/semver.git
+  sha: 280ebcb6edac3aa4cdc545dbff8a26c5ac4861fe
+  local_hint: ~/dev/afast-paired-src/rust-semver
+  add_files:
+    patches/caret_zero.diff: "--- a/src/eval.rs\n+++ b/src/eval.rs\n@@ -160,8 +160,6 @@\n         } else if ver.patch != patch {\n             return ver.patch > patch;\n         }\n-    } else if ver.minor != minor || ver.patch != patch {\n-        return false;\n     }\n \n     ver.pre >= cmp.pre\n"
+    patches/pre_rule.diff: "--- a/src/eval.rs\n+++ b/src/eval.rs\n@@ -7,20 +7,7 @@\n         }\n     }\n \n-    if ver.pre.is_empty() {\n-        return true;\n-    }\n-\n-    // If a version has a prerelease tag (for example, 1.2.3-alpha.3) then it\n-    // will only be allowed to satisfy req if at least one comparator with the\n-    // same major.minor.patch also has a prerelease tag.\n-    for cmp in &req.comparators {\n-        if pre_is_compatible(cmp, ver) {\n-            return true;\n-        }\n-    }\n-\n-    false\n+    true\n }\n \n pub(crate) fn matches_comparator(cmp: &Comparator, ver: &Version) -> bool {\n"
+turns:
+- prompt: Give me a one-line role for each file under src/ in this crate (lib.rs, parse.rs, eval.rs, identifier.rs, error.rs, display.rs, impls.rs, serde.rs). Do not change any files.
+  checks:
+  - {kind: keyed_facts, all: [eval\.rs, identifier\.rs, parse\.rs, error\.rs, serde, match]}
+- prompt: 'Explain the pre-release rule in `matches_req` (src/eval.rs): when can a version like 1.5.0-beta satisfy `^1.2.3`, and when can 1.2.3-rc.1 satisfy `^1.2.3-beta`? Do not change any files.'
+  checks:
+  - {kind: keyed_facts, all: [pre_is_compatible, 'same major\.minor\.patch|same.{0,20}patch', prerelease|pre-release|pre tag, '1\.5\.0-beta.{0,80}(not|no|false|cannot)|(not|no|false|cannot).{0,80}1\.5\.0-beta']}
+- prompt: 'Cargo cannot run offline here (the criterion dev-dependency is missing), so compile the library directly: `rustc --edition 2021 --crate-type rlib --crate-name semver src/lib.rs -o /tmp/libsemver.rlib` and link a throwaway program from /tmp. What do these evaluate to: `^0.0.3` vs 0.0.4, `^0.2.3` vs 0.2.9, and `>1.2` vs 1.2.9? Do not leave files in the repository.'
+  checks:
+  - {kind: keyed_facts, all: ['0\.0\.4.{0,40}(false|no\b|not match)', '0\.2\.9.{0,40}(true|yes|match)', '1\.2\.9.{0,40}(false|no\b|not match)']}
+- prompt: 'Review patches/caret_zero.diff (a proposed change to src/eval.rs `matches_caret`): what behaviour changes for which requirement and version? Give a concrete example and what you would ask the author. Do not apply it.'
+  checks:
+  - {kind: keyed_facts, all: [\^0\.0\.3, 0\.0\.4, patch|exact]}
+- prompt: 'Review patches/pre_rule.diff (a proposed change to `matches_req`): what is the observable behaviour change, with one concrete requirement/version pair, and what is the risk for users? Do not apply it.'
+  checks:
+  - {kind: keyed_facts, all: [1\.5\.0-beta, 'pre_is_compatible|pre-?release gating|prerelease', \^1\.2\.3]}
+- prompt: Write REVIEW.md with level-2 sections Summary, Patch caret_zero and Patch pre_rule, quoting one concrete wrong match for each.
+  checks:
+  - {kind: doc_sections, path: REVIEW.md, headings: [Summary, caret_zero, pre_rule]}
+  - {kind: file_regex, path: REVIEW.md, pattern: \^0\.0\.3}
+  - {kind: file_regex, path: REVIEW.md, pattern: 1\.5\.0-beta}
+- prompt: 'Create checks/req_checks.rs, a standalone Rust program (fn main with assert!s, linking the semver rlib) that pins: ^0.0.x exactness, pre-release gating, tilde and the `>1.2` case. Build and run it with rustc as above. It must fail if either patch is applied.'
+  checks:
+  - {kind: file_regex, path: checks/req_checks.rs, pattern: assert!, min_count: 4}
+  - {kind: tests, runner: cmd, cmd: 'D=$(mktemp -d) && rustc --edition 2021 --crate-type rlib --crate-name semver src/lib.rs -o $D/libsemver.rlib 2>/dev/null && rustc --edition 2021 --extern semver=$D/libsemver.rlib -L $D checks/req_checks.rs -o $D/chk 2>/dev/null && $D/chk && cp src/eval.rs eval.bak && perl -pi -e ''s/\} else if ver\.minor != minor \|\| ver\.patch != patch \{/} else if false {/'' src/eval.rs && rustc --edition 2021 --crate-type rlib --crate-name semver src/lib.rs -o $D/libsemver.rlib 2>/dev/null && rustc --edition 2021 --extern semver=$D/libsemver.rlib -L $D checks/req_checks.rs -o $D/chk 2>/dev/null && ! $D/chk && cp eval.bak src/eval.rs && perl -pi -e ''s/if ver\.pre\.is_empty\(\) \{/if true {/'' src/eval.rs && rustc --edition 2021 --crate-type rlib --crate-name semver src/lib.rs -o $D/libsemver.rlib 2>/dev/null && rustc --edition 2021 --extern semver=$D/libsemver.rlib -L $D checks/req_checks.rs -o $D/chk 2>/dev/null && ! $D/chk', timeout: 300}
+- prompt: What is the difference between `Version::cmp` and `Version::cmp_precedence` for 1.0.0+a versus 1.0.0+b? Verify with a throwaway program and give the results. Do not change repository files.
+  checks:
+  - {kind: keyed_facts, all: [cmp_precedence, build, Equal, Less]}
+- prompt: 'Read the long comment at the top of src/identifier.rs: how does Identifier store short and long strings, and why is size_of::<Option<Version>>() equal to size_of::<Version>()? Do not change any files.'
+  checks:
+  - {kind: keyed_facts, all: [8 bytes|8-byte|eight, inline, heap, niche|all-0|all-zero|zero bit pattern, varint|length]}
+- prompt: 'Write ARCHITECTURE.md summarising the crate files and call out two numbers from the source: the maximum number of comparators and how many ErrorKind variants exist.'
+  checks:
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: eval\.rs}
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: identifier\.rs}
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: \b32\b}
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: \b12\b}

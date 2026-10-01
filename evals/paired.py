@@ -91,21 +91,31 @@ def clean_tail(text: str, lines: int = 14) -> str:
     return "\n".join(kept[-lines:])
 
 
+# Positive evidence of a CONFIGURATION problem (the session cannot start for a reason retrying will not change).
+CONFIG_RE = re.compile(
+    r"Credential environment variable \S+ for provider|api_key_env \S+ is not set|Provider '[^']*' not configured|"
+    r"Could not load configured provider source|No providers? configured|--model requires --provider|"
+    r"(bundle|profile)[^\n]{0,60}(not found|failed to (load|resolve|prepare)|could not be (loaded|resolved))|"
+    r"cannot determine base instruction|Failed to (load|resolve|prepare) bundle|ModuleNotFoundError: No module named 'amplifier",
+    re.I)
+
+
 def classify_failure(result: dict | None, diag: dict) -> str:
     """'config_error' | 'transient' for a session that failed infrastructure.
 
-    A failure is a configuration error when NO model call happened (no session, or a session with zero
-    llm:request events) and the error text carries no transient marker (overload, rate limit, 5xx, timeouts,
-    connection resets, Forge launch trouble). With nothing to go on (no result and no output) the failure is
-    treated as transient: absence of evidence is not evidence of a bad configuration."""
+    A configuration error needs POSITIVE evidence, both of: (1) zero llm:request events in the session's events
+    (``diag['model_calls']``; no session at all counts as zero) and (2) a recognised configuration marker in the
+    error output (credential ValueError, unconfigured provider, bundle/profile resolution failure, ...). Everything
+    else -- a worker that started running and vanished (Forge daemon restart, machine sleep, killed terminal), any
+    model call having happened, transient markers (overload, rate limit, 5xx, timeouts, resets, Forge launch
+    trouble), or simply no recognisable cause -- is transient and follows the normal whole-wave retry path. Absence of
+    evidence is never a reason to halt a campaign."""
     tail = diag.get("error_tail") or ""
-    if diag.get("model_calls", 0) > 0:
+    if diag.get("model_calls", 0) > 0 or diag.get("worker_died"):
         return "transient"
     if TRANSIENT_RE.search(tail):
         return "transient"
-    if result is None and not tail.strip():
-        return "transient"
-    return "config_error"
+    return "config_error" if CONFIG_RE.search(tail) else "transient"
 
 
 # ----------------------------------------------------------------------------------------- config
@@ -616,6 +626,15 @@ def mechanism_gate(session: dict, counts: dict, switches: int, main_models: list
     return {"mechanism_engaged": ok, "mechanism_reasons": why, "fd_receipts": receipts}
 
 
+def count_llm_requests(session_dir) -> int:
+    """llm:request events in a session's events.jsonl (a request killed mid-flight counts: the call was made)."""
+    path = Path(session_dir) / "events.jsonl"
+    if not path.exists():
+        return 0
+    with path.open(encoding="utf-8", errors="replace") as fh:
+        return sum(1 for line in fh if '"llm:request"' in line)
+
+
 def sessions_dir_for_workspace(workspace: Path) -> Path:
     slug = str(Path(workspace).resolve()).replace("/", "-").replace("\\", "-").replace(":", "")
     return Path.home() / ".amplifier" / "projects" / slug / "sessions"
@@ -991,11 +1010,27 @@ class ForgeBackend:
                 tail = clean_tail(f.read_text(errors="replace"))
                 if tail:
                     break
-        calls = 0
-        if result and result.get("session_id"):
-            sdir = sessions_dir_for_workspace(self.workspace(root, name)) / result["session_id"]
-            calls = len(parse_events(sdir)["requests"])
-        return {"error_tail": tail, "model_calls": calls}
+        calls = sum(count_llm_requests(d) for d in self.session_dirs(root, name, result))
+        died = False
+        running, rfile = None, run / "running.json"
+        if result is None and rfile.exists():
+            try:
+                os.kill(json.loads(rfile.read_text()).get("controller_pid", 0), 0)
+            except (ProcessLookupError, ValueError, TypeError):
+                died = True               # the worker started, then vanished without writing result.json
+            except OSError:
+                pass
+        return {"error_tail": tail, "model_calls": calls, "worker_died": died}
+
+    def session_dirs(self, root: Path, name: str, result: dict | None = None) -> list:
+        """Every Amplifier session dir of this run's workspace, found on disk (a run that died has no result.json to
+        name its session, but its events are still evidence and still cost money)."""
+        base = sessions_dir_for_workspace(self.workspace(root, name))
+        dirs = [d for d in (sorted(base.iterdir()) if base.is_dir() else []) if not d.name.startswith(".") and (d / "events.jsonl").exists()]
+        sid = (result or {}).get("session_id")
+        if sid and (base / sid).exists() and (base / sid) not in dirs:
+            dirs.append(base / sid)
+        return dirs
 
     def run_dir(self, root: Path, name: str) -> Path:
         import forge_e2e
@@ -1080,15 +1115,17 @@ def wave_timeout_s(ctx: Ctx, sess: dict) -> float:
 
 
 def wave_cost(ctx: Ctx, backend, root: Path, sessions: list) -> float:
+    """Measured (recomputed) cost of a wave's sessions, including sessions that died before writing result.json:
+    their events are on disk and the provider billed them."""
     total = 0.0
     for s in sessions:
         res = backend.result(root, s["key"])
-        if not res or not res.get("session_id"):
-            continue
-        sdir = sessions_dir_for_workspace(backend.workspace(root, s["key"])) / res["session_id"]
-        parsed = parse_events(sdir)
-        total += sum(c for c in (recompute_cost(r["model"], r["uncached"], r["read"], r["write"], r["output"])
-                                 for r in parsed["requests"]) if c is not None)
+        dirs = backend.session_dirs(root, s["key"], res) if hasattr(backend, "session_dirs") else []
+        if not dirs and res and res.get("session_id"):
+            dirs = [sessions_dir_for_workspace(backend.workspace(root, s["key"])) / res["session_id"]]
+        for sdir in dirs:
+            total += sum(c for c in (recompute_cost(r["model"], r["uncached"], r["read"], r["write"], r["output"])
+                                     for r in parse_events(sdir)["requests"]) if c is not None)
     return total
 
 
@@ -1170,6 +1207,9 @@ def run_wave(ctx: Ctx, backend, state: State, ledger: Ledger, wid: str, policy_c
                 raise ConfigError(wid, cfg)
             att["status"] = "infra_failed"
             log(f"[{wid}] attempt {attempt_no}: transient infrastructure failure in {infra}; rerunning the whole wave")
+            if any(diag[k].get("worker_died") for k in infra):
+                log(f"[{wid}] workers vanished mid-run (Forge daemon restart/shutdown, sleep, killed terminal?): "
+                    "check ~/Library/Logs/forge/daemon.err.log for 'Shutting down daemon'")
             state.save()
             continue
         att["status"] = "done"

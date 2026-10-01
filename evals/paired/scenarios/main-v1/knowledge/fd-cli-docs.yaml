@@ -1,0 +1,76 @@
+# sharkdp/fd 10.5.0 at ce97e47: understand and document a Rust CLI (cannot be built offline), plus a Python port of the size parser verified against Rust unit-test values
+id: fd-cli-docs
+task_type: docs
+language: rust
+split: main
+source:
+  desc: 'sharkdp/fd 10.5.0 at ce97e47: understand and document a Rust CLI (cannot be built offline), plus a Python port of the size parser verified against Rust unit-test values'
+  repo: https://github.com/sharkdp/fd.git
+  sha: ce97e473ebaec49697c07daa50a7bc2b32f713d2
+workspace:
+  kind: git
+  repo: https://github.com/sharkdp/fd.git
+  sha: ce97e473ebaec49697c07daa50a7bc2b32f713d2
+  local_hint: ~/dev/afast-paired-src/sharkdp-fd
+turns:
+- prompt: 'Describe `ExitCode` in src/exit_codes.rs: its variants and the numeric exit status each maps to, including how `HasResults` is turned into a number. Do not change any files.'
+  checks:
+  - {kind: keyed_facts, all: [Success, GeneralError, KilledBySigint, HasResults, '130', '!has_results|inverted|0 when|zero when']}
+- prompt: How many threads does fd use by default and where is that decided? Do not change any files.
+  checks:
+  - {kind: keyed_facts, all: [default_num_threads, available_parallelism, \b64\b, fallback|single|\b1\b]}
+- prompt: What does the receiver buffer in src/walk.rs do, and what are its two limits (name the constants and values)? Do not change any files.
+  checks:
+  - {kind: keyed_facts, all: [MAX_BUFFER_LENGTH, '1000', DEFAULT_MAX_BUFFER_TIME, '100', stream]}
+- prompt: 'Explain the syntax of the `--size` filter as implemented in src/filter/size.rs: the regex, the meaning of a +/- prefix, and the difference between `k` and `ki` units. Do not change any files.'
+  checks:
+  - {kind: keyed_facts, all: ['\^\(\[\+-\]\?\)|\[\+-\]\?', Min, Max, Equals, '1024', '1000']}
+- prompt: List the placeholder tokens that fd's format templates understand (src/fmt/mod.rs) including the escape for literal braces. Do not change any files.
+  checks:
+  - {kind: keyed_facts, all: ['\{\}', '\{/\}', '\{//\}', '\{\.\}', '\{/\.\}', '\{\{']}
+- prompt: Create docs/cli-notes.md with level-2 sections Exit codes, Threads, Size filters and Placeholders summarising the answers so far with the exact numbers.
+  checks:
+  - {kind: doc_sections, path: docs/cli-notes.md, headings: [Exit codes, Threads, Size filters, Placeholders]}
+  - {kind: file_regex, path: docs/cli-notes.md, pattern: '130'}
+  - {kind: file_regex, path: docs/cli-notes.md, pattern: \b64\b}
+  - {kind: file_regex, path: docs/cli-notes.md, pattern: '10240'}
+  gap_before_s: 420
+- prompt: How does fd decide whether a search is case-sensitive (smart case)? Name the relevant function and the flags that interact with it. Do not change any files.
+  checks:
+  - {kind: keyed_facts, all: [pattern_has_uppercase_char, ignore_case|--ignore-case|-i, case_sensitive|--case-sensitive|-s, smart]}
+- prompt: 'From CHANGELOG.md: which two features were added in 10.5.0, and what security-related bugfix is listed there? Do not change any files.'
+  checks:
+  - {kind: keyed_facts, all: [--ignore-parent, --exact, sanitiz, escape|injection|control character]}
+- prompt: What bugfixes are listed under 'Upcoming Release' in CHANGELOG.md? Do not change any files.
+  checks:
+  - {kind: keyed_facts, all: [jemalloc, '2126', newline, --format|format]}
+- prompt: Which input formats does the time filter (`--changed-within` / `--changed-before`) accept, and in which order does `TimeFilter::from_str` try them? Do not change any files.
+  checks:
+  - {kind: keyed_facts, all: [Span, Timestamp, DateTime, '@', UNIX|unix|epoch]}
+- prompt: 'Write scripts/size_parse.py: a stdlib-only Python port of the size parsing (`python3 scripts/size_parse.py +10ki` prints `Min(10240)`, `-100ki` prints `Max(102400)`, `3MB` prints `Equals(3000000)`; invalid input exits non-zero). Follow the Rust regex and unit rules exactly (case-insensitive units, `b`, k/ki, m/mi, g/gi, t/ti). Run it on a few values.'
+  checks:
+  - {kind: file_regex, path: scripts/size_parse.py, pattern: re\.}
+  - {kind: tests, runner: cmd, cmd: python3 scripts/size_parse.py +10ki | grep -qx 'Min(10240)' && python3 scripts/size_parse.py -100ki | grep -qx 'Max(102400)' && python3 scripts/size_parse.py 3MB | grep -qx 'Equals(3000000)' && python3 scripts/size_parse.py 3MiB | grep -qx 'Equals(3145728)' && python3 scripts/size_parse.py 2GiB | grep -qx 'Equals(2147483648)' && python3 scripts/size_parse.py +7tb | grep -qx 'Min(7000000000000)' && python3 scripts/size_parse.py 1b | grep -qx 'Equals(1)' && python3 scripts/size_parse.py -1KIB | grep -qx 'Max(1024)' && ! python3 scripts/size_parse.py 5 2>/dev/null && ! python3 scripts/size_parse.py 1xb 2>/dev/null}
+- prompt: What does src/sanitize.rs escape, how are escaped characters rendered, and which whitespace character is exempt? Do not change any files.
+  checks:
+  - {kind: keyed_facts, all: [needs_escape, \\\\x|\\x, \\\\u|\\u, tab|\\t|HT, bidi]}
+  gap_before_s: 420
+- prompt: How do `--exec` and `--exec-batch` differ in src/exec/mod.rs and what happens when a placeholder is used as the executable? Do not change any files.
+  checks:
+  - {kind: keyed_facts, all: [ExecutionMode|CommandSet, batch, each|per, placeholder_as_executable_rejected|rejected|reject|error]}
+- prompt: Write docs/exec-cheatsheet.md with a markdown table (columns Placeholder, Meaning, and the result for the path `src/a/b.txt`) covering all five placeholders, using the semantics of basename/dirname/remove_extension in src/fmt/input.rs.
+  checks:
+  - {kind: file_regex, path: docs/exec-cheatsheet.md, pattern: ^\|.*\|.*\|.*\|, min_count: 7}
+  - {kind: file_regex, path: docs/exec-cheatsheet.md, pattern: '\{//\}.*src/a`'}
+  - {kind: file_regex, path: docs/exec-cheatsheet.md, pattern: '\{/\.\}.*`b`'}
+  - {kind: file_regex, path: docs/exec-cheatsheet.md, pattern: '\{\.\}.*src/a/b`'}
+- prompt: Which fields of `Config` (src/config.rs) control reading of ignore files, and what are their names? Do not change any files.
+  checks:
+  - {kind: keyed_facts, all: [read_fdignore, read_parent_ignore, read_vcsignore, require_git_to_read_vcsignore, read_global_ignore]}
+- prompt: Write ARCHITECTURE.md summarising the modules wired in src/main.rs (cli, config, walk, filter, fmt, exec, output, sanitize) with one bullet each.
+  checks:
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: walk\.rs}
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: filter/}
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: fmt/}
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: exec/}
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: sanitize\.rs}

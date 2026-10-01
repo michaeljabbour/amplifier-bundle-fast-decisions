@@ -1,0 +1,57 @@
+# vercel/ms at 4ff48ce (TypeScript, 4.0.0) plus two planted patches (plural threshold, month constant)
+id: ms-review
+task_type: review
+language: javascript
+split: main
+source:
+  desc: vercel/ms at 4ff48ce (TypeScript, 4.0.0) plus two planted patches (plural threshold, month constant)
+  repo: https://github.com/vercel/ms.git
+  sha: 4ff48cec099f0514c3e9bbca18706c9c21122bfb
+workspace:
+  kind: git
+  repo: https://github.com/vercel/ms.git
+  sha: 4ff48cec099f0514c3e9bbca18706c9c21122bfb
+  local_hint: ~/dev/afast-paired-src/js-ms
+  add_files:
+    patches/plural_cleanup.diff: |
+      --- a/src/index.ts
+      +++ b/src/index.ts
+      @@ -239,6 +239,6 @@
+         n: number,
+         name: string,
+       ): StringValue {
+      -  const isPlural = msAbs >= n * 1.5;
+      +  const isPlural = msAbs >= n;
+         return `${Math.round(ms / n)} ${name}${isPlural ? 's' : ''}` as StringValue;
+       }
+    patches/month_constant.diff: "--- a/src/index.ts\n+++ b/src/index.ts\n@@ -4,7 +4,7 @@\n const d = h * 24;\n const w = d * 7;\n const y = d * 365.25;\n-const mo = y / 12;\n+const mo = d * 30;\n \n type Years = 'years' | 'year' | 'yrs' | 'yr' | 'y';\n type Months = 'months' | 'month' | 'mo';\n"
+turns:
+- prompt: How are the unit constants in src/index.ts defined (in particular the year and the month), and what does that imply for `ms('1mo')`? Do not change any files.
+  checks:
+  - {kind: keyed_facts, all: [365\.25, 'y / 12|year.{0,20}12|12', 2629800000|30\.4], any: [d \* 365\.25, mo]}
+- prompt: Look at the input validation at the top of `parse` in src/index.ts. Are the condition and the error message consistent about the allowed string length? Quote both and say what a 100-character numeric string does today. Do not change any files.
+  checks:
+  - {kind: keyed_facts, all: ['> ?100', 1 and 99, accept|returns|does not throw|no error|allowed|passes|valid]}
+- prompt: Review patches/plural_cleanup.diff (a proposed change to src/index.ts). What exactly changes in the output of the long format, give two concrete inputs and outputs, and what would you ask the author to do? Do not apply it.
+  checks:
+  - {kind: keyed_facts, all: [1 seconds|1 hours, 1\.5, plural]}
+- prompt: Now review patches/month_constant.diff. Which round-trip or comparison breaks, with concrete values, and is the change safe for the short format thresholds? Do not apply it.
+  checks:
+  - {kind: keyed_facts, all: [12mo, 1y, 365\.25|360|365]}
+- prompt: Write REVIEW.md with level-2 sections Summary, Plural patch and Month patch, quoting the concrete wrong outputs for each patch.
+  checks:
+  - {kind: doc_sections, path: REVIEW.md, headings: [Summary, Plural, Month]}
+  - {kind: file_regex, path: REVIEW.md, pattern: 1 seconds}
+  - {kind: file_regex, path: REVIEW.md, pattern: 12mo}
+- prompt: Write tests/ms.test.mjs using node:test and node:assert/strict, importing `ms` from '../src/index.ts' (Node 22 strips the types). Pin the singular/plural boundary of the long format. Run it with `node --test tests/ms.test.mjs`. The tests must actually catch a wrong plural threshold.
+  checks:
+  - {kind: file_regex, path: tests/ms.test.mjs, pattern: 'long: true', min_count: 2}
+  - {kind: tests, runner: cmd, cmd: node --test tests/ms.test.mjs && perl -pi -e 's/msAbs >= n \* 1\.5/msAbs >= n/' src/index.ts && ! node --test tests/ms.test.mjs, expect_regex: pass \d+}
+- prompt: How is the existing test suite organised and which commands run it (src/*.test.ts)? Why are there two test commands? Do not change any files.
+  checks:
+  - {kind: keyed_facts, all: [jest, edge, parse\.test|format\.test|index\.test]}
+- prompt: Fix the inconsistency you found in `parse` by making the check match the documented 'between 1 and 99' message (strings of 100 characters must now throw). Keep everything else unchanged and verify with a quick script.
+  checks:
+  - {kind: file_regex, path: src/index.ts, pattern: str\.length > 99}
+  - {kind: file_regex, path: src/index.ts, pattern: str\.length > 100, absent: true}
+  - {kind: tests, runner: cmd, cmd: 'node --input-type=module -e "import {parse} from ''./src/index.ts''; let t=false; try{parse(''1''.repeat(100))}catch(e){t=true}; if(!t) process.exit(1); if(!(parse(''1''.repeat(99))>0)) process.exit(2); if(parse(''2d'')!==172800000) process.exit(3); console.log(''ok-boundary'')"', expect_regex: ok-boundary}

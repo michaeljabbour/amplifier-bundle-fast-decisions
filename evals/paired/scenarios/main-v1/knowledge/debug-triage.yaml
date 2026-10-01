@@ -1,0 +1,80 @@
+# debug-js/debug 4.4.3 at f405ade: triage three planted bug reports from the code, then implement and test a small change
+id: debug-triage
+task_type: mixed
+language: javascript
+split: main
+source:
+  desc: 'debug-js/debug 4.4.3 at f405ade: triage three planted bug reports from the code, then implement and test a small change'
+  repo: https://github.com/debug-js/debug.git
+  sha: f405ade8a4b7a0dc353e0f7390c1be90060f3621
+workspace:
+  kind: git
+  repo: https://github.com/debug-js/debug.git
+  sha: f405ade8a4b7a0dc353e0f7390c1be90060f3621
+  local_hint: ~/dev/afast-paired-src/debug-js
+  add_files:
+    issues/001-skip-whitespace.md: |
+      # Issue 001: skip pattern ignored when namespaces are space separated
+
+      I run `DEBUG='app:* -app:noisy' node server.js` and expected `app:noisy` to be silenced.
+      The docs only show commas, so I think the space-separated form is silently ignored. Is `-` skipping broken?
+    issues/002-extend-enabled.md: |
+      # Issue 002: extended debugger ignores explicit `enabled = true`
+
+      ```js
+      const parent = debug('zzz');
+      parent.enabled = true;
+      const child = parent.extend('child');
+      console.log(child.enabled); // false
+      ```
+
+      I expected children of a force-enabled debugger to be enabled too.
+    issues/003-case-sensitive.md: |
+      # Issue 003: DEBUG=App:* does not enable `app:db`
+
+      I capitalised the namespace in the env var by mistake and nothing is printed. Is namespace matching broken?
+turns:
+- prompt: How does src/index.js decide between the Node and browser implementation, and which files are involved? Do not change any files.
+  checks:
+  - {kind: keyed_facts, all: [browser\.js, node\.js, process\.type|renderer, __nwjs|process\.browser]}
+- prompt: 'Triage issues/001-skip-whitespace.md: is it a real bug? Name the function in src/common.js that decides and explain. Do not change any files.'
+  checks:
+  - {kind: keyed_facts, all: [enable, \\s\+|whitespace|space, skips, not a bug|expected|intended|works as (designed|intended)|supported]}
+- prompt: 'Triage issues/002-extend-enabled.md: is the behaviour real, and which function and variable cause it? Do not change any files.'
+  checks:
+  - {kind: keyed_facts, all: [extend, enableOverride, \blog\b, cop|inherit]}
+- prompt: 'Triage issues/003-case-sensitive.md: is namespace matching broken? Which function compares characters? Do not change any files.'
+  checks:
+  - {kind: keyed_facts, all: [matchesTemplate, case, sensitive|===, enabled]}
+- prompt: Write TRIAGE.md with one level-2 section per issue (headings `Issue 001`, `Issue 002`, `Issue 003`), each starting with a `Verdict:` line, naming the responsible function or variable.
+  checks:
+  - {kind: doc_sections, path: TRIAGE.md, headings: [Issue 001, Issue 002, Issue 003]}
+  - {kind: file_regex, path: TRIAGE.md, pattern: '^Verdict:', min_count: 3}
+  - {kind: file_regex, path: TRIAGE.md, pattern: enableOverride}
+  - {kind: file_regex, path: TRIAGE.md, pattern: matchesTemplate}
+- prompt: Which environment variables does src/node.js read, how are DEBUG_* variables turned into options, and how is the colour decision made? Do not change any files.
+  checks:
+  - {kind: keyed_facts, all: [inspectOpts, DEBUG_|debug_, hideDate|HIDE_DATE, isatty|useColors, camel]}
+- prompt: How does debug pick a colour for a namespace in src/common.js, and what is the base colour list in src/node.js versus when the optional supports-color package is present? Do not change any files.
+  checks:
+  - {kind: keyed_facts, all: [selectColor, hash, '6, ?2, ?3, ?4, ?5, ?1', supports-color]}
+- prompt: 'Implement matching that ignores case in src/common.js: in `enabled()` lowercase the name and each template with `.toLowerCase()` before calling matchesTemplate (skips too). Keep wildcard behaviour unchanged. (The `ms` dependency is not installed and there is no network: for local runs use a throwaway stub outside the repo via NODE_PATH.)'
+  checks:
+  - {kind: file_regex, path: src/common.js, pattern: toLowerCase, min_count: 2}
+  - {kind: tests, runner: cmd, cmd: 'mkdir -p node_modules/ms && echo "module.exports = n => n + ''ms'';" > node_modules/ms/index.js && DEBUG=''App:*,-APP:noisy'' node -e "const d=require(''./src/node.js''); const ok = d(''app:db'').enabled === true && d(''app:noisy'').enabled === false && d(''other'').enabled === false && d(''APP:x'').enabled === true; if(!ok) process.exit(1); console.log(''ci-match'')"', expect_regex: ci-match}
+- prompt: Add tests/namespace-case.test.js using node:test that pins the case-insensitive behaviour (set process.env.DEBUG before requiring ../src/node.js; include a skip pattern). The tests must fail if the lowercasing is removed. Run it with a throwaway `ms` stub.
+  checks:
+  - {kind: file_regex, path: tests/namespace-case.test.js, pattern: test\(, min_count: 2}
+  - {kind: tests, runner: cmd, cmd: mkdir -p node_modules/ms && echo "module.exports = n => n + 'ms';" > node_modules/ms/index.js && node --test tests/namespace-case.test.js && perl -pi -e 's/\.toLowerCase\(\)//g' src/common.js && ! node --test tests/namespace-case.test.js, expect_regex: pass \d+}
+- prompt: Add a '## Namespace matching' section to README.md (before '## Environment Variables') covering separators, wildcards, the `-` skip prefix and the new case-insensitivity.
+  checks:
+  - {kind: doc_sections, path: README.md, headings: [Namespace matching]}
+  - {kind: file_regex, path: README.md, pattern: case-insensitive}
+  - {kind: file_regex, path: README.md, pattern: whitespace|space}
+- prompt: Write ARCHITECTURE.md describing the three source files (index.js, common.js, node.js, browser.js) and the roles of `setup(env)`, `createDebug`, `formatters` and `enabled()`.
+  checks:
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: index\.js}
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: common\.js}
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: setup}
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: formatters}
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: enabled\(}

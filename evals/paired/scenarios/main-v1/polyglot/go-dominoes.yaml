@@ -1,0 +1,484 @@
+# main-v1 polyglot 8/20: go/dominoes, 13 turns, two 7-minute gaps (before turns 6 and 11).
+id: go-dominoes
+task_type: bugfix
+language: go
+split: main
+default_gap_s: 10
+source:
+  desc: "Aider polyglot-benchmark go/dominoes (Exercism), outside the S2 slice"
+  repo: https://github.com/Aider-AI/polyglot-benchmark
+  sha: 7e0611e77b54e2dea774cdc0aa00cf9f7ed6144f
+workspace:
+  kind: git
+  repo: https://github.com/Aider-AI/polyglot-benchmark
+  sha: 7e0611e77b54e2dea774cdc0aa00cf9f7ed6144f
+  subdir: go/exercises/practice/dominoes
+  local_hint: ~/dev/afast-campaign-corrected-polyglot-20260919/polyglot/polyglot-benchmark
+  remove: [.meta]
+protected: [dominoes_test.go, cases_test.go]
+hidden_files:
+  hidden_alias_test.go: |
+    package dominoes
+
+    import "testing"
+
+    func TestHdSingleStoneDoesNotAliasInput(t *testing.T) {
+        input := []Domino{{1, 1}}
+        chain, ok := MakeChain(input)
+        if !ok || len(chain) != 1 {
+            t.Fatalf("MakeChain(%v) = %v, %v", input, chain, ok)
+        }
+        chain[0][0] = 9
+        if input[0] != (Domino{1, 1}) {
+            t.Fatalf("input was modified through the result: %v", input)
+        }
+    }
+
+    func TestHdInputIsNotModified(t *testing.T) {
+        input := []Domino{{1, 2}, {3, 1}, {2, 3}}
+        want := []Domino{{1, 2}, {3, 1}, {2, 3}}
+        chain, ok := MakeChain(input)
+        if !ok {
+            t.Fatal("expected a chain")
+        }
+        if len(chain) > 0 {
+            chain[0] = Domino{7, 7}
+        }
+        for i := range input {
+            if input[i] != want[i] {
+                t.Fatalf("input changed: %v", input)
+            }
+        }
+    }
+
+    func TestHdEmptyResultIsNotNil(t *testing.T) {
+        for _, in := range [][]Domino{nil, {}} {
+            chain, ok := MakeChain(in)
+            if !ok || chain == nil || len(chain) != 0 {
+                t.Fatalf("MakeChain(%v) = %#v, %v; want empty non-nil chain and true", in, chain, ok)
+            }
+        }
+    }
+
+    func TestHdDuplicateStones(t *testing.T) {
+        input := []Domino{{1, 2}, {1, 2}}
+        chain, ok := MakeChain(input)
+        if !ok {
+            t.Fatal("two identical stones form a chain")
+        }
+        hdCheck(t, input, chain)
+    }
+  hidden_00_perf_test.go: |
+    package dominoes
+
+    import (
+        "testing"
+        "time"
+    )
+
+    var hdSlow bool
+
+    func hdRing(n int) []Domino {
+        ds := make([]Domino, n)
+        for i := range ds {
+            ds[i] = Domino{i, (i + 1) % n}
+        }
+        seed := uint32(12345)
+        for i := n - 1; i > 0; i-- {
+            seed = seed*1664525 + 1013904223
+            j := int(seed>>8) % (i + 1)
+            ds[i], ds[j] = ds[j], ds[i]
+        }
+        for i := range ds {
+            seed = seed*1664525 + 1013904223
+            if seed&0x10000 != 0 {
+                ds[i][0], ds[i][1] = ds[i][1], ds[i][0]
+            }
+        }
+        return ds
+    }
+
+    func hdGate(t *testing.T) {
+        if hdSlow {
+            t.Fatal("not run: the stone-ordering search is still factorial (see TestHdAGate)")
+        }
+    }
+
+    // TestHdAGate must stay first: it runs a 10-stone set that a permutation search needs seconds for.
+    func TestHdAGate(t *testing.T) {
+        var input []Domino
+        for i := 0; i < 5; i++ {
+            for j := i + 1; j < 5; j++ {
+                input = append(input, Domino{i, j})
+            }
+        }
+        start := time.Now()
+        chain, ok := MakeChain(input)
+        elapsed := time.Since(start)
+        if elapsed > 300*time.Millisecond {
+            hdSlow = true
+            t.Fatalf("MakeChain on 10 stones took %v", elapsed)
+        }
+        if !ok {
+            t.Fatal("the complete graph on 5 numbers has an Euler circuit")
+        }
+        hdCheck(t, input, chain)
+    }
+
+    func TestHdLargeRing(t *testing.T) {
+        hdGate(t)
+        input := hdRing(300)
+        start := time.Now()
+        chain, ok := MakeChain(input)
+        if !ok {
+            t.Fatal("a ring of stones must chain")
+        }
+        hdCheck(t, input, chain)
+        if time.Since(start) > time.Second {
+            t.Fatalf("too slow: %v", time.Since(start))
+        }
+    }
+
+    func TestHdOddDegreeIsRejectedQuickly(t *testing.T) {
+        hdGate(t)
+        input := append(hdRing(12), Domino{0, 5})
+        if chain, ok := MakeChain(input); ok {
+            t.Fatalf("unexpected chain %v", chain)
+        }
+    }
+
+    func TestHdDisconnectedRingsAreRejected(t *testing.T) {
+        hdGate(t)
+        var input []Domino
+        for i := 0; i < 6; i++ {
+            input = append(input, Domino{i, (i + 1) % 6}, Domino{10 + i, 10 + (i+1)%6})
+        }
+        if chain, ok := MakeChain(input); ok {
+            t.Fatalf("unexpected chain %v", chain)
+        }
+    }
+
+    func TestHdDoublesAndRepeats(t *testing.T) {
+        hdGate(t)
+        input := []Domino{{0, 0}, {0, 1}, {1, 1}, {1, 2}, {2, 0}, {2, 2}, {0, 0}, {3, 3}, {3, 3}}
+        if _, ok := MakeChain(input); ok {
+            t.Fatal("stone 3|3 is isolated, no chain expected")
+        }
+        input = input[:7]
+        chain, ok := MakeChain(input)
+        if !ok {
+            t.Fatal("expected a chain")
+        }
+        hdCheck(t, input, chain)
+    }
+  hidden_string_test.go: |
+    package dominoes
+
+    import (
+        "fmt"
+        "testing"
+    )
+
+    func TestHdStringer(t *testing.T) {
+        if got := fmt.Sprint(Domino{1, 2}); got != "[1|2]" {
+            t.Errorf("got %q", got)
+        }
+        if got := (Domino{0, 6}).String(); got != "[0|6]" {
+            t.Errorf("got %q", got)
+        }
+    }
+
+    func TestHdFormatChain(t *testing.T) {
+        cases := []struct {
+            in   []Domino
+            want string
+        }{
+            {nil, ""},
+            {[]Domino{}, ""},
+            {[]Domino{{1, 1}}, "[1|1]"},
+            {[]Domino{{1, 2}, {2, 3}, {3, 1}}, "[1|2] [2|3] [3|1]"},
+        }
+        for _, tc := range cases {
+            if got := FormatChain(tc.in); got != tc.want {
+                t.Errorf("FormatChain(%v) = %q, want %q", tc.in, got, tc.want)
+            }
+        }
+    }
+
+    func TestHdFormatChainOfAChain(t *testing.T) {
+        chain, ok := MakeChain([]Domino{{2, 1}, {2, 3}, {1, 3}})
+        if !ok {
+            t.Fatal("expected chain")
+        }
+        if got := FormatChain(chain); len(got) != len("[1|2] [2|3] [3|1]") {
+            t.Errorf("unexpected format %q", got)
+        }
+    }
+  hidden_parse_test.go: |
+    package dominoes
+
+    import "testing"
+
+    func TestHdParseDominoes(t *testing.T) {
+        cases := map[string][]Domino{
+            "":                    {},
+            "   ":                 {},
+            "[1|2]":               {{1, 2}},
+            "[1|2] [2|3] [3|1]":   {{1, 2}, {2, 3}, {3, 1}},
+            "1|2 2|3":             {{1, 2}, {2, 3}},
+            "  [0|6]   [6|6]  ":   {{0, 6}, {6, 6}},
+        }
+        for in, want := range cases {
+            got, err := ParseDominoes(in)
+            if err != nil {
+                t.Errorf("ParseDominoes(%q) error: %v", in, err)
+                continue
+            }
+            if len(got) != len(want) {
+                t.Errorf("ParseDominoes(%q) = %v, want %v", in, got, want)
+                continue
+            }
+            for i := range want {
+                if got[i] != want[i] {
+                    t.Errorf("ParseDominoes(%q) = %v, want %v", in, got, want)
+                }
+            }
+        }
+    }
+
+    func TestHdParseDominoesErrors(t *testing.T) {
+        for _, in := range []string{"[1|2", "1|", "|2", "a|b", "1|2|3", "12", "[1,2]", "1 2"} {
+            if got, err := ParseDominoes(in); err == nil {
+                t.Errorf("ParseDominoes(%q) = %v, want an error", in, got)
+            }
+        }
+    }
+
+    func TestHdParseFormatRoundTrip(t *testing.T) {
+        in := []Domino{{5, 4}, {4, 4}, {4, 0}, {0, 5}}
+        got, err := ParseDominoes(FormatChain(in))
+        if err != nil || len(got) != len(in) {
+            t.Fatalf("round trip failed: %v %v", got, err)
+        }
+        for i := range in {
+            if got[i] != in[i] {
+                t.Fatalf("round trip changed stone %d: %v", i, got)
+            }
+        }
+    }
+  hidden_from_test.go: |
+    package dominoes
+
+    import "testing"
+
+    func TestHdMakeChainFrom(t *testing.T) {
+        input := []Domino{{1, 2}, {2, 3}, {3, 1}}
+        for _, start := range []int{1, 2, 3} {
+            chain, ok := MakeChainFrom(start, input)
+            if !ok {
+                t.Fatalf("MakeChainFrom(%d) failed", start)
+            }
+            if chain[0][0] != start {
+                t.Errorf("MakeChainFrom(%d) starts with %v", start, chain[0])
+            }
+            hdCheck(t, input, chain)
+        }
+    }
+
+    func TestHdMakeChainFromMissingNumber(t *testing.T) {
+        if chain, ok := MakeChainFrom(9, []Domino{{1, 2}, {2, 3}, {3, 1}}); ok {
+            t.Errorf("unexpected chain %v", chain)
+        }
+    }
+
+    func TestHdMakeChainFromEmptyAndInvalid(t *testing.T) {
+        if chain, ok := MakeChainFrom(5, nil); !ok || len(chain) != 0 {
+            t.Errorf("empty input: %v %v", chain, ok)
+        }
+        if _, ok := MakeChainFrom(1, []Domino{{1, 2}}); ok {
+            t.Error("a single non-double stone cannot chain")
+        }
+    }
+
+    func TestHdMakeChainFromWithDoubles(t *testing.T) {
+        input := []Domino{{1, 1}, {1, 2}, {2, 1}, {2, 2}}
+        chain, ok := MakeChainFrom(2, input)
+        if !ok || chain[0][0] != 2 {
+            t.Fatalf("got %v %v", chain, ok)
+        }
+        hdCheck(t, input, chain)
+    }
+  hidden_first_test.go: |
+    package dominoes
+
+    import (
+        "reflect"
+        "testing"
+    )
+
+    func TestHdChainStartsWithFirstInputStone(t *testing.T) {
+        hdGate(t)
+        inputs := [][]Domino{
+            {{1, 2}, {2, 3}, {3, 1}},
+            {{3, 1}, {2, 3}, {1, 2}},
+            {{1, 2}, {1, 3}, {2, 3}},
+            {{5, 4}, {4, 4}, {4, 0}, {0, 5}},
+            {{1, 1}},
+            {{1, 2}, {2, 1}},
+            {{0, 1}, {1, 2}, {2, 0}, {0, 3}, {3, 4}, {4, 0}},
+            hdRing(40),
+        }
+        for _, input := range inputs {
+            chain, ok := MakeChain(input)
+            if !ok {
+                t.Fatalf("expected a chain for %v", input)
+            }
+            if chain[0] != input[0] {
+                t.Errorf("chain %v does not start with the first stone %v as given", chain, input[0])
+            }
+            hdCheck(t, input, chain)
+        }
+    }
+
+    func TestHdChainIsDeterministic(t *testing.T) {
+        hdGate(t)
+        input := hdRing(60)
+        first, _ := MakeChain(input)
+        for i := 0; i < 5; i++ {
+            again, _ := MakeChain(input)
+            if !reflect.DeepEqual(first, again) {
+                t.Fatal("MakeChain returned different chains for the same input")
+            }
+        }
+    }
+  hidden_check_helper_test.go: |
+    package dominoes
+
+    import "testing"
+
+    // hdCheck verifies that chain is a legal chain made from exactly the stones in input.
+    func hdCheck(t *testing.T, input, chain []Domino) {
+        t.Helper()
+        if len(chain) != len(input) {
+            t.Fatalf("chain has %d stones, input has %d", len(chain), len(input))
+        }
+        count := map[Domino]int{}
+        for _, d := range input {
+            if d[0] > d[1] {
+                d = Domino{d[1], d[0]}
+            }
+            count[d]++
+        }
+        for _, d := range chain {
+            if d[0] > d[1] {
+                d = Domino{d[1], d[0]}
+            }
+            count[d]--
+        }
+        for d, c := range count {
+            if c != 0 {
+                t.Fatalf("stones differ at %v", d)
+            }
+        }
+        for i := 0; i+1 < len(chain); i++ {
+            if chain[i][1] != chain[i+1][0] {
+                t.Fatalf("stones %d and %d do not match: %v %v", i, i+1, chain[i], chain[i+1])
+            }
+        }
+        if len(chain) > 0 && chain[0][0] != chain[len(chain)-1][1] {
+            t.Fatalf("ends do not match: %v ... %v", chain[0], chain[len(chain)-1])
+        }
+    }
+turns:
+  - prompt: >-
+      Read .docs/instructions.md and implement `Domino` and `MakeChain(input []Domino) ([]Domino,
+      bool)` in dominoes.go so that every test in dominoes_test.go passes. Run the tests with `go
+      test ./...`.
+    checks:
+      - {kind: tests, runner: go, restore: []}
+  - prompt: >-
+      Bug report: when `MakeChain` is given exactly one double stone like `{1, 1}` it hands back the
+      caller's own slice, so changing the returned chain changes the input. The result must always
+      be a fresh slice, the input must never be modified, and an empty or nil input must give an
+      empty non-nil chain with ok true.
+    checks:
+      - {kind: tests, runner: go, restore: [dominoes_test.go], hidden: [hidden_check_helper_test.go, hidden_alias_test.go]}
+  - prompt: >-
+      `MakeChain` tries every ordering of the stones, which is hopeless for more than nine or ten
+      stones (a ring of 300 stones never finishes and 12 stones can eat all the memory). Rewrite it
+      so it runs in time linear in the number of stones, for example by treating each stone as an
+      edge between two numbers: a chain exists exactly when every number appears an even number of
+      times and all stones are connected. Keep the exported API and every existing test passing.
+    checks:
+      - {kind: tests, runner: go, restore: [dominoes_test.go], hidden: [hidden_check_helper_test.go, hidden_alias_test.go, hidden_00_perf_test.go]}
+  - prompt: >-
+      Make `Domino` print nicely: add a `String()` method returning `[1|2]` style text, and add
+      `FormatChain(chain []Domino) string` that joins the stones with single spaces (an empty or nil
+      chain gives the empty string).
+    checks:
+      - {kind: tests, runner: go, restore: [dominoes_test.go], hidden: [hidden_check_helper_test.go, hidden_alias_test.go, hidden_00_perf_test.go, hidden_string_test.go]}
+  - prompt: >-
+      Without changing any files: in four to six sentences, explain why a legal chain exists exactly
+      when the stones form an Euler circuit, and how your `MakeChain` finds the order. Mention the
+      degree check and the connectivity check.
+    checks:
+      - {kind: keyed_facts, all: ['euler|circuit|cycle', 'degree|parity|even', connect, 'edge|graph|stone']}
+  - prompt: >-
+      Refactor dominoes.go for readability without changing behaviour: split `MakeChain` into small
+      unexported functions (for example for the degree check, building the adjacency lists, walking
+      the circuit and turning the result into a chain). Keep the exported API; run all tests.
+    checks:
+      - {kind: file_regex, path: dominoes.go, pattern: '^func [a-z]\w*\(', min_count: 4}
+      - {kind: tests, runner: go, restore: [dominoes_test.go], hidden: [hidden_check_helper_test.go, hidden_alias_test.go, hidden_00_perf_test.go, hidden_string_test.go]}
+    gap_before_s: 420
+  - prompt: >-
+      Write your own tests in a new file `extra_test.go` (package dominoes): at least six test
+      functions covering `String`, `FormatChain`, a double-only chain, a disconnected set and a
+      larger ring. Run `go test ./...`.
+    checks:
+      - {kind: file_regex, path: extra_test.go, pattern: '^func Test', min_count: 6}
+      - {kind: tests, runner: go, restore: [dominoes_test.go], hidden: [hidden_check_helper_test.go, hidden_alias_test.go, hidden_00_perf_test.go, hidden_string_test.go]}
+  - prompt: >-
+      Add `ParseDominoes(s string) ([]Domino, error)` that reads the notation `FormatChain`
+      produces: stones separated by whitespace, each written `[a|b]` (the brackets are optional, so
+      `1|2` also works). Empty or blank text gives an empty slice and a nil error; anything
+      malformed (missing bracket, missing number, non-numeric, more than two numbers, no bar)
+      returns a non-nil error.
+    checks:
+      - {kind: tests, runner: go, restore: [dominoes_test.go], hidden: [hidden_check_helper_test.go, hidden_alias_test.go, hidden_00_perf_test.go, hidden_string_test.go, hidden_parse_test.go]}
+  - prompt: >-
+      Add `MakeChainFrom(start int, input []Domino) ([]Domino, bool)`: like `MakeChain`, but the
+      first stone of the chain must show `start` on its left side. It returns false when no chain
+      exists or `start` does not occur on any stone, and an empty chain with true for empty input.
+    checks:
+      - {kind: tests, runner: go, restore: [dominoes_test.go], hidden: [hidden_check_helper_test.go, hidden_alias_test.go, hidden_00_perf_test.go, hidden_string_test.go, hidden_parse_test.go, hidden_from_test.go]}
+  - prompt: >-
+      Create `README_DOMINOES.md` documenting the package with these level-2 sections: Usage, API,
+      Algorithm, Examples. Cover `MakeChain`, `MakeChainFrom`, `String`, `FormatChain` and
+      `ParseDominoes`, and put a short runnable Go example in the Examples section.
+    checks:
+      - {kind: doc_sections, path: README_DOMINOES.md, headings: [Usage, API, Algorithm, Example]}
+      - {kind: file_regex, path: README_DOMINOES.md, pattern: '```', min_count: 2}
+  - prompt: >-
+      Review your own changes to dominoes.go from this session. List up to three concrete weaknesses
+      or risks (for example the order the chain comes back in, `MakeChainFrom` rotating a chain
+      computed by `MakeChain`, or how much `ParseDominoes` accepts) and say which one you would
+      address first. Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: ['chain|order|rotat|pars'], any: [first, 'risk|weak|gap|limit'], min_any: 1}
+    gap_before_s: 420
+  - prompt: >-
+      Make the result predictable: whenever a chain exists, `MakeChain` must return it starting with
+      the first stone of the input exactly as given (same orientation), and calling it twice on the
+      same input must give identical chains. Every legal chain is a circuit, so you can rotate or
+      reverse it. All existing tests must still pass.
+    checks:
+      - {kind: tests, runner: go, restore: [dominoes_test.go], hidden: [hidden_check_helper_test.go, hidden_alias_test.go, hidden_00_perf_test.go, hidden_string_test.go, hidden_parse_test.go, hidden_from_test.go, hidden_first_test.go]}
+  - prompt: >-
+      Finish up: make sure every exported identifier in dominoes.go (`Domino`, `MakeChain`,
+      `MakeChainFrom`, `String`, `FormatChain`, `ParseDominoes`) has a Go doc comment starting with
+      its name, that `gofmt -l .` prints nothing and `go vet ./...` is clean, and run the whole
+      suite.
+    checks:
+      - {kind: file_regex, path: dominoes.go, pattern: '^// (Domino|MakeChain|MakeChainFrom|String|FormatChain|ParseDominoes) ', min_count: 6}
+      - {kind: tests, runner: go, restore: [dominoes_test.go], hidden: [hidden_check_helper_test.go, hidden_alias_test.go, hidden_00_perf_test.go, hidden_string_test.go, hidden_parse_test.go, hidden_from_test.go, hidden_first_test.go]}

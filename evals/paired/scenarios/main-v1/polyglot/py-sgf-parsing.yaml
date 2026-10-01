@@ -1,0 +1,329 @@
+# main-v1 polyglot 3/20: python/sgf-parsing, 15 turns, short gaps.
+id: py-sgf-parsing
+task_type: mixed
+language: python
+split: main
+default_gap_s: 10
+source:
+  desc: "Aider polyglot-benchmark python/sgf-parsing (Exercism), outside the S2 slice"
+  repo: https://github.com/Aider-AI/polyglot-benchmark
+  sha: 7e0611e77b54e2dea774cdc0aa00cf9f7ed6144f
+workspace:
+  kind: git
+  repo: https://github.com/Aider-AI/polyglot-benchmark
+  sha: 7e0611e77b54e2dea774cdc0aa00cf9f7ed6144f
+  subdir: python/exercises/practice/sgf-parsing
+  local_hint: ~/dev/afast-campaign-corrected-polyglot-20260919/polyglot/polyglot-benchmark
+  remove: [.meta]
+protected: [sgf_parsing_test.py]
+hidden_files:
+  hidden_tosgf_test.py: |
+    import unittest
+    from sgf_parsing import SgfTree, parse
+
+
+    class ToSgfTest(unittest.TestCase):
+        def test_empty_root(self):
+            self.assertEqual(SgfTree().to_sgf(), "(;)")
+
+        def test_single_node(self):
+            self.assertEqual(SgfTree({"A": ["b"]}).to_sgf(), "(;A[b])")
+
+        def test_multiple_values(self):
+            self.assertEqual(SgfTree({"AB": ["aa", "bb"]}).to_sgf(), "(;AB[aa][bb])")
+
+        def test_chain(self):
+            tree = SgfTree({"FF": ["4"]}, [SgfTree({"B": ["aa"]}, [SgfTree({"W": ["ab"]})])])
+            self.assertEqual(tree.to_sgf(), "(;FF[4];B[aa];W[ab])")
+
+        def test_variations(self):
+            tree = SgfTree({"FF": ["4"]}, [SgfTree({"B": ["aa"]}, [SgfTree({"W": ["ab"]})]),
+                                           SgfTree({"B": ["dd"]}, [SgfTree({"W": ["ee"]})])])
+            self.assertEqual(tree.to_sgf(), "(;FF[4](;B[aa];W[ab])(;B[dd];W[ee]))")
+
+        def test_escaping(self):
+            self.assertEqual(SgfTree({"C": ["a]b\\c"]}).to_sgf(), "(;C[a\\]b\\\\c])")
+
+        def test_round_trip(self):
+            for text in ["(;)", "(;A[B])", "(;FF[4]C[root];B[aa];W[ab])", "(;FF[4](;B[aa];W[ab])(;B[dd];W[ee]))", "(;A[x\\]y\\\\])"]:
+                with self.subTest(text=text):
+                    self.assertEqual(parse(text).to_sgf(), text)
+  hidden_nested_test.py: |
+    import unittest
+    from sgf_parsing import parse
+
+
+    class NestedVariationsTest(unittest.TestCase):
+        def test_nested_variations(self):
+            t = parse("(;A[1](;B[2](;C[3])(;D[4]))(;E[5]))")
+            self.assertEqual(t.properties, {"A": ["1"]})
+            self.assertEqual(len(t.children), 2)
+            b, e = t.children
+            self.assertEqual(b.properties, {"B": ["2"]})
+            self.assertEqual([c.properties for c in b.children], [{"C": ["3"]}, {"D": ["4"]}])
+            self.assertEqual(e.properties, {"E": ["5"]})
+            self.assertEqual(e.children, [])
+
+        def test_parentheses_inside_values_of_variations(self):
+            t = parse("(;A[1](;B[x)y])(;C[(z]))")
+            self.assertEqual([c.properties for c in t.children], [{"B": ["x)y"]}, {"C": ["(z"]}])
+
+        def test_chain_then_nested_variations(self):
+            t = parse("(;A[1];B[2](;C[3];D[4])(;E[5]))")
+            b = t.children[0]
+            self.assertEqual(b.properties, {"B": ["2"]})
+            self.assertEqual(len(b.children), 2)
+            self.assertEqual(b.children[0].children[0].properties, {"D": ["4"]})
+
+        def test_whitespace_between_nodes(self):
+            t = parse("(;A[1]\n  ;B[2]\n  (;C[3])\n)")
+            self.assertEqual(t.children[0].children[0].properties, {"C": ["3"]})
+
+        def test_unclosed_variation_raises(self):
+            with self.assertRaises(ValueError):
+                parse("(;A[1](;B[2])")
+  hidden_walk_test.py: |
+    import unittest
+    from sgf_parsing import parse
+
+
+    def keys(nodes):
+        return [next(iter(n.properties)) for n in nodes]
+
+
+    class WalkTest(unittest.TestCase):
+        def setUp(self):
+            self.tree = parse("(;A[1](;B[2];C[3])(;D[4]))")
+
+        def test_walk_is_depth_first_preorder(self):
+            self.assertEqual(keys(self.tree.walk()), ["A", "B", "C", "D"])
+
+        def test_main_line_follows_first_children(self):
+            self.assertEqual(keys(self.tree.main_line()), ["A", "B", "C"])
+
+        def test_count_nodes(self):
+            self.assertEqual(self.tree.count_nodes(), 4)
+
+        def test_single_node(self):
+            t = parse("(;A[1])")
+            self.assertEqual(keys(t.walk()), ["A"])
+            self.assertEqual(keys(t.main_line()), ["A"])
+            self.assertEqual(t.count_nodes(), 1)
+
+        def test_walk_is_lazy(self):
+            it = self.tree.walk()
+            self.assertEqual(next(it), self.tree)
+  hidden_collection_test.py: |
+    import unittest
+    from sgf_parsing import parse_collection
+
+
+    class CollectionTest(unittest.TestCase):
+        def test_two_trees(self):
+            trees = parse_collection("(;A[1])(;B[2])")
+            self.assertEqual([t.properties for t in trees], [{"A": ["1"]}, {"B": ["2"]}])
+
+        def test_whitespace_between_trees(self):
+            trees = parse_collection("  (;A[1];B[2])\n\n(;C[3](;D[4])(;E[5]))\n")
+            self.assertEqual(len(trees), 2)
+            self.assertEqual(trees[0].children[0].properties, {"B": ["2"]})
+            self.assertEqual(len(trees[1].children), 2)
+
+        def test_empty_collection(self):
+            self.assertEqual(parse_collection(""), [])
+            self.assertEqual(parse_collection("  \n"), [])
+
+        def test_garbage_between_trees(self):
+            with self.assertRaises(ValueError):
+                parse_collection("(;A[1])x(;B[2])")
+
+        def test_unterminated_tree(self):
+            with self.assertRaises(ValueError):
+                parse_collection("(;A[1])(;B[2]")
+
+        def test_tree_without_nodes(self):
+            with self.assertRaises(ValueError):
+                parse_collection("(;A[1])()")
+  hidden_deep_test.py: |
+    import time
+    import unittest
+    from sgf_parsing import parse
+
+
+    class DeepGameTest(unittest.TestCase):
+        def test_long_single_line_of_play(self):
+            n = 20000
+            text = "(" + ";B[aa]" * n + ")"
+            start = time.perf_counter()
+            tree = parse(text)
+            self.assertEqual(tree.count_nodes(), n)
+            self.assertEqual(len(tree.main_line()), n)
+            self.assertEqual(tree.to_sgf(), text)
+            self.assertLess(time.perf_counter() - start, 3.0)
+
+        def test_long_line_with_a_variation_at_the_end(self):
+            text = "(" + ";W[bb]" * 5000 + "(;B[aa])(;B[cc]))"
+            tree = parse(text)
+            self.assertEqual(tree.count_nodes(), 5002)
+            self.assertEqual(tree.to_sgf(), text)
+
+        def test_wide_tree(self):
+            text = "(;R[x]" + "(;B[aa])" * 3000 + ")"
+            tree = parse(text)
+            self.assertEqual(len(tree.children), 3000)
+            self.assertEqual(tree.to_sgf(), text)
+  hidden_get_test.py: |
+    import unittest
+    from sgf_parsing import parse, SgfTree
+
+
+    class GetTest(unittest.TestCase):
+        def setUp(self):
+            self.node = parse("(;AB[aa][bb]C[root])")
+
+        def test_get_returns_first_value(self):
+            self.assertEqual(self.node.get("AB"), "aa")
+            self.assertEqual(self.node.get("C"), "root")
+
+        def test_get_missing_is_none_or_default(self):
+            self.assertIsNone(self.node.get("ZZ"))
+            self.assertEqual(self.node.get("ZZ", "none"), "none")
+
+        def test_get_all_returns_every_value(self):
+            self.assertEqual(self.node.get_all("AB"), ["aa", "bb"])
+            self.assertEqual(self.node.get_all("ZZ"), [])
+
+        def test_get_all_returns_a_copy(self):
+            self.node.get_all("AB").append("cc")
+            self.assertEqual(self.node.get_all("AB"), ["aa", "bb"])
+
+        def test_empty_node(self):
+            self.assertIsNone(SgfTree().get("A"))
+  hidden_crlf_test.py: |
+    import unittest
+    from sgf_parsing import parse, parse_collection
+
+
+    class LineEndingTest(unittest.TestCase):
+        def test_crlf_in_value_is_a_single_newline(self):
+            self.assertEqual(parse("(;C[a\r\nb])").properties, {"C": ["a\nb"]})
+
+        def test_lone_cr_is_a_newline(self):
+            self.assertEqual(parse("(;C[a\rb])").properties, {"C": ["a\nb"]})
+
+        def test_escaped_crlf_is_a_soft_line_break(self):
+            self.assertEqual(parse("(;C[a\\\r\nb])").properties, {"C": ["ab"]})
+
+        def test_crlf_between_nodes(self):
+            t = parse("(;A[1]\r\n;B[2]\r\n)")
+            self.assertEqual(t.children[0].properties, {"B": ["2"]})
+
+        def test_collection_with_crlf(self):
+            trees = parse_collection("(;A[x\r\ny])\r\n(;B[2])\r\n")
+            self.assertEqual(trees[0].properties, {"A": ["x\ny"]})
+            self.assertEqual(len(trees), 2)
+turns:
+  - prompt: >-
+      Read .docs/instructions.md and implement `parse(input_string)` in sgf_parsing.py (keeping the
+      `SgfTree` class) so that every test in sgf_parsing_test.py passes. Run the tests with `python3
+      -m pytest -q sgf_parsing_test.py`.
+    checks:
+      - {kind: tests, runner: python, files: [], restore: []}
+  - prompt: >-
+      Add a method `to_sgf()` to `SgfTree` that serialises a tree back into SGF text: the whole tree
+      wrapped in parentheses, nodes introduced by `;`, a single child continues the line of play,
+      several children become parenthesised variations, and `]` and `\` inside values are escaped
+      with a backslash. Parsing the result must give back an equal tree.
+    checks:
+      - {kind: tests, runner: python, files: [sgf_parsing_test.py, hidden_tosgf_test.py], restore: [sgf_parsing_test.py], hidden: [hidden_tosgf_test.py]}
+  - prompt: >-
+      Bug report: variations nested inside variations are parsed wrongly, and a `)` or `(` inside a
+      property value of a variation breaks the parser (for example
+      `(;A[1](;B[2](;C[3])(;D[4]))(;E[5]))` and `(;A[1](;B[x)y])(;C[(z]))`). Fix `parse` so
+      arbitrarily nested variations and bracketed values work, keeping the same ValueError messages
+      as before. Keep `to_sgf` working.
+    checks:
+      - {kind: tests, runner: python, files: [sgf_parsing_test.py, hidden_tosgf_test.py, hidden_nested_test.py], restore: [sgf_parsing_test.py], hidden: [hidden_tosgf_test.py, hidden_nested_test.py]}
+  - prompt: >-
+      Add three methods to `SgfTree`: `walk()` (a generator over every node, depth first, parents
+      before children, first child first), `main_line()` (a list of the nodes along the first-child
+      path starting at this node) and `count_nodes()`. None of them may mutate the tree.
+    checks:
+      - {kind: tests, runner: python, files: [sgf_parsing_test.py, hidden_tosgf_test.py, hidden_nested_test.py, hidden_walk_test.py], restore: [sgf_parsing_test.py], hidden: [hidden_tosgf_test.py, hidden_nested_test.py, hidden_walk_test.py]}
+  - prompt: >-
+      Without changing any files: in four to six sentences explain how `parse` handles a node that
+      has both a chain of single children and variations, and why the first variation is treated as
+      the main line. Name the function(s) involved.
+    checks:
+      - {kind: keyed_facts, all: [variation, 'child|children', first, 'recurs|chain|loop']}
+  - prompt: >-
+      Refactor sgf_parsing.py for readability without changing behaviour: break the node parser into
+      small private helpers (names starting with an underscore) such as skipping whitespace, reading
+      a property key, parsing the properties, parsing the children and parsing one variation.
+      Behaviour and error messages stay identical; run all tests.
+    checks:
+      - {kind: file_regex, path: sgf_parsing.py, pattern: '^\s*def _[a-z]', min_count: 8}
+      - {kind: tests, runner: python, files: [sgf_parsing_test.py, hidden_tosgf_test.py, hidden_nested_test.py, hidden_walk_test.py], restore: [sgf_parsing_test.py], hidden: [hidden_tosgf_test.py, hidden_nested_test.py, hidden_walk_test.py]}
+  - prompt: >-
+      Add `parse_collection(text)` to sgf_parsing.py: it parses several top-level game trees in a
+      row (for example `(;A[1])(;B[2])`, whitespace allowed between them) and returns a list of
+      `SgfTree`. Empty or blank input gives []; anything that is not a well-formed tree (garbage
+      between trees, an unterminated tree, a tree with no nodes) raises ValueError. `parse` behaves
+      as before.
+    checks:
+      - {kind: tests, runner: python, files: [sgf_parsing_test.py, hidden_tosgf_test.py, hidden_nested_test.py, hidden_walk_test.py, hidden_collection_test.py], restore: [sgf_parsing_test.py], hidden: [hidden_tosgf_test.py, hidden_nested_test.py, hidden_walk_test.py, hidden_collection_test.py]}
+  - prompt: >-
+      Write your own tests in a new file `test_extra.py`: at least six test functions covering
+      `to_sgf`, `walk`/`main_line`, `parse_collection` and a few ValueError cases. Run them with
+      pytest.
+    checks:
+      - {kind: file_regex, path: test_extra.py, pattern: '^\s*def test_', min_count: 6}
+      - {kind: tests, runner: python, files: [sgf_parsing_test.py, test_extra.py], restore: [sgf_parsing_test.py]}
+  - prompt: >-
+      `parse` dies with a RecursionError on a long game (a single line of play with thousands of
+      moves), and `to_sgf` has the same problem. Make parsing and serialising work for a 20,000-node
+      line of play, and for a node with thousands of variations, in well under three seconds,
+      without changing behaviour. `walk`, `main_line` and `count_nodes` must keep working on such
+      trees.
+    checks:
+      - {kind: tests, runner: python, files: [sgf_parsing_test.py, hidden_tosgf_test.py, hidden_nested_test.py, hidden_walk_test.py, hidden_collection_test.py, hidden_deep_test.py], restore: [sgf_parsing_test.py], hidden: [hidden_tosgf_test.py, hidden_nested_test.py, hidden_walk_test.py, hidden_collection_test.py, hidden_deep_test.py]}
+  - prompt: >-
+      Create `README_SGF.md` documenting the module with these level-2 sections: Usage, Format, API,
+      Errors. Cover `parse`, `parse_collection`, `to_sgf`, `walk`, `main_line`, `count_nodes`, and
+      include a short runnable example in a Usage or Examples section.
+    checks:
+      - {kind: doc_sections, path: README_SGF.md, headings: [Usage, Format, API, Errors]}
+      - {kind: file_regex, path: README_SGF.md, pattern: '```', min_count: 2}
+  - prompt: >-
+      Review your own changes to sgf_parsing.py from this session. List up to three concrete
+      weaknesses (for example error reporting without positions, dataclass equality on very deep
+      trees, or leniency about whitespace) and say which one you would address first. Do not change
+      any files.
+    checks:
+      - {kind: keyed_facts, all: ['recurs|deep|position|whitespace|error'], any: [first, 'risk|weak|gap|limit'], min_any: 1}
+  - prompt: >-
+      Add two small accessors to `SgfTree`: `get(key, default=None)` returns the first value of a
+      property (or the default when the property is missing) and `get_all(key)` returns a new list
+      of all values ([] when missing, and mutating the result must not change the node).
+    checks:
+      - {kind: tests, runner: python, files: [sgf_parsing_test.py, hidden_tosgf_test.py, hidden_nested_test.py, hidden_walk_test.py, hidden_collection_test.py, hidden_deep_test.py, hidden_get_test.py], restore: [sgf_parsing_test.py], hidden: [hidden_tosgf_test.py, hidden_nested_test.py, hidden_walk_test.py, hidden_collection_test.py, hidden_deep_test.py, hidden_get_test.py]}
+  - prompt: >-
+      Add type hints to every function and method in sgf_parsing.py (parameters and return types;
+      `Iterator[SgfTree]` for `walk`). No behaviour change; all tests must still pass.
+    checks:
+      - {kind: file_regex, path: sgf_parsing.py, pattern: '\) -> ', min_count: 14}
+      - {kind: tests, runner: python, files: [sgf_parsing_test.py, hidden_tosgf_test.py, hidden_nested_test.py, hidden_walk_test.py, hidden_collection_test.py, hidden_deep_test.py, hidden_get_test.py], restore: [sgf_parsing_test.py], hidden: [hidden_tosgf_test.py, hidden_nested_test.py, hidden_walk_test.py, hidden_collection_test.py, hidden_deep_test.py, hidden_get_test.py]}
+  - prompt: >-
+      Files coming from Windows break values: a `\r\n` inside a property value must count as a
+      single newline (a lone `\r` as well, and an escaped `\r\n` is a soft line break that
+      disappears), and CRLF between nodes or trees must be harmless. Normalise line endings in
+      `parse` and `parse_collection`.
+    checks:
+      - {kind: tests, runner: python, files: [sgf_parsing_test.py, hidden_tosgf_test.py, hidden_nested_test.py, hidden_walk_test.py, hidden_collection_test.py, hidden_deep_test.py, hidden_get_test.py, hidden_crlf_test.py], restore: [sgf_parsing_test.py], hidden: [hidden_tosgf_test.py, hidden_nested_test.py, hidden_walk_test.py, hidden_collection_test.py, hidden_deep_test.py, hidden_get_test.py, hidden_crlf_test.py]}
+  - prompt: >-
+      Last round: update `README_SGF.md` so it also documents `get`, `get_all` and the line-ending
+      normalisation (mention CRLF), then run the whole suite including test_extra.py once more.
+    checks:
+      - {kind: file_regex, path: README_SGF.md, pattern: get_all}
+      - {kind: file_regex, path: README_SGF.md, pattern: 'CRLF|\\r\\n|line ending'}
+      - {kind: tests, runner: python, files: [sgf_parsing_test.py, hidden_tosgf_test.py, hidden_nested_test.py, hidden_walk_test.py, hidden_collection_test.py, hidden_deep_test.py, hidden_get_test.py, hidden_crlf_test.py, test_extra.py], restore: [sgf_parsing_test.py], hidden: [hidden_tosgf_test.py, hidden_nested_test.py, hidden_walk_test.py, hidden_collection_test.py, hidden_deep_test.py, hidden_get_test.py, hidden_crlf_test.py]}

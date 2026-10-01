@@ -1,0 +1,177 @@
+# main-v1 scenario: jmespath/jmespath.py, ordering comparisons on strings regressed in 0.9.1, restored upstream in b893fc2b (#124); workspace is its parent
+# Workspace = parent of the upstream fix commit; hidden tests = the fix commit's tests (+ scenario-authored edge tests).
+id: jmespath-strcmp
+task_type: bugfix
+language: python
+split: main
+source:
+  desc: >-
+    jmespath/jmespath.py, ordering comparisons on strings regressed in 0.9.1, restored upstream in b893fc2b
+    (#124); workspace is its parent
+  repo: https://github.com/jmespath/jmespath.py.git
+  sha: de035093b7e52c6a6ea4411f41d2aec10d499dcb
+  fix_sha: b893fc2bdd52fdd227a8cec3b7a26574de813e67
+workspace:
+  kind: git
+  repo: https://github.com/jmespath/jmespath.py.git
+  sha: de035093b7e52c6a6ea4411f41d2aec10d499dcb
+  local_hint: ~/dev/afast-paired-src/jmespath.py
+hidden_files:
+  tests/test_search.py:
+    from_git:
+      repo: https://github.com/jmespath/jmespath.py.git
+      sha: b893fc2bdd52fdd227a8cec3b7a26574de813e67
+      path: tests/test_search.py
+      local_hint: ~/dev/afast-paired-src/jmespath.py
+  tests/test_search_hidden_edge.py: |
+    import unittest
+
+    import jmespath
+
+
+    class TestMixedTypeOrdering(unittest.TestCase):
+        def test_string_vs_number_is_null_not_an_error(self):
+            data = {'a': 'x', 'b': 1}
+            for op in ('<', '<=', '>', '>='):
+                self.assertIsNone(jmespath.search('a %s b' % op, data), op)
+                self.assertIsNone(jmespath.search('b %s a' % op, data), op)
+
+        def test_numbers_and_strings_still_order(self):
+            self.assertTrue(jmespath.search('a < b', {'a': 1, 'b': 2}))
+            self.assertTrue(jmespath.search('a >= b', {'a': 'b', 'b': 'a'}))
+            self.assertFalse(jmespath.search('a > b', {'a': 'a', 'b': 'b'}))
+
+        def test_filter_skips_mixed_comparisons(self):
+            data = [{'a': 'x'}, {'a': 5}, {'a': 9}]
+            self.assertEqual(jmespath.search('[?a > `6`]', data), [{'a': 9}])
+turns:
+- prompt: >-
+    Since jmespath 0.9.1, ordering comparisons between strings no longer work: `jmespath.search('a < b',
+    {'a': '2016', 'b': '2017'})` returns None where 0.9.0 returned True. People rely on this. Find out
+    why in jmespath/visitor.py and fix it. Run tests from this directory with `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1
+    python3 -m pytest -q tests/test_search.py` (the other test modules in tests/ are stale on this Python
+    version, so ignore them).
+  checks:
+  - kind: tests
+    runner: python
+    files:
+    - tests/test_search.py
+    hidden:
+    - tests/test_search.py
+- prompt: >-
+    In three to five sentences explain the root cause: which function in visitor.py decides whether an
+    ordering comparison is evaluated, and what condition made string operands return None. Do not change
+    any files.
+  checks:
+  - kind: keyed_facts
+    all:
+    - visit_comparator|_is_actual_number
+    - string|str
+    any:
+    - number
+    - None
+    - 'null'
+    - numeric
+    min_any: 1
+- prompt: >-
+    Add a regression test file `tests/test_search_strings.py` with at least three test methods that check
+    string ordering through the public `jmespath.search()` call (use `<`, `>=` and a filter expression),
+    and run it.
+  checks:
+  - kind: file_regex
+    path: tests/test_search_strings.py
+    pattern: ^\s*def test_
+    min_count: 3
+  - kind: tests
+    runner: python
+    files:
+    - tests/test_search_strings.py
+- prompt: >-
+    Edge case: after this fix, comparing a string with a number, e.g. `jmespath.search('a < b', {'a':
+    'x', 'b': 1})`, raises a Python TypeError. It must return None for all four ordering operators (`<`,
+    `<=`, `>`, `>=`), in either operand order, and a filter such as `[?a > `6`]` over rows with mixed
+    string and number values must just skip the non-comparable rows. Numbers vs numbers and strings vs
+    strings must keep working. Fix it and add a test for it to tests/test_search_strings.py.
+  checks:
+  - kind: file_regex
+    path: tests/test_search_strings.py
+    pattern: (?i)mixed|number
+  - kind: tests
+    runner: python
+    files:
+    - tests/test_search.py
+    - tests/test_search_strings.py
+    hidden:
+    - tests/test_search.py
+    - tests/test_search_hidden_edge.py
+- prompt: >-
+    Clean up `TreeInterpreter.visit_comparator` in jmespath/visitor.py: there is an unused local variable
+    `num_types` left over from the old implementation. Remove it (and anything else dead in that method)
+    without changing behaviour.
+  checks:
+  - kind: file_regex
+    path: jmespath/visitor.py
+    pattern: num_types
+    absent: true
+  - kind: tests
+    runner: python
+    files:
+    - tests/test_search.py
+    - tests/test_search_strings.py
+    hidden:
+    - tests/test_search.py
+    - tests/test_search_hidden_edge.py
+- prompt: >-
+    The comment above `_is_comparable` in jmespath/visitor.py explains why strings are allowed. Turn it
+    into a proper docstring (what the function accepts, what it rejects, and why strings are allowed even
+    though the spec does not list them).
+  checks:
+  - kind: file_regex
+    path: jmespath/visitor.py
+    pattern: def _is_comparable\(x\):\s+"""
+  - kind: file_regex
+    path: jmespath/visitor.py
+    pattern: def _is_comparable\(x\):\s+"""(?:(?!""")[\s\S])*?[Ss]pec
+  - kind: tests
+    runner: python
+    files:
+    - tests/test_search.py
+    - tests/test_search_strings.py
+    hidden:
+    - tests/test_search.py
+    - tests/test_search_hidden_edge.py
+- prompt: >-
+    Add a changelog entry to CHANGELOG.rst for this fix in a new section at the top headed `Next Release`
+    (underlined with `=` like the version headings), saying that ordering comparisons on strings work
+    again and mixed types yield null.
+  checks:
+  - kind: file_regex
+    path: CHANGELOG.rst
+    pattern: ^Next Release\s*\n=+
+  - kind: file_regex
+    path: CHANGELOG.rst
+    pattern: (?i)string
+- prompt: >-
+    Add a short subsection to README.rst titled `Python specific behaviour` stating that ordering operators
+    work on strings as well as numbers, and that comparing a string with a number yields null.
+  checks:
+  - kind: file_regex
+    path: README.rst
+    pattern: (?i)Python[- ]specific behaviou?r
+  - kind: file_regex
+    path: README.rst
+    pattern: (?i)Python[- ]specific[\s\S]{0,600}string
+- prompt: >-
+    Review the changes you made in this session as a code reviewer would: list each file you changed,
+    what changed, and any remaining risk or edge case you did not cover. Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all:
+    - visitor\.py
+    - test
+    any:
+    - risk
+    - edge
+    - remaining
+    - not cover
+    min_any: 1

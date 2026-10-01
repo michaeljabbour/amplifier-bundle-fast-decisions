@@ -1,0 +1,49 @@
+# smol-rs/fastrand 2.5.0 at 7a1cc2c: explain WyRand/Lemire internals and pin seeded sequences (rustc-only, no cargo)
+id: fastrand-explain
+task_type: explain
+language: rust
+split: main
+source:
+  desc: 'smol-rs/fastrand 2.5.0 at 7a1cc2c: explain WyRand/Lemire internals and pin seeded sequences (rustc-only, no cargo)'
+  repo: https://github.com/smol-rs/fastrand.git
+  sha: 7a1cc2c69ebde6cb3442809213db3fe19a2cb0ba
+workspace:
+  kind: git
+  repo: https://github.com/smol-rs/fastrand.git
+  sha: 7a1cc2c69ebde6cb3442809213db3fe19a2cb0ba
+  local_hint: ~/dev/afast-paired-src/fastrand
+turns:
+- prompt: Which generator algorithm does `Rng` in src/lib.rs implement, what is its state, and what are the two WyRand constants used in `gen_u64`? Do not change any files.
+  checks:
+  - {kind: keyed_facts, all: [WyRand|wyhash, u64, '0x2d35_?8dcc_?aa6c_?78a5', '0x8bb8_?4b93_?962e_?acc9', 128|u128]}
+- prompt: How does `gen_mod_u32` produce an unbiased number below n? Name the technique and the helper it uses. Do not change any files.
+  checks:
+  - {kind: keyed_facts, all: ['[Ll]emire', mul_high, wrapping_neg|reject, modulo|%]}
+- prompt: 'The cargo build is not possible offline, so compile the library directly: `rustc --edition 2018 --cfg ''feature="std"'' --cfg ''feature="alloc"'' --crate-type rlib --crate-name fastrand src/lib.rs -o /tmp/libfastrand.rlib`, link a throwaway program in /tmp and run it. With `Rng::with_seed(42)`, what are five consecutive `u32(0..100)` values and what does `get_seed()` return afterwards? Do not leave files in the repository.'
+  checks:
+  - {kind: keyed_facts, all: ['46, ?32, ?72, ?44, ?36', '16288329078222510947']}
+- prompt: Write docs/determinism.md with level-2 sections Seeding, Reproducible sequences and Forking. Use the verified numbers and the exact WyRand constant.
+  checks:
+  - {kind: doc_sections, path: docs/determinism.md, headings: [Seeding, Reproducible sequences, Forking]}
+  - {kind: file_regex, path: docs/determinism.md, pattern: '46, 32, 72, 44, 36'}
+  - {kind: file_regex, path: docs/determinism.md, pattern: '16288329078222510947'}
+  - {kind: file_regex, path: docs/determinism.md, pattern: '2d35_?8dcc_?aa6c_?78a5'}
+- prompt: What does `Rng::fork` do exactly, and what do `r.u64(..)` and the forked generator's `u64(..)` return for `Rng::with_seed(99)` when you call fork first? Run it (throwaway, outside the repo).
+  checks:
+  - {kind: keyed_facts, all: [gen_u64, with_seed, '3966536586343578085', '11043340091200057740']}
+- prompt: How is the global thread-local generator in src/global_rng.rs seeded and accessed (`with_rng`, `RestoreOnDrop`), and what does `Rng::new` fall back to if the thread-local is unavailable? Do not change any files.
+  checks:
+  - {kind: keyed_facts, all: [thread_local|thread-local, random_seed, DEFAULT_RNG_SEED, RestoreOnDrop, '0x4d595df4d0f33173']}
+- prompt: Create checks/seeded.rs, a standalone program (fn main with assert_eq!) that pins the seed-42 sequence plus final seed and the seed-99 fork values, building against the rlib as above. It must fail if the WyRand constant or the fork seeding is altered. Build and run it.
+  checks:
+  - {kind: file_regex, path: checks/seeded.rs, pattern: assert_eq!, min_count: 3}
+  - {kind: tests, runner: cmd, cmd: 'D=$(mktemp -d) && rustc --edition 2018 --cfg ''feature="std"'' --cfg ''feature="alloc"'' --crate-type rlib --crate-name fastrand src/lib.rs -o $D/libfastrand.rlib 2>/dev/null && rustc --edition 2018 --extern fastrand=$D/libfastrand.rlib -L $D checks/seeded.rs -o $D/chk 2>/dev/null && $D/chk && cp src/lib.rs lib.bak && perl -pi -e ''s/0x2d35_8dcc_aa6c_78a5/0x2d35_8dcc_aa6c_78a6/'' src/lib.rs && rustc --edition 2018 --cfg ''feature="std"'' --cfg ''feature="alloc"'' --crate-type rlib --crate-name fastrand src/lib.rs -o $D/libfastrand.rlib 2>/dev/null && rustc --edition 2018 --extern fastrand=$D/libfastrand.rlib -L $D checks/seeded.rs -o $D/chk 2>/dev/null && ! $D/chk && cp lib.bak src/lib.rs && perl -pi -e ''s/Rng::with_seed\(self\.gen_u64\(\)\)/Rng::with_seed(self.gen_u64() ^ 1)/'' src/lib.rs && rustc --edition 2018 --cfg ''feature="std"'' --cfg ''feature="alloc"'' --crate-type rlib --crate-name fastrand src/lib.rs -o $D/libfastrand.rlib 2>/dev/null && rustc --edition 2018 --extern fastrand=$D/libfastrand.rlib -L $D checks/seeded.rs -o $D/chk 2>/dev/null && ! $D/chk', timeout: 300}
+- prompt: According to CHANGELOG.md, what changed in 2.4.0 and what is the latest version? Do not change any files.
+  checks:
+  - {kind: keyed_facts, all: [2\.5\.0, f32_inclusive|f64_inclusive|inclusive, with_seed, const, 1\.63]}
+- prompt: Write ARCHITECTURE.md with one bullet per file in src/ and tests/ (lib.rs, global_rng.rs, smoke.rs, char.rs).
+  checks:
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: lib\.rs}
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: global_rng\.rs}
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: smoke\.rs}
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: char\.rs}

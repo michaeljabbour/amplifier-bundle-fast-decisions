@@ -40,13 +40,96 @@ class ClassifyTests(unittest.TestCase):
 
     def test_nothing_to_go_on_is_transient_not_config(self):
         self.assertEqual(paired.classify_failure(None, {"error_tail": "", "model_calls": 0}), "transient")
-        self.assertEqual(paired.classify_failure(None, {"error_tail": "Traceback ... ValueError", "model_calls": 0}), "config_error")
+        self.assertEqual(paired.classify_failure(None, {"error_tail": "Traceback ... ValueError", "model_calls": 0}), "transient")  # no marker
 
     def test_clean_tail_drops_forge_markers_ansi_and_keeps_the_last_lines(self):
         t = paired.clean_tail("\x1b[2mok\x1b[0m\r\n" + "\n".join(f"line{i}" for i in range(30)) + "\nFORGE_E2E_FINISHED {}\n", lines=5)
         self.assertEqual(t.splitlines(), [f"line{i}" for i in range(25, 30)])
         self.assertNotIn("FORGE_E2E", t)
         self.assertIn("GOOGLE_API_KEY", paired.clean_tail(CRED_TAIL))
+
+
+# What the real go-wordsearch-r1-fable run.log excerpt looked like: healthy turn-1 output, no config marker anywhere.
+HEALTHY_TAIL = ("Amplifier:\nCoordinates are {col, row} for first and last letter. Implementing now.\n"
+                "\U0001f527 Building tool call: write_file\u2026\n\u2514\u2500 Input: 77,439 (88% cached) | Output: 1,198 | Cost: $0.19\n"
+                "\u2705 Tool result: write_file\nAll tests pass.\nDONE: Implemented Solve in word_search.go\n")
+
+
+class FalseConfigErrorRegression(unittest.TestCase):
+    """2026-10-01 go-wordsearch-r1-fable: the Forge daemon shut down mid-turn-2 and killed every worker. All four
+    sessions had made model calls and printed healthy output, but result.json was missing, so the old classifier saw
+    `model_calls == 0` and no transient marker and declared a CONFIGURATION error, halting the campaign."""
+
+    def test_missing_result_with_healthy_output_is_not_a_config_error(self):
+        self.assertEqual(paired.classify_failure(None, {"error_tail": paired.clean_tail(HEALTHY_TAIL), "model_calls": 0}), "transient")
+        self.assertEqual(paired.classify_failure(None, {"error_tail": paired.clean_tail(HEALTHY_TAIL), "model_calls": 0, "worker_died": True}), "transient")
+
+    def test_config_error_needs_both_zero_model_calls_and_a_known_marker(self):
+        cred = paired.clean_tail(CRED_TAIL)
+        self.assertEqual(paired.classify_failure(None, {"error_tail": cred, "model_calls": 0}), "config_error")
+        self.assertEqual(paired.classify_failure(None, {"error_tail": cred, "model_calls": 1}), "transient")           # a call happened
+        self.assertEqual(paired.classify_failure(None, {"error_tail": cred, "model_calls": 0, "worker_died": True}), "transient")
+        for marker in ("Provider 'anthropic' not configured", "Could not load configured provider source for 'x'",
+                       "Error: Bundle 'file:///x/profile.md' not found", "RuntimeError: cannot determine base instruction for p"):
+            self.assertEqual(paired.classify_failure(None, {"error_tail": marker, "model_calls": 0}), "config_error", marker)
+
+    def test_backend_diagnose_counts_model_calls_from_disk_when_result_json_is_missing(self):
+        import os
+        import subprocess
+        tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, tmp, True)
+        root, name = tmp / "w003-a1", "go-wordsearch-r1-fable-aa"
+        run = root / name
+        (run / "workspace").mkdir(parents=True)
+        (run / "forge-output.txt").write_text(HEALTHY_TAIL)
+        dead = subprocess.Popen(["true"])
+        dead.wait()
+        (run / "running.json").write_text(json.dumps({"controller_pid": dead.pid, "turn": 2}))
+        sessions = tmp / "sessions"
+        write_events(sessions / "d6382653" / "events.jsonl", [{"t": 1_800_000_000.0, "model": "claude-fable-5-1", "uncached": 10, "read": 0, "write": 100, "output": 5}])
+        (sessions / ".d6382653.metadata.lock").mkdir()                                  # real sessions dirs hold such lock dirs
+        be = paired.ForgeBackend()
+        with patch.object(paired, "sessions_dir_for_workspace", lambda ws: sessions):
+            d = be.diagnose(root, name, None)
+        self.assertEqual((d["model_calls"], d["worker_died"]), (1, True))
+        self.assertEqual(paired.classify_failure(None, d), "transient")
+        with patch.object(paired, "sessions_dir_for_workspace", lambda ws: sessions):
+            self.assertEqual(len(be.session_dirs(root, name, None)), 1)
+
+    def test_backend_diagnose_still_flags_a_real_credential_failure(self):
+        tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, tmp, True)
+        root, name = tmp / "w000-a1", "slugify-bugfix-r1-fable-aa"
+        (root / name / "workspace").mkdir(parents=True)
+        (root / name / "forge-output.txt").write_text(CRED_TAIL)
+        with patch.object(paired, "sessions_dir_for_workspace", lambda ws: tmp / "no-sessions"):
+            d = paired.ForgeBackend().diagnose(root, name, {"session_id": None, "infrastructure_failure": True})
+        self.assertEqual((d["model_calls"], d["worker_died"]), (0, False))
+        self.assertEqual(paired.classify_failure({"session_id": None}, d), "config_error")
+
+    def test_a_wave_whose_workers_all_died_is_retried_whole_not_halted(self):
+        t = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, t, True)
+        scn = write_inline_scenario(t / "scn")
+        design = make_design(t, scn)
+        specs = {s.id: s for s in paired.load_specs(design)}
+        plan = paired.build_plan(design, list(specs.values()), reps=1, hosts=["fable"], arms=["anchor", "aa", "shipped", "sticky"], seed=1,
+                                 budget_usd=None, parallel=6, scenarios={"tiny-demo"})
+        out = t / "out"
+        out.mkdir()
+        ctx = paired.Ctx(out=out, design=design, cells_doc={}, suites_doc={}, specs=specs,
+                         snapshots={sid: str(ps.materialize(s, t / "snaps")) for sid, s in specs.items()}, plan=plan, campaign_root=t / "camp",
+                         candidate_source="x", candidate_sha=None, baseline_source="x", seed=1, decide_fn=lambda p, w, c: "cheap", sleep=lambda s: None)
+        victims = {f"tiny-demo-r1-fable-{a}" for a in ("anchor", "aa", "shipped", "sticky")}
+        diag = {k: {"error_tail": paired.clean_tail(HEALTHY_TAIL), "model_calls": 0, "worker_died": True} for k in victims}
+        be = FakeBackend(t / "b", specs, fail_first=victims, diag=diag)
+        logs = []
+        code = paired.run_campaign(ctx, be, budget_usd=1000, parallel=6, resume=False, policy_config={}, log=logs.append)
+        self.assertEqual(code, 0)                                                      # not exit 4
+        w = paired.State(out / "state.json").wave("tiny-demo-r1-fable")
+        self.assertEqual([a["status"] for a in w["attempts"]], ["infra_failed", "done"])
+        self.assertTrue(all(v == "transient" for v in w["attempts"][0]["failure_kinds"].values()))
+        self.assertFalse(any("configuration error" in l for l in logs))
 
 
 class Base(unittest.TestCase):

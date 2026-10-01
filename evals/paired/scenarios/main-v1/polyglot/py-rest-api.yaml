@@ -1,0 +1,271 @@
+# main-v1 polyglot 4/20: python/rest-api, 9 turns, short gaps.
+id: py-rest-api
+task_type: feature
+language: python
+split: main
+default_gap_s: 10
+source:
+  desc: "Aider polyglot-benchmark python/rest-api (Exercism), outside the S2 slice"
+  repo: https://github.com/Aider-AI/polyglot-benchmark
+  sha: 7e0611e77b54e2dea774cdc0aa00cf9f7ed6144f
+workspace:
+  kind: git
+  repo: https://github.com/Aider-AI/polyglot-benchmark
+  sha: 7e0611e77b54e2dea774cdc0aa00cf9f7ed6144f
+  subdir: python/exercises/practice/rest-api
+  local_hint: ~/dev/afast-campaign-corrected-polyglot-20260919/polyglot/polyglot-benchmark
+  remove: [.meta]
+protected: [rest_api_test.py]
+hidden_files:
+  hidden_sorted_test.py: |
+    import json
+    import unittest
+    from rest_api import RestAPI
+
+
+    def user(name):
+        return {"name": name, "owes": {}, "owed_by": {}, "balance": 0.0}
+
+
+    def names(response):
+        return [u["name"] for u in json.loads(response)["users"]]
+
+
+    class SortedByNameTest(unittest.TestCase):
+        def setUp(self):
+            self.api = RestAPI({"users": [user("Chuck"), user("Adam"), user("Bob")]})
+
+        def test_all_users_sorted(self):
+            self.assertEqual(names(self.api.get("/users")), ["Adam", "Bob", "Chuck"])
+
+        def test_requested_users_sorted(self):
+            payload = json.dumps({"users": ["Chuck", "Adam"]})
+            self.assertEqual(names(self.api.get("/users", payload)), ["Adam", "Chuck"])
+
+        def test_iou_response_sorted(self):
+            payload = json.dumps({"lender": "Chuck", "borrower": "Adam", "amount": 3})
+            self.assertEqual(names(self.api.post("/iou", payload)), ["Adam", "Chuck"])
+
+        def test_unknown_names_are_ignored(self):
+            payload = json.dumps({"users": ["Zed", "Bob"]})
+            self.assertEqual(names(self.api.get("/users", payload)), ["Bob"])
+
+        def test_empty_database(self):
+            self.assertEqual(json.loads(RestAPI({"users": []}).get("/users")), {"users": []})
+  hidden_errors_test.py: |
+    import json
+    import unittest
+    from rest_api import RestAPI
+
+
+    def user(name):
+        return {"name": name, "owes": {}, "owed_by": {}, "balance": 0.0}
+
+
+    def names(response):
+        return [u["name"] for u in json.loads(response)["users"]]
+
+
+    def error(response):
+        return json.loads(response)["error"]
+
+
+    class ErrorResponseTest(unittest.TestCase):
+        def setUp(self):
+            self.api = RestAPI({"users": [user("Adam"), user("Bob")]})
+
+        def post(self, url, **payload):
+            return self.api.post(url, json.dumps(payload))
+
+        def test_duplicate_user(self):
+            self.assertEqual(error(self.post("/add", user="Adam")), "user already exists")
+            self.assertEqual(len(json.loads(self.api.get("/users"))["users"]), 2)
+
+        def test_missing_user_name(self):
+            self.assertEqual(error(self.post("/add")), "user name required")
+            self.assertEqual(error(self.post("/add", user="")), "user name required")
+
+        def test_unknown_lender_or_borrower(self):
+            self.assertEqual(error(self.post("/iou", lender="Zed", borrower="Bob", amount=1)), "unknown user")
+            self.assertEqual(error(self.post("/iou", lender="Adam", borrower="Zed", amount=1)), "unknown user")
+
+        def test_same_lender_and_borrower(self):
+            self.assertEqual(error(self.post("/iou", lender="Adam", borrower="Adam", amount=1)), "lender and borrower must differ")
+
+        def test_bad_amounts(self):
+            for amount in (0, -3, "5", None, True):
+                with self.subTest(amount=amount):
+                    self.assertEqual(error(self.post("/iou", lender="Adam", borrower="Bob", amount=amount)), "amount must be positive")
+
+        def test_invalid_json(self):
+            self.assertEqual(error(self.api.post("/add", "{not json")), "invalid payload")
+            self.assertEqual(error(self.api.get("/users", "[")), "invalid payload")
+
+        def test_unknown_route(self):
+            self.assertEqual(error(self.api.get("/nope")), "unknown route")
+            self.assertEqual(error(self.api.post("/nope", "{}")), "unknown route")
+
+        def test_failed_iou_changes_nothing(self):
+            self.post("/iou", lender="Adam", borrower="Zed", amount=5)
+            self.assertEqual(json.loads(self.api.get("/users"))["users"], [user("Adam"), user("Bob")])
+  hidden_debts_test.py: |
+    import json
+    import unittest
+    from rest_api import RestAPI
+
+
+    def user(name):
+        return {"name": name, "owes": {}, "owed_by": {}, "balance": 0.0}
+
+
+    def names(response):
+        return [u["name"] for u in json.loads(response)["users"]]
+
+
+    class DebtsTest(unittest.TestCase):
+        def setUp(self):
+            self.api = RestAPI({"users": [user("Chuck"), user("Adam"), user("Bob")]})
+
+        def iou(self, lender, borrower, amount):
+            self.api.post("/iou", json.dumps({"lender": lender, "borrower": borrower, "amount": amount}))
+
+        def debts(self, payload=None):
+            return json.loads(self.api.get("/debts", None if payload is None else json.dumps(payload)))["debts"]
+
+        def test_no_debts(self):
+            self.assertEqual(self.debts(), [])
+
+        def test_single_debt(self):
+            self.iou("Adam", "Bob", 4.5)
+            self.assertEqual(self.debts(), [{"from": "Bob", "to": "Adam", "amount": 4.5}])
+
+        def test_sorted_by_debtor_then_creditor(self):
+            self.iou("Chuck", "Bob", 1)
+            self.iou("Adam", "Bob", 2)
+            self.iou("Bob", "Adam", 7)
+            self.assertEqual(self.debts(), [
+                {"from": "Adam", "to": "Bob", "amount": 5},
+                {"from": "Bob", "to": "Chuck", "amount": 1},
+            ])
+
+        def test_netted_debts_disappear(self):
+            self.iou("Adam", "Bob", 3)
+            self.iou("Bob", "Adam", 3)
+            self.assertEqual(self.debts(), [])
+
+        def test_filter_by_debtor(self):
+            self.iou("Adam", "Bob", 2)
+            self.iou("Adam", "Chuck", 3)
+            self.assertEqual(self.debts({"users": ["Chuck"]}), [{"from": "Chuck", "to": "Adam", "amount": 3}])
+  hidden_money_test.py: |
+    import json
+    import unittest
+    from rest_api import RestAPI
+
+
+    def user(name):
+        return {"name": name, "owes": {}, "owed_by": {}, "balance": 0.0}
+
+
+    def names(response):
+        return [u["name"] for u in json.loads(response)["users"]]
+
+
+    class MoneyTest(unittest.TestCase):
+        def setUp(self):
+            self.api = RestAPI({"users": [user("Adam"), user("Bob")]})
+
+        def iou(self, lender, borrower, amount):
+            return json.loads(self.api.post("/iou", json.dumps({"lender": lender, "borrower": borrower, "amount": amount})))["users"]
+
+        def test_cents_add_up_exactly(self):
+            self.iou("Adam", "Bob", 0.1)
+            adam, bob = self.iou("Adam", "Bob", 0.2)
+            self.assertEqual(adam["owed_by"], {"Bob": 0.3})
+            self.assertEqual(adam["balance"], 0.3)
+            self.assertEqual(bob["owes"], {"Adam": 0.3})
+            self.assertEqual(bob["balance"], -0.3)
+
+        def test_ten_dimes_make_a_dollar(self):
+            for _ in range(10):
+                adam, bob = self.iou("Adam", "Bob", 0.1)
+            self.assertEqual(adam["owed_by"], {"Bob": 1.0})
+            self.assertEqual(bob["balance"], -1.0)
+
+        def test_netting_leaves_no_float_dust(self):
+            self.iou("Adam", "Bob", 0.3)
+            adam, bob = self.iou("Bob", "Adam", 0.1)
+            self.assertEqual(adam["owed_by"], {"Bob": 0.2})
+            self.assertEqual(bob["owes"], {"Adam": 0.2})
+
+        def test_exact_repayment_clears_both_sides(self):
+            self.iou("Adam", "Bob", 0.7)
+            adam, bob = self.iou("Bob", "Adam", 0.7)
+            self.assertEqual((adam["owed_by"], adam["owes"], adam["balance"]), ({}, {}, 0))
+            self.assertEqual((bob["owed_by"], bob["owes"], bob["balance"]), ({}, {}, 0))
+turns:
+  - prompt: >-
+      Read .docs/instructions.md and implement the `RestAPI` class in rest_api.py (`get` and `post`
+      taking a URL and an optional JSON string payload and returning JSON strings) so that every
+      test in rest_api_test.py passes. Run the tests with `python3 -m pytest -q rest_api_test.py`.
+    checks:
+      - {kind: tests, runner: python, files: [], restore: []}
+  - prompt: >-
+      The spec says user lists must be sorted by name, but the order currently follows the database.
+      Make `GET /users` (with and without a payload) and the response of `POST /iou` return users
+      sorted by name. Unknown names in a payload are ignored; the API must not reorder the stored
+      database itself.
+    checks:
+      - {kind: tests, runner: python, files: [rest_api_test.py, hidden_sorted_test.py], restore: [rest_api_test.py], hidden: [hidden_sorted_test.py]}
+  - prompt: >-
+      Right now bad requests come back as `None` or crash. Make every API call return a JSON string
+      `{"error": "<message>"}` instead: 'user already exists' for a duplicate /add, 'user name
+      required' for a missing or empty name, 'unknown user' when an /iou names someone who does not
+      exist, 'lender and borrower must differ', 'amount must be positive' for a zero, negative or
+      non-numeric (or boolean) amount, 'invalid payload' for malformed JSON, and 'unknown route' for
+      any other URL. A failed request must not change the database.
+    checks:
+      - {kind: tests, runner: python, files: [rest_api_test.py, hidden_sorted_test.py, hidden_errors_test.py], restore: [rest_api_test.py], hidden: [hidden_sorted_test.py, hidden_errors_test.py]}
+  - prompt: >-
+      Add `GET /debts`: it returns `{"debts": [...]}` where each entry is `{"from": <debtor>, "to":
+      <creditor>, "amount": <amount>}`, one per outstanding debt, sorted by debtor name and then
+      creditor name. An optional payload `{"users": [...]}` limits the list to debts whose debtor is
+      one of those users. Netted-out debts must not appear.
+    checks:
+      - {kind: tests, runner: python, files: [rest_api_test.py, hidden_sorted_test.py, hidden_errors_test.py, hidden_debts_test.py], restore: [rest_api_test.py], hidden: [hidden_sorted_test.py, hidden_errors_test.py, hidden_debts_test.py]}
+  - prompt: >-
+      Without changing any files: in four to six sentences, explain how a user's `balance` is
+      computed and how two users who owe each other get netted against one another. Name the method
+      that does it.
+    checks:
+      - {kind: keyed_facts, all: [balance, 'net|cancel|offset|subtract', owes, owed_by]}
+  - prompt: >-
+      Refactor rest_api.py for readability without changing behaviour: replace the long if/elif
+      chains in `get` and `post` with a small route table and private helpers (names starting with
+      an underscore) such as finding a user, parsing the payload and one handler per route. Public
+      behaviour, JSON shapes and error messages stay the same; run all tests.
+    checks:
+      - {kind: file_regex, path: rest_api.py, pattern: '^\s*def _[a-z]', min_count: 6}
+      - {kind: tests, runner: python, files: [rest_api_test.py, hidden_sorted_test.py, hidden_errors_test.py, hidden_debts_test.py], restore: [rest_api_test.py], hidden: [hidden_sorted_test.py, hidden_errors_test.py, hidden_debts_test.py]}
+  - prompt: >-
+      Write your own tests in a new file `test_extra.py`: at least six test functions covering
+      /debts, the error responses and sorting. Run them with pytest.
+    checks:
+      - {kind: file_regex, path: test_extra.py, pattern: '^\s*def test_', min_count: 6}
+      - {kind: tests, runner: python, files: [rest_api_test.py, test_extra.py], restore: [rest_api_test.py]}
+  - prompt: >-
+      Bug report: amounts are floats, so `0.1` plus `0.2` gives `0.30000000000000004` and netting
+      leaves dust like `0.19999999999999998` (or a tiny phantom debt after a full repayment). Keep
+      all amounts and balances rounded to cents so sums, netting and balances come out exact, and
+      make sure a fully repaid debt disappears completely.
+    checks:
+      - {kind: tests, runner: python, files: [rest_api_test.py, hidden_sorted_test.py, hidden_errors_test.py, hidden_debts_test.py, hidden_money_test.py], restore: [rest_api_test.py], hidden: [hidden_sorted_test.py, hidden_errors_test.py, hidden_debts_test.py, hidden_money_test.py]}
+  - prompt: >-
+      Create `README_REST.md` documenting the API with these level-2 sections: Usage, Endpoints,
+      Errors, Examples. Cover /users, /add, /iou and /debts, every error message, and include a
+      short runnable example in the Examples section. Then run the whole test suite including
+      test_extra.py.
+    checks:
+      - {kind: doc_sections, path: README_REST.md, headings: [Usage, Endpoints, Errors, Example]}
+      - {kind: file_regex, path: README_REST.md, pattern: '```', min_count: 2}
+      - {kind: tests, runner: python, files: [rest_api_test.py, hidden_sorted_test.py, hidden_errors_test.py, hidden_debts_test.py, hidden_money_test.py, test_extra.py], restore: [rest_api_test.py], hidden: [hidden_sorted_test.py, hidden_errors_test.py, hidden_debts_test.py, hidden_money_test.py]}

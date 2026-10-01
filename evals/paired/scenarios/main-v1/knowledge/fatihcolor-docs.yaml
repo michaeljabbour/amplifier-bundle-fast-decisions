@@ -1,0 +1,44 @@
+# fatih/color at 820c6eb: document the exact escape sequences (incl. the RGB reset quirk) from running the code
+id: fatihcolor-docs
+task_type: docs
+language: go
+split: main
+source:
+  desc: 'fatih/color at 820c6eb: document the exact escape sequences (incl. the RGB reset quirk) from running the code'
+  repo: https://github.com/fatih/color.git
+  sha: 820c6ebc21b06a3a5328297d556a87f91556e577
+workspace:
+  kind: git
+  repo: https://github.com/fatih/color.git
+  sha: 820c6ebc21b06a3a5328297d556a87f91556e577
+  local_hint: ~/dev/afast-paired-src/fatih-color
+turns:
+- prompt: How is the package-level `NoColor` variable initialised in color.go and what conditions turn colors off? Do not change any files.
+  checks:
+  - {kind: keyed_facts, all: [NO_COLOR, TERM, dumb, terminal|isatty|IsTerminal]}
+- prompt: Write a throwaway test (do not keep it) that forces `NoColor = false` and prints `%q` of `New(FgRed, Bold).Sprint("x")`. What exactly is the string?
+  checks:
+  - {kind: keyed_facts, all: [31;1m, 0;22m]}
+- prompt: Explain how the closing (reset) sequence is built in `unformat()` and which attributes have a specific reset code. Do not change any files.
+  checks:
+  - {kind: keyed_facts, all: [mapResetAttributes, \b22\b, \b24\b, Reset]}
+- prompt: 'Run another throwaway test: what does `RGB(1, 2, 3).Sprint("y")` produce (with colors forced on)? Look at the closing sequence and explain why it has so many parts. Do not leave files behind.'
+  checks:
+  - {kind: keyed_facts, all: [38;2;1;2;3, 0;22;22;22;23, params|each parameter|per parameter|every parameter]}
+- prompt: Write docs/escape-codes.md with level-2 sections Overview, Formatting, Reset sequences and RGB. Use the exact verified strings from this session.
+  checks:
+  - {kind: doc_sections, path: docs/escape-codes.md, headings: [Overview, Formatting, Reset sequences, RGB]}
+  - {kind: file_regex, path: docs/escape-codes.md, pattern: 31;1}
+  - {kind: file_regex, path: docs/escape-codes.md, pattern: 0;22;22;22;23}
+  - {kind: file_regex, path: docs/escape-codes.md, pattern: mapResetAttributes}
+- prompt: 'How do `DisableColor()` / `EnableColor()` on a *Color interact with the global NoColor? Verify with a throwaway test: set NoColor = true, then call EnableColor() on a colour and Sprint. Do not leave files behind.'
+  checks:
+  - {kind: keyed_facts, all: [noColor, isNoColorSet|override|precedence|takes priority|per-color, EnableColor, '\\x1b\[31;1mx|colored|escape']}
+- prompt: Add color_docs_test.go (package color) with `TestEscapeDocs` that forces NoColor=false (restoring it afterwards) and pins the exact escape strings for red+bold, hi-blue+underline and RGB(1,2,3). Run `go test -run TestEscapeDocs .`. The test must fail if the reset sequence is no longer appended.
+  checks:
+  - {kind: file_regex, path: color_docs_test.go, pattern: func TestEscapeDocs}
+  - {kind: tests, runner: cmd, cmd: go test -count=1 -run TestEscapeDocs . -v && perl -pi -e 's/return c\.format\(\) \+ s \+ c\.unformat\(\)/return c.format() + s/' color.go && ! go test -count=1 -run TestEscapeDocs ., expect_regex: PASS, timeout: 300}
+- prompt: Append a '## Escape codes' section to README.md linking docs/escape-codes.md.
+  checks:
+  - {kind: doc_sections, path: README.md, headings: [Escape codes]}
+  - {kind: file_regex, path: README.md, pattern: docs/escape-codes\.md}

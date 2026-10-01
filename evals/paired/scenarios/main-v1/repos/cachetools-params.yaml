@@ -1,0 +1,195 @@
+# main-v1 scenario: tkem/cachetools, cache_parameters() for the func decorators, added upstream in 6a70f80e (#164); workspace is its parent
+# Workspace = parent of the upstream fix commit; hidden tests = the fix commit's tests (+ scenario-authored edge tests).
+id: cachetools-params
+task_type: feature
+language: python
+split: main
+source:
+  desc: >-
+    tkem/cachetools, cache_parameters() for the func decorators, added upstream in 6a70f80e (#164); workspace
+    is its parent
+  repo: https://github.com/tkem/cachetools.git
+  sha: 9a6cb65aae884cff1b1287d5288ff43c751a6f32
+  fix_sha: 6a70f80e8baf8954e32b836eeb8ecbb37f15d5ac
+workspace:
+  kind: git
+  repo: https://github.com/tkem/cachetools.git
+  sha: 9a6cb65aae884cff1b1287d5288ff43c751a6f32
+  local_hint: ~/dev/afast-paired-src/cachetools
+hidden_files:
+  tests/test_func.py:
+    from_git:
+      repo: https://github.com/tkem/cachetools.git
+      sha: 6a70f80e8baf8954e32b836eeb8ecbb37f15d5ac
+      path: tests/test_func.py
+      local_hint: ~/dev/afast-paired-src/cachetools
+  tests/test_func_hidden_edge.py: |
+    import unittest
+
+    import cachetools.func
+
+
+    class NegativeMaxsizeTest(unittest.TestCase):
+
+        def test_negative_maxsize_is_clamped_like_functools(self):
+            for deco in (cachetools.func.lfu_cache, cachetools.func.lru_cache,
+                         cachetools.func.rr_cache, cachetools.func.ttl_cache):
+                cached = deco(maxsize=-5)(lambda n: n)
+                self.assertEqual(cached.cache_parameters(), {'maxsize': 0, 'typed': False})
+                self.assertEqual(cached.cache_info(), (0, 0, 0, 0))
+                self.assertEqual(cached(1), 1)
+                self.assertEqual(cached.cache_info(), (0, 1, 0, 0))
+
+        def test_zero_and_none_are_unchanged(self):
+            self.assertEqual(cachetools.func.lru_cache(maxsize=0)(len).cache_parameters()['maxsize'], 0)
+            self.assertIsNone(cachetools.func.ttl_cache(maxsize=None)(len).cache_parameters()['maxsize'])
+turns:
+- prompt: >-
+    The decorators in `cachetools.func` (`lfu_cache`, `lru_cache`, `rr_cache`, `ttl_cache`) mimic `functools.lru_cache`,
+    and the wrapped functions have `cache_info()` and `cache_clear()`, but they have no `cache_parameters()`
+    like the one `functools.lru_cache` gained in Python 3.9. Add it: it should return a new dict `{'maxsize':
+    ..., 'typed': ...}` with the values the decorator was configured with (`maxsize=None` gives `None`,
+    the bare `@lru_cache` form gives 128). Implement it in cachetools/func.py. Run tests from this directory
+    with `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python3 -m pytest -q tests`.
+  checks:
+  - kind: tests
+    runner: python
+    files:
+    - tests
+    hidden:
+    - tests/test_func.py
+- prompt: >-
+    In three to five sentences explain how your implementation works: in which function the wrapper is
+    built, where `maxsize` and `typed` come from, and how the unbounded (`maxsize=None`) caches report
+    `None`. Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all:
+    - _cache
+    - maxsize
+    - typed
+    any:
+    - _UnboundCache
+    - unbound
+    - closure
+    - property
+    min_any: 1
+- prompt: >-
+    Add a regression test file `tests/test_func_parameters.py` with at least three test functions or test
+    methods that check `cache_parameters()` through the public decorators (for example `typed=True`, `maxsize=None`,
+    and the bare decorator form), and run it.
+  checks:
+  - kind: file_regex
+    path: tests/test_func_parameters.py
+    pattern: ^\s*def test_
+    min_count: 3
+  - kind: tests
+    runner: python
+    files:
+    - tests/test_func_parameters.py
+- prompt: >-
+    Edge case: `functools.lru_cache(maxsize=-1)` treats a negative size as 0, but our decorators keep
+    the negative number (`cache_info().maxsize` is -1 and `cache_parameters()['maxsize']` is -1). Make
+    all four decorators clamp a negative `maxsize` to 0 the same way, so both `cache_info()` and `cache_parameters()`
+    report 0, and add a test to tests/test_func_parameters.py. `None` and the bare-decorator form must
+    stay unchanged.
+  checks:
+  - kind: file_regex
+    path: tests/test_func_parameters.py
+    pattern: -\d
+  - kind: tests
+    runner: python
+    files:
+    - tests
+    hidden:
+    - tests/test_func.py
+    - tests/test_func_hidden_edge.py
+- prompt: >-
+    Document `cache_parameters()` in docs/index.rst, in the section about the `cachetools.func` decorators,
+    next to the existing description of `cache_info` and `cache_clear`. Mention that the returned dict
+    is a copy and mutating it has no effect, and that negative sizes are treated as 0.
+  checks:
+  - kind: file_regex
+    path: docs/index.rst
+    pattern: cache_parameters
+    min_count: 1
+  - kind: file_regex
+    path: docs/index.rst
+    pattern: (?i)negative
+  gap_before_s: 420
+- prompt: >-
+    Refactor: the four decorators `lfu_cache`, `lru_cache`, `rr_cache` and `ttl_cache` each repeat the
+    same `if maxsize is None / elif callable(maxsize) / else` dispatch. Collapse that into one private
+    helper in cachetools/func.py named `_dispatch` that the four functions call. Behaviour must not change
+    and the whole suite must pass.
+  checks:
+  - kind: file_regex
+    path: cachetools/func.py
+    pattern: def _dispatch\(
+  - kind: file_regex
+    path: cachetools/func.py
+    pattern: _dispatch\(
+    min_count: 5
+  - kind: tests
+    runner: python
+    files:
+    - tests
+    hidden:
+    - tests/test_func.py
+    - tests/test_func_hidden_edge.py
+- prompt: >-
+    Extend the docstrings of `lru_cache` and `ttl_cache` in cachetools/func.py so each mentions that the
+    wrapped function has `cache_parameters()`, `cache_info()` and `cache_clear()`.
+  checks:
+  - kind: file_regex
+    path: cachetools/func.py
+    pattern: def lru_cache\([^)]*\):\s+"""(?:(?!""")[\s\S])*?cache_parameters
+  - kind: file_regex
+    path: cachetools/func.py
+    pattern: def ttl_cache\([^)]*\):\s+"""(?:(?!""")[\s\S])*?cache_parameters
+  - kind: tests
+    runner: python
+    files:
+    - tests
+    hidden:
+    - tests/test_func.py
+    - tests/test_func_hidden_edge.py
+- prompt: >-
+    Add a changelog entry to CHANGELOG.rst for `cache_parameters()` under a new top section headed `Unreleased`
+    (use the same rst underline style as the existing version headings).
+  checks:
+  - kind: file_regex
+    path: CHANGELOG.rst
+    pattern: ^Unreleased\s*\n=+
+  - kind: file_regex
+    path: CHANGELOG.rst
+    pattern: cache_parameters
+  gap_before_s: 420
+- prompt: >-
+    Run the complete test suite once and tell me in your final message how many tests passed and whether
+    anything failed. Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all:
+    - \d+ (tests? )?pass(ed)?|pass(ed)?[^.]{0,20}\d+
+    any:
+    - no fail
+    - 0 fail
+    - nothing fail
+    - all pass
+    - none fail
+    min_any: 1
+- prompt: >-
+    Review the changes you made in this session as a code reviewer would: list each file you changed,
+    what changed, and any remaining risk or edge case you did not cover. Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all:
+    - func\.py
+    - test
+    any:
+    - risk
+    - edge
+    - remaining
+    - not cover
+    min_any: 1

@@ -1,0 +1,74 @@
+# adrienverge/yamllint 1.38.0 at 96246fb: explain the CLI/config, then design and implement a small new rule
+id: yamllint-mixed
+task_type: mixed
+language: python
+split: main
+source:
+  desc: 'adrienverge/yamllint 1.38.0 at 96246fb: explain the CLI/config, then design and implement a small new rule'
+  repo: https://github.com/adrienverge/yamllint.git
+  sha: 96246fb0d5fba8c8cba48747342de3351ea64bea
+workspace:
+  kind: git
+  repo: https://github.com/adrienverge/yamllint.git
+  sha: 96246fb0d5fba8c8cba48747342de3351ea64bea
+  local_hint: ~/dev/afast-paired-src/yamllint
+turns:
+- prompt: 'What exit codes can the yamllint CLI return (src: yamllint/cli.py `run`) and under which conditions? Do not change any files.'
+  checks:
+  - {kind: keyed_facts, all: [strict, 255|-1, \b2\b, \b1\b]}
+- prompt: Which rules does yamllint's built-in default configuration (yamllint/conf/default.yaml) disable? Do not change any files.
+  checks:
+  - {kind: keyed_facts, all: [document-end, empty-values, float-values, key-ordering, octal-values, quoted-strings]}
+- prompt: What are the default options of the `line-length` rule, and how does conf/relaxed.yaml change that rule? Do not change any files.
+  checks:
+  - {kind: keyed_facts, all: [\b80\b, allow-non-breakable-words, allow-non-breakable-inline-mappings, warning]}
+- prompt: 'How does yamllint resolve the name in an `extends:` key (config.py)? What is the difference between `extends: relaxed` and `extends: ./my.yaml`? Do not change any files.'
+  checks:
+  - {kind: keyed_facts, all: [get_extended_config_file, conf, /], any: [standard|shipped|built-in, filesystem|path], min_any: 2}
+- prompt: Create CHEATSHEET.md with level-2 sections Exit codes, Default-disabled rules and Output formats, each a short accurate list taken from the source.
+  checks:
+  - {kind: doc_sections, path: CHEATSHEET.md, headings: [Exit codes, Default-disabled rules, Output formats]}
+  - {kind: file_regex, path: CHEATSHEET.md, pattern: key-ordering}
+  - {kind: file_regex, path: CHEATSHEET.md, pattern: github}
+  - {kind: file_regex, path: CHEATSHEET.md, pattern: parsable}
+  gap_before_s: 420
+- prompt: Which output formats does `--format` accept, and when does `auto` pick `github` or `colored`? Do not change any files.
+  checks:
+  - {kind: keyed_facts, all: [parsable, standard, colored, github, GITHUB_ACTIONS, GITHUB_WORKFLOW]}
+- prompt: 'Bug report: ''a line ending in a lone carriage return is not reported by trailing-spaces, but a line ending in a tab is''. Look at yamllint/rules/trailing_spaces.py and tell me whether that is intended and which condition decides it. Do not change any files.'
+  checks:
+  - {kind: keyed_facts, all: [trailing_spaces, string\.whitespace, space or tab|' \\t'|space and tab|\" \\t\"]}
+- prompt: 'Write PROPOSAL.md proposing a new rule `no-todo-comments` (TYPE ''comment'') that flags TODO/FIXME markers in comments and is disabled in the default config. Level-2 sections: Motivation, Design, Configuration, Testing. Mention where the rule must be registered.'
+  checks:
+  - {kind: doc_sections, path: PROPOSAL.md, headings: [Motivation, Design, Configuration, Testing]}
+  - {kind: file_regex, path: PROPOSAL.md, pattern: no-todo-comments}
+  - {kind: file_regex, path: PROPOSAL.md, pattern: rules/__init__\.py|_RULES}
+  - {kind: file_regex, path: PROPOSAL.md, pattern: default\.yaml}
+- prompt: 'Implement the proposal: create yamllint/rules/no_todo_comments.py (ID ''no-todo-comments'', TYPE ''comment'', flags a comment containing the whole word TODO or FIXME), register it in yamllint/rules/__init__.py and add `no-todo-comments: disable` to yamllint/conf/default.yaml. Then run it on a sample file.'
+  checks:
+  - {kind: file_exists, path: yamllint/rules/no_todo_comments.py}
+  - {kind: tests, runner: cmd, cmd: 'printf -- ''---\nkey: 1  # TODO later\n'' > _bad.yaml && printf -- ''---\nkey: 1  # fine\n'' > _ok.yaml && python3 -m yamllint -d ''rules: {no-todo-comments: enable}'' _ok.yaml && ! python3 -m yamllint -d ''rules: {no-todo-comments: enable}'' _bad.yaml && python3 -m yamllint -d ''extends: default'' _bad.yaml && PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python3 -m pytest -q -p no:cacheprovider tests/test_config.py tests/test_module.py', expect_regex: '(?s)no-todo-comments.*passed'}
+- prompt: Add tests/rules/test_no_todo_comments.py following the style of the other tests in tests/rules (RuleTestCase) with at least three cases, including exact line/column of reported problems. Run it.
+  checks:
+  - {kind: file_regex, path: tests/rules/test_no_todo_comments.py, pattern: def test_, min_count: 3}
+  - {kind: tests, runner: cmd, cmd: 'PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python3 -m pytest -q -p no:cacheprovider tests/rules/test_no_todo_comments.py && printf ''\n\ndef check(conf, comment):\n    return iter(())\n'' >> yamllint/rules/no_todo_comments.py && ! PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python3 -m pytest -q -p no:cacheprovider tests/rules/test_no_todo_comments.py', expect_regex: \d+ passed}
+  gap_before_s: 420
+- prompt: Document the new rule in docs/rules.rst in alphabetical position (between new-lines and octal-values), following the existing automodule pattern.
+  checks:
+  - {kind: file_regex, path: docs/rules.rst, pattern: '^no-todo-comments\n-{16}$'}
+  - {kind: file_regex, path: docs/rules.rst, pattern: 'automodule:: yamllint\.rules\.no_todo_comments'}
+- prompt: Add a changelog entry for the new rule at the top of CHANGELOG.rst in the style of the existing entries (a new 'Unreleased' section).
+  checks:
+  - {kind: file_regex, path: CHANGELOG.rst, pattern: Unreleased}
+  - {kind: file_regex, path: CHANGELOG.rst, pattern: no-todo-comments}
+- prompt: 'What happens if a user''s config enables a rule id that does not exist (e.g. `rules: {nope: enable}`)? Which function raises, what is the message, and what is the process exit code? Do not change any files.'
+  checks:
+  - {kind: keyed_facts, all: [no such rule, _RULES|rules/__init__, YamlLintConfigError|invalid config, 255|-1]}
+- prompt: 'Write ARCHITECTURE.md summarising the lint pipeline in order: cli.py, config.py, linter.py, parser.py and the rules package (mention where rules are registered and the new rule file).'
+  checks:
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: cli\.py}
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: config\.py}
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: linter\.py}
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: parser\.py}
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: rules/__init__\.py|_RULES}
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: no_todo_comments}
