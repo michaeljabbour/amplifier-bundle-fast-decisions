@@ -1,0 +1,905 @@
+{
+  "settings_sha256": "111f4cda55861508",
+  "waves": {
+    "slugify-bugfix-r1-fable": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<pilot-2>/w000-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "slugify-bugfix-r1-fable-anchor",
+              "wave_id": "slugify-bugfix-r1-fable",
+              "scenario": "slugify-bugfix",
+              "rep": 1,
+              "host": "fable",
+              "arm": "anchor",
+              "kind": "plain",
+              "cell": "plain",
+              "model": "claude-fable-5-1",
+              "nonce": "c07dec90-a4a5-4fca-b2c5-3c0f76885dff",
+              "attempt": 1,
+              "est_usd": 5.0362,
+              "sticky_decision": null
+            },
+            {
+              "key": "slugify-bugfix-r1-fable-aa",
+              "wave_id": "slugify-bugfix-r1-fable",
+              "scenario": "slugify-bugfix",
+              "rep": 1,
+              "host": "fable",
+              "arm": "aa",
+              "kind": "plain",
+              "cell": "plain",
+              "model": "claude-fable-5-1",
+              "nonce": "269112f0-fe2a-40e6-8bb5-e44d751cc317",
+              "attempt": 1,
+              "est_usd": 5.0362,
+              "sticky_decision": null
+            },
+            {
+              "key": "slugify-bugfix-r1-fable-shipped",
+              "wave_id": "slugify-bugfix-r1-fable",
+              "scenario": "slugify-bugfix",
+              "rep": 1,
+              "host": "fable",
+              "arm": "shipped",
+              "kind": "fd",
+              "cell": "orch-default",
+              "model": "claude-fable-5-1",
+              "nonce": "756998b7-f700-4251-8fa8-5692422bb7c6",
+              "attempt": 1,
+              "est_usd": 3.1762,
+              "sticky_decision": null
+            },
+            {
+              "key": "slugify-bugfix-r1-fable-sticky",
+              "wave_id": "slugify-bugfix-r1-fable",
+              "scenario": "slugify-bugfix",
+              "rep": 1,
+              "host": "fable",
+              "arm": "sticky",
+              "kind": "sticky",
+              "cell": "orch-pin-cheap",
+              "model": "claude-fable-5-1",
+              "nonce": "24e0b87e-733f-4488-a35c-3ede9fca717c",
+              "attempt": 1,
+              "est_usd": 3.0066,
+              "sticky_decision": "cheap",
+              "expected_main_model": "claude-sonnet-5"
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "slugify-bugfix-r1-fable-anchor": "done",
+            "slugify-bugfix-r1-fable-aa": "done",
+            "slugify-bugfix-r1-fable-shipped": "done",
+            "slugify-bugfix-r1-fable-sticky": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "go-wordsearch-r1-opus": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<pilot-2>/w001-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "go-wordsearch-r1-opus-anchor",
+              "wave_id": "go-wordsearch-r1-opus",
+              "scenario": "go-wordsearch",
+              "rep": 1,
+              "host": "opus",
+              "arm": "anchor",
+              "kind": "plain",
+              "cell": "plain-opus",
+              "model": "claude-opus-5-5",
+              "nonce": "3d8c0d9b-9a88-47e9-ac25-d75e84b3a39c",
+              "attempt": 1,
+              "est_usd": 1.557,
+              "sticky_decision": null
+            },
+            {
+              "key": "go-wordsearch-r1-opus-aa",
+              "wave_id": "go-wordsearch-r1-opus",
+              "scenario": "go-wordsearch",
+              "rep": 1,
+              "host": "opus",
+              "arm": "aa",
+              "kind": "plain",
+              "cell": "plain-opus",
+              "model": "claude-opus-5-5",
+              "nonce": "67ae23be-b3e5-4a26-9bf4-d7be2d12a15d",
+              "attempt": 1,
+              "est_usd": 1.557,
+              "sticky_decision": null
+            },
+            {
+              "key": "go-wordsearch-r1-opus-shipped",
+              "wave_id": "go-wordsearch-r1-opus",
+              "scenario": "go-wordsearch",
+              "rep": 1,
+              "host": "opus",
+              "arm": "shipped",
+              "kind": "fd",
+              "cell": "orch-default-opus",
+              "model": "claude-opus-5-5",
+              "nonce": "651de188-904b-4b4a-be81-83fcffae7951",
+              "attempt": 1,
+              "est_usd": 2.046,
+              "sticky_decision": null
+            },
+            {
+              "key": "go-wordsearch-r1-opus-sticky",
+              "wave_id": "go-wordsearch-r1-opus",
+              "scenario": "go-wordsearch",
+              "rep": 1,
+              "host": "opus",
+              "arm": "sticky",
+              "kind": "sticky",
+              "cell": "orch-pin-cheap-opus",
+              "model": "claude-opus-5-5",
+              "nonce": "62237667-bec5-465a-b463-02fa129ff0a0",
+              "attempt": 1,
+              "est_usd": 1.6193,
+              "sticky_decision": "cheap",
+              "expected_main_model": "claude-sonnet-5"
+            },
+            {
+              "key": "go-wordsearch-r1-any-sonnet",
+              "wave_id": "go-wordsearch-r1-opus",
+              "scenario": "go-wordsearch",
+              "rep": 1,
+              "host": "any",
+              "arm": "sonnet",
+              "kind": "control",
+              "cell": "plain-sonnet",
+              "model": "claude-sonnet-5",
+              "nonce": "1e21df73-996d-49a0-93e7-7de662d164d0",
+              "attempt": 1,
+              "est_usd": 2.106,
+              "sticky_decision": null
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "go-wordsearch-r1-opus-anchor": "done",
+            "go-wordsearch-r1-opus-aa": "done",
+            "go-wordsearch-r1-opus-shipped": "done",
+            "go-wordsearch-r1-opus-sticky": "done",
+            "go-wordsearch-r1-any-sonnet": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "rust-wordcount-r1-fable": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<pilot-2>/w002-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "rust-wordcount-r1-fable-anchor",
+              "wave_id": "rust-wordcount-r1-fable",
+              "scenario": "rust-wordcount",
+              "rep": 1,
+              "host": "fable",
+              "arm": "anchor",
+              "kind": "plain",
+              "cell": "plain",
+              "model": "claude-fable-5-1",
+              "nonce": "789e5c5f-a194-4499-9138-8edfc97c256e",
+              "attempt": 1,
+              "est_usd": 4.8348,
+              "sticky_decision": null
+            },
+            {
+              "key": "rust-wordcount-r1-fable-aa",
+              "wave_id": "rust-wordcount-r1-fable",
+              "scenario": "rust-wordcount",
+              "rep": 1,
+              "host": "fable",
+              "arm": "aa",
+              "kind": "plain",
+              "cell": "plain",
+              "model": "claude-fable-5-1",
+              "nonce": "b8715d4c-9602-4bb0-ac2f-78091cd6cb7a",
+              "attempt": 1,
+              "est_usd": 4.8348,
+              "sticky_decision": null
+            },
+            {
+              "key": "rust-wordcount-r1-fable-shipped",
+              "wave_id": "rust-wordcount-r1-fable",
+              "scenario": "rust-wordcount",
+              "rep": 1,
+              "host": "fable",
+              "arm": "shipped",
+              "kind": "fd",
+              "cell": "orch-default",
+              "model": "claude-fable-5-1",
+              "nonce": "66ce7970-a3a4-4693-9954-18e25ffdf3aa",
+              "attempt": 1,
+              "est_usd": 3.0492,
+              "sticky_decision": null
+            },
+            {
+              "key": "rust-wordcount-r1-fable-sticky",
+              "wave_id": "rust-wordcount-r1-fable",
+              "scenario": "rust-wordcount",
+              "rep": 1,
+              "host": "fable",
+              "arm": "sticky",
+              "kind": "sticky",
+              "cell": "orch-pin-cheap",
+              "model": "claude-fable-5-1",
+              "nonce": "a09b964f-aa78-49b8-9a66-c3f63b81272c",
+              "attempt": 1,
+              "est_usd": 2.8864,
+              "sticky_decision": "cheap",
+              "expected_main_model": "claude-sonnet-5"
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "rust-wordcount-r1-fable-anchor": "done",
+            "rust-wordcount-r1-fable-aa": "done",
+            "rust-wordcount-r1-fable-shipped": "done",
+            "rust-wordcount-r1-fable-sticky": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "go-wordsearch-r1-fable": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<pilot-2>/w003-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "go-wordsearch-r1-fable-anchor",
+              "wave_id": "go-wordsearch-r1-fable",
+              "scenario": "go-wordsearch",
+              "rep": 1,
+              "host": "fable",
+              "arm": "anchor",
+              "kind": "plain",
+              "cell": "plain",
+              "model": "claude-fable-5-1",
+              "nonce": "02ac65c1-e2c7-4690-a865-79d04924411a",
+              "attempt": 1,
+              "est_usd": 4.029,
+              "sticky_decision": null
+            },
+            {
+              "key": "go-wordsearch-r1-fable-aa",
+              "wave_id": "go-wordsearch-r1-fable",
+              "scenario": "go-wordsearch",
+              "rep": 1,
+              "host": "fable",
+              "arm": "aa",
+              "kind": "plain",
+              "cell": "plain",
+              "model": "claude-fable-5-1",
+              "nonce": "a5ea079b-2a64-485c-9676-e7315432e464",
+              "attempt": 1,
+              "est_usd": 4.029,
+              "sticky_decision": null
+            },
+            {
+              "key": "go-wordsearch-r1-fable-shipped",
+              "wave_id": "go-wordsearch-r1-fable",
+              "scenario": "go-wordsearch",
+              "rep": 1,
+              "host": "fable",
+              "arm": "shipped",
+              "kind": "fd",
+              "cell": "orch-default",
+              "model": "claude-fable-5-1",
+              "nonce": "162442e4-0dac-4ebf-9ca7-47b81351e63f",
+              "attempt": 1,
+              "est_usd": 2.541,
+              "sticky_decision": null
+            },
+            {
+              "key": "go-wordsearch-r1-fable-sticky",
+              "wave_id": "go-wordsearch-r1-fable",
+              "scenario": "go-wordsearch",
+              "rep": 1,
+              "host": "fable",
+              "arm": "sticky",
+              "kind": "sticky",
+              "cell": "orch-pin-cheap",
+              "model": "claude-fable-5-1",
+              "nonce": "0f4dd3fb-7d41-4561-beef-019405d13b7e",
+              "attempt": 1,
+              "est_usd": 2.4053,
+              "sticky_decision": "cheap",
+              "expected_main_model": "claude-sonnet-5"
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "go-wordsearch-r1-fable-anchor": "done",
+            "go-wordsearch-r1-fable-aa": "done",
+            "go-wordsearch-r1-fable-shipped": "done",
+            "go-wordsearch-r1-fable-sticky": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "slugify-review-r1-fable": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<pilot-2>/w004-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "slugify-review-r1-fable-anchor",
+              "wave_id": "slugify-review-r1-fable",
+              "scenario": "slugify-review",
+              "rep": 1,
+              "host": "fable",
+              "arm": "anchor",
+              "kind": "plain",
+              "cell": "plain",
+              "model": "claude-fable-5-1",
+              "nonce": "dd7f3fb2-62e8-4d79-b2c7-9bb6fc903aa6",
+              "attempt": 1,
+              "est_usd": 3.3575,
+              "sticky_decision": null
+            },
+            {
+              "key": "slugify-review-r1-fable-aa",
+              "wave_id": "slugify-review-r1-fable",
+              "scenario": "slugify-review",
+              "rep": 1,
+              "host": "fable",
+              "arm": "aa",
+              "kind": "plain",
+              "cell": "plain",
+              "model": "claude-fable-5-1",
+              "nonce": "178a3a01-71a0-49e7-941c-895fb0bd7228",
+              "attempt": 1,
+              "est_usd": 3.3575,
+              "sticky_decision": null
+            },
+            {
+              "key": "slugify-review-r1-fable-shipped",
+              "wave_id": "slugify-review-r1-fable",
+              "scenario": "slugify-review",
+              "rep": 1,
+              "host": "fable",
+              "arm": "shipped",
+              "kind": "fd",
+              "cell": "orch-default",
+              "model": "claude-fable-5-1",
+              "nonce": "ccfd9875-c20e-407e-9ff1-0244064cedbd",
+              "attempt": 1,
+              "est_usd": 2.1175,
+              "sticky_decision": null
+            },
+            {
+              "key": "slugify-review-r1-fable-sticky",
+              "wave_id": "slugify-review-r1-fable",
+              "scenario": "slugify-review",
+              "rep": 1,
+              "host": "fable",
+              "arm": "sticky",
+              "kind": "sticky",
+              "cell": "orch-pin-cheap",
+              "model": "claude-fable-5-1",
+              "nonce": "04c77e64-bc92-4c5d-9807-6d524a7157e5",
+              "attempt": 1,
+              "est_usd": 2.0044,
+              "sticky_decision": "cheap",
+              "expected_main_model": "claude-sonnet-5"
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "slugify-review-r1-fable-anchor": "done",
+            "slugify-review-r1-fable-aa": "done",
+            "slugify-review-r1-fable-shipped": "done",
+            "slugify-review-r1-fable-sticky": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "slugify-bugfix-r1-opus": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<pilot-2>/w005-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "slugify-bugfix-r1-opus-anchor",
+              "wave_id": "slugify-bugfix-r1-opus",
+              "scenario": "slugify-bugfix",
+              "rep": 1,
+              "host": "opus",
+              "arm": "anchor",
+              "kind": "plain",
+              "cell": "plain-opus",
+              "model": "claude-opus-5-5",
+              "nonce": "f6ca36ce-b9b4-4408-bfae-7f2bce41b106",
+              "attempt": 1,
+              "est_usd": 1.9463,
+              "sticky_decision": null
+            },
+            {
+              "key": "slugify-bugfix-r1-opus-aa",
+              "wave_id": "slugify-bugfix-r1-opus",
+              "scenario": "slugify-bugfix",
+              "rep": 1,
+              "host": "opus",
+              "arm": "aa",
+              "kind": "plain",
+              "cell": "plain-opus",
+              "model": "claude-opus-5-5",
+              "nonce": "c33fee01-47c0-40b6-a76b-1a9323580ff1",
+              "attempt": 1,
+              "est_usd": 1.9463,
+              "sticky_decision": null
+            },
+            {
+              "key": "slugify-bugfix-r1-opus-shipped",
+              "wave_id": "slugify-bugfix-r1-opus",
+              "scenario": "slugify-bugfix",
+              "rep": 1,
+              "host": "opus",
+              "arm": "shipped",
+              "kind": "fd",
+              "cell": "orch-default-opus",
+              "model": "claude-opus-5-5",
+              "nonce": "95744f6a-572f-4107-af26-947c999858f5",
+              "attempt": 1,
+              "est_usd": 2.5575,
+              "sticky_decision": null
+            },
+            {
+              "key": "slugify-bugfix-r1-opus-sticky",
+              "wave_id": "slugify-bugfix-r1-opus",
+              "scenario": "slugify-bugfix",
+              "rep": 1,
+              "host": "opus",
+              "arm": "sticky",
+              "kind": "sticky",
+              "cell": "orch-pin-cheap-opus",
+              "model": "claude-opus-5-5",
+              "nonce": "5b04d8fa-332a-4bdc-aa63-6082381fbc9d",
+              "attempt": 1,
+              "est_usd": 2.0241,
+              "sticky_decision": "cheap",
+              "expected_main_model": "claude-sonnet-5"
+            },
+            {
+              "key": "slugify-bugfix-r1-any-sonnet",
+              "wave_id": "slugify-bugfix-r1-opus",
+              "scenario": "slugify-bugfix",
+              "rep": 1,
+              "host": "any",
+              "arm": "sonnet",
+              "kind": "control",
+              "cell": "plain-sonnet",
+              "model": "claude-sonnet-5",
+              "nonce": "88325121-5ce0-49fe-a6a6-725150fe1a2b",
+              "attempt": 1,
+              "est_usd": 2.6325,
+              "sticky_decision": null
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "slugify-bugfix-r1-opus-anchor": "done",
+            "slugify-bugfix-r1-opus-aa": "done",
+            "slugify-bugfix-r1-opus-shipped": "done",
+            "slugify-bugfix-r1-opus-sticky": "done",
+            "slugify-bugfix-r1-any-sonnet": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "py-bowling-r1-opus": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<pilot-2>/w006-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "py-bowling-r1-opus-anchor",
+              "wave_id": "py-bowling-r1-opus",
+              "scenario": "py-bowling",
+              "rep": 1,
+              "host": "opus",
+              "arm": "anchor",
+              "kind": "plain",
+              "cell": "plain-opus",
+              "model": "claude-opus-5-5",
+              "nonce": "7697cdf4-a1c9-4f2a-a360-4a2e71f0bf17",
+              "attempt": 1,
+              "est_usd": 1.557,
+              "sticky_decision": null
+            },
+            {
+              "key": "py-bowling-r1-opus-aa",
+              "wave_id": "py-bowling-r1-opus",
+              "scenario": "py-bowling",
+              "rep": 1,
+              "host": "opus",
+              "arm": "aa",
+              "kind": "plain",
+              "cell": "plain-opus",
+              "model": "claude-opus-5-5",
+              "nonce": "8a6ff36a-a7f2-4d34-b4aa-eca0ef238dd7",
+              "attempt": 1,
+              "est_usd": 1.557,
+              "sticky_decision": null
+            },
+            {
+              "key": "py-bowling-r1-opus-shipped",
+              "wave_id": "py-bowling-r1-opus",
+              "scenario": "py-bowling",
+              "rep": 1,
+              "host": "opus",
+              "arm": "shipped",
+              "kind": "fd",
+              "cell": "orch-default-opus",
+              "model": "claude-opus-5-5",
+              "nonce": "74436d96-3889-4c72-b99b-fde619b0d213",
+              "attempt": 1,
+              "est_usd": 2.046,
+              "sticky_decision": null
+            },
+            {
+              "key": "py-bowling-r1-opus-sticky",
+              "wave_id": "py-bowling-r1-opus",
+              "scenario": "py-bowling",
+              "rep": 1,
+              "host": "opus",
+              "arm": "sticky",
+              "kind": "sticky",
+              "cell": "orch-pin-cheap-opus",
+              "model": "claude-opus-5-5",
+              "nonce": "197f1b29-85ff-433d-8690-3da7118a550b",
+              "attempt": 1,
+              "est_usd": 1.6193,
+              "sticky_decision": "cheap",
+              "expected_main_model": "claude-sonnet-5"
+            },
+            {
+              "key": "py-bowling-r1-any-sonnet",
+              "wave_id": "py-bowling-r1-opus",
+              "scenario": "py-bowling",
+              "rep": 1,
+              "host": "any",
+              "arm": "sonnet",
+              "kind": "control",
+              "cell": "plain-sonnet",
+              "model": "claude-sonnet-5",
+              "nonce": "2f487b1c-91ca-4cbc-9556-842b50de1802",
+              "attempt": 1,
+              "est_usd": 2.106,
+              "sticky_decision": null
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "py-bowling-r1-opus-anchor": "done",
+            "py-bowling-r1-opus-aa": "done",
+            "py-bowling-r1-opus-shipped": "done",
+            "py-bowling-r1-opus-sticky": "done",
+            "py-bowling-r1-any-sonnet": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "rust-wordcount-r1-opus": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<pilot-2>/w007-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "rust-wordcount-r1-opus-anchor",
+              "wave_id": "rust-wordcount-r1-opus",
+              "scenario": "rust-wordcount",
+              "rep": 1,
+              "host": "opus",
+              "arm": "anchor",
+              "kind": "plain",
+              "cell": "plain-opus",
+              "model": "claude-opus-5-5",
+              "nonce": "38929f0e-750f-4d81-a289-356b5c325870",
+              "attempt": 1,
+              "est_usd": 1.8684,
+              "sticky_decision": null
+            },
+            {
+              "key": "rust-wordcount-r1-opus-aa",
+              "wave_id": "rust-wordcount-r1-opus",
+              "scenario": "rust-wordcount",
+              "rep": 1,
+              "host": "opus",
+              "arm": "aa",
+              "kind": "plain",
+              "cell": "plain-opus",
+              "model": "claude-opus-5-5",
+              "nonce": "fadd034f-f3f2-4116-84df-d1738b66a2ae",
+              "attempt": 1,
+              "est_usd": 1.8684,
+              "sticky_decision": null
+            },
+            {
+              "key": "rust-wordcount-r1-opus-shipped",
+              "wave_id": "rust-wordcount-r1-opus",
+              "scenario": "rust-wordcount",
+              "rep": 1,
+              "host": "opus",
+              "arm": "shipped",
+              "kind": "fd",
+              "cell": "orch-default-opus",
+              "model": "claude-opus-5-5",
+              "nonce": "7005045d-bd7d-49f7-af21-9f82ea9b59d5",
+              "attempt": 1,
+              "est_usd": 2.4552,
+              "sticky_decision": null
+            },
+            {
+              "key": "rust-wordcount-r1-opus-sticky",
+              "wave_id": "rust-wordcount-r1-opus",
+              "scenario": "rust-wordcount",
+              "rep": 1,
+              "host": "opus",
+              "arm": "sticky",
+              "kind": "sticky",
+              "cell": "orch-pin-cheap-opus",
+              "model": "claude-opus-5-5",
+              "nonce": "40f2c258-8ff6-4fd4-a54d-d2571856a9dc",
+              "attempt": 1,
+              "est_usd": 1.9431,
+              "sticky_decision": "cheap",
+              "expected_main_model": "claude-sonnet-5"
+            },
+            {
+              "key": "rust-wordcount-r1-any-sonnet",
+              "wave_id": "rust-wordcount-r1-opus",
+              "scenario": "rust-wordcount",
+              "rep": 1,
+              "host": "any",
+              "arm": "sonnet",
+              "kind": "control",
+              "cell": "plain-sonnet",
+              "model": "claude-sonnet-5",
+              "nonce": "603115d5-ed91-4076-9ec4-79f749986d6d",
+              "attempt": 1,
+              "est_usd": 2.5272,
+              "sticky_decision": null
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "rust-wordcount-r1-opus-anchor": "done",
+            "rust-wordcount-r1-opus-aa": "done",
+            "rust-wordcount-r1-opus-shipped": "done",
+            "rust-wordcount-r1-opus-sticky": "done",
+            "rust-wordcount-r1-any-sonnet": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "slugify-review-r1-opus": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<pilot-2>/w008-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "slugify-review-r1-opus-anchor",
+              "wave_id": "slugify-review-r1-opus",
+              "scenario": "slugify-review",
+              "rep": 1,
+              "host": "opus",
+              "arm": "anchor",
+              "kind": "plain",
+              "cell": "plain-opus",
+              "model": "claude-opus-5-5",
+              "nonce": "944ca494-96af-4975-869d-09cb44d0770c",
+              "attempt": 1,
+              "est_usd": 1.2975,
+              "sticky_decision": null
+            },
+            {
+              "key": "slugify-review-r1-opus-aa",
+              "wave_id": "slugify-review-r1-opus",
+              "scenario": "slugify-review",
+              "rep": 1,
+              "host": "opus",
+              "arm": "aa",
+              "kind": "plain",
+              "cell": "plain-opus",
+              "model": "claude-opus-5-5",
+              "nonce": "74b2688a-66e4-4157-ba27-47a009de4e33",
+              "attempt": 1,
+              "est_usd": 1.2975,
+              "sticky_decision": null
+            },
+            {
+              "key": "slugify-review-r1-opus-shipped",
+              "wave_id": "slugify-review-r1-opus",
+              "scenario": "slugify-review",
+              "rep": 1,
+              "host": "opus",
+              "arm": "shipped",
+              "kind": "fd",
+              "cell": "orch-default-opus",
+              "model": "claude-opus-5-5",
+              "nonce": "1362d93d-51eb-4b94-a4a6-71199d8eeff3",
+              "attempt": 1,
+              "est_usd": 1.705,
+              "sticky_decision": null
+            },
+            {
+              "key": "slugify-review-r1-opus-sticky",
+              "wave_id": "slugify-review-r1-opus",
+              "scenario": "slugify-review",
+              "rep": 1,
+              "host": "opus",
+              "arm": "sticky",
+              "kind": "sticky",
+              "cell": "orch-pin-cheap-opus",
+              "model": "claude-opus-5-5",
+              "nonce": "f501ff38-0c34-4142-9d6e-c39a4a323ac0",
+              "attempt": 1,
+              "est_usd": 1.3494,
+              "sticky_decision": "cheap",
+              "expected_main_model": "claude-sonnet-5"
+            },
+            {
+              "key": "slugify-review-r1-any-sonnet",
+              "wave_id": "slugify-review-r1-opus",
+              "scenario": "slugify-review",
+              "rep": 1,
+              "host": "any",
+              "arm": "sonnet",
+              "kind": "control",
+              "cell": "plain-sonnet",
+              "model": "claude-sonnet-5",
+              "nonce": "86a18818-54fd-432a-aca0-7b8a6166673b",
+              "attempt": 1,
+              "est_usd": 1.755,
+              "sticky_decision": null
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "slugify-review-r1-opus-anchor": "done",
+            "slugify-review-r1-opus-aa": "done",
+            "slugify-review-r1-opus-shipped": "done",
+            "slugify-review-r1-opus-sticky": "done",
+            "slugify-review-r1-any-sonnet": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "py-bowling-r1-fable": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<pilot-2>/w009-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "py-bowling-r1-fable-anchor",
+              "wave_id": "py-bowling-r1-fable",
+              "scenario": "py-bowling",
+              "rep": 1,
+              "host": "fable",
+              "arm": "anchor",
+              "kind": "plain",
+              "cell": "plain",
+              "model": "claude-fable-5-1",
+              "nonce": "90dadb63-922b-432c-8473-3f24ef62bd42",
+              "attempt": 1,
+              "est_usd": 4.029,
+              "sticky_decision": null
+            },
+            {
+              "key": "py-bowling-r1-fable-aa",
+              "wave_id": "py-bowling-r1-fable",
+              "scenario": "py-bowling",
+              "rep": 1,
+              "host": "fable",
+              "arm": "aa",
+              "kind": "plain",
+              "cell": "plain",
+              "model": "claude-fable-5-1",
+              "nonce": "7cc113a7-583a-4800-b479-f812f3ee43d2",
+              "attempt": 1,
+              "est_usd": 4.029,
+              "sticky_decision": null
+            },
+            {
+              "key": "py-bowling-r1-fable-shipped",
+              "wave_id": "py-bowling-r1-fable",
+              "scenario": "py-bowling",
+              "rep": 1,
+              "host": "fable",
+              "arm": "shipped",
+              "kind": "fd",
+              "cell": "orch-default",
+              "model": "claude-fable-5-1",
+              "nonce": "d65821c1-c9b7-4186-ae87-5dbaaec86f96",
+              "attempt": 1,
+              "est_usd": 2.541,
+              "sticky_decision": null
+            },
+            {
+              "key": "py-bowling-r1-fable-sticky",
+              "wave_id": "py-bowling-r1-fable",
+              "scenario": "py-bowling",
+              "rep": 1,
+              "host": "fable",
+              "arm": "sticky",
+              "kind": "sticky",
+              "cell": "orch-pin-cheap",
+              "model": "claude-fable-5-1",
+              "nonce": "fd4fc36c-6ab5-4991-b2df-b89e2e996a65",
+              "attempt": 1,
+              "est_usd": 2.4053,
+              "sticky_decision": "cheap",
+              "expected_main_model": "claude-sonnet-5"
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "py-bowling-r1-fable-anchor": "done",
+            "py-bowling-r1-fable-aa": "done",
+            "py-bowling-r1-fable-shipped": "done",
+            "py-bowling-r1-fable-sticky": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    }
+  }
+}
