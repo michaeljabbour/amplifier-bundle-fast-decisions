@@ -238,6 +238,142 @@ def attempt_end(cache: Cache, att):
     return end
 
 
+ARMS = ["anchor", "aa", "shipped", "sticky", "sonnet"]
+STATE_ORDER = ("done", "running", "pending", "excluded")
+
+
+def turns_done_in(d: Path) -> int:
+    """Graded turns of a live session: the worker writes turn-snapshots/tN.tar.gz after turn N ends and is graded."""
+    try:
+        return sum(1 for e in os.scandir(d / "turn-snapshots") if e.name.startswith("t") and e.name.endswith(".tar.gz"))
+    except OSError:
+        return 0
+
+
+def session_start(d: Path):
+    """When a live session began: creation time of turn1-stdout.txt (running.json is rewritten at every turn)."""
+    try:
+        st = (d / "turn1-stdout.txt").stat()
+        return getattr(st, "st_birthtime", st.st_mtime)
+    except OSError:
+        return None
+
+
+def turn_band(n: int) -> str:
+    return "8 turns or fewer" if n <= 8 else ("9-12 turns" if n <= 12 else "13-16 turns")
+
+
+def family_map(design) -> dict:
+    """scenario id -> family (the scenario_dir folder it lives in: polyglot / repos / mixed / knowledge)."""
+    dirs = (design or {}).get("scenario_dir") or []
+    out = {}
+    for d in [dirs] if isinstance(dirs, str) else dirs:
+        base = P._abs(P.REPO_ROOT, d)
+        if base.is_dir():
+            for f in base.iterdir():
+                if f.suffix in (".yaml", ".yml"):
+                    out[f.stem] = base.name
+    return out
+
+
+def _bucket():
+    return {"n": 0, "done": 0, "running": 0, "pending": 0, "excluded": 0, "turns": 0, "turns_done": 0, "est": 0.0, "est_done": 0.0}
+
+
+def _add(b, r):
+    b["n"] += 1
+    b[r["state"]] += 1
+    b["turns"] += r["turns"]
+    b["turns_done"] += r["td"]
+    b["est"] += r["est"]
+    b["est_done"] += r["est"] * (r["td"] / r["turns"]) if r["turns"] else 0.0
+
+
+def progress_detail(sched, swave, status, scen, famap, timing, now, first_start):
+    """Per-session work accounting. A session is done / running / pending / excluded; a running session counts the
+    turns already graded as partial work, so turns-done and est-cost-done are work-weighted (not wave counts)."""
+    recs = []
+    for wid, ss in (sched.get("waves") or {}).items():
+        wst = status.get(wid, "pending")
+        last = ((swave.get(wid) or {}).get("attempts") or [{}])[-1] if wst == "running" else {}
+        live = {x["key"] for x in last.get("sessions", [])}
+        for s in ss:
+            sc = scen.get(s["scenario"]) or {}
+            nt = int(sc.get("turns") or 0)
+            st, td, tm = "pending", 0, timing.get(s["key"])
+            if wst == "done":
+                st, td = "done", nt
+            elif wst in ("excluded", "config_error"):
+                st = "excluded"
+            elif wst == "running" and s["key"] in live:
+                d = sdir_of(last, s)
+                if (d / "result.json").exists():
+                    st, td = "done", nt
+                elif (d / "running.json").exists():
+                    st, td, tm = "running", min(turns_done_in(d), nt), (session_start(d), None)
+            recs.append({"key": s["key"], "scenario": s["scenario"], "rep": s["rep"], "arm": s["arm"], "host": s["host"],
+                         "state": st, "turns": nt, "td": td, "est": float(s.get("est_usd") or 0.0), "split": sc.get("split") or "unknown",
+                         "family": famap.get(s["scenario"], "unknown"), "band": turn_band(nt), "tm": tm})
+
+    def agg(keyf):
+        out = {}
+        for r in recs:
+            _add(out.setdefault(keyf(r), _bucket()), r)
+        return out
+
+    def rows(keyf, order, label):
+        a = agg(keyf)
+        return [{"label": label(k), "key": list(k) if isinstance(k, tuple) else k, **a[k]} for k in order(a)]
+
+    overall = _bucket()
+    for r in recs:
+        _add(overall, r)
+    by_ah = rows(lambda r: (r["arm"], "any" if r["arm"] == "sonnet" else r["host"]),
+                 lambda a: sorted(a, key=lambda k: (ARMS.index(k[0]) if k[0] in ARMS else 9, k[1])),
+                 lambda k: k[0] + (" (control, host-independent)" if k[0] == "sonnet" else f" x {k[1]}"))
+    ident = lambda k: k
+    by_family = rows(lambda r: r["family"], sorted, ident)
+    by_split = rows(lambda r: r["split"], sorted, ident)
+    bands = ["8 turns or fewer", "9-12 turns", "13-16 turns"]
+    by_band = rows(lambda r: r["band"], lambda a: [b for b in bands if b in a], ident)
+
+    # ---- anchor-paired comparisons: complete when both the arm session and its anchor session are done
+    anchors = {(r["scenario"], r["rep"], r["host"]): r for r in recs if r["arm"] == "anchor"}
+    pairs = {}
+    for r in recs:
+        if r["arm"] == "anchor":
+            continue
+        for host in ([r["host"]] if r["host"] != "any" else sorted({h for (sc_, rp, h) in anchors if (sc_, rp) == (r["scenario"], r["rep"])})):
+            a = anchors.get((r["scenario"], r["rep"], host))
+            if a is None:
+                continue
+            b = pairs.setdefault((host, r["arm"]), {"total": 0, "complete": 0, "train_total": 0, "train_complete": 0, "arm_done": 0})
+            ok = r["state"] == "done" and a["state"] == "done"
+            b["total"] += 1
+            b["complete"] += ok
+            b["arm_done"] += r["state"] == "done"
+            if r["split"] != "test":
+                b["train_total"] += 1
+                b["train_complete"] += ok
+    pair_rows = [{"host": h, "arm": a, **v} for (h, a), v in sorted(pairs.items(), key=lambda kv: (kv[0][0], ARMS.index(kv[0][1]) if kv[0][1] in ARMS else 9))]
+
+    # ---- turns/hour over the last 60 min: each session's graded turns spread evenly over its run time
+    lo = now - 3600
+    win = 0.0
+    for r in recs:
+        if not r["td"] or not r["tm"] or r["tm"][0] is None:
+            continue
+        s0, s1 = r["tm"][0], (r["tm"][1] or now)
+        if s1 > s0:
+            win += r["td"] * max(0.0, min(s1, now) - max(s0, lo)) / (s1 - s0)
+    span = min(3600.0, now - first_start) if first_start else 3600.0
+    rate = win / (span / 3600) if span > 0 else None
+    left = overall["turns"] - overall["turns_done"] - sum(r["turns"] - r["td"] for r in recs if r["state"] == "excluded")
+    return {"overall": overall, "by_arm_host": by_ah, "by_family": by_family, "by_split": by_split, "by_band": by_band,
+            "pairs": pair_rows, "turns_rate60": rate, "turns_left": left,
+            "eta_turns": (left / rate * 3600) if rate else None}
+
+
 def geo(lst):
     return math.exp(sum(lst) / len(lst)) if lst else None
 
@@ -326,7 +462,7 @@ def collect(out, cache_path=None, parse_budget_s=None, show_test=False, now=None
                     alive = False
                 except OSError:
                     alive = True
-            started = ts(rf.get("started_at"))
+            started = None if fin else session_start(d)
             if started and (first_start is None or started < first_start):
                 first_start = started
             sess.append({"arm": s["arm"], "host": s["host"], "turn": rf.get("turn"),
@@ -336,6 +472,8 @@ def collect(out, cache_path=None, parse_budget_s=None, show_test=False, now=None
         running.append({"wid": wid, "attempt": att.get("attempt"), "sessions": sess})
 
     # ---- progress
+    timing = {x["s"]["key"]: (x["e"].get("started"), x["e"].get("ended")) for x in entries}
+    detail = progress_detail(sched, swave, status, scen, family_map(design), timing, now, first_start)
     groups = {}
     for wid in wave_ids:
         g = groups.setdefault((wsplit(wid), whost(wid)), {"waves": 0, "done": 0, "sessions": 0, "sdone": 0})
@@ -460,7 +598,7 @@ def collect(out, cache_path=None, parse_budget_s=None, show_test=False, now=None
         "created_at": sched.get("created_at"), "started": first_start, "elapsed": elapsed, "process": proc,
         "state_mtime": sf.stat().st_mtime if sf.exists() else None,
         "parallel": (proc or {}).get("parallel"), "sched_parallel": sched.get("parallel"),
-        "counts": counts, "total_waves": total_waves, "total_sessions": total_sessions, "done_sessions": done_sessions,
+        "progress": detail, "counts": counts, "total_waves": total_waves, "total_sessions": total_sessions, "done_sessions": done_sessions,
         "groups": {f"{k[0]}|{k[1]}": v for k, v in sorted(groups.items())},
         "rate60": rate60, "rate_all": rate_all, "eta": eta, "wave_done_times": ends,
         "spend": spend, "health": health, "running": running, "interim": interim, "show_test": show_test,
@@ -481,7 +619,7 @@ section{background:var(--card);border:1px solid var(--line);border-radius:8px;pa
 .wrap{overflow-x:auto;margin:8px 0}table{border-collapse:collapse;width:100%;font-size:.88rem}caption{text-align:left;font-weight:600;padding:4px 0;color:var(--mut)}
 th,td{border-bottom:1px solid var(--line);padding:4px 8px;text-align:left;vertical-align:top}td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
 .ok{color:var(--ok)}.warn{color:var(--warn)}.bad{color:var(--bad)}.bar{display:flex;height:16px;border-radius:8px;overflow:hidden;background:var(--bar);margin:6px 0}
-.bar i{display:block;height:100%}.banner{border:2px solid var(--bad);color:var(--bad);padding:8px 12px;border-radius:8px;font-weight:700;margin:10px 0}
+.bar i{display:block;height:100%}.bar.sm{height:12px;min-width:110px;margin:2px 0}.banner{border:2px solid var(--bad);color:var(--bad);padding:8px 12px;border-radius:8px;font-weight:700;margin:10px 0}
 .interim{border:2px dashed var(--warn)}code,pre{font:12px ui-monospace,Menlo,monospace}pre{white-space:pre-wrap;word-break:break-word;margin:0}
 svg{width:100%;height:auto;max-height:220px}svg text{fill:var(--mut);font-size:11px}
 @media (max-width:600px){body{font-size:14px}main{padding:8px}.grid{grid-template-columns:repeat(2,1fr)}}
@@ -527,20 +665,58 @@ def spend_svg(series, projected, now):
             f'<text x="{W - 8}" y="{H - 6}" text-anchor="end">{esc(datetime.fromtimestamp(t1).strftime("%m-%d %H:%M"))}</text></svg>')
 
 
+STATE_COL = {"done": "var(--ok)", "running": "var(--acc)", "pending": "var(--bar)", "excluded": "var(--bad)"}
+
+
+def stacked(b):
+    n = max(b["n"], 1)
+    segs = "".join(f'<i style="width:{b[k] / n * 100:.2f}%;background:{STATE_COL[k]}" title="{k}: {b[k]}"></i>' for k in STATE_ORDER if b[k])
+    return (f'<div class="bar sm" role="img" aria-label="{b["done"]} done, {b["running"]} running, {b["pending"]} pending, '
+            f'{b["excluded"]} excluded of {b["n"]}">{segs}</div>')
+
+
+def pct(a, b):
+    return f"{a / b * 100:.1f}%" if b else "n/a"
+
+
+def breakdown(caption, first, rows):
+    body = [[esc(r["label"]), stacked(r), f'{r["done"]} / {r["running"]} / {r["pending"]} / {r["excluded"]}', str(r["n"]),
+             pct(r["done"], r["n"]), pct(r["turns_done"], r["turns"]), pct(r["est_done"], r["est"])] for r in rows]
+    return table(caption, [first, "Progress bar", "Done / running / pending / excluded", "Sessions", "% sessions done",
+                           "% turns done", "% est. cost done"], body, (2, 3, 4, 5, 6))
+
+
+def progress_html(m, pg):
+    o, c = pg["overall"], m["counts"]
+    fm = lambda x, u: "n/a" if x is None else f"{x:.1f}{u}"
+    pairs = [[esc(r["host"]), esc(r["arm"]), f'{r["complete"]} / {r["total"]}', pct(r["complete"], r["total"]),
+              str(r["arm_done"]), f'{r["train_complete"]} / {r["train_total"]}'] for r in pg["pairs"]]
+    return f"""<p class="note">A <b>session</b> is one arm running one scenario; a <b>wave</b> runs all arms of one scenario-rep together. Sessions are the unit of work here,
+and each is weighted by its scripted turns (work) or its schedule cost estimate. A running session counts the turns already graded as partial progress.</p>
+<div class="grid">{kpi("sessions done", pct(o["done"], o["n"]), f'{o["done"]} of {o["n"]} (+{o["running"]} running)')}
+{kpi("turns done (work-weighted)", pct(o["turns_done"], o["turns"]), f'{o["turns_done"]:,} of {o["turns"]:,} scripted turns, running sessions counted partially')}
+{kpi("est. cost done (cost-weighted)", pct(o["est_done"], o["est"]), f'{usd(o["est_done"], 0)} of {usd(o["est"], 0)} scheduled estimate')}
+{kpi("ETA (uses turns/hour)", dur(pg["eta_turns"]), f'{pg["turns_left"]:,} turns left at {fm(pg["turns_rate60"], " turns/h")} over the last 60 min')}
+{kpi("old ETA (by waves)", dur(m["eta"]["recent"]), f'{c["done"]} of {m["total_waves"]} waves done; {fm(m["rate60"], " waves/h")} last 60 min, overall rate gives {dur(m["eta"]["overall"])}')}
+{kpi("waves running / pending", f'{c["running"]} / {c["pending"]}', f'excluded {c["excluded"]}, config error {c["config_error"]}', "bad" if c["excluded"] + c["config_error"] else "")}</div>
+<p class="note">Overall, all sessions:</p>{stacked(o)}
+<p class="note">Bars: <span class="ok">done</span>, <span style="color:var(--acc)">running</span>, grey pending, <span class="bad">excluded</span> (counts are also in the table, so colour is not the only cue). The ETA divides remaining turns by turns completed per hour (each session's graded turns spread evenly over its run time), so it follows the work actually left, not the wave count.</p>
+{breakdown("Progress by arm and host (the sonnet control runs once per scenario-rep and is paired against each host's anchor)", "Arm x host", pg["by_arm_host"])}
+{table("Anchor-paired comparisons: complete when both the arm session and its anchor session are done (this is what the analysis needs)",
+       ["Host", "Arm", "Pairs complete / total", "% complete", "Arm sessions done", "Pairs complete, non-test"], pairs, (2, 3, 4, 5))}
+{breakdown("Progress by scenario family", "Family", pg["by_family"])}
+{breakdown("Progress by split (counts only; test RESULTS stay hidden)", "Split", pg["by_split"])}
+{breakdown("Progress by scripted turn count", "Turn band", pg["by_band"])}"""
+
+
 def render(m: dict) -> str:
     c, sp, h, now = m["counts"], m["spend"], m["health"], m["generated"]
     tot = max(m["total_waves"], 1)
     proc = m["process"]
     stat = (f'<span class="ok">running</span> (pid {proc["pid"]}, up {dur(proc["etime"])})' if proc
             else '<span class="bad">stopped</span> (no paired.py run process)')
-    seg = lambda n, col, lab: f'<i style="width:{n / tot * 100:.2f}%;background:{col}" title="{esc(lab)}: {n}"></i>'
-    bar = (f'<div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="{m["total_waves"]}" aria-valuenow="{c["done"]}" '
-           f'aria-label="Waves done">{seg(c["done"], "var(--ok)", "done")}{seg(c["running"], "var(--acc)", "running")}'
-           f'{seg(c["excluded"] + c["config_error"], "var(--bad)", "excluded")}</div>')
-    gr = [(k.split("|")[0], k.split("|")[1], v) for k, v in m["groups"].items()]
-    prog = table("Waves and sessions finished, by split and host (a wave = one scenario run by all its arms together)",
-                 ["Split", "Host", "Waves done / total", "Sessions done / total"],
-                 [[esc(s), esc(hh), f'{v["done"]} / {v["waves"]}', f'{v["sdone"]} / {v["sessions"]}'] for s, hh, v in gr], (2, 3))
+    pg = m["progress"]
+    prog = progress_html(m, pg)
     fm = lambda x, u: "n/a" if x is None else f"{x:.2f}{u}"
     pj = sp["proj"]
     over = bool(pj and sp["budget"] and pj["high"] > sp["budget"])
@@ -575,12 +751,7 @@ def render(m: dict) -> str:
 <div class="grid">{kpi("campaign status", stat)}{kpi("started (first session)", esc(clock(m["started"])))}{kpi("elapsed", dur(m["elapsed"]))}
 {kpi("--parallel (sessions at once)", esc(par), par_sub)}</div></header>
 
-<section aria-labelledby="h-prog"><h2 id="h-prog">1. Progress</h2>{bar}
-<div class="grid">{kpi("waves done", f'{c["done"]} / {m["total_waves"]}', f'{c["done"] / tot * 100:.1f}%')}{kpi("running now", c["running"])}{kpi("pending", c["pending"])}
-{kpi("excluded / config error", f'{c["excluded"]} / {c["config_error"]}', "", "bad" if c["excluded"] + c["config_error"] else "")}
-{kpi("sessions done", f'{m["done_sessions"]} / {m["total_sessions"]}')}{kpi("throughput, last 60 min", fm(m["rate60"], " waves/h"))}{kpi("throughput, overall", fm(m["rate_all"], " waves/h"), "since first session")}
-{kpi("ETA, " + str(c["pending"] + c["running"]) + " waves left", dur(m["eta"]["recent"]), "at recent rate; at overall rate " + dur(m["eta"]["overall"]))}</div>
-{prog}</section>
+<section aria-labelledby="h-prog"><h2 id="h-prog">1. Progress</h2>{prog}</section>
 
 <section aria-labelledby="h-spend"><h2 id="h-spend">2. Spend</h2>
 <div class="grid">{kpi("spent (ledger, settled)", usd(sp["spent"]), f'{sp["spent"] / sp["budget"] * 100:.1f}% of budget {usd(sp["budget"], 0)}' if sp["budget"] else "")}

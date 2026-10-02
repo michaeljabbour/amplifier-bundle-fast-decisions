@@ -61,8 +61,10 @@ class Fixture:
         waves[rw] = rs
         state_waves[rw] = {"status": "running", "accepted_attempt": None,
                            "attempts": [{"attempt": 1, "root": str(self.out / "w003-a1"), "status": "running", "sessions": rs}]}
-        write(self.out / "w003-a1" / f"{rw}-anchor" / "running.json",
-              {"started_at": "2026-10-01T12:00:00+00:00", "controller_pid": 999999999, "turn": 2})
+        rd = self.out / "w003-a1" / f"{rw}-anchor"
+        write(rd / "running.json", {"started_at": "2026-10-01T12:00:00+00:00", "controller_pid": 999999999, "turn": 2})
+        (rd / "turn-snapshots").mkdir(parents=True)
+        (rd / "turn-snapshots" / "t1.tar.gz").write_bytes(b"x")          # one graded turn of three
         waves["p1-r1-opus"] = [{"key": "p1-r1-opus-anchor", "wave_id": "p1-r1-opus", "scenario": "p1", "rep": 1, "host": "opus",
                                 "arm": "anchor", "est_usd": 2.0}]
         write(self.out / "schedule.json", {"plan_id": "fx", "design": "no-such-design", "scenarios": scen, "waves": waves,
@@ -106,6 +108,30 @@ class DashboardTest(unittest.TestCase):
         want = P.recompute_cost(MODEL, 1000, 0, 0, 20000)
         e = next(v for k, v in D.Cache(self.tmp_path / "cache.json").sessions.items() if k.endswith("t1-r1-opus-anchor"))
         self.assertAlmostEqual(e["cost_norm"], want)
+
+    def test_progress_is_work_weighted(self):
+        fx = Fixture(self.tmp_path)
+        m = self.collect(fx)
+        pg = m["progress"]
+        o = pg["overall"]
+        self.assertEqual((o["n"], o["done"], o["running"], o["pending"], o["excluded"]), (11, 9, 1, 1, 0))
+        self.assertEqual(o["turns"], 33)                           # 11 sessions x 3 scripted turns
+        self.assertEqual(o["turns_done"], 28)                      # 9 finished x 3 + 1 graded turn of the running one
+        self.assertAlmostEqual(o["est_done"], 9 * 2.0 + 2.0 / 3)   # running session counts 1/3 of its estimate
+        ah = {r["label"]: r for r in pg["by_arm_host"]}
+        self.assertEqual(ah["anchor x opus"]["n"], 5)
+        self.assertEqual(ah["anchor x opus"]["running"], 1)
+        self.assertEqual(ah["shipped x opus"]["done"], 3)
+        splits = {r["label"]: r for r in pg["by_split"]}
+        self.assertEqual(splits["test"]["done"], 3)                # progress counts for test are shown
+        self.assertEqual(sum(r["n"] for r in pg["by_band"]), 11)
+        pairs = {(r["host"], r["arm"]): r for r in pg["pairs"]}
+        self.assertEqual((pairs[("opus", "shipped")]["complete"], pairs[("opus", "shipped")]["total"]), (3, 3))
+        self.assertEqual(pairs[("opus", "shipped")]["train_complete"], 2)
+        self.assertIsNotNone(pg["turns_left"])
+        html = D.render(m)
+        for needle in ("Progress by arm and host", "Anchor-paired comparisons", "% turns done", "ETA (uses turns/hour)"):
+            self.assertIn(needle, html)
 
     def test_html_hides_test_split_and_is_self_contained(self):
         fx = Fixture(self.tmp_path)
