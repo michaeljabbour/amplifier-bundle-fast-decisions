@@ -1,0 +1,337 @@
+# main-v1 polyglot 6/20: python/go-counting, 14 turns, two 7-minute gaps (before turns 5 and 10).
+id: py-go-counting
+task_type: mixed
+language: python
+split: test
+default_gap_s: 10
+source:
+  desc: "Aider polyglot-benchmark python/go-counting (Exercism), outside the S2 slice"
+  repo: https://github.com/Aider-AI/polyglot-benchmark
+  sha: 7e0611e77b54e2dea774cdc0aa00cf9f7ed6144f
+workspace:
+  kind: git
+  repo: https://github.com/Aider-AI/polyglot-benchmark
+  sha: 7e0611e77b54e2dea774cdc0aa00cf9f7ed6144f
+  subdir: python/exercises/practice/go-counting
+  local_hint: ~/dev/afast-campaign-corrected-polyglot-20260919/polyglot/polyglot-benchmark
+  remove: [.meta]
+protected: [go_counting_test.py]
+hidden_files:
+  hidden_edges_test.py: |
+    import unittest
+    from go_counting import Board
+
+
+    class EdgeCaseBoardTest(unittest.TestCase):
+        EMPTY = {"B": set(), "W": set(), "": set()}
+
+        def test_board_without_rows(self):
+            self.assertEqual(Board([]).territories(), self.EMPTY)
+
+        def test_board_with_empty_rows(self):
+            self.assertEqual(Board([""]).territories(), self.EMPTY)
+
+        def test_territory_on_a_board_without_rows_is_invalid(self):
+            with self.assertRaises(ValueError):
+                Board([]).territory(0, 0)
+
+        def test_ragged_rows(self):
+            with self.assertRaises(ValueError):
+                Board(["B ", "W"])
+
+        def test_all_empty_board_is_neutral(self):
+            result = Board(["  ", "  "]).territories()
+            self.assertEqual(result[""], {(0, 0), (1, 0), (0, 1), (1, 1)})
+            self.assertEqual(result["B"], set())
+            self.assertEqual(result["W"], set())
+
+        def test_single_stone_owns_everything_else(self):
+            result = Board(["B  ", "   "]).territories()
+            self.assertEqual(result["B"], {(1, 0), (2, 0), (0, 1), (1, 1), (2, 1)})
+            self.assertEqual(result[""], set())
+  hidden_chars_test.py: |
+    import unittest
+    from go_counting import Board
+
+
+    class InvalidCharacterTest(unittest.TestCase):
+        def test_unknown_character(self):
+            with self.assertRaises(ValueError):
+                Board(["B x"])
+
+        def test_lowercase_stone(self):
+            with self.assertRaises(ValueError):
+                Board(["b  "])
+
+        def test_tab_is_not_an_empty_point(self):
+            with self.assertRaises(ValueError):
+                Board(["B\t "])
+
+        def test_digit(self):
+            with self.assertRaises(ValueError):
+                Board(["B 1"])
+
+        def test_valid_board_still_builds(self):
+            self.assertEqual(Board(["B W", " B "]).territory(1, 0)[0], "")
+
+        def test_message_mentions_the_problem(self):
+            with self.assertRaises(ValueError) as ctx:
+                Board(["B?"])
+            self.assertTrue(ctx.exception.args)
+  hidden_big_test.py: |
+    import time
+    import unittest
+    from go_counting import Board
+
+
+    class BigBoardTest(unittest.TestCase):
+        def test_large_open_board_does_not_recurse_forever(self):
+            n = 150
+            rows = [" " * n for _ in range(n)]
+            rows[75] = " " * 75 + "W" + " " * (n - 76)
+            board = Board(rows)
+            start = time.perf_counter()
+            owner, cells = board.territory(0, 0)
+            self.assertEqual(owner, "W")
+            self.assertEqual(len(cells), n * n - 1)
+            self.assertLess(time.perf_counter() - start, 3.0)
+
+        def test_territories_of_a_large_board(self):
+            n = 120
+            rows = ["B" + " " * (n - 2) + "W" if y == 0 else " " * n for y in range(n)]
+            result = Board(rows).territories()
+            self.assertEqual(len(result[""]), n * n - 2)
+            self.assertEqual(result["B"], set())
+
+        def test_snake_shaped_territory(self):
+            n = 61
+            rows = []
+            for y in range(n):
+                if y % 2 == 0:
+                    rows.append(" " * n)
+                else:
+                    rows.append(("B" * (n - 1) + " ") if (y // 2) % 2 == 0 else (" " + "B" * (n - 1)))
+            board = Board(rows)
+            owner, cells = board.territory(0, 0)
+            self.assertEqual(owner, "B")
+            self.assertEqual(len(cells), sum(row.count(" ") for row in rows))
+  hidden_area_test.py: |
+    import unittest
+    from go_counting import Board
+
+    FIVE = ["  B  ", " B B ", "B W B", " W W ", "  W  "]
+
+
+    class AreaScoreTest(unittest.TestCase):
+        def test_five_by_five(self):
+            self.assertEqual(Board(FIVE).area_scores(), {"B": 11, "W": 5})
+
+        def test_empty_board(self):
+            self.assertEqual(Board([]).area_scores(), {"B": 0, "W": 0})
+
+        def test_open_board_scores_nothing(self):
+            self.assertEqual(Board(["   ", "   "]).area_scores(), {"B": 0, "W": 0})
+
+        def test_single_stone_owns_the_board(self):
+            self.assertEqual(Board(["B  ", "   "]).area_scores(), {"B": 6, "W": 0})
+
+        def test_neutral_points_count_for_nobody(self):
+            self.assertEqual(Board(["B W"]).area_scores(), {"B": 1, "W": 1})
+
+        def test_scores_add_up(self):
+            board = Board(FIVE)
+            territories = board.territories()
+            self.assertEqual(sum(board.area_scores().values()), 9 + len(territories["B"]) + len(territories["W"]))
+  hidden_render_test.py: |
+    import unittest
+    from go_counting import Board
+
+
+    class RenderTest(unittest.TestCase):
+        def test_five_by_five(self):
+            board = Board(["  B  ", " B B ", "B W B", " W W ", "  W  "])
+            self.assertEqual(board.render(), ["bbBbb", "bB Bb", "B W B", " WwW ", "  W  "])
+
+        def test_empty_board(self):
+            self.assertEqual(Board([]).render(), [])
+
+        def test_neutral_stays_blank(self):
+            self.assertEqual(Board(["B W"]).render(), ["B W"])
+
+        def test_does_not_change_the_board(self):
+            board = Board(["B  "])
+            self.assertEqual(board.render(), ["Bbb"])
+            self.assertEqual(board.territory(1, 0)[0], "B")
+            self.assertEqual(board.render(), ["Bbb"])
+  hidden_place_test.py: |
+    import unittest
+    from go_counting import Board
+
+
+    class PlaceTest(unittest.TestCase):
+        def test_place_changes_territory(self):
+            board = Board(["B  ", "   "])
+            self.assertEqual(board.territory(2, 1)[0], "B")
+            board.place(2, 0, "W")
+            self.assertEqual(board.territory(2, 1)[0], "")
+
+        def test_place_a_stone_removes_empty_point_from_territory(self):
+            board = Board(["B  "])
+            board.place(2, 0, "B")
+            self.assertEqual(board.territories()["B"], {(1, 0)})
+
+        def test_remove_a_stone_with_space(self):
+            board = Board(["BW"])
+            board.place(1, 0, " ")
+            self.assertEqual(board.territories()["B"], {(1, 0)})
+
+        def test_callers_rows_are_not_modified(self):
+            rows = ["B  ", "   "]
+            Board(rows).place(1, 1, "W")
+            self.assertEqual(rows, ["B  ", "   "])
+
+        def test_invalid_coordinate(self):
+            with self.assertRaises(ValueError):
+                Board(["B "]).place(5, 0, "B")
+
+        def test_invalid_stone(self):
+            with self.assertRaises(ValueError):
+                Board(["B "]).place(1, 0, "X")
+
+        def test_render_follows_place(self):
+            board = Board(["   "])
+            board.place(0, 0, "B")
+            self.assertEqual(board.render(), ["Bbb"])
+  hidden_cache_test.py: |
+    import time
+    import unittest
+    from go_counting import Board
+
+
+    class CachedTerritoriesTest(unittest.TestCase):
+        def make(self, n=80):
+            rows = [" " * n for _ in range(n)]
+            rows[10] = " " * 10 + "B" + " " * (n - 11)
+            return Board(rows)
+
+        def test_repeated_calls_are_fast(self):
+            board = self.make()
+            board.territories()
+            best = None
+            for _ in range(3):
+                start = time.perf_counter()
+                for _ in range(300):
+                    board.territories()
+                elapsed = time.perf_counter() - start
+                best = elapsed if best is None else min(best, elapsed)
+            self.assertLess(best, 0.8)
+
+        def test_results_are_independent_copies(self):
+            board = Board(["B  "])
+            first = board.territories()
+            first["B"].clear()
+            first["W"].add((9, 9))
+            again = board.territories()
+            self.assertEqual(again["B"], {(1, 0), (2, 0)})
+            self.assertEqual(again["W"], set())
+
+        def test_place_invalidates_the_cache(self):
+            board = Board(["B  "])
+            self.assertEqual(board.territories()["B"], {(1, 0), (2, 0)})
+            board.place(1, 0, "W")
+            after = board.territories()
+            self.assertEqual(after["B"], set())
+            self.assertEqual(after["W"], {(2, 0)})
+turns:
+  - prompt: >-
+      Read .docs/instructions.md and implement `Board` in go_counting.py (`territory` and
+      `territories`) so that every test in go_counting_test.py passes. Run the tests with `python3
+      -m pytest -q go_counting_test.py`.
+    checks:
+      - {kind: tests, runner: python, files: [], restore: []}
+  - prompt: >-
+      Bug report: `Board([])` and `Board([""])` crash in the constructor, and ragged rows silently
+      build a broken board. A board without rows (or with empty rows) must work and own no territory
+      at all, `territory` on it must raise ValueError for any coordinate, and rows of different
+      lengths must raise `ValueError`. An all-empty board is neutral territory.
+    checks:
+      - {kind: tests, runner: python, files: [go_counting_test.py, hidden_edges_test.py], restore: [go_counting_test.py], hidden: [hidden_edges_test.py]}
+  - prompt: >-
+      Make the `Board` constructor reject any character other than a space, `B` or `W` with a
+      `ValueError` (lowercase letters, tabs, digits and so on). Valid boards must behave exactly as
+      before.
+    checks:
+      - {kind: tests, runner: python, files: [go_counting_test.py, hidden_edges_test.py, hidden_chars_test.py], restore: [go_counting_test.py], hidden: [hidden_edges_test.py, hidden_chars_test.py]}
+  - prompt: >-
+      `territory` blows the recursion limit (and gets very slow) on boards bigger than about 30x30,
+      e.g. a 150x150 board with a single white stone. Make the flood fill iterative and linear in
+      the number of points, keeping the results and `territories()` identical.
+    checks:
+      - {kind: tests, runner: python, files: [go_counting_test.py, hidden_edges_test.py, hidden_chars_test.py, hidden_big_test.py], restore: [go_counting_test.py], hidden: [hidden_edges_test.py, hidden_chars_test.py, hidden_big_test.py]}
+  - prompt: >-
+      Without changing any files: in four to six sentences, explain how your code decides that an
+      empty region is neutral rather than owned, and what the flood fill collects while it walks the
+      region. Name the methods involved.
+    checks:
+      - {kind: keyed_facts, all: ['neutral|both|none|no one|nobody', 'border|neighbo|adjacent|touch', 'flood|walk|fill|search|stack', empty]}
+    gap_before_s: 420
+  - prompt: >-
+      Refactor go_counting.py for readability without changing behaviour: split `Board` into small
+      private helpers (names starting with an underscore) for validating the rows, listing
+      neighbours, the flood fill, and deciding the owner of a border. Run all tests again.
+    checks:
+      - {kind: file_regex, path: go_counting.py, pattern: '^\s*def _[a-z]', min_count: 5}
+      - {kind: tests, runner: python, files: [go_counting_test.py, hidden_edges_test.py, hidden_chars_test.py, hidden_big_test.py], restore: [go_counting_test.py], hidden: [hidden_edges_test.py, hidden_chars_test.py, hidden_big_test.py]}
+  - prompt: >-
+      Add `area_scores()` to `Board`: it returns `{"B": n, "W": n}` where each number is the
+      player's stones on the board plus the size of their territory (neutral points count for
+      nobody). An empty board scores 0 for both.
+    checks:
+      - {kind: tests, runner: python, files: [go_counting_test.py, hidden_edges_test.py, hidden_chars_test.py, hidden_big_test.py, hidden_area_test.py], restore: [go_counting_test.py], hidden: [hidden_edges_test.py, hidden_chars_test.py, hidden_big_test.py, hidden_area_test.py]}
+  - prompt: >-
+      Write your own tests in a new file `test_extra.py`: at least six test functions covering
+      `area_scores`, the constructor errors and a mid-size board. Run them with pytest.
+    checks:
+      - {kind: file_regex, path: test_extra.py, pattern: '^\s*def test_', min_count: 6}
+      - {kind: tests, runner: python, files: [go_counting_test.py, test_extra.py], restore: [go_counting_test.py]}
+  - prompt: >-
+      Add `render()` to `Board`: it returns the board as a list of strings where stones keep their
+      letter, points in black's territory become `b`, points in white's territory become `w`, and
+      neutral points stay blank. It must not change the board.
+    checks:
+      - {kind: tests, runner: python, files: [go_counting_test.py, hidden_edges_test.py, hidden_chars_test.py, hidden_big_test.py, hidden_area_test.py, hidden_render_test.py], restore: [go_counting_test.py], hidden: [hidden_edges_test.py, hidden_chars_test.py, hidden_big_test.py, hidden_area_test.py, hidden_render_test.py]}
+  - prompt: >-
+      Review your own changes to go_counting.py from this session. List up to three concrete
+      weaknesses or risks (for example repeated flood fills in `territories`, the mutable `board`
+      attribute, or missing input checks) and say which one you would address first. Do not change
+      any files.
+    checks:
+      - {kind: keyed_facts, all: ['territor|flood|mutable|valid|cache|repeat|input'], any: [first, 'risk|weak|gap|limit'], min_any: 1}
+    gap_before_s: 420
+  - prompt: >-
+      Add `place(x, y, stone)` to `Board` so a game can be replayed: it puts `B` or `W` on the
+      point, or a single space to remove the stone there. Invalid coordinates and any other stone
+      value raise ValueError, and the list of strings the caller passed to the constructor must
+      never be modified.
+    checks:
+      - {kind: tests, runner: python, files: [go_counting_test.py, hidden_edges_test.py, hidden_chars_test.py, hidden_big_test.py, hidden_area_test.py, hidden_render_test.py, hidden_place_test.py], restore: [go_counting_test.py], hidden: [hidden_edges_test.py, hidden_chars_test.py, hidden_big_test.py, hidden_area_test.py, hidden_render_test.py, hidden_place_test.py]}
+  - prompt: >-
+      A UI calls `territories()` hundreds of times per second on an 80x80 board that rarely changes.
+      Cache the result and invalidate it in `place`, while still returning fresh set copies so that
+      callers who mutate the returned dict cannot corrupt later calls.
+    checks:
+      - {kind: tests, runner: python, files: [go_counting_test.py, hidden_edges_test.py, hidden_chars_test.py, hidden_big_test.py, hidden_area_test.py, hidden_render_test.py, hidden_place_test.py, hidden_cache_test.py], restore: [go_counting_test.py], hidden: [hidden_edges_test.py, hidden_chars_test.py, hidden_big_test.py, hidden_area_test.py, hidden_render_test.py, hidden_place_test.py, hidden_cache_test.py]}
+  - prompt: >-
+      Create `README_GO.md` documenting the module with these level-2 sections: Usage, Board format,
+      API, Examples. Cover `territory`, `territories`, `area_scores`, `render`, `place` and the
+      errors raised, with a short runnable example in the Examples section.
+    checks:
+      - {kind: doc_sections, path: README_GO.md, headings: [Usage, 'Board format', API, Example]}
+      - {kind: file_regex, path: README_GO.md, pattern: '```', min_count: 2}
+  - prompt: >-
+      Add type hints to every method in go_counting.py (parameters and return types; coordinates are
+      `tuple[int, int]`, `_neighbours` yields them as an `Iterator`). No behaviour change. Then run
+      the whole suite including test_extra.py.
+    checks:
+      - {kind: file_regex, path: go_counting.py, pattern: '\) -> ', min_count: 10}
+      - {kind: tests, runner: python, files: [go_counting_test.py, hidden_edges_test.py, hidden_chars_test.py, hidden_big_test.py, hidden_area_test.py, hidden_render_test.py, hidden_place_test.py, hidden_cache_test.py, test_extra.py], restore: [go_counting_test.py], hidden: [hidden_edges_test.py, hidden_chars_test.py, hidden_big_test.py, hidden_area_test.py, hidden_render_test.py, hidden_place_test.py, hidden_cache_test.py]}

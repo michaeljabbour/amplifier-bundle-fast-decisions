@@ -1,0 +1,150 @@
+# main-v1 real-repo scenario (8 turns): andialbrecht/sqlparse, Identifier.get_real_name() returned an intermediate component for names with 3+ dotted parts (#332), fixed upstream in f66d12c2; workspace is its parent
+# Workspace = parent of the upstream fix commit; hidden tests = the fix commit's tests (+ scenario-authored edge tests).
+id: sqlparse-realname
+task_type: bugfix
+language: python
+split: train
+source:
+  desc: >-
+    andialbrecht/sqlparse, Identifier.get_real_name() returned an intermediate component for names with
+    3+ dotted parts (#332), fixed upstream in f66d12c2; workspace is its parent
+  repo: https://github.com/andialbrecht/sqlparse.git
+  sha: df8e28495a87954a9d52de70c33ef7225c53b28f
+  fix_sha: f66d12c245412f28c58f045b646eb53c0e691b8b
+workspace:
+  kind: git
+  repo: https://github.com/andialbrecht/sqlparse.git
+  sha: df8e28495a87954a9d52de70c33ef7225c53b28f
+  local_hint: ~/dev/afast-paired-src/sqlparse
+  remove:
+  - AGENTS.md
+  - CLAUDE.md
+hidden_files:
+  tests/test_parse.py:
+    from_git:
+      repo: https://github.com/andialbrecht/sqlparse.git
+      sha: f66d12c245412f28c58f045b646eb53c0e691b8b
+      path: tests/test_parse.py
+      local_hint: ~/dev/afast-paired-src/sqlparse
+  tests/test_spaced_dots_hidden.py: |
+    import sqlparse
+    from sqlparse import sql
+
+
+    def _ident(query):
+        stmt = sqlparse.parse(query)[0]
+        return next(t for t in stmt.tokens if isinstance(t, sql.Identifier))
+
+
+    def test_spaced_dots_have_no_alias():
+        ident = _ident("select a . b . c from t")
+        assert ident.get_alias() is None
+        assert ident.get_real_name() == 'c'
+        assert ident.get_parent_name() == 'a'
+
+
+    def test_spaced_dots_with_real_alias():
+        ident = _ident("select a . b . c x from t")
+        assert ident.get_alias() == 'x'
+        assert ident.get_real_name() == 'c'
+
+
+    def test_spaced_dots_with_as_alias():
+        ident = _ident("select a . b as z from t")
+        assert ident.get_alias() == 'z'
+        assert ident.get_real_name() == 'b'
+
+
+    def test_plain_dotted_name_still_has_no_alias():
+        assert _ident("select a.b.c from t").get_alias() is None
+        assert _ident("select a.b.c y from t").get_alias() == 'y'
+  tests/test_name_parts_hidden.py: |
+    import sqlparse
+    from sqlparse import sql
+
+
+    def _ident(query):
+        stmt = sqlparse.parse(query)[0]
+        return next(t for t in stmt.tokens if isinstance(t, sql.Identifier))
+
+
+    def test_dotted_parts():
+        assert _ident("select db.schema.tbl.col from t").get_name_parts() == ['db', 'schema', 'tbl', 'col']
+
+
+    def test_quoted_parts():
+        assert _ident('select "a"."b" from t').get_name_parts() == ['a', 'b']
+
+
+    def test_wildcard_and_plain():
+        assert _ident("select t.* from t").get_name_parts() == ['t', '*']
+        assert _ident("select x from t").get_name_parts() == ['x']
+
+
+    def test_spaced_and_alias_excluded():
+        assert _ident("select a . b from t").get_name_parts() == ['a', 'b']
+        assert _ident("select a.b AS z from t").get_name_parts() == ['a', 'b']
+        assert _ident("select a.b z from t").get_name_parts() == ['a', 'b']
+turns:
+  - prompt: >-
+      sqlparse returns the wrong object name for fully-qualified identifiers with more than two parts. For
+      `ident = sqlparse.parse("db.schema.tbl.col")[0].tokens[0]`, `ident.get_real_name()` gives 'schema',
+      but it should be 'col' (the component after the last dot) and `get_name()` should agree. For
+      two-part names like `a.b` it is fine, and `get_parent_name()` should keep returning the first
+      component ('db'). An aliased name like `x.y.z AS w` must give real name 'z' and alias 'w'. Please
+      find the cause in sqlparse/sql.py and fix it. Run the tests from this directory with `python3 -m
+      pytest -q tests`.
+    checks:
+      - {kind: tests, runner: python, files: [tests, tests/test_parse.py], restore: [tests/__init__.py, tests/conftest.py, tests/test_cli.py, tests/test_dos_prevention.py, tests/test_format.py, tests/test_grouping.py, tests/test_keywords.py, tests/test_parse.py, tests/test_regressions.py, tests/test_split.py, tests/test_tokenize.py, tests/test_utils.py], hidden: [tests/test_parse.py]}
+  - prompt: >-
+      In three to five sentences explain the root cause: which method, which helper call anchored on the
+      wrong token, and why two-part names were accidentally correct. Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [get_real_name, dot|\., first], any: [token_next_by, _get_first_name, last]}
+  - prompt: >-
+      Add a regression test file `tests/test_real_name_dotted.py` with at least three test functions
+      covering real name / name / parent name for a four-part name, an aliased three-part name (`x.y.z AS
+      w` and `x.y.z w`), and a quoted name (`"db"."schema"."tbl"`). Run it.
+    checks:
+      - {kind: file_regex, path: tests/test_real_name_dotted.py, pattern: ^\s*def test_, min_count: 3}
+      - {kind: tests, runner: python, files: [tests/test_real_name_dotted.py]}
+  - prompt: >-
+      A related oddity: an identifier written with spaces around its dots, like `a . b . c`, is reported
+      as having an alias (`sqlparse.parse("select a . b . c from t")` -> the identifier's `get_alias()` is
+      'c'), although there is no alias. Make get_alias() ignore whitespace that sits right next to a dot,
+      while real aliases keep working (`a . b . c x` -> alias 'x', `a . b AS z` -> 'z', `a.b.c` -> None).
+      `get_real_name()` for the spaced forms must be the last component. Add a test to
+      tests/test_real_name_dotted.py.
+    checks:
+      - {kind: tests, runner: python, files: [tests/test_spaced_dots_hidden.py], restore: [tests/__init__.py, tests/conftest.py, tests/test_cli.py, tests/test_dos_prevention.py, tests/test_format.py, tests/test_grouping.py, tests/test_keywords.py, tests/test_parse.py, tests/test_regressions.py, tests/test_split.py, tests/test_tokenize.py, tests/test_utils.py], hidden: [tests/test_spaced_dots_hidden.py]}
+      - {kind: tests, runner: python, files: [tests, tests/test_parse.py, tests/test_spaced_dots_hidden.py], restore: [tests/__init__.py, tests/conftest.py, tests/test_cli.py, tests/test_dos_prevention.py, tests/test_format.py, tests/test_grouping.py, tests/test_keywords.py, tests/test_parse.py, tests/test_regressions.py, tests/test_split.py, tests/test_tokenize.py, tests/test_utils.py], hidden: [tests/test_parse.py, tests/test_spaced_dots_hidden.py]}
+      - {kind: file_regex, path: tests/test_real_name_dotted.py, pattern: a \. b}
+  - prompt: >-
+      Add entries to the CHANGELOG file under "Bug Fixes" of the "Development Version" section, in the
+      same bullet style: one for `get_real_name()` on names with more than two parts and one for the alias
+      detection around spaced dots.
+    checks:
+      - {kind: file_regex, path: CHANGELOG, pattern: 'Development Version\n-+\n(?:(?!Release ).*\n)*?\* .*get_real_name'}
+      - {kind: file_regex, path: CHANGELOG, pattern: 'Development Version\n-+\n(?:(?!Release ).*\n)*?\* .*(spaced|spaces|whitespace).*\n?.*(dot|alias)'}
+  - prompt: >-
+      Small feature: add `Identifier.get_name_parts()` returning the list of name components of a dotted
+      identifier, in order, with quotes removed: `db.schema.tbl.col` -> ['db', 'schema', 'tbl', 'col'],
+      `"a"."b"` -> ['a', 'b'], `t.*` -> ['t', '*'], a plain `x` -> ['x'], and `a . b` (spaced) -> ['a',
+      'b']. The alias is not part of it (`a.b AS z` -> ['a', 'b']). Put it right after `is_wildcard`. Add
+      tests to tests/test_real_name_dotted.py.
+    checks:
+      - {kind: tests, runner: python, files: [tests/test_name_parts_hidden.py], restore: [tests/__init__.py, tests/conftest.py, tests/test_cli.py, tests/test_dos_prevention.py, tests/test_format.py, tests/test_grouping.py, tests/test_keywords.py, tests/test_parse.py, tests/test_regressions.py, tests/test_split.py, tests/test_tokenize.py, tests/test_utils.py], hidden: [tests/test_name_parts_hidden.py]}
+      - {kind: tests, runner: python, files: [tests, tests/test_parse.py, tests/test_spaced_dots_hidden.py, tests/test_name_parts_hidden.py], restore: [tests/__init__.py, tests/conftest.py, tests/test_cli.py, tests/test_dos_prevention.py, tests/test_format.py, tests/test_grouping.py, tests/test_keywords.py, tests/test_parse.py, tests/test_regressions.py, tests/test_split.py, tests/test_tokenize.py, tests/test_utils.py], hidden: [tests/test_parse.py, tests/test_spaced_dots_hidden.py, tests/test_name_parts_hidden.py]}
+      - {kind: file_regex, path: sqlparse/sql.py, pattern: def get_name_parts}
+  - prompt: >-
+      Give `Identifier.get_name_parts()` a docstring: what it returns, that quotes are removed, that the
+      alias and typecast are not included, and that it stops at the first component that is not a plain
+      name (for example a function call).
+    checks:
+      - {kind: file_regex, path: sqlparse/sql.py, pattern: 'def get_name_parts\(self\):\n\s+"""'}
+      - {kind: tests, runner: python, files: [tests, tests/test_parse.py, tests/test_spaced_dots_hidden.py, tests/test_name_parts_hidden.py], restore: [tests/__init__.py, tests/conftest.py, tests/test_cli.py, tests/test_dos_prevention.py, tests/test_format.py, tests/test_grouping.py, tests/test_keywords.py, tests/test_parse.py, tests/test_regressions.py, tests/test_split.py, tests/test_tokenize.py, tests/test_utils.py], hidden: [tests/test_parse.py, tests/test_spaced_dots_hidden.py, tests/test_name_parts_hidden.py]}
+  - prompt: >-
+      Review the changes you made in this session as a code reviewer would: list each file you changed or
+      added, what changed, and any remaining edge case you did not cover. Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [sql\.py, test, get_name_parts|get_alias], any: [edge, risk, not cover, remaining]}

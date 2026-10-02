@@ -1,0 +1,271 @@
+# main-v1 polyglot 12/20: rust/wordy, 16 turns, short gaps.
+id: rust-wordy
+task_type: feature
+language: rust
+split: train
+default_gap_s: 10
+source:
+  desc: "Aider polyglot-benchmark rust/wordy (Exercism), outside the S2 slice"
+  repo: https://github.com/Aider-AI/polyglot-benchmark
+  sha: 7e0611e77b54e2dea774cdc0aa00cf9f7ed6144f
+workspace:
+  kind: git
+  repo: https://github.com/Aider-AI/polyglot-benchmark
+  sha: 7e0611e77b54e2dea774cdc0aa00cf9f7ed6144f
+  subdir: rust/exercises/practice/wordy
+  local_hint: ~/dev/afast-campaign-corrected-polyglot-20260919/polyglot/polyglot-benchmark
+  remove: [.meta]
+protected: [tests/wordy.rs]
+hidden_files:
+  tests/hidden_pow.rs: |
+    use wordy::*;
+
+    #[test]
+    fn hidden_power_basic() {
+        assert_eq!(answer("What is 2 raised to the 5th power?"), Some(32));
+        assert_eq!(answer("What is 3 raised to the 2nd power?"), Some(9));
+        assert_eq!(answer("What is 7 raised to the 1st power?"), Some(7));
+        assert_eq!(answer("What is 7 raised to the 0th power?"), Some(1));
+        assert_eq!(answer("What is -2 raised to the 3rd power?"), Some(-8));
+    }
+
+    #[test]
+    fn hidden_power_is_left_to_right() {
+        assert_eq!(answer("What is 2 plus 3 raised to the 2nd power?"), Some(25));
+        assert_eq!(answer("What is 2 raised to the 3rd power plus 1?"), Some(9));
+    }
+
+    #[test]
+    fn hidden_power_malformed() {
+        assert_eq!(answer("What is 2 raised to the power?"), None);
+        assert_eq!(answer("What is 2 raised 3?"), None);
+    }
+  tests/hidden_overflow.rs: |
+    use wordy::*;
+
+    #[test]
+    fn hidden_overflow_is_none_not_panic() {
+        assert_eq!(answer("What is 2147483647 plus 1?"), None);
+        assert_eq!(answer("What is -2147483648 minus 1?"), None);
+        assert_eq!(answer("What is 65536 multiplied by 65536?"), None);
+        assert_eq!(answer("What is -2147483648 divided by -1?"), None);
+        assert_eq!(answer("What is 2 raised to the 31st power?"), None);
+    }
+
+    #[test]
+    fn hidden_division_by_zero_is_none() {
+        assert_eq!(answer("What is 5 divided by 0?"), None);
+    }
+
+    #[test]
+    fn hidden_boundaries_still_work() {
+        assert_eq!(answer("What is 2147483647 plus 0?"), Some(2147483647));
+        assert_eq!(answer("What is 2 raised to the 30th power?"), Some(1073741824));
+        assert_eq!(answer("What is 10 divided by 3?"), Some(3));
+    }
+  tests/hidden_errors.rs: |
+    use wordy::*;
+
+    #[test]
+    fn hidden_error_kinds() {
+        assert_eq!(answer_or_err("Who is the President of the United States?"), Err(WordyError::NotAQuestion));
+        assert_eq!(answer_or_err("What is 5"), Err(WordyError::NotAQuestion));
+        assert_eq!(answer_or_err("What is 52 cubed?"), Err(WordyError::UnknownOperation));
+        assert_eq!(answer_or_err("What is 1 plus?"), Err(WordyError::MissingOperand));
+        assert_eq!(answer_or_err("What is?"), Err(WordyError::MissingOperand));
+        assert_eq!(answer_or_err("What is 5 divided by 0?"), Err(WordyError::DivisionByZero));
+        assert_eq!(answer_or_err("What is 2147483647 plus 1?"), Err(WordyError::Overflow));
+        assert_eq!(answer_or_err("What is 2 raised to the 31st power?"), Err(WordyError::Overflow));
+    }
+
+    #[test]
+    fn hidden_ok_value() {
+        assert_eq!(answer_or_err("What is 3 plus 4?"), Ok(7));
+    }
+
+    #[test]
+    fn hidden_answer_is_the_ok_projection() {
+        assert_eq!(answer("What is 3 plus 4?"), Some(7));
+        assert_eq!(answer("What is 52 cubed?"), None);
+    }
+  tests/hidden_mod.rs: |
+    use wordy::*;
+
+    #[test]
+    fn hidden_modulo() {
+        assert_eq!(answer("What is 17 modulo 5?"), Some(2));
+        assert_eq!(answer("What is 10 modulo 5?"), Some(0));
+        assert_eq!(answer("What is 7 plus 3 modulo 4?"), Some(2));
+    }
+
+    #[test]
+    fn hidden_modulo_by_zero() {
+        assert_eq!(answer("What is 5 modulo 0?"), None);
+        assert_eq!(answer_or_err("What is 5 modulo 0?"), Err(WordyError::DivisionByZero));
+    }
+  tests/hidden_asref.rs: |
+    use wordy::*;
+
+    #[test]
+    fn hidden_accepts_owned_and_borrowed() {
+        let s = String::from("What is 1 plus 1?");
+        assert_eq!(answer(&s), Some(2));
+        assert_eq!(answer(s.clone()), Some(2));
+        assert_eq!(answer("What is 1 plus 1?"), Some(2));
+        assert_eq!(answer_or_err(&s), Ok(2));
+        assert_eq!(answer_or_err(String::from("What is 1 plus?")), Err(WordyError::MissingOperand));
+    }
+  tests/hidden_case.rs: |
+    use wordy::*;
+
+    #[test]
+    fn hidden_case_insensitive() {
+        assert_eq!(answer("what is 1 PLUS 2?"), Some(3));
+        assert_eq!(answer("WHAT IS 6 Multiplied BY 2?"), Some(12));
+        assert_eq!(answer("What is 17 Modulo 5?"), Some(2));
+        assert_eq!(answer("what is 2 RAISED TO THE 3RD POWER?"), Some(8));
+    }
+
+    #[test]
+    fn hidden_whitespace_is_flexible() {
+        assert_eq!(answer("  What is 5   plus   3?  "), Some(8));
+        assert_eq!(answer("\tWhat is 9\tminus 4?\n"), Some(5));
+    }
+
+    #[test]
+    fn hidden_still_rejects_unknown_words() {
+        assert_eq!(answer("what is 52 CUBED?"), None);
+        assert_eq!(answer_or_err("what is 52 CUBED?"), Err(WordyError::UnknownOperation));
+    }
+  tests/hidden_display.rs: |
+    use std::error::Error;
+    use wordy::*;
+
+    #[test]
+    fn hidden_display_messages() {
+        assert_eq!(WordyError::NotAQuestion.to_string(), "not a question");
+        assert_eq!(WordyError::UnknownOperation.to_string(), "unknown operation");
+        assert_eq!(WordyError::MissingOperand.to_string(), "missing operand");
+        assert_eq!(WordyError::DivisionByZero.to_string(), "division by zero");
+        assert_eq!(WordyError::Overflow.to_string(), "arithmetic overflow");
+    }
+
+    #[test]
+    fn hidden_is_a_std_error() {
+        fn takes(_: &dyn Error) {}
+        takes(&WordyError::Overflow);
+    }
+
+    #[test]
+    fn hidden_question_mark_into_box_dyn_error() {
+        fn run(s: &str) -> Result<i32, Box<dyn Error>> {
+            Ok(answer_or_err(s)?)
+        }
+        assert_eq!(run("What is 1 plus 2?").unwrap(), 3);
+        assert_eq!(run("What is 1 plus?").unwrap_err().to_string(), "missing operand");
+    }
+turns:
+  - prompt: >-
+      Read .docs/instructions.md and implement `answer` in src/lib.rs so the provided tests in
+      tests/wordy.rs pass (some are marked #[ignore]; run them all with `cargo test --offline --
+      --include-ignored`). Do not edit the provided test file.
+    checks:
+      - {kind: tests, runner: rust, files: [tests/wordy.rs], restore: [tests/wordy.rs]}
+  - prompt: >-
+      In three to five sentences, explain how your parser splits the question into tokens and why the
+      evaluation is strictly left to right. Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [token|split, left, None]}
+  - prompt: >-
+      Add support for exponents: "What is 2 raised to the 5th power?" is 32. The ordinal can end in
+      st, nd, rd or th (1st, 2nd, 3rd, 5th, 0th). Like every other operator it is applied left to
+      right, so "What is 2 plus 3 raised to the 2nd power?" is 25.
+    checks:
+      - {kind: tests, runner: rust, files: [tests/wordy.rs], restore: [tests/wordy.rs], hidden: [tests/hidden_pow.rs]}
+  - prompt: >-
+      Fix an edge case: arithmetic that overflows an i32, dividing by zero and `i32::MIN / -1`
+      currently panic. `answer` must return `None` for all of those instead of panicking. Results at
+      the boundary, such as 2147483647 plus 0, must still work.
+    checks:
+      - {kind: tests, runner: rust, files: [tests/wordy.rs], restore: [tests/wordy.rs], hidden: [tests/hidden_pow.rs, tests/hidden_overflow.rs]}
+  - prompt: >-
+      Add unit tests inside src/lib.rs in a `#[cfg(test)] mod tests` block: at least four `#[test]`
+      functions covering exponents, overflow, division by zero and an unknown word. Run `cargo test
+      --offline`.
+    checks:
+      - {kind: file_regex, path: src/lib.rs, pattern: '#\[test\]', min_count: 4}
+      - {kind: tests, runner: rust, files: [tests/wordy.rs], restore: [tests/wordy.rs], hidden: [tests/hidden_pow.rs, tests/hidden_overflow.rs]}
+  - prompt: >-
+      Refactor src/lib.rs for readability: introduce a private `enum Op`, a private `fn parse` that
+      turns the question into a start value and a list of (Op, operand) steps, and a private `fn
+      apply` that performs one step. No behaviour change; keep all tests passing.
+    checks:
+      - {kind: file_regex, path: src/lib.rs, pattern: ^\s*enum Op\b}
+      - {kind: file_regex, path: src/lib.rs, pattern: ^\s*fn parse\(}
+      - {kind: file_regex, path: src/lib.rs, pattern: ^\s*fn apply\(}
+      - {kind: tests, runner: rust, files: [tests/wordy.rs], restore: [tests/wordy.rs], hidden: [tests/hidden_pow.rs, tests/hidden_overflow.rs]}
+  - prompt: >-
+      Add `pub enum WordyError { NotAQuestion, UnknownOperation, MissingOperand, DivisionByZero,
+      Overflow }` (derive Debug, PartialEq, Eq) and `pub fn answer_or_err(command: &str) ->
+      Result<i32, WordyError>`. NotAQuestion: not starting with "What is" or not ending in '?';
+      UnknownOperation: a word where an operator belongs ("What is 52 cubed?"); MissingOperand: an
+      operator without its operand or no operands at all ("What is 1 plus?", "What is?");
+      DivisionByZero; Overflow. `answer` must now be implemented on top of it.
+    checks:
+      - {kind: tests, runner: rust, files: [tests/wordy.rs], restore: [tests/wordy.rs], hidden: [tests/hidden_pow.rs, tests/hidden_overflow.rs, tests/hidden_errors.rs]}
+  - prompt: >-
+      Create README.md for the crate with a `## Supported questions` section and a `## Errors` section
+      describing the operators and the `WordyError` variants.
+    checks:
+      - {kind: doc_sections, path: README.md, headings: [supported questions, errors]}
+      - {kind: file_regex, path: README.md, pattern: DivisionByZero}
+      - {kind: tests, runner: rust, files: [tests/wordy.rs], restore: [tests/wordy.rs], hidden: [tests/hidden_pow.rs, tests/hidden_overflow.rs, tests/hidden_errors.rs]}
+  - prompt: >-
+      New requirement: support `modulo`, for example "What is 17 modulo 5?" is 2 (the remainder).
+      Modulo by zero is `DivisionByZero` from `answer_or_err` and `None` from `answer`.
+    checks:
+      - {kind: tests, runner: rust, files: [tests/wordy.rs], restore: [tests/wordy.rs], hidden: [tests/hidden_pow.rs, tests/hidden_overflow.rs, tests/hidden_errors.rs, tests/hidden_mod.rs]}
+  - prompt: >-
+      Small API change: make `answer` and `answer_or_err` accept anything that implements `AsRef<str>`
+      (`&str`, `String`, `&String`) instead of only `&str`. The provided tests must still compile and
+      pass.
+    checks:
+      - {kind: file_regex, path: src/lib.rs, pattern: AsRef<str>, min_count: 2}
+      - {kind: tests, runner: rust, files: [tests/wordy.rs], restore: [tests/wordy.rs], hidden: [tests/hidden_pow.rs, tests/hidden_overflow.rs, tests/hidden_errors.rs, tests/hidden_mod.rs, tests/hidden_asref.rs]}
+  - prompt: >-
+      Make the parser lenient: the "What is" prefix and all operator words are case-insensitive, and
+      leading or trailing whitespace and runs of whitespace between tokens are allowed (" what is 5
+      PLUS 3? " is 8). Words that are not operators are still rejected.
+    checks:
+      - {kind: tests, runner: rust, files: [tests/wordy.rs], restore: [tests/wordy.rs], hidden: [tests/hidden_pow.rs, tests/hidden_overflow.rs, tests/hidden_errors.rs, tests/hidden_mod.rs, tests/hidden_asref.rs, tests/hidden_case.rs]}
+  - prompt: >-
+      Add rustdoc comments (`///`) with an `# Examples` section containing a doctest for both `answer`
+      and `answer_or_err`. Run `cargo test --offline --doc`.
+    checks:
+      - {kind: file_regex, path: src/lib.rs, pattern: '# Examples', min_count: 2}
+      - {kind: tests, runner: cmd, cmd: cargo test --offline --doc, expect_regex: 'test result: ok\. [1-9]', restore: [tests/wordy.rs], hidden: [tests/hidden_pow.rs, tests/hidden_overflow.rs, tests/hidden_errors.rs, tests/hidden_mod.rs, tests/hidden_asref.rs, tests/hidden_case.rs]}
+  - prompt: >-
+      In three to five sentences, explain how `answer_or_err` distinguishes `Overflow` from
+      `DivisionByZero`, and why `checked_*` arithmetic is used rather than catching a panic. Do not
+      change any files.
+    checks:
+      - {kind: keyed_facts, all: [checked, Overflow, DivisionByZero, panic]}
+  - prompt: >-
+      Add integration tests in a new file `tests/extra.rs`: at least five `#[test]` functions covering
+      chains of operations, negative numbers, exponents, modulo and the error values. Run `cargo test
+      --offline`.
+    checks:
+      - {kind: file_regex, path: tests/extra.rs, pattern: '#\[test\]', min_count: 5}
+      - {kind: tests, runner: rust, files: [tests/wordy.rs], restore: [tests/wordy.rs], hidden: [tests/hidden_pow.rs, tests/hidden_overflow.rs, tests/hidden_errors.rs, tests/hidden_mod.rs, tests/hidden_asref.rs, tests/hidden_case.rs]}
+  - prompt: >-
+      Make `WordyError` a proper error type: implement `std::fmt::Display` with the messages "not a
+      question", "unknown operation", "missing operand", "division by zero" and "arithmetic overflow"
+      (in variant order) and implement `std::error::Error`, so it works with `?` into `Box<dyn
+      Error>`.
+    checks:
+      - {kind: tests, runner: rust, files: [tests/wordy.rs], restore: [tests/wordy.rs], hidden: [tests/hidden_pow.rs, tests/hidden_overflow.rs, tests/hidden_errors.rs, tests/hidden_mod.rs, tests/hidden_asref.rs, tests/hidden_case.rs, tests/hidden_display.rs]}
+  - prompt: >-
+      Finish with a short summary for a reviewer, in four to six sentences: the supported operators,
+      how errors are reported, and how input case and whitespace are handled. Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [modulo, WordyError, case, whitespace]}

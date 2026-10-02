@@ -1,0 +1,315 @@
+# main-v1 polyglot 17/20: javascript/tournament, 16 turns, short gaps.
+id: js-tournament
+task_type: mixed
+language: javascript
+split: train
+default_gap_s: 10
+source:
+  desc: "Aider polyglot-benchmark javascript/tournament (Exercism), outside the S2 slice"
+  repo: https://github.com/Aider-AI/polyglot-benchmark
+  sha: 7e0611e77b54e2dea774cdc0aa00cf9f7ed6144f
+workspace:
+  kind: git
+  repo: https://github.com/Aider-AI/polyglot-benchmark
+  sha: 7e0611e77b54e2dea774cdc0aa00cf9f7ed6144f
+  subdir: javascript/exercises/practice/tournament
+  local_hint: ~/dev/afast-campaign-corrected-polyglot-20260919/polyglot/polyglot-benchmark
+  remove: [.meta]
+protected: [tournament.spec.js]
+hidden_files:
+  jest_shim.mjs: |
+    import { describe as d, test as t } from 'node:test';
+    import assert from 'node:assert/strict';
+
+    const ctx = globalThis;
+    ctx.describe = (name, fn) => d(name, fn);
+    ctx.test = (name, fn) => t(name, fn);
+    ctx.xtest = ctx.test;
+    ctx.it = ctx.test;
+
+    const matchErr = (e) => (err) => {
+      if (e === undefined) return true;
+      if (e instanceof Error) return err.message === e.message;
+      if (typeof e === 'string') return String(err.message).includes(e);
+      if (e instanceof RegExp) return e.test(err.message);
+      if (typeof e === 'function') return err instanceof e;
+      return true;
+    };
+
+    ctx.expect = (actual) => ({
+      toEqual: (e) => assert.deepEqual(actual, e),
+      toBe: (e) => assert.strictEqual(actual, e),
+      toBeCloseTo: (e, digits = 2) => assert.ok(Math.abs(actual - e) < 10 ** -digits / 2, `${actual} is not close to ${e}`),
+      toBeTruthy: () => assert.ok(actual),
+      toBeFalsy: () => assert.ok(!actual),
+      toThrow: (e) => assert.throws(actual, matchErr(e)),
+      not: { toEqual: (e) => assert.notDeepEqual(actual, e), toBe: (e) => assert.notStrictEqual(actual, e) },
+    });
+  hidden_edge.test.mjs: |
+    import { test } from 'node:test';
+    import assert from 'node:assert/strict';
+    const HEADER = 'Team                           | MP |  W |  D |  L |  P';
+    const n = (v) => String(v).padStart(2);
+    const row = (name, mp, w, d, l, p) => `${name.padEnd(30)} | ${n(mp)} | ${n(w)} | ${n(d)} | ${n(l)} | ${n(p)}`;
+    import { tournamentTally } from './tournament.js';
+
+    test('blank lines and a trailing newline are ignored', () => {
+      const plain = tournamentTally('Allegoric Alaskans;Blithering Badgers;win');
+      assert.equal(tournamentTally('Allegoric Alaskans;Blithering Badgers;win\n\n'), plain);
+      assert.equal(tournamentTally('\nAllegoric Alaskans;Blithering Badgers;win\n\n\n'), plain);
+    });
+
+    test('unknown results and malformed lines are skipped', () => {
+      const out = tournamentTally('A;B;win\nA;C;foo\nbad line\nA;B\nA;B;win;extra\nC;A;loss');
+      assert.equal(
+        out,
+        [HEADER, row('A', 2, 2, 0, 0, 6), row('B', 1, 0, 0, 1, 0), row('C', 1, 0, 0, 1, 0)].join('\n'),
+      );
+    });
+
+    test('only malformed lines give just the header', () => {
+      assert.equal(tournamentTally('hello\n;;\nA;B;nope'), HEADER);
+    });
+  hidden_sort.test.mjs: |
+    import { test } from 'node:test';
+    import assert from 'node:assert/strict';
+    const HEADER = 'Team                           | MP |  W |  D |  L |  P';
+    const n = (v) => String(v).padStart(2);
+    const row = (name, mp, w, d, l, p) => `${name.padEnd(30)} | ${n(mp)} | ${n(w)} | ${n(d)} | ${n(l)} | ${n(p)}`;
+    import { tournamentTally } from './tournament.js';
+
+    test('default order is points then name', () => {
+      assert.equal(tournamentTally('Zed;Amy;win'), [HEADER, row('Zed', 1, 1, 0, 0, 3), row('Amy', 1, 0, 0, 1, 0)].join('\n'));
+    });
+
+    test('sort by name', () => {
+      const out = tournamentTally('Zed;Amy;win', { sort: 'name' });
+      assert.equal(out, [HEADER, row('Amy', 1, 0, 0, 1, 0), row('Zed', 1, 1, 0, 0, 3)].join('\n'));
+    });
+
+    test('explicit points sort and unknown values fall back to the default', () => {
+      const plain = tournamentTally('Zed;Amy;win');
+      assert.equal(tournamentTally('Zed;Amy;win', { sort: 'points' }), plain);
+      assert.equal(tournamentTally('Zed;Amy;win', { sort: 'whatever' }), plain);
+      assert.equal(tournamentTally('Zed;Amy;win', {}), plain);
+    });
+  hidden_results.test.mjs: |
+    import { test } from 'node:test';
+    import assert from 'node:assert/strict';
+    const HEADER = 'Team                           | MP |  W |  D |  L |  P';
+    const n = (v) => String(v).padStart(2);
+    const row = (name, mp, w, d, l, p) => `${name.padEnd(30)} | ${n(mp)} | ${n(w)} | ${n(d)} | ${n(l)} | ${n(p)}`;
+    import { tournamentTally, parseResults } from './tournament.js';
+
+    test('parseResults returns one row per team', () => {
+      assert.deepEqual(parseResults('Zed;Amy;win\nAmy;Bob;draw'), [
+        { team: 'Zed', mp: 1, w: 1, d: 0, l: 0, p: 3 },
+        { team: 'Amy', mp: 2, w: 0, d: 1, l: 1, p: 1 },
+        { team: 'Bob', mp: 1, w: 0, d: 1, l: 0, p: 1 },
+      ]);
+    });
+
+    test('parseResults on nothing', () => {
+      assert.deepEqual(parseResults(''), []);
+      assert.deepEqual(parseResults('x;y;z'), []);
+    });
+
+    test('parseResults honours the sort option', () => {
+      assert.deepEqual(parseResults('Zed;Amy;win', { sort: 'name' }).map((r) => r.team), ['Amy', 'Zed']);
+    });
+
+    test('tournamentTally is unchanged', () => {
+      assert.equal(tournamentTally('Zed;Amy;win'), [HEADER, row('Zed', 1, 1, 0, 0, 3), row('Amy', 1, 0, 0, 1, 0)].join('\n'));
+    });
+  hidden_points.test.mjs: |
+    import { test } from 'node:test';
+    import assert from 'node:assert/strict';
+    const HEADER = 'Team                           | MP |  W |  D |  L |  P';
+    const n = (v) => String(v).padStart(2);
+    const row = (name, mp, w, d, l, p) => `${name.padEnd(30)} | ${n(mp)} | ${n(w)} | ${n(d)} | ${n(l)} | ${n(p)}`;
+    import { tournamentTally, parseResults } from './tournament.js';
+
+    test('custom points for a win', () => {
+      const rows = parseResults('A;B;win\nC;D;draw', { points: { win: 2 } });
+      assert.deepEqual(rows.map((r) => [r.team, r.p]), [['A', 2], ['C', 1], ['D', 1], ['B', 0]]);
+    });
+
+    test('a draw can be worth more than a win', () => {
+      const out = tournamentTally('A;B;win\nC;D;draw', { points: { win: 1, draw: 3 } });
+      assert.equal(
+        out,
+        [HEADER, row('C', 1, 0, 1, 0, 3), row('D', 1, 0, 1, 0, 3), row('A', 1, 1, 0, 0, 1), row('B', 1, 0, 0, 1, 0)].join('\n'),
+      );
+    });
+
+    test('defaults are 3 and 1', () => {
+      assert.deepEqual(parseResults('A;B;win\nC;D;draw', { points: {} }).map((r) => r.p), [3, 1, 1, 0]);
+    });
+  hidden_trunc.test.mjs: |
+    import { test } from 'node:test';
+    import assert from 'node:assert/strict';
+    const HEADER = 'Team                           | MP |  W |  D |  L |  P';
+    const n = (v) => String(v).padStart(2);
+    const row = (name, mp, w, d, l, p) => `${name.padEnd(30)} | ${n(mp)} | ${n(w)} | ${n(d)} | ${n(l)} | ${n(p)}`;
+    import { tournamentTally } from './tournament.js';
+
+    test('long names are cut to 30 characters in the table', () => {
+      const long = 'Extraordinarily Long Team Name FC';
+      const out = tournamentTally(`${long};Short;win`);
+      assert.equal(out, [HEADER, row(long.slice(0, 30), 1, 1, 0, 0, 3), row('Short', 1, 0, 0, 1, 0)].join('\n'));
+      assert.ok(out.split('\n').every((l) => l.length === HEADER.length));
+    });
+
+    test('teams that share the first 30 characters stay separate', () => {
+      const a = 'Same Prefix Of Thirty Characte-A';
+      const b = 'Same Prefix Of Thirty Characte-B';
+      const lines = tournamentTally(`${a};${b};draw`).split('\n');
+      assert.equal(lines.length, 3);
+      assert.equal(lines[1], row(a.slice(0, 30), 1, 0, 1, 0, 1));
+    });
+  hidden_array.test.mjs: |
+    import { test } from 'node:test';
+    import assert from 'node:assert/strict';
+    const HEADER = 'Team                           | MP |  W |  D |  L |  P';
+    const n = (v) => String(v).padStart(2);
+    const row = (name, mp, w, d, l, p) => `${name.padEnd(30)} | ${n(mp)} | ${n(w)} | ${n(d)} | ${n(l)} | ${n(p)}`;
+    import { tournamentTally, parseResults } from './tournament.js';
+
+    test('an array of lines works like a string', () => {
+      assert.equal(tournamentTally(['A;B;win', 'C;D;draw']), tournamentTally('A;B;win\nC;D;draw'));
+      assert.deepEqual(parseResults(['A;B;win']), parseResults('A;B;win'));
+    });
+
+    test('an empty array gives the header', () => {
+      assert.equal(tournamentTally([]), HEADER);
+    });
+
+    test('malformed entries in an array are skipped', () => {
+      assert.equal(tournamentTally(['A;B;win', '', 'junk']), tournamentTally('A;B;win'));
+    });
+  hidden_json.test.mjs: |
+    import { test } from 'node:test';
+    import assert from 'node:assert/strict';
+    const HEADER = 'Team                           | MP |  W |  D |  L |  P';
+    const n = (v) => String(v).padStart(2);
+    const row = (name, mp, w, d, l, p) => `${name.padEnd(30)} | ${n(mp)} | ${n(w)} | ${n(d)} | ${n(l)} | ${n(p)}`;
+    import { tournamentTally, parseResults } from './tournament.js';
+
+    test('json format', () => {
+      const input = 'Zed;Amy;win\nAmy;Bob;draw';
+      assert.deepEqual(JSON.parse(tournamentTally(input, { format: 'json' })), parseResults(input));
+    });
+
+    test('json format honours sort and points', () => {
+      const rows = JSON.parse(tournamentTally('Zed;Amy;win', { format: 'json', sort: 'name', points: { win: 5 } }));
+      assert.deepEqual(rows.map((r) => [r.team, r.p]), [['Amy', 0], ['Zed', 5]]);
+    });
+
+    test('json of nothing is an empty array', () => {
+      assert.equal(tournamentTally('', { format: 'json' }), '[]');
+    });
+
+    test('default format is still the table', () => {
+      assert.ok(tournamentTally('A;B;win').startsWith('Team'));
+    });
+turns:
+  - prompt: >-
+      Read .docs/instructions.md and implement `tournamentTally` in tournament.js so that the specs in
+      tournament.spec.js pass (jest is not installed here, so check them with plain node by reasoning
+      or a small script). Do not edit the provided spec file.
+    checks:
+      - {kind: tests, runner: cmd, cmd: 'sed "s#from ''./tournament''#from ''./tournament.js''#" tournament.spec.js > spec_run.test.mjs && node --import ./jest_shim.mjs --test --test-reporter=tap spec_run.test.mjs ', expect_regex: '# fail 0', restore: [tournament.spec.js], hidden: [jest_shim.mjs], timeout: 120}
+  - prompt: >-
+      In three to five sentences, explain how your implementation keeps per-team statistics and how it
+      orders the rows of the table. Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [sort, points, alphabetical|name, win|draw]}
+  - prompt: >-
+      Fix an edge case: blank lines, a trailing newline, lines that do not have exactly three
+      `;`-separated fields and lines whose result is not win, loss or draw must be ignored instead of
+      creating bogus teams or counting as draws.
+    checks:
+      - {kind: tests, runner: cmd, cmd: sed "s#from './tournament'#from './tournament.js'#" tournament.spec.js > spec_run.test.mjs && node --import ./jest_shim.mjs --test --test-reporter=tap spec_run.test.mjs hidden_edge.test.mjs, expect_regex: '# fail 0', restore: [tournament.spec.js], hidden: [jest_shim.mjs, hidden_edge.test.mjs], timeout: 120}
+  - prompt: >-
+      Add an optional second argument `options` to `tournamentTally`: `{ sort: 'name' }` orders the
+      rows alphabetically by team name instead of by points. Any other value (or no options) keeps the
+      default order.
+    checks:
+      - {kind: tests, runner: cmd, cmd: sed "s#from './tournament'#from './tournament.js'#" tournament.spec.js > spec_run.test.mjs && node --import ./jest_shim.mjs --test --test-reporter=tap spec_run.test.mjs hidden_edge.test.mjs hidden_sort.test.mjs, expect_regex: '# fail 0', restore: [tournament.spec.js], hidden: [jest_shim.mjs, hidden_edge.test.mjs, hidden_sort.test.mjs], timeout: 120}
+  - prompt: >-
+      Add your own tests in a new file `extra.test.mjs` using `node:test` and `node:assert/strict`
+      (importing from ./tournament.js): at least five `test(` cases. Run it with `node --test
+      extra.test.mjs`.
+    checks:
+      - {kind: file_regex, path: extra.test.mjs, pattern: \btest\(, min_count: 5}
+      - {kind: tests, runner: cmd, cmd: node --test --test-reporter=tap extra.test.mjs, expect_regex: '# pass [1-9]', restore: [], hidden: [], timeout: 120}
+      - {kind: tests, runner: cmd, cmd: sed "s#from './tournament'#from './tournament.js'#" tournament.spec.js > spec_run.test.mjs && node --import ./jest_shim.mjs --test --test-reporter=tap spec_run.test.mjs hidden_edge.test.mjs hidden_sort.test.mjs, expect_regex: '# fail 0', restore: [tournament.spec.js], hidden: [jest_shim.mjs, hidden_edge.test.mjs, hidden_sort.test.mjs], timeout: 120}
+  - prompt: >-
+      Refactor tournament.js for readability: split the work into small module-level helpers named
+      `parseLine`, `applyResult` and `formatTable` (and keep a Map of team stats). No behaviour
+      change; keep all tests passing.
+    checks:
+      - {kind: file_regex, path: tournament.js, pattern: (function|const)\s+(parseLine|applyResult|formatTable)\b, min_count: 3}
+      - {kind: tests, runner: cmd, cmd: sed "s#from './tournament'#from './tournament.js'#" tournament.spec.js > spec_run.test.mjs && node --import ./jest_shim.mjs --test --test-reporter=tap spec_run.test.mjs hidden_edge.test.mjs hidden_sort.test.mjs, expect_regex: '# fail 0', restore: [tournament.spec.js], hidden: [jest_shim.mjs, hidden_edge.test.mjs, hidden_sort.test.mjs], timeout: 120}
+  - prompt: >-
+      Add and export `parseResults(input, options)` that returns the table as data: an array of `{
+      team, mp, w, d, l, p }` objects in the same order as the table rows (the `sort` option applies).
+      `tournamentTally` must be built on top of it.
+    checks:
+      - {kind: tests, runner: cmd, cmd: sed "s#from './tournament'#from './tournament.js'#" tournament.spec.js > spec_run.test.mjs && node --import ./jest_shim.mjs --test --test-reporter=tap spec_run.test.mjs hidden_edge.test.mjs hidden_sort.test.mjs hidden_results.test.mjs, expect_regex: '# fail 0', restore: [tournament.spec.js], hidden: [jest_shim.mjs, hidden_edge.test.mjs, hidden_sort.test.mjs, hidden_results.test.mjs], timeout: 120}
+  - prompt: >-
+      New requirement: `options.points` may override the points awarded, as `{ win, draw }` (defaults
+      3 and 1), in both `parseResults` and `tournamentTally`; the P column and the ordering follow the
+      new values. A loss is always worth 0.
+    checks:
+      - {kind: tests, runner: cmd, cmd: sed "s#from './tournament'#from './tournament.js'#" tournament.spec.js > spec_run.test.mjs && node --import ./jest_shim.mjs --test --test-reporter=tap spec_run.test.mjs hidden_edge.test.mjs hidden_sort.test.mjs hidden_results.test.mjs hidden_points.test.mjs, expect_regex: '# fail 0', restore: [tournament.spec.js], hidden: [jest_shim.mjs, hidden_edge.test.mjs, hidden_sort.test.mjs, hidden_results.test.mjs, hidden_points.test.mjs], timeout: 120}
+  - prompt: >-
+      Create README.md with a `## Usage` section and a `## Output format` section describing
+      `tournamentTally`, `parseResults` and the options.
+    checks:
+      - {kind: doc_sections, path: README.md, headings: [usage, output format]}
+      - {kind: file_regex, path: README.md, pattern: parseResults}
+      - {kind: tests, runner: cmd, cmd: sed "s#from './tournament'#from './tournament.js'#" tournament.spec.js > spec_run.test.mjs && node --import ./jest_shim.mjs --test --test-reporter=tap spec_run.test.mjs hidden_edge.test.mjs hidden_sort.test.mjs hidden_results.test.mjs hidden_points.test.mjs, expect_regex: '# fail 0', restore: [tournament.spec.js], hidden: [jest_shim.mjs, hidden_edge.test.mjs, hidden_sort.test.mjs, hidden_results.test.mjs, hidden_points.test.mjs], timeout: 120}
+  - prompt: >-
+      Add JSDoc comments to the exported functions `parseResults` and `tournamentTally`, each with
+      `@param` tags and a `@returns` tag.
+    checks:
+      - {kind: file_regex, path: tournament.js, pattern: /\*\*, min_count: 2}
+      - {kind: file_regex, path: tournament.js, pattern: '@param', min_count: 2}
+      - {kind: file_regex, path: tournament.js, pattern: '@returns', min_count: 2}
+      - {kind: tests, runner: cmd, cmd: sed "s#from './tournament'#from './tournament.js'#" tournament.spec.js > spec_run.test.mjs && node --import ./jest_shim.mjs --test --test-reporter=tap spec_run.test.mjs hidden_edge.test.mjs hidden_sort.test.mjs hidden_results.test.mjs hidden_points.test.mjs, expect_regex: '# fail 0', restore: [tournament.spec.js], hidden: [jest_shim.mjs, hidden_edge.test.mjs, hidden_sort.test.mjs, hidden_results.test.mjs, hidden_points.test.mjs], timeout: 120}
+  - prompt: >-
+      Edge case: a team name longer than 30 characters is cut to its first 30 characters in the table
+      so the columns stay aligned. Statistics are still kept per full name, so two long names that
+      share their first 30 characters remain two separate teams.
+    checks:
+      - {kind: tests, runner: cmd, cmd: sed "s#from './tournament'#from './tournament.js'#" tournament.spec.js > spec_run.test.mjs && node --import ./jest_shim.mjs --test --test-reporter=tap spec_run.test.mjs hidden_edge.test.mjs hidden_sort.test.mjs hidden_results.test.mjs hidden_points.test.mjs hidden_trunc.test.mjs, expect_regex: '# fail 0', restore: [tournament.spec.js], hidden: [jest_shim.mjs, hidden_edge.test.mjs, hidden_sort.test.mjs, hidden_results.test.mjs, hidden_points.test.mjs, hidden_trunc.test.mjs], timeout: 120}
+  - prompt: >-
+      In three or four sentences, explain the time complexity of `parseResults` for n result lines and
+      t teams, and why the Map matters. Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [Map, O\(, sort]}
+  - prompt: >-
+      Let `tournamentTally` and `parseResults` accept an array of result lines as well as a single
+      newline-separated string (`['A;B;win', 'C;D;draw']`). Malformed entries are skipped as before.
+    checks:
+      - {kind: tests, runner: cmd, cmd: sed "s#from './tournament'#from './tournament.js'#" tournament.spec.js > spec_run.test.mjs && node --import ./jest_shim.mjs --test --test-reporter=tap spec_run.test.mjs hidden_edge.test.mjs hidden_sort.test.mjs hidden_results.test.mjs hidden_points.test.mjs hidden_trunc.test.mjs hidden_array.test.mjs, expect_regex: '# fail 0', restore: [tournament.spec.js], hidden: [jest_shim.mjs, hidden_edge.test.mjs, hidden_sort.test.mjs, hidden_results.test.mjs, hidden_points.test.mjs, hidden_trunc.test.mjs, hidden_array.test.mjs], timeout: 120}
+  - prompt: >-
+      Add `options.format = 'json'` to `tournamentTally`: it returns `JSON.stringify` of the
+      `parseResults` rows (with the same `sort` and `points` options) instead of the table. No results
+      give `'[]'`; the default stays the table.
+    checks:
+      - {kind: tests, runner: cmd, cmd: sed "s#from './tournament'#from './tournament.js'#" tournament.spec.js > spec_run.test.mjs && node --import ./jest_shim.mjs --test --test-reporter=tap spec_run.test.mjs hidden_edge.test.mjs hidden_sort.test.mjs hidden_results.test.mjs hidden_points.test.mjs hidden_trunc.test.mjs hidden_array.test.mjs hidden_json.test.mjs, expect_regex: '# fail 0', restore: [tournament.spec.js], hidden: [jest_shim.mjs, hidden_edge.test.mjs, hidden_sort.test.mjs, hidden_results.test.mjs, hidden_points.test.mjs, hidden_trunc.test.mjs, hidden_array.test.mjs, hidden_json.test.mjs], timeout: 120}
+  - prompt: >-
+      Add a small command line tool `cli.js` that reads match results from standard input and prints
+      the table; `node cli.js --sort=name` passes `{ sort: 'name' }`. Use `tournamentTally` from
+      ./tournament.js.
+    checks:
+      - {kind: tests, runner: cmd, cmd: printf 'Allegoric Alaskans;Blithering Badgers;win\n' | node cli.js, expect_regex: Allegoric Alaskans +\|  1 \|  1 \|  0 \|  0 \|  3, restore: [], hidden: []}
+      - {kind: tests, runner: cmd, cmd: printf 'Zed;Amy;win\n' | node cli.js --sort=name | sed -n 2p, expect_regex: ^Amy, restore: [], hidden: []}
+      - {kind: tests, runner: cmd, cmd: sed "s#from './tournament'#from './tournament.js'#" tournament.spec.js > spec_run.test.mjs && node --import ./jest_shim.mjs --test --test-reporter=tap spec_run.test.mjs hidden_edge.test.mjs hidden_sort.test.mjs hidden_results.test.mjs hidden_points.test.mjs hidden_trunc.test.mjs hidden_array.test.mjs hidden_json.test.mjs, expect_regex: '# fail 0', restore: [tournament.spec.js], hidden: [jest_shim.mjs, hidden_edge.test.mjs, hidden_sort.test.mjs, hidden_results.test.mjs, hidden_points.test.mjs, hidden_trunc.test.mjs, hidden_array.test.mjs, hidden_json.test.mjs], timeout: 120}
+  - prompt: >-
+      Finish with a short summary for a reviewer, in four to six sentences: the public functions and
+      options of this module and how malformed input is handled. Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [parseResults, tournamentTally, sort, points, malformed|ignored|skipped]}

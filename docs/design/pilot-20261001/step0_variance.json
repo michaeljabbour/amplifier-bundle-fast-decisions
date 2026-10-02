@@ -1,0 +1,4954 @@
+{
+ "generated": "2026-09-30",
+ "source": "/Users/michaeljabbour/dev/fd-judge-realistic/docs/evidence/2026-10-01-caching",
+ "n_pairs_used": 1787,
+ "method": {
+  "y": "ln(cost_treat/cost_anchor), cost = sum llm:response cost_usd (list-price table, incl. background calls)",
+  "icc": "one-way random effects, ANOVA estimator, unbalanced k0; sigma_b^2 clipped at 0",
+  "plan": "Var(mean y) = sb2/n + sw2/(n*m); n = ceil((1.96/h)^2 (sb2 + sw2/m)); h = ln(1.10) for +-10%, ln(1.20) for +-20% (tighter, upper side of the asymmetric relative interval); normal approx (with <15 scenarios inflate n by ~(t_{n-1}/1.96)^2); m = independent pairs (reps) per scenario",
+  "cell_adjusted": "y re-centred on cell (config) means within the stratum; removes between-config spread",
+  "caveats": [
+   "anchor runs are reused across several treatment cells -> pairs sharing an anchor are correlated; scenario clustering absorbs most of this, but sigma_within is slightly understated",
+   "s1m has only 6 scenarios per stratum (3 for routing_plus_shaping): sigma_between is very imprecise",
+   "sigma_b^2 clipped to 0 gives ICC=0 -> plan relies on within variance only; treat as optimistic"
+  ]
+ },
+ "strata": [
+  {
+   "lever": "effort_only",
+   "host": "fable",
+   "suite": "S1",
+   "cells": [
+    "orch-fablelow",
+    "orch-primary-effort-only"
+   ],
+   "campaigns": [
+    "screen-s1-dev",
+    "tune-fable-dev"
+   ],
+   "raw": {
+    "n_pairs": 36,
+    "n_scenarios": 12,
+    "pairs_per_scenario_k0": 3.0,
+    "mean_ln_ratio": -0.004140887777026914,
+    "gmean_ratio": 0.995867673877071,
+    "sd_ln_ratio": 0.14964867470486215,
+    "sd_between_scenario_means": 0.0975854638468427,
+    "sigma_between": 0.0547838536583017,
+    "sigma_within": 0.13987478828454997,
+    "icc": 0.13299833503789077,
+    "msb": 0.02856876826261033,
+    "msw": 0.01956495639764768
+   },
+   "cell_adjusted": {
+    "n_pairs": 36,
+    "n_scenarios": 12,
+    "pairs_per_scenario_k0": 3.0,
+    "mean_ln_ratio": -0.004140887777026921,
+    "gmean_ratio": 0.995867673877071,
+    "sd_ln_ratio": 0.13477476251448706,
+    "sd_between_scenario_means": 0.09758546384684272,
+    "sigma_between": 0.07111791927379876,
+    "sigma_within": 0.11573889984403107,
+    "icc": 0.2740849478486189,
+    "msb": 0.02856876826261033,
+    "msw": 0.013395492937106656
+   },
+   "plan_cell_adjusted": {
+    "pm10": {
+     "m1": {
+      "scenarios": 8,
+      "pairs": 8,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 5,
+      "pairs": 10,
+      "design_effect": 1.274084947848619
+     },
+     "m3": {
+      "scenarios": 5,
+      "pairs": 15,
+      "design_effect": 1.5481698956972378
+     },
+     "m5": {
+      "scenarios": 4,
+      "pairs": 20,
+      "design_effect": 2.0963397913944757
+     },
+     "m10": {
+      "scenarios": 3,
+      "pairs": 30,
+      "design_effect": 3.4667645306375703
+     },
+     "min_scenarios_m_inf": 3
+    },
+    "pm20": {
+     "m1": {
+      "scenarios": 3,
+      "pairs": 3,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 2,
+      "pairs": 4,
+      "design_effect": 1.274084947848619
+     },
+     "m3": {
+      "scenarios": 2,
+      "pairs": 6,
+      "design_effect": 1.5481698956972378
+     },
+     "m5": {
+      "scenarios": 2,
+      "pairs": 10,
+      "design_effect": 2.0963397913944757
+     },
+     "m10": {
+      "scenarios": 2,
+      "pairs": 20,
+      "design_effect": 3.4667645306375703
+     },
+     "min_scenarios_m_inf": 1
+    }
+   },
+   "plan_raw": {
+    "pm10": {
+     "m1": {
+      "scenarios": 10,
+      "pairs": 10,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 6,
+      "pairs": 12,
+      "design_effect": 1.1329983350378907
+     },
+     "m3": {
+      "scenarios": 5,
+      "pairs": 15,
+      "design_effect": 1.2659966700757814
+     },
+     "m5": {
+      "scenarios": 3,
+      "pairs": 15,
+      "design_effect": 1.531993340151563
+     },
+     "m10": {
+      "scenarios": 3,
+      "pairs": 30,
+      "design_effect": 2.196985015341017
+     },
+     "min_scenarios_m_inf": 2
+    },
+    "pm20": {
+     "m1": {
+      "scenarios": 3,
+      "pairs": 3,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 2,
+      "pairs": 4,
+      "design_effect": 1.1329983350378907
+     },
+     "m3": {
+      "scenarios": 2,
+      "pairs": 6,
+      "design_effect": 1.2659966700757814
+     },
+     "m5": {
+      "scenarios": 2,
+      "pairs": 10,
+      "design_effect": 1.531993340151563
+     },
+     "m10": {
+      "scenarios": 2,
+      "pairs": 20,
+      "design_effect": 2.196985015341017
+     },
+     "min_scenarios_m_inf": 1
+    }
+   }
+  },
+  {
+   "lever": "effort_only",
+   "host": "fable",
+   "suite": "S3",
+   "cells": [
+    "orch-strong-phase-effort"
+   ],
+   "campaigns": [
+    "swe-complex-speed"
+   ],
+   "raw": {
+    "n_pairs": 20,
+    "n_scenarios": 10,
+    "pairs_per_scenario_k0": 2.0,
+    "mean_ln_ratio": -0.1407628530921027,
+    "gmean_ratio": 0.8686952956757452,
+    "sd_ln_ratio": 0.23964204591271182,
+    "sd_between_scenario_means": 0.19575194710990027,
+    "sigma_between": 0.13508838756212135,
+    "sigma_within": 0.20034945641644894,
+    "icc": 0.31254075436828865,
+    "msb": 0.07663764959463439,
+    "msw": 0.04013990468636657
+   },
+   "cell_adjusted": {
+    "n_pairs": 20,
+    "n_scenarios": 10,
+    "pairs_per_scenario_k0": 2.0,
+    "mean_ln_ratio": -0.1407628530921027,
+    "gmean_ratio": 0.8686952956757452,
+    "sd_ln_ratio": 0.23964204591271182,
+    "sd_between_scenario_means": 0.19575194710990027,
+    "sigma_between": 0.13508838756212135,
+    "sigma_within": 0.20034945641644894,
+    "icc": 0.31254075436828865,
+    "msb": 0.07663764959463439,
+    "msw": 0.04013990468636657
+   },
+   "plan_cell_adjusted": {
+    "pm10": {
+     "m1": {
+      "scenarios": 25,
+      "pairs": 25,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 17,
+      "pairs": 34,
+      "design_effect": 1.3125407543682885
+     },
+     "m3": {
+      "scenarios": 14,
+      "pairs": 42,
+      "design_effect": 1.6250815087365773
+     },
+     "m5": {
+      "scenarios": 12,
+      "pairs": 60,
+      "design_effect": 2.2501630174731546
+     },
+     "m10": {
+      "scenarios": 10,
+      "pairs": 100,
+      "design_effect": 3.8128667893145978
+     },
+     "min_scenarios_m_inf": 8
+    },
+    "pm20": {
+     "m1": {
+      "scenarios": 7,
+      "pairs": 7,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 5,
+      "pairs": 10,
+      "design_effect": 1.3125407543682885
+     },
+     "m3": {
+      "scenarios": 4,
+      "pairs": 12,
+      "design_effect": 1.6250815087365773
+     },
+     "m5": {
+      "scenarios": 4,
+      "pairs": 20,
+      "design_effect": 2.2501630174731546
+     },
+     "m10": {
+      "scenarios": 3,
+      "pairs": 30,
+      "design_effect": 3.8128667893145978
+     },
+     "min_scenarios_m_inf": 3
+    }
+   },
+   "plan_raw": {
+    "pm10": {
+     "m1": {
+      "scenarios": 25,
+      "pairs": 25,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 17,
+      "pairs": 34,
+      "design_effect": 1.3125407543682885
+     },
+     "m3": {
+      "scenarios": 14,
+      "pairs": 42,
+      "design_effect": 1.6250815087365773
+     },
+     "m5": {
+      "scenarios": 12,
+      "pairs": 60,
+      "design_effect": 2.2501630174731546
+     },
+     "m10": {
+      "scenarios": 10,
+      "pairs": 100,
+      "design_effect": 3.8128667893145978
+     },
+     "min_scenarios_m_inf": 8
+    },
+    "pm20": {
+     "m1": {
+      "scenarios": 7,
+      "pairs": 7,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 5,
+      "pairs": 10,
+      "design_effect": 1.3125407543682885
+     },
+     "m3": {
+      "scenarios": 4,
+      "pairs": 12,
+      "design_effect": 1.6250815087365773
+     },
+     "m5": {
+      "scenarios": 4,
+      "pairs": 20,
+      "design_effect": 2.2501630174731546
+     },
+     "m10": {
+      "scenarios": 3,
+      "pairs": 30,
+      "design_effect": 3.8128667893145978
+     },
+     "min_scenarios_m_inf": 3
+    }
+   }
+  },
+  {
+   "lever": "effort_only",
+   "host": "opus",
+   "suite": "S1",
+   "cells": [
+    "orch-opuslow-opus"
+   ],
+   "campaigns": [
+    "tune-opus-dev",
+    "tune-opus-dev-b2"
+   ],
+   "raw": {
+    "n_pairs": 24,
+    "n_scenarios": 12,
+    "pairs_per_scenario_k0": 2.0,
+    "mean_ln_ratio": -0.040829697524537294,
+    "gmean_ratio": 0.9599926051443705,
+    "sd_ln_ratio": 0.06058755141482721,
+    "sd_between_scenario_means": 0.05993417155109328,
+    "sigma_between": 0.05802558502128997,
+    "sigma_within": 0.02121963253465661,
+    "icc": 0.8820423528597817,
+    "msb": 0.007184209839031758,
+    "msw": 0.00045027280490585723
+   },
+   "cell_adjusted": {
+    "n_pairs": 24,
+    "n_scenarios": 12,
+    "pairs_per_scenario_k0": 2.0,
+    "mean_ln_ratio": -0.0408296975245373,
+    "gmean_ratio": 0.9599926051443705,
+    "sd_ln_ratio": 0.060587551414827204,
+    "sd_between_scenario_means": 0.05993417155109328,
+    "sigma_between": 0.058025585021289953,
+    "sigma_within": 0.02121963253465661,
+    "icc": 0.8820423528597816,
+    "msb": 0.007184209839031755,
+    "msw": 0.00045027280490585723
+   },
+   "plan_cell_adjusted": {
+    "pm10": {
+     "m1": {
+      "scenarios": 2,
+      "pairs": 2,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 2,
+      "pairs": 4,
+      "design_effect": 1.8820423528597816
+     },
+     "m3": {
+      "scenarios": 2,
+      "pairs": 6,
+      "design_effect": 2.764084705719563
+     },
+     "m5": {
+      "scenarios": 2,
+      "pairs": 10,
+      "design_effect": 4.528169411439126
+     },
+     "m10": {
+      "scenarios": 2,
+      "pairs": 20,
+      "design_effect": 8.938381175738034
+     },
+     "min_scenarios_m_inf": 2
+    },
+    "pm20": {
+     "m1": {
+      "scenarios": 2,
+      "pairs": 2,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 2,
+      "pairs": 4,
+      "design_effect": 1.8820423528597816
+     },
+     "m3": {
+      "scenarios": 2,
+      "pairs": 6,
+      "design_effect": 2.764084705719563
+     },
+     "m5": {
+      "scenarios": 2,
+      "pairs": 10,
+      "design_effect": 4.528169411439126
+     },
+     "m10": {
+      "scenarios": 2,
+      "pairs": 20,
+      "design_effect": 8.938381175738034
+     },
+     "min_scenarios_m_inf": 1
+    }
+   },
+   "plan_raw": {
+    "pm10": {
+     "m1": {
+      "scenarios": 2,
+      "pairs": 2,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 2,
+      "pairs": 4,
+      "design_effect": 1.8820423528597816
+     },
+     "m3": {
+      "scenarios": 2,
+      "pairs": 6,
+      "design_effect": 2.764084705719563
+     },
+     "m5": {
+      "scenarios": 2,
+      "pairs": 10,
+      "design_effect": 4.528169411439126
+     },
+     "m10": {
+      "scenarios": 2,
+      "pairs": 20,
+      "design_effect": 8.938381175738035
+     },
+     "min_scenarios_m_inf": 2
+    },
+    "pm20": {
+     "m1": {
+      "scenarios": 2,
+      "pairs": 2,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 2,
+      "pairs": 4,
+      "design_effect": 1.8820423528597816
+     },
+     "m3": {
+      "scenarios": 2,
+      "pairs": 6,
+      "design_effect": 2.764084705719563
+     },
+     "m5": {
+      "scenarios": 2,
+      "pairs": 10,
+      "design_effect": 4.528169411439126
+     },
+     "m10": {
+      "scenarios": 2,
+      "pairs": 20,
+      "design_effect": 8.938381175738035
+     },
+     "min_scenarios_m_inf": 1
+    }
+   }
+  },
+  {
+   "lever": "model_swap_control",
+   "host": "fable",
+   "suite": "S1",
+   "cells": [
+    "plain-sonnet"
+   ],
+   "campaigns": [
+    "holdout2",
+    "holdout3",
+    "planner-st-dev",
+    "prereg-s1-holdout",
+    "prereg2-s1-holdout",
+    "reval-s1-dev",
+    "reval-s1-dev-reversed",
+    "router-rules-s1-dev",
+    "router-s1-dev",
+    "screen-s1-dev",
+    "tune-fable-dev",
+    "value-st-dev"
+   ],
+   "raw": {
+    "n_pairs": 235,
+    "n_scenarios": 39,
+    "pairs_per_scenario_k0": 5.95,
+    "mean_ln_ratio": -0.9364490697930502,
+    "gmean_ratio": 0.3920173931901206,
+    "sd_ln_ratio": 0.1914091201987531,
+    "sd_between_scenario_means": 0.1504734932714574,
+    "sigma_between": 0.10355686530015971,
+    "sigma_within": 0.1621208824892791,
+    "icc": 0.28978206764604314,
+    "msb": 0.09004368993228654,
+    "msw": 0.026283180539102648
+   },
+   "cell_adjusted": {
+    "n_pairs": 235,
+    "n_scenarios": 39,
+    "pairs_per_scenario_k0": 5.95,
+    "mean_ln_ratio": -0.9364490697930502,
+    "gmean_ratio": 0.3920173931901206,
+    "sd_ln_ratio": 0.1914091201987531,
+    "sd_between_scenario_means": 0.1504734932714574,
+    "sigma_between": 0.10355686530015971,
+    "sigma_within": 0.1621208824892791,
+    "icc": 0.28978206764604314,
+    "msb": 0.09004368993228654,
+    "msw": 0.026283180539102648
+   },
+   "plan_cell_adjusted": {
+    "pm10": {
+     "m1": {
+      "scenarios": 16,
+      "pairs": 16,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 11,
+      "pairs": 22,
+      "design_effect": 1.2897820676460432
+     },
+     "m3": {
+      "scenarios": 9,
+      "pairs": 27,
+      "design_effect": 1.5795641352920864
+     },
+     "m5": {
+      "scenarios": 7,
+      "pairs": 35,
+      "design_effect": 2.159128270584173
+     },
+     "m10": {
+      "scenarios": 6,
+      "pairs": 60,
+      "design_effect": 3.6080386088143883
+     },
+     "min_scenarios_m_inf": 5
+    },
+    "pm20": {
+     "m1": {
+      "scenarios": 5,
+      "pairs": 5,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 3,
+      "pairs": 6,
+      "design_effect": 1.2897820676460432
+     },
+     "m3": {
+      "scenarios": 3,
+      "pairs": 9,
+      "design_effect": 1.5795641352920864
+     },
+     "m5": {
+      "scenarios": 2,
+      "pairs": 10,
+      "design_effect": 2.159128270584173
+     },
+     "m10": {
+      "scenarios": 2,
+      "pairs": 20,
+      "design_effect": 3.6080386088143883
+     },
+     "min_scenarios_m_inf": 2
+    }
+   },
+   "plan_raw": {
+    "pm10": {
+     "m1": {
+      "scenarios": 16,
+      "pairs": 16,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 11,
+      "pairs": 22,
+      "design_effect": 1.2897820676460432
+     },
+     "m3": {
+      "scenarios": 9,
+      "pairs": 27,
+      "design_effect": 1.5795641352920864
+     },
+     "m5": {
+      "scenarios": 7,
+      "pairs": 35,
+      "design_effect": 2.159128270584173
+     },
+     "m10": {
+      "scenarios": 6,
+      "pairs": 60,
+      "design_effect": 3.6080386088143883
+     },
+     "min_scenarios_m_inf": 5
+    },
+    "pm20": {
+     "m1": {
+      "scenarios": 5,
+      "pairs": 5,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 3,
+      "pairs": 6,
+      "design_effect": 1.2897820676460432
+     },
+     "m3": {
+      "scenarios": 3,
+      "pairs": 9,
+      "design_effect": 1.5795641352920864
+     },
+     "m5": {
+      "scenarios": 2,
+      "pairs": 10,
+      "design_effect": 2.159128270584173
+     },
+     "m10": {
+      "scenarios": 2,
+      "pairs": 20,
+      "design_effect": 3.6080386088143883
+     },
+     "min_scenarios_m_inf": 2
+    }
+   }
+  },
+  {
+   "lever": "model_swap_control",
+   "host": "fable",
+   "suite": "s1m",
+   "cells": [
+    "plain-sonnet"
+   ],
+   "campaigns": [
+    "m-holdout3",
+    "mt-dev",
+    "planner-mt-dev",
+    "planner-smoke2",
+    "v12-mt-dev",
+    "value-mt-dev"
+   ],
+   "raw": {
+    "n_pairs": 42,
+    "n_scenarios": 6,
+    "pairs_per_scenario_k0": 5.97,
+    "mean_ln_ratio": -0.6392138309440465,
+    "gmean_ratio": 0.5277071280226286,
+    "sd_ln_ratio": 0.19875278794428977,
+    "sd_between_scenario_means": 0.20185942964850417,
+    "sigma_between": 0.126661195026657,
+    "sigma_within": 0.166792525937158,
+    "icc": 0.36575541197414285,
+    "msb": 0.12361972356696593,
+    "msw": 0.027819746708497517
+   },
+   "cell_adjusted": {
+    "n_pairs": 42,
+    "n_scenarios": 6,
+    "pairs_per_scenario_k0": 5.97,
+    "mean_ln_ratio": -0.6392138309440465,
+    "gmean_ratio": 0.5277071280226286,
+    "sd_ln_ratio": 0.19875278794428977,
+    "sd_between_scenario_means": 0.20185942964850417,
+    "sigma_between": 0.126661195026657,
+    "sigma_within": 0.166792525937158,
+    "icc": 0.36575541197414285,
+    "msb": 0.12361972356696593,
+    "msw": 0.027819746708497517
+   },
+   "plan_cell_adjusted": {
+    "pm10": {
+     "m1": {
+      "scenarios": 19,
+      "pairs": 19,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 13,
+      "pairs": 26,
+      "design_effect": 1.3657554119741429
+     },
+     "m3": {
+      "scenarios": 11,
+      "pairs": 33,
+      "design_effect": 1.7315108239482857
+     },
+     "m5": {
+      "scenarios": 10,
+      "pairs": 50,
+      "design_effect": 2.4630216478965714
+     },
+     "m10": {
+      "scenarios": 8,
+      "pairs": 80,
+      "design_effect": 4.291798707767286
+     },
+     "min_scenarios_m_inf": 7
+    },
+    "pm20": {
+     "m1": {
+      "scenarios": 6,
+      "pairs": 6,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 4,
+      "pairs": 8,
+      "design_effect": 1.3657554119741429
+     },
+     "m3": {
+      "scenarios": 3,
+      "pairs": 9,
+      "design_effect": 1.7315108239482857
+     },
+     "m5": {
+      "scenarios": 3,
+      "pairs": 15,
+      "design_effect": 2.4630216478965714
+     },
+     "m10": {
+      "scenarios": 3,
+      "pairs": 30,
+      "design_effect": 4.291798707767286
+     },
+     "min_scenarios_m_inf": 2
+    }
+   },
+   "plan_raw": {
+    "pm10": {
+     "m1": {
+      "scenarios": 19,
+      "pairs": 19,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 13,
+      "pairs": 26,
+      "design_effect": 1.3657554119741429
+     },
+     "m3": {
+      "scenarios": 11,
+      "pairs": 33,
+      "design_effect": 1.7315108239482857
+     },
+     "m5": {
+      "scenarios": 10,
+      "pairs": 50,
+      "design_effect": 2.4630216478965714
+     },
+     "m10": {
+      "scenarios": 8,
+      "pairs": 80,
+      "design_effect": 4.291798707767286
+     },
+     "min_scenarios_m_inf": 7
+    },
+    "pm20": {
+     "m1": {
+      "scenarios": 6,
+      "pairs": 6,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 4,
+      "pairs": 8,
+      "design_effect": 1.3657554119741429
+     },
+     "m3": {
+      "scenarios": 3,
+      "pairs": 9,
+      "design_effect": 1.7315108239482857
+     },
+     "m5": {
+      "scenarios": 3,
+      "pairs": 15,
+      "design_effect": 2.4630216478965714
+     },
+     "m10": {
+      "scenarios": 3,
+      "pairs": 30,
+      "design_effect": 4.291798707767286
+     },
+     "min_scenarios_m_inf": 2
+    }
+   }
+  },
+  {
+   "lever": "model_swap_control",
+   "host": "opus",
+   "suite": "S1",
+   "cells": [
+    "plain-sonnet"
+   ],
+   "campaigns": [
+    "holdout2",
+    "holdout3",
+    "planner-st-dev",
+    "prereg2-s1-holdout",
+    "reval-s1-dev",
+    "reval-s1-dev-reversed",
+    "shape-opus-dev",
+    "tune-opus-dev",
+    "tune-opus-dev-b2",
+    "value-st-dev"
+   ],
+   "raw": {
+    "n_pairs": 204,
+    "n_scenarios": 44,
+    "pairs_per_scenario_k0": 4.56,
+    "mean_ln_ratio": -0.030464247351186514,
+    "gmean_ratio": 0.9699951113418355,
+    "sd_ln_ratio": 0.19435645009631974,
+    "sd_between_scenario_means": 0.14801888961347354,
+    "sigma_between": 0.11872620549496501,
+    "sigma_within": 0.15546275546581317,
+    "icc": 0.36838015194509716,
+    "msb": 0.08840051846435017,
+    "msw": 0.024168668337023226
+   },
+   "cell_adjusted": {
+    "n_pairs": 204,
+    "n_scenarios": 44,
+    "pairs_per_scenario_k0": 4.56,
+    "mean_ln_ratio": -0.030464247351186514,
+    "gmean_ratio": 0.9699951113418355,
+    "sd_ln_ratio": 0.19435645009631974,
+    "sd_between_scenario_means": 0.14801888961347354,
+    "sigma_between": 0.11872620549496501,
+    "sigma_within": 0.15546275546581317,
+    "icc": 0.36838015194509716,
+    "msb": 0.08840051846435017,
+    "msw": 0.024168668337023226
+   },
+   "plan_cell_adjusted": {
+    "pm10": {
+     "m1": {
+      "scenarios": 17,
+      "pairs": 17,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 12,
+      "pairs": 24,
+      "design_effect": 1.368380151945097
+     },
+     "m3": {
+      "scenarios": 10,
+      "pairs": 30,
+      "design_effect": 1.7367603038901942
+     },
+     "m5": {
+      "scenarios": 9,
+      "pairs": 45,
+      "design_effect": 2.4735206077803884
+     },
+     "m10": {
+      "scenarios": 7,
+      "pairs": 70,
+      "design_effect": 4.315421367505874
+     },
+     "min_scenarios_m_inf": 6
+    },
+    "pm20": {
+     "m1": {
+      "scenarios": 5,
+      "pairs": 5,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 4,
+      "pairs": 8,
+      "design_effect": 1.368380151945097
+     },
+     "m3": {
+      "scenarios": 3,
+      "pairs": 9,
+      "design_effect": 1.7367603038901942
+     },
+     "m5": {
+      "scenarios": 3,
+      "pairs": 15,
+      "design_effect": 2.4735206077803884
+     },
+     "m10": {
+      "scenarios": 2,
+      "pairs": 20,
+      "design_effect": 4.315421367505874
+     },
+     "min_scenarios_m_inf": 2
+    }
+   },
+   "plan_raw": {
+    "pm10": {
+     "m1": {
+      "scenarios": 17,
+      "pairs": 17,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 12,
+      "pairs": 24,
+      "design_effect": 1.368380151945097
+     },
+     "m3": {
+      "scenarios": 10,
+      "pairs": 30,
+      "design_effect": 1.7367603038901942
+     },
+     "m5": {
+      "scenarios": 9,
+      "pairs": 45,
+      "design_effect": 2.4735206077803884
+     },
+     "m10": {
+      "scenarios": 7,
+      "pairs": 70,
+      "design_effect": 4.315421367505874
+     },
+     "min_scenarios_m_inf": 6
+    },
+    "pm20": {
+     "m1": {
+      "scenarios": 5,
+      "pairs": 5,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 4,
+      "pairs": 8,
+      "design_effect": 1.368380151945097
+     },
+     "m3": {
+      "scenarios": 3,
+      "pairs": 9,
+      "design_effect": 1.7367603038901942
+     },
+     "m5": {
+      "scenarios": 3,
+      "pairs": 15,
+      "design_effect": 2.4735206077803884
+     },
+     "m10": {
+      "scenarios": 2,
+      "pairs": 20,
+      "design_effect": 4.315421367505874
+     },
+     "min_scenarios_m_inf": 2
+    }
+   }
+  },
+  {
+   "lever": "model_swap_control",
+   "host": "opus",
+   "suite": "s1m",
+   "cells": [
+    "plain-sonnet"
+   ],
+   "campaigns": [
+    "m-holdout3",
+    "mt-dev",
+    "mt-smoke",
+    "planner-mt-dev",
+    "planner-smoke2",
+    "v12-mt-dev",
+    "value-mt-dev"
+   ],
+   "raw": {
+    "n_pairs": 45,
+    "n_scenarios": 6,
+    "pairs_per_scenario_k0": 6.37,
+    "mean_ln_ratio": 0.2986011284235315,
+    "gmean_ratio": 1.347971848572204,
+    "sd_ln_ratio": 0.1660885474461536,
+    "sd_between_scenario_means": 0.10463924352212746,
+    "sigma_between": 0.017809976052535818,
+    "sigma_within": 0.16539552393621065,
+    "icc": 0.011462316501170253,
+    "msb": 0.029377270378962005,
+    "msw": 0.027355679338133633
+   },
+   "cell_adjusted": {
+    "n_pairs": 45,
+    "n_scenarios": 6,
+    "pairs_per_scenario_k0": 6.37,
+    "mean_ln_ratio": 0.2986011284235314,
+    "gmean_ratio": 1.347971848572204,
+    "sd_ln_ratio": 0.16608854744615362,
+    "sd_between_scenario_means": 0.10463924352212746,
+    "sigma_between": 0.01780997605253585,
+    "sigma_within": 0.16539552393621065,
+    "icc": 0.011462316501170291,
+    "msb": 0.02937727037896201,
+    "msw": 0.027355679338133633
+   },
+   "plan_cell_adjusted": {
+    "pm10": {
+     "m1": {
+      "scenarios": 12,
+      "pairs": 12,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 6,
+      "pairs": 12,
+      "design_effect": 1.0114623165011702
+     },
+     "m3": {
+      "scenarios": 4,
+      "pairs": 12,
+      "design_effect": 1.0229246330023405
+     },
+     "m5": {
+      "scenarios": 3,
+      "pairs": 15,
+      "design_effect": 1.0458492660046812
+     },
+     "m10": {
+      "scenarios": 2,
+      "pairs": 20,
+      "design_effect": 1.1031608485105326
+     },
+     "min_scenarios_m_inf": 1
+    },
+    "pm20": {
+     "m1": {
+      "scenarios": 4,
+      "pairs": 4,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 2,
+      "pairs": 4,
+      "design_effect": 1.0114623165011702
+     },
+     "m3": {
+      "scenarios": 2,
+      "pairs": 6,
+      "design_effect": 1.0229246330023405
+     },
+     "m5": {
+      "scenarios": 2,
+      "pairs": 10,
+      "design_effect": 1.0458492660046812
+     },
+     "m10": {
+      "scenarios": 2,
+      "pairs": 20,
+      "design_effect": 1.1031608485105326
+     },
+     "min_scenarios_m_inf": 1
+    }
+   },
+   "plan_raw": {
+    "pm10": {
+     "m1": {
+      "scenarios": 12,
+      "pairs": 12,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 6,
+      "pairs": 12,
+      "design_effect": 1.0114623165011702
+     },
+     "m3": {
+      "scenarios": 4,
+      "pairs": 12,
+      "design_effect": 1.0229246330023405
+     },
+     "m5": {
+      "scenarios": 3,
+      "pairs": 15,
+      "design_effect": 1.045849266004681
+     },
+     "m10": {
+      "scenarios": 2,
+      "pairs": 20,
+      "design_effect": 1.1031608485105322
+     },
+     "min_scenarios_m_inf": 1
+    },
+    "pm20": {
+     "m1": {
+      "scenarios": 4,
+      "pairs": 4,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 2,
+      "pairs": 4,
+      "design_effect": 1.0114623165011702
+     },
+     "m3": {
+      "scenarios": 2,
+      "pairs": 6,
+      "design_effect": 1.0229246330023405
+     },
+     "m5": {
+      "scenarios": 2,
+      "pairs": 10,
+      "design_effect": 1.045849266004681
+     },
+     "m10": {
+      "scenarios": 2,
+      "pairs": 20,
+      "design_effect": 1.1031608485105322
+     },
+     "min_scenarios_m_inf": 1
+    }
+   }
+  },
+  {
+   "lever": "prepared_or_retrieval_same_model",
+   "host": "sonnet",
+   "suite": "S3-v4",
+   "cells": [
+    "jev-prepared",
+    "jevgrep",
+    "laya-prepared"
+   ],
+   "campaigns": [
+    "swebench-complete-v4"
+   ],
+   "raw": {
+    "n_pairs": 105,
+    "n_scenarios": 35,
+    "pairs_per_scenario_k0": 3.0,
+    "mean_ln_ratio": 0.10579587444496102,
+    "gmean_ratio": 1.1115949484105843,
+    "sd_ln_ratio": 0.3902112711700258,
+    "sd_between_scenario_means": 0.3047805454713621,
+    "sigma_between": 0.2502047302730773,
+    "sigma_within": 0.30144041125965987,
+    "icc": 0.40791637244673723,
+    "msb": 0.278673542693463,
+    "msw": 0.09086632154039288
+   },
+   "cell_adjusted": {
+    "n_pairs": 105,
+    "n_scenarios": 35,
+    "pairs_per_scenario_k0": 3.0,
+    "mean_ln_ratio": 0.10579587444496102,
+    "gmean_ratio": 1.1115949484105843,
+    "sd_ln_ratio": 0.38816385059235603,
+    "sd_between_scenario_means": 0.304780545471362,
+    "sigma_between": 0.2517769822852957,
+    "sigma_within": 0.2974871363057445,
+    "icc": 0.4173516790162321,
+    "msb": 0.278673542693463,
+    "msw": 0.08849859626739263
+   },
+   "plan_cell_adjusted": {
+    "pm10": {
+     "m1": {
+      "scenarios": 65,
+      "pairs": 65,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 46,
+      "pairs": 92,
+      "design_effect": 1.4173516790162322
+     },
+     "m3": {
+      "scenarios": 40,
+      "pairs": 120,
+      "design_effect": 1.8347033580324643
+     },
+     "m5": {
+      "scenarios": 35,
+      "pairs": 175,
+      "design_effect": 2.6694067160649286
+     },
+     "m10": {
+      "scenarios": 31,
+      "pairs": 310,
+      "design_effect": 4.756165111146089
+     },
+     "min_scenarios_m_inf": 27
+    },
+    "pm20": {
+     "m1": {
+      "scenarios": 18,
+      "pairs": 18,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 13,
+      "pairs": 26,
+      "design_effect": 1.4173516790162322
+     },
+     "m3": {
+      "scenarios": 11,
+      "pairs": 33,
+      "design_effect": 1.8347033580324643
+     },
+     "m5": {
+      "scenarios": 10,
+      "pairs": 50,
+      "design_effect": 2.6694067160649286
+     },
+     "m10": {
+      "scenarios": 9,
+      "pairs": 90,
+      "design_effect": 4.756165111146089
+     },
+     "min_scenarios_m_inf": 8
+    }
+   },
+   "plan_raw": {
+    "pm10": {
+     "m1": {
+      "scenarios": 65,
+      "pairs": 65,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 46,
+      "pairs": 92,
+      "design_effect": 1.4079163724467372
+     },
+     "m3": {
+      "scenarios": 40,
+      "pairs": 120,
+      "design_effect": 1.8158327448934743
+     },
+     "m5": {
+      "scenarios": 35,
+      "pairs": 175,
+      "design_effect": 2.6316654897869487
+     },
+     "m10": {
+      "scenarios": 31,
+      "pairs": 310,
+      "design_effect": 4.671247352020635
+     },
+     "min_scenarios_m_inf": 27
+    },
+    "pm20": {
+     "m1": {
+      "scenarios": 18,
+      "pairs": 18,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 13,
+      "pairs": 26,
+      "design_effect": 1.4079163724467372
+     },
+     "m3": {
+      "scenarios": 11,
+      "pairs": 33,
+      "design_effect": 1.8158327448934743
+     },
+     "m5": {
+      "scenarios": 10,
+      "pairs": 50,
+      "design_effect": 2.6316654897869487
+     },
+     "m10": {
+      "scenarios": 9,
+      "pairs": 90,
+      "design_effect": 4.671247352020635
+     },
+     "min_scenarios_m_inf": 8
+    }
+   }
+  },
+  {
+   "lever": "routing",
+   "host": "fable",
+   "suite": "S1",
+   "cells": [
+    "orch-default",
+    "orch-haiku-fable",
+    "orch-planner-sub-fable",
+    "orch-planner-v12-sub-fable",
+    "orch-planner-value-sub-fable",
+    "orch-router-jev",
+    "orch-router-rules"
+   ],
+   "campaigns": [
+    "holdout2",
+    "holdout3",
+    "planner-st-dev",
+    "prereg-s1-holdout",
+    "prereg2-s1-holdout",
+    "reval-s1-dev",
+    "reval-s1-dev-reversed",
+    "router-rules-s1-dev",
+    "router-s1-dev",
+    "tune-fable-dev",
+    "value-st-dev"
+   ],
+   "raw": {
+    "n_pairs": 295,
+    "n_scenarios": 39,
+    "pairs_per_scenario_k0": 7.42,
+    "mean_ln_ratio": -0.8222414172861428,
+    "gmean_ratio": 0.43944556890971276,
+    "sd_ln_ratio": 0.5550460471697508,
+    "sd_between_scenario_means": 0.4071486441181184,
+    "sigma_between": 0.42359295606462705,
+    "sigma_within": 0.36884050004717717,
+    "icc": 0.5687657869487135,
+    "msb": 1.4670339250300988,
+    "msw": 0.1360433144750517
+   },
+   "cell_adjusted": {
+    "n_pairs": 295,
+    "n_scenarios": 39,
+    "pairs_per_scenario_k0": 7.42,
+    "mean_ln_ratio": -0.8222414172861426,
+    "gmean_ratio": 0.4394455689097128,
+    "sd_ln_ratio": 0.4959792287371078,
+    "sd_between_scenario_means": 0.39334687288871634,
+    "sigma_between": 0.4326230997523884,
+    "sigma_within": 0.25797215436157195,
+    "icc": 0.7376965494408184,
+    "msb": 1.4548931665400413,
+    "msw": 0.0665496324259507
+   },
+   "plan_cell_adjusted": {
+    "pm10": {
+     "m1": {
+      "scenarios": 108,
+      "pairs": 108,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 94,
+      "pairs": 188,
+      "design_effect": 1.7376965494408183
+     },
+     "m3": {
+      "scenarios": 89,
+      "pairs": 267,
+      "design_effect": 2.4753930988816366
+     },
+     "m5": {
+      "scenarios": 85,
+      "pairs": 425,
+      "design_effect": 3.9507861977632737
+     },
+     "m10": {
+      "scenarios": 82,
+      "pairs": 820,
+      "design_effect": 7.639268944967366
+     },
+     "min_scenarios_m_inf": 80
+    },
+    "pm20": {
+     "m1": {
+      "scenarios": 30,
+      "pairs": 30,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 26,
+      "pairs": 52,
+      "design_effect": 1.7376965494408183
+     },
+     "m3": {
+      "scenarios": 25,
+      "pairs": 75,
+      "design_effect": 2.4753930988816366
+     },
+     "m5": {
+      "scenarios": 24,
+      "pairs": 120,
+      "design_effect": 3.9507861977632737
+     },
+     "m10": {
+      "scenarios": 23,
+      "pairs": 230,
+      "design_effect": 7.639268944967366
+     },
+     "min_scenarios_m_inf": 22
+    }
+   },
+   "plan_raw": {
+    "pm10": {
+     "m1": {
+      "scenarios": 134,
+      "pairs": 134,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 105,
+      "pairs": 210,
+      "design_effect": 1.5687657869487135
+     },
+     "m3": {
+      "scenarios": 96,
+      "pairs": 288,
+      "design_effect": 2.137531573897427
+     },
+     "m5": {
+      "scenarios": 88,
+      "pairs": 440,
+      "design_effect": 3.275063147794854
+     },
+     "m10": {
+      "scenarios": 82,
+      "pairs": 820,
+      "design_effect": 6.118892082538421
+     },
+     "min_scenarios_m_inf": 76
+    },
+    "pm20": {
+     "m1": {
+      "scenarios": 37,
+      "pairs": 37,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 29,
+      "pairs": 58,
+      "design_effect": 1.5687657869487135
+     },
+     "m3": {
+      "scenarios": 26,
+      "pairs": 78,
+      "design_effect": 2.137531573897427
+     },
+     "m5": {
+      "scenarios": 24,
+      "pairs": 120,
+      "design_effect": 3.275063147794854
+     },
+     "m10": {
+      "scenarios": 23,
+      "pairs": 230,
+      "design_effect": 6.118892082538421
+     },
+     "min_scenarios_m_inf": 21
+    }
+   }
+  },
+  {
+   "lever": "routing",
+   "host": "fable",
+   "suite": "S3",
+   "cells": [
+    "orch-router-jev",
+    "orch-router-local",
+    "orch-router-rules"
+   ],
+   "campaigns": [
+    "swe-complex-speed",
+    "swe-router-reps",
+    "swe-router10"
+   ],
+   "raw": {
+    "n_pairs": 60,
+    "n_scenarios": 10,
+    "pairs_per_scenario_k0": 6.0,
+    "mean_ln_ratio": -0.07169711576158136,
+    "gmean_ratio": 0.9308127816401408,
+    "sd_ln_ratio": 0.40195879789633804,
+    "sd_between_scenario_means": 0.2690225976226076,
+    "sigma_between": 0.23157012117298997,
+    "sigma_within": 0.33539621653986046,
+    "icc": 0.32281618315797184,
+    "msb": 0.4342389481896925,
+    "msw": 0.11249062206925295
+   },
+   "cell_adjusted": {
+    "n_pairs": 60,
+    "n_scenarios": 10,
+    "pairs_per_scenario_k0": 6.0,
+    "mean_ln_ratio": -0.07169711576158136,
+    "gmean_ratio": 0.9308127816401408,
+    "sd_ln_ratio": 0.39981459589402946,
+    "sd_between_scenario_means": 0.2690225976226076,
+    "sigma_between": 0.23229899546982832,
+    "sigma_within": 0.33235825311242767,
+    "icc": 0.3281914461195607,
+    "msb": 0.4342389481896925,
+    "msw": 0.11046200841194452
+   },
+   "plan_cell_adjusted": {
+    "pm10": {
+     "m1": {
+      "scenarios": 70,
+      "pairs": 70,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 47,
+      "pairs": 94,
+      "design_effect": 1.3281914461195607
+     },
+     "m3": {
+      "scenarios": 39,
+      "pairs": 117,
+      "design_effect": 1.6563828922391215
+     },
+     "m5": {
+      "scenarios": 33,
+      "pairs": 165,
+      "design_effect": 2.312765784478243
+     },
+     "m10": {
+      "scenarios": 28,
+      "pairs": 280,
+      "design_effect": 3.9537230150760463
+     },
+     "min_scenarios_m_inf": 23
+    },
+    "pm20": {
+     "m1": {
+      "scenarios": 20,
+      "pairs": 20,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 13,
+      "pairs": 26,
+      "design_effect": 1.3281914461195607
+     },
+     "m3": {
+      "scenarios": 11,
+      "pairs": 33,
+      "design_effect": 1.6563828922391215
+     },
+     "m5": {
+      "scenarios": 9,
+      "pairs": 45,
+      "design_effect": 2.312765784478243
+     },
+     "m10": {
+      "scenarios": 8,
+      "pairs": 80,
+      "design_effect": 3.9537230150760463
+     },
+     "min_scenarios_m_inf": 7
+    }
+   },
+   "plan_raw": {
+    "pm10": {
+     "m1": {
+      "scenarios": 71,
+      "pairs": 71,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 47,
+      "pairs": 94,
+      "design_effect": 1.322816183157972
+     },
+     "m3": {
+      "scenarios": 39,
+      "pairs": 117,
+      "design_effect": 1.6456323663159438
+     },
+     "m5": {
+      "scenarios": 33,
+      "pairs": 165,
+      "design_effect": 2.2912647326318876
+     },
+     "m10": {
+      "scenarios": 28,
+      "pairs": 280,
+      "design_effect": 3.9053456484217466
+     },
+     "min_scenarios_m_inf": 23
+    },
+    "pm20": {
+     "m1": {
+      "scenarios": 20,
+      "pairs": 20,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 13,
+      "pairs": 26,
+      "design_effect": 1.322816183157972
+     },
+     "m3": {
+      "scenarios": 11,
+      "pairs": 33,
+      "design_effect": 1.6456323663159438
+     },
+     "m5": {
+      "scenarios": 9,
+      "pairs": 45,
+      "design_effect": 2.2912647326318876
+     },
+     "m10": {
+      "scenarios": 8,
+      "pairs": 80,
+      "design_effect": 3.9053456484217466
+     },
+     "min_scenarios_m_inf": 7
+    }
+   }
+  },
+  {
+   "lever": "routing",
+   "host": "fable",
+   "suite": "s1m",
+   "cells": [
+    "orch-default",
+    "orch-planner-fable",
+    "orch-planner-v12-fable",
+    "orch-planner-value-fable"
+   ],
+   "campaigns": [
+    "m-holdout3",
+    "mt-dev",
+    "planner-mt-dev",
+    "planner-smoke",
+    "planner-smoke2",
+    "v12-mt-dev",
+    "value-mt-dev"
+   ],
+   "raw": {
+    "n_pairs": 75,
+    "n_scenarios": 6,
+    "pairs_per_scenario_k0": 10.74,
+    "mean_ln_ratio": -0.504184368661008,
+    "gmean_ratio": 0.6039980142845979,
+    "sd_ln_ratio": 0.3766624457947849,
+    "sd_between_scenario_means": 0.32259383693908233,
+    "sigma_between": 0.26742145675734824,
+    "sigma_within": 0.2999963083975353,
+    "icc": 0.4427796474503195,
+    "msb": 0.8577746177475596,
+    "msw": 0.08999778505214913
+   },
+   "cell_adjusted": {
+    "n_pairs": 75,
+    "n_scenarios": 6,
+    "pairs_per_scenario_k0": 10.74,
+    "mean_ln_ratio": -0.504184368661008,
+    "gmean_ratio": 0.6039980142845979,
+    "sd_ln_ratio": 0.3731360220994405,
+    "sd_between_scenario_means": 0.3150583634442426,
+    "sigma_between": 0.26459779603232475,
+    "sigma_within": 0.29739437173604244,
+    "icc": 0.4418403602005255,
+    "msb": 0.8400921763294733,
+    "msw": 0.0884434123402754
+   },
+   "plan_cell_adjusted": {
+    "pm10": {
+     "m1": {
+      "scenarios": 68,
+      "pairs": 68,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 49,
+      "pairs": 98,
+      "design_effect": 1.4418403602005254
+     },
+     "m3": {
+      "scenarios": 43,
+      "pairs": 129,
+      "design_effect": 1.8836807204010508
+     },
+     "m5": {
+      "scenarios": 38,
+      "pairs": 190,
+      "design_effect": 2.7673614408021017
+     },
+     "m10": {
+      "scenarios": 34,
+      "pairs": 340,
+      "design_effect": 4.97656324180473
+     },
+     "min_scenarios_m_inf": 30
+    },
+    "pm20": {
+     "m1": {
+      "scenarios": 19,
+      "pairs": 19,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 14,
+      "pairs": 28,
+      "design_effect": 1.4418403602005254
+     },
+     "m3": {
+      "scenarios": 12,
+      "pairs": 36,
+      "design_effect": 1.8836807204010508
+     },
+     "m5": {
+      "scenarios": 11,
+      "pairs": 55,
+      "design_effect": 2.7673614408021017
+     },
+     "m10": {
+      "scenarios": 10,
+      "pairs": 100,
+      "design_effect": 4.97656324180473
+     },
+     "min_scenarios_m_inf": 9
+    }
+   },
+   "plan_raw": {
+    "pm10": {
+     "m1": {
+      "scenarios": 69,
+      "pairs": 69,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 50,
+      "pairs": 100,
+      "design_effect": 1.4427796474503194
+     },
+     "m3": {
+      "scenarios": 43,
+      "pairs": 129,
+      "design_effect": 1.885559294900639
+     },
+     "m5": {
+      "scenarios": 38,
+      "pairs": 190,
+      "design_effect": 2.771118589801278
+     },
+     "m10": {
+      "scenarios": 35,
+      "pairs": 350,
+      "design_effect": 4.985016827052876
+     },
+     "min_scenarios_m_inf": 31
+    },
+    "pm20": {
+     "m1": {
+      "scenarios": 19,
+      "pairs": 19,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 14,
+      "pairs": 28,
+      "design_effect": 1.4427796474503194
+     },
+     "m3": {
+      "scenarios": 12,
+      "pairs": 36,
+      "design_effect": 1.885559294900639
+     },
+     "m5": {
+      "scenarios": 11,
+      "pairs": 55,
+      "design_effect": 2.771118589801278
+     },
+     "m10": {
+      "scenarios": 10,
+      "pairs": 100,
+      "design_effect": 4.985016827052876
+     },
+     "min_scenarios_m_inf": 9
+    }
+   }
+  },
+  {
+   "lever": "routing",
+   "host": "opus",
+   "suite": "S1",
+   "cells": [
+    "orch-default-opus",
+    "orch-haiku-low-opus",
+    "orch-haiku-opus",
+    "orch-planner-sub-opus",
+    "orch-planner-v12-sub-opus",
+    "orch-planner-value-sub-opus",
+    "orch-sonnetlow-opus"
+   ],
+   "campaigns": [
+    "holdout2",
+    "holdout3",
+    "planner-st-dev",
+    "prereg2-s1-holdout",
+    "reval-s1-dev",
+    "reval-s1-dev-reversed",
+    "shape-opus-dev",
+    "tune-opus-dev",
+    "tune-opus-dev-b2",
+    "value-st-dev"
+   ],
+   "raw": {
+    "n_pairs": 360,
+    "n_scenarios": 44,
+    "pairs_per_scenario_k0": 7.95,
+    "mean_ln_ratio": -0.22740851815879523,
+    "gmean_ratio": 0.7965952921682922,
+    "sd_ln_ratio": 0.47733873599590354,
+    "sd_between_scenario_means": 0.18271519112058257,
+    "sigma_between": 0.13628480782980734,
+    "sigma_within": 0.4584452463790682,
+    "icc": 0.08119740634154135,
+    "msb": 0.3577813638973843,
+    "msw": 0.21017204392756456
+   },
+   "cell_adjusted": {
+    "n_pairs": 360,
+    "n_scenarios": 44,
+    "pairs_per_scenario_k0": 7.95,
+    "mean_ln_ratio": -0.22740851815879526,
+    "gmean_ratio": 0.7965952921682922,
+    "sd_ln_ratio": 0.30935795984045406,
+    "sd_between_scenario_means": 0.15062587003471514,
+    "sigma_between": 0.16183655048144505,
+    "sigma_within": 0.2660281539398827,
+    "icc": 0.27011670727555753,
+    "msb": 0.2789189167688247,
+    "msw": 0.07077097868866195
+   },
+   "plan_cell_adjusted": {
+    "pm10": {
+     "m1": {
+      "scenarios": 42,
+      "pairs": 42,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 27,
+      "pairs": 54,
+      "design_effect": 1.2701167072755575
+     },
+     "m3": {
+      "scenarios": 22,
+      "pairs": 66,
+      "design_effect": 1.540233414551115
+     },
+     "m5": {
+      "scenarios": 18,
+      "pairs": 90,
+      "design_effect": 2.08046682910223
+     },
+     "m10": {
+      "scenarios": 15,
+      "pairs": 150,
+      "design_effect": 3.4310503654800177
+     },
+     "min_scenarios_m_inf": 12
+    },
+    "pm20": {
+     "m1": {
+      "scenarios": 12,
+      "pairs": 12,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 8,
+      "pairs": 16,
+      "design_effect": 1.2701167072755575
+     },
+     "m3": {
+      "scenarios": 6,
+      "pairs": 18,
+      "design_effect": 1.540233414551115
+     },
+     "m5": {
+      "scenarios": 5,
+      "pairs": 25,
+      "design_effect": 2.08046682910223
+     },
+     "m10": {
+      "scenarios": 4,
+      "pairs": 40,
+      "design_effect": 3.4310503654800177
+     },
+     "min_scenarios_m_inf": 4
+    }
+   },
+   "plan_raw": {
+    "pm10": {
+     "m1": {
+      "scenarios": 97,
+      "pairs": 97,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 53,
+      "pairs": 106,
+      "design_effect": 1.0811974063415413
+     },
+     "m3": {
+      "scenarios": 38,
+      "pairs": 114,
+      "design_effect": 1.1623948126830828
+     },
+     "m5": {
+      "scenarios": 26,
+      "pairs": 130,
+      "design_effect": 1.3247896253661655
+     },
+     "m10": {
+      "scenarios": 17,
+      "pairs": 170,
+      "design_effect": 1.7307766570738723
+     },
+     "min_scenarios_m_inf": 8
+    },
+    "pm20": {
+     "m1": {
+      "scenarios": 27,
+      "pairs": 27,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 15,
+      "pairs": 30,
+      "design_effect": 1.0811974063415413
+     },
+     "m3": {
+      "scenarios": 11,
+      "pairs": 33,
+      "design_effect": 1.1623948126830828
+     },
+     "m5": {
+      "scenarios": 8,
+      "pairs": 40,
+      "design_effect": 1.3247896253661655
+     },
+     "m10": {
+      "scenarios": 5,
+      "pairs": 50,
+      "design_effect": 1.7307766570738723
+     },
+     "min_scenarios_m_inf": 3
+    }
+   }
+  },
+  {
+   "lever": "routing",
+   "host": "opus",
+   "suite": "s1m",
+   "cells": [
+    "orch-default-opus",
+    "orch-planner-opus",
+    "orch-planner-v12-opus",
+    "orch-planner-value-opus"
+   ],
+   "campaigns": [
+    "m-holdout3",
+    "mt-dev",
+    "mt-smoke",
+    "planner-mt-dev",
+    "planner-smoke",
+    "planner-smoke2",
+    "v12-mt-dev",
+    "value-mt-dev"
+   ],
+   "raw": {
+    "n_pairs": 90,
+    "n_scenarios": 6,
+    "pairs_per_scenario_k0": 12.75,
+    "mean_ln_ratio": 0.17788694477359282,
+    "gmean_ratio": 1.1946902476231243,
+    "sd_ln_ratio": 0.23280345373072975,
+    "sd_between_scenario_means": 0.044259034872789337,
+    "sigma_between": 0.0,
+    "sigma_within": 0.23289352633142227,
+    "icc": 0.0,
+    "msb": 0.05349274622839153,
+    "msw": 0.05423939460708488
+   },
+   "cell_adjusted": {
+    "n_pairs": 90,
+    "n_scenarios": 6,
+    "pairs_per_scenario_k0": 12.75,
+    "mean_ln_ratio": 0.17788694477359282,
+    "gmean_ratio": 1.1946902476231243,
+    "sd_ln_ratio": 0.2125521743974416,
+    "sd_between_scenario_means": 0.04631126389385185,
+    "sigma_between": 0.027363835202469176,
+    "sigma_within": 0.21128706115582807,
+    "icc": 0.016496209581815628,
+    "msb": 0.054186664611872284,
+    "msw": 0.04464222221186663
+   },
+   "plan_cell_adjusted": {
+    "pm10": {
+     "m1": {
+      "scenarios": 20,
+      "pairs": 20,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 10,
+      "pairs": 20,
+      "design_effect": 1.0164962095818155
+     },
+     "m3": {
+      "scenarios": 7,
+      "pairs": 21,
+      "design_effect": 1.0329924191636313
+     },
+     "m5": {
+      "scenarios": 5,
+      "pairs": 25,
+      "design_effect": 1.0659848383272625
+     },
+     "m10": {
+      "scenarios": 3,
+      "pairs": 30,
+      "design_effect": 1.1484658862363406
+     },
+     "min_scenarios_m_inf": 1
+    },
+    "pm20": {
+     "m1": {
+      "scenarios": 6,
+      "pairs": 6,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 3,
+      "pairs": 6,
+      "design_effect": 1.0164962095818155
+     },
+     "m3": {
+      "scenarios": 2,
+      "pairs": 6,
+      "design_effect": 1.0329924191636313
+     },
+     "m5": {
+      "scenarios": 2,
+      "pairs": 10,
+      "design_effect": 1.0659848383272625
+     },
+     "m10": {
+      "scenarios": 2,
+      "pairs": 20,
+      "design_effect": 1.1484658862363406
+     },
+     "min_scenarios_m_inf": 1
+    }
+   },
+   "plan_raw": {
+    "pm10": {
+     "m1": {
+      "scenarios": 23,
+      "pairs": 23,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 12,
+      "pairs": 24,
+      "design_effect": 1.0
+     },
+     "m3": {
+      "scenarios": 8,
+      "pairs": 24,
+      "design_effect": 1.0
+     },
+     "m5": {
+      "scenarios": 5,
+      "pairs": 25,
+      "design_effect": 1.0
+     },
+     "m10": {
+      "scenarios": 3,
+      "pairs": 30,
+      "design_effect": 1.0
+     },
+     "min_scenarios_m_inf": 0
+    },
+    "pm20": {
+     "m1": {
+      "scenarios": 7,
+      "pairs": 7,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 4,
+      "pairs": 8,
+      "design_effect": 1.0
+     },
+     "m3": {
+      "scenarios": 3,
+      "pairs": 9,
+      "design_effect": 1.0
+     },
+     "m5": {
+      "scenarios": 2,
+      "pairs": 10,
+      "design_effect": 1.0
+     },
+     "m10": {
+      "scenarios": 2,
+      "pairs": 20,
+      "design_effect": 1.0
+     },
+     "min_scenarios_m_inf": 0
+    }
+   }
+  },
+  {
+   "lever": "routing_plus_shaping",
+   "host": "fable",
+   "suite": "S1",
+   "cells": [
+    "orch-haiku-shaped-fable"
+   ],
+   "campaigns": [
+    "holdout2"
+   ],
+   "raw": {
+    "n_pairs": 36,
+    "n_scenarios": 12,
+    "pairs_per_scenario_k0": 3.0,
+    "mean_ln_ratio": -1.7163074202648243,
+    "gmean_ratio": 0.17972858624099947,
+    "sd_ln_ratio": 0.9971411747023653,
+    "sd_between_scenario_means": 1.016233879442321,
+    "sigma_between": 1.0113015402415322,
+    "sigma_within": 0.1732093452862275,
+    "icc": 0.9715013229947791,
+    "msb": 3.098193893179169,
+    "msw": 0.030001477294483585
+   },
+   "cell_adjusted": {
+    "n_pairs": 36,
+    "n_scenarios": 12,
+    "pairs_per_scenario_k0": 3.0,
+    "mean_ln_ratio": -1.7163074202648243,
+    "gmean_ratio": 0.17972858624099947,
+    "sd_ln_ratio": 0.9971411747023653,
+    "sd_between_scenario_means": 1.016233879442321,
+    "sigma_between": 1.0113015402415322,
+    "sigma_within": 0.1732093452862275,
+    "icc": 0.9715013229947791,
+    "msb": 3.098193893179169,
+    "msw": 0.030001477294483585
+   },
+   "plan_cell_adjusted": {
+    "pm10": {
+     "m1": {
+      "scenarios": 446,
+      "pairs": 446,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 439,
+      "pairs": 878,
+      "design_effect": 1.971501322994779
+     },
+     "m3": {
+      "scenarios": 437,
+      "pairs": 1311,
+      "design_effect": 2.943002645989558
+     },
+     "m5": {
+      "scenarios": 436,
+      "pairs": 2180,
+      "design_effect": 4.886005291979116
+     },
+     "m10": {
+      "scenarios": 434,
+      "pairs": 4340,
+      "design_effect": 9.743511906953012
+     },
+     "min_scenarios_m_inf": 433
+    },
+    "pm20": {
+     "m1": {
+      "scenarios": 122,
+      "pairs": 122,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 120,
+      "pairs": 240,
+      "design_effect": 1.971501322994779
+     },
+     "m3": {
+      "scenarios": 120,
+      "pairs": 360,
+      "design_effect": 2.943002645989558
+     },
+     "m5": {
+      "scenarios": 119,
+      "pairs": 595,
+      "design_effect": 4.886005291979116
+     },
+     "m10": {
+      "scenarios": 119,
+      "pairs": 1190,
+      "design_effect": 9.743511906953012
+     },
+     "min_scenarios_m_inf": 119
+    }
+   },
+   "plan_raw": {
+    "pm10": {
+     "m1": {
+      "scenarios": 446,
+      "pairs": 446,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 439,
+      "pairs": 878,
+      "design_effect": 1.971501322994779
+     },
+     "m3": {
+      "scenarios": 437,
+      "pairs": 1311,
+      "design_effect": 2.943002645989558
+     },
+     "m5": {
+      "scenarios": 436,
+      "pairs": 2180,
+      "design_effect": 4.886005291979116
+     },
+     "m10": {
+      "scenarios": 434,
+      "pairs": 4340,
+      "design_effect": 9.743511906953012
+     },
+     "min_scenarios_m_inf": 433
+    },
+    "pm20": {
+     "m1": {
+      "scenarios": 122,
+      "pairs": 122,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 120,
+      "pairs": 240,
+      "design_effect": 1.971501322994779
+     },
+     "m3": {
+      "scenarios": 120,
+      "pairs": 360,
+      "design_effect": 2.943002645989558
+     },
+     "m5": {
+      "scenarios": 119,
+      "pairs": 595,
+      "design_effect": 4.886005291979116
+     },
+     "m10": {
+      "scenarios": 119,
+      "pairs": 1190,
+      "design_effect": 9.743511906953012
+     },
+     "min_scenarios_m_inf": 119
+    }
+   }
+  },
+  {
+   "lever": "routing_plus_shaping",
+   "host": "fable",
+   "suite": "s1m",
+   "cells": [
+    "orch-haiku-shaped-fable"
+   ],
+   "campaigns": [
+    "mt-dev"
+   ],
+   "raw": {
+    "n_pairs": 9,
+    "n_scenarios": 3,
+    "pairs_per_scenario_k0": 3.0,
+    "mean_ln_ratio": -0.9073562867142095,
+    "gmean_ratio": 0.40358979057815836,
+    "sd_ln_ratio": 0.8011435330097952,
+    "sd_between_scenario_means": 0.6950477908774403,
+    "sigma_between": 0.5990523384025113,
+    "sigma_within": 0.6104778311898632,
+    "icc": 0.49055461892913943,
+    "msb": 1.44927429481083,
+    "msw": 0.3726831823742791
+   },
+   "cell_adjusted": {
+    "n_pairs": 9,
+    "n_scenarios": 3,
+    "pairs_per_scenario_k0": 3.0,
+    "mean_ln_ratio": -0.9073562867142093,
+    "gmean_ratio": 0.4035897905781584,
+    "sd_ln_ratio": 0.8011435330097952,
+    "sd_between_scenario_means": 0.6950477908774403,
+    "sigma_between": 0.5990523384025113,
+    "sigma_within": 0.6104778311898632,
+    "icc": 0.4905546189291393,
+    "msb": 1.4492742948108297,
+    "msw": 0.3726831823742791
+   },
+   "plan_cell_adjusted": {
+    "pm10": {
+     "m1": {
+      "scenarios": 310,
+      "pairs": 310,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 231,
+      "pairs": 462,
+      "design_effect": 1.4905546189291394
+     },
+     "m3": {
+      "scenarios": 205,
+      "pairs": 615,
+      "design_effect": 1.9811092378582786
+     },
+     "m5": {
+      "scenarios": 184,
+      "pairs": 920,
+      "design_effect": 2.9622184757165573
+     },
+     "m10": {
+      "scenarios": 168,
+      "pairs": 1680,
+      "design_effect": 5.414991570362254
+     },
+     "min_scenarios_m_inf": 152
+    },
+    "pm20": {
+     "m1": {
+      "scenarios": 85,
+      "pairs": 85,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 64,
+      "pairs": 128,
+      "design_effect": 1.4905546189291394
+     },
+     "m3": {
+      "scenarios": 56,
+      "pairs": 168,
+      "design_effect": 1.9811092378582786
+     },
+     "m5": {
+      "scenarios": 51,
+      "pairs": 255,
+      "design_effect": 2.9622184757165573
+     },
+     "m10": {
+      "scenarios": 46,
+      "pairs": 460,
+      "design_effect": 5.414991570362254
+     },
+     "min_scenarios_m_inf": 42
+    }
+   },
+   "plan_raw": {
+    "pm10": {
+     "m1": {
+      "scenarios": 310,
+      "pairs": 310,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 231,
+      "pairs": 462,
+      "design_effect": 1.4905546189291394
+     },
+     "m3": {
+      "scenarios": 205,
+      "pairs": 615,
+      "design_effect": 1.9811092378582789
+     },
+     "m5": {
+      "scenarios": 184,
+      "pairs": 920,
+      "design_effect": 2.9622184757165577
+     },
+     "m10": {
+      "scenarios": 168,
+      "pairs": 1680,
+      "design_effect": 5.414991570362255
+     },
+     "min_scenarios_m_inf": 152
+    },
+    "pm20": {
+     "m1": {
+      "scenarios": 85,
+      "pairs": 85,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 64,
+      "pairs": 128,
+      "design_effect": 1.4905546189291394
+     },
+     "m3": {
+      "scenarios": 56,
+      "pairs": 168,
+      "design_effect": 1.9811092378582789
+     },
+     "m5": {
+      "scenarios": 51,
+      "pairs": 255,
+      "design_effect": 2.9622184757165577
+     },
+     "m10": {
+      "scenarios": 46,
+      "pairs": 460,
+      "design_effect": 5.414991570362255
+     },
+     "min_scenarios_m_inf": 42
+    }
+   }
+  },
+  {
+   "lever": "routing_plus_shaping",
+   "host": "opus",
+   "suite": "S1",
+   "cells": [
+    "orch-haiku-guided-opus",
+    "orch-haiku-shaped-opus",
+    "orch-sonnet-shaped-opus"
+   ],
+   "campaigns": [
+    "holdout2",
+    "shape-opus-dev"
+   ],
+   "raw": {
+    "n_pairs": 108,
+    "n_scenarios": 24,
+    "pairs_per_scenario_k0": 4.48,
+    "mean_ln_ratio": -0.784889880990258,
+    "gmean_ratio": 0.4561699320011237,
+    "sd_ln_ratio": 0.6756487463272302,
+    "sd_between_scenario_means": 0.5450354705376477,
+    "sigma_between": 0.45869112001018,
+    "sigma_within": 0.5039533843215905,
+    "icc": 0.4530850474452335,
+    "msb": 1.196184100019094,
+    "msw": 0.2539690135691847
+   },
+   "cell_adjusted": {
+    "n_pairs": 108,
+    "n_scenarios": 24,
+    "pairs_per_scenario_k0": 4.48,
+    "mean_ln_ratio": -0.7848898809902581,
+    "gmean_ratio": 0.45616993200112366,
+    "sd_ln_ratio": 0.5416316033404294,
+    "sd_between_scenario_means": 0.5203637356940957,
+    "sigma_between": 0.4763338504992503,
+    "sigma_within": 0.2737752233987662,
+    "icc": 0.7516857212188028,
+    "msb": 1.0910431131443723,
+    "msw": 0.07495287294704435
+   },
+   "plan_cell_adjusted": {
+    "pm10": {
+     "m1": {
+      "scenarios": 128,
+      "pairs": 128,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 112,
+      "pairs": 224,
+      "design_effect": 1.7516857212188028
+     },
+     "m3": {
+      "scenarios": 107,
+      "pairs": 321,
+      "design_effect": 2.5033714424376057
+     },
+     "m5": {
+      "scenarios": 103,
+      "pairs": 515,
+      "design_effect": 4.006742884875211
+     },
+     "m10": {
+      "scenarios": 100,
+      "pairs": 1000,
+      "design_effect": 7.765171490969226
+     },
+     "min_scenarios_m_inf": 96
+    },
+    "pm20": {
+     "m1": {
+      "scenarios": 35,
+      "pairs": 35,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 31,
+      "pairs": 62,
+      "design_effect": 1.7516857212188028
+     },
+     "m3": {
+      "scenarios": 30,
+      "pairs": 90,
+      "design_effect": 2.5033714424376057
+     },
+     "m5": {
+      "scenarios": 28,
+      "pairs": 140,
+      "design_effect": 4.006742884875211
+     },
+     "m10": {
+      "scenarios": 28,
+      "pairs": 280,
+      "design_effect": 7.765171490969226
+     },
+     "min_scenarios_m_inf": 27
+    }
+   },
+   "plan_raw": {
+    "pm10": {
+     "m1": {
+      "scenarios": 197,
+      "pairs": 197,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 143,
+      "pairs": 286,
+      "design_effect": 1.4530850474452335
+     },
+     "m3": {
+      "scenarios": 125,
+      "pairs": 375,
+      "design_effect": 1.906170094890467
+     },
+     "m5": {
+      "scenarios": 111,
+      "pairs": 555,
+      "design_effect": 2.812340189780934
+     },
+     "m10": {
+      "scenarios": 100,
+      "pairs": 1000,
+      "design_effect": 5.077765427007101
+     },
+     "min_scenarios_m_inf": 89
+    },
+    "pm20": {
+     "m1": {
+      "scenarios": 54,
+      "pairs": 54,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 39,
+      "pairs": 78,
+      "design_effect": 1.4530850474452335
+     },
+     "m3": {
+      "scenarios": 35,
+      "pairs": 105,
+      "design_effect": 1.906170094890467
+     },
+     "m5": {
+      "scenarios": 31,
+      "pairs": 155,
+      "design_effect": 2.812340189780934
+     },
+     "m10": {
+      "scenarios": 28,
+      "pairs": 280,
+      "design_effect": 5.077765427007101
+     },
+     "min_scenarios_m_inf": 25
+    }
+   }
+  },
+  {
+   "lever": "routing_plus_shaping",
+   "host": "opus",
+   "suite": "s1m",
+   "cells": [
+    "orch-haiku-shaped-opus"
+   ],
+   "campaigns": [
+    "mt-dev"
+   ],
+   "raw": {
+    "n_pairs": 9,
+    "n_scenarios": 3,
+    "pairs_per_scenario_k0": 3.0,
+    "mean_ln_ratio": -0.46227619737000264,
+    "gmean_ratio": 0.6298483534569882,
+    "sd_ln_ratio": 0.4950523106072999,
+    "sd_between_scenario_means": 0.35573751607456305,
+    "sigma_between": 0.24455924144020905,
+    "sigma_within": 0.44745935380464297,
+    "icc": 0.2300097316846551,
+    "msb": 0.3796475410287001,
+    "msw": 0.20021987330726868
+   },
+   "cell_adjusted": {
+    "n_pairs": 9,
+    "n_scenarios": 3,
+    "pairs_per_scenario_k0": 3.0,
+    "mean_ln_ratio": -0.46227619737000264,
+    "gmean_ratio": 0.6298483534569882,
+    "sd_ln_ratio": 0.4950523106072999,
+    "sd_between_scenario_means": 0.355737516074563,
+    "sigma_between": 0.244559241440209,
+    "sigma_within": 0.44745935380464297,
+    "icc": 0.23000973168465502,
+    "msb": 0.37964754102869996,
+    "msw": 0.20021987330726868
+   },
+   "plan_cell_adjusted": {
+    "pm10": {
+     "m1": {
+      "scenarios": 110,
+      "pairs": 110,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 68,
+      "pairs": 136,
+      "design_effect": 1.230009731684655
+     },
+     "m3": {
+      "scenarios": 54,
+      "pairs": 162,
+      "design_effect": 1.46001946336931
+     },
+     "m5": {
+      "scenarios": 43,
+      "pairs": 215,
+      "design_effect": 1.92003892673862
+     },
+     "m10": {
+      "scenarios": 34,
+      "pairs": 340,
+      "design_effect": 3.0700875851618954
+     },
+     "min_scenarios_m_inf": 26
+    },
+    "pm20": {
+     "m1": {
+      "scenarios": 31,
+      "pairs": 31,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 19,
+      "pairs": 38,
+      "design_effect": 1.230009731684655
+     },
+     "m3": {
+      "scenarios": 15,
+      "pairs": 45,
+      "design_effect": 1.46001946336931
+     },
+     "m5": {
+      "scenarios": 12,
+      "pairs": 60,
+      "design_effect": 1.92003892673862
+     },
+     "m10": {
+      "scenarios": 10,
+      "pairs": 100,
+      "design_effect": 3.0700875851618954
+     },
+     "min_scenarios_m_inf": 7
+    }
+   },
+   "plan_raw": {
+    "pm10": {
+     "m1": {
+      "scenarios": 110,
+      "pairs": 110,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 68,
+      "pairs": 136,
+      "design_effect": 1.230009731684655
+     },
+     "m3": {
+      "scenarios": 54,
+      "pairs": 162,
+      "design_effect": 1.4600194633693102
+     },
+     "m5": {
+      "scenarios": 43,
+      "pairs": 215,
+      "design_effect": 1.9200389267386204
+     },
+     "m10": {
+      "scenarios": 34,
+      "pairs": 340,
+      "design_effect": 3.070087585161896
+     },
+     "min_scenarios_m_inf": 26
+    },
+    "pm20": {
+     "m1": {
+      "scenarios": 31,
+      "pairs": 31,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 19,
+      "pairs": 38,
+      "design_effect": 1.230009731684655
+     },
+     "m3": {
+      "scenarios": 15,
+      "pairs": 45,
+      "design_effect": 1.4600194633693102
+     },
+     "m5": {
+      "scenarios": 12,
+      "pairs": 60,
+      "design_effect": 1.9200389267386204
+     },
+     "m10": {
+      "scenarios": 10,
+      "pairs": 100,
+      "design_effect": 3.070087585161896
+     },
+     "min_scenarios_m_inf": 7
+    }
+   }
+  }
+ ],
+ "per_cell": [
+  {
+   "cell": "orch-default",
+   "anchor": "plain",
+   "host": "fable",
+   "suite": "S1",
+   "n_pairs": 168,
+   "n_scenarios": 32,
+   "gmean_ratio": 0.4909245781045528,
+   "sd_ln_ratio": 0.4561888940144179,
+   "sigma_between": 0.4341048711464665,
+   "sigma_within": 0.16208212901983307,
+   "icc": 0.8776504127624138,
+   "plan": {
+    "pm10": {
+     "m1": {
+      "scenarios": 91,
+      "pairs": 91,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 86,
+      "pairs": 172,
+      "design_effect": 1.8776504127624138
+     },
+     "m3": {
+      "scenarios": 84,
+      "pairs": 252,
+      "design_effect": 2.7553008255248277
+     },
+     "m5": {
+      "scenarios": 82,
+      "pairs": 410,
+      "design_effect": 4.510601651049655
+     },
+     "m10": {
+      "scenarios": 81,
+      "pairs": 810,
+      "design_effect": 8.898853714861724
+     },
+     "min_scenarios_m_inf": 80
+    },
+    "pm20": {
+     "m1": {
+      "scenarios": 25,
+      "pairs": 25,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 24,
+      "pairs": 48,
+      "design_effect": 1.8776504127624138
+     },
+     "m3": {
+      "scenarios": 23,
+      "pairs": 69,
+      "design_effect": 2.7553008255248277
+     },
+     "m5": {
+      "scenarios": 23,
+      "pairs": 115,
+      "design_effect": 4.510601651049655
+     },
+     "m10": {
+      "scenarios": 23,
+      "pairs": 230,
+      "design_effect": 8.898853714861724
+     },
+     "min_scenarios_m_inf": 22
+    }
+   }
+  },
+  {
+   "cell": "orch-default",
+   "anchor": "plain",
+   "host": "fable",
+   "suite": "s1m",
+   "n_pairs": 39,
+   "n_scenarios": 6,
+   "gmean_ratio": 0.6166771791754554,
+   "sd_ln_ratio": 0.3792167404160978,
+   "sigma_between": 0.2459383215542913,
+   "sigma_within": 0.3154074156274514,
+   "icc": 0.378112176418551,
+   "plan": {
+    "pm10": {
+     "m1": {
+      "scenarios": 68,
+      "pairs": 68,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 47,
+      "pairs": 94,
+      "design_effect": 1.378112176418551
+     },
+     "m3": {
+      "scenarios": 40,
+      "pairs": 120,
+      "design_effect": 1.756224352837102
+     },
+     "m5": {
+      "scenarios": 34,
+      "pairs": 170,
+      "design_effect": 2.512448705674204
+     },
+     "m10": {
+      "scenarios": 30,
+      "pairs": 300,
+      "design_effect": 4.4030095877669595
+     },
+     "min_scenarios_m_inf": 26
+    },
+    "pm20": {
+     "m1": {
+      "scenarios": 19,
+      "pairs": 19,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 13,
+      "pairs": 26,
+      "design_effect": 1.378112176418551
+     },
+     "m3": {
+      "scenarios": 11,
+      "pairs": 33,
+      "design_effect": 1.756224352837102
+     },
+     "m5": {
+      "scenarios": 10,
+      "pairs": 50,
+      "design_effect": 2.512448705674204
+     },
+     "m10": {
+      "scenarios": 9,
+      "pairs": 90,
+      "design_effect": 4.4030095877669595
+     },
+     "min_scenarios_m_inf": 7
+    }
+   }
+  },
+  {
+   "cell": "orch-default-opus",
+   "anchor": "plain-opus",
+   "host": "opus",
+   "suite": "S1",
+   "n_pairs": 204,
+   "n_scenarios": 44,
+   "gmean_ratio": 0.9505943720913059,
+   "sd_ln_ratio": 0.18997206755961385,
+   "sigma_between": 0.07110239774637415,
+   "sigma_within": 0.17666247418081987,
+   "icc": 0.13940509493880954,
+   "plan": {
+    "pm10": {
+     "m1": {
+      "scenarios": 16,
+      "pairs": 16,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 9,
+      "pairs": 18,
+      "design_effect": 1.1394050949388095
+     },
+     "m3": {
+      "scenarios": 7,
+      "pairs": 21,
+      "design_effect": 1.278810189877619
+     },
+     "m5": {
+      "scenarios": 5,
+      "pairs": 25,
+      "design_effect": 1.5576203797552381
+     },
+     "m10": {
+      "scenarios": 4,
+      "pairs": 40,
+      "design_effect": 2.2546458544492856
+     },
+     "min_scenarios_m_inf": 3
+    },
+    "pm20": {
+     "m1": {
+      "scenarios": 5,
+      "pairs": 5,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 3,
+      "pairs": 6,
+      "design_effect": 1.1394050949388095
+     },
+     "m3": {
+      "scenarios": 2,
+      "pairs": 6,
+      "design_effect": 1.278810189877619
+     },
+     "m5": {
+      "scenarios": 2,
+      "pairs": 10,
+      "design_effect": 1.5576203797552381
+     },
+     "m10": {
+      "scenarios": 2,
+      "pairs": 20,
+      "design_effect": 2.2546458544492856
+     },
+     "min_scenarios_m_inf": 1
+    }
+   }
+  },
+  {
+   "cell": "orch-default-opus",
+   "anchor": "plain-opus",
+   "host": "opus",
+   "suite": "s1m",
+   "n_pairs": 45,
+   "n_scenarios": 6,
+   "gmean_ratio": 1.3050442728521763,
+   "sd_ln_ratio": 0.17608490592254675,
+   "sigma_between": 0.07057378670845083,
+   "sigma_within": 0.1655254943415959,
+   "icc": 0.15382209891272497,
+   "plan": {
+    "pm10": {
+     "m1": {
+      "scenarios": 14,
+      "pairs": 14,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 8,
+      "pairs": 16,
+      "design_effect": 1.153822098912725
+     },
+     "m3": {
+      "scenarios": 6,
+      "pairs": 18,
+      "design_effect": 1.30764419782545
+     },
+     "m5": {
+      "scenarios": 5,
+      "pairs": 25,
+      "design_effect": 1.6152883956508999
+     },
+     "m10": {
+      "scenarios": 4,
+      "pairs": 40,
+      "design_effect": 2.384398890214525
+     },
+     "min_scenarios_m_inf": 3
+    },
+    "pm20": {
+     "m1": {
+      "scenarios": 4,
+      "pairs": 4,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 3,
+      "pairs": 6,
+      "design_effect": 1.153822098912725
+     },
+     "m3": {
+      "scenarios": 2,
+      "pairs": 6,
+      "design_effect": 1.30764419782545
+     },
+     "m5": {
+      "scenarios": 2,
+      "pairs": 10,
+      "design_effect": 1.6152883956508999
+     },
+     "m10": {
+      "scenarios": 2,
+      "pairs": 20,
+      "design_effect": 2.384398890214525
+     },
+     "min_scenarios_m_inf": 1
+    }
+   }
+  },
+  {
+   "cell": "orch-fablelow",
+   "anchor": "plain",
+   "host": "fable",
+   "suite": "S1",
+   "n_pairs": 24,
+   "n_scenarios": 12,
+   "gmean_ratio": 0.9517152435432276,
+   "sd_ln_ratio": 0.07064666199997453,
+   "sigma_between": 0.04853890772280004,
+   "sigma_within": 0.05231979723638324,
+   "icc": 0.4625656131207985,
+   "plan": {
+    "pm10": {
+     "m1": {
+      "scenarios": 3,
+      "pairs": 3,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 2,
+      "pairs": 4,
+      "design_effect": 1.4625656131207985
+     },
+     "m3": {
+      "scenarios": 2,
+      "pairs": 6,
+      "design_effect": 1.925131226241597
+     },
+     "m5": {
+      "scenarios": 2,
+      "pairs": 10,
+      "design_effect": 2.850262452483194
+     },
+     "m10": {
+      "scenarios": 2,
+      "pairs": 20,
+      "design_effect": 5.163090518087187
+     },
+     "min_scenarios_m_inf": 1
+    },
+    "pm20": {
+     "m1": {
+      "scenarios": 2,
+      "pairs": 2,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 2,
+      "pairs": 4,
+      "design_effect": 1.4625656131207985
+     },
+     "m3": {
+      "scenarios": 2,
+      "pairs": 6,
+      "design_effect": 1.925131226241597
+     },
+     "m5": {
+      "scenarios": 2,
+      "pairs": 10,
+      "design_effect": 2.850262452483194
+     },
+     "m10": {
+      "scenarios": 2,
+      "pairs": 20,
+      "design_effect": 5.163090518087187
+     },
+     "min_scenarios_m_inf": 1
+    }
+   }
+  },
+  {
+   "cell": "orch-haiku-fable",
+   "anchor": "plain",
+   "host": "fable",
+   "suite": "S1",
+   "n_pairs": 24,
+   "n_scenarios": 12,
+   "gmean_ratio": 0.20344064232481862,
+   "sd_ln_ratio": 1.0053373456022283,
+   "sigma_between": 1.0181887155184661,
+   "sigma_within": 0.13809123884263116,
+   "icc": 0.9819382482233582,
+   "plan": {
+    "pm10": {
+     "m1": {
+      "scenarios": 447,
+      "pairs": 447,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 443,
+      "pairs": 886,
+      "design_effect": 1.9819382482233583
+     },
+     "m3": {
+      "scenarios": 442,
+      "pairs": 1326,
+      "design_effect": 2.9638764964467166
+     },
+     "m5": {
+      "scenarios": 441,
+      "pairs": 2205,
+      "design_effect": 4.927752992893433
+     },
+     "m10": {
+      "scenarios": 440,
+      "pairs": 4400,
+      "design_effect": 9.837444234010224
+     },
+     "min_scenarios_m_inf": 439
+    },
+    "pm20": {
+     "m1": {
+      "scenarios": 123,
+      "pairs": 123,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 121,
+      "pairs": 242,
+      "design_effect": 1.9819382482233583
+     },
+     "m3": {
+      "scenarios": 121,
+      "pairs": 363,
+      "design_effect": 2.9638764964467166
+     },
+     "m5": {
+      "scenarios": 121,
+      "pairs": 605,
+      "design_effect": 4.927752992893433
+     },
+     "m10": {
+      "scenarios": 121,
+      "pairs": 1210,
+      "design_effect": 9.837444234010224
+     },
+     "min_scenarios_m_inf": 120
+    }
+   }
+  },
+  {
+   "cell": "orch-haiku-guided-opus",
+   "anchor": "plain-opus",
+   "host": "opus",
+   "suite": "S1",
+   "n_pairs": 24,
+   "n_scenarios": 12,
+   "gmean_ratio": 0.3720481452510283,
+   "sd_ln_ratio": 0.6165066681936159,
+   "sigma_between": 0.6196238725518387,
+   "sigma_within": 0.11331151726457896,
+   "icc": 0.967640207198967,
+   "plan": {
+    "pm10": {
+     "m1": {
+      "scenarios": 168,
+      "pairs": 168,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 166,
+      "pairs": 332,
+      "design_effect": 1.9676402071989672
+     },
+     "m3": {
+      "scenarios": 165,
+      "pairs": 495,
+      "design_effect": 2.9352804143979343
+     },
+     "m5": {
+      "scenarios": 164,
+      "pairs": 820,
+      "design_effect": 4.870560828795869
+     },
+     "m10": {
+      "scenarios": 163,
+      "pairs": 1630,
+      "design_effect": 9.708761864790704
+     },
+     "min_scenarios_m_inf": 163
+    },
+    "pm20": {
+     "m1": {
+      "scenarios": 46,
+      "pairs": 46,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 46,
+      "pairs": 92,
+      "design_effect": 1.9676402071989672
+     },
+     "m3": {
+      "scenarios": 45,
+      "pairs": 135,
+      "design_effect": 2.9352804143979343
+     },
+     "m5": {
+      "scenarios": 45,
+      "pairs": 225,
+      "design_effect": 4.870560828795869
+     },
+     "m10": {
+      "scenarios": 45,
+      "pairs": 450,
+      "design_effect": 9.708761864790704
+     },
+     "min_scenarios_m_inf": 45
+    }
+   }
+  },
+  {
+   "cell": "orch-haiku-low-opus",
+   "anchor": "plain-opus",
+   "host": "opus",
+   "suite": "S1",
+   "n_pairs": 24,
+   "n_scenarios": 12,
+   "gmean_ratio": 0.37041041710474776,
+   "sd_ln_ratio": 0.6095148039798653,
+   "sigma_between": 0.6216948888946087,
+   "sigma_within": 0.042524185913615516,
+   "icc": 0.9953431712901292,
+   "plan": {
+    "pm10": {
+     "m1": {
+      "scenarios": 165,
+      "pairs": 165,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 164,
+      "pairs": 328,
+      "design_effect": 1.9953431712901293
+     },
+     "m3": {
+      "scenarios": 164,
+      "pairs": 492,
+      "design_effect": 2.9906863425802586
+     },
+     "m5": {
+      "scenarios": 164,
+      "pairs": 820,
+      "design_effect": 4.981372685160517
+     },
+     "m10": {
+      "scenarios": 164,
+      "pairs": 1640,
+      "design_effect": 9.958088541611163
+     },
+     "min_scenarios_m_inf": 164
+    },
+    "pm20": {
+     "m1": {
+      "scenarios": 45,
+      "pairs": 45,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 45,
+      "pairs": 90,
+      "design_effect": 1.9953431712901293
+     },
+     "m3": {
+      "scenarios": 45,
+      "pairs": 135,
+      "design_effect": 2.9906863425802586
+     },
+     "m5": {
+      "scenarios": 45,
+      "pairs": 225,
+      "design_effect": 4.981372685160517
+     },
+     "m10": {
+      "scenarios": 45,
+      "pairs": 450,
+      "design_effect": 9.958088541611163
+     },
+     "min_scenarios_m_inf": 45
+    }
+   }
+  },
+  {
+   "cell": "orch-haiku-opus",
+   "anchor": "plain-opus",
+   "host": "opus",
+   "suite": "S1",
+   "n_pairs": 48,
+   "n_scenarios": 12,
+   "gmean_ratio": 0.393651101344365,
+   "sd_ln_ratio": 0.6054266642933012,
+   "sigma_between": 0.6077556145956463,
+   "sigma_within": 0.14405265904495532,
+   "icc": 0.9468079770280737,
+   "plan": {
+    "pm10": {
+     "m1": {
+      "scenarios": 165,
+      "pairs": 165,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 161,
+      "pairs": 322,
+      "design_effect": 1.9468079770280737
+     },
+     "m3": {
+      "scenarios": 160,
+      "pairs": 480,
+      "design_effect": 2.8936159540561475
+     },
+     "m5": {
+      "scenarios": 158,
+      "pairs": 790,
+      "design_effect": 4.787231908112295
+     },
+     "m10": {
+      "scenarios": 158,
+      "pairs": 1580,
+      "design_effect": 9.521271793252664
+     },
+     "min_scenarios_m_inf": 157
+    },
+    "pm20": {
+     "m1": {
+      "scenarios": 46,
+      "pairs": 46,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 44,
+      "pairs": 88,
+      "design_effect": 1.9468079770280737
+     },
+     "m3": {
+      "scenarios": 44,
+      "pairs": 132,
+      "design_effect": 2.8936159540561475
+     },
+     "m5": {
+      "scenarios": 44,
+      "pairs": 220,
+      "design_effect": 4.787231908112295
+     },
+     "m10": {
+      "scenarios": 43,
+      "pairs": 430,
+      "design_effect": 9.521271793252664
+     },
+     "min_scenarios_m_inf": 43
+    }
+   }
+  },
+  {
+   "cell": "orch-haiku-shaped-fable",
+   "anchor": "plain",
+   "host": "fable",
+   "suite": "S1",
+   "n_pairs": 36,
+   "n_scenarios": 12,
+   "gmean_ratio": 0.17972858624099947,
+   "sd_ln_ratio": 0.9971411747023653,
+   "sigma_between": 1.0113015402415322,
+   "sigma_within": 0.1732093452862275,
+   "icc": 0.9715013229947791,
+   "plan": {
+    "pm10": {
+     "m1": {
+      "scenarios": 446,
+      "pairs": 446,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 439,
+      "pairs": 878,
+      "design_effect": 1.971501322994779
+     },
+     "m3": {
+      "scenarios": 437,
+      "pairs": 1311,
+      "design_effect": 2.943002645989558
+     },
+     "m5": {
+      "scenarios": 436,
+      "pairs": 2180,
+      "design_effect": 4.886005291979116
+     },
+     "m10": {
+      "scenarios": 434,
+      "pairs": 4340,
+      "design_effect": 9.743511906953012
+     },
+     "min_scenarios_m_inf": 433
+    },
+    "pm20": {
+     "m1": {
+      "scenarios": 122,
+      "pairs": 122,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 120,
+      "pairs": 240,
+      "design_effect": 1.971501322994779
+     },
+     "m3": {
+      "scenarios": 120,
+      "pairs": 360,
+      "design_effect": 2.943002645989558
+     },
+     "m5": {
+      "scenarios": 119,
+      "pairs": 595,
+      "design_effect": 4.886005291979116
+     },
+     "m10": {
+      "scenarios": 119,
+      "pairs": 1190,
+      "design_effect": 9.743511906953012
+     },
+     "min_scenarios_m_inf": 119
+    }
+   }
+  },
+  {
+   "cell": "orch-haiku-shaped-opus",
+   "anchor": "plain-opus",
+   "host": "opus",
+   "suite": "S1",
+   "n_pairs": 60,
+   "n_scenarios": 24,
+   "gmean_ratio": 0.3663495018362903,
+   "sd_ln_ratio": 0.6116277373031053,
+   "sigma_between": 0.6031653300660765,
+   "sigma_within": 0.14193683303050308,
+   "icc": 0.9475300703026194,
+   "plan": {
+    "pm10": {
+     "m1": {
+      "scenarios": 163,
+      "pairs": 163,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 159,
+      "pairs": 318,
+      "design_effect": 1.9475300703026193
+     },
+     "m3": {
+      "scenarios": 157,
+      "pairs": 471,
+      "design_effect": 2.8950601406052385
+     },
+     "m5": {
+      "scenarios": 156,
+      "pairs": 780,
+      "design_effect": 4.790120281210477
+     },
+     "m10": {
+      "scenarios": 155,
+      "pairs": 1550,
+      "design_effect": 9.527770632723575
+     },
+     "min_scenarios_m_inf": 154
+    },
+    "pm20": {
+     "m1": {
+      "scenarios": 45,
+      "pairs": 45,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 44,
+      "pairs": 88,
+      "design_effect": 1.9475300703026193
+     },
+     "m3": {
+      "scenarios": 43,
+      "pairs": 129,
+      "design_effect": 2.8950601406052385
+     },
+     "m5": {
+      "scenarios": 43,
+      "pairs": 215,
+      "design_effect": 4.790120281210477
+     },
+     "m10": {
+      "scenarios": 43,
+      "pairs": 430,
+      "design_effect": 9.527770632723575
+     },
+     "min_scenarios_m_inf": 43
+    }
+   }
+  },
+  {
+   "cell": "orch-opuslow-opus",
+   "anchor": "plain-opus",
+   "host": "opus",
+   "suite": "S1",
+   "n_pairs": 24,
+   "n_scenarios": 12,
+   "gmean_ratio": 0.9599926051443705,
+   "sd_ln_ratio": 0.06058755141482721,
+   "sigma_between": 0.05802558502128997,
+   "sigma_within": 0.02121963253465661,
+   "icc": 0.8820423528597817,
+   "plan": {
+    "pm10": {
+     "m1": {
+      "scenarios": 2,
+      "pairs": 2,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 2,
+      "pairs": 4,
+      "design_effect": 1.8820423528597816
+     },
+     "m3": {
+      "scenarios": 2,
+      "pairs": 6,
+      "design_effect": 2.764084705719563
+     },
+     "m5": {
+      "scenarios": 2,
+      "pairs": 10,
+      "design_effect": 4.528169411439126
+     },
+     "m10": {
+      "scenarios": 2,
+      "pairs": 20,
+      "design_effect": 8.938381175738035
+     },
+     "min_scenarios_m_inf": 2
+    },
+    "pm20": {
+     "m1": {
+      "scenarios": 2,
+      "pairs": 2,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 2,
+      "pairs": 4,
+      "design_effect": 1.8820423528597816
+     },
+     "m3": {
+      "scenarios": 2,
+      "pairs": 6,
+      "design_effect": 2.764084705719563
+     },
+     "m5": {
+      "scenarios": 2,
+      "pairs": 10,
+      "design_effect": 4.528169411439126
+     },
+     "m10": {
+      "scenarios": 2,
+      "pairs": 20,
+      "design_effect": 8.938381175738035
+     },
+     "min_scenarios_m_inf": 1
+    }
+   }
+  },
+  {
+   "cell": "orch-planner-sub-fable",
+   "anchor": "plain",
+   "host": "fable",
+   "suite": "S1",
+   "n_pairs": 24,
+   "n_scenarios": 12,
+   "gmean_ratio": 0.4984875077754758,
+   "sd_ln_ratio": 0.4428059000787226,
+   "sigma_between": 0.4477010965251159,
+   "sigma_within": 0.06599555916177416,
+   "icc": 0.9787324675068582,
+   "plan": {
+    "pm10": {
+     "m1": {
+      "scenarios": 87,
+      "pairs": 87,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 86,
+      "pairs": 172,
+      "design_effect": 1.978732467506858
+     },
+     "m3": {
+      "scenarios": 86,
+      "pairs": 258,
+      "design_effect": 2.957464935013716
+     },
+     "m5": {
+      "scenarios": 86,
+      "pairs": 430,
+      "design_effect": 4.914929870027432
+     },
+     "m10": {
+      "scenarios": 85,
+      "pairs": 850,
+      "design_effect": 9.808592207561723
+     },
+     "min_scenarios_m_inf": 85
+    },
+    "pm20": {
+     "m1": {
+      "scenarios": 24,
+      "pairs": 24,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 24,
+      "pairs": 48,
+      "design_effect": 1.978732467506858
+     },
+     "m3": {
+      "scenarios": 24,
+      "pairs": 72,
+      "design_effect": 2.957464935013716
+     },
+     "m5": {
+      "scenarios": 24,
+      "pairs": 120,
+      "design_effect": 4.914929870027432
+     },
+     "m10": {
+      "scenarios": 24,
+      "pairs": 240,
+      "design_effect": 9.808592207561723
+     },
+     "min_scenarios_m_inf": 24
+    }
+   }
+  },
+  {
+   "cell": "orch-planner-sub-opus",
+   "anchor": "plain-opus",
+   "host": "opus",
+   "suite": "S1",
+   "n_pairs": 24,
+   "n_scenarios": 12,
+   "gmean_ratio": 0.9405259422415708,
+   "sd_ln_ratio": 0.13210853279417745,
+   "sigma_between": 0.10514158400409832,
+   "sigma_within": 0.08293704342034726,
+   "icc": 0.6164369678575704,
+   "plan": {
+    "pm10": {
+     "m1": {
+      "scenarios": 8,
+      "pairs": 8,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 7,
+      "pairs": 14,
+      "design_effect": 1.6164369678575703
+     },
+     "m3": {
+      "scenarios": 6,
+      "pairs": 18,
+      "design_effect": 2.2328739357151406
+     },
+     "m5": {
+      "scenarios": 6,
+      "pairs": 30,
+      "design_effect": 3.4657478714302816
+     },
+     "m10": {
+      "scenarios": 5,
+      "pairs": 50,
+      "design_effect": 6.5479327107181335
+     },
+     "min_scenarios_m_inf": 5
+    },
+    "pm20": {
+     "m1": {
+      "scenarios": 3,
+      "pairs": 3,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 2,
+      "pairs": 4,
+      "design_effect": 1.6164369678575703
+     },
+     "m3": {
+      "scenarios": 2,
+      "pairs": 6,
+      "design_effect": 2.2328739357151406
+     },
+     "m5": {
+      "scenarios": 2,
+      "pairs": 10,
+      "design_effect": 3.4657478714302816
+     },
+     "m10": {
+      "scenarios": 2,
+      "pairs": 20,
+      "design_effect": 6.5479327107181335
+     },
+     "min_scenarios_m_inf": 2
+    }
+   }
+  },
+  {
+   "cell": "orch-planner-v12-fable",
+   "anchor": "plain",
+   "host": "fable",
+   "suite": "s1m",
+   "n_pairs": 12,
+   "n_scenarios": 6,
+   "gmean_ratio": 0.5742383946741232,
+   "sd_ln_ratio": 0.3591610669456694,
+   "sigma_between": 0.359991957447333,
+   "sigma_within": 0.13066904848468575,
+   "icc": 0.8835851770080134,
+   "plan": {
+    "pm10": {
+     "m1": {
+      "scenarios": 63,
+      "pairs": 63,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 59,
+      "pairs": 118,
+      "design_effect": 1.8835851770080134
+     },
+     "m3": {
+      "scenarios": 58,
+      "pairs": 174,
+      "design_effect": 2.767170354016027
+     },
+     "m5": {
+      "scenarios": 57,
+      "pairs": 285,
+      "design_effect": 4.534340708032054
+     },
+     "m10": {
+      "scenarios": 56,
+      "pairs": 560,
+      "design_effect": 8.952266593072121
+     },
+     "min_scenarios_m_inf": 55
+    },
+    "pm20": {
+     "m1": {
+      "scenarios": 17,
+      "pairs": 17,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 16,
+      "pairs": 32,
+      "design_effect": 1.8835851770080134
+     },
+     "m3": {
+      "scenarios": 16,
+      "pairs": 48,
+      "design_effect": 2.767170354016027
+     },
+     "m5": {
+      "scenarios": 16,
+      "pairs": 80,
+      "design_effect": 4.534340708032054
+     },
+     "m10": {
+      "scenarios": 16,
+      "pairs": 160,
+      "design_effect": 8.952266593072121
+     },
+     "min_scenarios_m_inf": 15
+    }
+   }
+  },
+  {
+   "cell": "orch-planner-v12-opus",
+   "anchor": "plain-opus",
+   "host": "opus",
+   "suite": "s1m",
+   "n_pairs": 12,
+   "n_scenarios": 6,
+   "gmean_ratio": 1.0194741062084303,
+   "sd_ln_ratio": 0.05677119880456503,
+   "sigma_between": 0.053393099780215454,
+   "sigma_within": 0.027584316462029804,
+   "icc": 0.7893261337173584,
+   "plan": {
+    "pm10": {
+     "m1": {
+      "scenarios": 2,
+      "pairs": 2,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 2,
+      "pairs": 4,
+      "design_effect": 1.7893261337173585
+     },
+     "m3": {
+      "scenarios": 2,
+      "pairs": 6,
+      "design_effect": 2.578652267434717
+     },
+     "m5": {
+      "scenarios": 2,
+      "pairs": 10,
+      "design_effect": 4.157304534869434
+     },
+     "m10": {
+      "scenarios": 2,
+      "pairs": 20,
+      "design_effect": 8.103935203456224
+     },
+     "min_scenarios_m_inf": 2
+    },
+    "pm20": {
+     "m1": {
+      "scenarios": 2,
+      "pairs": 2,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 2,
+      "pairs": 4,
+      "design_effect": 1.7893261337173585
+     },
+     "m3": {
+      "scenarios": 2,
+      "pairs": 6,
+      "design_effect": 2.578652267434717
+     },
+     "m5": {
+      "scenarios": 2,
+      "pairs": 10,
+      "design_effect": 4.157304534869434
+     },
+     "m10": {
+      "scenarios": 2,
+      "pairs": 20,
+      "design_effect": 8.103935203456224
+     },
+     "min_scenarios_m_inf": 1
+    }
+   }
+  },
+  {
+   "cell": "orch-planner-value-sub-fable",
+   "anchor": "plain",
+   "host": "fable",
+   "suite": "S1",
+   "n_pairs": 24,
+   "n_scenarios": 12,
+   "gmean_ratio": 0.4816323950507479,
+   "sd_ln_ratio": 0.42866549745183113,
+   "sigma_between": 0.432982370781455,
+   "sigma_within": 0.06656881541217549,
+   "icc": 0.9769083455936145,
+   "plan": {
+    "pm10": {
+     "m1": {
+      "scenarios": 82,
+      "pairs": 82,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 81,
+      "pairs": 162,
+      "design_effect": 1.9769083455936145
+     },
+     "m3": {
+      "scenarios": 80,
+      "pairs": 240,
+      "design_effect": 2.953816691187229
+     },
+     "m5": {
+      "scenarios": 80,
+      "pairs": 400,
+      "design_effect": 4.907633382374458
+     },
+     "m10": {
+      "scenarios": 80,
+      "pairs": 800,
+      "design_effect": 9.79217511034253
+     },
+     "min_scenarios_m_inf": 80
+    },
+    "pm20": {
+     "m1": {
+      "scenarios": 23,
+      "pairs": 23,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 22,
+      "pairs": 44,
+      "design_effect": 1.9769083455936145
+     },
+     "m3": {
+      "scenarios": 22,
+      "pairs": 66,
+      "design_effect": 2.953816691187229
+     },
+     "m5": {
+      "scenarios": 22,
+      "pairs": 110,
+      "design_effect": 4.907633382374458
+     },
+     "m10": {
+      "scenarios": 22,
+      "pairs": 220,
+      "design_effect": 9.79217511034253
+     },
+     "min_scenarios_m_inf": 22
+    }
+   }
+  },
+  {
+   "cell": "orch-planner-value-sub-opus",
+   "anchor": "plain-opus",
+   "host": "opus",
+   "suite": "S1",
+   "n_pairs": 24,
+   "n_scenarios": 12,
+   "gmean_ratio": 0.9559857161638919,
+   "sd_ln_ratio": 0.07601464201889627,
+   "sigma_between": 0.03952265566068438,
+   "sigma_within": 0.0654530387903835,
+   "icc": 0.2671917112592449,
+   "plan": {
+    "pm10": {
+     "m1": {
+      "scenarios": 3,
+      "pairs": 3,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 2,
+      "pairs": 4,
+      "design_effect": 1.2671917112592448
+     },
+     "m3": {
+      "scenarios": 2,
+      "pairs": 6,
+      "design_effect": 1.5343834225184898
+     },
+     "m5": {
+      "scenarios": 2,
+      "pairs": 10,
+      "design_effect": 2.0687668450369796
+     },
+     "m10": {
+      "scenarios": 2,
+      "pairs": 20,
+      "design_effect": 3.404725401333204
+     },
+     "min_scenarios_m_inf": 1
+    },
+    "pm20": {
+     "m1": {
+      "scenarios": 2,
+      "pairs": 2,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 2,
+      "pairs": 4,
+      "design_effect": 1.2671917112592448
+     },
+     "m3": {
+      "scenarios": 2,
+      "pairs": 6,
+      "design_effect": 1.5343834225184898
+     },
+     "m5": {
+      "scenarios": 2,
+      "pairs": 10,
+      "design_effect": 2.0687668450369796
+     },
+     "m10": {
+      "scenarios": 2,
+      "pairs": 20,
+      "design_effect": 3.404725401333204
+     },
+     "min_scenarios_m_inf": 1
+    }
+   }
+  },
+  {
+   "cell": "orch-router-jev",
+   "anchor": "plain",
+   "host": "fable",
+   "suite": "S3",
+   "n_pairs": 30,
+   "n_scenarios": 10,
+   "gmean_ratio": 0.9116612011166094,
+   "sd_ln_ratio": 0.4365195201981132,
+   "sigma_between": 0.39010738296923597,
+   "sigma_within": 0.2210451395025904,
+   "icc": 0.7569647552097466,
+   "plan": {
+    "pm10": {
+     "m1": {
+      "scenarios": 86,
+      "pairs": 86,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 75,
+      "pairs": 150,
+      "design_effect": 1.7569647552097467
+     },
+     "m3": {
+      "scenarios": 72,
+      "pairs": 216,
+      "design_effect": 2.5139295104194934
+     },
+     "m5": {
+      "scenarios": 69,
+      "pairs": 345,
+      "design_effect": 4.027859020838987
+     },
+     "m10": {
+      "scenarios": 67,
+      "pairs": 670,
+      "design_effect": 7.812682796887719
+     },
+     "min_scenarios_m_inf": 65
+    },
+    "pm20": {
+     "m1": {
+      "scenarios": 24,
+      "pairs": 24,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 21,
+      "pairs": 42,
+      "design_effect": 1.7569647552097467
+     },
+     "m3": {
+      "scenarios": 20,
+      "pairs": 60,
+      "design_effect": 2.5139295104194934
+     },
+     "m5": {
+      "scenarios": 19,
+      "pairs": 95,
+      "design_effect": 4.027859020838987
+     },
+     "m10": {
+      "scenarios": 19,
+      "pairs": 190,
+      "design_effect": 7.812682796887719
+     },
+     "min_scenarios_m_inf": 18
+    }
+   }
+  },
+  {
+   "cell": "orch-router-rules",
+   "anchor": "plain",
+   "host": "fable",
+   "suite": "S1",
+   "n_pairs": 36,
+   "n_scenarios": 20,
+   "gmean_ratio": 0.3804369994804325,
+   "sd_ln_ratio": 0.2743658592083973,
+   "sigma_between": 0.2548186762854412,
+   "sigma_within": 0.11321522938282969,
+   "icc": 0.8351427959113136,
+   "plan": {
+    "pm10": {
+     "m1": {
+      "scenarios": 33,
+      "pairs": 33,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 31,
+      "pairs": 62,
+      "design_effect": 1.8351427959113136
+     },
+     "m3": {
+      "scenarios": 30,
+      "pairs": 90,
+      "design_effect": 2.670285591822627
+     },
+     "m5": {
+      "scenarios": 29,
+      "pairs": 145,
+      "design_effect": 4.340571183645254
+     },
+     "m10": {
+      "scenarios": 29,
+      "pairs": 290,
+      "design_effect": 8.516285163201822
+     },
+     "min_scenarios_m_inf": 28
+    },
+    "pm20": {
+     "m1": {
+      "scenarios": 9,
+      "pairs": 9,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 9,
+      "pairs": 18,
+      "design_effect": 1.8351427959113136
+     },
+     "m3": {
+      "scenarios": 8,
+      "pairs": 24,
+      "design_effect": 2.670285591822627
+     },
+     "m5": {
+      "scenarios": 8,
+      "pairs": 40,
+      "design_effect": 4.340571183645254
+     },
+     "m10": {
+      "scenarios": 8,
+      "pairs": 80,
+      "design_effect": 8.516285163201822
+     },
+     "min_scenarios_m_inf": 8
+    }
+   }
+  },
+  {
+   "cell": "orch-router-rules",
+   "anchor": "plain",
+   "host": "fable",
+   "suite": "S3",
+   "n_pairs": 20,
+   "n_scenarios": 10,
+   "gmean_ratio": 0.9846836259615058,
+   "sd_ln_ratio": 0.20735259455571223,
+   "sigma_between": 0.0,
+   "sigma_within": 0.22327480518762893,
+   "icc": 0.0,
+   "plan": {
+    "pm10": {
+     "m1": {
+      "scenarios": 22,
+      "pairs": 22,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 11,
+      "pairs": 22,
+      "design_effect": 1.0
+     },
+     "m3": {
+      "scenarios": 8,
+      "pairs": 24,
+      "design_effect": 1.0
+     },
+     "m5": {
+      "scenarios": 5,
+      "pairs": 25,
+      "design_effect": 1.0
+     },
+     "m10": {
+      "scenarios": 3,
+      "pairs": 30,
+      "design_effect": 1.0
+     },
+     "min_scenarios_m_inf": 0
+    },
+    "pm20": {
+     "m1": {
+      "scenarios": 6,
+      "pairs": 6,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 3,
+      "pairs": 6,
+      "design_effect": 1.0
+     },
+     "m3": {
+      "scenarios": 2,
+      "pairs": 6,
+      "design_effect": 1.0
+     },
+     "m5": {
+      "scenarios": 2,
+      "pairs": 10,
+      "design_effect": 1.0
+     },
+     "m10": {
+      "scenarios": 2,
+      "pairs": 20,
+      "design_effect": 1.0
+     },
+     "min_scenarios_m_inf": 0
+    }
+   }
+  },
+  {
+   "cell": "orch-sonnet-shaped-opus",
+   "anchor": "plain-opus",
+   "host": "opus",
+   "suite": "S1",
+   "n_pairs": 24,
+   "n_scenarios": 12,
+   "gmean_ratio": 0.9676800640893461,
+   "sd_ln_ratio": 0.1583833025721728,
+   "sigma_between": 0.10624725439463019,
+   "sigma_within": 0.1195307278691995,
+   "icc": 0.4413687213701299,
+   "plan": {
+    "pm10": {
+     "m1": {
+      "scenarios": 11,
+      "pairs": 11,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 8,
+      "pairs": 16,
+      "design_effect": 1.4413687213701298
+     },
+     "m3": {
+      "scenarios": 7,
+      "pairs": 21,
+      "design_effect": 1.8827374427402597
+     },
+     "m5": {
+      "scenarios": 6,
+      "pairs": 30,
+      "design_effect": 2.7654748854805193
+     },
+     "m10": {
+      "scenarios": 6,
+      "pairs": 60,
+      "design_effect": 4.972318492331169
+     },
+     "min_scenarios_m_inf": 5
+    },
+    "pm20": {
+     "m1": {
+      "scenarios": 3,
+      "pairs": 3,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 3,
+      "pairs": 6,
+      "design_effect": 1.4413687213701298
+     },
+     "m3": {
+      "scenarios": 2,
+      "pairs": 6,
+      "design_effect": 1.8827374427402597
+     },
+     "m5": {
+      "scenarios": 2,
+      "pairs": 10,
+      "design_effect": 2.7654748854805193
+     },
+     "m10": {
+      "scenarios": 2,
+      "pairs": 20,
+      "design_effect": 4.972318492331169
+     },
+     "min_scenarios_m_inf": 2
+    }
+   }
+  },
+  {
+   "cell": "orch-sonnetlow-opus",
+   "anchor": "plain-opus",
+   "host": "opus",
+   "suite": "S1",
+   "n_pairs": 24,
+   "n_scenarios": 12,
+   "gmean_ratio": 0.9910148975650171,
+   "sd_ln_ratio": 0.14579711016227198,
+   "sigma_between": 0.06635598588804738,
+   "sigma_within": 0.13055696202084063,
+   "icc": 0.20529038461689933,
+   "plan": {
+    "pm10": {
+     "m1": {
+      "scenarios": 10,
+      "pairs": 10,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 6,
+      "pairs": 12,
+      "design_effect": 1.2052903846168994
+     },
+     "m3": {
+      "scenarios": 5,
+      "pairs": 15,
+      "design_effect": 1.4105807692337986
+     },
+     "m5": {
+      "scenarios": 4,
+      "pairs": 20,
+      "design_effect": 1.8211615384675972
+     },
+     "m10": {
+      "scenarios": 3,
+      "pairs": 30,
+      "design_effect": 2.8476134615520943
+     },
+     "min_scenarios_m_inf": 2
+    },
+    "pm20": {
+     "m1": {
+      "scenarios": 3,
+      "pairs": 3,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 2,
+      "pairs": 4,
+      "design_effect": 1.2052903846168994
+     },
+     "m3": {
+      "scenarios": 2,
+      "pairs": 6,
+      "design_effect": 1.4105807692337986
+     },
+     "m5": {
+      "scenarios": 2,
+      "pairs": 10,
+      "design_effect": 1.8211615384675972
+     },
+     "m10": {
+      "scenarios": 2,
+      "pairs": 20,
+      "design_effect": 2.8476134615520943
+     },
+     "min_scenarios_m_inf": 1
+    }
+   }
+  },
+  {
+   "cell": "orch-strong-phase-effort",
+   "anchor": "plain",
+   "host": "fable",
+   "suite": "S3",
+   "n_pairs": 20,
+   "n_scenarios": 10,
+   "gmean_ratio": 0.8686952956757452,
+   "sd_ln_ratio": 0.23964204591271182,
+   "sigma_between": 0.13508838756212135,
+   "sigma_within": 0.20034945641644894,
+   "icc": 0.31254075436828865,
+   "plan": {
+    "pm10": {
+     "m1": {
+      "scenarios": 25,
+      "pairs": 25,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 17,
+      "pairs": 34,
+      "design_effect": 1.3125407543682885
+     },
+     "m3": {
+      "scenarios": 14,
+      "pairs": 42,
+      "design_effect": 1.6250815087365773
+     },
+     "m5": {
+      "scenarios": 12,
+      "pairs": 60,
+      "design_effect": 2.2501630174731546
+     },
+     "m10": {
+      "scenarios": 10,
+      "pairs": 100,
+      "design_effect": 3.8128667893145978
+     },
+     "min_scenarios_m_inf": 8
+    },
+    "pm20": {
+     "m1": {
+      "scenarios": 7,
+      "pairs": 7,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 5,
+      "pairs": 10,
+      "design_effect": 1.3125407543682885
+     },
+     "m3": {
+      "scenarios": 4,
+      "pairs": 12,
+      "design_effect": 1.6250815087365773
+     },
+     "m5": {
+      "scenarios": 4,
+      "pairs": 20,
+      "design_effect": 2.2501630174731546
+     },
+     "m10": {
+      "scenarios": 3,
+      "pairs": 30,
+      "design_effect": 3.8128667893145978
+     },
+     "min_scenarios_m_inf": 3
+    }
+   }
+  },
+  {
+   "cell": "plain-sonnet",
+   "anchor": "plain",
+   "host": "fable",
+   "suite": "S1",
+   "n_pairs": 235,
+   "n_scenarios": 39,
+   "gmean_ratio": 0.3920173931901206,
+   "sd_ln_ratio": 0.1914091201987531,
+   "sigma_between": 0.10355686530015971,
+   "sigma_within": 0.1621208824892791,
+   "icc": 0.28978206764604314,
+   "plan": {
+    "pm10": {
+     "m1": {
+      "scenarios": 16,
+      "pairs": 16,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 11,
+      "pairs": 22,
+      "design_effect": 1.2897820676460432
+     },
+     "m3": {
+      "scenarios": 9,
+      "pairs": 27,
+      "design_effect": 1.5795641352920864
+     },
+     "m5": {
+      "scenarios": 7,
+      "pairs": 35,
+      "design_effect": 2.159128270584173
+     },
+     "m10": {
+      "scenarios": 6,
+      "pairs": 60,
+      "design_effect": 3.6080386088143883
+     },
+     "min_scenarios_m_inf": 5
+    },
+    "pm20": {
+     "m1": {
+      "scenarios": 5,
+      "pairs": 5,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 3,
+      "pairs": 6,
+      "design_effect": 1.2897820676460432
+     },
+     "m3": {
+      "scenarios": 3,
+      "pairs": 9,
+      "design_effect": 1.5795641352920864
+     },
+     "m5": {
+      "scenarios": 2,
+      "pairs": 10,
+      "design_effect": 2.159128270584173
+     },
+     "m10": {
+      "scenarios": 2,
+      "pairs": 20,
+      "design_effect": 3.6080386088143883
+     },
+     "min_scenarios_m_inf": 2
+    }
+   }
+  },
+  {
+   "cell": "plain-sonnet",
+   "anchor": "plain",
+   "host": "fable",
+   "suite": "s1m",
+   "n_pairs": 42,
+   "n_scenarios": 6,
+   "gmean_ratio": 0.5277071280226286,
+   "sd_ln_ratio": 0.19875278794428977,
+   "sigma_between": 0.126661195026657,
+   "sigma_within": 0.166792525937158,
+   "icc": 0.36575541197414285,
+   "plan": {
+    "pm10": {
+     "m1": {
+      "scenarios": 19,
+      "pairs": 19,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 13,
+      "pairs": 26,
+      "design_effect": 1.3657554119741429
+     },
+     "m3": {
+      "scenarios": 11,
+      "pairs": 33,
+      "design_effect": 1.7315108239482857
+     },
+     "m5": {
+      "scenarios": 10,
+      "pairs": 50,
+      "design_effect": 2.4630216478965714
+     },
+     "m10": {
+      "scenarios": 8,
+      "pairs": 80,
+      "design_effect": 4.291798707767286
+     },
+     "min_scenarios_m_inf": 7
+    },
+    "pm20": {
+     "m1": {
+      "scenarios": 6,
+      "pairs": 6,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 4,
+      "pairs": 8,
+      "design_effect": 1.3657554119741429
+     },
+     "m3": {
+      "scenarios": 3,
+      "pairs": 9,
+      "design_effect": 1.7315108239482857
+     },
+     "m5": {
+      "scenarios": 3,
+      "pairs": 15,
+      "design_effect": 2.4630216478965714
+     },
+     "m10": {
+      "scenarios": 3,
+      "pairs": 30,
+      "design_effect": 4.291798707767286
+     },
+     "min_scenarios_m_inf": 2
+    }
+   }
+  },
+  {
+   "cell": "plain-sonnet",
+   "anchor": "plain-opus",
+   "host": "opus",
+   "suite": "S1",
+   "n_pairs": 204,
+   "n_scenarios": 44,
+   "gmean_ratio": 0.9699951113418355,
+   "sd_ln_ratio": 0.19435645009631974,
+   "sigma_between": 0.11872620549496501,
+   "sigma_within": 0.15546275546581317,
+   "icc": 0.36838015194509716,
+   "plan": {
+    "pm10": {
+     "m1": {
+      "scenarios": 17,
+      "pairs": 17,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 12,
+      "pairs": 24,
+      "design_effect": 1.368380151945097
+     },
+     "m3": {
+      "scenarios": 10,
+      "pairs": 30,
+      "design_effect": 1.7367603038901942
+     },
+     "m5": {
+      "scenarios": 9,
+      "pairs": 45,
+      "design_effect": 2.4735206077803884
+     },
+     "m10": {
+      "scenarios": 7,
+      "pairs": 70,
+      "design_effect": 4.315421367505874
+     },
+     "min_scenarios_m_inf": 6
+    },
+    "pm20": {
+     "m1": {
+      "scenarios": 5,
+      "pairs": 5,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 4,
+      "pairs": 8,
+      "design_effect": 1.368380151945097
+     },
+     "m3": {
+      "scenarios": 3,
+      "pairs": 9,
+      "design_effect": 1.7367603038901942
+     },
+     "m5": {
+      "scenarios": 3,
+      "pairs": 15,
+      "design_effect": 2.4735206077803884
+     },
+     "m10": {
+      "scenarios": 2,
+      "pairs": 20,
+      "design_effect": 4.315421367505874
+     },
+     "min_scenarios_m_inf": 2
+    }
+   }
+  },
+  {
+   "cell": "plain-sonnet",
+   "anchor": "plain-opus",
+   "host": "opus",
+   "suite": "s1m",
+   "n_pairs": 45,
+   "n_scenarios": 6,
+   "gmean_ratio": 1.347971848572204,
+   "sd_ln_ratio": 0.1660885474461536,
+   "sigma_between": 0.017809976052535818,
+   "sigma_within": 0.16539552393621065,
+   "icc": 0.011462316501170253,
+   "plan": {
+    "pm10": {
+     "m1": {
+      "scenarios": 12,
+      "pairs": 12,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 6,
+      "pairs": 12,
+      "design_effect": 1.0114623165011702
+     },
+     "m3": {
+      "scenarios": 4,
+      "pairs": 12,
+      "design_effect": 1.0229246330023405
+     },
+     "m5": {
+      "scenarios": 3,
+      "pairs": 15,
+      "design_effect": 1.045849266004681
+     },
+     "m10": {
+      "scenarios": 2,
+      "pairs": 20,
+      "design_effect": 1.1031608485105322
+     },
+     "min_scenarios_m_inf": 1
+    },
+    "pm20": {
+     "m1": {
+      "scenarios": 4,
+      "pairs": 4,
+      "design_effect": 1.0
+     },
+     "m2": {
+      "scenarios": 2,
+      "pairs": 4,
+      "design_effect": 1.0114623165011702
+     },
+     "m3": {
+      "scenarios": 2,
+      "pairs": 6,
+      "design_effect": 1.0229246330023405
+     },
+     "m5": {
+      "scenarios": 2,
+      "pairs": 10,
+      "design_effect": 1.045849266004681
+     },
+     "m10": {
+      "scenarios": 2,
+      "pairs": 20,
+      "design_effect": 1.1031608485105322
+     },
+     "min_scenarios_m_inf": 1
+    }
+   }
+  }
+ ],
+ "per_turn_s1m": [
+  {
+   "lever": "model_swap_control",
+   "host": "fable",
+   "n_pairs": 42,
+   "n_turn_obs": 168,
+   "sd_turn_ln_ratio_all": 0.37889498158348833,
+   "sd_turn_ln_ratio_within_session": 0.3939226233003727,
+   "sigma_between_sessions": 0.0,
+   "icc_turns_within_session": 0.0,
+   "sd_turn_within_session_ex_turn_index": 0.22249843820475318,
+   "sigma_between_sessions_ex_turn_index": 0.1207944496981942,
+   "icc_ex_turn_index": 0.22764454335542428,
+   "sd_session_ln_ratio": 0.19875278794428977,
+   "by_turn": {
+    "1": {
+     "n": 42,
+     "gmean_ratio": 0.39257243802073005,
+     "sd": 0.27334998649846826
+    },
+    "2": {
+     "n": 42,
+     "gmean_ratio": 0.8157839268764558,
+     "sd": 0.33174245964859256
+    },
+    "3": {
+     "n": 42,
+     "gmean_ratio": 0.7329505599954863,
+     "sd": 0.24000924084606567
+    },
+    "4": {
+     "n": 42,
+     "gmean_ratio": 0.6688904938594825,
+     "sd": 0.1327857811102041
+    }
+   }
+  },
+  {
+   "lever": "model_swap_control",
+   "host": "opus",
+   "n_pairs": 45,
+   "n_turn_obs": 180,
+   "sd_turn_ln_ratio_all": 0.3280858691351865,
+   "sd_turn_ln_ratio_within_session": 0.3533967606807325,
+   "sigma_between_sessions": 0.0,
+   "icc_turns_within_session": 0.0,
+   "sd_turn_within_session_ex_turn_index": 0.22569381599481225,
+   "sigma_between_sessions_ex_turn_index": 0.030739943633892052,
+   "icc_ex_turn_index": 0.01821310722053173,
+   "sd_session_ln_ratio": 0.1660885474461536,
+   "by_turn": {
+    "1": {
+     "n": 45,
+     "gmean_ratio": 1.0406889468019478,
+     "sd": 0.25798899773188594
+    },
+    "2": {
+     "n": 45,
+     "gmean_ratio": 1.8656325688389337,
+     "sd": 0.23942249155175313
+    },
+    "3": {
+     "n": 45,
+     "gmean_ratio": 1.8210170716645422,
+     "sd": 0.26604050628798803
+    },
+    "4": {
+     "n": 45,
+     "gmean_ratio": 1.6347798312452508,
+     "sd": 0.12784597122007677
+    }
+   }
+  },
+  {
+   "lever": "routing",
+   "host": "fable",
+   "n_pairs": 75,
+   "n_turn_obs": 300,
+   "sd_turn_ln_ratio_all": 0.7883313465457482,
+   "sd_turn_ln_ratio_within_session": 0.8326977241069483,
+   "sigma_between_sessions": 0.0,
+   "icc_turns_within_session": 0.0,
+   "sd_turn_within_session_ex_turn_index": 0.5255453394681708,
+   "sigma_between_sessions_ex_turn_index": 0.177901097525458,
+   "icc_ex_turn_index": 0.10280701418868357,
+   "sd_session_ln_ratio": 0.3766624457947849,
+   "by_turn": {
+    "1": {
+     "n": 75,
+     "gmean_ratio": 0.32866442343148944,
+     "sd": 0.2862079768792587
+    },
+    "2": {
+     "n": 75,
+     "gmean_ratio": 1.5936269818122457,
+     "sd": 1.0317216199084864
+    },
+    "3": {
+     "n": 75,
+     "gmean_ratio": 0.6990201582399,
+     "sd": 0.28334898146455817
+    },
+    "4": {
+     "n": 75,
+     "gmean_ratio": 0.6617055604857462,
+     "sd": 0.12622550199821997
+    }
+   }
+  },
+  {
+   "lever": "routing",
+   "host": "opus",
+   "n_pairs": 90,
+   "n_turn_obs": 360,
+   "sd_turn_ln_ratio_all": 0.48927297462784264,
+   "sd_turn_ln_ratio_within_session": 0.47992930801611694,
+   "sigma_between_sessions": 0.09556263285272576,
+   "icc_turns_within_session": 0.03813601695652909,
+   "sd_turn_within_session_ex_turn_index": 0.357928000517222,
+   "sigma_between_sessions_ex_turn_index": 0.1862448350488892,
+   "icc_ex_turn_index": 0.213066495604446,
+   "sd_session_ln_ratio": 0.23280345373072975,
+   "by_turn": {
+    "1": {
+     "n": 90,
+     "gmean_ratio": 0.8879082306900201,
+     "sd": 0.2635555538262949
+    },
+    "2": {
+     "n": 90,
+     "gmean_ratio": 1.9271711198866979,
+     "sd": 0.6545846959032056
+    },
+    "3": {
+     "n": 90,
+     "gmean_ratio": 1.4418953892586508,
+     "sd": 0.3104240530790675
+    },
+    "4": {
+     "n": 90,
+     "gmean_ratio": 1.3381179505799174,
+     "sd": 0.24740860749776372
+    }
+   }
+  },
+  {
+   "lever": "routing_plus_shaping",
+   "host": "fable",
+   "n_pairs": 9,
+   "n_turn_obs": 36,
+   "sd_turn_ln_ratio_all": 1.3099020697004886,
+   "sd_turn_ln_ratio_within_session": 1.412660592030381,
+   "sigma_between_sessions": 0.0,
+   "icc_turns_within_session": 0.0,
+   "sd_turn_within_session_ex_turn_index": 0.8992000895502612,
+   "sigma_between_sessions_ex_turn_index": 0.0,
+   "icc_ex_turn_index": 0.0,
+   "sd_session_ln_ratio": 0.8011435330097952,
+   "by_turn": {
+    "1": {
+     "n": 9,
+     "gmean_ratio": 0.12005581553154582,
+     "sd": 0.1897693518377559
+    },
+    "2": {
+     "n": 9,
+     "gmean_ratio": 1.4795031872215951,
+     "sd": 1.8412186154867298
+    },
+    "3": {
+     "n": 9,
+     "gmean_ratio": 0.2178208693843437,
+     "sd": 0.20776065650317585
+    },
+    "4": {
+     "n": 9,
+     "gmean_ratio": 0.22790277197246517,
+     "sd": 0.17680853118906065
+    }
+   }
+  },
+  {
+   "lever": "routing_plus_shaping",
+   "host": "opus",
+   "n_pairs": 9,
+   "n_turn_obs": 36,
+   "sd_turn_ln_ratio_all": 0.9816412224892138,
+   "sd_turn_ln_ratio_within_session": 1.0655631606977187,
+   "sigma_between_sessions": 0.0,
+   "icc_turns_within_session": 0.0,
+   "sd_turn_within_session_ex_turn_index": 0.6751331253165511,
+   "sigma_between_sessions_ex_turn_index": 0.0,
+   "icc_ex_turn_index": 0.0,
+   "sd_session_ln_ratio": 0.4950523106072999,
+   "by_turn": {
+    "1": {
+     "n": 9,
+     "gmean_ratio": 0.26792232282553896,
+     "sd": 0.33141713610030327
+    },
+    "2": {
+     "n": 9,
+     "gmean_ratio": 1.8980363516547534,
+     "sd": 1.3095486421764015
+    },
+    "3": {
+     "n": 9,
+     "gmean_ratio": 0.5368563350311503,
+     "sd": 0.25803552770251986
+    },
+    "4": {
+     "n": 9,
+     "gmean_ratio": 0.4795394161117163,
+     "sd": 0.1754425538464174
+    }
+   }
+  }
+ ]
+}

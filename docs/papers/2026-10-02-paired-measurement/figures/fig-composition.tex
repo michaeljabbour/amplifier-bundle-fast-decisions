@@ -1,0 +1,23 @@
+% Where the money goes: mean tools-normalized cost per session, split by token class.
+\begin{tikzpicture}
+\begin{axis}[benchmark, xbar stacked, bar width=10pt, scale only axis, width=10.5cm, height=6.4cm,
+  xmin=0, xmax=\CompMax, ymin=-0.6, ymax=6.6, ytick={0,...,6},
+  yticklabels from table={generated/data/composition.dat}{label},
+  xlabel={Mean cost per session (US dollars)}, xmajorgrids,
+  legend to name=complegend, legend columns=3, legend cell align=left,
+  legend style={/tikz/every even column/.append style={column sep=10pt}}]
+\addplot[fill=okgray!50, draw=black!60] table[x=input, y=idx]{generated/data/composition.dat};
+\addlegendentry{uncached input}
+\addplot[fill=okblue!45, draw=black!60] table[x=read, y=idx]{generated/data/composition.dat};
+\addlegendentry{cache read}
+\addplot[fill=okorange!80, draw=black!60, postaction={pattern=north east lines, pattern color=white}]
+  table[x=write, y=idx]{generated/data/composition.dat};
+\addlegendentry{cache write (new content)}
+\addplot[fill=black!75, draw=black!60, postaction={pattern=crosshatch dots, pattern color=white}]
+  table[x=rebuild, y=idx]{generated/data/composition.dat};
+\addlegendentry{rebuild after a switch}
+\addplot[fill=okgreen!70, draw=black!60, postaction={pattern=dots, pattern color=white}]
+  table[x=output, y=idx]{generated/data/composition.dat};
+\addlegendentry{output}
+\end{axis}
+\end{tikzpicture}

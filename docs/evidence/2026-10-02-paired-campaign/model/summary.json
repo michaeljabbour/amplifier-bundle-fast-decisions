@@ -1,0 +1,6680 @@
+{
+ "aa_noise": {
+  "all": {
+   "centred_on_zero": true,
+   "implied_sd_single_session": 0.075708,
+   "mean_log_ratio": 0.007078,
+   "mean_log_ratio_ci95": [
+    -0.027751,
+    0.039762
+   ],
+   "n_pairs": 55,
+   "n_scenarios": 26,
+   "sd_log_ratio": 0.107067
+  },
+  "fable": {
+   "centred_on_zero": true,
+   "implied_sd_single_session": 0.068571,
+   "mean_log_ratio": -0.03243,
+   "mean_log_ratio_ci95": [
+    -0.067457,
+    0.003754
+   ],
+   "n_pairs": 28,
+   "n_scenarios": 26,
+   "sd_log_ratio": 0.096974
+  },
+  "opus": {
+   "centred_on_zero": false,
+   "implied_sd_single_session": 0.072866,
+   "mean_log_ratio": 0.048049,
+   "mean_log_ratio_ci95": [
+    0.004601,
+    0.088682
+   ],
+   "n_pairs": 27,
+   "n_scenarios": 25,
+   "sd_log_ratio": 0.103048
+  }
+ },
+ "basis": "normalized",
+ "bootstrap": 2000,
+ "counts": {
+  "by_split": {
+   "test": 294,
+   "train": 602
+  },
+  "pairs": 896,
+  "unjoined_pairs": 0,
+  "valid_cost_pairs": 895
+ },
+ "groups": [
+  {
+   "arm": "aa",
+   "dim": "overall",
+   "gm_cost_ratio": 1.007103,
+   "gm_cost_ratio_both_pass": 1.007401,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.971265,
+    1.043603
+   ],
+   "gm_cost_ratio_ci95": [
+    0.972891,
+    1.042628
+   ],
+   "host": "all",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": 0.000866,
+   "mean_saving_usd_ci95": [
+    -0.146549,
+    0.152983
+   ],
+   "median_saving_usd": -0.019232,
+   "n_both_pass": 53,
+   "n_pairs_total": 56,
+   "n_scenarios": 26,
+   "n_valid_pairs": 55,
+   "quality": {
+    "anchor_final_pass_rate": 1.0,
+    "arm_final_pass_rate": 0.9464,
+    "delta_turn_pass_ci95": [
+     -0.0176,
+     0.0154
+    ],
+    "mcnemar_anchor_only_pass": 3,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 0.25,
+    "mean_delta_turn_pass": -0.0015,
+    "n_pairs": 56,
+    "non_inferior": true
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": -0.71,
+   "savings_claim_allowed": true,
+   "share_sessions_with_switch": 0.0,
+   "value": "all"
+  },
+  {
+   "arm": "aa",
+   "dim": "overall",
+   "gm_cost_ratio": 0.96809,
+   "gm_cost_ratio_both_pass": 0.966439,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.932024,
+    1.003403
+   ],
+   "gm_cost_ratio_ci95": [
+    0.934625,
+    1.003803
+   ],
+   "host": "fable",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": 0.118937,
+   "mean_saving_usd_ci95": [
+    -0.113567,
+    0.32341
+   ],
+   "median_saving_usd": 0.127552,
+   "n_both_pass": 27,
+   "n_pairs_total": 28,
+   "n_scenarios": 26,
+   "n_valid_pairs": 28,
+   "quality": {
+    "anchor_final_pass_rate": 1.0,
+    "arm_final_pass_rate": 0.9643,
+    "delta_turn_pass_ci95": [
+     -0.0062,
+     0.0178
+    ],
+    "mcnemar_anchor_only_pass": 1,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 1.0,
+    "mean_delta_turn_pass": 0.0042,
+    "n_pairs": 28,
+    "non_inferior": true
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": 3.191,
+   "savings_claim_allowed": true,
+   "share_sessions_with_switch": 0.0,
+   "value": "all"
+  },
+  {
+   "arm": "aa",
+   "dim": "overall",
+   "gm_cost_ratio": 1.049222,
+   "gm_cost_ratio_both_pass": 1.051777,
+   "gm_cost_ratio_both_pass_ci95": [
+    1.006197,
+    1.095341
+   ],
+   "gm_cost_ratio_ci95": [
+    1.005946,
+    1.094423
+   ],
+   "host": "opus",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": -0.121578,
+   "mean_saving_usd_ci95": [
+    -0.203777,
+    -0.044417
+   ],
+   "median_saving_usd": -0.097515,
+   "n_both_pass": 26,
+   "n_pairs_total": 28,
+   "n_scenarios": 25,
+   "n_valid_pairs": 27,
+   "quality": {
+    "anchor_final_pass_rate": 1.0,
+    "arm_final_pass_rate": 0.9286,
+    "delta_turn_pass_ci95": [
+     -0.0305,
+     0.0144
+    ],
+    "mcnemar_anchor_only_pass": 2,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 0.5,
+    "mean_delta_turn_pass": -0.0072,
+    "n_pairs": 28,
+    "non_inferior": true
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": -4.922,
+   "savings_claim_allowed": true,
+   "share_sessions_with_switch": 0.0,
+   "value": "all"
+  },
+  {
+   "arm": "shipped",
+   "dim": "overall",
+   "gm_cost_ratio": 0.890957,
+   "gm_cost_ratio_both_pass": 0.895784,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.824475,
+    0.967718
+   ],
+   "gm_cost_ratio_ci95": [
+    0.826494,
+    0.96139
+   ],
+   "host": "all",
+   "mean_model_switches": 1.507,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": 0.583288,
+   "mean_saving_usd_ci95": [
+    0.32557,
+    0.842729
+   ],
+   "median_saving_usd": 0.172088,
+   "n_both_pass": 260,
+   "n_pairs_total": 280,
+   "n_scenarios": 70,
+   "n_valid_pairs": 280,
+   "quality": {
+    "anchor_final_pass_rate": 0.9679,
+    "arm_final_pass_rate": 0.9357,
+    "delta_turn_pass_ci95": [
+     -0.0431,
+     0.0114
+    ],
+    "mcnemar_anchor_only_pass": 11,
+    "mcnemar_arm_only_pass": 2,
+    "mcnemar_p": 0.0225,
+    "mean_delta_turn_pass": -0.013,
+    "n_pairs": 280,
+    "non_inferior": true
+   },
+   "rebuild_cost_share": 0.142487,
+   "saving_pct": 10.904,
+   "savings_claim_allowed": true,
+   "share_sessions_with_switch": 0.568,
+   "value": "all"
+  },
+  {
+   "arm": "shipped",
+   "dim": "overall",
+   "gm_cost_ratio": 0.632513,
+   "gm_cost_ratio_both_pass": 0.634675,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.58865,
+    0.686702
+   ],
+   "gm_cost_ratio_ci95": [
+    0.58798,
+    0.682608
+   ],
+   "host": "fable",
+   "mean_model_switches": 1.507,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": 1.754211,
+   "mean_saving_usd_ci95": [
+    1.427516,
+    2.076103
+   ],
+   "median_saving_usd": 1.747616,
+   "n_both_pass": 130,
+   "n_pairs_total": 140,
+   "n_scenarios": 70,
+   "n_valid_pairs": 140,
+   "quality": {
+    "anchor_final_pass_rate": 0.9786,
+    "arm_final_pass_rate": 0.9357,
+    "delta_turn_pass_ci95": [
+     -0.0447,
+     0.0172
+    ],
+    "mcnemar_anchor_only_pass": 7,
+    "mcnemar_arm_only_pass": 1,
+    "mcnemar_p": 0.0703,
+    "mean_delta_turn_pass": -0.0129,
+    "n_pairs": 140,
+    "non_inferior": true
+   },
+   "rebuild_cost_share": 0.170789,
+   "saving_pct": 36.749,
+   "savings_claim_allowed": true,
+   "share_sessions_with_switch": 0.571,
+   "value": "all"
+  },
+  {
+   "arm": "shipped",
+   "dim": "overall",
+   "gm_cost_ratio": 1.255002,
+   "gm_cost_ratio_both_pass": 1.264317,
+   "gm_cost_ratio_both_pass_ci95": [
+    1.180988,
+    1.358432
+   ],
+   "gm_cost_ratio_ci95": [
+    1.172925,
+    1.336825
+   ],
+   "host": "opus",
+   "mean_model_switches": 1.507,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": -0.587635,
+   "mean_saving_usd_ci95": [
+    -0.769344,
+    -0.433379
+   ],
+   "median_saving_usd": -0.437839,
+   "n_both_pass": 130,
+   "n_pairs_total": 140,
+   "n_scenarios": 70,
+   "n_valid_pairs": 140,
+   "quality": {
+    "anchor_final_pass_rate": 0.9571,
+    "arm_final_pass_rate": 0.9357,
+    "delta_turn_pass_ci95": [
+     -0.0459,
+     0.0172
+    ],
+    "mcnemar_anchor_only_pass": 4,
+    "mcnemar_arm_only_pass": 1,
+    "mcnemar_p": 0.375,
+    "mean_delta_turn_pass": -0.0131,
+    "n_pairs": 140,
+    "non_inferior": true
+   },
+   "rebuild_cost_share": 0.105378,
+   "saving_pct": -25.5,
+   "savings_claim_allowed": true,
+   "share_sessions_with_switch": 0.564,
+   "value": "all"
+  },
+  {
+   "arm": "sonnet",
+   "dim": "overall",
+   "gm_cost_ratio": 0.922449,
+   "gm_cost_ratio_both_pass": 0.91894,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.843657,
+    1.002688
+   ],
+   "gm_cost_ratio_ci95": [
+    0.84342,
+    1.006253
+   ],
+   "host": "all",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": 0.496997,
+   "mean_saving_usd_ci95": [
+    0.196589,
+    0.793706
+   ],
+   "median_saving_usd": 0.134792,
+   "n_both_pass": 262,
+   "n_pairs_total": 280,
+   "n_scenarios": 70,
+   "n_valid_pairs": 280,
+   "quality": {
+    "anchor_final_pass_rate": 0.9679,
+    "arm_final_pass_rate": 0.9429,
+    "delta_turn_pass_ci95": [
+     -0.0326,
+     0.0233
+    ],
+    "mcnemar_anchor_only_pass": 9,
+    "mcnemar_arm_only_pass": 2,
+    "mcnemar_p": 0.0654,
+    "mean_delta_turn_pass": -0.0013,
+    "n_pairs": 280,
+    "non_inferior": true
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": 7.755,
+   "savings_claim_allowed": true,
+   "share_sessions_with_switch": 0.0,
+   "value": "all"
+  },
+  {
+   "arm": "sonnet",
+   "dim": "overall",
+   "gm_cost_ratio": 0.586681,
+   "gm_cost_ratio_both_pass": 0.586381,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.551471,
+    0.627378
+   ],
+   "gm_cost_ratio_ci95": [
+    0.550098,
+    0.625236
+   ],
+   "host": "fable",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": 2.089983,
+   "mean_saving_usd_ci95": [
+    1.793124,
+    2.398379
+   ],
+   "median_saving_usd": 2.089577,
+   "n_both_pass": 132,
+   "n_pairs_total": 140,
+   "n_scenarios": 70,
+   "n_valid_pairs": 140,
+   "quality": {
+    "anchor_final_pass_rate": 0.9786,
+    "arm_final_pass_rate": 0.9429,
+    "delta_turn_pass_ci95": [
+     -0.0423,
+     0.0217
+    ],
+    "mcnemar_anchor_only_pass": 5,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 0.0625,
+    "mean_delta_turn_pass": -0.008,
+    "n_pairs": 140,
+    "non_inferior": true
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": 41.332,
+   "savings_claim_allowed": true,
+   "share_sessions_with_switch": 0.0,
+   "value": "all"
+  },
+  {
+   "arm": "sonnet",
+   "dim": "overall",
+   "gm_cost_ratio": 1.450385,
+   "gm_cost_ratio_both_pass": 1.450095,
+   "gm_cost_ratio_both_pass_ci95": [
+    1.339022,
+    1.56787
+   ],
+   "gm_cost_ratio_ci95": [
+    1.345488,
+    1.568718
+   ],
+   "host": "opus",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": -1.095989,
+   "mean_saving_usd_ci95": [
+    -1.37551,
+    -0.829718
+   ],
+   "median_saving_usd": -0.889984,
+   "n_both_pass": 130,
+   "n_pairs_total": 140,
+   "n_scenarios": 70,
+   "n_valid_pairs": 140,
+   "quality": {
+    "anchor_final_pass_rate": 0.9571,
+    "arm_final_pass_rate": 0.9429,
+    "delta_turn_pass_ci95": [
+     -0.0241,
+     0.0325
+    ],
+    "mcnemar_anchor_only_pass": 4,
+    "mcnemar_arm_only_pass": 2,
+    "mcnemar_p": 0.6875,
+    "mean_delta_turn_pass": 0.0054,
+    "n_pairs": 140,
+    "non_inferior": true
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": -45.039,
+   "savings_claim_allowed": true,
+   "share_sessions_with_switch": 0.0,
+   "value": "all"
+  },
+  {
+   "arm": "sticky",
+   "dim": "overall",
+   "gm_cost_ratio": 0.819612,
+   "gm_cost_ratio_both_pass": 0.825952,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.759206,
+    0.900495
+   ],
+   "gm_cost_ratio_ci95": [
+    0.75883,
+    0.892492
+   ],
+   "host": "all",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": 0.745478,
+   "mean_saving_usd_ci95": [
+    0.420785,
+    1.071599
+   ],
+   "median_saving_usd": 0.251988,
+   "n_both_pass": 260,
+   "n_pairs_total": 280,
+   "n_scenarios": 70,
+   "n_valid_pairs": 280,
+   "quality": {
+    "anchor_final_pass_rate": 0.9679,
+    "arm_final_pass_rate": 0.9393,
+    "delta_turn_pass_ci95": [
+     -0.0448,
+     0.0096
+    ],
+    "mcnemar_anchor_only_pass": 11,
+    "mcnemar_arm_only_pass": 3,
+    "mcnemar_p": 0.0574,
+    "mean_delta_turn_pass": -0.0155,
+    "n_pairs": 280,
+    "non_inferior": true
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": 18.039,
+   "savings_claim_allowed": true,
+   "share_sessions_with_switch": 0.0,
+   "value": "all"
+  },
+  {
+   "arm": "sticky",
+   "dim": "overall",
+   "gm_cost_ratio": 0.559639,
+   "gm_cost_ratio_both_pass": 0.56679,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.518715,
+    0.622572
+   ],
+   "gm_cost_ratio_ci95": [
+    0.51731,
+    0.61283
+   ],
+   "host": "fable",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": 1.980099,
+   "mean_saving_usd_ci95": [
+    1.473481,
+    2.404653
+   ],
+   "median_saving_usd": 2.034075,
+   "n_both_pass": 131,
+   "n_pairs_total": 140,
+   "n_scenarios": 70,
+   "n_valid_pairs": 140,
+   "quality": {
+    "anchor_final_pass_rate": 0.9786,
+    "arm_final_pass_rate": 0.9429,
+    "delta_turn_pass_ci95": [
+     -0.0575,
+     0.0113
+    ],
+    "mcnemar_anchor_only_pass": 6,
+    "mcnemar_arm_only_pass": 1,
+    "mcnemar_p": 0.125,
+    "mean_delta_turn_pass": -0.0209,
+    "n_pairs": 140,
+    "non_inferior": false
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": 44.036,
+   "savings_claim_allowed": false,
+   "share_sessions_with_switch": 0.0,
+   "value": "all"
+  },
+  {
+   "arm": "sticky",
+   "dim": "overall",
+   "gm_cost_ratio": 1.200351,
+   "gm_cost_ratio_both_pass": 1.210663,
+   "gm_cost_ratio_both_pass_ci95": [
+    1.132881,
+    1.294393
+   ],
+   "gm_cost_ratio_ci95": [
+    1.128869,
+    1.279649
+   ],
+   "host": "opus",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": -0.489144,
+   "mean_saving_usd_ci95": [
+    -0.665548,
+    -0.327731
+   ],
+   "median_saving_usd": -0.324279,
+   "n_both_pass": 129,
+   "n_pairs_total": 140,
+   "n_scenarios": 70,
+   "n_valid_pairs": 140,
+   "quality": {
+    "anchor_final_pass_rate": 0.9571,
+    "arm_final_pass_rate": 0.9357,
+    "delta_turn_pass_ci95": [
+     -0.0367,
+     0.0145
+    ],
+    "mcnemar_anchor_only_pass": 5,
+    "mcnemar_arm_only_pass": 2,
+    "mcnemar_p": 0.4531,
+    "mean_delta_turn_pass": -0.0101,
+    "n_pairs": 140,
+    "non_inferior": true
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": -20.035,
+   "savings_claim_allowed": true,
+   "share_sessions_with_switch": 0.0,
+   "value": "all"
+  },
+  {
+   "arm": "aa",
+   "dim": "task_type",
+   "gm_cost_ratio": 0.963654,
+   "gm_cost_ratio_both_pass": 0.960608,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.909346,
+    1.019372
+   ],
+   "gm_cost_ratio_ci95": [
+    0.912438,
+    1.020549
+   ],
+   "host": "all",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": 0.197998,
+   "mean_saving_usd_ci95": [
+    0.009972,
+    0.440574
+   ],
+   "median_saving_usd": 0.064791,
+   "n_both_pass": 16,
+   "n_pairs_total": 18,
+   "n_scenarios": 9,
+   "n_valid_pairs": 17,
+   "quality": {
+    "anchor_final_pass_rate": 1.0,
+    "arm_final_pass_rate": 0.8889,
+    "delta_turn_pass_ci95": [
+     -0.0479,
+     0.021
+    ],
+    "mcnemar_anchor_only_pass": 2,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 0.5,
+    "mean_delta_turn_pass": -0.0118,
+    "n_pairs": 18,
+    "non_inferior": true
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": 3.635,
+   "savings_claim_allowed": true,
+   "share_sessions_with_switch": 0.0,
+   "value": "bugfix"
+  },
+  {
+   "arm": "aa",
+   "dim": "task_type",
+   "gm_cost_ratio": 1.18122,
+   "gm_cost_ratio_both_pass": 1.18122,
+   "gm_cost_ratio_both_pass_ci95": [
+    null,
+    null
+   ],
+   "gm_cost_ratio_ci95": [
+    null,
+    null
+   ],
+   "host": "all",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": -0.895442,
+   "mean_saving_usd_ci95": [
+    null,
+    null
+   ],
+   "median_saving_usd": -0.895442,
+   "n_both_pass": 2,
+   "n_pairs_total": 2,
+   "n_scenarios": 1,
+   "n_valid_pairs": 2,
+   "quality": {
+    "anchor_final_pass_rate": 1.0,
+    "arm_final_pass_rate": 1.0,
+    "delta_turn_pass_ci95": [
+     null,
+     null
+    ],
+    "mcnemar_anchor_only_pass": 0,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 1.0,
+    "mean_delta_turn_pass": -0.0312,
+    "n_pairs": 2,
+    "non_inferior": null
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": -18.122,
+   "savings_claim_allowed": null,
+   "share_sessions_with_switch": 0.0,
+   "value": "docs"
+  },
+  {
+   "arm": "aa",
+   "dim": "task_type",
+   "gm_cost_ratio": 1.017089,
+   "gm_cost_ratio_both_pass": 1.023643,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.926648,
+    1.098996
+   ],
+   "gm_cost_ratio_ci95": [
+    0.940889,
+    1.097076
+   ],
+   "host": "all",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": 0.0024,
+   "mean_saving_usd_ci95": [
+    -0.213408,
+    0.267541
+   ],
+   "median_saving_usd": -0.035202,
+   "n_both_pass": 5,
+   "n_pairs_total": 6,
+   "n_scenarios": 2,
+   "n_valid_pairs": 6,
+   "quality": {
+    "anchor_final_pass_rate": 1.0,
+    "arm_final_pass_rate": 0.8333,
+    "delta_turn_pass_ci95": [
+     -0.075,
+     0.0
+    ],
+    "mcnemar_anchor_only_pass": 1,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 1.0,
+    "mean_delta_turn_pass": -0.0167,
+    "n_pairs": 6,
+    "non_inferior": false
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": -1.709,
+   "savings_claim_allowed": false,
+   "share_sessions_with_switch": 0.0,
+   "value": "explain"
+  },
+  {
+   "arm": "aa",
+   "dim": "task_type",
+   "gm_cost_ratio": 0.985753,
+   "gm_cost_ratio_both_pass": 0.985753,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.922784,
+    1.047854
+   ],
+   "gm_cost_ratio_ci95": [
+    0.921962,
+    1.051312
+   ],
+   "host": "all",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": 0.010653,
+   "mean_saving_usd_ci95": [
+    -0.318237,
+    0.333919
+   ],
+   "median_saving_usd": -0.006741,
+   "n_both_pass": 10,
+   "n_pairs_total": 10,
+   "n_scenarios": 5,
+   "n_valid_pairs": 10,
+   "quality": {
+    "anchor_final_pass_rate": 1.0,
+    "arm_final_pass_rate": 1.0,
+    "delta_turn_pass_ci95": [
+     -0.0333,
+     0.0
+    ],
+    "mcnemar_anchor_only_pass": 0,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 1.0,
+    "mean_delta_turn_pass": -0.0083,
+    "n_pairs": 10,
+    "non_inferior": true
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": 1.425,
+   "savings_claim_allowed": true,
+   "share_sessions_with_switch": 0.0,
+   "value": "feature"
+  },
+  {
+   "arm": "aa",
+   "dim": "task_type",
+   "gm_cost_ratio": 1.039608,
+   "gm_cost_ratio_both_pass": 1.039608,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.982732,
+    1.101992
+   ],
+   "gm_cost_ratio_ci95": [
+    0.983684,
+    1.097565
+   ],
+   "host": "all",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": -0.100342,
+   "mean_saving_usd_ci95": [
+    -0.398368,
+    0.112141
+   ],
+   "median_saving_usd": -0.065569,
+   "n_both_pass": 18,
+   "n_pairs_total": 18,
+   "n_scenarios": 8,
+   "n_valid_pairs": 18,
+   "quality": {
+    "anchor_final_pass_rate": 1.0,
+    "arm_final_pass_rate": 1.0,
+    "delta_turn_pass_ci95": [
+     0.0,
+     0.0547
+    ],
+    "mcnemar_anchor_only_pass": 0,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 1.0,
+    "mean_delta_turn_pass": 0.0208,
+    "n_pairs": 18,
+    "non_inferior": true
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": -3.961,
+   "savings_claim_allowed": true,
+   "share_sessions_with_switch": 0.0,
+   "value": "mixed"
+  },
+  {
+   "arm": "aa",
+   "dim": "task_type",
+   "gm_cost_ratio": 1.014201,
+   "gm_cost_ratio_both_pass": 1.014201,
+   "gm_cost_ratio_both_pass_ci95": [
+    null,
+    null
+   ],
+   "gm_cost_ratio_ci95": [
+    null,
+    null
+   ],
+   "host": "all",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": 0.078882,
+   "mean_saving_usd_ci95": [
+    null,
+    null
+   ],
+   "median_saving_usd": 0.078882,
+   "n_both_pass": 2,
+   "n_pairs_total": 2,
+   "n_scenarios": 1,
+   "n_valid_pairs": 2,
+   "quality": {
+    "anchor_final_pass_rate": 1.0,
+    "arm_final_pass_rate": 1.0,
+    "delta_turn_pass_ci95": [
+     null,
+     null
+    ],
+    "mcnemar_anchor_only_pass": 0,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 1.0,
+    "mean_delta_turn_pass": 0.0,
+    "n_pairs": 2,
+    "non_inferior": null
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": -1.42,
+   "savings_claim_allowed": null,
+   "share_sessions_with_switch": 0.0,
+   "value": "review"
+  },
+  {
+   "arm": "aa",
+   "dim": "task_type",
+   "gm_cost_ratio": 0.916525,
+   "gm_cost_ratio_both_pass": 0.905049,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.855569,
+    0.95752
+   ],
+   "gm_cost_ratio_ci95": [
+    0.870507,
+    0.965021
+   ],
+   "host": "fable",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": 0.434863,
+   "mean_saving_usd_ci95": [
+    0.174598,
+    0.745984
+   ],
+   "median_saving_usd": 0.436267,
+   "n_both_pass": 8,
+   "n_pairs_total": 9,
+   "n_scenarios": 9,
+   "n_valid_pairs": 9,
+   "quality": {
+    "anchor_final_pass_rate": 1.0,
+    "arm_final_pass_rate": 0.8889,
+    "delta_turn_pass_ci95": [
+     -0.0278,
+     0.0256
+    ],
+    "mcnemar_anchor_only_pass": 1,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 1.0,
+    "mean_delta_turn_pass": -0.0007,
+    "n_pairs": 9,
+    "non_inferior": true
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": 8.347,
+   "savings_claim_allowed": true,
+   "share_sessions_with_switch": 0.0,
+   "value": "bugfix"
+  },
+  {
+   "arm": "aa",
+   "dim": "task_type",
+   "gm_cost_ratio": 1.159465,
+   "gm_cost_ratio_both_pass": 1.159465,
+   "gm_cost_ratio_both_pass_ci95": [
+    null,
+    null
+   ],
+   "gm_cost_ratio_ci95": [
+    null,
+    null
+   ],
+   "host": "fable",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": -1.091946,
+   "mean_saving_usd_ci95": [
+    null,
+    null
+   ],
+   "median_saving_usd": -1.091946,
+   "n_both_pass": 1,
+   "n_pairs_total": 1,
+   "n_scenarios": 1,
+   "n_valid_pairs": 1,
+   "quality": {
+    "anchor_final_pass_rate": 1.0,
+    "arm_final_pass_rate": 1.0,
+    "delta_turn_pass_ci95": [
+     null,
+     null
+    ],
+    "mcnemar_anchor_only_pass": 0,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 1.0,
+    "mean_delta_turn_pass": 0.0,
+    "n_pairs": 1,
+    "non_inferior": null
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": -15.947,
+   "savings_claim_allowed": null,
+   "share_sessions_with_switch": 0.0,
+   "value": "docs"
+  },
+  {
+   "arm": "aa",
+   "dim": "task_type",
+   "gm_cost_ratio": 0.96759,
+   "gm_cost_ratio_both_pass": 0.96759,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.910206,
+    1.035126
+   ],
+   "gm_cost_ratio_ci95": [
+    0.910206,
+    1.035126
+   ],
+   "host": "fable",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": 0.139307,
+   "mean_saving_usd_ci95": [
+    -0.134368,
+    0.412982
+   ],
+   "median_saving_usd": 0.267541,
+   "n_both_pass": 3,
+   "n_pairs_total": 3,
+   "n_scenarios": 2,
+   "n_valid_pairs": 3,
+   "quality": {
+    "anchor_final_pass_rate": 1.0,
+    "arm_final_pass_rate": 1.0,
+    "delta_turn_pass_ci95": [
+     0.0,
+     0.0
+    ],
+    "mcnemar_anchor_only_pass": 0,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 1.0,
+    "mean_delta_turn_pass": 0.0,
+    "n_pairs": 3,
+    "non_inferior": true
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": 3.241,
+   "savings_claim_allowed": true,
+   "share_sessions_with_switch": 0.0,
+   "value": "explain"
+  },
+  {
+   "arm": "aa",
+   "dim": "task_type",
+   "gm_cost_ratio": 0.981792,
+   "gm_cost_ratio_both_pass": 0.981792,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.90609,
+    1.063819
+   ],
+   "gm_cost_ratio_ci95": [
+    0.906068,
+    1.063819
+   ],
+   "host": "fable",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": 0.010056,
+   "mean_saving_usd_ci95": [
+    -0.473811,
+    0.505229
+   ],
+   "median_saving_usd": -0.068565,
+   "n_both_pass": 5,
+   "n_pairs_total": 5,
+   "n_scenarios": 5,
+   "n_valid_pairs": 5,
+   "quality": {
+    "anchor_final_pass_rate": 1.0,
+    "arm_final_pass_rate": 1.0,
+    "delta_turn_pass_ci95": [
+     0.0,
+     0.0
+    ],
+    "mcnemar_anchor_only_pass": 0,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 1.0,
+    "mean_delta_turn_pass": 0.0,
+    "n_pairs": 5,
+    "non_inferior": true
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": 1.821,
+   "savings_claim_allowed": true,
+   "share_sessions_with_switch": 0.0,
+   "value": "feature"
+  },
+  {
+   "arm": "aa",
+   "dim": "task_type",
+   "gm_cost_ratio": 0.997571,
+   "gm_cost_ratio_both_pass": 0.997571,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.951562,
+    1.058849
+   ],
+   "gm_cost_ratio_ci95": [
+    0.949678,
+    1.06297
+   ],
+   "host": "fable",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": -0.037868,
+   "mean_saving_usd_ci95": [
+    -0.510846,
+    0.282655
+   ],
+   "median_saving_usd": 0.063053,
+   "n_both_pass": 9,
+   "n_pairs_total": 9,
+   "n_scenarios": 8,
+   "n_valid_pairs": 9,
+   "quality": {
+    "anchor_final_pass_rate": 1.0,
+    "arm_final_pass_rate": 1.0,
+    "delta_turn_pass_ci95": [
+     0.0,
+     0.0469
+    ],
+    "mcnemar_anchor_only_pass": 0,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 1.0,
+    "mean_delta_turn_pass": 0.0139,
+    "n_pairs": 9,
+    "non_inferior": true
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": 0.243,
+   "savings_claim_allowed": true,
+   "share_sessions_with_switch": 0.0,
+   "value": "mixed"
+  },
+  {
+   "arm": "aa",
+   "dim": "task_type",
+   "gm_cost_ratio": 0.942786,
+   "gm_cost_ratio_both_pass": 0.942786,
+   "gm_cost_ratio_both_pass_ci95": [
+    null,
+    null
+   ],
+   "gm_cost_ratio_ci95": [
+    null,
+    null
+   ],
+   "host": "fable",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": 0.381016,
+   "mean_saving_usd_ci95": [
+    null,
+    null
+   ],
+   "median_saving_usd": 0.381016,
+   "n_both_pass": 1,
+   "n_pairs_total": 1,
+   "n_scenarios": 1,
+   "n_valid_pairs": 1,
+   "quality": {
+    "anchor_final_pass_rate": 1.0,
+    "arm_final_pass_rate": 1.0,
+    "delta_turn_pass_ci95": [
+     null,
+     null
+    ],
+    "mcnemar_anchor_only_pass": 0,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 1.0,
+    "mean_delta_turn_pass": 0.0,
+    "n_pairs": 1,
+    "non_inferior": null
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": 5.721,
+   "savings_claim_allowed": null,
+   "share_sessions_with_switch": 0.0,
+   "value": "review"
+  },
+  {
+   "arm": "aa",
+   "dim": "task_type",
+   "gm_cost_ratio": 1.019577,
+   "gm_cost_ratio_both_pass": 1.019577,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.952971,
+    1.088658
+   ],
+   "gm_cost_ratio_ci95": [
+    0.949351,
+    1.090129
+   ],
+   "host": "opus",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": -0.068476,
+   "mean_saving_usd_ci95": [
+    -0.182901,
+    0.041984
+   ],
+   "median_saving_usd": -0.074574,
+   "n_both_pass": 8,
+   "n_pairs_total": 9,
+   "n_scenarios": 8,
+   "n_valid_pairs": 8,
+   "quality": {
+    "anchor_final_pass_rate": 1.0,
+    "arm_final_pass_rate": 0.8889,
+    "delta_turn_pass_ci95": [
+     -0.0759,
+     0.0171
+    ],
+    "mcnemar_anchor_only_pass": 1,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 1.0,
+    "mean_delta_turn_pass": -0.0229,
+    "n_pairs": 9,
+    "non_inferior": false
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": -1.958,
+   "savings_claim_allowed": false,
+   "share_sessions_with_switch": 0.0,
+   "value": "bugfix"
+  },
+  {
+   "arm": "aa",
+   "dim": "task_type",
+   "gm_cost_ratio": 1.203382,
+   "gm_cost_ratio_both_pass": 1.203382,
+   "gm_cost_ratio_both_pass_ci95": [
+    null,
+    null
+   ],
+   "gm_cost_ratio_ci95": [
+    null,
+    null
+   ],
+   "host": "opus",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": -0.698937,
+   "mean_saving_usd_ci95": [
+    null,
+    null
+   ],
+   "median_saving_usd": -0.698937,
+   "n_both_pass": 1,
+   "n_pairs_total": 1,
+   "n_scenarios": 1,
+   "n_valid_pairs": 1,
+   "quality": {
+    "anchor_final_pass_rate": 1.0,
+    "arm_final_pass_rate": 1.0,
+    "delta_turn_pass_ci95": [
+     null,
+     null
+    ],
+    "mcnemar_anchor_only_pass": 0,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 1.0,
+    "mean_delta_turn_pass": -0.0625,
+    "n_pairs": 1,
+    "non_inferior": null
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": -20.338,
+   "savings_claim_allowed": null,
+   "share_sessions_with_switch": 0.0,
+   "value": "docs"
+  },
+  {
+   "arm": "aa",
+   "dim": "task_type",
+   "gm_cost_ratio": 1.06912,
+   "gm_cost_ratio_both_pass": 1.113871,
+   "gm_cost_ratio_both_pass_ci95": [
+    null,
+    null
+   ],
+   "gm_cost_ratio_ci95": [
+    0.98494,
+    1.146876
+   ],
+   "host": "opus",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": -0.134507,
+   "mean_saving_usd_ci95": [
+    -0.274216,
+    0.027111
+   ],
+   "median_saving_usd": -0.097515,
+   "n_both_pass": 2,
+   "n_pairs_total": 3,
+   "n_scenarios": 2,
+   "n_valid_pairs": 3,
+   "quality": {
+    "anchor_final_pass_rate": 1.0,
+    "arm_final_pass_rate": 0.6667,
+    "delta_turn_pass_ci95": [
+     -0.1,
+     0.0
+    ],
+    "mcnemar_anchor_only_pass": 1,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 1.0,
+    "mean_delta_turn_pass": -0.0333,
+    "n_pairs": 3,
+    "non_inferior": false
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": -6.912,
+   "savings_claim_allowed": false,
+   "share_sessions_with_switch": 0.0,
+   "value": "explain"
+  },
+  {
+   "arm": "aa",
+   "dim": "task_type",
+   "gm_cost_ratio": 0.98973,
+   "gm_cost_ratio_both_pass": 0.98973,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.943463,
+    1.039571
+   ],
+   "gm_cost_ratio_ci95": [
+    0.943463,
+    1.039571
+   ],
+   "host": "opus",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": 0.01125,
+   "mean_saving_usd_ci95": [
+    -0.097207,
+    0.102815
+   ],
+   "median_saving_usd": 0.018473,
+   "n_both_pass": 5,
+   "n_pairs_total": 5,
+   "n_scenarios": 5,
+   "n_valid_pairs": 5,
+   "quality": {
+    "anchor_final_pass_rate": 1.0,
+    "arm_final_pass_rate": 1.0,
+    "delta_turn_pass_ci95": [
+     -0.05,
+     0.0
+    ],
+    "mcnemar_anchor_only_pass": 0,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 1.0,
+    "mean_delta_turn_pass": -0.0167,
+    "n_pairs": 5,
+    "non_inferior": true
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": 1.027,
+   "savings_claim_allowed": true,
+   "share_sessions_with_switch": 0.0,
+   "value": "feature"
+  },
+  {
+   "arm": "aa",
+   "dim": "task_type",
+   "gm_cost_ratio": 1.083417,
+   "gm_cost_ratio_both_pass": 1.083417,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.995981,
+    1.166749
+   ],
+   "gm_cost_ratio_ci95": [
+    0.994706,
+    1.16706
+   ],
+   "host": "opus",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": -0.162815,
+   "mean_saving_usd_ci95": [
+    -0.277045,
+    -0.022318
+   ],
+   "median_saving_usd": -0.186676,
+   "n_both_pass": 9,
+   "n_pairs_total": 9,
+   "n_scenarios": 8,
+   "n_valid_pairs": 9,
+   "quality": {
+    "anchor_final_pass_rate": 1.0,
+    "arm_final_pass_rate": 1.0,
+    "delta_turn_pass_ci95": [
+     0.0,
+     0.0625
+    ],
+    "mcnemar_anchor_only_pass": 0,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 1.0,
+    "mean_delta_turn_pass": 0.0278,
+    "n_pairs": 9,
+    "non_inferior": true
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": -8.342,
+   "savings_claim_allowed": true,
+   "share_sessions_with_switch": 0.0,
+   "value": "mixed"
+  },
+  {
+   "arm": "aa",
+   "dim": "task_type",
+   "gm_cost_ratio": 1.091025,
+   "gm_cost_ratio_both_pass": 1.091025,
+   "gm_cost_ratio_both_pass_ci95": [
+    null,
+    null
+   ],
+   "gm_cost_ratio_ci95": [
+    null,
+    null
+   ],
+   "host": "opus",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": -0.223253,
+   "mean_saving_usd_ci95": [
+    null,
+    null
+   ],
+   "median_saving_usd": -0.223253,
+   "n_both_pass": 1,
+   "n_pairs_total": 1,
+   "n_scenarios": 1,
+   "n_valid_pairs": 1,
+   "quality": {
+    "anchor_final_pass_rate": 1.0,
+    "arm_final_pass_rate": 1.0,
+    "delta_turn_pass_ci95": [
+     null,
+     null
+    ],
+    "mcnemar_anchor_only_pass": 0,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 1.0,
+    "mean_delta_turn_pass": 0.0,
+    "n_pairs": 1,
+    "non_inferior": null
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": -9.103,
+   "savings_claim_allowed": null,
+   "share_sessions_with_switch": 0.0,
+   "value": "review"
+  },
+  {
+   "arm": "shipped",
+   "dim": "task_type",
+   "gm_cost_ratio": 1.178646,
+   "gm_cost_ratio_both_pass": 1.178646,
+   "gm_cost_ratio_both_pass_ci95": [
+    1.038058,
+    1.335567
+   ],
+   "gm_cost_ratio_ci95": [
+    1.044711,
+    1.340264
+   ],
+   "host": "all",
+   "mean_model_switches": 1.694,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": -0.221285,
+   "mean_saving_usd_ci95": [
+    -0.639951,
+    0.187372
+   ],
+   "median_saving_usd": -0.443566,
+   "n_both_pass": 72,
+   "n_pairs_total": 72,
+   "n_scenarios": 18,
+   "n_valid_pairs": 72,
+   "quality": {
+    "anchor_final_pass_rate": 1.0,
+    "arm_final_pass_rate": 1.0,
+    "delta_turn_pass_ci95": [
+     0.0008,
+     0.0556
+    ],
+    "mcnemar_anchor_only_pass": 0,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 1.0,
+    "mean_delta_turn_pass": 0.0212,
+    "n_pairs": 72,
+    "non_inferior": true
+   },
+   "rebuild_cost_share": 0.146459,
+   "saving_pct": -17.865,
+   "savings_claim_allowed": true,
+   "share_sessions_with_switch": 0.694,
+   "value": "bugfix"
+  },
+  {
+   "arm": "shipped",
+   "dim": "task_type",
+   "gm_cost_ratio": 0.697248,
+   "gm_cost_ratio_both_pass": 0.71815,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.606449,
+    0.879647
+   ],
+   "gm_cost_ratio_ci95": [
+    0.5938,
+    0.811252
+   ],
+   "host": "all",
+   "mean_model_switches": 1.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": 1.212894,
+   "mean_saving_usd_ci95": [
+    0.677656,
+    1.854663
+   ],
+   "median_saving_usd": 1.163733,
+   "n_both_pass": 14,
+   "n_pairs_total": 16,
+   "n_scenarios": 4,
+   "n_valid_pairs": 16,
+   "quality": {
+    "anchor_final_pass_rate": 1.0,
+    "arm_final_pass_rate": 0.875,
+    "delta_turn_pass_ci95": [
+     -0.0457,
+     0.0655
+    ],
+    "mcnemar_anchor_only_pass": 2,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 0.5,
+    "mean_delta_turn_pass": 0.0066,
+    "n_pairs": 16,
+    "non_inferior": true
+   },
+   "rebuild_cost_share": 0.111723,
+   "saving_pct": 30.275,
+   "savings_claim_allowed": true,
+   "share_sessions_with_switch": 0.5,
+   "value": "docs"
+  },
+  {
+   "arm": "shipped",
+   "dim": "task_type",
+   "gm_cost_ratio": 0.596923,
+   "gm_cost_ratio_both_pass": 0.596923,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.456813,
+    0.776848
+   ],
+   "gm_cost_ratio_ci95": [
+    0.458818,
+    0.765513
+   ],
+   "host": "all",
+   "mean_model_switches": 0.667,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": 1.23952,
+   "mean_saving_usd_ci95": [
+    0.586253,
+    1.94525
+   ],
+   "median_saving_usd": 0.777821,
+   "n_both_pass": 12,
+   "n_pairs_total": 12,
+   "n_scenarios": 3,
+   "n_valid_pairs": 12,
+   "quality": {
+    "anchor_final_pass_rate": 1.0,
+    "arm_final_pass_rate": 1.0,
+    "delta_turn_pass_ci95": [
+     -0.2093,
+     -0.0648
+    ],
+    "mcnemar_anchor_only_pass": 0,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 1.0,
+    "mean_delta_turn_pass": -0.1259,
+    "n_pairs": 12,
+    "non_inferior": false
+   },
+   "rebuild_cost_share": 0.140688,
+   "saving_pct": 40.308,
+   "savings_claim_allowed": false,
+   "share_sessions_with_switch": 0.333,
+   "value": "explain"
+  },
+  {
+   "arm": "shipped",
+   "dim": "task_type",
+   "gm_cost_ratio": 0.900865,
+   "gm_cost_ratio_both_pass": 0.909633,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.792445,
+    1.031946
+   ],
+   "gm_cost_ratio_ci95": [
+    0.783959,
+    1.022236
+   ],
+   "host": "all",
+   "mean_model_switches": 1.077,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": 0.764722,
+   "mean_saving_usd_ci95": [
+    0.179869,
+    1.38398
+   ],
+   "median_saving_usd": 0.030218,
+   "n_both_pass": 48,
+   "n_pairs_total": 52,
+   "n_scenarios": 13,
+   "n_valid_pairs": 52,
+   "quality": {
+    "anchor_final_pass_rate": 0.9231,
+    "arm_final_pass_rate": 0.9231,
+    "delta_turn_pass_ci95": [
+     -0.1651,
+     0.0599
+    ],
+    "mcnemar_anchor_only_pass": 0,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 1.0,
+    "mean_delta_turn_pass": -0.0385,
+    "n_pairs": 52,
+    "non_inferior": false
+   },
+   "rebuild_cost_share": 0.119814,
+   "saving_pct": 9.914,
+   "savings_claim_allowed": false,
+   "share_sessions_with_switch": 0.519,
+   "value": "feature"
+  },
+  {
+   "arm": "shipped",
+   "dim": "task_type",
+   "gm_cost_ratio": 0.814234,
+   "gm_cost_ratio_both_pass": 0.810941,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.725406,
+    0.9
+   ],
+   "gm_cost_ratio_ci95": [
+    0.725732,
+    0.899108
+   ],
+   "host": "all",
+   "mean_model_switches": 1.821,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": 0.770162,
+   "mean_saving_usd_ci95": [
+    0.415346,
+    1.131311
+   ],
+   "median_saving_usd": 0.273507,
+   "n_both_pass": 100,
+   "n_pairs_total": 112,
+   "n_scenarios": 28,
+   "n_valid_pairs": 112,
+   "quality": {
+    "anchor_final_pass_rate": 0.9554,
+    "arm_final_pass_rate": 0.9107,
+    "delta_turn_pass_ci95": [
+     -0.0317,
+     0.0243
+    ],
+    "mcnemar_anchor_only_pass": 7,
+    "mcnemar_arm_only_pass": 2,
+    "mcnemar_p": 0.1797,
+    "mean_delta_turn_pass": -0.0015,
+    "n_pairs": 112,
+    "non_inferior": true
+   },
+   "rebuild_cost_share": 0.164807,
+   "saving_pct": 18.577,
+   "savings_claim_allowed": true,
+   "share_sessions_with_switch": 0.554,
+   "value": "mixed"
+  },
+  {
+   "arm": "shipped",
+   "dim": "task_type",
+   "gm_cost_ratio": 0.790779,
+   "gm_cost_ratio_both_pass": 0.745068,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.561808,
+    0.97608
+   ],
+   "gm_cost_ratio_ci95": [
+    0.611086,
+    1.0168
+   ],
+   "host": "all",
+   "mean_model_switches": 1.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": 1.184307,
+   "mean_saving_usd_ci95": [
+    0.22265,
+    2.220355
+   ],
+   "median_saving_usd": 0.800612,
+   "n_both_pass": 14,
+   "n_pairs_total": 16,
+   "n_scenarios": 4,
+   "n_valid_pairs": 16,
+   "quality": {
+    "anchor_final_pass_rate": 1.0,
+    "arm_final_pass_rate": 0.875,
+    "delta_turn_pass_ci95": [
+     -0.1615,
+     -0.0344
+    ],
+    "mcnemar_anchor_only_pass": 2,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 0.5,
+    "mean_delta_turn_pass": -0.0995,
+    "n_pairs": 16,
+    "non_inferior": false
+   },
+   "rebuild_cost_share": 0.063585,
+   "saving_pct": 20.922,
+   "savings_claim_allowed": false,
+   "share_sessions_with_switch": 0.5,
+   "value": "review"
+  },
+  {
+   "arm": "shipped",
+   "dim": "task_type",
+   "gm_cost_ratio": 0.809676,
+   "gm_cost_ratio_both_pass": 0.809676,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.722137,
+    0.902005
+   ],
+   "gm_cost_ratio_ci95": [
+    0.726075,
+    0.899288
+   ],
+   "host": "fable",
+   "mean_model_switches": 1.722,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": 0.797409,
+   "mean_saving_usd_ci95": [
+    0.28139,
+    1.308154
+   ],
+   "median_saving_usd": 0.785213,
+   "n_both_pass": 36,
+   "n_pairs_total": 36,
+   "n_scenarios": 18,
+   "n_valid_pairs": 36,
+   "quality": {
+    "anchor_final_pass_rate": 1.0,
+    "arm_final_pass_rate": 1.0,
+    "delta_turn_pass_ci95": [
+     -0.0048,
+     0.0785
+    ],
+    "mcnemar_anchor_only_pass": 0,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 1.0,
+    "mean_delta_turn_pass": 0.0253,
+    "n_pairs": 36,
+    "non_inferior": true
+   },
+   "rebuild_cost_share": 0.183632,
+   "saving_pct": 19.032,
+   "savings_claim_allowed": true,
+   "share_sessions_with_switch": 0.722,
+   "value": "bugfix"
+  },
+  {
+   "arm": "shipped",
+   "dim": "task_type",
+   "gm_cost_ratio": 0.523585,
+   "gm_cost_ratio_both_pass": 0.509861,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.470648,
+    0.553791
+   ],
+   "gm_cost_ratio_ci95": [
+    0.482232,
+    0.56797
+   ],
+   "host": "fable",
+   "mean_model_switches": 1.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": 2.263386,
+   "mean_saving_usd_ci95": [
+    1.882668,
+    2.755947
+   ],
+   "median_saving_usd": 2.104484,
+   "n_both_pass": 6,
+   "n_pairs_total": 8,
+   "n_scenarios": 4,
+   "n_valid_pairs": 8,
+   "quality": {
+    "anchor_final_pass_rate": 1.0,
+    "arm_final_pass_rate": 0.75,
+    "delta_turn_pass_ci95": [
+     -0.0565,
+     0.0469
+    ],
+    "mcnemar_anchor_only_pass": 2,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 0.5,
+    "mean_delta_turn_pass": -0.0096,
+    "n_pairs": 8,
+    "non_inferior": false
+   },
+   "rebuild_cost_share": 0.147994,
+   "saving_pct": 47.642,
+   "savings_claim_allowed": false,
+   "share_sessions_with_switch": 0.5,
+   "value": "docs"
+  },
+  {
+   "arm": "shipped",
+   "dim": "task_type",
+   "gm_cost_ratio": 0.415624,
+   "gm_cost_ratio_both_pass": 0.415624,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.32613,
+    0.561069
+   ],
+   "gm_cost_ratio_ci95": [
+    0.331793,
+    0.551197
+   ],
+   "host": "fable",
+   "mean_model_switches": 0.667,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": 2.244344,
+   "mean_saving_usd_ci95": [
+    1.639533,
+    2.849155
+   ],
+   "median_saving_usd": 2.34563,
+   "n_both_pass": 6,
+   "n_pairs_total": 6,
+   "n_scenarios": 3,
+   "n_valid_pairs": 6,
+   "quality": {
+    "anchor_final_pass_rate": 1.0,
+    "arm_final_pass_rate": 1.0,
+    "delta_turn_pass_ci95": [
+     -0.2777,
+     -0.0519
+    ],
+    "mcnemar_anchor_only_pass": 0,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 1.0,
+    "mean_delta_turn_pass": -0.1611,
+    "n_pairs": 6,
+    "non_inferior": false
+   },
+   "rebuild_cost_share": 0.177094,
+   "saving_pct": 58.438,
+   "savings_claim_allowed": false,
+   "share_sessions_with_switch": 0.333,
+   "value": "explain"
+  },
+  {
+   "arm": "shipped",
+   "dim": "task_type",
+   "gm_cost_ratio": 0.657769,
+   "gm_cost_ratio_both_pass": 0.670521,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.570515,
+    0.798268
+   ],
+   "gm_cost_ratio_ci95": [
+    0.564421,
+    0.777066
+   ],
+   "host": "fable",
+   "mean_model_switches": 1.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": 2.019482,
+   "mean_saving_usd_ci95": [
+    1.123155,
+    2.962667
+   ],
+   "median_saving_usd": 1.739546,
+   "n_both_pass": 24,
+   "n_pairs_total": 26,
+   "n_scenarios": 13,
+   "n_valid_pairs": 26,
+   "quality": {
+    "anchor_final_pass_rate": 0.9231,
+    "arm_final_pass_rate": 0.9231,
+    "delta_turn_pass_ci95": [
+     -0.1763,
+     0.0807
+    ],
+    "mcnemar_anchor_only_pass": 0,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 1.0,
+    "mean_delta_turn_pass": -0.0329,
+    "n_pairs": 26,
+    "non_inferior": false
+   },
+   "rebuild_cost_share": 0.128313,
+   "saving_pct": 34.223,
+   "savings_claim_allowed": false,
+   "share_sessions_with_switch": 0.5,
+   "value": "feature"
+  },
+  {
+   "arm": "shipped",
+   "dim": "task_type",
+   "gm_cost_ratio": 0.590729,
+   "gm_cost_ratio_both_pass": 0.584059,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.525117,
+    0.652707
+   ],
+   "gm_cost_ratio_ci95": [
+    0.53201,
+    0.659916
+   ],
+   "host": "fable",
+   "mean_model_switches": 1.839,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": 1.941392,
+   "mean_saving_usd_ci95": [
+    1.483173,
+    2.448547
+   ],
+   "median_saving_usd": 1.872262,
+   "n_both_pass": 50,
+   "n_pairs_total": 56,
+   "n_scenarios": 28,
+   "n_valid_pairs": 56,
+   "quality": {
+    "anchor_final_pass_rate": 0.9821,
+    "arm_final_pass_rate": 0.9107,
+    "delta_turn_pass_ci95": [
+     -0.0313,
+     0.0271
+    ],
+    "mcnemar_anchor_only_pass": 5,
+    "mcnemar_arm_only_pass": 1,
+    "mcnemar_p": 0.2188,
+    "mean_delta_turn_pass": -0.0014,
+    "n_pairs": 56,
+    "non_inferior": true
+   },
+   "rebuild_cost_share": 0.195627,
+   "saving_pct": 40.927,
+   "savings_claim_allowed": true,
+   "share_sessions_with_switch": 0.554,
+   "value": "mixed"
+  },
+  {
+   "arm": "shipped",
+   "dim": "task_type",
+   "gm_cost_ratio": 0.48961,
+   "gm_cost_ratio_both_pass": 0.48961,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.434312,
+    0.55023
+   ],
+   "gm_cost_ratio_ci95": [
+    0.431968,
+    0.553708
+   ],
+   "host": "fable",
+   "mean_model_switches": 1.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": 3.010649,
+   "mean_saving_usd_ci95": [
+    2.375555,
+    3.596783
+   ],
+   "median_saving_usd": 3.149758,
+   "n_both_pass": 8,
+   "n_pairs_total": 8,
+   "n_scenarios": 4,
+   "n_valid_pairs": 8,
+   "quality": {
+    "anchor_final_pass_rate": 1.0,
+    "arm_final_pass_rate": 1.0,
+    "delta_turn_pass_ci95": [
+     -0.175,
+     0.0
+    ],
+    "mcnemar_anchor_only_pass": 0,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 1.0,
+    "mean_delta_turn_pass": -0.0927,
+    "n_pairs": 8,
+    "non_inferior": false
+   },
+   "rebuild_cost_share": 0.091513,
+   "saving_pct": 51.039,
+   "savings_claim_allowed": false,
+   "share_sessions_with_switch": 0.5,
+   "value": "review"
+  },
+  {
+   "arm": "shipped",
+   "dim": "task_type",
+   "gm_cost_ratio": 1.715757,
+   "gm_cost_ratio_both_pass": 1.715757,
+   "gm_cost_ratio_both_pass_ci95": [
+    1.539705,
+    1.89676
+   ],
+   "gm_cost_ratio_ci95": [
+    1.545294,
+    1.898528
+   ],
+   "host": "opus",
+   "mean_model_switches": 1.667,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": -1.239979,
+   "mean_saving_usd_ci95": [
+    -1.576924,
+    -0.933152
+   ],
+   "median_saving_usd": -1.217697,
+   "n_both_pass": 36,
+   "n_pairs_total": 36,
+   "n_scenarios": 18,
+   "n_valid_pairs": 36,
+   "quality": {
+    "anchor_final_pass_rate": 1.0,
+    "arm_final_pass_rate": 1.0,
+    "delta_turn_pass_ci95": [
+     -0.0069,
+     0.0509
+    ],
+    "mcnemar_anchor_only_pass": 0,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 1.0,
+    "mean_delta_turn_pass": 0.0172,
+    "n_pairs": 36,
+    "non_inferior": true
+   },
+   "rebuild_cost_share": 0.099609,
+   "saving_pct": -71.576,
+   "savings_claim_allowed": true,
+   "share_sessions_with_switch": 0.667,
+   "value": "bugfix"
+  },
+  {
+   "arm": "shipped",
+   "dim": "task_type",
+   "gm_cost_ratio": 0.928513,
+   "gm_cost_ratio_both_pass": 0.928513,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.866947,
+    1.002132
+   ],
+   "gm_cost_ratio_ci95": [
+    0.865384,
+    0.998338
+   ],
+   "host": "opus",
+   "mean_model_switches": 1.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": 0.162403,
+   "mean_saving_usd_ci95": [
+    -0.028566,
+    0.333052
+   ],
+   "median_saving_usd": 0.175479,
+   "n_both_pass": 8,
+   "n_pairs_total": 8,
+   "n_scenarios": 4,
+   "n_valid_pairs": 8,
+   "quality": {
+    "anchor_final_pass_rate": 1.0,
+    "arm_final_pass_rate": 1.0,
+    "delta_turn_pass_ci95": [
+     -0.0427,
+     0.0938
+    ],
+    "mcnemar_anchor_only_pass": 0,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 1.0,
+    "mean_delta_turn_pass": 0.0227,
+    "n_pairs": 8,
+    "non_inferior": true
+   },
+   "rebuild_cost_share": 0.071177,
+   "saving_pct": 7.149,
+   "savings_claim_allowed": true,
+   "share_sessions_with_switch": 0.5,
+   "value": "docs"
+  },
+  {
+   "arm": "shipped",
+   "dim": "task_type",
+   "gm_cost_ratio": 0.857307,
+   "gm_cost_ratio_both_pass": 0.857307,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.757958,
+    0.987016
+   ],
+   "gm_cost_ratio_ci95": [
+    0.757958,
+    0.987016
+   ],
+   "host": "opus",
+   "mean_model_switches": 0.667,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": 0.234696,
+   "mean_saving_usd_ci95": [
+    -0.016211,
+    0.414243
+   ],
+   "median_saving_usd": 0.29037,
+   "n_both_pass": 6,
+   "n_pairs_total": 6,
+   "n_scenarios": 3,
+   "n_valid_pairs": 6,
+   "quality": {
+    "anchor_final_pass_rate": 1.0,
+    "arm_final_pass_rate": 1.0,
+    "delta_turn_pass_ci95": [
+     -0.1481,
+     -0.0333
+    ],
+    "mcnemar_anchor_only_pass": 0,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 1.0,
+    "mean_delta_turn_pass": -0.0907,
+    "n_pairs": 6,
+    "non_inferior": false
+   },
+   "rebuild_cost_share": 0.101587,
+   "saving_pct": 14.269,
+   "savings_claim_allowed": false,
+   "share_sessions_with_switch": 0.333,
+   "value": "explain"
+  },
+  {
+   "arm": "shipped",
+   "dim": "task_type",
+   "gm_cost_ratio": 1.233802,
+   "gm_cost_ratio_both_pass": 1.234013,
+   "gm_cost_ratio_both_pass_ci95": [
+    1.123279,
+    1.370916
+   ],
+   "gm_cost_ratio_ci95": [
+    1.127849,
+    1.361063
+   ],
+   "host": "opus",
+   "mean_model_switches": 1.154,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": -0.490038,
+   "mean_saving_usd_ci95": [
+    -0.76272,
+    -0.277168
+   ],
+   "median_saving_usd": -0.425714,
+   "n_both_pass": 24,
+   "n_pairs_total": 26,
+   "n_scenarios": 13,
+   "n_valid_pairs": 26,
+   "quality": {
+    "anchor_final_pass_rate": 0.9231,
+    "arm_final_pass_rate": 0.9231,
+    "delta_turn_pass_ci95": [
+     -0.1859,
+     0.0686
+    ],
+    "mcnemar_anchor_only_pass": 0,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 1.0,
+    "mean_delta_turn_pass": -0.0441,
+    "n_pairs": 26,
+    "non_inferior": false
+   },
+   "rebuild_cost_share": 0.106479,
+   "saving_pct": -23.38,
+   "savings_claim_allowed": false,
+   "share_sessions_with_switch": 0.538,
+   "value": "feature"
+  },
+  {
+   "arm": "shipped",
+   "dim": "task_type",
+   "gm_cost_ratio": 1.122305,
+   "gm_cost_ratio_both_pass": 1.125959,
+   "gm_cost_ratio_both_pass_ci95": [
+    1.044806,
+    1.214747
+   ],
+   "gm_cost_ratio_ci95": [
+    1.044227,
+    1.20357
+   ],
+   "host": "opus",
+   "mean_model_switches": 1.804,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": -0.401068,
+   "mean_saving_usd_ci95": [
+    -0.636692,
+    -0.174044
+   ],
+   "median_saving_usd": -0.258939,
+   "n_both_pass": 50,
+   "n_pairs_total": 56,
+   "n_scenarios": 28,
+   "n_valid_pairs": 56,
+   "quality": {
+    "anchor_final_pass_rate": 0.9286,
+    "arm_final_pass_rate": 0.9107,
+    "delta_turn_pass_ci95": [
+     -0.042,
+     0.029
+    ],
+    "mcnemar_anchor_only_pass": 2,
+    "mcnemar_arm_only_pass": 1,
+    "mcnemar_p": 1.0,
+    "mean_delta_turn_pass": -0.0017,
+    "n_pairs": 56,
+    "non_inferior": true
+   },
+   "rebuild_cost_share": 0.124054,
+   "saving_pct": -12.231,
+   "savings_claim_allowed": true,
+   "share_sessions_with_switch": 0.554,
+   "value": "mixed"
+  },
+  {
+   "arm": "shipped",
+   "dim": "task_type",
+   "gm_cost_ratio": 1.277202,
+   "gm_cost_ratio_both_pass": 1.304136,
+   "gm_cost_ratio_both_pass_ci95": [
+    1.142634,
+    1.519893
+   ],
+   "gm_cost_ratio_ci95": [
+    1.163069,
+    1.438948
+   ],
+   "host": "opus",
+   "mean_model_switches": 1.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": -0.642035,
+   "mean_saving_usd_ci95": [
+    -0.944272,
+    -0.359876
+   ],
+   "median_saving_usd": -0.573755,
+   "n_both_pass": 6,
+   "n_pairs_total": 8,
+   "n_scenarios": 4,
+   "n_valid_pairs": 8,
+   "quality": {
+    "anchor_final_pass_rate": 1.0,
+    "arm_final_pass_rate": 0.75,
+    "delta_turn_pass_ci95": [
+     -0.1709,
+     -0.0375
+    ],
+    "mcnemar_anchor_only_pass": 2,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 0.5,
+    "mean_delta_turn_pass": -0.1063,
+    "n_pairs": 8,
+    "non_inferior": false
+   },
+   "rebuild_cost_share": 0.036327,
+   "saving_pct": -27.72,
+   "savings_claim_allowed": false,
+   "share_sessions_with_switch": 0.5,
+   "value": "review"
+  },
+  {
+   "arm": "sonnet",
+   "dim": "task_type",
+   "gm_cost_ratio": 1.31254,
+   "gm_cost_ratio_both_pass": 1.301717,
+   "gm_cost_ratio_both_pass_ci95": [
+    1.117163,
+    1.524095
+   ],
+   "gm_cost_ratio_ci95": [
+    1.130133,
+    1.541023
+   ],
+   "host": "all",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": -0.538652,
+   "mean_saving_usd_ci95": [
+    -1.032749,
+    0.002091
+   ],
+   "median_saving_usd": -0.620063,
+   "n_both_pass": 70,
+   "n_pairs_total": 72,
+   "n_scenarios": 18,
+   "n_valid_pairs": 72,
+   "quality": {
+    "anchor_final_pass_rate": 1.0,
+    "arm_final_pass_rate": 0.9722,
+    "delta_turn_pass_ci95": [
+     -0.0083,
+     0.0608
+    ],
+    "mcnemar_anchor_only_pass": 2,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 0.5,
+    "mean_delta_turn_pass": 0.023,
+    "n_pairs": 72,
+    "non_inferior": true
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": -31.254,
+   "savings_claim_allowed": true,
+   "share_sessions_with_switch": 0.0,
+   "value": "bugfix"
+  },
+  {
+   "arm": "sonnet",
+   "dim": "task_type",
+   "gm_cost_ratio": 0.763803,
+   "gm_cost_ratio_both_pass": 0.780752,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.615653,
+    0.962022
+   ],
+   "gm_cost_ratio_ci95": [
+    0.631726,
+    0.940732
+   ],
+   "host": "all",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": 1.058685,
+   "mean_saving_usd_ci95": [
+    0.333229,
+    1.943391
+   ],
+   "median_saving_usd": 1.013245,
+   "n_both_pass": 12,
+   "n_pairs_total": 16,
+   "n_scenarios": 4,
+   "n_valid_pairs": 16,
+   "quality": {
+    "anchor_final_pass_rate": 1.0,
+    "arm_final_pass_rate": 0.75,
+    "delta_turn_pass_ci95": [
+     -0.0396,
+     0.0805
+    ],
+    "mcnemar_anchor_only_pass": 4,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 0.125,
+    "mean_delta_turn_pass": 0.0217,
+    "n_pairs": 16,
+    "non_inferior": true
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": 23.62,
+   "savings_claim_allowed": true,
+   "share_sessions_with_switch": 0.0,
+   "value": "docs"
+  },
+  {
+   "arm": "sonnet",
+   "dim": "task_type",
+   "gm_cost_ratio": 0.581444,
+   "gm_cost_ratio_both_pass": 0.581444,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.453408,
+    0.736166
+   ],
+   "gm_cost_ratio_ci95": [
+    0.453405,
+    0.745009
+   ],
+   "host": "all",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": 1.304588,
+   "mean_saving_usd_ci95": [
+    0.675598,
+    1.999026
+   ],
+   "median_saving_usd": 1.070205,
+   "n_both_pass": 12,
+   "n_pairs_total": 12,
+   "n_scenarios": 3,
+   "n_valid_pairs": 12,
+   "quality": {
+    "anchor_final_pass_rate": 1.0,
+    "arm_final_pass_rate": 1.0,
+    "delta_turn_pass_ci95": [
+     -0.025,
+     0.025
+    ],
+    "mcnemar_anchor_only_pass": 0,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 1.0,
+    "mean_delta_turn_pass": 0.0,
+    "n_pairs": 12,
+    "non_inferior": true
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": 41.856,
+   "savings_claim_allowed": true,
+   "share_sessions_with_switch": 0.0,
+   "value": "explain"
+  },
+  {
+   "arm": "sonnet",
+   "dim": "task_type",
+   "gm_cost_ratio": 0.895208,
+   "gm_cost_ratio_both_pass": 0.897933,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.761889,
+    1.062697
+   ],
+   "gm_cost_ratio_ci95": [
+    0.761853,
+    1.055862
+   ],
+   "host": "all",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": 0.898079,
+   "mean_saving_usd_ci95": [
+    0.25997,
+    1.564866
+   ],
+   "median_saving_usd": 0.254117,
+   "n_both_pass": 48,
+   "n_pairs_total": 52,
+   "n_scenarios": 13,
+   "n_valid_pairs": 52,
+   "quality": {
+    "anchor_final_pass_rate": 0.9231,
+    "arm_final_pass_rate": 0.9231,
+    "delta_turn_pass_ci95": [
+     -0.1639,
+     0.0688
+    ],
+    "mcnemar_anchor_only_pass": 0,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 1.0,
+    "mean_delta_turn_pass": -0.0377,
+    "n_pairs": 52,
+    "non_inferior": false
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": 10.479,
+   "savings_claim_allowed": false,
+   "share_sessions_with_switch": 0.0,
+   "value": "feature"
+  },
+  {
+   "arm": "sonnet",
+   "dim": "task_type",
+   "gm_cost_ratio": 0.802911,
+   "gm_cost_ratio_both_pass": 0.786801,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.708747,
+    0.881782
+   ],
+   "gm_cost_ratio_ci95": [
+    0.718775,
+    0.902275
+   ],
+   "host": "all",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": 0.795404,
+   "mean_saving_usd_ci95": [
+    0.333626,
+    1.217823
+   ],
+   "median_saving_usd": 0.283921,
+   "n_both_pass": 104,
+   "n_pairs_total": 112,
+   "n_scenarios": 28,
+   "n_valid_pairs": 112,
+   "quality": {
+    "anchor_final_pass_rate": 0.9554,
+    "arm_final_pass_rate": 0.9464,
+    "delta_turn_pass_ci95": [
+     -0.0197,
+     0.0338
+    ],
+    "mcnemar_anchor_only_pass": 3,
+    "mcnemar_arm_only_pass": 2,
+    "mcnemar_p": 1.0,
+    "mean_delta_turn_pass": 0.008,
+    "n_pairs": 112,
+    "non_inferior": true
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": 19.709,
+   "savings_claim_allowed": true,
+   "share_sessions_with_switch": 0.0,
+   "value": "mixed"
+  },
+  {
+   "arm": "sonnet",
+   "dim": "task_type",
+   "gm_cost_ratio": 0.937993,
+   "gm_cost_ratio_both_pass": 0.937993,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.726032,
+    1.205623
+   ],
+   "gm_cost_ratio_ci95": [
+    0.726767,
+    1.22474
+   ],
+   "host": "all",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": 0.597677,
+   "mean_saving_usd_ci95": [
+    -0.305729,
+    1.542982
+   ],
+   "median_saving_usd": 0.132875,
+   "n_both_pass": 16,
+   "n_pairs_total": 16,
+   "n_scenarios": 4,
+   "n_valid_pairs": 16,
+   "quality": {
+    "anchor_final_pass_rate": 1.0,
+    "arm_final_pass_rate": 1.0,
+    "delta_turn_pass_ci95": [
+     -0.1461,
+     0.0104
+    ],
+    "mcnemar_anchor_only_pass": 0,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 1.0,
+    "mean_delta_turn_pass": -0.0812,
+    "n_pairs": 16,
+    "non_inferior": false
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": 6.201,
+   "savings_claim_allowed": false,
+   "share_sessions_with_switch": 0.0,
+   "value": "review"
+  },
+  {
+   "arm": "sonnet",
+   "dim": "task_type",
+   "gm_cost_ratio": 0.814064,
+   "gm_cost_ratio_both_pass": 0.807782,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.723198,
+    0.897697
+   ],
+   "gm_cost_ratio_ci95": [
+    0.727786,
+    0.90468
+   ],
+   "host": "fable",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": 0.870524,
+   "mean_saving_usd_ci95": [
+    0.426696,
+    1.369259
+   ],
+   "median_saving_usd": 0.774414,
+   "n_both_pass": 35,
+   "n_pairs_total": 36,
+   "n_scenarios": 18,
+   "n_valid_pairs": 36,
+   "quality": {
+    "anchor_final_pass_rate": 1.0,
+    "arm_final_pass_rate": 0.9722,
+    "delta_turn_pass_ci95": [
+     -0.0116,
+     0.0799
+    ],
+    "mcnemar_anchor_only_pass": 1,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 1.0,
+    "mean_delta_turn_pass": 0.0264,
+    "n_pairs": 36,
+    "non_inferior": true
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": 18.594,
+   "savings_claim_allowed": true,
+   "share_sessions_with_switch": 0.0,
+   "value": "bugfix"
+  },
+  {
+   "arm": "sonnet",
+   "dim": "task_type",
+   "gm_cost_ratio": 0.543043,
+   "gm_cost_ratio_both_pass": 0.541517,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.497521,
+    0.571782
+   ],
+   "gm_cost_ratio_ci95": [
+    0.505517,
+    0.576842
+   ],
+   "host": "fable",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": 2.245953,
+   "mean_saving_usd_ci95": [
+    1.684201,
+    3.165226
+   ],
+   "median_saving_usd": 1.898626,
+   "n_both_pass": 6,
+   "n_pairs_total": 8,
+   "n_scenarios": 4,
+   "n_valid_pairs": 8,
+   "quality": {
+    "anchor_final_pass_rate": 1.0,
+    "arm_final_pass_rate": 0.75,
+    "delta_turn_pass_ci95": [
+     -0.0413,
+     0.0625
+    ],
+    "mcnemar_anchor_only_pass": 2,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 0.5,
+    "mean_delta_turn_pass": 0.0085,
+    "n_pairs": 8,
+    "non_inferior": true
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": 45.696,
+   "savings_claim_allowed": true,
+   "share_sessions_with_switch": 0.0,
+   "value": "docs"
+  },
+  {
+   "arm": "sonnet",
+   "dim": "task_type",
+   "gm_cost_ratio": 0.394997,
+   "gm_cost_ratio_both_pass": 0.394997,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.352848,
+    0.439763
+   ],
+   "gm_cost_ratio_ci95": [
+    0.354689,
+    0.435518
+   ],
+   "host": "fable",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": 2.367042,
+   "mean_saving_usd_ci95": [
+    1.997065,
+    2.707259
+   ],
+   "median_saving_usd": 2.396803,
+   "n_both_pass": 6,
+   "n_pairs_total": 6,
+   "n_scenarios": 3,
+   "n_valid_pairs": 6,
+   "quality": {
+    "anchor_final_pass_rate": 1.0,
+    "arm_final_pass_rate": 1.0,
+    "delta_turn_pass_ci95": [
+     -0.0667,
+     0.0
+    ],
+    "mcnemar_anchor_only_pass": 0,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 1.0,
+    "mean_delta_turn_pass": -0.0167,
+    "n_pairs": 6,
+    "non_inferior": false
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": 60.5,
+   "savings_claim_allowed": false,
+   "share_sessions_with_switch": 0.0,
+   "value": "explain"
+  },
+  {
+   "arm": "sonnet",
+   "dim": "task_type",
+   "gm_cost_ratio": 0.530733,
+   "gm_cost_ratio_both_pass": 0.533261,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.493116,
+    0.573962
+   ],
+   "gm_cost_ratio_ci95": [
+    0.493098,
+    0.568536
+   ],
+   "host": "fable",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": 2.895107,
+   "mean_saving_usd_ci95": [
+    2.285913,
+    3.628231
+   ],
+   "median_saving_usd": 2.694768,
+   "n_both_pass": 24,
+   "n_pairs_total": 26,
+   "n_scenarios": 13,
+   "n_valid_pairs": 26,
+   "quality": {
+    "anchor_final_pass_rate": 0.9231,
+    "arm_final_pass_rate": 0.9231,
+    "delta_turn_pass_ci95": [
+     -0.1995,
+     0.0575
+    ],
+    "mcnemar_anchor_only_pass": 0,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 1.0,
+    "mean_delta_turn_pass": -0.0562,
+    "n_pairs": 26,
+    "non_inferior": false
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": 46.927,
+   "savings_claim_allowed": false,
+   "share_sessions_with_switch": 0.0,
+   "value": "feature"
+  },
+  {
+   "arm": "sonnet",
+   "dim": "task_type",
+   "gm_cost_ratio": 0.525268,
+   "gm_cost_ratio_both_pass": 0.522769,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.48533,
+    0.562195
+   ],
+   "gm_cost_ratio_ci95": [
+    0.488302,
+    0.57032
+   ],
+   "host": "fable",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": 2.405475,
+   "mean_saving_usd_ci95": [
+    2.001772,
+    2.808706
+   ],
+   "median_saving_usd": 2.188385,
+   "n_both_pass": 53,
+   "n_pairs_total": 56,
+   "n_scenarios": 28,
+   "n_valid_pairs": 56,
+   "quality": {
+    "anchor_final_pass_rate": 0.9821,
+    "arm_final_pass_rate": 0.9464,
+    "delta_turn_pass_ci95": [
+     -0.0269,
+     0.026
+    ],
+    "mcnemar_anchor_only_pass": 2,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 0.5,
+    "mean_delta_turn_pass": 0.0013,
+    "n_pairs": 56,
+    "non_inferior": true
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": 47.473,
+   "savings_claim_allowed": true,
+   "share_sessions_with_switch": 0.0,
+   "value": "mixed"
+  },
+  {
+   "arm": "sonnet",
+   "dim": "task_type",
+   "gm_cost_ratio": 0.586509,
+   "gm_cost_ratio_both_pass": 0.586509,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.513754,
+    0.677256
+   ],
+   "gm_cost_ratio_ci95": [
+    0.512481,
+    0.684313
+   ],
+   "host": "fable",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": 2.388691,
+   "mean_saving_usd_ci95": [
+    1.761897,
+    2.870447
+   ],
+   "median_saving_usd": 2.498228,
+   "n_both_pass": 8,
+   "n_pairs_total": 8,
+   "n_scenarios": 4,
+   "n_valid_pairs": 8,
+   "quality": {
+    "anchor_final_pass_rate": 1.0,
+    "arm_final_pass_rate": 1.0,
+    "delta_turn_pass_ci95": [
+     -0.1458,
+     0.0375
+    ],
+    "mcnemar_anchor_only_pass": 0,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 1.0,
+    "mean_delta_turn_pass": -0.0812,
+    "n_pairs": 8,
+    "non_inferior": false
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": 41.349,
+   "savings_claim_allowed": false,
+   "share_sessions_with_switch": 0.0,
+   "value": "review"
+  },
+  {
+   "arm": "sonnet",
+   "dim": "task_type",
+   "gm_cost_ratio": 2.116248,
+   "gm_cost_ratio_both_pass": 2.097679,
+   "gm_cost_ratio_both_pass_ci95": [
+    1.887717,
+    2.333217
+   ],
+   "gm_cost_ratio_ci95": [
+    1.887211,
+    2.346633
+   ],
+   "host": "opus",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": -1.947827,
+   "mean_saving_usd_ci95": [
+    -2.393252,
+    -1.547949
+   ],
+   "median_saving_usd": -1.892034,
+   "n_both_pass": 35,
+   "n_pairs_total": 36,
+   "n_scenarios": 18,
+   "n_valid_pairs": 36,
+   "quality": {
+    "anchor_final_pass_rate": 1.0,
+    "arm_final_pass_rate": 0.9722,
+    "delta_turn_pass_ci95": [
+     -0.0174,
+     0.0693
+    ],
+    "mcnemar_anchor_only_pass": 1,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 1.0,
+    "mean_delta_turn_pass": 0.0195,
+    "n_pairs": 36,
+    "non_inferior": true
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": -111.625,
+   "savings_claim_allowed": true,
+   "share_sessions_with_switch": 0.0,
+   "value": "bugfix"
+  },
+  {
+   "arm": "sonnet",
+   "dim": "task_type",
+   "gm_cost_ratio": 1.074307,
+   "gm_cost_ratio_both_pass": 1.125679,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.942246,
+    1.251645
+   ],
+   "gm_cost_ratio_ci95": [
+    0.933952,
+    1.242992
+   ],
+   "host": "opus",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": -0.128583,
+   "mean_saving_usd_ci95": [
+    -0.501938,
+    0.231234
+   ],
+   "median_saving_usd": -0.044411,
+   "n_both_pass": 6,
+   "n_pairs_total": 8,
+   "n_scenarios": 4,
+   "n_valid_pairs": 8,
+   "quality": {
+    "anchor_final_pass_rate": 1.0,
+    "arm_final_pass_rate": 0.75,
+    "delta_turn_pass_ci95": [
+     -0.0338,
+     0.1009
+    ],
+    "mcnemar_anchor_only_pass": 2,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 0.5,
+    "mean_delta_turn_pass": 0.0348,
+    "n_pairs": 8,
+    "non_inferior": true
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": -7.431,
+   "savings_claim_allowed": true,
+   "share_sessions_with_switch": 0.0,
+   "value": "docs"
+  },
+  {
+   "arm": "sonnet",
+   "dim": "task_type",
+   "gm_cost_ratio": 0.855898,
+   "gm_cost_ratio_both_pass": 0.855898,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.75633,
+    0.972689
+   ],
+   "gm_cost_ratio_ci95": [
+    0.748674,
+    0.986061
+   ],
+   "host": "opus",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": 0.242133,
+   "mean_saving_usd_ci95": [
+    0.023028,
+    0.421623
+   ],
+   "median_saving_usd": 0.263918,
+   "n_both_pass": 6,
+   "n_pairs_total": 6,
+   "n_scenarios": 3,
+   "n_valid_pairs": 6,
+   "quality": {
+    "anchor_final_pass_rate": 1.0,
+    "arm_final_pass_rate": 1.0,
+    "delta_turn_pass_ci95": [
+     0.0,
+     0.0667
+    ],
+    "mcnemar_anchor_only_pass": 0,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 1.0,
+    "mean_delta_turn_pass": 0.0167,
+    "n_pairs": 6,
+    "non_inferior": true
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": 14.41,
+   "savings_claim_allowed": true,
+   "share_sessions_with_switch": 0.0,
+   "value": "explain"
+  },
+  {
+   "arm": "sonnet",
+   "dim": "task_type",
+   "gm_cost_ratio": 1.509983,
+   "gm_cost_ratio_both_pass": 1.511988,
+   "gm_cost_ratio_both_pass_ci95": [
+    1.38298,
+    1.665515
+   ],
+   "gm_cost_ratio_ci95": [
+    1.39202,
+    1.651417
+   ],
+   "host": "opus",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": -1.09895,
+   "mean_saving_usd_ci95": [
+    -1.410624,
+    -0.805638
+   ],
+   "median_saving_usd": -0.93058,
+   "n_both_pass": 24,
+   "n_pairs_total": 26,
+   "n_scenarios": 13,
+   "n_valid_pairs": 26,
+   "quality": {
+    "anchor_final_pass_rate": 0.9231,
+    "arm_final_pass_rate": 0.9231,
+    "delta_turn_pass_ci95": [
+     -0.1371,
+     0.0839
+    ],
+    "mcnemar_anchor_only_pass": 0,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 1.0,
+    "mean_delta_turn_pass": -0.0193,
+    "n_pairs": 26,
+    "non_inferior": false
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": -50.998,
+   "savings_claim_allowed": false,
+   "share_sessions_with_switch": 0.0,
+   "value": "feature"
+  },
+  {
+   "arm": "sonnet",
+   "dim": "task_type",
+   "gm_cost_ratio": 1.22731,
+   "gm_cost_ratio_both_pass": 1.203324,
+   "gm_cost_ratio_both_pass_ci95": [
+    1.102347,
+    1.314135
+   ],
+   "gm_cost_ratio_ci95": [
+    1.121129,
+    1.34925
+   ],
+   "host": "opus",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": -0.814667,
+   "mean_saving_usd_ci95": [
+    -1.354734,
+    -0.399453
+   ],
+   "median_saving_usd": -0.33019,
+   "n_both_pass": 51,
+   "n_pairs_total": 56,
+   "n_scenarios": 28,
+   "n_valid_pairs": 56,
+   "quality": {
+    "anchor_final_pass_rate": 0.9286,
+    "arm_final_pass_rate": 0.9464,
+    "delta_turn_pass_ci95": [
+     -0.0194,
+     0.0509
+    ],
+    "mcnemar_anchor_only_pass": 1,
+    "mcnemar_arm_only_pass": 2,
+    "mcnemar_p": 1.0,
+    "mean_delta_turn_pass": 0.0147,
+    "n_pairs": 56,
+    "non_inferior": true
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": -22.731,
+   "savings_claim_allowed": true,
+   "share_sessions_with_switch": 0.0,
+   "value": "mixed"
+  },
+  {
+   "arm": "sonnet",
+   "dim": "task_type",
+   "gm_cost_ratio": 1.500116,
+   "gm_cost_ratio_both_pass": 1.500116,
+   "gm_cost_ratio_both_pass_ci95": [
+    1.345185,
+    1.703463
+   ],
+   "gm_cost_ratio_ci95": [
+    1.341228,
+    1.69687
+   ],
+   "host": "opus",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": -1.193337,
+   "mean_saving_usd_ci95": [
+    -1.635911,
+    -0.801822
+   ],
+   "median_saving_usd": -1.100259,
+   "n_both_pass": 8,
+   "n_pairs_total": 8,
+   "n_scenarios": 4,
+   "n_valid_pairs": 8,
+   "quality": {
+    "anchor_final_pass_rate": 1.0,
+    "arm_final_pass_rate": 1.0,
+    "delta_turn_pass_ci95": [
+     -0.1563,
+     0.0063
+    ],
+    "mcnemar_anchor_only_pass": 0,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 1.0,
+    "mean_delta_turn_pass": -0.0812,
+    "n_pairs": 8,
+    "non_inferior": false
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": -50.012,
+   "savings_claim_allowed": false,
+   "share_sessions_with_switch": 0.0,
+   "value": "review"
+  },
+  {
+   "arm": "sticky",
+   "dim": "task_type",
+   "gm_cost_ratio": 1.035755,
+   "gm_cost_ratio_both_pass": 1.04655,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.908255,
+    1.203322
+   ],
+   "gm_cost_ratio_ci95": [
+    0.894709,
+    1.185874
+   ],
+   "host": "all",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": 0.15447,
+   "mean_saving_usd_ci95": [
+    -0.315192,
+    0.66687
+   ],
+   "median_saving_usd": -0.226342,
+   "n_both_pass": 71,
+   "n_pairs_total": 72,
+   "n_scenarios": 18,
+   "n_valid_pairs": 72,
+   "quality": {
+    "anchor_final_pass_rate": 1.0,
+    "arm_final_pass_rate": 0.9861,
+    "delta_turn_pass_ci95": [
+     -0.0098,
+     0.0554
+    ],
+    "mcnemar_anchor_only_pass": 1,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 1.0,
+    "mean_delta_turn_pass": 0.0185,
+    "n_pairs": 72,
+    "non_inferior": true
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": -3.576,
+   "savings_claim_allowed": true,
+   "share_sessions_with_switch": 0.0,
+   "value": "bugfix"
+  },
+  {
+   "arm": "sticky",
+   "dim": "task_type",
+   "gm_cost_ratio": 0.648686,
+   "gm_cost_ratio_both_pass": 0.647258,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.531256,
+    0.76957
+   ],
+   "gm_cost_ratio_ci95": [
+    0.546883,
+    0.772784
+   ],
+   "host": "all",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": 1.439526,
+   "mean_saving_usd_ci95": [
+    0.746494,
+    2.280691
+   ],
+   "median_saving_usd": 1.383915,
+   "n_both_pass": 14,
+   "n_pairs_total": 16,
+   "n_scenarios": 4,
+   "n_valid_pairs": 16,
+   "quality": {
+    "anchor_final_pass_rate": 1.0,
+    "arm_final_pass_rate": 0.875,
+    "delta_turn_pass_ci95": [
+     -0.0457,
+     0.0271
+    ],
+    "mcnemar_anchor_only_pass": 2,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 0.5,
+    "mean_delta_turn_pass": -0.0073,
+    "n_pairs": 16,
+    "non_inferior": true
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": 35.131,
+   "savings_claim_allowed": true,
+   "share_sessions_with_switch": 0.0,
+   "value": "docs"
+  },
+  {
+   "arm": "sticky",
+   "dim": "task_type",
+   "gm_cost_ratio": 0.575965,
+   "gm_cost_ratio_both_pass": 0.575965,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.464751,
+    0.710655
+   ],
+   "gm_cost_ratio_ci95": [
+    0.473662,
+    0.706773
+   ],
+   "host": "all",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": 1.327872,
+   "mean_saving_usd_ci95": [
+    0.742851,
+    1.939948
+   ],
+   "median_saving_usd": 1.005842,
+   "n_both_pass": 12,
+   "n_pairs_total": 12,
+   "n_scenarios": 3,
+   "n_valid_pairs": 12,
+   "quality": {
+    "anchor_final_pass_rate": 1.0,
+    "arm_final_pass_rate": 1.0,
+    "delta_turn_pass_ci95": [
+     -0.1944,
+     -0.0463
+    ],
+    "mcnemar_anchor_only_pass": 0,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 1.0,
+    "mean_delta_turn_pass": -0.1167,
+    "n_pairs": 12,
+    "non_inferior": false
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": 42.404,
+   "savings_claim_allowed": false,
+   "share_sessions_with_switch": 0.0,
+   "value": "explain"
+  },
+  {
+   "arm": "sticky",
+   "dim": "task_type",
+   "gm_cost_ratio": 0.859921,
+   "gm_cost_ratio_both_pass": 0.865523,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.718896,
+    1.041637
+   ],
+   "gm_cost_ratio_ci95": [
+    0.718617,
+    1.023899
+   ],
+   "host": "all",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": 0.804391,
+   "mean_saving_usd_ci95": [
+    -0.009197,
+    1.643758
+   ],
+   "median_saving_usd": -0.245274,
+   "n_both_pass": 46,
+   "n_pairs_total": 52,
+   "n_scenarios": 13,
+   "n_valid_pairs": 52,
+   "quality": {
+    "anchor_final_pass_rate": 0.9231,
+    "arm_final_pass_rate": 0.8846,
+    "delta_turn_pass_ci95": [
+     -0.1764,
+     0.0474
+    ],
+    "mcnemar_anchor_only_pass": 2,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 0.5,
+    "mean_delta_turn_pass": -0.0511,
+    "n_pairs": 52,
+    "non_inferior": false
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": 14.008,
+   "savings_claim_allowed": false,
+   "share_sessions_with_switch": 0.0,
+   "value": "feature"
+  },
+  {
+   "arm": "sticky",
+   "dim": "task_type",
+   "gm_cost_ratio": 0.750394,
+   "gm_cost_ratio_both_pass": 0.743808,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.657608,
+    0.846237
+   ],
+   "gm_cost_ratio_ci95": [
+    0.671029,
+    0.850849
+   ],
+   "host": "all",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": 0.858603,
+   "mean_saving_usd_ci95": [
+    0.226403,
+    1.401871
+   ],
+   "median_saving_usd": 0.35131,
+   "n_both_pass": 104,
+   "n_pairs_total": 112,
+   "n_scenarios": 28,
+   "n_valid_pairs": 112,
+   "quality": {
+    "anchor_final_pass_rate": 0.9554,
+    "arm_final_pass_rate": 0.9554,
+    "delta_turn_pass_ci95": [
+     -0.0126,
+     0.028
+    ],
+    "mcnemar_anchor_only_pass": 3,
+    "mcnemar_arm_only_pass": 3,
+    "mcnemar_p": 1.0,
+    "mean_delta_turn_pass": 0.0075,
+    "n_pairs": 112,
+    "non_inferior": true
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": 24.961,
+   "savings_claim_allowed": true,
+   "share_sessions_with_switch": 0.0,
+   "value": "mixed"
+  },
+  {
+   "arm": "sticky",
+   "dim": "task_type",
+   "gm_cost_ratio": 0.746684,
+   "gm_cost_ratio_both_pass": 0.805485,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.607365,
+    1.056794
+   ],
+   "gm_cost_ratio_ci95": [
+    0.574166,
+    0.967794
+   ],
+   "host": "all",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": 1.290823,
+   "mean_saving_usd_ci95": [
+    0.309486,
+    2.258355
+   ],
+   "median_saving_usd": 0.894501,
+   "n_both_pass": 13,
+   "n_pairs_total": 16,
+   "n_scenarios": 4,
+   "n_valid_pairs": 16,
+   "quality": {
+    "anchor_final_pass_rate": 1.0,
+    "arm_final_pass_rate": 0.8125,
+    "delta_turn_pass_ci95": [
+     -0.2188,
+     -0.051
+    ],
+    "mcnemar_anchor_only_pass": 3,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 0.25,
+    "mean_delta_turn_pass": -0.1464,
+    "n_pairs": 16,
+    "non_inferior": false
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": 25.332,
+   "savings_claim_allowed": false,
+   "share_sessions_with_switch": 0.0,
+   "value": "review"
+  },
+  {
+   "arm": "sticky",
+   "dim": "task_type",
+   "gm_cost_ratio": 0.680725,
+   "gm_cost_ratio_both_pass": 0.686906,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.601432,
+    0.781061
+   ],
+   "gm_cost_ratio_ci95": [
+    0.596709,
+    0.777125
+   ],
+   "host": "fable",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": 1.345937,
+   "mean_saving_usd_ci95": [
+    0.740708,
+    1.955069
+   ],
+   "median_saving_usd": 1.209394,
+   "n_both_pass": 35,
+   "n_pairs_total": 36,
+   "n_scenarios": 18,
+   "n_valid_pairs": 36,
+   "quality": {
+    "anchor_final_pass_rate": 1.0,
+    "arm_final_pass_rate": 0.9722,
+    "delta_turn_pass_ci95": [
+     -0.0043,
+     0.081
+    ],
+    "mcnemar_anchor_only_pass": 1,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 1.0,
+    "mean_delta_turn_pass": 0.0268,
+    "n_pairs": 36,
+    "non_inferior": true
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": 31.928,
+   "savings_claim_allowed": true,
+   "share_sessions_with_switch": 0.0,
+   "value": "bugfix"
+  },
+  {
+   "arm": "sticky",
+   "dim": "task_type",
+   "gm_cost_ratio": 0.463938,
+   "gm_cost_ratio_both_pass": 0.463628,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.427755,
+    0.508956
+   ],
+   "gm_cost_ratio_ci95": [
+    0.432124,
+    0.502787
+   ],
+   "host": "fable",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": 2.615489,
+   "mean_saving_usd_ci95": [
+    1.922835,
+    3.437505
+   ],
+   "median_saving_usd": 2.539162,
+   "n_both_pass": 7,
+   "n_pairs_total": 8,
+   "n_scenarios": 4,
+   "n_valid_pairs": 8,
+   "quality": {
+    "anchor_final_pass_rate": 1.0,
+    "arm_final_pass_rate": 0.875,
+    "delta_turn_pass_ci95": [
+     -0.0739,
+     0.0
+    ],
+    "mcnemar_anchor_only_pass": 1,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 1.0,
+    "mean_delta_turn_pass": -0.033,
+    "n_pairs": 8,
+    "non_inferior": false
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": 53.606,
+   "savings_claim_allowed": false,
+   "share_sessions_with_switch": 0.0,
+   "value": "docs"
+  },
+  {
+   "arm": "sticky",
+   "dim": "task_type",
+   "gm_cost_ratio": 0.410938,
+   "gm_cost_ratio_both_pass": 0.410938,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.373017,
+    0.464304
+   ],
+   "gm_cost_ratio_ci95": [
+    0.373017,
+    0.459316
+   ],
+   "host": "fable",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": 2.314755,
+   "mean_saving_usd_ci95": [
+    1.911602,
+    2.822376
+   ],
+   "median_saving_usd": 2.228274,
+   "n_both_pass": 6,
+   "n_pairs_total": 6,
+   "n_scenarios": 3,
+   "n_valid_pairs": 6,
+   "quality": {
+    "anchor_final_pass_rate": 1.0,
+    "arm_final_pass_rate": 1.0,
+    "delta_turn_pass_ci95": [
+     -0.2222,
+     -0.0519
+    ],
+    "mcnemar_anchor_only_pass": 0,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 1.0,
+    "mean_delta_turn_pass": -0.1426,
+    "n_pairs": 6,
+    "non_inferior": false
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": 58.906,
+   "savings_claim_allowed": false,
+   "share_sessions_with_switch": 0.0,
+   "value": "explain"
+  },
+  {
+   "arm": "sticky",
+   "dim": "task_type",
+   "gm_cost_ratio": 0.581564,
+   "gm_cost_ratio_both_pass": 0.597339,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.474863,
+    0.768049
+   ],
+   "gm_cost_ratio_ci95": [
+    0.474018,
+    0.752895
+   ],
+   "host": "fable",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": 2.182908,
+   "mean_saving_usd_ci95": [
+    0.812937,
+    3.441204
+   ],
+   "median_saving_usd": 2.322998,
+   "n_both_pass": 24,
+   "n_pairs_total": 26,
+   "n_scenarios": 13,
+   "n_valid_pairs": 26,
+   "quality": {
+    "anchor_final_pass_rate": 0.9231,
+    "arm_final_pass_rate": 0.9231,
+    "delta_turn_pass_ci95": [
+     -0.2308,
+     0.0559
+    ],
+    "mcnemar_anchor_only_pass": 0,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 1.0,
+    "mean_delta_turn_pass": -0.0714,
+    "n_pairs": 26,
+    "non_inferior": false
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": 41.844,
+   "savings_claim_allowed": false,
+   "share_sessions_with_switch": 0.0,
+   "value": "feature"
+  },
+  {
+   "arm": "sticky",
+   "dim": "task_type",
+   "gm_cost_ratio": 0.525555,
+   "gm_cost_ratio_both_pass": 0.525424,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.466321,
+    0.612389
+   ],
+   "gm_cost_ratio_ci95": [
+    0.465892,
+    0.608416
+   ],
+   "host": "fable",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": 2.02028,
+   "mean_saving_usd_ci95": [
+    1.030752,
+    2.833766
+   ],
+   "median_saving_usd": 2.232576,
+   "n_both_pass": 53,
+   "n_pairs_total": 56,
+   "n_scenarios": 28,
+   "n_valid_pairs": 56,
+   "quality": {
+    "anchor_final_pass_rate": 0.9821,
+    "arm_final_pass_rate": 0.9643,
+    "delta_turn_pass_ci95": [
+     -0.021,
+     0.0304
+    ],
+    "mcnemar_anchor_only_pass": 2,
+    "mcnemar_arm_only_pass": 1,
+    "mcnemar_p": 1.0,
+    "mean_delta_turn_pass": 0.0057,
+    "n_pairs": 56,
+    "non_inferior": true
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": 47.444,
+   "savings_claim_allowed": true,
+   "share_sessions_with_switch": 0.0,
+   "value": "mixed"
+  },
+  {
+   "arm": "sticky",
+   "dim": "task_type",
+   "gm_cost_ratio": 0.483007,
+   "gm_cost_ratio_both_pass": 0.509856,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.430496,
+    0.606424
+   ],
+   "gm_cost_ratio_ci95": [
+    0.41715,
+    0.574321
+   ],
+   "host": "fable",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": 3.00705,
+   "mean_saving_usd_ci95": [
+    2.346058,
+    3.586349
+   ],
+   "median_saving_usd": 2.903738,
+   "n_both_pass": 6,
+   "n_pairs_total": 8,
+   "n_scenarios": 4,
+   "n_valid_pairs": 8,
+   "quality": {
+    "anchor_final_pass_rate": 1.0,
+    "arm_final_pass_rate": 0.75,
+    "delta_turn_pass_ci95": [
+     -0.251,
+     -0.0375
+    ],
+    "mcnemar_anchor_only_pass": 2,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 0.5,
+    "mean_delta_turn_pass": -0.1552,
+    "n_pairs": 8,
+    "non_inferior": false
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": 51.699,
+   "savings_claim_allowed": false,
+   "share_sessions_with_switch": 0.0,
+   "value": "review"
+  },
+  {
+   "arm": "sticky",
+   "dim": "task_type",
+   "gm_cost_ratio": 1.575952,
+   "gm_cost_ratio_both_pass": 1.575952,
+   "gm_cost_ratio_both_pass_ci95": [
+    1.404694,
+    1.76802
+   ],
+   "gm_cost_ratio_ci95": [
+    1.40734,
+    1.762304
+   ],
+   "host": "opus",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": -1.036997,
+   "mean_saving_usd_ci95": [
+    -1.420669,
+    -0.701574
+   ],
+   "median_saving_usd": -0.829659,
+   "n_both_pass": 36,
+   "n_pairs_total": 36,
+   "n_scenarios": 18,
+   "n_valid_pairs": 36,
+   "quality": {
+    "anchor_final_pass_rate": 1.0,
+    "arm_final_pass_rate": 1.0,
+    "delta_turn_pass_ci95": [
+     -0.0282,
+     0.0499
+    ],
+    "mcnemar_anchor_only_pass": 0,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 1.0,
+    "mean_delta_turn_pass": 0.0102,
+    "n_pairs": 36,
+    "non_inferior": true
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": -57.595,
+   "savings_claim_allowed": true,
+   "share_sessions_with_switch": 0.0,
+   "value": "bugfix"
+  },
+  {
+   "arm": "sticky",
+   "dim": "task_type",
+   "gm_cost_ratio": 0.907004,
+   "gm_cost_ratio_both_pass": 0.903619,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.815309,
+    0.958942
+   ],
+   "gm_cost_ratio_ci95": [
+    0.846141,
+    0.960926
+   ],
+   "host": "opus",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": 0.263563,
+   "mean_saving_usd_ci95": [
+    0.087825,
+    0.569658
+   ],
+   "median_saving_usd": 0.213409,
+   "n_both_pass": 7,
+   "n_pairs_total": 8,
+   "n_scenarios": 4,
+   "n_valid_pairs": 8,
+   "quality": {
+    "anchor_final_pass_rate": 1.0,
+    "arm_final_pass_rate": 0.875,
+    "delta_turn_pass_ci95": [
+     -0.0469,
+     0.0697
+    ],
+    "mcnemar_anchor_only_pass": 1,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 1.0,
+    "mean_delta_turn_pass": 0.0185,
+    "n_pairs": 8,
+    "non_inferior": true
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": 9.3,
+   "savings_claim_allowed": true,
+   "share_sessions_with_switch": 0.0,
+   "value": "docs"
+  },
+  {
+   "arm": "sticky",
+   "dim": "task_type",
+   "gm_cost_ratio": 0.807263,
+   "gm_cost_ratio_both_pass": 0.807263,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.746456,
+    0.879751
+   ],
+   "gm_cost_ratio_ci95": [
+    0.749065,
+    0.879627
+   ],
+   "host": "opus",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": 0.340989,
+   "mean_saving_usd_ci95": [
+    0.205743,
+    0.441738
+   ],
+   "median_saving_usd": 0.414685,
+   "n_both_pass": 6,
+   "n_pairs_total": 6,
+   "n_scenarios": 3,
+   "n_valid_pairs": 6,
+   "quality": {
+    "anchor_final_pass_rate": 1.0,
+    "arm_final_pass_rate": 1.0,
+    "delta_turn_pass_ci95": [
+     -0.1666,
+     -0.0185
+    ],
+    "mcnemar_anchor_only_pass": 0,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 1.0,
+    "mean_delta_turn_pass": -0.0907,
+    "n_pairs": 6,
+    "non_inferior": false
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": 19.274,
+   "savings_claim_allowed": false,
+   "share_sessions_with_switch": 0.0,
+   "value": "explain"
+  },
+  {
+   "arm": "sticky",
+   "dim": "task_type",
+   "gm_cost_ratio": 1.271508,
+   "gm_cost_ratio_both_pass": 1.297112,
+   "gm_cost_ratio_both_pass_ci95": [
+    1.189597,
+    1.405777
+   ],
+   "gm_cost_ratio_ci95": [
+    1.172116,
+    1.381416
+   ],
+   "host": "opus",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": -0.574126,
+   "mean_saving_usd_ci95": [
+    -0.810097,
+    -0.353774
+   ],
+   "median_saving_usd": -0.518299,
+   "n_both_pass": 22,
+   "n_pairs_total": 26,
+   "n_scenarios": 13,
+   "n_valid_pairs": 26,
+   "quality": {
+    "anchor_final_pass_rate": 0.9231,
+    "arm_final_pass_rate": 0.8462,
+    "delta_turn_pass_ci95": [
+     -0.1389,
+     0.0538
+    ],
+    "mcnemar_anchor_only_pass": 2,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 0.5,
+    "mean_delta_turn_pass": -0.0308,
+    "n_pairs": 26,
+    "non_inferior": false
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": -27.151,
+   "savings_claim_allowed": false,
+   "share_sessions_with_switch": 0.0,
+   "value": "feature"
+  },
+  {
+   "arm": "sticky",
+   "dim": "task_type",
+   "gm_cost_ratio": 1.071423,
+   "gm_cost_ratio_both_pass": 1.067411,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.989329,
+    1.161897
+   ],
+   "gm_cost_ratio_ci95": [
+    0.995464,
+    1.153687
+   ],
+   "host": "opus",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": -0.303074,
+   "mean_saving_usd_ci95": [
+    -0.56865,
+    -0.072462
+   ],
+   "median_saving_usd": -0.110887,
+   "n_both_pass": 51,
+   "n_pairs_total": 56,
+   "n_scenarios": 28,
+   "n_valid_pairs": 56,
+   "quality": {
+    "anchor_final_pass_rate": 0.9286,
+    "arm_final_pass_rate": 0.9464,
+    "delta_turn_pass_ci95": [
+     -0.0167,
+     0.0334
+    ],
+    "mcnemar_anchor_only_pass": 1,
+    "mcnemar_arm_only_pass": 2,
+    "mcnemar_p": 1.0,
+    "mean_delta_turn_pass": 0.0093,
+    "n_pairs": 56,
+    "non_inferior": true
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": -7.142,
+   "savings_claim_allowed": true,
+   "share_sessions_with_switch": 0.0,
+   "value": "mixed"
+  },
+  {
+   "arm": "sticky",
+   "dim": "task_type",
+   "gm_cost_ratio": 1.154306,
+   "gm_cost_ratio_both_pass": 1.19205,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.988418,
+    1.385837
+   ],
+   "gm_cost_ratio_ci95": [
+    0.96999,
+    1.374874
+   ],
+   "host": "opus",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": -0.425405,
+   "mean_saving_usd_ci95": [
+    -0.922543,
+    0.041718
+   ],
+   "median_saving_usd": -0.372676,
+   "n_both_pass": 7,
+   "n_pairs_total": 8,
+   "n_scenarios": 4,
+   "n_valid_pairs": 8,
+   "quality": {
+    "anchor_final_pass_rate": 1.0,
+    "arm_final_pass_rate": 0.875,
+    "delta_turn_pass_ci95": [
+     -0.2375,
+     -0.0292
+    ],
+    "mcnemar_anchor_only_pass": 1,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 1.0,
+    "mean_delta_turn_pass": -0.1375,
+    "n_pairs": 8,
+    "non_inferior": false
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": -15.431,
+   "savings_claim_allowed": false,
+   "share_sessions_with_switch": 0.0,
+   "value": "review"
+  },
+  {
+   "arm": "aa",
+   "dim": "gap_pattern",
+   "gm_cost_ratio": 1.002165,
+   "gm_cost_ratio_both_pass": 1.002165,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.940071,
+    1.072536
+   ],
+   "gm_cost_ratio_ci95": [
+    0.940367,
+    1.073111
+   ],
+   "host": "all",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": 0.05949,
+   "mean_saving_usd_ci95": [
+    -0.248499,
+    0.399489
+   ],
+   "median_saving_usd": 0.063053,
+   "n_both_pass": 17,
+   "n_pairs_total": 18,
+   "n_scenarios": 9,
+   "n_valid_pairs": 17,
+   "quality": {
+    "anchor_final_pass_rate": 1.0,
+    "arm_final_pass_rate": 0.9444,
+    "delta_turn_pass_ci95": [
+     -0.0359,
+     0.0502
+    ],
+    "mcnemar_anchor_only_pass": 1,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 1.0,
+    "mean_delta_turn_pass": 0.0078,
+    "n_pairs": 18,
+    "non_inferior": true
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": -0.216,
+   "savings_claim_allowed": true,
+   "share_sessions_with_switch": 0.0,
+   "value": "2+ long gaps"
+  },
+  {
+   "arm": "aa",
+   "dim": "gap_pattern",
+   "gm_cost_ratio": 1.00932,
+   "gm_cost_ratio_both_pass": 1.009883,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.967468,
+    1.049898
+   ],
+   "gm_cost_ratio_ci95": [
+    0.968254,
+    1.04913
+   ],
+   "host": "all",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": -0.025361,
+   "mean_saving_usd_ci95": [
+    -0.189367,
+    0.125203
+   ],
+   "median_saving_usd": -0.025593,
+   "n_both_pass": 36,
+   "n_pairs_total": 38,
+   "n_scenarios": 17,
+   "n_valid_pairs": 38,
+   "quality": {
+    "anchor_final_pass_rate": 1.0,
+    "arm_final_pass_rate": 0.9474,
+    "delta_turn_pass_ci95": [
+     -0.0197,
+     0.0074
+    ],
+    "mcnemar_anchor_only_pass": 2,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 0.5,
+    "mean_delta_turn_pass": -0.0059,
+    "n_pairs": 38,
+    "non_inferior": true
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": -0.932,
+   "savings_claim_allowed": true,
+   "share_sessions_with_switch": 0.0,
+   "value": "no long gap"
+  },
+  {
+   "arm": "aa",
+   "dim": "gap_pattern",
+   "gm_cost_ratio": 0.95229,
+   "gm_cost_ratio_both_pass": 0.95229,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.903628,
+    1.011604
+   ],
+   "gm_cost_ratio_ci95": [
+    0.90309,
+    1.011164
+   ],
+   "host": "fable",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": 0.2878,
+   "mean_saving_usd_ci95": [
+    -0.141498,
+    0.67414
+   ],
+   "median_saving_usd": 0.363797,
+   "n_both_pass": 9,
+   "n_pairs_total": 9,
+   "n_scenarios": 9,
+   "n_valid_pairs": 9,
+   "quality": {
+    "anchor_final_pass_rate": 1.0,
+    "arm_final_pass_rate": 1.0,
+    "delta_turn_pass_ci95": [
+     0.0,
+     0.0556
+    ],
+    "mcnemar_anchor_only_pass": 0,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 1.0,
+    "mean_delta_turn_pass": 0.0224,
+    "n_pairs": 9,
+    "non_inferior": true
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": 4.771,
+   "savings_claim_allowed": true,
+   "share_sessions_with_switch": 0.0,
+   "value": "2+ long gaps"
+  },
+  {
+   "arm": "aa",
+   "dim": "gap_pattern",
+   "gm_cost_ratio": 0.975665,
+   "gm_cost_ratio_both_pass": 0.973592,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.929574,
+    1.020453
+   ],
+   "gm_cost_ratio_ci95": [
+    0.935884,
+    1.021371
+   ],
+   "host": "fable",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": 0.038949,
+   "mean_saving_usd_ci95": [
+    -0.234491,
+    0.252489
+   ],
+   "median_saving_usd": 0.064791,
+   "n_both_pass": 18,
+   "n_pairs_total": 19,
+   "n_scenarios": 17,
+   "n_valid_pairs": 19,
+   "quality": {
+    "anchor_final_pass_rate": 1.0,
+    "arm_final_pass_rate": 0.9474,
+    "delta_turn_pass_ci95": [
+     -0.0147,
+     0.0
+    ],
+    "mcnemar_anchor_only_pass": 1,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 1.0,
+    "mean_delta_turn_pass": -0.0044,
+    "n_pairs": 19,
+    "non_inferior": true
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": 2.433,
+   "savings_claim_allowed": true,
+   "share_sessions_with_switch": 0.0,
+   "value": "no long gap"
+  },
+  {
+   "arm": "aa",
+   "dim": "gap_pattern",
+   "gm_cost_ratio": 1.061403,
+   "gm_cost_ratio_both_pass": 1.061403,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.976013,
+    1.149114
+   ],
+   "gm_cost_ratio_ci95": [
+    0.980959,
+    1.145677
+   ],
+   "host": "opus",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": -0.197358,
+   "mean_saving_usd_ci95": [
+    -0.388263,
+    -0.003453
+   ],
+   "median_saving_usd": -0.27728,
+   "n_both_pass": 8,
+   "n_pairs_total": 9,
+   "n_scenarios": 8,
+   "n_valid_pairs": 8,
+   "quality": {
+    "anchor_final_pass_rate": 1.0,
+    "arm_final_pass_rate": 0.8889,
+    "delta_turn_pass_ci95": [
+     -0.0651,
+     0.0449
+    ],
+    "mcnemar_anchor_only_pass": 1,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 1.0,
+    "mean_delta_turn_pass": -0.0067,
+    "n_pairs": 9,
+    "non_inferior": false
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": -6.14,
+   "savings_claim_allowed": false,
+   "share_sessions_with_switch": 0.0,
+   "value": "2+ long gaps"
+  },
+  {
+   "arm": "aa",
+   "dim": "gap_pattern",
+   "gm_cost_ratio": 1.044135,
+   "gm_cost_ratio_both_pass": 1.047526,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.994694,
+    1.099454
+   ],
+   "gm_cost_ratio_ci95": [
+    0.994252,
+    1.095537
+   ],
+   "host": "opus",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": -0.089671,
+   "mean_saving_usd_ci95": [
+    -0.166633,
+    -0.00869
+   ],
+   "median_saving_usd": -0.051632,
+   "n_both_pass": 18,
+   "n_pairs_total": 19,
+   "n_scenarios": 17,
+   "n_valid_pairs": 19,
+   "quality": {
+    "anchor_final_pass_rate": 1.0,
+    "arm_final_pass_rate": 0.9474,
+    "delta_turn_pass_ci95": [
+     -0.0273,
+     0.0146
+    ],
+    "mcnemar_anchor_only_pass": 1,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 1.0,
+    "mean_delta_turn_pass": -0.0075,
+    "n_pairs": 19,
+    "non_inferior": true
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": -4.414,
+   "savings_claim_allowed": true,
+   "share_sessions_with_switch": 0.0,
+   "value": "no long gap"
+  },
+  {
+   "arm": "shipped",
+   "dim": "gap_pattern",
+   "gm_cost_ratio": 0.868478,
+   "gm_cost_ratio_both_pass": 0.876913,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.782498,
+    0.982679
+   ],
+   "gm_cost_ratio_ci95": [
+    0.77684,
+    0.967722
+   ],
+   "host": "all",
+   "mean_model_switches": 2.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": 0.777501,
+   "mean_saving_usd_ci95": [
+    0.339285,
+    1.252426
+   ],
+   "median_saving_usd": 0.208842,
+   "n_both_pass": 85,
+   "n_pairs_total": 92,
+   "n_scenarios": 23,
+   "n_valid_pairs": 92,
+   "quality": {
+    "anchor_final_pass_rate": 0.9891,
+    "arm_final_pass_rate": 0.9348,
+    "delta_turn_pass_ci95": [
+     -0.0809,
+     0.0307
+    ],
+    "mcnemar_anchor_only_pass": 6,
+    "mcnemar_arm_only_pass": 1,
+    "mcnemar_p": 0.125,
+    "mean_delta_turn_pass": -0.0183,
+    "n_pairs": 92,
+    "non_inferior": false
+   },
+   "rebuild_cost_share": 0.173521,
+   "saving_pct": 13.152,
+   "savings_claim_allowed": false,
+   "share_sessions_with_switch": 0.674,
+   "value": "2+ long gaps"
+  },
+  {
+   "arm": "shipped",
+   "dim": "gap_pattern",
+   "gm_cost_ratio": 0.902169,
+   "gm_cost_ratio_both_pass": 0.905097,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.818414,
+    1.002511
+   ],
+   "gm_cost_ratio_ci95": [
+    0.814186,
+    0.991802
+   ],
+   "host": "all",
+   "mean_model_switches": 1.266,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": 0.488248,
+   "mean_saving_usd_ci95": [
+    0.191134,
+    0.782301
+   ],
+   "median_saving_usd": 0.141288,
+   "n_both_pass": 175,
+   "n_pairs_total": 188,
+   "n_scenarios": 47,
+   "n_valid_pairs": 188,
+   "quality": {
+    "anchor_final_pass_rate": 0.9574,
+    "arm_final_pass_rate": 0.9362,
+    "delta_turn_pass_ci95": [
+     -0.0386,
+     0.018
+    ],
+    "mcnemar_anchor_only_pass": 5,
+    "mcnemar_arm_only_pass": 1,
+    "mcnemar_p": 0.2188,
+    "mean_delta_turn_pass": -0.0104,
+    "n_pairs": 188,
+    "non_inferior": true
+   },
+   "rebuild_cost_share": 0.123594,
+   "saving_pct": 9.783,
+   "savings_claim_allowed": true,
+   "share_sessions_with_switch": 0.516,
+   "value": "no long gap"
+  },
+  {
+   "arm": "shipped",
+   "dim": "gap_pattern",
+   "gm_cost_ratio": 0.642903,
+   "gm_cost_ratio_both_pass": 0.646951,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.56314,
+    0.74363
+   ],
+   "gm_cost_ratio_ci95": [
+    0.569436,
+    0.727744
+   ],
+   "host": "fable",
+   "mean_model_switches": 1.978,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": 2.038761,
+   "mean_saving_usd_ci95": [
+    1.435498,
+    2.664254
+   ],
+   "median_saving_usd": 2.028439,
+   "n_both_pass": 42,
+   "n_pairs_total": 46,
+   "n_scenarios": 23,
+   "n_valid_pairs": 46,
+   "quality": {
+    "anchor_final_pass_rate": 1.0,
+    "arm_final_pass_rate": 0.913,
+    "delta_turn_pass_ci95": [
+     -0.1012,
+     0.0427
+    ],
+    "mcnemar_anchor_only_pass": 4,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 0.125,
+    "mean_delta_turn_pass": -0.0199,
+    "n_pairs": 46,
+    "non_inferior": false
+   },
+   "rebuild_cost_share": 0.200166,
+   "saving_pct": 35.71,
+   "savings_claim_allowed": false,
+   "share_sessions_with_switch": 0.674,
+   "value": "2+ long gaps"
+  },
+  {
+   "arm": "shipped",
+   "dim": "gap_pattern",
+   "gm_cost_ratio": 0.62749,
+   "gm_cost_ratio_both_pass": 0.628898,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.574411,
+    0.694464
+   ],
+   "gm_cost_ratio_ci95": [
+    0.573599,
+    0.690168
+   ],
+   "host": "fable",
+   "mean_model_switches": 1.277,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": 1.614963,
+   "mean_saving_usd_ci95": [
+    1.237906,
+    1.977514
+   ],
+   "median_saving_usd": 1.595673,
+   "n_both_pass": 88,
+   "n_pairs_total": 94,
+   "n_scenarios": 47,
+   "n_valid_pairs": 94,
+   "quality": {
+    "anchor_final_pass_rate": 0.9681,
+    "arm_final_pass_rate": 0.9468,
+    "delta_turn_pass_ci95": [
+     -0.0374,
+     0.0183
+    ],
+    "mcnemar_anchor_only_pass": 3,
+    "mcnemar_arm_only_pass": 1,
+    "mcnemar_p": 0.625,
+    "mean_delta_turn_pass": -0.0095,
+    "n_pairs": 94,
+    "non_inferior": true
+   },
+   "rebuild_cost_share": 0.152239,
+   "saving_pct": 37.251,
+   "savings_claim_allowed": true,
+   "share_sessions_with_switch": 0.521,
+   "value": "no long gap"
+  },
+  {
+   "arm": "shipped",
+   "dim": "gap_pattern",
+   "gm_cost_ratio": 1.173201,
+   "gm_cost_ratio_both_pass": 1.180239,
+   "gm_cost_ratio_both_pass_ci95": [
+    1.08442,
+    1.286324
+   ],
+   "gm_cost_ratio_ci95": [
+    1.07746,
+    1.276815
+   ],
+   "host": "opus",
+   "mean_model_switches": 2.022,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": -0.483759,
+   "mean_saving_usd_ci95": [
+    -0.740696,
+    -0.235831
+   ],
+   "median_saving_usd": -0.453067,
+   "n_both_pass": 43,
+   "n_pairs_total": 46,
+   "n_scenarios": 23,
+   "n_valid_pairs": 46,
+   "quality": {
+    "anchor_final_pass_rate": 0.9783,
+    "arm_final_pass_rate": 0.9565,
+    "delta_turn_pass_ci95": [
+     -0.0858,
+     0.0353
+    ],
+    "mcnemar_anchor_only_pass": 2,
+    "mcnemar_arm_only_pass": 1,
+    "mcnemar_p": 1.0,
+    "mean_delta_turn_pass": -0.0168,
+    "n_pairs": 46,
+    "non_inferior": false
+   },
+   "rebuild_cost_share": 0.136684,
+   "saving_pct": -17.32,
+   "savings_claim_allowed": false,
+   "share_sessions_with_switch": 0.674,
+   "value": "2+ long gaps"
+  },
+  {
+   "arm": "shipped",
+   "dim": "gap_pattern",
+   "gm_cost_ratio": 1.297086,
+   "gm_cost_ratio_both_pass": 1.308058,
+   "gm_cost_ratio_both_pass_ci95": [
+    1.193052,
+    1.429544
+   ],
+   "gm_cost_ratio_ci95": [
+    1.189354,
+    1.418764
+   ],
+   "host": "opus",
+   "mean_model_switches": 1.255,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": -0.638468,
+   "mean_saving_usd_ci95": [
+    -0.866818,
+    -0.44221
+   ],
+   "median_saving_usd": -0.433474,
+   "n_both_pass": 87,
+   "n_pairs_total": 94,
+   "n_scenarios": 47,
+   "n_valid_pairs": 94,
+   "quality": {
+    "anchor_final_pass_rate": 0.9468,
+    "arm_final_pass_rate": 0.9255,
+    "delta_turn_pass_ci95": [
+     -0.0499,
+     0.0235
+    ],
+    "mcnemar_anchor_only_pass": 2,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 0.5,
+    "mean_delta_turn_pass": -0.0113,
+    "n_pairs": 94,
+    "non_inferior": true
+   },
+   "rebuild_cost_share": 0.087222,
+   "saving_pct": -29.709,
+   "savings_claim_allowed": true,
+   "share_sessions_with_switch": 0.511,
+   "value": "no long gap"
+  },
+  {
+   "arm": "sonnet",
+   "dim": "gap_pattern",
+   "gm_cost_ratio": 0.896862,
+   "gm_cost_ratio_both_pass": 0.897619,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.792883,
+    1.014676
+   ],
+   "gm_cost_ratio_ci95": [
+    0.793072,
+    1.01483
+   ],
+   "host": "all",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": 0.732424,
+   "mean_saving_usd_ci95": [
+    0.267659,
+    1.227077
+   ],
+   "median_saving_usd": 0.455593,
+   "n_both_pass": 89,
+   "n_pairs_total": 92,
+   "n_scenarios": 23,
+   "n_valid_pairs": 92,
+   "quality": {
+    "anchor_final_pass_rate": 0.9891,
+    "arm_final_pass_rate": 0.9783,
+    "delta_turn_pass_ci95": [
+     -0.0843,
+     0.0358
+    ],
+    "mcnemar_anchor_only_pass": 2,
+    "mcnemar_arm_only_pass": 1,
+    "mcnemar_p": 1.0,
+    "mean_delta_turn_pass": -0.0155,
+    "n_pairs": 92,
+    "non_inferior": false
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": 10.314,
+   "savings_claim_allowed": false,
+   "share_sessions_with_switch": 0.0,
+   "value": "2+ long gaps"
+  },
+  {
+   "arm": "sonnet",
+   "dim": "gap_pattern",
+   "gm_cost_ratio": 0.935236,
+   "gm_cost_ratio_both_pass": 0.930106,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.829998,
+    1.050016
+   ],
+   "gm_cost_ratio_ci95": [
+    0.832086,
+    1.049784
+   ],
+   "host": "all",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": 0.381789,
+   "mean_saving_usd_ci95": [
+    0.010265,
+    0.750156
+   ],
+   "median_saving_usd": 0.098482,
+   "n_both_pass": 173,
+   "n_pairs_total": 188,
+   "n_scenarios": 47,
+   "n_valid_pairs": 188,
+   "quality": {
+    "anchor_final_pass_rate": 0.9574,
+    "arm_final_pass_rate": 0.9255,
+    "delta_turn_pass_ci95": [
+     -0.0247,
+     0.0327
+    ],
+    "mcnemar_anchor_only_pass": 7,
+    "mcnemar_arm_only_pass": 1,
+    "mcnemar_p": 0.0703,
+    "mean_delta_turn_pass": 0.0056,
+    "n_pairs": 188,
+    "non_inferior": true
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": 6.476,
+   "savings_claim_allowed": true,
+   "share_sessions_with_switch": 0.0,
+   "value": "no long gap"
+  },
+  {
+   "arm": "sonnet",
+   "dim": "gap_pattern",
+   "gm_cost_ratio": 0.572283,
+   "gm_cost_ratio_both_pass": 0.573762,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.528772,
+    0.618654
+   ],
+   "gm_cost_ratio_ci95": [
+    0.528097,
+    0.617978
+   ],
+   "host": "fable",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": 2.573335,
+   "mean_saving_usd_ci95": [
+    2.169328,
+    2.983128
+   ],
+   "median_saving_usd": 2.243256,
+   "n_both_pass": 45,
+   "n_pairs_total": 46,
+   "n_scenarios": 23,
+   "n_valid_pairs": 46,
+   "quality": {
+    "anchor_final_pass_rate": 1.0,
+    "arm_final_pass_rate": 0.9783,
+    "delta_turn_pass_ci95": [
+     -0.1091,
+     0.0386
+    ],
+    "mcnemar_anchor_only_pass": 1,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 1.0,
+    "mean_delta_turn_pass": -0.0263,
+    "n_pairs": 46,
+    "non_inferior": false
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": 42.772,
+   "savings_claim_allowed": false,
+   "share_sessions_with_switch": 0.0,
+   "value": "2+ long gaps"
+  },
+  {
+   "arm": "sonnet",
+   "dim": "gap_pattern",
+   "gm_cost_ratio": 0.593858,
+   "gm_cost_ratio_both_pass": 0.593016,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.540534,
+    0.651534
+   ],
+   "gm_cost_ratio_ci95": [
+    0.545384,
+    0.649574
+   ],
+   "host": "fable",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": 1.85345,
+   "mean_saving_usd_ci95": [
+    1.476666,
+    2.256942
+   ],
+   "median_saving_usd": 1.744592,
+   "n_both_pass": 87,
+   "n_pairs_total": 94,
+   "n_scenarios": 47,
+   "n_valid_pairs": 94,
+   "quality": {
+    "anchor_final_pass_rate": 0.9681,
+    "arm_final_pass_rate": 0.9255,
+    "delta_turn_pass_ci95": [
+     -0.0296,
+     0.0289
+    ],
+    "mcnemar_anchor_only_pass": 4,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 0.125,
+    "mean_delta_turn_pass": 0.0009,
+    "n_pairs": 94,
+    "non_inferior": true
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": 40.614,
+   "savings_claim_allowed": true,
+   "share_sessions_with_switch": 0.0,
+   "value": "no long gap"
+  },
+  {
+   "arm": "sonnet",
+   "dim": "gap_pattern",
+   "gm_cost_ratio": 1.405531,
+   "gm_cost_ratio_both_pass": 1.418631,
+   "gm_cost_ratio_both_pass_ci95": [
+    1.286797,
+    1.566422
+   ],
+   "gm_cost_ratio_ci95": [
+    1.272836,
+    1.558323
+   ],
+   "host": "opus",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": -1.108487,
+   "mean_saving_usd_ci95": [
+    -1.489678,
+    -0.771724
+   ],
+   "median_saving_usd": -0.953834,
+   "n_both_pass": 44,
+   "n_pairs_total": 46,
+   "n_scenarios": 23,
+   "n_valid_pairs": 46,
+   "quality": {
+    "anchor_final_pass_rate": 0.9783,
+    "arm_final_pass_rate": 0.9783,
+    "delta_turn_pass_ci95": [
+     -0.0685,
+     0.0503
+    ],
+    "mcnemar_anchor_only_pass": 1,
+    "mcnemar_arm_only_pass": 1,
+    "mcnemar_p": 1.0,
+    "mean_delta_turn_pass": -0.0047,
+    "n_pairs": 46,
+    "non_inferior": false
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": -40.553,
+   "savings_claim_allowed": false,
+   "share_sessions_with_switch": 0.0,
+   "value": "2+ long gaps"
+  },
+  {
+   "arm": "sonnet",
+   "dim": "gap_pattern",
+   "gm_cost_ratio": 1.472854,
+   "gm_cost_ratio_both_pass": 1.466462,
+   "gm_cost_ratio_both_pass_ci95": [
+    1.319217,
+    1.631771
+   ],
+   "gm_cost_ratio_ci95": [
+    1.330112,
+    1.630893
+   ],
+   "host": "opus",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": -1.089873,
+   "mean_saving_usd_ci95": [
+    -1.475105,
+    -0.749783
+   ],
+   "median_saving_usd": -0.87729,
+   "n_both_pass": 86,
+   "n_pairs_total": 94,
+   "n_scenarios": 47,
+   "n_valid_pairs": 94,
+   "quality": {
+    "anchor_final_pass_rate": 0.9468,
+    "arm_final_pass_rate": 0.9255,
+    "delta_turn_pass_ci95": [
+     -0.0203,
+     0.0427
+    ],
+    "mcnemar_anchor_only_pass": 3,
+    "mcnemar_arm_only_pass": 1,
+    "mcnemar_p": 0.625,
+    "mean_delta_turn_pass": 0.0103,
+    "n_pairs": 94,
+    "non_inferior": true
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": -47.285,
+   "savings_claim_allowed": true,
+   "share_sessions_with_switch": 0.0,
+   "value": "no long gap"
+  },
+  {
+   "arm": "sticky",
+   "dim": "gap_pattern",
+   "gm_cost_ratio": 0.805282,
+   "gm_cost_ratio_both_pass": 0.808572,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.70746,
+    0.933979
+   ],
+   "gm_cost_ratio_ci95": [
+    0.708449,
+    0.917728
+   ],
+   "host": "all",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": 0.984597,
+   "mean_saving_usd_ci95": [
+    0.333079,
+    1.584753
+   ],
+   "median_saving_usd": 0.274683,
+   "n_both_pass": 88,
+   "n_pairs_total": 92,
+   "n_scenarios": 23,
+   "n_valid_pairs": 92,
+   "quality": {
+    "anchor_final_pass_rate": 0.9891,
+    "arm_final_pass_rate": 0.9674,
+    "delta_turn_pass_ci95": [
+     -0.0757,
+     0.0391
+    ],
+    "mcnemar_anchor_only_pass": 3,
+    "mcnemar_arm_only_pass": 1,
+    "mcnemar_p": 0.625,
+    "mean_delta_turn_pass": -0.0104,
+    "n_pairs": 92,
+    "non_inferior": false
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": 19.472,
+   "savings_claim_allowed": false,
+   "share_sessions_with_switch": 0.0,
+   "value": "2+ long gaps"
+  },
+  {
+   "arm": "sticky",
+   "dim": "gap_pattern",
+   "gm_cost_ratio": 0.826717,
+   "gm_cost_ratio_both_pass": 0.834989,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.755715,
+    0.931005
+   ],
+   "gm_cost_ratio_ci95": [
+    0.746628,
+    0.916795
+   ],
+   "host": "all",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": 0.628462,
+   "mean_saving_usd_ci95": [
+    0.241353,
+    1.014102
+   ],
+   "median_saving_usd": 0.249605,
+   "n_both_pass": 172,
+   "n_pairs_total": 188,
+   "n_scenarios": 47,
+   "n_valid_pairs": 188,
+   "quality": {
+    "anchor_final_pass_rate": 0.9574,
+    "arm_final_pass_rate": 0.9255,
+    "delta_turn_pass_ci95": [
+     -0.0464,
+     0.0099
+    ],
+    "mcnemar_anchor_only_pass": 8,
+    "mcnemar_arm_only_pass": 2,
+    "mcnemar_p": 0.1094,
+    "mean_delta_turn_pass": -0.018,
+    "n_pairs": 188,
+    "non_inferior": true
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": 17.328,
+   "savings_claim_allowed": true,
+   "share_sessions_with_switch": 0.0,
+   "value": "no long gap"
+  },
+  {
+   "arm": "sticky",
+   "dim": "gap_pattern",
+   "gm_cost_ratio": 0.550178,
+   "gm_cost_ratio_both_pass": 0.553556,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.485324,
+    0.651096
+   ],
+   "gm_cost_ratio_ci95": [
+    0.482837,
+    0.642063
+   ],
+   "host": "fable",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": 2.452978,
+   "mean_saving_usd_ci95": [
+    1.528043,
+    3.2327
+   ],
+   "median_saving_usd": 2.661558,
+   "n_both_pass": 44,
+   "n_pairs_total": 46,
+   "n_scenarios": 23,
+   "n_valid_pairs": 46,
+   "quality": {
+    "anchor_final_pass_rate": 1.0,
+    "arm_final_pass_rate": 0.9565,
+    "delta_turn_pass_ci95": [
+     -0.1036,
+     0.0455
+    ],
+    "mcnemar_anchor_only_pass": 2,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 0.5,
+    "mean_delta_turn_pass": -0.0228,
+    "n_pairs": 46,
+    "non_inferior": false
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": 44.982,
+   "savings_claim_allowed": false,
+   "share_sessions_with_switch": 0.0,
+   "value": "2+ long gaps"
+  },
+  {
+   "arm": "sticky",
+   "dim": "gap_pattern",
+   "gm_cost_ratio": 0.564328,
+   "gm_cost_ratio_both_pass": 0.573603,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.522174,
+    0.64201
+   ],
+   "gm_cost_ratio_ci95": [
+    0.512567,
+    0.62743
+   ],
+   "host": "fable",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": 1.74869,
+   "mean_saving_usd_ci95": [
+    1.180273,
+    2.248475
+   ],
+   "median_saving_usd": 1.736547,
+   "n_both_pass": 87,
+   "n_pairs_total": 94,
+   "n_scenarios": 47,
+   "n_valid_pairs": 94,
+   "quality": {
+    "anchor_final_pass_rate": 0.9681,
+    "arm_final_pass_rate": 0.9362,
+    "delta_turn_pass_ci95": [
+     -0.0558,
+     0.0134
+    ],
+    "mcnemar_anchor_only_pass": 4,
+    "mcnemar_arm_only_pass": 1,
+    "mcnemar_p": 0.375,
+    "mean_delta_turn_pass": -0.02,
+    "n_pairs": 94,
+    "non_inferior": false
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": 43.567,
+   "savings_claim_allowed": false,
+   "share_sessions_with_switch": 0.0,
+   "value": "no long gap"
+  },
+  {
+   "arm": "sticky",
+   "dim": "gap_pattern",
+   "gm_cost_ratio": 1.178671,
+   "gm_cost_ratio_both_pass": 1.18107,
+   "gm_cost_ratio_both_pass_ci95": [
+    1.067646,
+    1.306728
+   ],
+   "gm_cost_ratio_ci95": [
+    1.068061,
+    1.296216
+   ],
+   "host": "opus",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": -0.483784,
+   "mean_saving_usd_ci95": [
+    -0.747586,
+    -0.214099
+   ],
+   "median_saving_usd": -0.414934,
+   "n_both_pass": 44,
+   "n_pairs_total": 46,
+   "n_scenarios": 23,
+   "n_valid_pairs": 46,
+   "quality": {
+    "anchor_final_pass_rate": 0.9783,
+    "arm_final_pass_rate": 0.9783,
+    "delta_turn_pass_ci95": [
+     -0.0598,
+     0.0464
+    ],
+    "mcnemar_anchor_only_pass": 1,
+    "mcnemar_arm_only_pass": 1,
+    "mcnemar_p": 1.0,
+    "mean_delta_turn_pass": 0.0021,
+    "n_pairs": 46,
+    "non_inferior": false
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": -17.867,
+   "savings_claim_allowed": false,
+   "share_sessions_with_switch": 0.0,
+   "value": "2+ long gaps"
+  },
+  {
+   "arm": "sticky",
+   "dim": "gap_pattern",
+   "gm_cost_ratio": 1.211106,
+   "gm_cost_ratio_both_pass": 1.226272,
+   "gm_cost_ratio_both_pass_ci95": [
+    1.124866,
+    1.343236
+   ],
+   "gm_cost_ratio_ci95": [
+    1.110801,
+    1.318738
+   ],
+   "host": "opus",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": -0.491766,
+   "mean_saving_usd_ci95": [
+    -0.721227,
+    -0.282277
+   ],
+   "median_saving_usd": -0.292363,
+   "n_both_pass": 85,
+   "n_pairs_total": 94,
+   "n_scenarios": 47,
+   "n_valid_pairs": 94,
+   "quality": {
+    "anchor_final_pass_rate": 0.9468,
+    "arm_final_pass_rate": 0.9149,
+    "delta_turn_pass_ci95": [
+     -0.0464,
+     0.0104
+    ],
+    "mcnemar_anchor_only_pass": 4,
+    "mcnemar_arm_only_pass": 1,
+    "mcnemar_p": 0.375,
+    "mean_delta_turn_pass": -0.016,
+    "n_pairs": 94,
+    "non_inferior": true
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": -21.111,
+   "savings_claim_allowed": true,
+   "share_sessions_with_switch": 0.0,
+   "value": "no long gap"
+  },
+  {
+   "arm": "aa",
+   "dim": "turn_band",
+   "gm_cost_ratio": 0.993087,
+   "gm_cost_ratio_both_pass": 0.992503,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.939539,
+    1.041615
+   ],
+   "gm_cost_ratio_ci95": [
+    0.944565,
+    1.038258
+   ],
+   "host": "all",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": 0.060011,
+   "mean_saving_usd_ci95": [
+    -0.129686,
+    0.257377
+   ],
+   "median_saving_usd": -0.019232,
+   "n_both_pass": 21,
+   "n_pairs_total": 24,
+   "n_scenarios": 11,
+   "n_valid_pairs": 23,
+   "quality": {
+    "anchor_final_pass_rate": 1.0,
+    "arm_final_pass_rate": 0.875,
+    "delta_turn_pass_ci95": [
+     -0.0515,
+     -0.0035
+    ],
+    "mcnemar_anchor_only_pass": 3,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 0.25,
+    "mean_delta_turn_pass": -0.0229,
+    "n_pairs": 24,
+    "non_inferior": false
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": 0.691,
+   "savings_claim_allowed": false,
+   "share_sessions_with_switch": 0.0,
+   "value": "9-12"
+  },
+  {
+   "arm": "aa",
+   "dim": "turn_band",
+   "gm_cost_ratio": 0.99716,
+   "gm_cost_ratio_both_pass": 0.99716,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.942964,
+    1.052782
+   ],
+   "gm_cost_ratio_ci95": [
+    0.944846,
+    1.05273
+   ],
+   "host": "all",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": 0.047109,
+   "mean_saving_usd_ci95": [
+    -0.053518,
+    0.15239
+   ],
+   "median_saving_usd": 0.033166,
+   "n_both_pass": 22,
+   "n_pairs_total": 22,
+   "n_scenarios": 10,
+   "n_valid_pairs": 22,
+   "quality": {
+    "anchor_final_pass_rate": 1.0,
+    "arm_final_pass_rate": 1.0,
+    "delta_turn_pass_ci95": [
+     0.0,
+     0.05
+    ],
+    "mcnemar_anchor_only_pass": 0,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 1.0,
+    "mean_delta_turn_pass": 0.017,
+    "n_pairs": 22,
+    "non_inferior": true
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": 0.284,
+   "savings_claim_allowed": true,
+   "share_sessions_with_switch": 0.0,
+   "value": "<=8"
+  },
+  {
+   "arm": "aa",
+   "dim": "turn_band",
+   "gm_cost_ratio": 1.063048,
+   "gm_cost_ratio_both_pass": 1.063048,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.976815,
+    1.145236
+   ],
+   "gm_cost_ratio_ci95": [
+    0.979399,
+    1.149341
+   ],
+   "host": "all",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": -0.236904,
+   "mean_saving_usd_ci95": [
+    -0.806858,
+    0.376026
+   ],
+   "median_saving_usd": -0.296601,
+   "n_both_pass": 10,
+   "n_pairs_total": 10,
+   "n_scenarios": 5,
+   "n_valid_pairs": 10,
+   "quality": {
+    "anchor_final_pass_rate": 1.0,
+    "arm_final_pass_rate": 1.0,
+    "delta_turn_pass_ci95": [
+     -0.0187,
+     0.0461
+    ],
+    "mcnemar_anchor_only_pass": 0,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 1.0,
+    "mean_delta_turn_pass": 0.0091,
+    "n_pairs": 10,
+    "non_inferior": true
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": -6.305,
+   "savings_claim_allowed": true,
+   "share_sessions_with_switch": 0.0,
+   "value": ">=13"
+  },
+  {
+   "arm": "aa",
+   "dim": "turn_band",
+   "gm_cost_ratio": 0.957059,
+   "gm_cost_ratio_both_pass": 0.952066,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.893577,
+    1.012074
+   ],
+   "gm_cost_ratio_ci95": [
+    0.904668,
+    1.010144
+   ],
+   "host": "fable",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": 0.178957,
+   "mean_saving_usd_ci95": [
+    -0.100036,
+    0.431956
+   ],
+   "median_saving_usd": 0.315669,
+   "n_both_pass": 11,
+   "n_pairs_total": 12,
+   "n_scenarios": 11,
+   "n_valid_pairs": 12,
+   "quality": {
+    "anchor_final_pass_rate": 1.0,
+    "arm_final_pass_rate": 0.9167,
+    "delta_turn_pass_ci95": [
+     -0.0227,
+     0.0
+    ],
+    "mcnemar_anchor_only_pass": 1,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 1.0,
+    "mean_delta_turn_pass": -0.0069,
+    "n_pairs": 12,
+    "non_inferior": true
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": 4.294,
+   "savings_claim_allowed": true,
+   "share_sessions_with_switch": 0.0,
+   "value": "9-12"
+  },
+  {
+   "arm": "aa",
+   "dim": "turn_band",
+   "gm_cost_ratio": 0.954112,
+   "gm_cost_ratio_both_pass": 0.954112,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.920583,
+    0.990248
+   ],
+   "gm_cost_ratio_ci95": [
+    0.920988,
+    0.990845
+   ],
+   "host": "fable",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": 0.165245,
+   "mean_saving_usd_ci95": [
+    0.037769,
+    0.286491
+   ],
+   "median_saving_usd": 0.104112,
+   "n_both_pass": 11,
+   "n_pairs_total": 11,
+   "n_scenarios": 10,
+   "n_valid_pairs": 11,
+   "quality": {
+    "anchor_final_pass_rate": 1.0,
+    "arm_final_pass_rate": 1.0,
+    "delta_turn_pass_ci95": [
+     0.0,
+     0.0375
+    ],
+    "mcnemar_anchor_only_pass": 0,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 1.0,
+    "mean_delta_turn_pass": 0.0114,
+    "n_pairs": 11,
+    "non_inferior": true
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": 4.589,
+   "savings_claim_allowed": true,
+   "share_sessions_with_switch": 0.0,
+   "value": "<=8"
+  },
+  {
+   "arm": "aa",
+   "dim": "turn_band",
+   "gm_cost_ratio": 1.02744,
+   "gm_cost_ratio_both_pass": 1.02744,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.92221,
+    1.143901
+   ],
+   "gm_cost_ratio_ci95": [
+    0.92214,
+    1.143901
+   ],
+   "host": "fable",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": -0.126989,
+   "mean_saving_usd_ci95": [
+    -0.970787,
+    0.791641
+   ],
+   "median_saving_usd": -0.079505,
+   "n_both_pass": 5,
+   "n_pairs_total": 5,
+   "n_scenarios": 5,
+   "n_valid_pairs": 5,
+   "quality": {
+    "anchor_final_pass_rate": 1.0,
+    "arm_final_pass_rate": 1.0,
+    "delta_turn_pass_ci95": [
+     0.0,
+     0.0461
+    ],
+    "mcnemar_anchor_only_pass": 0,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 1.0,
+    "mean_delta_turn_pass": 0.0154,
+    "n_pairs": 5,
+    "non_inferior": true
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": -2.744,
+   "savings_claim_allowed": true,
+   "share_sessions_with_switch": 0.0,
+   "value": ">=13"
+  },
+  {
+   "arm": "aa",
+   "dim": "turn_band",
+   "gm_cost_ratio": 1.033939,
+   "gm_cost_ratio_both_pass": 1.038971,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.986368,
+    1.088373
+   ],
+   "gm_cost_ratio_ci95": [
+    0.985306,
+    1.077807
+   ],
+   "host": "opus",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": -0.069748,
+   "mean_saving_usd_ci95": [
+    -0.161455,
+    0.022768
+   ],
+   "median_saving_usd": -0.097515,
+   "n_both_pass": 10,
+   "n_pairs_total": 12,
+   "n_scenarios": 10,
+   "n_valid_pairs": 11,
+   "quality": {
+    "anchor_final_pass_rate": 1.0,
+    "arm_final_pass_rate": 0.8333,
+    "delta_turn_pass_ci95": [
+     -0.0788,
+     -0.0069
+    ],
+    "mcnemar_anchor_only_pass": 2,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 0.5,
+    "mean_delta_turn_pass": -0.0389,
+    "n_pairs": 12,
+    "non_inferior": false
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": -3.394,
+   "savings_claim_allowed": false,
+   "share_sessions_with_switch": 0.0,
+   "value": "9-12"
+  },
+  {
+   "arm": "aa",
+   "dim": "turn_band",
+   "gm_cost_ratio": 1.04215,
+   "gm_cost_ratio_both_pass": 1.04215,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.952438,
+    1.127414
+   ],
+   "gm_cost_ratio_ci95": [
+    0.96097,
+    1.131819
+   ],
+   "host": "opus",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": -0.071026,
+   "mean_saving_usd_ci95": [
+    -0.185284,
+    0.058471
+   ],
+   "median_saving_usd": -0.031954,
+   "n_both_pass": 11,
+   "n_pairs_total": 11,
+   "n_scenarios": 10,
+   "n_valid_pairs": 11,
+   "quality": {
+    "anchor_final_pass_rate": 1.0,
+    "arm_final_pass_rate": 1.0,
+    "delta_turn_pass_ci95": [
+     0.0,
+     0.0501
+    ],
+    "mcnemar_anchor_only_pass": 0,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 1.0,
+    "mean_delta_turn_pass": 0.0227,
+    "n_pairs": 11,
+    "non_inferior": true
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": -4.215,
+   "savings_claim_allowed": true,
+   "share_sessions_with_switch": 0.0,
+   "value": "<=8"
+  },
+  {
+   "arm": "aa",
+   "dim": "turn_band",
+   "gm_cost_ratio": 1.099891,
+   "gm_cost_ratio_both_pass": 1.099891,
+   "gm_cost_ratio_both_pass_ci95": [
+    1.054212,
+    1.156954
+   ],
+   "gm_cost_ratio_ci95": [
+    1.053634,
+    1.156954
+   ],
+   "host": "opus",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": -0.346819,
+   "mean_saving_usd_ci95": [
+    -0.538003,
+    -0.195485
+   ],
+   "median_saving_usd": -0.309917,
+   "n_both_pass": 5,
+   "n_pairs_total": 5,
+   "n_scenarios": 5,
+   "n_valid_pairs": 5,
+   "quality": {
+    "anchor_final_pass_rate": 1.0,
+    "arm_final_pass_rate": 1.0,
+    "delta_turn_pass_ci95": [
+     -0.0375,
+     0.0461
+    ],
+    "mcnemar_anchor_only_pass": 0,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 1.0,
+    "mean_delta_turn_pass": 0.0029,
+    "n_pairs": 5,
+    "non_inferior": true
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": -9.989,
+   "savings_claim_allowed": true,
+   "share_sessions_with_switch": 0.0,
+   "value": ">=13"
+  },
+  {
+   "arm": "shipped",
+   "dim": "turn_band",
+   "gm_cost_ratio": 0.896954,
+   "gm_cost_ratio_both_pass": 0.912174,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.810924,
+    1.022013
+   ],
+   "gm_cost_ratio_ci95": [
+    0.798271,
+    1.009598
+   ],
+   "host": "all",
+   "mean_model_switches": 1.533,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": 0.539898,
+   "mean_saving_usd_ci95": [
+    0.137597,
+    0.950524
+   ],
+   "median_saving_usd": 0.107717,
+   "n_both_pass": 113,
+   "n_pairs_total": 120,
+   "n_scenarios": 30,
+   "n_valid_pairs": 120,
+   "quality": {
+    "anchor_final_pass_rate": 0.9583,
+    "arm_final_pass_rate": 0.9417,
+    "delta_turn_pass_ci95": [
+     -0.0931,
+     0.0108
+    ],
+    "mcnemar_anchor_only_pass": 2,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 0.5,
+    "mean_delta_turn_pass": -0.035,
+    "n_pairs": 120,
+    "non_inferior": false
+   },
+   "rebuild_cost_share": 0.149189,
+   "saving_pct": 10.305,
+   "savings_claim_allowed": false,
+   "share_sessions_with_switch": 0.525,
+   "value": "9-12"
+  },
+  {
+   "arm": "shipped",
+   "dim": "turn_band",
+   "gm_cost_ratio": 0.929436,
+   "gm_cost_ratio_both_pass": 0.923624,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.785646,
+    1.081973
+   ],
+   "gm_cost_ratio_ci95": [
+    0.787199,
+    1.088969
+   ],
+   "host": "all",
+   "mean_model_switches": 1.136,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": 0.280404,
+   "mean_saving_usd_ci95": [
+    -0.049422,
+    0.601852
+   ],
+   "median_saving_usd": 0.11749,
+   "n_both_pass": 85,
+   "n_pairs_total": 88,
+   "n_scenarios": 22,
+   "n_valid_pairs": 88,
+   "quality": {
+    "anchor_final_pass_rate": 1.0,
+    "arm_final_pass_rate": 0.9659,
+    "delta_turn_pass_ci95": [
+     -0.0114,
+     0.0526
+    ],
+    "mcnemar_anchor_only_pass": 3,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 0.25,
+    "mean_delta_turn_pass": 0.0199,
+    "n_pairs": 88,
+    "non_inferior": true
+   },
+   "rebuild_cost_share": 0.132781,
+   "saving_pct": 7.056,
+   "savings_claim_allowed": true,
+   "share_sessions_with_switch": 0.534,
+   "value": "<=8"
+  },
+  {
+   "arm": "shipped",
+   "dim": "turn_band",
+   "gm_cost_ratio": 0.836678,
+   "gm_cost_ratio_both_pass": 0.831055,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.73754,
+    0.942856
+   ],
+   "gm_cost_ratio_ci95": [
+    0.746581,
+    0.941901
+   ],
+   "host": "all",
+   "mean_model_switches": 1.917,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": 1.025796,
+   "mean_saving_usd_ci95": [
+    0.500081,
+    1.574018
+   ],
+   "median_saving_usd": 0.437271,
+   "n_both_pass": 62,
+   "n_pairs_total": 72,
+   "n_scenarios": 18,
+   "n_valid_pairs": 72,
+   "quality": {
+    "anchor_final_pass_rate": 0.9444,
+    "arm_final_pass_rate": 0.8889,
+    "delta_turn_pass_ci95": [
+     -0.0657,
+     0.017
+    ],
+    "mcnemar_anchor_only_pass": 6,
+    "mcnemar_arm_only_pass": 2,
+    "mcnemar_p": 0.2891,
+    "mean_delta_turn_pass": -0.0165,
+    "n_pairs": 72,
+    "non_inferior": false
+   },
+   "rebuild_cost_share": 0.140084,
+   "saving_pct": 16.332,
+   "savings_claim_allowed": false,
+   "share_sessions_with_switch": 0.681,
+   "value": ">=13"
+  },
+  {
+   "arm": "shipped",
+   "dim": "turn_band",
+   "gm_cost_ratio": 0.638896,
+   "gm_cost_ratio_both_pass": 0.652775,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.574152,
+    0.747904
+   ],
+   "gm_cost_ratio_ci95": [
+    0.562936,
+    0.729208
+   ],
+   "host": "fable",
+   "mean_model_switches": 1.5,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": 1.724175,
+   "mean_saving_usd_ci95": [
+    1.198834,
+    2.26626
+   ],
+   "median_saving_usd": 1.619396,
+   "n_both_pass": 56,
+   "n_pairs_total": 60,
+   "n_scenarios": 30,
+   "n_valid_pairs": 60,
+   "quality": {
+    "anchor_final_pass_rate": 0.9667,
+    "arm_final_pass_rate": 0.9333,
+    "delta_turn_pass_ci95": [
+     -0.1051,
+     0.0156
+    ],
+    "mcnemar_anchor_only_pass": 2,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 0.5,
+    "mean_delta_turn_pass": -0.0391,
+    "n_pairs": 60,
+    "non_inferior": false
+   },
+   "rebuild_cost_share": 0.175793,
+   "saving_pct": 36.11,
+   "savings_claim_allowed": false,
+   "share_sessions_with_switch": 0.517,
+   "value": "9-12"
+  },
+  {
+   "arm": "shipped",
+   "dim": "turn_band",
+   "gm_cost_ratio": 0.637405,
+   "gm_cost_ratio_both_pass": 0.637405,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.557859,
+    0.728682
+   ],
+   "gm_cost_ratio_ci95": [
+    0.555929,
+    0.729866
+   ],
+   "host": "fable",
+   "mean_model_switches": 1.136,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": 1.129121,
+   "mean_saving_usd_ci95": [
+    0.816278,
+    1.430959
+   ],
+   "median_saving_usd": 1.221499,
+   "n_both_pass": 44,
+   "n_pairs_total": 44,
+   "n_scenarios": 22,
+   "n_valid_pairs": 44,
+   "quality": {
+    "anchor_final_pass_rate": 1.0,
+    "arm_final_pass_rate": 1.0,
+    "delta_turn_pass_ci95": [
+     -0.0171,
+     0.071
+    ],
+    "mcnemar_anchor_only_pass": 0,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 1.0,
+    "mean_delta_turn_pass": 0.0199,
+    "n_pairs": 44,
+    "non_inferior": true
+   },
+   "rebuild_cost_share": 0.168647,
+   "saving_pct": 36.26,
+   "savings_claim_allowed": true,
+   "share_sessions_with_switch": 0.545,
+   "value": "<=8"
+  },
+  {
+   "arm": "shipped",
+   "dim": "turn_band",
+   "gm_cost_ratio": 0.616187,
+   "gm_cost_ratio_both_pass": 0.598439,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.54121,
+    0.671235
+   ],
+   "gm_cost_ratio_ci95": [
+    0.556754,
+    0.694803
+   ],
+   "host": "fable",
+   "mean_model_switches": 1.972,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": 2.568271,
+   "mean_saving_usd_ci95": [
+    1.930255,
+    3.180329
+   ],
+   "median_saving_usd": 2.473019,
+   "n_both_pass": 30,
+   "n_pairs_total": 36,
+   "n_scenarios": 18,
+   "n_valid_pairs": 36,
+   "quality": {
+    "anchor_final_pass_rate": 0.9722,
+    "arm_final_pass_rate": 0.8611,
+    "delta_turn_pass_ci95": [
+     -0.0471,
+     0.0164
+    ],
+    "mcnemar_anchor_only_pass": 5,
+    "mcnemar_arm_only_pass": 1,
+    "mcnemar_p": 0.2188,
+    "mean_delta_turn_pass": -0.0093,
+    "n_pairs": 36,
+    "non_inferior": true
+   },
+   "rebuild_cost_share": 0.1658,
+   "saving_pct": 38.381,
+   "savings_claim_allowed": true,
+   "share_sessions_with_switch": 0.694,
+   "value": ">=13"
+  },
+  {
+   "arm": "shipped",
+   "dim": "turn_band",
+   "gm_cost_ratio": 1.259245,
+   "gm_cost_ratio_both_pass": 1.267192,
+   "gm_cost_ratio_both_pass_ci95": [
+    1.153442,
+    1.398068
+   ],
+   "gm_cost_ratio_ci95": [
+    1.14751,
+    1.37863
+   ],
+   "host": "opus",
+   "mean_model_switches": 1.567,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": -0.644378,
+   "mean_saving_usd_ci95": [
+    -0.93087,
+    -0.389517
+   ],
+   "median_saving_usd": -0.568126,
+   "n_both_pass": 57,
+   "n_pairs_total": 60,
+   "n_scenarios": 30,
+   "n_valid_pairs": 60,
+   "quality": {
+    "anchor_final_pass_rate": 0.95,
+    "arm_final_pass_rate": 0.95,
+    "delta_turn_pass_ci95": [
+     -0.0874,
+     0.0156
+    ],
+    "mcnemar_anchor_only_pass": 0,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 1.0,
+    "mean_delta_turn_pass": -0.0309,
+    "n_pairs": 60,
+    "non_inferior": false
+   },
+   "rebuild_cost_share": 0.113686,
+   "saving_pct": -25.925,
+   "savings_claim_allowed": false,
+   "share_sessions_with_switch": 0.533,
+   "value": "9-12"
+  },
+  {
+   "arm": "shipped",
+   "dim": "turn_band",
+   "gm_cost_ratio": 1.355263,
+   "gm_cost_ratio_both_pass": 1.375185,
+   "gm_cost_ratio_both_pass_ci95": [
+    1.198483,
+    1.588265
+   ],
+   "gm_cost_ratio_ci95": [
+    1.18316,
+    1.549329
+   ],
+   "host": "opus",
+   "mean_model_switches": 1.136,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": -0.568312,
+   "mean_saving_usd_ci95": [
+    -0.814381,
+    -0.320063
+   ],
+   "median_saving_usd": -0.431072,
+   "n_both_pass": 41,
+   "n_pairs_total": 44,
+   "n_scenarios": 22,
+   "n_valid_pairs": 44,
+   "quality": {
+    "anchor_final_pass_rate": 1.0,
+    "arm_final_pass_rate": 0.9318,
+    "delta_turn_pass_ci95": [
+     -0.017,
+     0.0568
+    ],
+    "mcnemar_anchor_only_pass": 3,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 0.25,
+    "mean_delta_turn_pass": 0.0199,
+    "n_pairs": 44,
+    "non_inferior": true
+   },
+   "rebuild_cost_share": 0.089502,
+   "saving_pct": -35.526,
+   "savings_claim_allowed": true,
+   "share_sessions_with_switch": 0.523,
+   "value": "<=8"
+  },
+  {
+   "arm": "shipped",
+   "dim": "turn_band",
+   "gm_cost_ratio": 1.136068,
+   "gm_cost_ratio_both_pass": 1.130646,
+   "gm_cost_ratio_both_pass_ci95": [
+    1.034405,
+    1.245935
+   ],
+   "gm_cost_ratio_ci95": [
+    1.040659,
+    1.242994
+   ],
+   "host": "opus",
+   "mean_model_switches": 1.861,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": -0.51668,
+   "mean_saving_usd_ci95": [
+    -0.876704,
+    -0.190037
+   ],
+   "median_saving_usd": -0.265207,
+   "n_both_pass": 32,
+   "n_pairs_total": 36,
+   "n_scenarios": 18,
+   "n_valid_pairs": 36,
+   "quality": {
+    "anchor_final_pass_rate": 0.9167,
+    "arm_final_pass_rate": 0.9167,
+    "delta_turn_pass_ci95": [
+     -0.1078,
+     0.0299
+    ],
+    "mcnemar_anchor_only_pass": 1,
+    "mcnemar_arm_only_pass": 1,
+    "mcnemar_p": 1.0,
+    "mean_delta_turn_pass": -0.0237,
+    "n_pairs": 36,
+    "non_inferior": false
+   },
+   "rebuild_cost_share": 0.105356,
+   "saving_pct": -13.607,
+   "savings_claim_allowed": false,
+   "share_sessions_with_switch": 0.667,
+   "value": ">=13"
+  },
+  {
+   "arm": "sonnet",
+   "dim": "turn_band",
+   "gm_cost_ratio": 0.908801,
+   "gm_cost_ratio_both_pass": 0.915745,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.795222,
+    1.047925
+   ],
+   "gm_cost_ratio_ci95": [
+    0.794606,
+    1.035382
+   ],
+   "host": "all",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": 0.56552,
+   "mean_saving_usd_ci95": [
+    0.086534,
+    1.002812
+   ],
+   "median_saving_usd": 0.263918,
+   "n_both_pass": 114,
+   "n_pairs_total": 120,
+   "n_scenarios": 30,
+   "n_valid_pairs": 120,
+   "quality": {
+    "anchor_final_pass_rate": 0.9583,
+    "arm_final_pass_rate": 0.95,
+    "delta_turn_pass_ci95": [
+     -0.0679,
+     0.0249
+    ],
+    "mcnemar_anchor_only_pass": 1,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 1.0,
+    "mean_delta_turn_pass": -0.0161,
+    "n_pairs": 120,
+    "non_inferior": false
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": 9.12,
+   "savings_claim_allowed": false,
+   "share_sessions_with_switch": 0.0,
+   "value": "9-12"
+  },
+  {
+   "arm": "sonnet",
+   "dim": "turn_band",
+   "gm_cost_ratio": 0.989848,
+   "gm_cost_ratio_both_pass": 0.976768,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.827537,
+    1.173103
+   ],
+   "gm_cost_ratio_ci95": [
+    0.830006,
+    1.197191
+   ],
+   "host": "all",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": 0.121472,
+   "mean_saving_usd_ci95": [
+    -0.29433,
+    0.521839
+   ],
+   "median_saving_usd": 0.035338,
+   "n_both_pass": 86,
+   "n_pairs_total": 88,
+   "n_scenarios": 22,
+   "n_valid_pairs": 88,
+   "quality": {
+    "anchor_final_pass_rate": 1.0,
+    "arm_final_pass_rate": 0.9773,
+    "delta_turn_pass_ci95": [
+     -0.0028,
+     0.0668
+    ],
+    "mcnemar_anchor_only_pass": 2,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 0.5,
+    "mean_delta_turn_pass": 0.0312,
+    "n_pairs": 88,
+    "non_inferior": true
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": 1.015,
+   "savings_claim_allowed": true,
+   "share_sessions_with_switch": 0.0,
+   "value": "<=8"
+  },
+  {
+   "arm": "sonnet",
+   "dim": "turn_band",
+   "gm_cost_ratio": 0.867562,
+   "gm_cost_ratio_both_pass": 0.849777,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.741436,
+    0.977645
+   ],
+   "gm_cost_ratio_ci95": [
+    0.756395,
+    1.001928
+   ],
+   "host": "all",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": 0.841767,
+   "mean_saving_usd_ci95": [
+    0.105541,
+    1.48704
+   ],
+   "median_saving_usd": 0.350969,
+   "n_both_pass": 62,
+   "n_pairs_total": 72,
+   "n_scenarios": 18,
+   "n_valid_pairs": 72,
+   "quality": {
+    "anchor_final_pass_rate": 0.9444,
+    "arm_final_pass_rate": 0.8889,
+    "delta_turn_pass_ci95": [
+     -0.0838,
+     0.0294
+    ],
+    "mcnemar_anchor_only_pass": 6,
+    "mcnemar_arm_only_pass": 2,
+    "mcnemar_p": 0.2891,
+    "mean_delta_turn_pass": -0.0164,
+    "n_pairs": 72,
+    "non_inferior": false
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": 13.244,
+   "savings_claim_allowed": false,
+   "share_sessions_with_switch": 0.0,
+   "value": ">=13"
+  },
+  {
+   "arm": "sonnet",
+   "dim": "turn_band",
+   "gm_cost_ratio": 0.572475,
+   "gm_cost_ratio_both_pass": 0.577873,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.520703,
+    0.639625
+   ],
+   "gm_cost_ratio_ci95": [
+    0.521213,
+    0.634413
+   ],
+   "host": "fable",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": 2.207617,
+   "mean_saving_usd_ci95": [
+    1.769637,
+    2.680269
+   ],
+   "median_saving_usd": 2.230605,
+   "n_both_pass": 57,
+   "n_pairs_total": 60,
+   "n_scenarios": 30,
+   "n_valid_pairs": 60,
+   "quality": {
+    "anchor_final_pass_rate": 0.9667,
+    "arm_final_pass_rate": 0.95,
+    "delta_turn_pass_ci95": [
+     -0.0882,
+     0.0266
+    ],
+    "mcnemar_anchor_only_pass": 1,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 1.0,
+    "mean_delta_turn_pass": -0.024,
+    "n_pairs": 60,
+    "non_inferior": false
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": 42.752,
+   "savings_claim_allowed": false,
+   "share_sessions_with_switch": 0.0,
+   "value": "9-12"
+  },
+  {
+   "arm": "sonnet",
+   "dim": "turn_band",
+   "gm_cost_ratio": 0.625572,
+   "gm_cost_ratio_both_pass": 0.617843,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.540401,
+    0.710562
+   ],
+   "gm_cost_ratio_ci95": [
+    0.53957,
+    0.728443
+   ],
+   "host": "fable",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": 1.171597,
+   "mean_saving_usd_ci95": [
+    0.80955,
+    1.534472
+   ],
+   "median_saving_usd": 1.337773,
+   "n_both_pass": 43,
+   "n_pairs_total": 44,
+   "n_scenarios": 22,
+   "n_valid_pairs": 44,
+   "quality": {
+    "anchor_final_pass_rate": 1.0,
+    "arm_final_pass_rate": 0.9773,
+    "delta_turn_pass_ci95": [
+     -0.0085,
+     0.0767
+    ],
+    "mcnemar_anchor_only_pass": 1,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 1.0,
+    "mean_delta_turn_pass": 0.0284,
+    "n_pairs": 44,
+    "non_inferior": true
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": 37.443,
+   "savings_claim_allowed": true,
+   "share_sessions_with_switch": 0.0,
+   "value": "<=8"
+  },
+  {
+   "arm": "sonnet",
+   "dim": "turn_band",
+   "gm_cost_ratio": 0.565033,
+   "gm_cost_ratio_both_pass": 0.561026,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.523972,
+    0.608711
+   ],
+   "gm_cost_ratio_ci95": [
+    0.525765,
+    0.612306
+   ],
+   "host": "fable",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": 3.0164,
+   "mean_saving_usd_ci95": [
+    2.545372,
+    3.447907
+   ],
+   "median_saving_usd": 2.987026,
+   "n_both_pass": 32,
+   "n_pairs_total": 36,
+   "n_scenarios": 18,
+   "n_valid_pairs": 36,
+   "quality": {
+    "anchor_final_pass_rate": 0.9722,
+    "arm_final_pass_rate": 0.8889,
+    "delta_turn_pass_ci95": [
+     -0.0853,
+     0.0161
+    ],
+    "mcnemar_anchor_only_pass": 3,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 0.25,
+    "mean_delta_turn_pass": -0.0259,
+    "n_pairs": 36,
+    "non_inferior": false
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": 43.497,
+   "savings_claim_allowed": false,
+   "share_sessions_with_switch": 0.0,
+   "value": ">=13"
+  },
+  {
+   "arm": "sonnet",
+   "dim": "turn_band",
+   "gm_cost_ratio": 1.442718,
+   "gm_cost_ratio_both_pass": 1.451163,
+   "gm_cost_ratio_both_pass_ci95": [
+    1.291968,
+    1.617499
+   ],
+   "gm_cost_ratio_ci95": [
+    1.292801,
+    1.609976
+   ],
+   "host": "opus",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": -1.076576,
+   "mean_saving_usd_ci95": [
+    -1.463593,
+    -0.734953
+   ],
+   "median_saving_usd": -0.991201,
+   "n_both_pass": 57,
+   "n_pairs_total": 60,
+   "n_scenarios": 30,
+   "n_valid_pairs": 60,
+   "quality": {
+    "anchor_final_pass_rate": 0.95,
+    "arm_final_pass_rate": 0.95,
+    "delta_turn_pass_ci95": [
+     -0.0514,
+     0.0316
+    ],
+    "mcnemar_anchor_only_pass": 0,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 1.0,
+    "mean_delta_turn_pass": -0.0083,
+    "n_pairs": 60,
+    "non_inferior": false
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": -44.272,
+   "savings_claim_allowed": false,
+   "share_sessions_with_switch": 0.0,
+   "value": "9-12"
+  },
+  {
+   "arm": "sonnet",
+   "dim": "turn_band",
+   "gm_cost_ratio": 1.566245,
+   "gm_cost_ratio_both_pass": 1.544204,
+   "gm_cost_ratio_both_pass_ci95": [
+    1.315304,
+    1.80477
+   ],
+   "gm_cost_ratio_ci95": [
+    1.340883,
+    1.852961
+   ],
+   "host": "opus",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": -0.928652,
+   "mean_saving_usd_ci95": [
+    -1.284392,
+    -0.58535
+   ],
+   "median_saving_usd": -0.655293,
+   "n_both_pass": 43,
+   "n_pairs_total": 44,
+   "n_scenarios": 22,
+   "n_valid_pairs": 44,
+   "quality": {
+    "anchor_final_pass_rate": 1.0,
+    "arm_final_pass_rate": 0.9773,
+    "delta_turn_pass_ci95": [
+     -0.0057,
+     0.0795
+    ],
+    "mcnemar_anchor_only_pass": 1,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 1.0,
+    "mean_delta_turn_pass": 0.0341,
+    "n_pairs": 44,
+    "non_inferior": true
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": -56.625,
+   "savings_claim_allowed": true,
+   "share_sessions_with_switch": 0.0,
+   "value": "<=8"
+  },
+  {
+   "arm": "sonnet",
+   "dim": "turn_band",
+   "gm_cost_ratio": 1.332069,
+   "gm_cost_ratio_both_pass": 1.323267,
+   "gm_cost_ratio_both_pass_ci95": [
+    1.174496,
+    1.489028
+   ],
+   "gm_cost_ratio_ci95": [
+    1.179889,
+    1.504863
+   ],
+   "host": "opus",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": -1.332866,
+   "mean_saving_usd_ci95": [
+    -2.089514,
+    -0.657552
+   ],
+   "median_saving_usd": -0.688046,
+   "n_both_pass": 30,
+   "n_pairs_total": 36,
+   "n_scenarios": 18,
+   "n_valid_pairs": 36,
+   "quality": {
+    "anchor_final_pass_rate": 0.9167,
+    "arm_final_pass_rate": 0.8889,
+    "delta_turn_pass_ci95": [
+     -0.0777,
+     0.0544
+    ],
+    "mcnemar_anchor_only_pass": 3,
+    "mcnemar_arm_only_pass": 2,
+    "mcnemar_p": 1.0,
+    "mean_delta_turn_pass": -0.0069,
+    "n_pairs": 36,
+    "non_inferior": false
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": -33.207,
+   "savings_claim_allowed": false,
+   "share_sessions_with_switch": 0.0,
+   "value": ">=13"
+  },
+  {
+   "arm": "sticky",
+   "dim": "turn_band",
+   "gm_cost_ratio": 0.837029,
+   "gm_cost_ratio_both_pass": 0.846399,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.74149,
+    0.968106
+   ],
+   "gm_cost_ratio_ci95": [
+    0.737081,
+    0.946098
+   ],
+   "host": "all",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": 0.702195,
+   "mean_saving_usd_ci95": [
+    0.252887,
+    1.146652
+   ],
+   "median_saving_usd": 0.116798,
+   "n_both_pass": 110,
+   "n_pairs_total": 120,
+   "n_scenarios": 30,
+   "n_valid_pairs": 120,
+   "quality": {
+    "anchor_final_pass_rate": 0.9583,
+    "arm_final_pass_rate": 0.925,
+    "delta_turn_pass_ci95": [
+     -0.101,
+     0.0001
+    ],
+    "mcnemar_anchor_only_pass": 5,
+    "mcnemar_arm_only_pass": 1,
+    "mcnemar_p": 0.2188,
+    "mean_delta_turn_pass": -0.0466,
+    "n_pairs": 120,
+    "non_inferior": false
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": 16.297,
+   "savings_claim_allowed": false,
+   "share_sessions_with_switch": 0.0,
+   "value": "9-12"
+  },
+  {
+   "arm": "sticky",
+   "dim": "turn_band",
+   "gm_cost_ratio": 0.823087,
+   "gm_cost_ratio_both_pass": 0.835553,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.729151,
+    0.968809
+   ],
+   "gm_cost_ratio_ci95": [
+    0.716511,
+    0.955978
+   ],
+   "host": "all",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": 0.56707,
+   "mean_saving_usd_ci95": [
+    0.256309,
+    0.866991
+   ],
+   "median_saving_usd": 0.278707,
+   "n_both_pass": 85,
+   "n_pairs_total": 88,
+   "n_scenarios": 22,
+   "n_valid_pairs": 88,
+   "quality": {
+    "anchor_final_pass_rate": 1.0,
+    "arm_final_pass_rate": 0.9659,
+    "delta_turn_pass_ci95": [
+     -0.0185,
+     0.054
+    ],
+    "mcnemar_anchor_only_pass": 3,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 0.25,
+    "mean_delta_turn_pass": 0.0185,
+    "n_pairs": 88,
+    "non_inferior": true
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": 17.691,
+   "savings_claim_allowed": true,
+   "share_sessions_with_switch": 0.0,
+   "value": "<=8"
+  },
+  {
+   "arm": "sticky",
+   "dim": "turn_band",
+   "gm_cost_ratio": 0.787303,
+   "gm_cost_ratio_both_pass": 0.780582,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.66454,
+    0.938769
+   ],
+   "gm_cost_ratio_ci95": [
+    0.673648,
+    0.933298
+   ],
+   "host": "all",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": 1.035668,
+   "mean_saving_usd_ci95": [
+    0.085276,
+    1.900497
+   ],
+   "median_saving_usd": 0.324259,
+   "n_both_pass": 65,
+   "n_pairs_total": 72,
+   "n_scenarios": 18,
+   "n_valid_pairs": 72,
+   "quality": {
+    "anchor_final_pass_rate": 0.9444,
+    "arm_final_pass_rate": 0.9306,
+    "delta_turn_pass_ci95": [
+     -0.0494,
+     0.0243
+    ],
+    "mcnemar_anchor_only_pass": 3,
+    "mcnemar_arm_only_pass": 2,
+    "mcnemar_p": 1.0,
+    "mean_delta_turn_pass": -0.0052,
+    "n_pairs": 72,
+    "non_inferior": true
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": 21.27,
+   "savings_claim_allowed": true,
+   "share_sessions_with_switch": 0.0,
+   "value": ">=13"
+  },
+  {
+   "arm": "sticky",
+   "dim": "turn_band",
+   "gm_cost_ratio": 0.576507,
+   "gm_cost_ratio_both_pass": 0.588906,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.511057,
+    0.683828
+   ],
+   "gm_cost_ratio_ci95": [
+    0.504407,
+    0.665897
+   ],
+   "host": "fable",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": 1.95434,
+   "mean_saving_usd_ci95": [
+    1.332447,
+    2.571706
+   ],
+   "median_saving_usd": 2.213087,
+   "n_both_pass": 56,
+   "n_pairs_total": 60,
+   "n_scenarios": 30,
+   "n_valid_pairs": 60,
+   "quality": {
+    "anchor_final_pass_rate": 0.9667,
+    "arm_final_pass_rate": 0.9333,
+    "delta_turn_pass_ci95": [
+     -0.1109,
+     0.0092
+    ],
+    "mcnemar_anchor_only_pass": 2,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 0.5,
+    "mean_delta_turn_pass": -0.0473,
+    "n_pairs": 60,
+    "non_inferior": false
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": 42.349,
+   "savings_claim_allowed": false,
+   "share_sessions_with_switch": 0.0,
+   "value": "9-12"
+  },
+  {
+   "arm": "sticky",
+   "dim": "turn_band",
+   "gm_cost_ratio": 0.540141,
+   "gm_cost_ratio_both_pass": 0.547238,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.492602,
+    0.609728
+   ],
+   "gm_cost_ratio_ci95": [
+    0.487145,
+    0.597491
+   ],
+   "host": "fable",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": 1.549825,
+   "mean_saving_usd_ci95": [
+    1.275304,
+    1.840677
+   ],
+   "median_saving_usd": 1.503226,
+   "n_both_pass": 42,
+   "n_pairs_total": 44,
+   "n_scenarios": 22,
+   "n_valid_pairs": 44,
+   "quality": {
+    "anchor_final_pass_rate": 1.0,
+    "arm_final_pass_rate": 0.9545,
+    "delta_turn_pass_ci95": [
+     -0.017,
+     0.0682
+    ],
+    "mcnemar_anchor_only_pass": 2,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 0.5,
+    "mean_delta_turn_pass": 0.0199,
+    "n_pairs": 44,
+    "non_inferior": true
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": 45.986,
+   "savings_claim_allowed": true,
+   "share_sessions_with_switch": 0.0,
+   "value": "<=8"
+  },
+  {
+   "arm": "sticky",
+   "dim": "turn_band",
+   "gm_cost_ratio": 0.556207,
+   "gm_cost_ratio_both_pass": 0.555412,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.462265,
+    0.700901
+   ],
+   "gm_cost_ratio_ci95": [
+    0.465786,
+    0.687068
+   ],
+   "host": "fable",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": 2.548922,
+   "mean_saving_usd_ci95": [
+    0.93178,
+    3.77277
+   ],
+   "median_saving_usd": 3.547579,
+   "n_both_pass": 33,
+   "n_pairs_total": 36,
+   "n_scenarios": 18,
+   "n_valid_pairs": 36,
+   "quality": {
+    "anchor_final_pass_rate": 0.9722,
+    "arm_final_pass_rate": 0.9444,
+    "delta_turn_pass_ci95": [
+     -0.0946,
+     0.0215
+    ],
+    "mcnemar_anchor_only_pass": 2,
+    "mcnemar_arm_only_pass": 1,
+    "mcnemar_p": 1.0,
+    "mean_delta_turn_pass": -0.027,
+    "n_pairs": 36,
+    "non_inferior": false
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": 44.379,
+   "savings_claim_allowed": false,
+   "share_sessions_with_switch": 0.0,
+   "value": ">=13"
+  },
+  {
+   "arm": "sticky",
+   "dim": "turn_band",
+   "gm_cost_ratio": 1.21528,
+   "gm_cost_ratio_both_pass": 1.23293,
+   "gm_cost_ratio_both_pass_ci95": [
+    1.116172,
+    1.362406
+   ],
+   "gm_cost_ratio_ci95": [
+    1.112516,
+    1.335675
+   ],
+   "host": "opus",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": -0.549949,
+   "mean_saving_usd_ci95": [
+    -0.830536,
+    -0.305311
+   ],
+   "median_saving_usd": -0.438364,
+   "n_both_pass": 54,
+   "n_pairs_total": 60,
+   "n_scenarios": 30,
+   "n_valid_pairs": 60,
+   "quality": {
+    "anchor_final_pass_rate": 0.95,
+    "arm_final_pass_rate": 0.9167,
+    "delta_turn_pass_ci95": [
+     -0.0955,
+     -0.0018
+    ],
+    "mcnemar_anchor_only_pass": 3,
+    "mcnemar_arm_only_pass": 1,
+    "mcnemar_p": 0.625,
+    "mean_delta_turn_pass": -0.0459,
+    "n_pairs": 60,
+    "non_inferior": false
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": -21.528,
+   "savings_claim_allowed": false,
+   "share_sessions_with_switch": 0.0,
+   "value": "9-12"
+  },
+  {
+   "arm": "sticky",
+   "dim": "turn_band",
+   "gm_cost_ratio": 1.25425,
+   "gm_cost_ratio_both_pass": 1.263274,
+   "gm_cost_ratio_both_pass_ci95": [
+    1.105312,
+    1.440753
+   ],
+   "gm_cost_ratio_ci95": [
+    1.107761,
+    1.435621
+   ],
+   "host": "opus",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": -0.415685,
+   "mean_saving_usd_ci95": [
+    -0.661324,
+    -0.185905
+   ],
+   "median_saving_usd": -0.303546,
+   "n_both_pass": 43,
+   "n_pairs_total": 44,
+   "n_scenarios": 22,
+   "n_valid_pairs": 44,
+   "quality": {
+    "anchor_final_pass_rate": 1.0,
+    "arm_final_pass_rate": 0.9773,
+    "delta_turn_pass_ci95": [
+     -0.0256,
+     0.0569
+    ],
+    "mcnemar_anchor_only_pass": 1,
+    "mcnemar_arm_only_pass": 0,
+    "mcnemar_p": 1.0,
+    "mean_delta_turn_pass": 0.017,
+    "n_pairs": 44,
+    "non_inferior": true
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": -25.425,
+   "savings_claim_allowed": true,
+   "share_sessions_with_switch": 0.0,
+   "value": "<=8"
+  },
+  {
+   "arm": "sticky",
+   "dim": "turn_band",
+   "gm_cost_ratio": 1.114414,
+   "gm_cost_ratio_both_pass": 1.108769,
+   "gm_cost_ratio_both_pass_ci95": [
+    0.995498,
+    1.237617
+   ],
+   "gm_cost_ratio_ci95": [
+    1.005808,
+    1.236016
+   ],
+   "host": "opus",
+   "mean_model_switches": 0.0,
+   "mean_receipt_saving_usd": 0.0,
+   "mean_saving_usd": -0.477585,
+   "mean_saving_usd_ci95": [
+    -0.874906,
+    -0.116285
+   ],
+   "median_saving_usd": -0.224154,
+   "n_both_pass": 32,
+   "n_pairs_total": 36,
+   "n_scenarios": 18,
+   "n_valid_pairs": 36,
+   "quality": {
+    "anchor_final_pass_rate": 0.9167,
+    "arm_final_pass_rate": 0.9167,
+    "delta_turn_pass_ci95": [
+     -0.0053,
+     0.0387
+    ],
+    "mcnemar_anchor_only_pass": 1,
+    "mcnemar_arm_only_pass": 1,
+    "mcnemar_p": 1.0,
+    "mean_delta_turn_pass": 0.0165,
+    "n_pairs": 36,
+    "non_inferior": true
+   },
+   "rebuild_cost_share": 0.0,
+   "saving_pct": -11.441,
+   "savings_claim_allowed": true,
+   "share_sessions_with_switch": 0.0,
+   "value": ">=13"
+  }
+ ],
+ "ni_margin": -0.05,
+ "schema": "fast-decisions-paired-model/v1",
+ "seed": 0
+}

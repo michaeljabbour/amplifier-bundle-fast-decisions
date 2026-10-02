@@ -1,0 +1,7 @@
+key	text	x	y	px	py	x0	y0	x1	y1	own_dist	nearest_other	nearest_other_dist	leader
+shipped|fable	shipped, Fable	93.5700	85.0100	190.39	140.33	165.17	124.13	215.62	135.63	4.70	sonnet|fable	14.06	no
+shipped|opus	shipped, Opus	-32.6400	-31.4800	43.49	34.87	46.81	20.05	97.23	31.55	4.70	sticky|opus	12.68	no
+sonnet|fable	sonnet, Fable	69.1800	94.9500	162.00	149.33	110.45	143.99	157.30	154.67	4.70	shipped|fable	33.29	no
+sonnet|opus	sonnet, Opus	-42.5100	-46.8000	32.00	21.00	8.59	5.17	55.41	16.30	4.70	shipped|opus	18.57	no
+sticky|fable	sticky, Fable	103.1300	99.8200	201.52	153.74	206.22	148.01	250.60	159.47	4.70	shipped|fable	17.59	no
+sticky|opus	sticky, Opus	-28.6900	-21.1500	48.08	44.22	52.78	38.47	97.14	49.97	4.70	shipped|opus	9.97	no

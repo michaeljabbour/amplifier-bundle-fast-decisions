@@ -1,0 +1,80 @@
+# spf13/pflag at c966cfe (UnknownFlagsHandling era): explain, document and test parser behaviour, triage a planted bool-flag issue
+id: pflag-mixed
+task_type: mixed
+language: go
+split: train
+source:
+  desc: 'spf13/pflag at c966cfe (UnknownFlagsHandling era): explain, document and test parser behaviour, triage a planted bool-flag issue'
+  repo: https://github.com/spf13/pflag.git
+  sha: c966cfef47379dcb01e7929504d66d94b540945b
+workspace:
+  kind: git
+  repo: https://github.com/spf13/pflag.git
+  sha: c966cfef47379dcb01e7929504d66d94b540945b
+  local_hint: ~/dev/afast-paired-src/pflag
+  add_files:
+    issues/bool-space.md: |
+      # Issue: `--force false` does not turn the flag off
+
+      ```go
+      force := fs.Bool("force", true, "force")
+      fs.Parse([]string{"--force", "false"})
+      fmt.Println(*force) // true
+      ```
+
+      I expected false. Is this a parsing bug?
+turns:
+- prompt: What are the three ErrorHandling constants in flag.go and what does each do when Parse fails? Do not change any files.
+  checks:
+  - {kind: keyed_facts, all: [ContinueOnError, ExitOnError, PanicOnError, 'os\.Exit\(2\)|exit.{0,10}2', panic]}
+- prompt: How do StringSlice and StringArray flags differ when a flag is repeated or contains commas? Give the resulting slice lengths for `--tags=a,b --tags c` (StringSlice) and `--arr=x,y --arr z` (StringArray); verify by running a throwaway test and do not leave it behind.
+  checks:
+  - {kind: keyed_facts, all: [csv|comma, StringArray, \b3\b, \b2\b, 'x,y']}
+- prompt: 'Run a throwaway test: after parsing `--force pos1 -- --num=9` with a bool flag `force` and an int flag `num`, what are `Args()`, `NArg()` and `ArgsLenAtDash()`? Do not leave files behind.'
+  checks:
+  - {kind: keyed_facts, all: [pos1, --num=9, ArgsLenAtDash, \b1\b, \b2\b]}
+- prompt: Explain the unknown-flag handling types in flag.go (names and behaviour) and how the older `UnknownFlags` bool relates to them. Do not change any files.
+  checks:
+  - {kind: keyed_facts, all: [ErrorOnUnknownFlag, IgnoreUnknownFlag, PassUnknownFlagToArgs, '[Dd]eprecated', UnknownFlagsHandling]}
+- prompt: 'Run a throwaway test with PassUnknownFlagToArgs set and an int flag `num`: what is `num` and what is `Args()` after parsing `--nme=3 --num 4 rest`? Do not leave files behind.'
+  checks:
+  - {kind: keyed_facts, all: ['\[--nme=3 rest\]', 'num\b.{0,12}\b4\b|\b4\b.{0,12}num', positional|non-flag|passed through]}
+- prompt: What does `FlagUsages()` print for a bool flag, and which flags are left out of the usage? Verify with a throwaway test containing a string flag `config` with shorthand c, int `port` (marked deprecated), bool `debug` and a hidden duration `timeout`. Do not leave files behind.
+  checks:
+  - {kind: keyed_facts, all: ['debug\[=true\|false\]', hidden, deprecated, '-c, --config']}
+- prompt: Write docs/cookbook.md with level-2 sections Slices vs arrays, Terminator, Unknown flags and Usage output, using the concrete verified values from this session.
+  checks:
+  - {kind: doc_sections, path: docs/cookbook.md, headings: [Slices vs arrays, Terminator, Unknown flags, Usage output]}
+  - {kind: file_regex, path: docs/cookbook.md, pattern: '\[a b c\]'}
+  - {kind: file_regex, path: docs/cookbook.md, pattern: '\[--nme=3 rest\]'}
+  - {kind: file_regex, path: docs/cookbook.md, pattern: ArgsLenAtDash}
+- prompt: 'Add cookbook_test.go (package pflag) with tests named TestCookbook* that pin three behaviours: StringSlice vs StringArray lengths, ArgsLenAtDash after `--`, and PassUnknownFlagToArgs. Run `go test -run TestCookbook .`. The tests must fail if either the `--` bookkeeping or the CSV splitting is broken.'
+  checks:
+  - {kind: file_regex, path: cookbook_test.go, pattern: func TestCookbook, min_count: 3}
+  - {kind: tests, runner: cmd, cmd: 'go test -count=1 -run TestCookbook -v . && cp flag.go flag.go.bak && perl -pi -e ''s/f\.argsLenAtDash = len\(f\.args\)/f.argsLenAtDash = -1/'' flag.go && ! go test -count=1 -run TestCookbook . && cp flag.go.bak flag.go && cp string_slice.go ss.go.bak && perl -pi -e ''s/v, err := readAsCSV\(val\)/v, err := []string{val}, error(nil)/'' string_slice.go && ! go test -count=1 -run TestCookbook .', expect_regex: PASS, timeout: 300}
+- prompt: 'Explain how short flags are parsed: how `-n5`, `-vvv` and `-abc` are handled and which function does the work (name it). Do not change any files.'
+  checks:
+  - {kind: keyed_facts, all: [parseSingleShortArg, parseShortArg, shorthand, NoOptDefVal]}
+- prompt: How does a count flag work (`CountP("verbose", "v", ...)`)? What is its NoOptDefVal and what is the value after `-vv --verbose`? Do not change any files.
+  checks:
+  - {kind: keyed_facts, all: [\+1, count, \b3\b, NoOptDefVal]}
+- prompt: 'Triage issues/bool-space.md: is `--force false` a parsing bug? Explain with the mechanism, show what Args() contains and give the correct way to turn the flag off. Do not change any files.'
+  checks:
+  - {kind: keyed_facts, all: [NoOptDefVal, --force=false, positional|Args\(\)|non-flag, not a bug|expected|by design|intended]}
+- prompt: Add an example test file example_unknown_test.go (package pflag_test) with `func ExamplePassUnknownFlagToArgs()` that prints the int flag and Args() with an `// Output:` comment, then run it.
+  checks:
+  - {kind: file_regex, path: example_unknown_test.go, pattern: '// Output:'}
+  - {kind: tests, runner: cmd, cmd: go test -count=1 -run ExamplePassUnknownFlagToArgs -v ., expect_regex: '--- PASS: ExamplePassUnknownFlagToArgs', timeout: 240}
+- prompt: Append a '## Unknown flags' section to README.md pointing to docs/cookbook.md.
+  checks:
+  - {kind: doc_sections, path: README.md, headings: [Unknown flags]}
+  - {kind: file_regex, path: README.md, pattern: docs/cookbook\.md}
+- prompt: What is golangflag.go for, and what does `flagValueWrapper` do? Do not change any files.
+  checks:
+  - {kind: keyed_facts, all: [golangflag\.go, flagValueWrapper, standard|std|go flag|flag package, Type]}
+- prompt: Write ARCHITECTURE.md describing flag.go (FlagSet/Flag/parsing), golangflag.go and the per-type files, with one bullet each.
+  checks:
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: flag\.go}
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: golangflag\.go}
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: count\.go|string_slice\.go}
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: FlagSet}

@@ -1,0 +1,160 @@
+# main-v1 real-repo scenario (12 turns): astanin/python-tabulate, the github table format dropped column alignment colons (#53), fixed upstream in 8014ec66; workspace is its parent
+# Workspace = parent of the upstream fix commit; hidden tests = the fix commit's tests (+ scenario-authored edge tests).
+id: tabulate-github
+task_type: bugfix
+language: python
+split: train
+source:
+  desc: >-
+    astanin/python-tabulate, the github table format dropped column alignment colons (#53), fixed
+    upstream in 8014ec66; workspace is its parent
+  repo: https://github.com/astanin/python-tabulate.git
+  sha: 7c70bf451bc00ba64c3d8587909fa08d16a958e0
+  fix_sha: 8014ec66820c89307005b26f878119baa5bf6932
+workspace:
+  kind: git
+  repo: https://github.com/astanin/python-tabulate.git
+  sha: 7c70bf451bc00ba64c3d8587909fa08d16a958e0
+  local_hint: ~/dev/afast-paired-src/python-tabulate
+hidden_files:
+  test/test_output.py:
+    from_git:
+      repo: https://github.com/astanin/python-tabulate.git
+      sha: 8014ec66820c89307005b26f878119baa5bf6932
+      path: test/test_output.py
+      local_hint: ~/dev/afast-paired-src/python-tabulate
+  test/test_pipe_escape_hidden.py: |
+    from tabulate import tabulate
+
+
+    def test_github_escapes_pipe_in_cells_and_headers():
+        out = tabulate([["a|b", 1]], ["x|y", "n"], tablefmt="github")
+        assert out == "\n".join([
+            "| x\\|y   |   n |",
+            "|:------|----:|",
+            "| a\\|b   |   1 |",
+        ])
+
+
+    def test_pipe_format_escapes_too():
+        assert tabulate([["a|b"]], tablefmt="pipe") == "\n".join(["|:----|", "| a\\|b |"])
+
+
+    def test_plain_text_without_pipes_unchanged():
+        out = tabulate([["spam", 1]], ["item", "qty"], tablefmt="github")
+        assert out == "\n".join(["| item   |   qty |", "|:-------|------:|", "| spam   |     1 |"])
+
+
+    def test_other_formats_not_escaped():
+        assert "\\|" not in tabulate([["a|b", 1]], ["x|y", "n"], tablefmt="orgtbl")
+        assert "\\|" not in tabulate([["a|b", 1]], ["x|y", "n"], tablefmt="simple")
+  test/test_gfm_hidden.py: |
+    from tabulate import tabulate, tabulate_formats
+
+    ROWS = [["a|b", 1], ["line1\nline2", 22.5]]
+
+
+    def test_gfm_is_listed():
+        assert "gfm" in tabulate_formats
+        assert "github" in tabulate_formats
+
+
+    def test_gfm_equals_github():
+        for kwargs in ({}, {"colalign": ("center", "right")}, {"headers": ["h1", "h2"]}):
+            assert tabulate(ROWS, tablefmt="gfm", **kwargs) == tabulate(ROWS, tablefmt="github", **kwargs)
+
+
+    def test_gfm_multiline_uses_multiline_path():
+        out = tabulate([["line1\nline2", 1]], ["x", "n"], tablefmt="gfm")
+        assert "line1" in out and "line2" in out
+        assert len(out.splitlines()) == 4
+turns:
+  - prompt: >-
+      `tablefmt="github"` loses the column alignment: for a table with a text column and a number column
+      it prints the separator row as `|-----------|-----------|`, so GitHub renders every column
+      left-aligned, although numbers are right-aligned in the cell text. The `pipe` format already emits
+      the alignment colons (`|:----------|----------:|`) and GitHub Flavored Markdown understands them.
+      `github` should produce the same separator row as `pipe` (also with an explicit `colalign`, in
+      headerless tables and with multiline cells). Please find the cause in tabulate/__init__.py and fix
+      it. Run the tests from this directory with `python3 -m pytest -q test`.
+    checks:
+      - {kind: tests, runner: python, files: [test, test/test_output.py], restore: [test/common.py, test/test_api.py, test/test_cli.py, test/test_grapheme_clusters.py, test/test_input.py, test/test_internal.py, test/test_output.py, test/test_regression.py, test/test_textwrapper.py], hidden: [test/test_output.py]}
+  - prompt: >-
+      In three to five sentences explain the root cause: how the "github" and "pipe" entries of
+      `_table_formats` differed, and which helper produces the colons. Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [github, pipe, _pipe_line_with_colons|colons], any: [Line\(|linebelowheader|lineabove, TableFormat]}
+  - prompt: >-
+      Add a regression test file `test/test_github_alignment.py` (pytest style, plain asserts) with at
+      least three test functions: a text and a number column (colons on both sides as appropriate), an
+      explicit `colalign=("center", "right")`, and `github` output being identical to `pipe` output for
+      the same input. Run it.
+    checks:
+      - {kind: file_regex, path: test/test_github_alignment.py, pattern: ^\s*def test_, min_count: 3}
+      - {kind: tests, runner: python, files: [test/test_github_alignment.py]}
+  - prompt: >-
+      Now cells and headers containing a literal pipe. `tabulate([['a|b', 1]], ['x|y', 'n'],
+      tablefmt='github')` emits the `|` unescaped, which breaks the table in Markdown. For the `github`
+      and `pipe` formats a literal `|` in a header or cell must be written as `\|`. Padding and the
+      separator row are still computed from the original text (so the row with the escaped cell is simply
+      one character longer per escaped pipe); the column delimiters themselves stay `|`. Other formats
+      must be unaffected. Fix it and add a test to test/test_github_alignment.py.
+    checks:
+      - {kind: tests, runner: python, files: [test/test_pipe_escape_hidden.py], restore: [test/common.py, test/test_api.py, test/test_cli.py, test/test_grapheme_clusters.py, test/test_input.py, test/test_internal.py, test/test_output.py, test/test_regression.py, test/test_textwrapper.py], hidden: [test/test_pipe_escape_hidden.py]}
+      - {kind: tests, runner: python, files: [test, test/test_output.py, test/test_pipe_escape_hidden.py], restore: [test/common.py, test/test_api.py, test/test_cli.py, test/test_grapheme_clusters.py, test/test_input.py, test/test_internal.py, test/test_output.py, test/test_regression.py, test/test_textwrapper.py], hidden: [test/test_output.py, test/test_pipe_escape_hidden.py]}
+      - {kind: file_regex, path: test/test_github_alignment.py, pattern: a\\\\\|b}
+  - prompt: >-
+      Quick question about this library: when I don't pass `numalign`/`stralign`, which alignment does
+      each kind of column get for the normal formats, and how do numbers with decimals line up? Answer
+      from the code. Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [numalign, stralign], any: [decimal, left, right]}
+  - prompt: >-
+      README.md still says the `github` format corresponds to `pipe` "without alignment colons" and shows
+      a separator row without colons. Fix that paragraph (the sentence should say it corresponds to the
+      `pipe` format with the same alignment colons) and the example output below it.
+    checks:
+      - {kind: file_regex, path: README.md, pattern: without alignment colons, absent: true}
+      - {kind: file_regex, path: README.md, pattern: same alignment colons}
+  - prompt: >-
+      Small feature: add `gfm` as another name for the `github` format. `tabulate(..., tablefmt="gfm")`
+      must give exactly the same output as `github` (including multiline cells and escaping), `"gfm"` must
+      appear in `tabulate_formats`, and the command line `-f gfm` must be accepted through that list. Add
+      tests in the next step.
+    checks:
+      - {kind: tests, runner: python, files: [test/test_gfm_hidden.py], restore: [test/common.py, test/test_api.py, test/test_cli.py, test/test_grapheme_clusters.py, test/test_input.py, test/test_internal.py, test/test_output.py, test/test_regression.py, test/test_textwrapper.py], hidden: [test/test_gfm_hidden.py]}
+      - {kind: tests, runner: python, files: [test, test/test_output.py, test/test_pipe_escape_hidden.py, test/test_gfm_hidden.py], restore: [test/common.py, test/test_api.py, test/test_cli.py, test/test_grapheme_clusters.py, test/test_input.py, test/test_internal.py, test/test_output.py, test/test_regression.py, test/test_textwrapper.py], hidden: [test/test_output.py, test/test_pipe_escape_hidden.py, test/test_gfm_hidden.py]}
+      - {kind: file_regex, path: tabulate/__init__.py, pattern: gfm}
+  - prompt: >-
+      Add `test/test_gfm_alias.py` (pytest style) with at least three test functions: gfm output equals
+      github output, gfm is in `tabulate_formats`, and a multiline cell renders the same under both names.
+      Run it.
+    checks:
+      - {kind: file_regex, path: test/test_gfm_alias.py, pattern: ^\s*def test_, min_count: 3}
+      - {kind: tests, runner: python, files: [test/test_gfm_alias.py]}
+  - prompt: >-
+      Small refactor, behaviour unchanged: rewrite `_pipe_segment_with_colons` without the if/elif chain,
+      using a module-level lookup table named `_PIPE_COLON_FORMAT` that maps an alignment to its (left,
+      right) colon strings (right and decimal -> ("", ":"), center -> (":", ":"), left -> (":", ""),
+      anything else -> no colons).
+    checks:
+      - {kind: file_regex, path: tabulate/__init__.py, pattern: ^_PIPE_COLON_FORMAT\s*=}
+      - {kind: tests, runner: python, files: [test, test/test_output.py, test/test_pipe_escape_hidden.py, test/test_gfm_hidden.py], restore: [test/common.py, test/test_api.py, test/test_cli.py, test/test_grapheme_clusters.py, test/test_input.py, test/test_internal.py, test/test_output.py, test/test_regression.py, test/test_textwrapper.py], hidden: [test/test_output.py, test/test_pipe_escape_hidden.py, test/test_gfm_hidden.py]}
+  - prompt: >-
+      Give the new `_pipe_row` function a docstring: it renders a pipe/github table row, escapes literal
+      `|` characters in the cells as `\|`, and works on already padded cells.
+    checks:
+      - {kind: file_regex, path: tabulate/__init__.py, pattern: 'def _pipe_row\(padded_cells, colwidths, colaligns\):\n\s+"""'}
+      - {kind: tests, runner: python, files: [test, test/test_output.py, test/test_pipe_escape_hidden.py, test/test_gfm_hidden.py], restore: [test/common.py, test/test_api.py, test/test_cli.py, test/test_grapheme_clusters.py, test/test_input.py, test/test_internal.py, test/test_output.py, test/test_regression.py, test/test_textwrapper.py], hidden: [test/test_output.py, test/test_pipe_escape_hidden.py, test/test_gfm_hidden.py]}
+  - prompt: >-
+      Add an entry for this work to the top of the CHANGELOG file: a new first item `- Unreleased:` (same
+      layout as the `- 0.11.0:` item below it) that mentions the `github` alignment colons, pipe escaping
+      in `github`/`pipe`, and the new `gfm` format name.
+    checks:
+      - {kind: file_regex, path: CHANGELOG, pattern: '^- Unreleased:'}
+      - {kind: file_regex, path: CHANGELOG, pattern: gfm}
+  - prompt: >-
+      Review the changes you made in this session as a code reviewer would: list each file you changed or
+      added, what changed, and any remaining edge case you did not cover. Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [__init__\.py, test, gfm|escape], any: [edge, risk, not cover, remaining]}

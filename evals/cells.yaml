@@ -754,6 +754,55 @@ cells:
     requires_cells: [plain]
     mechanism_gate: { max_scored: 0 }
 
+  # --- Paired multi-turn campaign arms (evals/paired.py, docs/design/parallel-measurement-mode.md 1.1) ---
+  # A2 "sticky" decides the session's model ONCE, in the harness, then runs the whole session on it: the
+  # harness calls the turn-start decision read-only (paired.sticky_decision) and launches one of the two pin
+  # cells below. No orchestrator change. The mechanism gate (R4) is evaluated by paired.py from session events:
+  # at most one difficulty_judged, zero model switches, requested model on every main request.
+  orch-pin-host:
+    harnesses: [amplifier-fd]
+    fd: { composition: composed, backend: none, effort_profile: all_phase,
+          overrides: { model_routing: null } }
+    role: "sticky arm, decision=host: orchestrator composed, model routing removed (whole session on the host model)"
+    purpose: "A2 sticky (Fable host); the decision is made once at session start by the harness"
+    anchor_cell: plain
+    mechanism_gate: { max_scored: 0 }
+
+  orch-pin-host-opus:
+    harnesses: [amplifier-fd]
+    amplifier_model: claude-opus-5-5
+    fd: { composition: composed, backend: none, effort_profile: all_phase,
+          overrides: { model_routing: null } }
+    role: "sticky arm, decision=host, Opus 5.5 host"
+    purpose: "A2 sticky (Opus host)"
+    anchor_cell: plain-opus
+    mechanism_gate: { max_scored: 0 }
+
+  orch-pin-cheap:
+    harnesses: [amplifier-fd]
+    fd: { composition: composed, backend: none, effort_profile: all_phase,
+          overrides: { model_routing: { start_model: claude-sonnet-5, provider_match: anthropic, start_policy: cheap,
+                                        max_requests_before_escalation: null, escalate_on_test_failure: false,
+                                        escalate_on_provider_error: true } } }
+    role: "sticky arm, decision=cheap: every turn starts on Sonnet 5 (same start effort as the shipped default), no escalation except provider error"
+    purpose: "A2 sticky (Fable host)"
+    anchor_cell: plain
+    requires_cells: [plain-sonnet]
+    mechanism_gate: { max_scored: 0, model_routed_model: claude-sonnet-5, min_model_routed: 1 }
+
+  orch-pin-cheap-opus:
+    harnesses: [amplifier-fd]
+    amplifier_model: claude-opus-5-5
+    fd: { composition: composed, backend: none, effort_profile: all_phase,
+          overrides: { model_routing: { start_model: claude-sonnet-5, provider_match: anthropic, start_policy: cheap,
+                                        max_requests_before_escalation: null, escalate_on_test_failure: false,
+                                        escalate_on_provider_error: true } } }
+    role: "sticky arm, decision=cheap, Opus 5.5 host"
+    purpose: "A2 sticky (Opus host)"
+    anchor_cell: plain-opus
+    requires_cells: [plain-sonnet]
+    mechanism_gate: { max_scored: 0, model_routed_model: claude-sonnet-5, min_model_routed: 1 }
+
   externals:
     harnesses: [claude, codex, opencode, amplifier-plain, amplifier-fd]
     fd: { backend: ollama, model: qwen3:0.6b, effort_profile: all_phase }   # = champion

@@ -1,0 +1,197 @@
+# main-v1 polyglot 19/20: javascript/list-ops, 8 turns, short gaps.
+id: js-listops
+task_type: feature
+language: javascript
+split: test
+default_gap_s: 10
+source:
+  desc: "Aider polyglot-benchmark javascript/list-ops (Exercism), outside the S2 slice"
+  repo: https://github.com/Aider-AI/polyglot-benchmark
+  sha: 7e0611e77b54e2dea774cdc0aa00cf9f7ed6144f
+workspace:
+  kind: git
+  repo: https://github.com/Aider-AI/polyglot-benchmark
+  sha: 7e0611e77b54e2dea774cdc0aa00cf9f7ed6144f
+  subdir: javascript/exercises/practice/list-ops
+  local_hint: ~/dev/afast-campaign-corrected-polyglot-20260919/polyglot/polyglot-benchmark
+  remove: [.meta]
+protected: [list-ops.spec.js]
+hidden_files:
+  jest_shim.mjs: |
+    import { describe as d, test as t } from 'node:test';
+    import assert from 'node:assert/strict';
+
+    const ctx = globalThis;
+    ctx.describe = (name, fn) => d(name, fn);
+    ctx.test = (name, fn) => t(name, fn);
+    ctx.xtest = ctx.test;
+    ctx.it = ctx.test;
+
+    const matchErr = (e) => (err) => {
+      if (e === undefined) return true;
+      if (e instanceof Error) return err.message === e.message;
+      if (typeof e === 'string') return String(err.message).includes(e);
+      if (e instanceof RegExp) return e.test(err.message);
+      if (typeof e === 'function') return err instanceof e;
+      return true;
+    };
+
+    ctx.expect = (actual) => ({
+      toEqual: (e) => assert.deepEqual(actual, e),
+      toBe: (e) => assert.strictEqual(actual, e),
+      toBeCloseTo: (e, digits = 2) => assert.ok(Math.abs(actual - e) < 10 ** -digits / 2, `${actual} is not close to ${e}`),
+      toBeTruthy: () => assert.ok(actual),
+      toBeFalsy: () => assert.ok(!actual),
+      toThrow: (e) => assert.throws(actual, matchErr(e)),
+      not: { toEqual: (e) => assert.notDeepEqual(actual, e), toBe: (e) => assert.notStrictEqual(actual, e) },
+    });
+  hidden_take.test.mjs: |
+    import { test } from 'node:test';
+    import assert from 'node:assert/strict';
+    import { List } from './list-ops.js';
+
+    test('take', () => {
+      const l = new List([1, 2, 3]);
+      assert.deepEqual(l.take(2).values, [1, 2]);
+      assert.deepEqual(l.take(0).values, []);
+      assert.deepEqual(l.take(-1).values, []);
+      assert.deepEqual(l.take(10).values, [1, 2, 3]);
+    });
+
+    test('drop', () => {
+      const l = new List([1, 2, 3]);
+      assert.deepEqual(l.drop(1).values, [2, 3]);
+      assert.deepEqual(l.drop(0).values, [1, 2, 3]);
+      assert.deepEqual(l.drop(-2).values, [1, 2, 3]);
+      assert.deepEqual(l.drop(10).values, []);
+    });
+
+    test('take and drop on an empty list', () => {
+      assert.deepEqual(new List().take(3).values, []);
+      assert.deepEqual(new List().drop(3).values, []);
+    });
+  hidden_immutable.test.mjs: |
+    import { test } from 'node:test';
+    import assert from 'node:assert/strict';
+    import { List } from './list-ops.js';
+
+    test('append leaves both lists unchanged', () => {
+      const a = new List([1, 2]);
+      const b = new List([3]);
+      const c = a.append(b);
+      assert.deepEqual(c.values, [1, 2, 3]);
+      assert.deepEqual(a.values, [1, 2]);
+      assert.deepEqual(b.values, [3]);
+      assert.notStrictEqual(c, a);
+    });
+
+    test('concat leaves everything unchanged', () => {
+      const a = new List([1]);
+      const rest = new List([new List([2]), new List([3, 4])]);
+      const c = a.concat(rest);
+      assert.deepEqual(c.values, [1, 2, 3, 4]);
+      assert.deepEqual(a.values, [1]);
+      assert.equal(rest.values.length, 2);
+      assert.deepEqual(rest.values[1].values, [3, 4]);
+    });
+
+    test('the constructor copies its argument', () => {
+      const arr = [1, 2];
+      const l = new List(arr);
+      arr.push(3);
+      assert.deepEqual(l.values, [1, 2]);
+    });
+
+    test('reverse, map and filter do not touch the receiver', () => {
+      const l = new List([1, 2, 3]);
+      l.reverse();
+      l.map((x) => x + 1);
+      l.filter((x) => x > 1);
+      assert.deepEqual(l.values, [1, 2, 3]);
+    });
+
+    test('chained appends do not grow the first list', () => {
+      const a = new List([1]);
+      a.append(new List([2])).append(new List([3]));
+      assert.deepEqual(a.values, [1]);
+    });
+  hidden_iter.test.mjs: |
+    import { test } from 'node:test';
+    import assert from 'node:assert/strict';
+    import { List } from './list-ops.js';
+
+    test('a list is iterable', () => {
+      assert.deepEqual([...new List([1, 2, 3])], [1, 2, 3]);
+      const seen = [];
+      for (const x of new List(['a', 'b'])) seen.push(x);
+      assert.deepEqual(seen, ['a', 'b']);
+      assert.deepEqual([...new List()], []);
+    });
+
+    test('toArray returns a copy', () => {
+      const l = new List([1, 2]);
+      const arr = l.toArray();
+      assert.deepEqual(arr, [1, 2]);
+      arr.push(3);
+      assert.deepEqual(l.toArray(), [1, 2]);
+    });
+
+    test('toArray keeps nested lists as they are', () => {
+      const inner = new List([1]);
+      assert.equal(new List([inner]).toArray()[0], inner);
+    });
+turns:
+  - prompt: >-
+      Read .docs/instructions.md and implement the `List` class in list-ops.js (`append`, `concat`,
+      `filter`, `map`, `length`, `foldl`, `foldr`, `reverse`) so that the specs in list-ops.spec.js
+      pass, without using the built-in array methods for these operations (jest is not installed here,
+      so check with plain node). Do not edit the provided spec file.
+    checks:
+      - {kind: tests, runner: cmd, cmd: 'sed "s#from ''./list-ops''#from ''./list-ops.js''#" list-ops.spec.js > spec_run.test.mjs && node --import ./jest_shim.mjs --test --test-reporter=tap spec_run.test.mjs ', expect_regex: '# fail 0', restore: [list-ops.spec.js], hidden: [jest_shim.mjs], timeout: 120}
+  - prompt: >-
+      In three to five sentences, explain in which order the fold callbacks receive their arguments
+      and how `foldl` differs from `foldr` for a function that is not commutative. Do not change any
+      files.
+    checks:
+      - {kind: keyed_facts, all: [foldl, foldr, accumulator, order|direction|left|right]}
+  - prompt: >-
+      Add `take(n)` and `drop(n)`: `take` returns a new list with the first n items (fewer if the list
+      is shorter, empty for n <= 0) and `drop` returns a new list without the first n items
+      (everything for n <= 0, empty if n is past the end).
+    checks:
+      - {kind: tests, runner: cmd, cmd: sed "s#from './list-ops'#from './list-ops.js'#" list-ops.spec.js > spec_run.test.mjs && node --import ./jest_shim.mjs --test --test-reporter=tap spec_run.test.mjs hidden_take.test.mjs, expect_regex: '# fail 0', restore: [list-ops.spec.js], hidden: [jest_shim.mjs, hidden_take.test.mjs], timeout: 120}
+  - prompt: >-
+      Fix a design problem: no method may modify the list it is called on or any list passed in.
+      `append` and `concat` must return new lists, and the constructor must copy the array it is given
+      instead of keeping a reference to it.
+    checks:
+      - {kind: tests, runner: cmd, cmd: sed "s#from './list-ops'#from './list-ops.js'#" list-ops.spec.js > spec_run.test.mjs && node --import ./jest_shim.mjs --test --test-reporter=tap spec_run.test.mjs hidden_take.test.mjs hidden_immutable.test.mjs, expect_regex: '# fail 0', restore: [list-ops.spec.js], hidden: [jest_shim.mjs, hidden_take.test.mjs, hidden_immutable.test.mjs], timeout: 120}
+  - prompt: >-
+      Add your own tests in a new file `extra.test.mjs` using `node:test` and `node:assert/strict`
+      (importing from ./list-ops.js): at least five `test(` cases covering immutability, folds,
+      `take`/`drop` and `reverse`. Run it with `node --test extra.test.mjs`.
+    checks:
+      - {kind: file_regex, path: extra.test.mjs, pattern: \btest\(, min_count: 5}
+      - {kind: tests, runner: cmd, cmd: node --test --test-reporter=tap extra.test.mjs, expect_regex: '# pass [1-9]', restore: [], hidden: [], timeout: 120}
+      - {kind: tests, runner: cmd, cmd: sed "s#from './list-ops'#from './list-ops.js'#" list-ops.spec.js > spec_run.test.mjs && node --import ./jest_shim.mjs --test --test-reporter=tap spec_run.test.mjs hidden_take.test.mjs hidden_immutable.test.mjs, expect_regex: '# fail 0', restore: [list-ops.spec.js], hidden: [jest_shim.mjs, hidden_take.test.mjs, hidden_immutable.test.mjs], timeout: 120}
+  - prompt: >-
+      Refactor list-ops.js so that `map`, `filter`, `length` and `reverse` are all implemented with
+      `foldl` or `foldr` (through `this.foldl(...)` / `this.foldr(...)`) instead of their own loops.
+      No behaviour change; keep all tests passing.
+    checks:
+      - {kind: file_regex, path: list-ops.js, pattern: 'this\.fold[lr]\(', min_count: 4}
+      - {kind: tests, runner: cmd, cmd: sed "s#from './list-ops'#from './list-ops.js'#" list-ops.spec.js > spec_run.test.mjs && node --import ./jest_shim.mjs --test --test-reporter=tap spec_run.test.mjs hidden_take.test.mjs hidden_immutable.test.mjs, expect_regex: '# fail 0', restore: [list-ops.spec.js], hidden: [jest_shim.mjs, hidden_take.test.mjs, hidden_immutable.test.mjs], timeout: 120}
+  - prompt: >-
+      Make `List` iterable (`for (const x of list)` and `[...list]` yield the items in order) and add
+      a `toArray()` method that returns a copy of the items as a plain array.
+    checks:
+      - {kind: tests, runner: cmd, cmd: sed "s#from './list-ops'#from './list-ops.js'#" list-ops.spec.js > spec_run.test.mjs && node --import ./jest_shim.mjs --test --test-reporter=tap spec_run.test.mjs hidden_take.test.mjs hidden_immutable.test.mjs hidden_iter.test.mjs, expect_regex: '# fail 0', restore: [list-ops.spec.js], hidden: [jest_shim.mjs, hidden_take.test.mjs, hidden_immutable.test.mjs, hidden_iter.test.mjs], timeout: 120}
+  - prompt: >-
+      Document the module: create README.md with a `## Usage` section and a `## Notes` section
+      (mention immutability), and add JSDoc comments (with `@param` / `@returns`) to the class,
+      `append`, `foldl`, `take` and `toArray`.
+    checks:
+      - {kind: doc_sections, path: README.md, headings: [usage, notes]}
+      - {kind: file_regex, path: list-ops.js, pattern: /\*\*, min_count: 5}
+      - {kind: file_regex, path: list-ops.js, pattern: '@returns', min_count: 3}
+      - {kind: tests, runner: cmd, cmd: sed "s#from './list-ops'#from './list-ops.js'#" list-ops.spec.js > spec_run.test.mjs && node --import ./jest_shim.mjs --test --test-reporter=tap spec_run.test.mjs hidden_take.test.mjs hidden_immutable.test.mjs hidden_iter.test.mjs, expect_regex: '# fail 0', restore: [list-ops.spec.js], hidden: [jest_shim.mjs, hidden_take.test.mjs, hidden_immutable.test.mjs, hidden_iter.test.mjs], timeout: 120}

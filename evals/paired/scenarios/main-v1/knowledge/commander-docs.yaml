@@ -1,0 +1,78 @@
+# tj/commander.js 15.0.0 at ba6d13d: write a migration guide from 14 to 15, verified by running the library, plus a planted legacy CJS script
+id: commander-docs
+task_type: docs
+language: javascript
+split: train
+source:
+  desc: 'tj/commander.js 15.0.0 at ba6d13d: write a migration guide from 14 to 15, verified by running the library, plus a planted legacy CJS script'
+  repo: https://github.com/tj/commander.js.git
+  sha: ba6d13ddb4243e5913367734f8c159089ffe7834
+workspace:
+  kind: git
+  repo: https://github.com/tj/commander.js.git
+  sha: ba6d13ddb4243e5913367734f8c159089ffe7834
+  local_hint: ~/dev/afast-paired-src/commander-js
+  add_files:
+    legacy/cli.cjs: |
+      // legacy/cli.cjs -- written against commander 14
+      const { program } = require('../esm.mjs'); // 14.x shipped commander/esm.mjs
+
+      program
+        .name('shipit')
+        .option('--color', 'colorize output')
+        .option('--no-color', 'disable colors')
+        .argument('<target>', 'deploy target')
+        .action((target, opts) => {
+          console.log(`deploying ${target} color=${opts.color}`);
+        });
+
+      program.parse(process.argv);
+turns:
+- prompt: From CHANGELOG.md, list every change marked *Breaking:* in the 15.0.0 release and the minimum Node.js version. Do not change any files.
+  checks:
+  - {kind: keyed_facts, all: [ESM, 22\.12, esm\.mjs, --no-|negat]}
+- prompt: 'Write and run a small script against the library in this checkout: what does `opts()` return after `parse([], {from:''user''})` for a command with only `.option(''--no-sauce'')`, and for one with `.option(''--sauce'')` followed by `.option(''--no-sauce'')`? Do not change repository files.'
+  checks:
+  - {kind: keyed_facts, all: ['sauce: true|\"sauce\": ?true|sauce.{0,6}true', '\{\s*\}|empty|undefined|not set']}
+- prompt: What is the support policy for the old Commander 14 line after the 15 release, and until when? Use docs/release-policy.md. Do not change any files.
+  checks:
+  - {kind: keyed_facts, all: [maintenance, '2027', 12 months|twelve months, security]}
+- prompt: Write docs/migrating-to-15.md for users upgrading from Commander 14, with level-2 sections Overview, Breaking changes, ESM and CommonJS, Option defaults and Checklist. Include the Node.js minimum and the removed export by its exact name.
+  checks:
+  - {kind: doc_sections, path: docs/migrating-to-15.md, headings: [Overview, Breaking changes, ESM and CommonJS, Option defaults, Checklist]}
+  - {kind: file_regex, path: docs/migrating-to-15.md, pattern: 22\.12}
+  - {kind: file_regex, path: docs/migrating-to-15.md, pattern: commander/esm\.mjs}
+  gap_before_s: 420
+- prompt: What error does Commander raise when a command receives more arguments than declared? Run an example and give the exact message and the error code, and name the method that turns this off. Do not change repository files.
+  checks:
+  - {kind: keyed_facts, all: [commander\.excessArguments, too many arguments, Expected 1 argument but got 3|Expected 1 argument but got 2, allowExcessArguments]}
+- prompt: Add a section `## Excess arguments` to docs/migrating-to-15.md that shows the exact message text and error code.
+  checks:
+  - {kind: doc_sections, path: docs/migrating-to-15.md, headings: [Excess arguments]}
+  - {kind: file_regex, path: docs/migrating-to-15.md, pattern: commander\.excessArguments}
+  - {kind: file_regex, path: docs/migrating-to-15.md, pattern: too many arguments}
+- prompt: How does package.json expose the library (exports map and entry file), and what do index.js's named exports contain? Do not change any files.
+  checks:
+  - {kind: keyed_facts, all: [exports, index\.js, typings/index\.d\.ts, Command, CommanderError, InvalidArgumentError]}
+- prompt: 'Create examples/migration-check.mjs that imports Command from ''../index.js'' and prints, from the real library: the opts() for a lone --no-sauce, the opts() for --sauce plus --no-sauce, and the err.code and err.message of an excess-argument error. Run it with node.'
+  checks:
+  - {kind: file_regex, path: examples/migration-check.mjs, pattern: \.\./index\.js}
+  - {kind: tests, runner: cmd, cmd: 'node examples/migration-check.mjs > _o1.txt && grep -q ''sauce: true'' _o1.txt && grep -q ''commander.excessArguments'' _o1.txt && perl -pi -e ''s/commander\.excessArguments/commander.excessChanged/'' lib/command.js && node examples/migration-check.mjs > _o2.txt && ! cmp -s _o1.txt _o2.txt'}
+- prompt: 'Review legacy/cli.cjs (written for Commander 14): list every problem it will have on Commander 15 and why, and what its output is for `shipit prod`. Run it if useful. Do not change any files.'
+  checks:
+  - {kind: keyed_facts, all: [esm\.mjs, color=undefined|undefined, --no-color|no-color, MODULE_NOT_FOUND|removed|no longer]}
+  gap_before_s: 420
+- prompt: 'Update legacy/cli.cjs so it works on this Commander 15 checkout and keeps its old behaviour: `shipit prod` prints color=true, `shipit prod --no-color` prints color=false, and extra arguments are rejected.'
+  checks:
+  - {kind: file_regex, path: legacy/cli.cjs, pattern: esm\.mjs\x27\), absent: true}
+  - {kind: tests, runner: cmd, cmd: node legacy/cli.cjs prod | grep -q 'color=true' && node legacy/cli.cjs prod --no-color | grep -q 'color=false' && ! node legacy/cli.cjs prod extra 2>/dev/null && node legacy/cli.cjs prod, expect_regex: color=true}
+- prompt: Add a one-sentence pointer to the new migration guide near the top of the 'Installation' section of Readme.md.
+  checks:
+  - {kind: file_regex, path: Readme.md, pattern: docs/migrating-to-15\.md}
+- prompt: Which files in lib/ implement help formatting, similar-command suggestions and the error classes? Name the classes/functions each exports. Do not change any files.
+  checks:
+  - {kind: keyed_facts, all: [help\.js, suggestSimilar, error\.js, CommanderError, InvalidArgumentError, Help]}
+- prompt: 'Append a ''## Summary table'' section to docs/migrating-to-15.md: a markdown table with columns Change, Impact, Action and at least four data rows covering ESM, Node version, esm.mjs removal and the --no-* default.'
+  checks:
+  - {kind: file_regex, path: docs/migrating-to-15.md, pattern: ^\|.*\|.*\|, min_count: 6}
+  - {kind: file_regex, path: docs/migrating-to-15.md, pattern: \|.*Change.*\|.*Impact.*\|.*Action.*\|}

@@ -1,0 +1,260 @@
+# Four service JSON configs with planted policy violations: matrix CSV, issue list, fixes, ports table, validator script.
+id: config-matrix
+task_type: mixed
+language: python
+split: train
+source:
+  desc: 'Four service JSON configs with planted policy violations: matrix CSV, issue list, fixes, ports table, validator script.'
+  kind: self-authored deterministic workspace
+  adapted_from: ['~/dev/amplifier-agent/.amplifier/evaluation/tasks/automation-bench/marketing-utm-audit-and-fix/meta.yaml (audit data for inconsistencies,
+      then fix them); configs authored fresh']
+workspace:
+  kind: inline
+  files:
+    configs/api.json: |
+      {
+        "name": "api",
+        "port": 8080,
+        "replicas": 3,
+        "memory_mb": 512,
+        "log_level": "info",
+        "depends_on": [
+          "db"
+        ],
+        "healthcheck": "/healthz"
+      }
+    configs/db.json: |
+      {
+        "name": "db",
+        "port": 5432,
+        "replicas": 1,
+        "memory_mb": 2048,
+        "log_level": "verbose",
+        "depends_on": [],
+        "healthcheck": "/ready"
+      }
+    configs/web.json: |
+      {
+        "name": "web",
+        "port": 8080,
+        "replicas": 2,
+        "memory_mb": 256,
+        "log_level": "info",
+        "depends_on": [
+          "api"
+        ],
+        "healthcheck": "/"
+      }
+    configs/worker.json: |
+      {
+        "name": "worker",
+        "port": 9000,
+        "replicas": 4,
+        "memory_mb": 1024,
+        "log_level": "debug",
+        "depends_on": [
+          "api",
+          "cache"
+        ],
+        "healthcheck": "/status"
+      }
+    docs/policy.md: |
+      # Config policy
+
+      - Valid log levels: debug, info, warn, error.
+      - No two services may use the same port.
+      - Every entry in `depends_on` must name a service that has a config file in `configs/`.
+    README.md: |
+      # Service configs
+
+      One JSON file per service in `configs/`; the rules are in `docs/policy.md`.
+protected: [docs/policy.md]
+hidden_files:
+  _grade.py: |
+    import csv, json, os, re, subprocess, sys
+    from pathlib import Path
+
+    W = Path(".")
+
+
+    def fail(msg):
+        print("FAIL:", msg)
+        sys.exit(1)
+
+
+    def need(cond, msg):
+        if not cond:
+            fail(msg)
+
+
+    def load_json(rel):
+        p = W / rel
+        need(p.exists(), f"missing {rel}")
+        try:
+            return json.loads(p.read_text(encoding="utf-8"))
+        except Exception as e:  # noqa: BLE001
+            fail(f"{rel} is not valid JSON: {e}")
+
+
+    def read(rel):
+        p = W / rel
+        need(p.exists(), f"missing {rel}")
+        return p.read_text(encoding="utf-8")
+
+
+    def close(a, b, tol=0.011):
+        try:
+            return abs(float(a) - float(b)) <= tol
+        except (TypeError, ValueError):
+            return False
+
+
+    def md_rows(rel, under=None):
+        """Table rows (lists of cells) of a markdown file; with `under`, only rows inside the first heading matching it."""
+        lines = read(rel).splitlines()
+        if under:
+            out, on, lvl = [], False, 0
+            for ln in lines:
+                m = re.match(r"^(#+)\s+(.*)", ln)
+                if m:
+                    if on and len(m.group(1)) <= lvl:
+                        break
+                    if not on and re.search(under, m.group(2), re.I):
+                        on, lvl = True, len(m.group(1))
+                    continue
+                if on:
+                    out.append(ln)
+            lines = out
+        rows = []
+        for ln in lines:
+            if ln.strip().startswith("|") and not re.match(r"^\s*\|[\s:|-]+\|\s*$", ln):
+                rows.append([c.strip() for c in ln.strip().strip("|").split("|")])
+        return rows
+
+
+    def num(s):
+        m = re.search(r"-?\d[\d,]*\.?\d*", str(s))
+        return float(m.group(0).replace(",", "")) if m else None
+
+
+    def run(cmd, timeout=60):
+        p = subprocess.run(cmd, shell=True, cwd=W, capture_output=True, text=True, timeout=timeout)
+        return p.returncode, p.stdout, p.stderr
+
+    EXP = {'orig': {'api': {'name': 'api', 'port': 8080, 'replicas': 3, 'memory_mb': 512, 'log_level': 'info', 'depends_on': ['db'], 'healthcheck': '/healthz'}, 'db': {'name': 'db', 'port': 5432, 'replicas': 1, 'memory_mb': 2048, 'log_level': 'verbose', 'depends_on': [], 'healthcheck': '/ready'}, 'web': {'name': 'web', 'port': 8080, 'replicas': 2, 'memory_mb': 256, 'log_level': 'info', 'depends_on': ['api'], 'healthcheck': '/'}, 'worker': {'name': 'worker', 'port': 9000, 'replicas': 4, 'memory_mb': 1024, 'log_level': 'debug', 'depends_on': ['api', 'cache'], 'healthcheck': '/status'}}, 'fixed': {'api': {'name': 'api', 'port': 8080, 'replicas': 3, 'memory_mb': 512, 'log_level': 'info', 'depends_on': ['db'], 'healthcheck': '/healthz'}, 'db': {'name': 'db', 'port': 5432, 'replicas': 1, 'memory_mb': 2048, 'log_level': 'info', 'depends_on': [], 'healthcheck': '/ready'}, 'web': {'name': 'web', 'port': 8081, 'replicas': 2, 'memory_mb': 256, 'log_level': 'info', 'depends_on': ['api'], 'healthcheck': '/'}, 'worker': {'name': 'worker', 'port': 9000, 'replicas': 4, 'memory_mb': 1024, 'log_level': 'debug', 'depends_on': ['api'], 'healthcheck': '/status'}}, 'mem': 8192, 'issues': [('api', 'port_conflict'), ('web', 'port_conflict'), ('worker', 'unknown_dependency'), ('db', 'invalid_log_level')]}
+    def _cfg(name): return load_json(f"configs/{name}.json")
+    def _matrix(key):
+        p = W / "out/matrix.csv"; need(p.exists(), "missing out/matrix.csv")
+        rd = list(csv.DictReader(open(p, encoding="utf-8"))); need(rd and list(rd[0]) == ["service", "port", "replicas", "memory_mb", "log_level"], "bad header")
+        e = EXP[key]; need([r["service"] for r in rd] == sorted(e), "rows must be one per service, sorted")
+        for r in rd:
+            c = e[r["service"]]; need(int(r["port"]) == c["port"] and int(r["replicas"]) == c["replicas"] and int(r["memory_mb"]) == c["memory_mb"] and r["log_level"] == c["log_level"], "bad row " + r["service"])
+    def t3(): _matrix("orig")
+    def t6():
+        d = load_json("out/issues.json"); need(isinstance(d, list), "issues.json must be a list")
+        for i, x in enumerate(d): need(isinstance(x, dict) and all(isinstance(x.get(k), str) and x[k].strip() for k in ("service", "code", "detail")), f"entry {i}: service, code and detail strings required")
+        need(sorted((x["service"], x["code"]) for x in d) == sorted(EXP["issues"]), f"issue set differs: {sorted((x['service'], x['code']) for x in d)}")
+    def t7():
+        for name, e in EXP["fixed"].items(): need(_cfg(name) == e, f"{name}.json differs from the expected fixed config")
+    def t8(): _matrix("fixed")
+    def t10():
+        txt = read("docs/CONFIG.md")
+        for h in ("Services", "Ports", "Dependencies", "Policy"): need(re.search(r"^##\s+" + h, txt, re.M | re.I), "missing section " + h)
+        rows = md_rows("docs/CONFIG.md", "ports"); got = {r[0].strip("* `"): num(r[1]) for r in rows if len(r) >= 2 and num(r[1]) is not None}
+        for n, c in EXP["fixed"].items(): need(got.get(n) == c["port"], f"{n}: {got.get(n)} != {c['port']}")
+    def t11():
+        need((W / "scripts/check_configs.py").exists(), "missing scripts/check_configs.py")
+        rc, out, err = run("python3 scripts/check_configs.py"); need(rc == 0 and "OK" in out, f"clean configs must exit 0 and print OK: rc={rc} {out!r}")
+        saved = {n: (W / f"configs/{n}.json").read_text(encoding="utf-8") for n in EXP["fixed"]}
+        try:
+            web = json.loads(saved["web"]); web["port"] = 8080; (W / "configs/web.json").write_text(json.dumps(web))
+            db = json.loads(saved["db"]); db["log_level"] = "verbose"; (W / "configs/db.json").write_text(json.dumps(db))
+            wk = json.loads(saved["worker"]); wk["depends_on"] = ["api", "cache"]; (W / "configs/worker.json").write_text(json.dumps(wk))
+            rc, out, err = run("python3 scripts/check_configs.py")
+        finally:
+            for n, t in saved.items(): (W / f"configs/{n}.json").write_text(t, encoding="utf-8")
+        need(rc == 1, f"broken configs must exit 1, got {rc}")
+        for line in ("api: port_conflict", "web: port_conflict", "db: invalid_log_level", "worker: unknown_dependency"): need(line in out, f"missing line {line!r} in output: {out!r}")
+
+
+    if __name__ == "__main__":
+        fn = globals().get(sys.argv[1]) if len(sys.argv) > 1 else None
+        need(callable(fn), "unknown check " + str(sys.argv[1:]))
+        fn()
+        print("OK")
+turns:
+- prompt: Which TCP port does each service in configs/ listen on? Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: ['api\D{0,15}8080|8080\D{0,15}api', 'db\D{0,15}5432|5432\D{0,15}db', 'web\D{0,15}8080|8080\D{0,15}web', 'worker\D{0,15}9000|9000\D{0,15}worker']
+- prompt: Which services run more than one replica? Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: [api, web, worker]
+- prompt: Create out/matrix.csv with the header service,port,replicas,memory_mb,log_level and one row per service sorted by service name, from
+    the files in configs/.
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t3
+    hidden: [_grade.py]
+    timeout: 60
+- prompt: What is the total memory in MB the whole fleet needs (sum of replicas times memory_mb over all services)? Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: ['(?<![\d,.])8,192(?!\d)|(?<![\d,.])8192(?!\d)']
+- prompt: Check the configs against docs/policy.md. Do two services share a port? Name the port and the services. Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: ['8080', api, web]
+- prompt: 'Write out/issues.json: a JSON array with one object per policy violation, with string keys service, code (`port_conflict`, `unknown_dependency`
+    or `invalid_log_level`) and detail. A port conflict is reported once for each service involved.'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t6
+    hidden: [_grade.py]
+    timeout: 60
+- prompt: 'Fix the violations in configs/: give web port 8081, drop dependencies on services that do not exist, and set invalid log levels to
+    info. Change nothing else in those files.'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t7
+    hidden: [_grade.py]
+    timeout: 60
+- prompt: Regenerate out/matrix.csv from the fixed configs.
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t8
+    hidden: [_grade.py]
+    timeout: 60
+- prompt: Following depends_on, what is the longest dependency chain in the fixed configs? Give it as service names in start order from the most
+    dependent service. Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: ['web\D{1,12}api\D{1,12}db']
+- prompt: Write docs/CONFIG.md with level-2 sections Services, Ports, Dependencies and Policy. Ports must contain a table with service in the
+    first column and its port in the second, matching the current configs.
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t10
+    hidden: [_grade.py]
+    timeout: 60
+- prompt: 'Create scripts/check_configs.py: it reads configs/*.json, checks the three rules in docs/policy.md, prints one `<service>: <code>`
+    line per violation (codes as in out/issues.json) and exits 1; with no violations it prints `OK` and exits 0. Run it on the current configs.'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t11
+    hidden: [_grade.py]
+    timeout: 60
+- prompt: Add a Usage section to README.md showing how to run the checker and what its exit codes mean.
+  checks:
+  - kind: doc_sections
+    path: README.md
+    headings: [Usage]
+  - {kind: file_regex, path: README.md, pattern: scripts/check_configs\.py}
+  - {kind: file_regex, path: README.md, pattern: exit}

@@ -1,0 +1,109 @@
+# Pilot scenario 5/5: mixed (implement + explain + docs) with TWO 7-minute gaps (cache expiry).
+id: rust-wordcount
+task_type: mixed
+language: rust
+split: pilot
+default_gap_s: 10
+source:
+  desc: "Aider polyglot-benchmark rust/word-count (Exercism), outside the S2 slice"
+  repo: https://github.com/Aider-AI/polyglot-benchmark
+  sha: 7e0611e77b54e2dea774cdc0aa00cf9f7ed6144f
+workspace:
+  kind: git
+  repo: https://github.com/Aider-AI/polyglot-benchmark
+  sha: 7e0611e77b54e2dea774cdc0aa00cf9f7ed6144f
+  subdir: rust/exercises/practice/word-count
+  local_hint: ~/dev/afast-campaign-corrected-polyglot-20260919/polyglot/polyglot-benchmark
+  remove: [.meta]
+protected: [tests/word-count.rs]
+hidden_files:
+  tests/hidden_top_n.rs: |
+    use word_count::*;
+
+    #[test]
+    fn orders_by_count_then_alphabetically() {
+        let r = top_n("b a b c c c", 2);
+        assert_eq!(r, vec![("c".to_string(), 3), ("b".to_string(), 2)]);
+    }
+
+    #[test]
+    fn ties_break_alphabetically() {
+        let r = top_n("b a", 5);
+        assert_eq!(r, vec![("a".to_string(), 1), ("b".to_string(), 1)]);
+    }
+
+    #[test]
+    fn zero_is_empty() {
+        assert!(top_n("a", 0).is_empty());
+    }
+
+    #[test]
+    fn normalises_case_and_punctuation() {
+        assert_eq!(top_n("Hello, hello! world", 1), vec![("hello".to_string(), 2)]);
+    }
+  tests/hidden_unique.rs: |
+    use word_count::*;
+
+    #[test]
+    fn counts_distinct_words() {
+        assert_eq!(unique_count("one fish two fish"), 3);
+    }
+
+    #[test]
+    fn empty_is_zero() {
+        assert_eq!(unique_count(""), 0);
+    }
+
+    #[test]
+    fn case_insensitive() {
+        assert_eq!(unique_count("A a"), 1);
+    }
+turns:
+  - prompt: >-
+      Read .docs/instructions.md and implement `word_count` in src/lib.rs so the provided tests in
+      tests/word-count.rs pass (some are marked #[ignore]; run them all with
+      `cargo test --offline -- --include-ignored`).
+    checks:
+      - {kind: tests, runner: rust, files: [tests/word-count.rs], restore: [tests/word-count.rs]}
+  - prompt: >-
+      In three to five sentences, explain how your tokenizer treats apostrophes, punctuation and
+      letter case, and why. Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: ['apostroph', 'punctuation', 'lower|case']}
+  - prompt: >-
+      Add `pub fn top_n(words: &str, n: usize) -> Vec<(String, u32)>` returning the n most frequent
+      words, ordered by count descending and then alphabetically ascending. n larger than the
+      number of distinct words returns them all; n == 0 returns an empty vec.
+    gap_before_s: 420
+    checks:
+      - {kind: tests, runner: rust, files: [tests/word-count.rs], restore: [tests/word-count.rs], hidden: [tests/hidden_top_n.rs]}
+  - prompt: >-
+      Add unit tests for `top_n` inside src/lib.rs in a `#[cfg(test)] mod tests` block: at least
+      three `#[test]` functions. Run `cargo test --offline`.
+    checks:
+      - {kind: file_regex, path: src/lib.rs, pattern: '#\[test\]', min_count: 3}
+      - {kind: tests, runner: rust, files: [tests/word-count.rs], restore: [tests/word-count.rs], hidden: [tests/hidden_top_n.rs]}
+  - prompt: >-
+      Refactor src/lib.rs: extract the tokenizing into a private helper function used by both
+      `word_count` and `top_n`. No behaviour change; all tests must keep passing.
+    checks:
+      - {kind: file_regex, path: src/lib.rs, pattern: '^\s*fn [a-z_]+\(', min_count: 1}
+      - {kind: tests, runner: rust, files: [tests/word-count.rs], restore: [tests/word-count.rs], hidden: [tests/hidden_top_n.rs]}
+  - prompt: >-
+      Add rustdoc comments (`///`) with an `# Examples` section containing a doctest for both
+      `word_count` and `top_n`. Run `cargo test --offline --doc`.
+    gap_before_s: 420
+    checks:
+      - {kind: file_regex, path: src/lib.rs, pattern: '# Examples', min_count: 2}
+      - {kind: tests, runner: cmd, cmd: 'cargo test --offline --doc', expect_regex: 'test result: ok', restore: [tests/word-count.rs], hidden: [tests/hidden_top_n.rs]}
+  - prompt: >-
+      In three to five sentences, state the time and space complexity of `word_count` and `top_n`
+      in terms of the input length and number of distinct words, and name the data structures
+      responsible. Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: ['HashMap', 'O\(', 'sort']}
+  - prompt: >-
+      Add `pub fn unique_count(words: &str) -> usize` returning the number of distinct words, with
+      the same normalisation as `word_count`, and reuse the tokenizing helper. Keep all tests passing.
+    checks:
+      - {kind: tests, runner: rust, files: [tests/word-count.rs], restore: [tests/word-count.rs], hidden: [tests/hidden_top_n.rs, tests/hidden_unique.rs]}

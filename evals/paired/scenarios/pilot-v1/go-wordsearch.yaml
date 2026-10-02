@@ -1,0 +1,111 @@
+# Pilot scenario 2/5: polyglot-style feature work (Go). go/word-search is outside the S2 slice.
+id: go-wordsearch
+task_type: feature
+language: go
+split: pilot
+source:
+  desc: "Aider polyglot-benchmark go/word-search (Exercism), outside the S2 slice"
+  repo: https://github.com/Aider-AI/polyglot-benchmark
+  sha: 7e0611e77b54e2dea774cdc0aa00cf9f7ed6144f
+workspace:
+  kind: git
+  repo: https://github.com/Aider-AI/polyglot-benchmark
+  sha: 7e0611e77b54e2dea774cdc0aa00cf9f7ed6144f
+  subdir: go/exercises/practice/word-search
+  local_hint: ~/dev/afast-campaign-corrected-polyglot-20260919/polyglot/polyglot-benchmark
+  remove: [.meta]
+protected: [word_search_test.go, cases_test.go]
+hidden_files:
+  hidden_count_test.go: |
+    package wordsearch
+
+    import "testing"
+
+    func TestCountAllFound(t *testing.T) {
+    	n, err := Count([]string{"clojure"}, []string{"clojurermt"})
+    	if err != nil || n != 1 {
+    		t.Fatalf("got %d, %v", n, err)
+    	}
+    }
+
+    func TestCountIgnoresMissingWords(t *testing.T) {
+    	n, err := Count([]string{"clojure", "xyz"}, []string{"clojurermt"})
+    	if err != nil || n != 1 {
+    		t.Fatalf("got %d, %v", n, err)
+    	}
+    }
+
+    func TestCountNone(t *testing.T) {
+    	n, err := Count([]string{"zzz"}, []string{"abc"})
+    	if err != nil || n != 0 {
+    		t.Fatalf("got %d, %v", n, err)
+    	}
+    }
+
+    func TestCountDiagonal(t *testing.T) {
+    	n, err := Count([]string{"cc"}, []string{"co", "oc"})
+    	if err != nil || n != 1 {
+    		t.Fatalf("got %d, %v", n, err)
+    	}
+    }
+  hidden_ragged_test.go: |
+    package wordsearch
+
+    import "testing"
+
+    func TestRaggedPuzzleIsAnErrorNotAPanic(t *testing.T) {
+    	if _, err := Solve([]string{"ab"}, []string{"abc", "ab"}); err == nil {
+    		t.Fatal("Solve: expected error for ragged puzzle")
+    	}
+    	if _, err := Count([]string{"ab"}, []string{"abc", "ab"}); err == nil {
+    		t.Fatal("Count: expected error for ragged puzzle")
+    	}
+    }
+turns:
+  - prompt: >-
+      Read .docs/instructions.md and implement `Solve` in word_search.go so that `go test ./...`
+      passes. Do not edit the provided test files.
+    checks:
+      - {kind: tests, runner: go, restore: [word_search_test.go, cases_test.go]}
+  - prompt: >-
+      Add `func Count(words []string, puzzle []string) (int, error)` that returns how many of the
+      words can be found in the puzzle. Words that cannot be found are simply not counted (no error
+      for those); it returns an error only for an invalid puzzle (see the next request).
+    checks:
+      - {kind: tests, runner: go, restore: [word_search_test.go, cases_test.go], hidden: [hidden_count_test.go]}
+  - prompt: >-
+      Make both `Solve` and `Count` return an error (never panic) when the puzzle rows are not all
+      the same length.
+    checks:
+      - {kind: tests, runner: go, restore: [word_search_test.go, cases_test.go], hidden: [hidden_count_test.go, hidden_ragged_test.go]}
+  - prompt: >-
+      Refactor word_search.go for readability: pull the direction handling and the per-word search
+      into small unexported helper functions, with no behaviour change. Keep all tests passing.
+    checks:
+      - {kind: file_regex, path: word_search.go, pattern: '^func [a-z]', min_count: 2}
+      - {kind: tests, runner: go, restore: [word_search_test.go, cases_test.go], hidden: [hidden_count_test.go, hidden_ragged_test.go]}
+  - prompt: >-
+      Add your own tests in a new file `extra_test.go` (package wordsearch): at least five test
+      functions covering `Count` and the ragged-puzzle error. Run `go test ./...`.
+    checks:
+      - {kind: file_regex, path: extra_test.go, pattern: '^func Test', min_count: 5}
+      - {kind: tests, runner: go, restore: [word_search_test.go, cases_test.go], hidden: [hidden_count_test.go, hidden_ragged_test.go]}
+  - prompt: >-
+      In four to six sentences, explain how your search enumerates directions and how the
+      coordinates of the first and last letter are reported. Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: ['direction', 'diagonal', 'first', 'last|end']}
+  - prompt: >-
+      Add Go doc comments to `Solve` and `Count` (each comment must start with the function name)
+      describing parameters, results and the error cases.
+    checks:
+      - {kind: file_regex, path: word_search.go, pattern: '^// Solve ', min_count: 1}
+      - {kind: file_regex, path: word_search.go, pattern: '^// Count ', min_count: 1}
+      - {kind: tests, runner: go, restore: [word_search_test.go, cases_test.go], hidden: [hidden_count_test.go, hidden_ragged_test.go]}
+  - prompt: >-
+      Add a benchmark `BenchmarkCount` in a new file `bench_test.go` that exercises Count on a
+      10x10 puzzle with several words, and run it once with
+      `go test -run xxx -bench Count -benchtime 1x ./...`.
+    checks:
+      - {kind: file_regex, path: bench_test.go, pattern: 'func BenchmarkCount'}
+      - {kind: tests, runner: cmd, cmd: 'go test -run xxx -bench Count -benchtime 1x ./...', expect_regex: 'BenchmarkCount', restore: [word_search_test.go, cases_test.go], hidden: [hidden_count_test.go, hidden_ragged_test.go]}

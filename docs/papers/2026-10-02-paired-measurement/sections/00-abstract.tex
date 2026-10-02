@@ -1,0 +1,20 @@
+\begin{center}\textbf{Abstract}\end{center}
+\small
+An AI coding agent can hand some of its work to a cheaper model. Whether that saves money in a long
+conversation is hard to estimate, because providers cache the conversation separately for each model and
+a switch throws that cache away. We stopped estimating and measured. For each of \NScenarios\ scripted
+\MinTurns--\MaxTurns-turn sessions, the plain host model, the shipped router (which re-chooses its model at
+the start of each turn), a ``sticky'' router that chooses a model once and never switches, and plain Sonnet
+(plus, on a \AAPct\,\% subsample, a second plain copy) were launched within seconds of each other from one
+frozen workspace, each with its own cache key, twice on each of two host models: \NSessions\ sessions in
+all. Hypotheses, thresholds, split and decision rule were preregistered; the estimator was written after the
+data were collected. On the \NTest\ held-out scenarios, with Fable~5.1 as host at our price table, sticky
+routing cost \CfFableStickyPairTwo\X\ as much as the plain host (95\,\% confidence interval
+\CfFableStickyPairCITwo), with turn-pass fraction inside the preregistered margin; plain Sonnet cost about
+the same (\CfFableSonnetPairTwo\X). With Opus~5.5 as host, every routing arm cost more
+(\CfOpusStickyPairTwo\X--\CfOpusSonnetPairTwo\X; \CfOpusStickyArmTwo\X--\CfOpusSonnetArmTwo\X\ without the
+quality filter); that result depends on Opus's cheap cache reads and would reverse if they cost about
+\BEStickyPair\ instead of \PriceOpusRead\ dollars per million tokens. The sticky policy cost less than the
+shipped one on both hosts. A savings model fitted on the training scenarios passed its preregistered pooled
+check on the held-out ones. The measurement cost \$\SpendLedger.
+\normalsize

@@ -1,0 +1,158 @@
+# main-v1 scenario: mahmoud/boltons, tableutils.Table.to_text crashes on degenerate tables, fixed upstream in eb659013; workspace is its parent
+# Workspace = parent of the upstream fix commit; hidden tests = the fix commit's tests (+ scenario-authored edge tests).
+id: boltons-tableutils
+task_type: bugfix
+language: python
+split: train
+source:
+  desc: >-
+    mahmoud/boltons, tableutils.Table.to_text crashes on degenerate tables, fixed upstream in eb659013;
+    workspace is its parent
+  repo: https://github.com/mahmoud/boltons.git
+  sha: e66cade323f5c11cebb4bd0f099e634b245adccd
+  fix_sha: eb659013fbe4f355561fbead2116868366ba6e26
+workspace:
+  kind: git
+  repo: https://github.com/mahmoud/boltons.git
+  sha: e66cade323f5c11cebb4bd0f099e634b245adccd
+  local_hint: ~/dev/afast-paired-src/boltons
+  remove:
+  - .omp
+hidden_files:
+  tests/test_tableutils.py:
+    from_git:
+      repo: https://github.com/mahmoud/boltons.git
+      sha: eb659013fbe4f355561fbead2116868366ba6e26
+      path: tests/test_tableutils.py
+      local_hint: ~/dev/afast-paired-src/boltons
+  tests/test_tableutils_hidden_edge.py: |
+    from boltons.tableutils import Table
+
+
+    def test_header_only_table_renders_header_and_rule():
+        t = Table([], headers=['a', 'bb'])
+        assert t.to_text().splitlines() == ['a | bb', '--|---']
+
+
+    def test_header_only_table_without_headers_is_empty():
+        assert Table([], headers=['a', 'bb']).to_text(with_headers=False) == ''
+
+
+    def test_header_only_table_with_none_header():
+        lines = Table([], headers=[None, 'x']).to_text().splitlines()
+        assert lines[0] == 'None | x'
+        assert len(lines) == 2
+turns:
+- prompt: >-
+    `boltons.tableutils.Table.to_text()` crashes on some unusual tables: `Table([[]]).to_text()` raises
+    ValueError (max() of an empty sequence), a table with a `None` header raises AttributeError ('NoneType'
+    object has no attribute 'center'), and a table that has fewer headers than columns raises IndexError.
+    Find the causes in boltons/tableutils.py and fix them. Run tests from this directory with `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1
+    python3 -m pytest -q tests`.
+  checks:
+  - kind: tests
+    runner: python
+    files:
+    - tests
+    hidden:
+    - tests/test_tableutils.py
+- prompt: >-
+    In three to five sentences explain the root cause: which functions were involved and which expressions
+    produced each of the three crashes. Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all:
+    - to_text
+    - max|_set_width
+    any:
+    - None
+    - center
+    - pad
+    - IndexError
+    - default
+    - empty
+    min_any: 2
+- prompt: >-
+    Add a regression test file `tests/test_tableutils_regression.py` with at least three test functions
+    that reproduce these crashes through the public `Table(...).to_text()` call, and run it.
+  checks:
+  - kind: file_regex
+    path: tests/test_tableutils_regression.py
+    pattern: ^\s*def test_
+    min_count: 3
+  - kind: tests
+    runner: python
+    files:
+    - tests/test_tableutils_regression.py
+- prompt: >-
+    One more case: a table that has headers but no data rows at all, e.g. `Table([], headers=['a', 'bb']).to_text()`,
+    still crashes with IndexError. It should render just the header row and the separator rule (`'a |
+    bb'` then `'--|---'`), and an empty string with `with_headers=False`. Fix it in `to_text`, and add
+    a test for it to tests/test_tableutils_regression.py.
+  checks:
+  - kind: file_regex
+    path: tests/test_tableutils_regression.py
+    pattern: Table\(\[\],\s*headers=
+  - kind: tests
+    runner: python
+    files:
+    - tests
+    hidden:
+    - tests/test_tableutils.py
+    - tests/test_tableutils_hidden_edge.py
+- prompt: >-
+    Refactor `Table.to_text` for clarity without changing behaviour: move the column-width computation
+    into a small private method named `_column_widths` on `Table`. The whole test suite must still pass.
+  checks:
+  - kind: file_regex
+    path: boltons/tableutils.py
+    pattern: def _column_widths\(
+  - kind: tests
+    runner: python
+    files:
+    - tests
+    hidden:
+    - tests/test_tableutils.py
+    - tests/test_tableutils_hidden_edge.py
+- prompt: >-
+    Update the docstring of `Table.to_text`: say what happens with `None` header values, with an empty
+    or shorter-than-the-table header list, and with a table that has no data rows.
+  checks:
+  - kind: file_regex
+    path: boltons/tableutils.py
+    pattern: def to_text\(self[^)]*\):\s+"""(?:(?!""")[\s\S])*?\bNone\b
+  - kind: file_regex
+    path: boltons/tableutils.py
+    pattern: def to_text\(self[^)]*\):\s+"""(?:(?!""")[\s\S])*?(empty|no data|no rows)
+  - kind: tests
+    runner: python
+    files:
+    - tests
+    hidden:
+    - tests/test_tableutils.py
+    - tests/test_tableutils_hidden_edge.py
+- prompt: >-
+    Add a changelog entry for this fix at the top of CHANGELOG.md, under a new `## Unreleased` heading
+    above the newest release, in the style of the existing entries (mention `tableutils.Table`).
+  checks:
+  - kind: doc_sections
+    path: CHANGELOG.md
+    headings:
+    - Unreleased
+  - kind: file_regex
+    path: CHANGELOG.md
+    pattern: '## Unreleased[\s\S]{0,400}tableutils'
+- prompt: >-
+    Review the changes you made in this session as a code reviewer would: list each file you changed,
+    what changed, and any remaining risk or edge case you did not cover. Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all:
+    - tableutils\.py
+    - test
+    any:
+    - risk
+    - edge
+    - remaining
+    - not cover
+    min_any: 1

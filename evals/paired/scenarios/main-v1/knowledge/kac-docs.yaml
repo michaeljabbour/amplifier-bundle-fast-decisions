@@ -1,0 +1,84 @@
+# olivierlacan/keep-a-changelog at 08d0df5 (docs-heavy Middleman site, 2.0.0 era) plus a planted samples/draft.md for the prose linter
+id: kac-docs
+task_type: docs
+language: ruby
+split: train
+source:
+  desc: olivierlacan/keep-a-changelog at 08d0df5 (docs-heavy Middleman site, 2.0.0 era) plus a planted samples/draft.md for the prose linter
+  repo: https://github.com/olivierlacan/keep-a-changelog.git
+  sha: 08d0df5a7e93b71d902def8be0f0d40025b56289
+workspace:
+  kind: git
+  repo: https://github.com/olivierlacan/keep-a-changelog.git
+  sha: 08d0df5a7e93b71d902def8be0f0d40025b56289
+  local_hint: ~/dev/afast-paired-src/keep-a-changelog
+  add_files:
+    samples/draft.md: |
+      # Release notes draft
+
+      We ship a new version every month. Obviously, you should read the notes first.
+
+      The release process is simply a matter of running one command, which you will of course need to bolt on to your CI.
+
+      ```
+      ship it obviously
+      ```
+
+      Just add a line to the changelog, and call out breaking changes at the top; the relationship between versions is well-formed.
+      A parser may chase down stale links, and the hook is that everyone knows this already, so use it — carefully — as an aside — then another — here.
+turns:
+- prompt: 'From AGENTS.md: what is the technical stack and what are the main technical principles of this project (hosting, language, tooling)? Do not change any files.'
+  checks:
+  - {kind: keyed_facts, all: [Middleman, static, GitHub Pages, Rake, Minitest, Playwright]}
+- prompt: How many language directories are under source/ (not counting assets, layouts, partials and translations), and which spec versions does the English directory contain? Verify by listing. Do not change any files.
+  checks:
+  - {kind: keyed_facts, all: [\b29\b, 0\.3\.0, 1\.0\.0, 1\.1\.0, 2\.0\.0]}
+- prompt: Run the translation coverage tool in CSV mode (`ruby translation_coverage.rb --format csv`) and tell me how many languages have each of the versions 0.3.0, 1.0.0, 1.1.0 and 2.0.0. Do not change any files.
+  checks:
+  - {kind: keyed_facts, all: [\b13\b, \b24\b, \b22\b, '2\.0\.0.{0,60}(none|no |zero|\b0\b)']}
+- prompt: Which command-line options does `ruby translation_coverage.rb --help` list? Name each. Do not change any files.
+  checks:
+  - {kind: keyed_facts, all: [--migration, --consistency, --lint, --segments, --dashboard, --format]}
+- prompt: Write docs/translation-howto.md with level-2 sections Overview, Check coverage, Lint and Dashboard, with the exact commands and the language counts you found.
+  checks:
+  - {kind: doc_sections, path: docs/translation-howto.md, headings: [Overview, Check coverage, Lint, Dashboard]}
+  - {kind: file_regex, path: docs/translation-howto.md, pattern: translation_coverage\.rb}
+  - {kind: file_regex, path: docs/translation-howto.md, pattern: --lint}
+  - {kind: file_regex, path: docs/translation-howto.md, pattern: --dashboard}
+  - {kind: file_regex, path: docs/translation-howto.md, pattern: \b24\b}
+- prompt: 'Explain how tools/prose_lint.rb works: the severities, the two numeric thresholds (name the constants), what content is skipped and how a false positive is suppressed. Do not change any files.'
+  checks:
+  - {kind: keyed_facts, all: [LONG_SENTENCE_WORDS, \b45\b, MAX_EM_DASHES_PER_SENTENCE, prose-lint-ignore, error, warn, fence|code]}
+- prompt: Read samples/draft.md and, from the rules in tools/prose_lint.rb only (do not run it yet), predict which phrases will be flagged and whether the fenced block is linted. Do not change any files.
+  checks:
+  - {kind: keyed_facts, all: [Obviously, bolt on, chase down, well-formed, of course, everyone knows, fence|code block|skipped]}
+- prompt: 'Write scripts/lint_draft.rb: `ruby scripts/lint_draft.rb PATH` loads tools/prose_lint.rb (require_relative) and prints one line per finding as `line:severity:rule:match`, then a last line `errors=N warns=M`. Run it on samples/draft.md.'
+  checks:
+  - {kind: file_regex, path: scripts/lint_draft.rb, pattern: ProseLint}
+  - {kind: tests, runner: cmd, cmd: 'ruby scripts/lint_draft.rb samples/draft.md | tail -1 | grep -qx ''errors=9 warns=3'' && printf ''We ship it. Just so.\n'' > _x.md && ruby scripts/lint_draft.rb _x.md | grep -qx ''1:error:ship:ship'' && ruby scripts/lint_draft.rb _x.md | grep -qx ''1:warn:just:Just'' && ruby scripts/lint_draft.rb _x.md | tail -1 | grep -qx ''errors=1 warns=1'''}
+- prompt: 'Write docs/draft-lint-report.md: a markdown table with columns Line, Severity, Rule and Match, one row per finding of the real run on samples/draft.md.'
+  checks:
+  - {kind: file_regex, path: docs/draft-lint-report.md, pattern: ^\|\s*\d+\s*\|\s*error\s*\|, min_count: 9}
+  - {kind: file_regex, path: docs/draft-lint-report.md, pattern: ^\|\s*\d+\s*\|\s*warn\s*\|, min_count: 3}
+- prompt: 'What does tools/changelog_release.rb do: the subcommands, what `--dry-run` does, and how it is made testable? Do not change any files.'
+  checks:
+  - {kind: keyed_facts, all: [create, sync, --dry-run, idempotent|skips, GitHubCli, Runner|inject|fake]}
+- prompt: From CHANGELOG.md, what is the new tagline in 2.0.0 and which changes are marked **Breaking:**? Do not change any files.
+  checks:
+  - {kind: keyed_facts, all: [Clearly document the evolution of your projects, Breaking, FAQ, tagline|Restructured, 'anchors?|links? no longer resolve']}
+- prompt: Write docs/translator-migration.md with level-2 sections Overview, What changed and What to do for translators moving to 2.0.0, mentioning the tool option that shows the migration workload.
+  checks:
+  - {kind: doc_sections, path: docs/translator-migration.md, headings: [Overview, What changed, What to do]}
+  - {kind: file_regex, path: docs/translator-migration.md, pattern: --migration}
+  - {kind: file_regex, path: docs/translator-migration.md, pattern: FAQ}
+  - {kind: file_regex, path: docs/translator-migration.md, pattern: Clearly document the evolution}
+- prompt: List the Ruby test files under test/ and the kind of test in test/visual. Do not change any files.
+  checks:
+  - {kind: keyed_facts, all: [build_test, changelog_pin_test, changelog_release_test, prose_lint_test, translation_coverage_test, version_routing_test, Playwright|visual]}
+- prompt: Write ARCHITECTURE.md summarising source/, tools/, test/, data/ and docs/ with one bullet each, including the number of language directories.
+  checks:
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: source/}
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: tools/}
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: test/}
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: \b29\b}
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: prose_lint\.rb}

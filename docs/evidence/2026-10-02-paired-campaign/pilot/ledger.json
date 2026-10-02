@@ -1,0 +1,17 @@
+{
+  "budget_usd": 150.0,
+  "reserved": {},
+  "spent": {
+    "preflight#1790856986251": 2.8388,
+    "slugify-bugfix-r1-fable#a1": 13.513,
+    "go-wordsearch-r1-opus#a1": 6.9661,
+    "rust-wordcount-r1-fable#a1": 13.5449,
+    "go-wordsearch-r1-fable#a1": 9.3369,
+    "slugify-review-r1-fable#a1": 11.017,
+    "slugify-bugfix-r1-opus#a1": 12.2713,
+    "py-bowling-r1-opus#a1": 14.5181,
+    "rust-wordcount-r1-opus#a1": 9.2052,
+    "slugify-review-r1-opus#a1": 7.8681,
+    "py-bowling-r1-fable#a1": 18.4682
+  }
+}

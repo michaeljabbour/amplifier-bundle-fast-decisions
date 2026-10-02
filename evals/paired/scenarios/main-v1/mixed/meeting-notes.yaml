@@ -1,0 +1,204 @@
+# Meeting notes markdown: extract open action items to a CSV, per-owner digest, reassignment revision, status email.
+id: meeting-notes
+task_type: mixed
+language: python
+split: train
+source:
+  desc: 'Meeting notes markdown: extract open action items to a CSV, per-owner digest, reassignment revision, status email.'
+  kind: self-authored deterministic workspace
+  adapted_from: [~/dev/amplifier-agent/.amplifier/evaluation/tasks/automation-bench/operations-notion-gmail-checklist-update/meta.yaml (checklist/action-item
+      upkeep) and hr/marketing launch-checklist tasks (bodies not vendored; authored from titles)]
+workspace:
+  kind: inline
+  files:
+    README.md: |
+      # Project notes
+
+      `notes.md` holds four meetings. Action items are checklist lines: `- [ ] @owner text (due YYYY-MM-DD)`; `[x]` means done. Today is 2025-04-10.
+    notes.md: |
+      # Meeting notes
+
+      ## 2025-03-24 Kickoff
+
+      We agreed the scope is unchanged.
+
+      - [ ] @Dana Draft the vendor shortlist (due 2025-04-02)
+      - [x] @Eli Send the kickoff invite (due 2025-03-28)
+      - [ ] @Gus Book the demo room (due 2025-04-09)
+
+      Discussion notes: nothing further recorded.
+
+      ## 2025-03-27 Pricing review
+
+      Budget remains on track.
+
+      - [ ] @Farah Review the pricing sheet (due 2025-04-04)
+      - [ ] @Dana Update the risk register (due 2025-04-18)
+      - [x] @Gus Share last quarter's metrics (due 2025-03-31)
+
+      Discussion notes: nothing further recorded.
+
+      ## 2025-04-01 Product sync
+
+      No blockers were raised.
+
+      - [ ] @Eli Prototype the onboarding flow (due 2025-04-16)
+      - [ ] @Dana Interview two customers (due 2025-04-11)
+      - [ ] @Farah Write the launch checklist (due 2025-04-07)
+
+      Discussion notes: nothing further recorded.
+
+      ## 2025-04-08 Launch readiness
+
+      The team will reconvene next week.
+
+      - [ ] @Eli Estimate migration effort (due 2025-04-25)
+      - [x] @Farah Confirm legal review slot (due 2025-04-03)
+      - [ ] @Gus Collect security questionnaire answers (due 2025-04-14)
+      - [ ] @Dana Prepare the board update (due 2025-04-23)
+
+      Discussion notes: nothing further recorded.
+protected: [notes.md]
+hidden_files:
+  _grade.py: |
+    import csv, json, os, re, subprocess, sys
+    from pathlib import Path
+
+    W = Path(".")
+
+
+    def fail(msg):
+        print("FAIL:", msg)
+        sys.exit(1)
+
+
+    def need(cond, msg):
+        if not cond:
+            fail(msg)
+
+
+    def load_json(rel):
+        p = W / rel
+        need(p.exists(), f"missing {rel}")
+        try:
+            return json.loads(p.read_text(encoding="utf-8"))
+        except Exception as e:  # noqa: BLE001
+            fail(f"{rel} is not valid JSON: {e}")
+
+
+    def read(rel):
+        p = W / rel
+        need(p.exists(), f"missing {rel}")
+        return p.read_text(encoding="utf-8")
+
+
+    def close(a, b, tol=0.011):
+        try:
+            return abs(float(a) - float(b)) <= tol
+        except (TypeError, ValueError):
+            return False
+
+
+    def md_rows(rel, under=None):
+        """Table rows (lists of cells) of a markdown file; with `under`, only rows inside the first heading matching it."""
+        lines = read(rel).splitlines()
+        if under:
+            out, on, lvl = [], False, 0
+            for ln in lines:
+                m = re.match(r"^(#+)\s+(.*)", ln)
+                if m:
+                    if on and len(m.group(1)) <= lvl:
+                        break
+                    if not on and re.search(under, m.group(2), re.I):
+                        on, lvl = True, len(m.group(1))
+                    continue
+                if on:
+                    out.append(ln)
+            lines = out
+        rows = []
+        for ln in lines:
+            if ln.strip().startswith("|") and not re.match(r"^\s*\|[\s:|-]+\|\s*$", ln):
+                rows.append([c.strip() for c in ln.strip().strip("|").split("|")])
+        return rows
+
+
+    def num(s):
+        m = re.search(r"-?\d[\d,]*\.?\d*", str(s))
+        return float(m.group(0).replace(",", "")) if m else None
+
+
+    def run(cmd, timeout=60):
+        p = subprocess.run(cmd, shell=True, cwd=W, capture_output=True, text=True, timeout=timeout)
+        return p.returncode, p.stdout, p.stderr
+
+    EXP = {'rows': [('2025-03-24', 'Dana', 'Draft the vendor shortlist', '2025-04-02'), ('2025-03-27', 'Farah', 'Review the pricing sheet', '2025-04-04'), ('2025-04-01', 'Farah', 'Write the launch checklist', '2025-04-07'), ('2025-03-24', 'Gus', 'Book the demo room', '2025-04-09'), ('2025-04-01', 'Dana', 'Interview two customers', '2025-04-11'), ('2025-04-08', 'Gus', 'Collect security questionnaire answers', '2025-04-14'), ('2025-04-01', 'Eli', 'Prototype the onboarding flow', '2025-04-16'), ('2025-03-27', 'Dana', 'Update the risk register', '2025-04-18'), ('2025-04-08', 'Dana', 'Prepare the board update', '2025-04-23'), ('2025-04-08', 'Eli', 'Estimate migration effort', '2025-04-25')], 're': [('2025-03-24', 'Eli', 'Draft the vendor shortlist', '2025-04-02'), ('2025-03-27', 'Farah', 'Review the pricing sheet', '2025-04-04'), ('2025-04-01', 'Farah', 'Write the launch checklist', '2025-04-07'), ('2025-03-24', 'Gus', 'Book the demo room', '2025-04-09'), ('2025-04-01', 'Eli', 'Interview two customers', '2025-04-11'), ('2025-04-08', 'Gus', 'Collect security questionnaire answers', '2025-04-14'), ('2025-04-01', 'Eli', 'Prototype the onboarding flow', '2025-04-16'), ('2025-03-27', 'Eli', 'Update the risk register', '2025-04-18'), ('2025-04-08', 'Eli', 'Prepare the board update', '2025-04-23'), ('2025-04-08', 'Eli', 'Estimate migration effort', '2025-04-25')], 'by': {'Dana': [('Draft the vendor shortlist', '2025-04-02'), ('Interview two customers', '2025-04-11'), ('Update the risk register', '2025-04-18'), ('Prepare the board update', '2025-04-23')], 'Gus': [('Book the demo room', '2025-04-09'), ('Collect security questionnaire answers', '2025-04-14')], 'Farah': [('Review the pricing sheet', '2025-04-04'), ('Write the launch checklist', '2025-04-07')], 'Eli': [('Prototype the onboarding flow', '2025-04-16'), ('Estimate migration effort', '2025-04-25')]}}
+
+    def _rows(key):
+        p = W / "actions.csv"; need(p.exists(), "missing actions.csv")
+        rd = list(csv.DictReader(open(p, encoding="utf-8"))); need(rd and list(rd[0]) == ["owner", "due", "meeting_date", "item"], "bad header")
+        got = sorted((r["owner"], r["due"], r["meeting_date"], r["item"].strip()) for r in rd)
+        exp = sorted((o, due, m, t) for m, o, t, due in EXP[key]); need(got == exp, f"rows differ ({len(got)} vs {len(exp)})")
+        need([(r["due"], r["owner"]) for r in rd] == sorted((r["due"], r["owner"]) for r in rd), "rows must be sorted by due date then owner")
+    def t2(): _rows("rows")
+    def t6(): _rows("re")
+    def t5():
+        txt = read("actions_by_owner.md"); parts = re.split(r"^##\s+", txt, flags=re.M)[1:]
+        sec = {p.split("\n", 1)[0].strip(): p for p in parts}; need(set(sec) == set(EXP["by"]), f"one section per owner needed, got {sorted(sec)}")
+        for o, its in EXP["by"].items():
+            for t, due in its: need(t in sec[o] and due in sec[o], f"{o}: missing {t}")
+
+
+    if __name__ == "__main__":
+        fn = globals().get(sys.argv[1]) if len(sys.argv) > 1 else None
+        need(callable(fn), "unknown check " + str(sys.argv[1:]))
+        fn()
+        print("OK")
+turns:
+- prompt: How many open (unchecked) action items are there across all meetings in notes.md? Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: ['(?<!\d)10(?!\d)']
+- prompt: 'Create actions.csv with the header owner,due,meeting_date,item containing one row per open action item: owner name without the @, due
+    date, the date from the meeting heading, and the item text verbatim without the checkbox, owner or due parts. Sort by due date, then owner.'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t2
+    hidden: [_grade.py]
+    timeout: 60
+- prompt: Which owner has the most open items, and how many? Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: [Dana, '(?<!\d)4(?!\d)']
+- prompt: Today is 2025-04-10. Which open items are overdue (due before today)? Give the owner and due date of each. Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: ['Dana\D{0,40}2025-04-02|2025-04-02\D{0,40}Dana', 'Gus\D{0,40}2025-04-09|2025-04-09\D{0,40}Gus', 'Farah\D{0,40}2025-04-04|2025-04-04\D{0,40}Farah',
+      'Farah\D{0,40}2025-04-07|2025-04-07\D{0,40}Farah']
+  gap_before_s: 420
+- prompt: Write actions_by_owner.md with one level-2 section per owner (the owner's name as the heading) listing their open items as bullets with
+    the due date.
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t5
+    hidden: [_grade.py]
+    timeout: 60
+- prompt: 'Dana is going on leave: reassign all of her open items to Eli in actions.csv. Leave notes.md untouched and keep the sort order.'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t6
+    hidden: [_grade.py]
+    timeout: 60
+  gap_before_s: 420
+- prompt: Draft status_email.md for the team. It needs a first line starting with `Subject:` and a body stating the number of open items and the
+    number overdue as of 2025-04-10.
+  checks:
+  - {kind: file_regex, path: status_email.md, pattern: '^Subject:'}
+  - {kind: file_regex, path: status_email.md, pattern: '(?<!\d)10(?!\d)'}
+  - {kind: file_regex, path: status_email.md, pattern: '(?<!\d)4(?!\d)'}
+- prompt: After the reassignment, how many open items does Eli hold, and who now has the fewest? Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: ['Eli\D{0,20}6(?!\d)|(?<!\d)6(?!\d)\D{0,20}Eli', Farah]

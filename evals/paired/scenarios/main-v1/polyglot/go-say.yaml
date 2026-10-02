@@ -1,0 +1,243 @@
+# main-v1 polyglot 7/20: go/say, 11 turns, short gaps.
+id: go-say
+task_type: feature
+language: go
+split: train
+default_gap_s: 10
+source:
+  desc: "Aider polyglot-benchmark go/say (Exercism), outside the S2 slice"
+  repo: https://github.com/Aider-AI/polyglot-benchmark
+  sha: 7e0611e77b54e2dea774cdc0aa00cf9f7ed6144f
+workspace:
+  kind: git
+  repo: https://github.com/Aider-AI/polyglot-benchmark
+  sha: 7e0611e77b54e2dea774cdc0aa00cf9f7ed6144f
+  subdir: go/exercises/practice/say
+  local_hint: ~/dev/afast-campaign-corrected-polyglot-20260919/polyglot/polyglot-benchmark
+  remove: [.meta]
+protected: [say_test.go, cases_test.go]
+hidden_files:
+  hidden_ordinal_test.go: |
+    package say
+
+    import "testing"
+
+    func TestSayOrdinal(t *testing.T) {
+        cases := []struct {
+            n    int64
+            want string
+        }{
+            {0, "zeroth"}, {1, "first"}, {2, "second"}, {3, "third"}, {4, "fourth"}, {5, "fifth"},
+            {8, "eighth"}, {9, "ninth"}, {12, "twelfth"}, {13, "thirteenth"}, {20, "twentieth"},
+            {21, "twenty-first"}, {22, "twenty-second"}, {30, "thirtieth"}, {40, "fortieth"},
+            {99, "ninety-ninth"}, {100, "one hundredth"}, {101, "one hundred first"},
+            {110, "one hundred tenth"}, {1000, "one thousandth"}, {1001, "one thousand first"},
+            {1000000, "one millionth"},
+            {123456, "one hundred twenty-three thousand four hundred fifty-sixth"},
+        }
+        for _, tc := range cases {
+            got, ok := SayOrdinal(tc.n)
+            if !ok || got != tc.want {
+                t.Errorf("SayOrdinal(%d) = %q, %v; want %q", tc.n, got, ok, tc.want)
+            }
+        }
+    }
+
+    func TestSayOrdinalOutOfRange(t *testing.T) {
+        for _, n := range []int64{-1, 1000000000000} {
+            if got, ok := SayOrdinal(n); ok {
+                t.Errorf("SayOrdinal(%d) = %q, want not ok", n, got)
+            }
+        }
+    }
+  hidden_any_test.go: |
+    package say
+
+    import (
+        "math"
+        "testing"
+    )
+
+    func TestSayAny(t *testing.T) {
+        cases := []struct {
+            n    int64
+            want string
+        }{
+            {0, "zero"},
+            {-1, "minus one"},
+            {-42, "minus forty-two"},
+            {1000000000000, "one trillion"},
+            {1234567890123, "one trillion two hundred thirty-four billion five hundred sixty-seven million eight hundred ninety thousand one hundred twenty-three"},
+            {math.MaxInt64, "nine quintillion two hundred twenty-three quadrillion three hundred seventy-two trillion thirty-six billion eight hundred fifty-four million seven hundred seventy-five thousand eight hundred seven"},
+            {math.MinInt64, "minus nine quintillion two hundred twenty-three quadrillion three hundred seventy-two trillion thirty-six billion eight hundred fifty-four million seven hundred seventy-five thousand eight hundred eight"},
+            {-math.MaxInt64, "minus nine quintillion two hundred twenty-three quadrillion three hundred seventy-two trillion thirty-six billion eight hundred fifty-four million seven hundred seventy-five thousand eight hundred seven"},
+        }
+        for _, tc := range cases {
+            if got := SayAny(tc.n); got != tc.want {
+                t.Errorf("SayAny(%d) = %q; want %q", tc.n, got, tc.want)
+            }
+        }
+    }
+
+    func TestSayAnyAgreesWithSayInRange(t *testing.T) {
+        for _, n := range []int64{0, 7, 19, 20, 99, 100, 999, 1000, 12345, 999999999999} {
+            want, _ := Say(n)
+            if got := SayAny(n); got != want {
+                t.Errorf("SayAny(%d) = %q; Say gives %q", n, got, want)
+            }
+        }
+    }
+  hidden_british_test.go: |
+    package say
+
+    import "testing"
+
+    func TestSayBritish(t *testing.T) {
+        cases := []struct {
+            n    int64
+            want string
+        }{
+            {0, "zero"}, {21, "twenty-one"}, {100, "one hundred"}, {101, "one hundred and one"},
+            {110, "one hundred and ten"}, {342, "three hundred and forty-two"},
+            {1000, "one thousand"}, {1001, "one thousand and one"}, {1100, "one thousand one hundred"},
+            {1101, "one thousand one hundred and one"}, {100000, "one hundred thousand"},
+            {101000, "one hundred and one thousand"}, {1000025, "one million and twenty-five"},
+            {1001001, "one million one thousand and one"},
+            {999999999999, "nine hundred and ninety-nine billion nine hundred and ninety-nine million nine hundred and ninety-nine thousand nine hundred and ninety-nine"},
+        }
+        for _, tc := range cases {
+            got, ok := SayBritish(tc.n)
+            if !ok || got != tc.want {
+                t.Errorf("SayBritish(%d) = %q, %v; want %q", tc.n, got, ok, tc.want)
+            }
+        }
+    }
+
+    func TestSayBritishOutOfRange(t *testing.T) {
+        for _, n := range []int64{-5, 1000000000000} {
+            if got, ok := SayBritish(n); ok {
+                t.Errorf("SayBritish(%d) = %q, want not ok", n, got)
+            }
+        }
+    }
+  hidden_parse_test.go: |
+    package say
+
+    import "testing"
+
+    func TestParseWords(t *testing.T) {
+        cases := map[string]int64{
+            "zero": 0, "twenty-one": 21, "one hundred": 100, "one hundred twenty-three": 123,
+            "one thousand": 1000, "Forty-Two": 42, "one hundred and one": 101,
+            "twelve thousand three hundred forty-five": 12345,
+            "nine hundred ninety-nine billion nine hundred ninety-nine million nine hundred ninety-nine thousand nine hundred ninety-nine": 999999999999,
+        }
+        for words, want := range cases {
+            got, ok := ParseWords(words)
+            if !ok || got != want {
+                t.Errorf("ParseWords(%q) = %d, %v; want %d", words, got, ok, want)
+            }
+        }
+    }
+
+    func TestParseWordsRejectsGarbage(t *testing.T) {
+        for _, s := range []string{"", "   ", "banana", "one banana", "hundred", "thousand", "and"} {
+            if got, ok := ParseWords(s); ok {
+                t.Errorf("ParseWords(%q) = %d, want not ok", s, got)
+            }
+        }
+    }
+
+    func TestRoundTrip(t *testing.T) {
+        for n := int64(0); n < 3000; n++ {
+            s, _ := Say(n)
+            if got, ok := ParseWords(s); !ok || got != n {
+                t.Fatalf("ParseWords(Say(%d)) = %d, %v (%q)", n, got, ok, s)
+            }
+            b, _ := SayBritish(n)
+            if got, ok := ParseWords(b); !ok || got != n {
+                t.Fatalf("ParseWords(SayBritish(%d)) = %d, %v (%q)", n, got, ok, b)
+            }
+        }
+        for n := int64(3000); n <= 999999999999; n = n*3 + 7 {
+            s, _ := Say(n)
+            if got, ok := ParseWords(s); !ok || got != n {
+                t.Fatalf("ParseWords(Say(%d)) = %d, %v (%q)", n, got, ok, s)
+            }
+        }
+    }
+turns:
+  - prompt: >-
+      Read .docs/instructions.md and implement `Say(n int64) (string, bool)` in say.go so that every
+      test in say_test.go passes. Run the tests with `go test ./...`.
+    checks:
+      - {kind: tests, runner: go, restore: []}
+  - prompt: >-
+      Add `SayOrdinal(n int64) (string, bool)` to say.go: it spells the number as an ordinal (1 is
+      "first", 2 "second", 12 "twelfth", 20 "twentieth", 21 "twenty-first", 100 "one hundredth",
+      123456 "one hundred twenty-three thousand four hundred fifty-sixth"). It uses the same range
+      as `Say` and reports false outside it.
+    checks:
+      - {kind: tests, runner: go, restore: [say_test.go], hidden: [hidden_ordinal_test.go]}
+  - prompt: >-
+      Add `SayAny(n int64) string` to say.go that covers every int64: negative numbers are spelled
+      with a leading "minus ", and the full positive range up to math.MaxInt64 (nine quintillion
+      ...) works. Include math.MinInt64. For numbers in Say's range it must return exactly what
+      `Say` returns.
+    checks:
+      - {kind: tests, runner: go, restore: [say_test.go], hidden: [hidden_ordinal_test.go, hidden_any_test.go]}
+  - prompt: >-
+      Add `SayBritish(n int64) (string, bool)` to say.go: same range as `Say`, but with British
+      "and": 101 is "one hundred and one", 342 "three hundred and forty-two", 1001 "one thousand and
+      one", 1000025 "one million and twenty-five"; there is no "and" in 100, 1100, 100000 ("one
+      hundred thousand") or whenever the last group is 100 or more without a remainder.
+    checks:
+      - {kind: tests, runner: go, restore: [say_test.go], hidden: [hidden_ordinal_test.go, hidden_any_test.go, hidden_british_test.go]}
+  - prompt: >-
+      Without changing any files: in four to six sentences, explain how `say` splits a large number
+      into groups of three digits and attaches the scale words (thousand, million, ...), and why
+      zero groups are skipped. Name the function(s) responsible.
+    checks:
+      - {kind: keyed_facts, all: [thousand, 'group|chunk|three', scale, 'zero|skip|0']}
+  - prompt: >-
+      Refactor say.go for readability without changing behaviour: split the big `say` function and
+      the exported helpers into small unexported functions (for example for the tens, the hundreds,
+      the scaled groups, detecting a scale word, and converting the last word to an ordinal). Keep
+      all exported signatures; run all tests.
+    checks:
+      - {kind: file_regex, path: say.go, pattern: '^func [a-z]\w*\(', min_count: 6}
+      - {kind: tests, runner: go, restore: [say_test.go], hidden: [hidden_ordinal_test.go, hidden_any_test.go, hidden_british_test.go]}
+  - prompt: >-
+      Write your own tests in a new file `extra_test.go` (package say): at least six test functions
+      covering `SayOrdinal`, `SayAny` and `SayBritish`, including table-driven cases. Run `go test
+      ./...`.
+    checks:
+      - {kind: file_regex, path: extra_test.go, pattern: '^func Test', min_count: 6}
+      - {kind: tests, runner: go, restore: [say_test.go], hidden: [hidden_ordinal_test.go, hidden_any_test.go, hidden_british_test.go]}
+  - prompt: >-
+      Add the inverse `ParseWords(s string) (int64, bool)` to say.go: it reads English words as
+      produced by `Say` or `SayBritish` (case-insensitive, hyphens and an optional "and" allowed)
+      and returns the number. Empty input, unknown words and a bare scale or "hundred" return false.
+      `ParseWords(Say(n))` and `ParseWords(SayBritish(n))` must give n back.
+    checks:
+      - {kind: tests, runner: go, restore: [say_test.go], hidden: [hidden_ordinal_test.go, hidden_any_test.go, hidden_british_test.go, hidden_parse_test.go]}
+  - prompt: >-
+      Create `README_SAY.md` documenting the package with these level-2 sections: Usage, API,
+      Ranges, Examples. Cover `Say`, `SayOrdinal`, `SayAny`, `SayBritish` and `ParseWords`, and put
+      a short runnable Go example in the Examples section.
+    checks:
+      - {kind: doc_sections, path: README_SAY.md, headings: [Usage, API, Ranges, Example]}
+      - {kind: file_regex, path: README_SAY.md, pattern: '```', min_count: 2}
+  - prompt: >-
+      Review your own changes to say.go from this session. List up to three concrete weaknesses or
+      risks (for example the special case for math.MinInt64, lenient parsing in `ParseWords`, or
+      duplicated range checks) and say which one you would address first. Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: ['MinInt64|lenient|parse|range|duplicat'], any: [first, 'risk|weak|gap|limit'], min_any: 1}
+  - prompt: >-
+      Finish up: add a Go doc comment (starting with the function name) to each exported function in
+      say.go (`Say`, `SayOrdinal`, `SayAny`, `SayBritish`, `ParseWords`), make sure `gofmt -l .`
+      prints nothing and `go vet ./...` is clean, and run the whole suite.
+    checks:
+      - {kind: file_regex, path: say.go, pattern: '^// (Say|SayOrdinal|SayAny|SayBritish|ParseWords) ', min_count: 5}
+      - {kind: tests, runner: go, restore: [say_test.go], hidden: [hidden_ordinal_test.go, hidden_any_test.go, hidden_british_test.go, hidden_parse_test.go]}

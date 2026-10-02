@@ -1,0 +1,214 @@
+# main-v1 polyglot 2/20: python/forth, 10 turns, two 7-minute gaps (before turns 5 and 8).
+id: py-forth
+task_type: bugfix
+language: python
+split: train
+default_gap_s: 10
+source:
+  desc: "Aider polyglot-benchmark python/forth (Exercism), outside the S2 slice"
+  repo: https://github.com/Aider-AI/polyglot-benchmark
+  sha: 7e0611e77b54e2dea774cdc0aa00cf9f7ed6144f
+workspace:
+  kind: git
+  repo: https://github.com/Aider-AI/polyglot-benchmark
+  sha: 7e0611e77b54e2dea774cdc0aa00cf9f7ed6144f
+  subdir: python/exercises/practice/forth
+  local_hint: ~/dev/afast-campaign-corrected-polyglot-20260919/polyglot/polyglot-benchmark
+  remove: [.meta]
+protected: [forth_test.py]
+hidden_files:
+  hidden_mutation_test.py: |
+    import unittest
+    from forth import evaluate
+
+
+    class InputIsNotMutatedTest(unittest.TestCase):
+        def test_definitions_stay_in_the_callers_list(self):
+            lines = [": foo 5 ;", "foo foo"]
+            self.assertEqual(evaluate(lines), [5, 5])
+            self.assertEqual(lines, [": foo 5 ;", "foo foo"])
+
+        def test_same_list_can_be_evaluated_twice(self):
+            lines = [": double dup + ;", "4 double"]
+            self.assertEqual(evaluate(lines), [8])
+            self.assertEqual(evaluate(lines), [8])
+
+        def test_single_line_input(self):
+            lines = ["1 2 +"]
+            evaluate(lines)
+            self.assertEqual(lines, ["1 2 +"])
+
+        def test_empty_input(self):
+            self.assertEqual(evaluate([]), [])
+  hidden_bigdiv_test.py: |
+    import unittest
+    from forth import evaluate
+
+
+    class BigIntegerDivisionTest(unittest.TestCase):
+        def test_exact_big_division(self):
+            self.assertEqual(evaluate(["100000000000000000001 3 /"]), [33333333333333333333])
+
+        def test_big_division_truncates_toward_zero(self):
+            self.assertEqual(evaluate(["-100000000000000000001 3 /"]), [-33333333333333333333])
+
+        def test_negative_divisor(self):
+            self.assertEqual(evaluate(["7 -2 /"]), [-3])
+
+        def test_both_negative(self):
+            self.assertEqual(evaluate(["-7 -2 /"]), [3])
+
+        def test_small_values_unchanged(self):
+            self.assertEqual(evaluate(["8 2 /"]), [4])
+
+        def test_divide_by_zero_still_raises(self):
+            with self.assertRaises(ZeroDivisionError):
+                evaluate(["4 0 /"])
+
+        def test_big_multiplication(self):
+            self.assertEqual(evaluate(["99999999999 99999999999 *"]), [9999999999800000000001])
+  hidden_malformed_test.py: |
+    import unittest
+    from forth import evaluate
+
+
+    class MalformedDefinitionTest(unittest.TestCase):
+        def test_missing_semicolon(self):
+            with self.assertRaises(ValueError):
+                evaluate([": foo 1 2", "foo"])
+
+        def test_empty_definition_without_name(self):
+            with self.assertRaises(ValueError):
+                evaluate([":", "1"])
+
+        def test_number_cannot_be_redefined(self):
+            with self.assertRaises(ValueError):
+                evaluate([": 1 2 ;", "1"])
+
+        def test_well_formed_definition_still_works(self):
+            self.assertEqual(evaluate([": foo 1 2 ;", "foo foo"]), [1, 2, 1, 2])
+
+        def test_empty_body_is_allowed(self):
+            self.assertEqual(evaluate([": noop ;", "5 noop 6"]), [5, 6])
+  hidden_words_test.py: |
+    import unittest
+    from forth import evaluate, StackUnderflowError
+
+
+    class RotAndDepthTest(unittest.TestCase):
+        def test_rot(self):
+            self.assertEqual(evaluate(["1 2 3 rot"]), [2, 3, 1])
+
+        def test_rot_with_extra_values(self):
+            self.assertEqual(evaluate(["9 1 2 3 rot"]), [9, 2, 3, 1])
+
+        def test_rot_is_case_insensitive(self):
+            self.assertEqual(evaluate(["1 2 3 ROT"]), [2, 3, 1])
+
+        def test_rot_underflow(self):
+            with self.assertRaises(StackUnderflowError):
+                evaluate(["1 2 rot"])
+
+        def test_depth(self):
+            self.assertEqual(evaluate(["depth"]), [0])
+            self.assertEqual(evaluate(["7 8 9 depth"]), [7, 8, 9, 3])
+
+        def test_words_in_definitions(self):
+            self.assertEqual(evaluate([": r3 rot rot rot ;", "1 2 3 r3"]), [1, 2, 3])
+            self.assertEqual(evaluate([": d depth ;", "4 5 d"]), [4, 5, 2])
+  hidden_perf_test.py: |
+    import time
+    import unittest
+    from forth import evaluate
+
+
+    class LargeProgramTest(unittest.TestCase):
+        def test_two_hundred_thousand_tokens(self):
+            program = "1 " + "dup drop " * 100000
+            start = time.perf_counter()
+            self.assertEqual(evaluate([program]), [1])
+            self.assertLess(time.perf_counter() - start, 2.0)
+
+        def test_big_expansion_through_a_definition(self):
+            start = time.perf_counter()
+            self.assertEqual(evaluate([": dd dup drop ;", "1 " + "dd " * 100000]), [1])
+            self.assertLess(time.perf_counter() - start, 2.0)
+
+        def test_many_numbers(self):
+            n = 150000
+            result = evaluate([" ".join(["2"] * n)])
+            self.assertEqual(len(result), n)
+turns:
+  - prompt: >-
+      Read .docs/instructions.md and implement `evaluate(input_data)` and the `StackUnderflowError`
+      in forth.py so that every test in forth_test.py passes. Run the tests with `python3 -m pytest
+      -q forth_test.py`.
+    checks:
+      - {kind: tests, runner: python, files: [], restore: []}
+  - prompt: >-
+      Bug report: calling `evaluate(lines)` eats the definition lines out of the list the caller
+      passed in, so evaluating the same list a second time gives a different answer. `evaluate` must
+      never modify its argument. Fix it and keep the existing tests passing.
+    checks:
+      - {kind: tests, runner: python, files: [forth_test.py, hidden_mutation_test.py], restore: [forth_test.py], hidden: [hidden_mutation_test.py]}
+  - prompt: >-
+      Another bug report: `/` is wrong for large numbers (`100000000000000000001 3 /` should be
+      33333333333333333333, it goes through floating point). Integer division must be exact for
+      arbitrarily large integers, still truncate toward zero for negative operands, and keep raising
+      ZeroDivisionError on a zero divisor.
+    checks:
+      - {kind: tests, runner: python, files: [forth_test.py, hidden_mutation_test.py, hidden_bigdiv_test.py], restore: [forth_test.py], hidden: [hidden_mutation_test.py, hidden_bigdiv_test.py]}
+  - prompt: >-
+      A definition that is missing its closing `;` (for example `: foo 1 2`) is silently accepted
+      and swallows its last word. Make `evaluate` raise `ValueError` for a malformed definition (no
+      closing semicolon, or no name), keep rejecting a number as a word name, and keep allowing an
+      empty body (`: noop ;`).
+    checks:
+      - {kind: tests, runner: python, files: [forth_test.py, hidden_mutation_test.py, hidden_bigdiv_test.py, hidden_malformed_test.py], restore: [forth_test.py], hidden: [hidden_mutation_test.py, hidden_bigdiv_test.py, hidden_malformed_test.py]}
+  - prompt: >-
+      Without changing any files: in four to six sentences, explain how user-defined words are
+      stored and expanded in your `evaluate`, and what happens when a program redefines an existing
+      word (built-in or user-defined). Say whether the expansion happens when the word is defined or
+      when it is used.
+    checks:
+      - {kind: keyed_facts, all: [defin, 'expand|inline|substitut', 'redefin|override|existing|replace']}
+    gap_before_s: 420
+  - prompt: >-
+      Refactor forth.py for readability without changing behaviour: split `evaluate` into small
+      private helpers (names starting with an underscore), for example for parsing a definition,
+      running one word, and the arithmetic. All existing tests (shipped and added so far) must still
+      pass.
+    checks:
+      - {kind: file_regex, path: forth.py, pattern: '^\s*def _[a-z]', min_count: 4}
+      - {kind: tests, runner: python, files: [forth_test.py, hidden_mutation_test.py, hidden_bigdiv_test.py, hidden_malformed_test.py], restore: [forth_test.py], hidden: [hidden_mutation_test.py, hidden_bigdiv_test.py, hidden_malformed_test.py]}
+  - prompt: >-
+      Write your own tests in a new file `test_extra.py`: at least six test functions covering
+      user-defined words, redefinition of a built-in, case-insensitivity, StackUnderflowError and
+      the malformed-definition ValueError. Run them with pytest.
+    checks:
+      - {kind: file_regex, path: test_extra.py, pattern: '^\s*def test_', min_count: 6}
+      - {kind: tests, runner: python, files: [forth_test.py, test_extra.py], restore: [forth_test.py]}
+  - prompt: >-
+      Add two new words to the interpreter: `rot` (rotate the third value from the top to the top:
+      `1 2 3 rot` leaves 2 3 1) and `depth` (push the number of values currently on the stack). Both
+      are case-insensitive, `rot` raises StackUnderflowError with fewer than three values, and both
+      must work inside user-defined words.
+    checks:
+      - {kind: tests, runner: python, files: [forth_test.py, hidden_mutation_test.py, hidden_bigdiv_test.py, hidden_malformed_test.py, hidden_words_test.py], restore: [forth_test.py], hidden: [hidden_mutation_test.py, hidden_bigdiv_test.py, hidden_malformed_test.py, hidden_words_test.py]}
+    gap_before_s: 420
+  - prompt: >-
+      Programs with a few hundred thousand tokens take far too long to run in `evaluate`. Make the
+      main loop linear in the number of executed words (for example by not popping from the front of
+      a list and not rebuilding the token list when a definition expands) without changing any
+      behaviour. All tests, including the new large-input ones, must pass quickly.
+    checks:
+      - {kind: tests, runner: python, files: [forth_test.py, hidden_mutation_test.py, hidden_bigdiv_test.py, hidden_malformed_test.py, hidden_words_test.py, hidden_perf_test.py], restore: [forth_test.py], hidden: [hidden_mutation_test.py, hidden_bigdiv_test.py, hidden_malformed_test.py, hidden_words_test.py, hidden_perf_test.py]}
+  - prompt: >-
+      Create `README_FORTH.md` documenting the interpreter with these level-2 sections: Usage,
+      Words, Errors, Examples. List every supported word, the exceptions raised, and include a short
+      runnable example in the Examples section. Then run the complete test suite including
+      test_extra.py.
+    checks:
+      - {kind: doc_sections, path: README_FORTH.md, headings: [Usage, Words, Errors, Example]}
+      - {kind: file_regex, path: README_FORTH.md, pattern: '```', min_count: 2}
+      - {kind: tests, runner: python, files: [forth_test.py, hidden_mutation_test.py, hidden_bigdiv_test.py, hidden_malformed_test.py, hidden_words_test.py, hidden_perf_test.py, test_extra.py], restore: [forth_test.py], hidden: [hidden_mutation_test.py, hidden_bigdiv_test.py, hidden_malformed_test.py, hidden_words_test.py, hidden_perf_test.py]}

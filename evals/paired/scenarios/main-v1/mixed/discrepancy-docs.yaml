@@ -1,0 +1,395 @@
+# Tiny config library with docs that disagree with the code (5 injected discrepancies): find, report, fix docs, pin with tests, small CLI change.
+id: discrepancy-docs
+task_type: mixed
+language: python
+split: test
+source:
+  desc: 'Tiny config library with docs that disagree with the code (5 injected discrepancies): find, report, fix docs, pin with tests, small CLI
+    change.'
+  kind: self-authored deterministic workspace
+  adapted_from: ['~/dev/amplifier-agent/.amplifier/evaluation/tasks/benchmark/code-discrepancy-docs-knack/task.yaml + grader.yaml (find doc-vs-code
+      discrepancies into DISCREPANCIES.md; the 5-injected-discrepancy rubric shape was reused, config.get raising vs returning None is the same
+      class of defect)', ~/dev/amplifier-agent/.amplifier/evaluation/tasks/benchmark/code-discrepancy-docstrings-grasp/task.yaml (docstring discrepancies)]
+workspace:
+  kind: inline
+  files:
+    README.md: |
+      # tinycfg
+
+      A tiny layered configuration store for scripts.
+
+      ## Quick start
+
+      ```python
+      from tinycfg import Config
+      cfg = Config()
+      cfg.load("settings.json")
+      cfg.get("timeout")
+      ```
+
+      `Config.get(key)` returns `None` when the key is missing; pass a second argument to get a different fallback.
+
+      See docs/usage.md for the full reference and docs/env.md for environment overrides.
+    CHANGELOG.md: |
+      # Changelog
+
+      ## Unreleased
+    docs/usage.md: |
+      # Usage
+
+      ## Reading values
+
+      `get(key, default)` returns `default` when it is given and raises `KeyError` otherwise.
+      `keys()` returns the keys in insertion order.
+
+      ## Loading files
+
+      `load(path)` merges a JSON object over the current values. A missing file is silently ignored.
+
+      ## Defaults
+
+      `retries` is 3, `timeout` is 30 seconds and `format` is `json`.
+
+      ## Validators
+
+      `add_validator(name, func)` registers a check. `validate()` runs the validators in the order they were added and raises `ConfigError` listing every failure.
+
+      ## CLI
+
+      `python3 -m tinycfg show FILE [--format json|env]` prints the merged configuration.
+    docs/env.md: |
+      # Environment overrides
+
+      `apply_env(prefix="TINY_")` copies every environment variable that starts with the prefix into the configuration. The prefix is stripped and the name is lower-cased.
+
+      Values are converted automatically: numeric strings become ints and `true` / `false` become booleans.
+    config/sample.json: |
+      {
+        "timeout": 10,
+        "name": "demo",
+        "debug": true
+      }
+    tinycfg/__init__.py: |
+      """tinycfg: a tiny layered configuration store."""
+      from .config import Config, ConfigError
+
+      __all__ = ["Config", "ConfigError"]
+    tinycfg/__main__.py: |
+      from .cli import main
+
+      raise SystemExit(main())
+    tinycfg/config.py: |
+      """Layered configuration store."""
+      import json
+      import os
+
+      DEFAULTS = {"retries": 5, "timeout": 30, "format": "json"}
+      _MISSING = object()
+
+
+      class ConfigError(Exception):
+          """Raised for unreadable or invalid configuration."""
+
+
+      class Config:
+          """A small key/value configuration."""
+
+          def __init__(self, defaults=None):
+              self._data = dict(DEFAULTS)
+              self._data.update(defaults or {})
+              self._validators = []
+
+          def get(self, key, default=_MISSING):
+              """Return the value for `key`, or `default` when given."""
+              if key in self._data:
+                  return self._data[key]
+              if default is _MISSING:
+                  raise KeyError(key)
+              return default
+
+          def set(self, key, value):
+              self._data[key] = value
+
+          def keys(self):
+              """All keys."""
+              return sorted(self._data)
+
+          def load(self, path):
+              """Merge a JSON object from `path` over the current values."""
+              try:
+                  with open(path, encoding="utf-8") as fh:
+                      data = json.load(fh)
+              except FileNotFoundError as exc:
+                  raise ConfigError(f"config file not found: {path}") from exc
+              if not isinstance(data, dict):
+                  raise ConfigError("top-level JSON must be an object")
+              self._data.update(data)
+
+          def apply_env(self, prefix="TINY_"):
+              for name, value in os.environ.items():
+                  if name.startswith(prefix):
+                      self._data[name[len(prefix):].lower()] = value
+
+          def add_validator(self, name, func):
+              self._validators.append((name, func))
+
+          def validate(self):
+              """Run every validator in the order it was added; raise ConfigError listing all failures."""
+              errors = []
+              for name, func in self._validators:
+                  msg = func(self._data)
+                  if msg:
+                      errors.append(f"{name}: {msg}")
+              if errors:
+                  raise ConfigError("; ".join(errors))
+    tinycfg/cli.py: |
+      """Command line entry: `python3 -m tinycfg show FILE`."""
+      import argparse
+      import json
+      import sys
+
+      from .config import Config, ConfigError
+
+
+      def build_parser():
+          p = argparse.ArgumentParser(prog="tinycfg")
+          sub = p.add_subparsers(dest="cmd", required=True)
+          show = sub.add_parser("show", help="print a config file merged over the defaults")
+          show.add_argument("file")
+          show.add_argument("--format", choices=["json", "env"], default="json")
+          return p
+
+
+      def main(argv=None):
+          """Run the CLI and return an exit status."""
+          args = build_parser().parse_args(argv)
+          cfg = Config()
+          try:
+              cfg.load(args.file)
+          except ConfigError as exc:
+              print(f"error: {exc}", file=sys.stderr)
+              return 2
+          if args.format == "json":
+              print(json.dumps({k: cfg.get(k) for k in cfg.keys()}, indent=2))
+          else:
+              for k in cfg.keys():
+                  print(f"{k.upper()}={cfg.get(k)}")
+          return 0
+protected: [config/sample.json]
+hidden_files:
+  _grade.py: |
+    import csv, json, os, re, subprocess, sys
+    from pathlib import Path
+
+    W = Path(".")
+
+
+    def fail(msg):
+        print("FAIL:", msg)
+        sys.exit(1)
+
+
+    def need(cond, msg):
+        if not cond:
+            fail(msg)
+
+
+    def load_json(rel):
+        p = W / rel
+        need(p.exists(), f"missing {rel}")
+        try:
+            return json.loads(p.read_text(encoding="utf-8"))
+        except Exception as e:  # noqa: BLE001
+            fail(f"{rel} is not valid JSON: {e}")
+
+
+    def read(rel):
+        p = W / rel
+        need(p.exists(), f"missing {rel}")
+        return p.read_text(encoding="utf-8")
+
+
+    def close(a, b, tol=0.011):
+        try:
+            return abs(float(a) - float(b)) <= tol
+        except (TypeError, ValueError):
+            return False
+
+
+    def md_rows(rel, under=None):
+        """Table rows (lists of cells) of a markdown file; with `under`, only rows inside the first heading matching it."""
+        lines = read(rel).splitlines()
+        if under:
+            out, on, lvl = [], False, 0
+            for ln in lines:
+                m = re.match(r"^(#+)\s+(.*)", ln)
+                if m:
+                    if on and len(m.group(1)) <= lvl:
+                        break
+                    if not on and re.search(under, m.group(2), re.I):
+                        on, lvl = True, len(m.group(1))
+                    continue
+                if on:
+                    out.append(ln)
+            lines = out
+        rows = []
+        for ln in lines:
+            if ln.strip().startswith("|") and not re.match(r"^\s*\|[\s:|-]+\|\s*$", ln):
+                rows.append([c.strip() for c in ln.strip().strip("|").split("|")])
+        return rows
+
+
+    def num(s):
+        m = re.search(r"-?\d[\d,]*\.?\d*", str(s))
+        return float(m.group(0).replace(",", "")) if m else None
+
+
+    def run(cmd, timeout=60):
+        p = subprocess.run(cmd, shell=True, cwd=W, capture_output=True, text=True, timeout=timeout)
+        return p.returncode, p.stdout, p.stderr
+
+    SRC = "tinycfg/config.py"
+    D = {
+     "get": [r"(?is)(get.{0,400}KeyError)|(KeyError.{0,400}get)"],
+     "keys": [r"(?is)(keys.{0,400}(sorted|alphabet))|((sorted|alphabet).{0,400}keys)"],
+     "load": [r"(?is)((load|missing file).{0,400}ConfigError)|(ConfigError.{0,400}(load|missing file))"],
+     "retries": [r"(?is)(retries.{0,300}\b5\b)|(\b5\b.{0,300}retries)"],
+     "env": [r"(?is)((env|apply_env).{0,400}(raw|string|not (converted|cast)|no conversion))|((raw|string).{0,400}(env|apply_env))"],
+    }
+    def t4():
+        txt = read("DISCREPANCIES.md"); heads = re.findall(r"^##\s+\S", txt, re.M)
+        need(len(heads) >= 5, f"need one level-2 section per discrepancy (>=5), found {len(heads)}")
+        for k, pats in D.items():
+            for p in pats: need(re.search(p, txt), f"discrepancy '{k}' not described")
+    def t6():
+        txt = read("README.md"); need(not re.search(r"returns\s+`?None`?", txt, re.I), "README still claims get returns None"); need("KeyError" in txt, "README must mention KeyError")
+    def t7():
+        txt = read("docs/usage.md")
+        need(re.search(r"sorted|alphabetical", txt, re.I) and "ConfigError" in txt and re.search(r"retries\D{0,40}\b5\b", txt), "usage.md not corrected")
+        need(not re.search(r"insertion order|silently ignored|retries\D{0,12}\b3\b", txt, re.I), "usage.md still has an old claim")
+    def t8():
+        txt = read("docs/env.md"); need(re.search(r"string|str\b|raw", txt, re.I), "env.md must say values stay strings")
+        need(not re.search(r"converted automatically|become ints|auto-?convert|become booleans", txt, re.I), "env.md still claims conversion")
+    def t9():
+        p = W / "tests/test_docs.py"; need(p.exists(), "missing tests/test_docs.py")
+        rc, out, err = run("python3 -m unittest discover -s tests -p 'test_docs.py' -v 2>&1"); need(rc == 0, "tests fail: " + (out + err)[-300:])
+        m = re.search(r"Ran (\d+) tests?", out + err); need(m and int(m.group(1)) >= 5, "need >= 5 tests")
+        src = (W / SRC).read_text(encoding="utf-8"); applied = 0
+        for old, new in (("raise KeyError(key)", "return None"), ("return sorted(self._data)", "return list(self._data)"), ('"retries": 5', '"retries": 3'),
+                         ('raise ConfigError(f"config file not found: {path}") from exc', "return"), ("self._data[name[len(prefix):].lower()] = value", "self._data[name[len(prefix):].lower()] = int(value) if value.isdigit() else value")):
+            if old not in src: continue
+            applied += 1; (W / SRC).write_text(src.replace(old, new), encoding="utf-8")
+            rc, out, err = run("python3 -m unittest discover -s tests -p 'test_docs.py' 2>&1"); (W / SRC).write_text(src, encoding="utf-8")
+            need(rc != 0, f"tests do not catch mutation: {old}")
+        need(applied >= 3, "could not apply mutations (source restructured?)")
+    def t11():
+        rc, out, err = run("python3 -m tinycfg show config/sample.json --keys-only"); need(rc == 0, "cli failed: " + err[-200:])
+        need(out.split() == ["debug", "format", "name", "retries", "timeout"], f"keys-only output wrong: {out!r}")
+        rc, out, err = run("python3 -m tinycfg show config/sample.json"); need(rc == 0 and '"timeout": 10' in out, "default json output must still work")
+    def t15():
+        import ast
+        for f in (W / "tinycfg").glob("*.py"):
+            tree = ast.parse(f.read_text(encoding="utf-8"))
+            for n in ast.walk(tree):
+                if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef)) and not n.name.startswith("_"):
+                    need(ast.get_docstring(n), f"{f.name}:{n.name} has no docstring")
+
+
+    if __name__ == "__main__":
+        fn = globals().get(sys.argv[1]) if len(sys.argv) > 1 else None
+        need(callable(fn), "unknown check " + str(sys.argv[1:]))
+        fn()
+        print("OK")
+turns:
+- prompt: 'Give me a quick tour of the tinycfg package: which modules exist and what each one is responsible for? Do not change any files.'
+  checks:
+  - kind: keyed_facts
+    all: [config, cli, __main__|python -m|entry]
+    any: [Config, ConfigError]
+- prompt: What does `Config.get` do when the key is missing and no default is passed? Answer from the code, not the docs. Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: [KeyError]
+- prompt: In what order does `Config.keys()` return keys, per the implementation? Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: [sort|alphabet]
+- prompt: Compare the documentation (README.md and docs/) with what the code in tinycfg/ actually does. Write every mismatch you can verify to
+    DISCREPANCIES.md, one level-2 section per discrepancy, naming the doc file, the claim and the actual behaviour.
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t4
+    hidden: [_grade.py]
+    timeout: 60
+- prompt: Which documentation file contains the most discrepancies, and how many does it have? Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: [usage\.md, '(?<!\d)3(?!\d)|three']
+- prompt: Fix the README so it matches the code for the issue it contains. Change nothing else.
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t6
+    hidden: [_grade.py]
+    timeout: 60
+  gap_before_s: 420
+- prompt: Fix docs/usage.md so every statement matches the code (keep the structure).
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t7
+    hidden: [_grade.py]
+    timeout: 60
+- prompt: Fix docs/env.md so it matches the code.
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t8
+    hidden: [_grade.py]
+    timeout: 60
+- prompt: 'Add tests/test_docs.py (unittest, no third-party packages) with at least five tests that pin the documented behaviour: get with and
+    without a default, keys ordering, load of a missing file, the default retries value and environment values staying strings. Run them.'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t9
+    hidden: [_grade.py]
+    timeout: 60
+- prompt: When `Config.validate()` has several validators attached, which one is run first, and why? Do not change any files.
+  checks:
+  - kind: keyed_facts
+    any: ['first (one )?(that was |to be )?(added|registered|appended)', 'order (in which )?(they|it) (were|was) (added|registered|appended)',
+      insertion|registration order|appended]
+- prompt: 'Add a `--keys-only` flag to the `show` command in tinycfg/cli.py: when given it prints only the sorted keys, one per line, regardless
+    of --format. Try it on config/sample.json.'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t11
+    hidden: [_grade.py]
+    timeout: 60
+- prompt: Document the new flag in the CLI section of docs/usage.md.
+  checks:
+  - {kind: file_regex, path: docs/usage.md, pattern: --keys-only}
+  gap_before_s: 420
+- prompt: 'Add an `## Unreleased` entry to CHANGELOG.md with two bullets: the documentation fixes and the new --keys-only flag.'
+  checks:
+  - {kind: file_regex, path: CHANGELOG.md, pattern: ^##\s+Unreleased}
+  - {kind: file_regex, path: CHANGELOG.md, pattern: --keys-only}
+  - {kind: file_regex, path: CHANGELOG.md, pattern: '^\s*[-*]\s+.*(doc)'}
+- prompt: Which public functions or methods in tinycfg/ (names not starting with an underscore) currently have no docstring? List them. Do not
+    change any files.
+  checks:
+  - kind: keyed_facts
+    all: [\bset\b, apply_env, add_validator, build_parser]
+- prompt: Add short docstrings to exactly those functions and methods.
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t15
+    hidden: [_grade.py]
+    timeout: 60
+- prompt: 'Update DISCREPANCIES.md: add a line `Status: fixed.` at the end of each discrepancy section.'
+  checks:
+  - {kind: file_regex, path: DISCREPANCIES.md, pattern: '^Status:\s*fixed', min_count: 5}

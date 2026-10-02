@@ -1,0 +1,175 @@
+# main-v1 polyglot 20/20: javascript/phone-number, 8 turns, short gaps.
+id: js-phone
+task_type: bugfix
+language: javascript
+split: test
+default_gap_s: 10
+source:
+  desc: "Aider polyglot-benchmark javascript/phone-number (Exercism), outside the S2 slice"
+  repo: https://github.com/Aider-AI/polyglot-benchmark
+  sha: 7e0611e77b54e2dea774cdc0aa00cf9f7ed6144f
+workspace:
+  kind: git
+  repo: https://github.com/Aider-AI/polyglot-benchmark
+  sha: 7e0611e77b54e2dea774cdc0aa00cf9f7ed6144f
+  subdir: javascript/exercises/practice/phone-number
+  local_hint: ~/dev/afast-campaign-corrected-polyglot-20260919/polyglot/polyglot-benchmark
+  remove: [.meta]
+protected: [phone-number.spec.js]
+hidden_files:
+  jest_shim.mjs: |
+    import { describe as d, test as t } from 'node:test';
+    import assert from 'node:assert/strict';
+
+    const ctx = globalThis;
+    ctx.describe = (name, fn) => d(name, fn);
+    ctx.test = (name, fn) => t(name, fn);
+    ctx.xtest = ctx.test;
+    ctx.it = ctx.test;
+
+    const matchErr = (e) => (err) => {
+      if (e === undefined) return true;
+      if (e instanceof Error) return err.message === e.message;
+      if (typeof e === 'string') return String(err.message).includes(e);
+      if (e instanceof RegExp) return e.test(err.message);
+      if (typeof e === 'function') return err instanceof e;
+      return true;
+    };
+
+    ctx.expect = (actual) => ({
+      toEqual: (e) => assert.deepEqual(actual, e),
+      toBe: (e) => assert.strictEqual(actual, e),
+      toBeCloseTo: (e, digits = 2) => assert.ok(Math.abs(actual - e) < 10 ** -digits / 2, `${actual} is not close to ${e}`),
+      toBeTruthy: () => assert.ok(actual),
+      toBeFalsy: () => assert.ok(!actual),
+      toThrow: (e) => assert.throws(actual, matchErr(e)),
+      not: { toEqual: (e) => assert.notDeepEqual(actual, e), toBe: (e) => assert.notStrictEqual(actual, e) },
+    });
+  hidden_format.test.mjs: |
+    import { test } from 'node:test';
+    import assert from 'node:assert/strict';
+    import { format } from './phone-number.js';
+
+    test('national is the default', () => {
+      assert.equal(format('(223) 456-7890'), '(223) 456-7890');
+      assert.equal(format('223.456.7890'), '(223) 456-7890');
+    });
+
+    test('dashes and e164', () => {
+      assert.equal(format('223.456.7890', 'dashes'), '223-456-7890');
+      assert.equal(format('1 (223) 456-7890', 'e164'), '+12234567890');
+    });
+
+    test('an unknown style is a RangeError', () => {
+      assert.throws(() => format('223.456.7890', 'weird'), RangeError);
+    });
+
+    test('invalid numbers fail with the same messages as clean', () => {
+      assert.throws(() => format('123'), /Incorrect number of digits/);
+      assert.throws(() => format('(023) 456-7890', 'e164'), /Area code cannot start with zero/);
+    });
+  hidden_ext.test.mjs: |
+    import { test } from 'node:test';
+    import assert from 'node:assert/strict';
+    import { clean } from './phone-number.js';
+
+    test('an extension is ignored', () => {
+      assert.equal(clean('223-456-7890 x123'), '2234567890');
+      assert.equal(clean('223 456 7890 ext 12'), '2234567890');
+      assert.equal(clean('(223) 456-7890 ext. 45'), '2234567890');
+      assert.equal(clean('+1 223 456 7890 EXT45'), '2234567890');
+      assert.equal(clean('223.456.7890x9'), '2234567890');
+    });
+
+    test('other letters are still rejected', () => {
+      assert.throws(() => clean('223-abc-7890 x1'), /Letters not permitted/);
+      assert.throws(() => clean('223-456-7890 x'), /Letters not permitted/);
+      assert.throws(() => clean('223-456-7890 ext'), /Letters not permitted/);
+    });
+
+    test('digits of the extension do not count towards the number', () => {
+      assert.throws(() => clean('456-7890 x123456'), /Incorrect number of digits/);
+    });
+
+    test('plain numbers are unchanged', () => {
+      assert.equal(clean('(223) 456-7890'), '2234567890');
+    });
+  hidden_api.test.mjs: |
+    import { test } from 'node:test';
+    import assert from 'node:assert/strict';
+    import { isValid, areaCode } from './phone-number.js';
+
+    test('isValid never throws', () => {
+      assert.equal(isValid('(223) 456-7890'), true);
+      assert.equal(isValid('223-456-7890 x12'), true);
+      assert.equal(isValid('123'), false);
+      assert.equal(isValid('223-abc-7890'), false);
+      assert.equal(isValid(''), false);
+    });
+
+    test('areaCode', () => {
+      assert.equal(areaCode('1 (223) 456-7890'), '223');
+      assert.equal(areaCode('987.654.3210'), '987');
+    });
+
+    test('areaCode throws for invalid numbers', () => {
+      assert.throws(() => areaCode('123'), /Incorrect number of digits/);
+      assert.throws(() => areaCode('(123) 456-7890'), /Area code cannot start with one/);
+    });
+turns:
+  - prompt: >-
+      Read .docs/instructions.md and implement `clean` in phone-number.js so that the specs in
+      phone-number.spec.js pass (jest is not installed here, so check them with plain node). The error
+      messages are part of the specs. Do not edit the provided spec file.
+    checks:
+      - {kind: tests, runner: cmd, cmd: 'sed "s#from ''./phone-number''#from ''./phone-number.js''#" phone-number.spec.js > spec_run.test.mjs && node --import ./jest_shim.mjs --test --test-reporter=tap spec_run.test.mjs ', expect_regex: '# fail 0', restore: [phone-number.spec.js], hidden: [jest_shim.mjs], timeout: 120}
+  - prompt: >-
+      In three to five sentences, explain in which order `clean` validates its input (characters,
+      digit count, area code, exchange code) and why that order matters for the error that is
+      reported. Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [letters, punctuation, digits, area code, exchange]}
+  - prompt: >-
+      Add `format(input, style = 'national')`: it cleans the number (same errors as `clean`) and
+      renders 'national' as (223) 456-7890, 'dashes' as 223-456-7890 and 'e164' as +12234567890. An
+      unknown style is a `RangeError`.
+    checks:
+      - {kind: tests, runner: cmd, cmd: sed "s#from './phone-number'#from './phone-number.js'#" phone-number.spec.js > spec_run.test.mjs && node --import ./jest_shim.mjs --test --test-reporter=tap spec_run.test.mjs hidden_format.test.mjs, expect_regex: '# fail 0', restore: [phone-number.spec.js], hidden: [jest_shim.mjs, hidden_format.test.mjs], timeout: 120}
+  - prompt: >-
+      New requirement: a number may end in an extension written as `x123`, `ext 12` or `ext. 12` (any
+      case, optional space before). `clean` ignores the extension and its digits, so '223-456-7890
+      x123' gives '2234567890'. An `x` or `ext` that is not followed by digits is still a letter
+      error.
+    checks:
+      - {kind: tests, runner: cmd, cmd: sed "s#from './phone-number'#from './phone-number.js'#" phone-number.spec.js > spec_run.test.mjs && node --import ./jest_shim.mjs --test --test-reporter=tap spec_run.test.mjs hidden_format.test.mjs hidden_ext.test.mjs, expect_regex: '# fail 0', restore: [phone-number.spec.js], hidden: [jest_shim.mjs, hidden_format.test.mjs, hidden_ext.test.mjs], timeout: 120}
+  - prompt: >-
+      Add your own tests in a new file `extra.test.mjs` using `node:test` and `node:assert/strict`
+      (importing from ./phone-number.js): at least five `test(` cases. Run it with `node --test
+      extra.test.mjs`.
+    checks:
+      - {kind: file_regex, path: extra.test.mjs, pattern: \btest\(, min_count: 5}
+      - {kind: tests, runner: cmd, cmd: node --test --test-reporter=tap extra.test.mjs, expect_regex: '# pass [1-9]', restore: [], hidden: [], timeout: 120}
+      - {kind: tests, runner: cmd, cmd: sed "s#from './phone-number'#from './phone-number.js'#" phone-number.spec.js > spec_run.test.mjs && node --import ./jest_shim.mjs --test --test-reporter=tap spec_run.test.mjs hidden_format.test.mjs hidden_ext.test.mjs, expect_regex: '# fail 0', restore: [phone-number.spec.js], hidden: [jest_shim.mjs, hidden_format.test.mjs, hidden_ext.test.mjs], timeout: 120}
+  - prompt: >-
+      Refactor phone-number.js: extract module-level helpers `stripExtension`, `validateCharacters`,
+      `normalizeDigits` and `validateAreaAndExchange` and make `clean` a short composition of them. No
+      behaviour change; keep all tests passing.
+    checks:
+      - {kind: file_regex, path: phone-number.js, pattern: '^(export )?(const|function)\s+(stripExtension|validateCharacters|normalizeDigits|validateAreaAndExchange)\b', min_count: 4}
+      - {kind: tests, runner: cmd, cmd: sed "s#from './phone-number'#from './phone-number.js'#" phone-number.spec.js > spec_run.test.mjs && node --import ./jest_shim.mjs --test --test-reporter=tap spec_run.test.mjs hidden_format.test.mjs hidden_ext.test.mjs, expect_regex: '# fail 0', restore: [phone-number.spec.js], hidden: [jest_shim.mjs, hidden_format.test.mjs, hidden_ext.test.mjs], timeout: 120}
+  - prompt: >-
+      Add `isValid(input)` that returns true or false and never throws, and `areaCode(input)` that
+      returns the three-digit area code of a valid number (and throws the same errors as `clean`
+      otherwise).
+    checks:
+      - {kind: tests, runner: cmd, cmd: sed "s#from './phone-number'#from './phone-number.js'#" phone-number.spec.js > spec_run.test.mjs && node --import ./jest_shim.mjs --test --test-reporter=tap spec_run.test.mjs hidden_format.test.mjs hidden_ext.test.mjs hidden_api.test.mjs, expect_regex: '# fail 0', restore: [phone-number.spec.js], hidden: [jest_shim.mjs, hidden_format.test.mjs, hidden_ext.test.mjs, hidden_api.test.mjs], timeout: 120}
+  - prompt: >-
+      Document the module: create README.md with a `## Usage` section and a `## Errors` section, and
+      add JSDoc comments (with `@param` and `@returns`) to `clean`, `format`, `isValid` and
+      `areaCode`.
+    checks:
+      - {kind: doc_sections, path: README.md, headings: [usage, errors]}
+      - {kind: file_regex, path: phone-number.js, pattern: /\*\*, min_count: 4}
+      - {kind: file_regex, path: phone-number.js, pattern: '@param', min_count: 4}
+      - {kind: file_regex, path: phone-number.js, pattern: '@returns', min_count: 4}
+      - {kind: tests, runner: cmd, cmd: sed "s#from './phone-number'#from './phone-number.js'#" phone-number.spec.js > spec_run.test.mjs && node --import ./jest_shim.mjs --test --test-reporter=tap spec_run.test.mjs hidden_format.test.mjs hidden_ext.test.mjs hidden_api.test.mjs, expect_regex: '# fail 0', restore: [phone-number.spec.js], hidden: [jest_shim.mjs, hidden_format.test.mjs, hidden_ext.test.mjs, hidden_api.test.mjs], timeout: 120}

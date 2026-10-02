@@ -1,0 +1,307 @@
+Traceback (most recent call last):
+  File "<repo>/evals/paired.py", line 2178, in <module>
+    sys.exit(main())
+             ~~~~^^
+  File "<repo>/evals/paired.py", line 2167, in main
+    return {"plan": cmd_plan, "run": cmd_run, "rows": cmd_rows, "grade": cmd_grade,
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+            "render-check": cmd_render_check, "preflight": cmd_preflight}[args.cmd](args)
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "<repo>/evals/paired.py", line 2033, in cmd_run
+    ctx = _ctx_from_schedule(out, args)
+  File "<repo>/evals/paired.py", line 2020, in _ctx_from_schedule
+    if ps.scenario_hash(specs[sid]) != m["scenario_hash"]:
+                        ~~~~~^^^^^
+KeyError: 'api-docs'
+EXIT 1
+EXIT 143
+paired.py: ~/.amplifier/settings.yaml changed since the campaign started (STUDY-DESIGN 18.5)
+memory check ok: 63.9 GB available (floor 32.0 GB)
+EXIT 4
+EXIT 143
+EXIT 143
+memory check ok: 58.0 GB available (floor 32.0 GB)
+caffeinate attached (idle/system sleep prevented; clamshell sleep on battery cannot be prevented: keep the lid open or on AC)
+{"prepared": "<campaign>/pf-1790947262643", "runs": ["pf0", "pf1", "pf2", "pf3", "pf4", "pf5", "pf6", "pf7", "pf8"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+preflight PASS  plain-opus             claude-opus-5-5      key=default  models=claude-opus-5-5  $0.3451
+preflight PASS  orch-default-opus      claude-opus-5-5      key=default  models=claude-sonnet-5  $0.1484
+preflight PASS  orch-pin-host-opus     claude-opus-5-5      key=default  models=claude-opus-5-5  $0.1914
+preflight PASS  orch-pin-cheap-opus    claude-opus-5-5      key=default  models=claude-sonnet-5  $0.1487
+preflight PASS  plain-sonnet           claude-sonnet-5      key=default  models=claude-sonnet-5  $0.2596
+preflight PASS  plain                  claude-fable-5-1     key=default  models=claude-fable-5-1  $0.4717
+preflight PASS  orch-default           claude-fable-5-1     key=default  models=claude-sonnet-5  $0.1484
+preflight PASS  orch-pin-host          claude-fable-5-1     key=default  models=claude-fable-5-1  $0.4718
+preflight PASS  orch-pin-cheap         claude-fable-5-1     key=default  models=claude-sonnet-5  $0.1484
+preflight PASSED: 9 sessions, $2.3335
+{"prepared": "<campaign>/w115-a1", "runs": ["semver-review-r1-fable-anchor", "semver-review-r1-fable-shipped", "semver-review-r1-fable-sticky"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w116-a1", "runs": ["docstring-audit-r1-opus-anchor", "docstring-audit-r1-opus-shipped", "docstring-audit-r1-opus-sticky", "docstring-audit-r1-any-sonnet"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w117-a1", "runs": ["lark-discard-r2-fable-anchor", "lark-discard-r2-fable-shipped", "lark-discard-r2-fable-sticky"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w118-a1", "runs": ["fatihcolor-docs-r1-opus-anchor", "fatihcolor-docs-r1-opus-shipped", "fatihcolor-docs-r1-opus-sticky", "fatihcolor-docs-r1-any-sonnet"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w119-a1", "runs": ["py-poker-r1-fable-anchor", "py-poker-r1-fable-shipped", "py-poker-r1-fable-sticky"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w120-a1", "runs": ["moreit-chunked-r1-fable-anchor", "moreit-chunked-r1-fable-shipped", "moreit-chunked-r1-fable-sticky"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w121-a1", "runs": ["rust-wordy-r1-opus-anchor", "rust-wordy-r1-opus-shipped", "rust-wordy-r1-opus-sticky", "rust-wordy-r1-any-sonnet"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w122-a1", "runs": ["pr-review-retry-r1-opus-anchor", "pr-review-retry-r1-opus-aa", "pr-review-retry-r1-opus-shipped", "pr-review-retry-r1-opus-sticky", "pr-review-retry-r1-any-sonnet"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w123-a1", "runs": ["js-phone-r2-opus-anchor", "js-phone-r2-opus-shipped", "js-phone-r2-opus-sticky", "js-phone-r2-any-sonnet"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w124-a1", "runs": ["deps-audit-r2-opus-anchor", "deps-audit-r2-opus-shipped", "deps-audit-r2-opus-sticky", "deps-audit-r2-any-sonnet"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w125-a1", "runs": ["nanoid-explain-r1-opus-anchor", "nanoid-explain-r1-opus-aa", "nanoid-explain-r1-opus-shipped", "nanoid-explain-r1-opus-sticky", "nanoid-explain-r1-any-sonnet"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w126-a1", "runs": ["js-tournament-r1-opus-anchor", "js-tournament-r1-opus-shipped", "js-tournament-r1-opus-sticky", "js-tournament-r1-any-sonnet"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w127-a1", "runs": ["timesheet-invoice-r2-opus-anchor", "timesheet-invoice-r2-opus-aa", "timesheet-invoice-r2-opus-shipped", "timesheet-invoice-r2-opus-sticky", "timesheet-invoice-r2-any-sonnet"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w128-a1", "runs": ["humanize-review-r1-opus-anchor", "humanize-review-r1-opus-shipped", "humanize-review-r1-opus-sticky", "humanize-review-r1-any-sonnet"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w129-a1", "runs": ["go-say-r2-opus-anchor", "go-say-r2-opus-shipped", "go-say-r2-opus-sticky", "go-say-r2-any-sonnet"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w130-a1", "runs": ["pathspec-matchfile-r1-opus-anchor", "pathspec-matchfile-r1-opus-shipped", "pathspec-matchfile-r1-opus-sticky", "pathspec-matchfile-r1-any-sonnet"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w131-a1", "runs": ["lark-template-r2-fable-anchor", "lark-template-r2-fable-shipped", "lark-template-r2-fable-sticky"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w132-a1", "runs": ["sqlparse-realname-r2-opus-anchor", "sqlparse-realname-r2-opus-shipped", "sqlparse-realname-r2-opus-sticky", "sqlparse-realname-r2-any-sonnet"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w133-a1", "runs": ["rust-twobucket-r1-opus-anchor", "rust-twobucket-r1-opus-aa", "rust-twobucket-r1-opus-shipped", "rust-twobucket-r1-opus-sticky", "rust-twobucket-r1-any-sonnet"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w134-a1", "runs": ["xmltodict-none-r1-fable-anchor", "xmltodict-none-r1-fable-shipped", "xmltodict-none-r1-fable-sticky"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w135-a1", "runs": ["nanoid-explain-r2-fable-anchor", "nanoid-explain-r2-fable-shipped", "nanoid-explain-r2-fable-sticky"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w136-a1", "runs": ["api-docs-r1-fable-anchor", "api-docs-r1-fable-shipped", "api-docs-r1-fable-sticky"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w137-a1", "runs": ["js-rationals-r2-fable-anchor", "js-rationals-r2-fable-shipped", "js-rationals-r2-fable-sticky"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w138-a1", "runs": ["debug-triage-r1-opus-anchor", "debug-triage-r1-opus-shipped", "debug-triage-r1-opus-sticky", "debug-triage-r1-any-sonnet"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w139-a1", "runs": ["migration-plan-r2-opus-anchor", "migration-plan-r2-opus-shipped", "migration-plan-r2-opus-sticky", "migration-plan-r2-any-sonnet"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w140-a1", "runs": ["support-workload-r1-opus-anchor", "support-workload-r1-opus-shipped", "support-workload-r1-opus-sticky", "support-workload-r1-any-sonnet"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w141-a1", "runs": ["debug-triage-r1-fable-anchor", "debug-triage-r1-fable-shipped", "debug-triage-r1-fable-sticky"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w142-a1", "runs": ["fatihcolor-docs-r2-opus-anchor", "fatihcolor-docs-r2-opus-shipped", "fatihcolor-docs-r2-opus-sticky", "fatihcolor-docs-r2-any-sonnet"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w143-a1", "runs": ["nanoid-explain-r1-fable-anchor", "nanoid-explain-r1-fable-aa", "nanoid-explain-r1-fable-shipped", "nanoid-explain-r1-fable-sticky"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w144-a1", "runs": ["fd-cli-docs-r1-opus-anchor", "fd-cli-docs-r1-opus-aa", "fd-cli-docs-r1-opus-shipped", "fd-cli-docs-r1-opus-sticky", "fd-cli-docs-r1-any-sonnet"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w145-a1", "runs": ["go-linkedlist-r1-opus-anchor", "go-linkedlist-r1-opus-shipped", "go-linkedlist-r1-opus-sticky", "go-linkedlist-r1-any-sonnet"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w146-a1", "runs": ["arch-explain-r2-opus-anchor", "arch-explain-r2-opus-shipped", "arch-explain-r2-opus-sticky", "arch-explain-r2-any-sonnet"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w147-a1", "runs": ["kac-docs-r1-opus-anchor", "kac-docs-r1-opus-shipped", "kac-docs-r1-opus-sticky", "kac-docs-r1-any-sonnet"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w148-a1", "runs": ["semver-review-r2-fable-anchor", "semver-review-r2-fable-shipped", "semver-review-r2-fable-sticky"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w149-a1", "runs": ["ms-review-r2-opus-anchor", "ms-review-r2-opus-shipped", "ms-review-r2-opus-sticky", "ms-review-r2-any-sonnet"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w150-a1", "runs": ["pflag-mixed-r1-fable-anchor", "pflag-mixed-r1-fable-shipped", "pflag-mixed-r1-fable-sticky"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w151-a1", "runs": ["markdown-tocclass-r2-opus-anchor", "markdown-tocclass-r2-opus-shipped", "markdown-tocclass-r2-opus-sticky", "markdown-tocclass-r2-any-sonnet"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w152-a1", "runs": ["arch-explain-r1-opus-anchor", "arch-explain-r1-opus-aa", "arch-explain-r1-opus-shipped", "arch-explain-r1-opus-sticky", "arch-explain-r1-any-sonnet"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w153-a1", "runs": ["readme-rewrite-r1-opus-anchor", "readme-rewrite-r1-opus-shipped", "readme-rewrite-r1-opus-sticky", "readme-rewrite-r1-any-sonnet"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w154-a1", "runs": ["rust-luhn-r2-fable-anchor", "rust-luhn-r2-fable-aa", "rust-luhn-r2-fable-shipped", "rust-luhn-r2-fable-sticky"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w155-a1", "runs": ["log-incident-r1-fable-anchor", "log-incident-r1-fable-aa", "log-incident-r1-fable-shipped", "log-incident-r1-fable-sticky"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w156-a1", "runs": ["voluptuous-number-r1-opus-anchor", "voluptuous-number-r1-opus-shipped", "voluptuous-number-r1-opus-sticky", "voluptuous-number-r1-any-sonnet"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w157-a1", "runs": ["sortedc-update-r2-fable-anchor", "sortedc-update-r2-fable-aa", "sortedc-update-r2-fable-shipped", "sortedc-update-r2-fable-sticky"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w158-a1", "runs": ["tabulate-github-r2-opus-anchor", "tabulate-github-r2-opus-aa", "tabulate-github-r2-opus-shipped", "tabulate-github-r2-opus-sticky", "tabulate-github-r2-any-sonnet"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w159-a1", "runs": ["okr-status-r1-opus-anchor", "okr-status-r1-opus-shipped", "okr-status-r1-opus-sticky", "okr-status-r1-any-sonnet"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w160-a1", "runs": ["jmespath-strcmp-r1-opus-anchor", "jmespath-strcmp-r1-opus-aa", "jmespath-strcmp-r1-opus-shipped", "jmespath-strcmp-r1-opus-sticky", "jmespath-strcmp-r1-any-sonnet"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w161-a1", "runs": ["sqlparse-realname-r1-opus-anchor", "sqlparse-realname-r1-opus-shipped", "sqlparse-realname-r1-opus-sticky", "sqlparse-realname-r1-any-sonnet"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w162-a1", "runs": ["support-workload-r2-opus-anchor", "support-workload-r2-opus-shipped", "support-workload-r2-opus-sticky", "support-workload-r2-any-sonnet"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w163-a1", "runs": ["pflag-mixed-r2-fable-anchor", "pflag-mixed-r2-fable-shipped", "pflag-mixed-r2-fable-sticky"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w164-a1", "runs": ["expense-anomaly-r1-fable-anchor", "expense-anomaly-r1-fable-shipped", "expense-anomaly-r1-fable-sticky"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w165-a1", "runs": ["migration-plan-r1-opus-anchor", "migration-plan-r1-opus-shipped", "migration-plan-r1-opus-sticky", "migration-plan-r1-any-sonnet"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+[pflag-mixed-r2-fable] attempt 1: transient infrastructure failure: pflag-mixed-r2-fable-anchor: timeout (worker vanished mid-run) -- [terminal tail omitted: 163 chars, sha256:19d5789c]; pflag-mixed-r2-fable-shipped: timeout (worker vanished mid-run) -- [terminal tail omitted: 291 chars, sha256:41f77321]; pflag-mixed-r2-fable-sticky: timeout (worker vanished mid-run) -- [terminal tail omitted: 156 chars, sha256:f824331f]
+[pflag-mixed-r2-fable] workers vanished mid-run (Forge daemon restart/shutdown, sleep, killed terminal?): check ~/Library/Logs/forge/daemon.err.log for 'Shutting down daemon'
+[expense-anomaly-r1-fable] attempt 1: transient infrastructure failure: expense-anomaly-r1-fable-anchor: timeout (worker vanished mid-run) -- [terminal tail omitted: 54 chars, sha256:05c05779]; expense-anomaly-r1-fable-shipped: timeout (worker vanished mid-run) -- [terminal tail omitted: 231 chars, sha256:90330481]; expense-anomaly-r1-fable-sticky: timeout (worker vanished mid-run) -- [terminal tail omitted: 180 chars, sha256:fe5a1940]
+[support-workload-r2-opus] attempt 1: transient infrastructure failure: support-workload-r2-opus-anchor: timeout (worker vanished mid-run) -- [terminal tail omitted: 114 chars, sha256:09c1a23e]; support-workload-r2-opus-shipped: timeout (worker vanished mid-run) -- [terminal tail omitted: 313 chars, sha256:da446328]; support-workload-r2-opus-sticky: timeout (worker vanished mid-run) -- [terminal tail omitted: 53 chars, sha256:f9ab3a89]; support-workload-r2-any-sonnet: timeout (worker vanished mid-run) -- [terminal tail omitted: 208 chars, sha256:9c2c408b]
+[voluptuous-number-r1-opus] attempt 1: transient infrastructure failure: voluptuous-number-r1-opus-anchor: timeout (worker vanished mid-run) -- [terminal tail omitted: 233 chars, sha256:caac58a9]; voluptuous-number-r1-opus-shipped: timeout (worker vanished mid-run) -- [terminal tail omitted: 186 chars, sha256:0880de82]; voluptuous-number-r1-opus-sticky: timeout (worker vanished mid-run) -- [terminal tail omitted: 243 chars, sha256:076a876a]; voluptuous-number-r1-any-sonnet: timeout (worker vanished mid-run) -- [terminal tail omitted: 216 chars, sha256:54f08c94]
+[sqlparse-realname-r1-opus] attempt 1: transient infrastructure failure: sqlparse-realname-r1-opus-anchor: timeout (worker vanished mid-run) -- [terminal tail omitted: 99 chars, sha256:934d418e]; sqlparse-realname-r1-opus-shipped: timeout (worker vanished mid-run) -- [terminal tail omitted: 145 chars, sha256:ba92af6a]; sqlparse-realname-r1-opus-sticky: timeout (worker vanished mid-run) -- [terminal tail omitted: 123 chars, sha256:56a87b04]; sqlparse-realname-r1-any-sonnet: timeout (worker vanished mid-run) -- [terminal tail omitted: 314 chars, sha256:2ef42a8d]
+{"prepared": "<campaign>/w163-a2", "runs": ["pflag-mixed-r2-fable-anchor", "pflag-mixed-r2-fable-shipped", "pflag-mixed-r2-fable-sticky"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+circuit breaker: 2 waves in a row failed infrastructure (pflag-mixed-r2-fable, expense-anomaly-r1-fable); stopping instead of burning through waves
+circuit breaker: 2 waves in a row failed infrastructure (pflag-mixed-r2-fable, expense-anomaly-r1-fable); stopping instead of burning through waves
+circuit breaker: 2 waves in a row failed infrastructure (pflag-mixed-r2-fable, expense-anomaly-r1-fable); stopping instead of burning through waves
+circuit breaker: 2 waves in a row failed infrastructure (pflag-mixed-r2-fable, expense-anomaly-r1-fable); stopping instead of burning through waves
+STOPPED: infrastructure is unhealthy. No wave was excluded by this trip; fix the cause (see the attempt reasons in state.json) and re-run with --resume.
+{"exit": 4, "state": "<campaign>/state.json", "ledger": "<campaign>/ledger.json"}
+EXIT 4
+EXIT 143
+memory check ok: 57.1 GB available (floor 32.0 GB)
+caffeinate attached (idle/system sleep prevented; clamshell sleep on battery cannot be prevented: keep the lid open or on AC)
+--parallel 28 clamped to 23: Forge allows 30 terminals, 5 belong to others, 2 kept free (raise maxSessions in ~/.forge/settings.json and restart the daemon for more)
+{"prepared": "<campaign>/w232-a1", "runs": ["jmespath-strcmp-r2-fable-anchor", "jmespath-strcmp-r2-fable-shipped", "jmespath-strcmp-r2-fable-sticky"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w233-a1", "runs": ["xmltodict-none-r1-opus-anchor", "xmltodict-none-r1-opus-shipped", "xmltodict-none-r1-opus-sticky", "xmltodict-none-r1-any-sonnet"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w234-a1", "runs": ["js-listops-r1-opus-anchor", "js-listops-r1-opus-shipped", "js-listops-r1-opus-sticky", "js-listops-r1-any-sonnet"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w235-a1", "runs": ["js-listops-r1-fable-anchor", "js-listops-r1-fable-shipped", "js-listops-r1-fable-sticky"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w236-a1", "runs": ["pr-review-retry-r1-fable-anchor", "pr-review-retry-r1-fable-aa", "pr-review-retry-r1-fable-shipped", "pr-review-retry-r1-fable-sticky"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w237-a1", "runs": ["rust-gradeschool-r1-fable-anchor", "rust-gradeschool-r1-fable-shipped", "rust-gradeschool-r1-fable-sticky"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w238-a1", "runs": ["lark-template-r1-opus-anchor", "lark-template-r1-opus-shipped", "lark-template-r1-opus-sticky", "lark-template-r1-any-sonnet"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w239-a1", "runs": ["filelock-explain-r1-opus-anchor", "filelock-explain-r1-opus-shipped", "filelock-explain-r1-opus-sticky", "filelock-explain-r1-any-sonnet"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w240-a1", "runs": ["py-rest-api-r1-opus-anchor", "py-rest-api-r1-opus-shipped", "py-rest-api-r1-opus-sticky", "py-rest-api-r1-any-sonnet"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+waiting for Forge terminal capacity before moreit-chunked-r2-opus (4 sessions)
+{"prepared": "<campaign>/w241-a1", "runs": ["moreit-chunked-r2-opus-anchor", "moreit-chunked-r2-opus-shipped", "moreit-chunked-r2-opus-sticky", "moreit-chunked-r2-any-sonnet"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w242-a1", "runs": ["lark-discard-r2-opus-anchor", "lark-discard-r2-opus-shipped", "lark-discard-r2-opus-sticky", "lark-discard-r2-any-sonnet"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w243-a1", "runs": ["go-vlq-r2-opus-anchor", "go-vlq-r2-opus-shipped", "go-vlq-r2-opus-sticky", "go-vlq-r2-any-sonnet"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w244-a1", "runs": ["py-sgf-parsing-r2-fable-anchor", "py-sgf-parsing-r2-fable-shipped", "py-sgf-parsing-r2-fable-sticky"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w245-a1", "runs": ["go-dominoes-r2-fable-anchor", "go-dominoes-r2-fable-aa", "go-dominoes-r2-fable-shipped", "go-dominoes-r2-fable-sticky"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w246-a1", "runs": ["js-rationals-r1-fable-anchor", "js-rationals-r1-fable-shipped", "js-rationals-r1-fable-sticky"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w247-a1", "runs": ["kac-docs-r1-fable-anchor", "kac-docs-r1-fable-shipped", "kac-docs-r1-fable-sticky"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w248-a1", "runs": ["nanoid-explain-r2-opus-anchor", "nanoid-explain-r2-opus-shipped", "nanoid-explain-r2-opus-sticky", "nanoid-explain-r2-any-sonnet"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w249-a1", "runs": ["discrepancy-docs-r1-fable-anchor", "discrepancy-docs-r1-fable-shipped", "discrepancy-docs-r1-fable-sticky"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w250-a1", "runs": ["py-poker-r2-fable-anchor", "py-poker-r2-fable-aa", "py-poker-r2-fable-shipped", "py-poker-r2-fable-sticky"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w251-a1", "runs": ["schema-wrongkey-r2-opus-anchor", "schema-wrongkey-r2-opus-shipped", "schema-wrongkey-r2-opus-sticky", "schema-wrongkey-r2-any-sonnet"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w252-a1", "runs": ["cachetools-params-r1-opus-anchor", "cachetools-params-r1-opus-shipped", "cachetools-params-r1-opus-sticky", "cachetools-params-r1-any-sonnet"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w253-a1", "runs": ["pr-review-retry-r2-fable-anchor", "pr-review-retry-r2-fable-aa", "pr-review-retry-r2-fable-shipped", "pr-review-retry-r2-fable-sticky"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w254-a1", "runs": ["survey-analysis-r2-fable-anchor", "survey-analysis-r2-fable-shipped", "survey-analysis-r2-fable-sticky"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w255-a1", "runs": ["discrepancy-docs-r2-fable-anchor", "discrepancy-docs-r2-fable-shipped", "discrepancy-docs-r2-fable-sticky"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w256-a1", "runs": ["pr-review-cart-r1-fable-anchor", "pr-review-cart-r1-fable-shipped", "pr-review-cart-r1-fable-sticky"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w257-a1", "runs": ["go-dominoes-r1-opus-anchor", "go-dominoes-r1-opus-shipped", "go-dominoes-r1-opus-sticky", "go-dominoes-r1-any-sonnet"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w258-a1", "runs": ["fd-cli-docs-r1-fable-anchor", "fd-cli-docs-r1-fable-aa", "fd-cli-docs-r1-fable-shipped", "fd-cli-docs-r1-fable-sticky"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+[discrepancy-docs-r2-fable] attempt 1: transient infrastructure failure: discrepancy-docs-r2-fable-anchor: timeout (worker vanished mid-run) -- [terminal tail omitted: 220 chars, sha256:7663a022]; discrepancy-docs-r2-fable-shipped: timeout (worker vanished mid-run) -- [terminal tail omitted: 211 chars, sha256:62615777]; discrepancy-docs-r2-fable-sticky: timeout (worker vanished mid-run) -- [terminal tail omitted: 241 chars, sha256:56053e56]
+[discrepancy-docs-r2-fable] workers vanished mid-run (Forge daemon restart/shutdown, sleep, killed terminal?): check ~/Library/Logs/forge/daemon.err.log for 'Shutting down daemon'
+[cachetools-params-r1-opus] attempt 1: transient infrastructure failure: cachetools-params-r1-opus-anchor: timeout (worker vanished mid-run) -- [terminal tail omitted: 133 chars, sha256:abf998d2]; cachetools-params-r1-opus-shipped: timeout (worker vanished mid-run) -- [terminal tail omitted: 203 chars, sha256:0f13eba0]; cachetools-params-r1-opus-sticky: timeout (worker vanished mid-run) -- [terminal tail omitted: 219 chars, sha256:a3741aba]; cachetools-params-r1-any-sonnet: timeout (worker vanished mid-run) -- [terminal tail omitted: 213 chars, sha256:9b73ea9c]
+[survey-analysis-r2-fable] attempt 1: transient infrastructure failure: survey-analysis-r2-fable-anchor: timeout (worker vanished mid-run) -- [terminal tail omitted: 210 chars, sha256:28998cad]
+[pr-review-cart-r1-fable] attempt 1: transient infrastructure failure: pr-review-cart-r1-fable-anchor: timeout (worker vanished mid-run) -- [terminal tail omitted: 165 chars, sha256:656d1d8b]; pr-review-cart-r1-fable-shipped: timeout (worker vanished mid-run) -- [terminal tail omitted: 305 chars, sha256:37bc2193]; pr-review-cart-r1-fable-sticky: timeout (worker vanished mid-run) -- [terminal tail omitted: 293 chars, sha256:f7f0dfa2]
+{"prepared": "<campaign>/w255-a2", "runs": ["discrepancy-docs-r2-fable-anchor", "discrepancy-docs-r2-fable-shipped", "discrepancy-docs-r2-fable-sticky"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+[go-dominoes-r1-opus] attempt 1: transient infrastructure failure: go-dominoes-r1-opus-anchor: timeout (worker vanished mid-run) -- [terminal tail omitted: 248 chars, sha256:af8efefe]; go-dominoes-r1-opus-shipped: timeout (worker vanished mid-run) -- [terminal tail omitted: 248 chars, sha256:af8efefe]; go-dominoes-r1-opus-sticky: timeout (worker vanished mid-run) -- [terminal tail omitted: 248 chars, sha256:af8efefe]; go-dominoes-r1-any-sonnet: timeout (worker vanished mid-run) -- [terminal tail omitted: 274 chars, sha256:3c749a0a]
+circuit breaker: 2 waves in a row failed infrastructure (discrepancy-docs-r2-fable, cachetools-params-r1-opus); stopping instead of burning through waves
+circuit breaker: 2 waves in a row failed infrastructure (discrepancy-docs-r2-fable, cachetools-params-r1-opus); stopping instead of burning through waves
+circuit breaker: 2 waves in a row failed infrastructure (discrepancy-docs-r2-fable, cachetools-params-r1-opus); stopping instead of burning through waves
+circuit breaker: 2 waves in a row failed infrastructure (discrepancy-docs-r2-fable, cachetools-params-r1-opus); stopping instead of burning through waves
+STOPPED: infrastructure is unhealthy. No wave was excluded by this trip; fix the cause (see the attempt reasons in state.json) and re-run with --resume.
+{"exit": 4, "state": "<campaign>/state.json", "ledger": "<campaign>/ledger.json"}
+EXIT 4
+memory check ok: 58.2 GB available (floor 32.0 GB)
+caffeinate attached (idle/system sleep prevented; clamshell sleep on battery cannot be prevented: keep the lid open or on AC)
+{"prepared": "<campaign>/w252-a2", "runs": ["cachetools-params-r1-opus-anchor", "cachetools-params-r1-opus-shipped", "cachetools-params-r1-opus-sticky", "cachetools-params-r1-any-sonnet"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w254-a2", "runs": ["survey-analysis-r2-fable-anchor", "survey-analysis-r2-fable-shipped", "survey-analysis-r2-fable-sticky"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w256-a2", "runs": ["pr-review-cart-r1-fable-anchor", "pr-review-cart-r1-fable-shipped", "pr-review-cart-r1-fable-sticky"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+waiting for Forge terminal capacity before go-dominoes-r1-opus (4 sessions)
+waiting for Forge terminal capacity before go-dominoes-r1-opus (4 sessions)
+waiting for Forge terminal capacity before go-dominoes-r1-opus (4 sessions)
+waiting for Forge terminal capacity before go-dominoes-r1-opus (4 sessions)
+waiting for Forge terminal capacity before go-dominoes-r1-opus (4 sessions)
+waiting for Forge terminal capacity before go-dominoes-r1-opus (4 sessions)
+waiting for Forge terminal capacity before go-dominoes-r1-opus (4 sessions)
+waiting for Forge terminal capacity before go-dominoes-r1-opus (4 sessions)
+waiting for Forge terminal capacity before go-dominoes-r1-opus (4 sessions)
+waiting for Forge terminal capacity before go-dominoes-r1-opus (4 sessions)
+waiting for Forge terminal capacity before go-dominoes-r1-opus (4 sessions)
+waiting for Forge terminal capacity before go-dominoes-r1-opus (4 sessions)
+waiting for Forge terminal capacity before go-dominoes-r1-opus (4 sessions)
+waiting for Forge terminal capacity before go-dominoes-r1-opus (4 sessions)
+waiting for Forge terminal capacity before go-dominoes-r1-opus (4 sessions)
+waiting for Forge terminal capacity before go-dominoes-r1-opus (4 sessions)
+waiting for Forge terminal capacity before go-dominoes-r1-opus (4 sessions)
+waiting for Forge terminal capacity before go-dominoes-r1-opus (4 sessions)
+waiting for Forge terminal capacity before go-dominoes-r1-opus (4 sessions)
+waiting for Forge terminal capacity before go-dominoes-r1-opus (4 sessions)
+waiting for Forge terminal capacity before go-dominoes-r1-opus (4 sessions)
+waiting for Forge terminal capacity before go-dominoes-r1-opus (4 sessions)
+waiting for Forge terminal capacity before go-dominoes-r1-opus (4 sessions)
+waiting for Forge terminal capacity before go-dominoes-r1-opus (4 sessions)
+{"prepared": "<campaign>/w257-a2", "runs": ["go-dominoes-r1-opus-anchor", "go-dominoes-r1-opus-shipped", "go-dominoes-r1-opus-sticky", "go-dominoes-r1-any-sonnet"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+waiting for Forge terminal capacity before js-rationals-r1-opus (4 sessions)
+waiting for Forge terminal capacity before js-rationals-r1-opus (4 sessions)
+waiting for Forge terminal capacity before js-rationals-r1-opus (4 sessions)
+waiting for Forge terminal capacity before js-rationals-r1-opus (4 sessions)
+waiting for Forge terminal capacity before js-rationals-r1-opus (4 sessions)
+waiting for Forge terminal capacity before js-rationals-r1-opus (4 sessions)
+waiting for Forge terminal capacity before js-rationals-r1-opus (4 sessions)
+waiting for Forge terminal capacity before js-rationals-r1-opus (4 sessions)
+waiting for Forge terminal capacity before js-rationals-r1-opus (4 sessions)
+waiting for Forge terminal capacity before js-rationals-r1-opus (4 sessions)
+waiting for Forge terminal capacity before js-rationals-r1-opus (4 sessions)
+waiting for Forge terminal capacity before js-rationals-r1-opus (4 sessions)
+waiting for Forge terminal capacity before js-rationals-r1-opus (4 sessions)
+waiting for Forge terminal capacity before js-rationals-r1-opus (4 sessions)
+waiting for Forge terminal capacity before js-rationals-r1-opus (4 sessions)
+waiting for Forge terminal capacity before js-rationals-r1-opus (4 sessions)
+waiting for Forge terminal capacity before js-rationals-r1-opus (4 sessions)
+waiting for Forge terminal capacity before js-rationals-r1-opus (4 sessions)
+waiting for Forge terminal capacity before js-rationals-r1-opus (4 sessions)
+waiting for Forge terminal capacity before js-rationals-r1-opus (4 sessions)
+waiting for Forge terminal capacity before js-rationals-r1-opus (4 sessions)
+waiting for Forge terminal capacity before js-rationals-r1-opus (4 sessions)
+waiting for Forge terminal capacity before js-rationals-r1-opus (4 sessions)
+waiting for Forge terminal capacity before js-rationals-r1-opus (4 sessions)
+waiting for Forge terminal capacity before js-rationals-r1-opus (4 sessions)
+waiting for Forge terminal capacity before js-rationals-r1-opus (4 sessions)
+waiting for Forge terminal capacity before js-rationals-r1-opus (4 sessions)
+waiting for Forge terminal capacity before js-rationals-r1-opus (4 sessions)
+waiting for Forge terminal capacity before js-rationals-r1-opus (4 sessions)
+waiting for Forge terminal capacity before js-rationals-r1-opus (4 sessions)
+waiting for Forge terminal capacity before js-rationals-r1-opus (4 sessions)
+waiting for Forge terminal capacity before js-rationals-r1-opus (4 sessions)
+waiting for Forge terminal capacity before js-rationals-r1-opus (4 sessions)
+waiting for Forge terminal capacity before js-rationals-r1-opus (4 sessions)
+waiting for Forge terminal capacity before js-rationals-r1-opus (4 sessions)
+waiting for Forge terminal capacity before js-rationals-r1-opus (4 sessions)
+waiting for Forge terminal capacity before js-rationals-r1-opus (4 sessions)
+waiting for Forge terminal capacity before js-rationals-r1-opus (4 sessions)
+waiting for Forge terminal capacity before js-rationals-r1-opus (4 sessions)
+waiting for Forge terminal capacity before js-rationals-r1-opus (4 sessions)
+{"prepared": "<campaign>/w259-a1", "runs": ["js-rationals-r1-opus-anchor", "js-rationals-r1-opus-shipped", "js-rationals-r1-opus-sticky", "js-rationals-r1-any-sonnet"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+waiting for Forge terminal capacity before boltons-tableutils-r1-fable (3 sessions)
+waiting for Forge terminal capacity before boltons-tableutils-r1-fable (3 sessions)
+waiting for Forge terminal capacity before boltons-tableutils-r1-fable (3 sessions)
+waiting for Forge terminal capacity before boltons-tableutils-r1-fable (3 sessions)
+waiting for Forge terminal capacity before boltons-tableutils-r1-fable (3 sessions)
+waiting for Forge terminal capacity before boltons-tableutils-r1-fable (3 sessions)
+waiting for Forge terminal capacity before boltons-tableutils-r1-fable (3 sessions)
+waiting for Forge terminal capacity before boltons-tableutils-r1-fable (3 sessions)
+waiting for Forge terminal capacity before boltons-tableutils-r1-fable (3 sessions)
+waiting for Forge terminal capacity before boltons-tableutils-r1-fable (3 sessions)
+waiting for Forge terminal capacity before boltons-tableutils-r1-fable (3 sessions)
+waiting for Forge terminal capacity before boltons-tableutils-r1-fable (3 sessions)
+waiting for Forge terminal capacity before boltons-tableutils-r1-fable (3 sessions)
+waiting for Forge terminal capacity before boltons-tableutils-r1-fable (3 sessions)
+waiting for Forge terminal capacity before boltons-tableutils-r1-fable (3 sessions)
+waiting for Forge terminal capacity before boltons-tableutils-r1-fable (3 sessions)
+waiting for Forge terminal capacity before boltons-tableutils-r1-fable (3 sessions)
+{"prepared": "<campaign>/w260-a1", "runs": ["boltons-tableutils-r1-fable-anchor", "boltons-tableutils-r1-fable-shipped", "boltons-tableutils-r1-fable-sticky"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+waiting for Forge terminal capacity before fd-cli-docs-r2-fable (3 sessions)
+waiting for Forge terminal capacity before fd-cli-docs-r2-fable (3 sessions)
+waiting for Forge terminal capacity before fd-cli-docs-r2-fable (3 sessions)
+waiting for Forge terminal capacity before fd-cli-docs-r2-fable (3 sessions)
+waiting for Forge terminal capacity before fd-cli-docs-r2-fable (3 sessions)
+waiting for Forge terminal capacity before fd-cli-docs-r2-fable (3 sessions)
+waiting for Forge terminal capacity before fd-cli-docs-r2-fable (3 sessions)
+waiting for Forge terminal capacity before fd-cli-docs-r2-fable (3 sessions)
+waiting for Forge terminal capacity before fd-cli-docs-r2-fable (3 sessions)
+waiting for Forge terminal capacity before fd-cli-docs-r2-fable (3 sessions)
+waiting for Forge terminal capacity before fd-cli-docs-r2-fable (3 sessions)
+waiting for Forge terminal capacity before fd-cli-docs-r2-fable (3 sessions)
+waiting for Forge terminal capacity before fd-cli-docs-r2-fable (3 sessions)
+waiting for Forge terminal capacity before fd-cli-docs-r2-fable (3 sessions)
+waiting for Forge terminal capacity before fd-cli-docs-r2-fable (3 sessions)
+waiting for Forge terminal capacity before fd-cli-docs-r2-fable (3 sessions)
+waiting for Forge terminal capacity before fd-cli-docs-r2-fable (3 sessions)
+waiting for Forge terminal capacity before fd-cli-docs-r2-fable (3 sessions)
+waiting for Forge terminal capacity before fd-cli-docs-r2-fable (3 sessions)
+waiting for Forge terminal capacity before fd-cli-docs-r2-fable (3 sessions)
+waiting for Forge terminal capacity before fd-cli-docs-r2-fable (3 sessions)
+waiting for Forge terminal capacity before fd-cli-docs-r2-fable (3 sessions)
+waiting for Forge terminal capacity before fd-cli-docs-r2-fable (3 sessions)
+{"prepared": "<campaign>/w261-a1", "runs": ["fd-cli-docs-r2-fable-anchor", "fd-cli-docs-r2-fable-shipped", "fd-cli-docs-r2-fable-sticky"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+waiting for Forge terminal capacity before docstring-audit-r2-fable (3 sessions)
+waiting for Forge terminal capacity before docstring-audit-r2-fable (3 sessions)
+waiting for Forge terminal capacity before docstring-audit-r2-fable (3 sessions)
+waiting for Forge terminal capacity before docstring-audit-r2-fable (3 sessions)
+waiting for Forge terminal capacity before docstring-audit-r2-fable (3 sessions)
+waiting for Forge terminal capacity before docstring-audit-r2-fable (3 sessions)
+waiting for Forge terminal capacity before docstring-audit-r2-fable (3 sessions)
+waiting for Forge terminal capacity before docstring-audit-r2-fable (3 sessions)
+waiting for Forge terminal capacity before docstring-audit-r2-fable (3 sessions)
+waiting for Forge terminal capacity before docstring-audit-r2-fable (3 sessions)
+waiting for Forge terminal capacity before docstring-audit-r2-fable (3 sessions)
+waiting for Forge terminal capacity before docstring-audit-r2-fable (3 sessions)
+waiting for Forge terminal capacity before docstring-audit-r2-fable (3 sessions)
+waiting for Forge terminal capacity before docstring-audit-r2-fable (3 sessions)
+waiting for Forge terminal capacity before docstring-audit-r2-fable (3 sessions)
+{"prepared": "<campaign>/w262-a1", "runs": ["docstring-audit-r2-fable-anchor", "docstring-audit-r2-fable-shipped", "docstring-audit-r2-fable-sticky"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+waiting for Forge terminal capacity before py-poker-r1-opus (4 sessions)
+waiting for Forge terminal capacity before py-poker-r1-opus (4 sessions)
+waiting for Forge terminal capacity before py-poker-r1-opus (4 sessions)
+waiting for Forge terminal capacity before py-poker-r1-opus (4 sessions)
+waiting for Forge terminal capacity before py-poker-r1-opus (4 sessions)
+waiting for Forge terminal capacity before py-poker-r1-opus (4 sessions)
+waiting for Forge terminal capacity before py-poker-r1-opus (4 sessions)
+waiting for Forge terminal capacity before py-poker-r1-opus (4 sessions)
+waiting for Forge terminal capacity before py-poker-r1-opus (4 sessions)
+waiting for Forge terminal capacity before py-poker-r1-opus (4 sessions)
+waiting for Forge terminal capacity before py-poker-r1-opus (4 sessions)
+waiting for Forge terminal capacity before py-poker-r1-opus (4 sessions)
+waiting for Forge terminal capacity before py-poker-r1-opus (4 sessions)
+{"prepared": "<campaign>/w263-a1", "runs": ["py-poker-r1-opus-anchor", "py-poker-r1-opus-shipped", "py-poker-r1-opus-sticky", "py-poker-r1-any-sonnet"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w264-a1", "runs": ["mistune-escape-r2-fable-anchor", "mistune-escape-r2-fable-aa", "mistune-escape-r2-fable-shipped", "mistune-escape-r2-fable-sticky"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w265-a1", "runs": ["js-phone-r2-fable-anchor", "js-phone-r2-fable-shipped", "js-phone-r2-fable-sticky"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w266-a1", "runs": ["sales-orders-r2-fable-anchor", "sales-orders-r2-fable-shipped", "sales-orders-r2-fable-sticky"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w267-a1", "runs": ["arch-explain-r2-fable-anchor", "arch-explain-r2-fable-shipped", "arch-explain-r2-fable-sticky"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w268-a1", "runs": ["meeting-notes-r1-fable-anchor", "meeting-notes-r1-fable-aa", "meeting-notes-r1-fable-shipped", "meeting-notes-r1-fable-sticky"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w269-a1", "runs": ["sqlparse-realname-r1-fable-anchor", "sqlparse-realname-r1-fable-shipped", "sqlparse-realname-r1-fable-sticky"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w270-a1", "runs": ["meeting-notes-r2-opus-anchor", "meeting-notes-r2-opus-shipped", "meeting-notes-r2-opus-sticky", "meeting-notes-r2-any-sonnet"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w271-a1", "runs": ["okr-status-r2-fable-anchor", "okr-status-r2-fable-shipped", "okr-status-r2-fable-sticky"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w272-a1", "runs": ["survey-analysis-r2-opus-anchor", "survey-analysis-r2-opus-shipped", "survey-analysis-r2-opus-sticky", "survey-analysis-r2-any-sonnet"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w273-a1", "runs": ["expense-anomaly-r2-opus-anchor", "expense-anomaly-r2-opus-shipped", "expense-anomaly-r2-opus-sticky", "expense-anomaly-r2-any-sonnet"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w274-a1", "runs": ["py-book-store-r1-fable-anchor", "py-book-store-r1-fable-shipped", "py-book-store-r1-fable-sticky"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w275-a1", "runs": ["readme-rewrite-r2-opus-anchor", "readme-rewrite-r2-opus-aa", "readme-rewrite-r2-opus-shipped", "readme-rewrite-r2-opus-sticky", "readme-rewrite-r2-any-sonnet"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w276-a1", "runs": ["py-go-counting-r1-opus-anchor", "py-go-counting-r1-opus-shipped", "py-go-counting-r1-opus-sticky", "py-go-counting-r1-any-sonnet"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w277-a1", "runs": ["yamllint-mixed-r1-opus-anchor", "yamllint-mixed-r1-opus-shipped", "yamllint-mixed-r1-opus-sticky", "yamllint-mixed-r1-any-sonnet"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w278-a1", "runs": ["go-protein-r1-fable-anchor", "go-protein-r1-fable-shipped", "go-protein-r1-fable-sticky"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w279-a1", "runs": ["go-vlq-r2-fable-anchor", "go-vlq-r2-fable-shipped", "go-vlq-r2-fable-sticky"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"exit": 0, "state": "<campaign>/state.json", "ledger": "<campaign>/ledger.json"}
+EXIT 0
