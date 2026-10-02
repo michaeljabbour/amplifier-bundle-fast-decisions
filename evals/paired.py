@@ -1086,6 +1086,34 @@ class ForgeBackend:
         import forge_e2e
         return Path(root) / forge_e2e._slug(name) / "workspace"
 
+    def _forge(self):
+        import forge_e2e
+        forge_py = Path(forge_e2e.FORGE).expanduser()
+        if str(forge_py.parent) not in sys.path:
+            sys.path.insert(0, str(forge_py.parent))
+        import forge as forge_module
+        return forge_module
+
+    def forge_max_sessions(self) -> int:
+        """Forge's own terminal cap (~/.forge/settings.json maxSessions, default 10): exited-but-unclosed terminals count."""
+        try:
+            return int(json.loads((Path.home() / ".forge" / "settings.json").read_text()).get("maxSessions", 10))
+        except (OSError, ValueError, TypeError):
+            return 10
+
+    def forge_terminals(self, root: Path | None = None) -> dict:
+        """{'total': n, 'ours_exited': n} from Forge's list_terminals ('ours' = name or cwd mentions the campaign root)."""
+        sessions = self._forge().call("list_terminals", {})
+        if isinstance(sessions, dict):
+            sessions = sessions.get("sessions") or sessions.get("terminals") or []
+        sessions = [s for s in sessions if isinstance(s, dict)]
+        ours = [s for s in sessions if root is not None and str(root) in (s.get("name") or "") + " " + (s.get("cwd") or "")]
+        return {"total": len(sessions), "ours": len(ours), "ours_exited": sum(1 for s in ours if s.get("status") == "exited")}
+
+    def forge_reap(self, root: Path) -> bool:
+        import forge_e2e
+        return forge_e2e.reap_exited_worker_terminals(self._forge(), root)
+
     def diagnose(self, root: Path, name: str, result: dict | None) -> dict:
         """Evidence for failure classification: the error tail (forge-output.txt, else the first turn's stdout)
         and how many model calls the session made (llm:request events)."""
@@ -1143,6 +1171,50 @@ class Slots:
         with self.cv:
             self.n += k
             self.cv.notify_all()
+
+
+FORGE_RESERVE = 2             # terminals left free for the user / other tools when clamping --parallel to Forge's cap
+MAX_EXCLUDED_PER_HOUR = 3
+CAPACITY_WAIT_S = 15.0
+MAX_CAPACITY_WAITS = 40
+
+
+class BreakerOpen(PairedError):
+    """Too many consecutive infrastructure failures: stop launching instead of burning through waves (exit 4)."""
+
+    def __init__(self, reason: str):
+        super().__init__(EXIT_PRECONDITION, reason)
+
+
+class CircuitBreaker:
+    """Trips when >= ``consecutive`` waves in a row have an infrastructure-failed attempt (no clean wave in between), or when
+    more than ``max_excluded_per_hour`` waves were excluded within the last hour. Once open it stays open for the run."""
+
+    def __init__(self, consecutive: int = 2, max_excluded_per_hour: int = MAX_EXCLUDED_PER_HOUR, now=time.time):
+        self.consecutive, self.max_excluded, self.now = consecutive, max_excluded_per_hour, now
+        self.lock, self.streak, self.excluded_at, self.tripped = threading.Lock(), [], [], None
+
+    def note_infra(self, wid: str) -> str | None:
+        with self.lock:
+            if wid not in self.streak:
+                self.streak.append(wid)
+            if len(self.streak) >= self.consecutive and not self.tripped:
+                self.tripped = (f"circuit breaker: {len(self.streak)} waves in a row failed infrastructure ({', '.join(self.streak)}); "
+                                "stopping instead of burning through waves")
+            return self.tripped
+
+    def note_clean(self, wid: str) -> None:
+        with self.lock:
+            self.streak = []
+
+    def note_excluded(self, wid: str) -> str | None:
+        with self.lock:
+            t = self.now()
+            self.excluded_at = [x for x in self.excluded_at if t - x < 3600] + [t]
+            if len(self.excluded_at) > self.max_excluded and not self.tripped:
+                self.tripped = (f"circuit breaker: {len(self.excluded_at)} waves excluded within an hour (limit {self.max_excluded}); "
+                                "stopping")
+            return self.tripped
 
 
 def _read_json(p: Path, default=None):
@@ -1230,7 +1302,20 @@ def wave_cost(ctx: Ctx, backend, root: Path, sessions: list) -> float:
     return total
 
 
-def run_wave(ctx: Ctx, backend, state: State, ledger: Ledger, wid: str, policy_config: dict, resume: bool, log=print) -> str:
+def failure_reason(infra: list, outcomes: dict, diag: dict) -> str:
+    """Non-empty, human-readable reason for an infra-failed (or capacity-deferred) attempt: per failed session the launch /
+    wait outcome plus the last lines of its error output."""
+    parts = []
+    for k in infra:
+        out = str(outcomes.get(k, "?"))
+        tail = clean_tail((diag.get(k) or {}).get("error_tail", ""), 3).replace("\n", " | ")
+        died = " (worker vanished mid-run)" if (diag.get(k) or {}).get("worker_died") else ""
+        parts.append(f"{k}: {out}{died}" + (f" -- {tail}" if tail else ""))
+    return "; ".join(parts) or "no result.json and no output captured"
+
+
+def run_wave(ctx: Ctx, backend, state: State, ledger: Ledger, wid: str, policy_config: dict, resume: bool, log=print,
+             breaker=None) -> str:
     """All attempts of one wave. A TRANSIENT infrastructure failure reruns the whole wave (fresh nonces); a wave
     that fails ctx.max_attempts times is excluded and reported. A session that fails BEFORE any model call for a
     non-transient reason is a configuration error: no retry, the wave is marked ``config_error`` (re-runnable
@@ -1298,8 +1383,25 @@ def run_wave(ctx: Ctx, backend, state: State, ledger: Ledger, wid: str, policy_c
         ledger.settle(f"{wid}#a{attempt_no}", spent)
         if infra:
             diag = {k: backend.diagnose(root, k, results[k]) for k in infra}
+            att["reason"] = failure_reason(infra, outcomes, diag)
+            att["infra_failed_sessions"] = infra
+            if all("Maximum sessions" in str(outcomes.get(k, "")) for k in infra):
+                # Forge's terminal cap, not a failed run: wait for capacity and retry; never counts against the attempt limit
+                att["status"] = "capacity_wait"
+                w["capacity_waits"] = w.get("capacity_waits", 0) + 1
+                state.save()
+                log(f"[{wid}] Forge terminal cap reached ({w['capacity_waits']}/{MAX_CAPACITY_WAITS}); waiting {CAPACITY_WAIT_S:.0f}s for capacity")
+                if w["capacity_waits"] > MAX_CAPACITY_WAITS:
+                    raise BreakerOpen(f"[{wid}] Forge terminal cap still reached after {MAX_CAPACITY_WAITS} waits: {att['reason']}")
+                if hasattr(backend, "forge_reap"):
+                    try:
+                        backend.forge_reap(ctx.campaign_root)
+                    except Exception:  # noqa: BLE001 -- reaping is best effort
+                        pass
+                ctx.sleep(CAPACITY_WAIT_S)
+                continue
             kinds = {k: classify_failure(results[k], diag[k]) for k in infra}
-            att["infra_failed_sessions"], att["failure_kinds"] = infra, kinds
+            att["failure_kinds"] = kinds
             cfg = {k: diag[k]["error_tail"] for k, v in kinds.items() if v == "config_error"}
             if cfg:
                 att["status"], att["error_tail"] = "config_error", cfg
@@ -1307,7 +1409,12 @@ def run_wave(ctx: Ctx, backend, state: State, ledger: Ledger, wid: str, policy_c
                 state.save()
                 raise ConfigError(wid, cfg)
             att["status"] = "infra_failed"
-            log(f"[{wid}] attempt {attempt_no}: transient infrastructure failure in {infra}; rerunning the whole wave")
+            log(f"[{wid}] attempt {attempt_no}: transient infrastructure failure: {att['reason']}; rerunning the whole wave")
+            trip = breaker.note_infra(wid) if breaker is not None else None
+            if trip:
+                w["status"] = "pending"            # not the scenario's fault: left runnable, never excluded by a breaker trip
+                state.save()
+                raise BreakerOpen(trip)
             if any(diag[k].get("worker_died") for k in infra):
                 log(f"[{wid}] workers vanished mid-run (Forge daemon restart/shutdown, sleep, killed terminal?): "
                     "check ~/Library/Logs/forge/daemon.err.log for 'Shutting down daemon'")
@@ -1315,12 +1422,18 @@ def run_wave(ctx: Ctx, backend, state: State, ledger: Ledger, wid: str, policy_c
             continue
         att["status"] = "done"
         w["status"], w["accepted_attempt"] = "done", attempt_no
+        if breaker is not None and not any(a["status"] == "infra_failed" for a in w["attempts"]):
+            breaker.note_clean(wid)
         state.save()
         if not att["wave_valid"]:
             log(f"[{wid}] WARNING launch spread {spread:.1f}s > {ctx.max_spread_s}s (or staggered): rows marked wave_valid=false")
         return "done"
     w["status"] = "excluded"
+    w["excluded_reason"] = "; ".join(f"a{a['attempt']}: {a.get('reason', '?')}" for a in w["attempts"] if a["status"] == "infra_failed")
     state.save()
+    trip = breaker.note_excluded(wid) if breaker is not None else None
+    if trip:
+        raise BreakerOpen(trip)
     return "excluded"
 
 
@@ -1354,8 +1467,34 @@ def check_prompt_hashes(root: Path, sessions: list, plan: dict) -> None:
             raise PairedError(EXIT_PRECONDITION, f"prompt hash mismatch for {s['key']}: {item['prompt_sha256']} != {want}")
 
 
+def forge_clamp(backend, root: Path, parallel: int, log=print) -> int:
+    """--parallel can never exceed what Forge can hold: its terminal cap (default 10, exited-but-unclosed terminals count)
+    minus FORGE_RESERVE for the user, minus terminals that are not ours. Backends without Forge (tests) return as is."""
+    if not hasattr(backend, "forge_max_sessions"):
+        return parallel
+    try:
+        cap = backend.forge_max_sessions()
+        try:
+            backend.forge_reap(root)
+        except Exception:  # noqa: BLE001
+            pass
+        info = backend.forge_terminals(root)
+    except Exception as exc:  # noqa: BLE001 -- unreachable Forge: leave it to the launcher's own retry logic
+        log(f"forge capacity check skipped: {exc!r}")
+        return parallel
+    external = max(0, info["total"] - info["ours"])
+    allowed = max(1, cap - FORGE_RESERVE - external)
+    if allowed < parallel:
+        log(f"--parallel {parallel} clamped to {allowed}: Forge allows {cap} terminals, {external} belong to others, "
+            f"{FORGE_RESERVE} kept free (raise maxSessions in ~/.forge/settings.json and restart the daemon for more)")
+    return min(parallel, allowed)
+
+
 def run_campaign(ctx: Ctx, backend, *, budget_usd: float, parallel: int, resume: bool, max_waves=None,
-                 policy_config: dict | None = None, reset_waves_ids: list | None = None, watchdog=None, log=print) -> int:
+                 policy_config: dict | None = None, reset_waves_ids: list | None = None, watchdog=None, log=print,
+                 breaker=None, stagger_per_session_s: float = 2.0) -> int:
+    parallel = forge_clamp(backend, ctx.campaign_root, parallel, log)
+    breaker = breaker if breaker is not None else CircuitBreaker()
     too_big = {w: len(v) for w, v in ctx.plan["waves"].items() if len(v) > parallel}
     if too_big:
         raise PairedError(EXIT_PRECONDITION, f"--parallel {parallel} is smaller than waves {too_big}: every arm of a wave must "
@@ -1380,9 +1519,10 @@ def run_campaign(ctx: Ctx, backend, *, budget_usd: float, parallel: int, resume:
     if max_waves is not None:
         todo = todo[:max_waves]
     slots, futures, code = Slots(parallel), [], EXIT_OK
-    stop, config_errors = threading.Event(), []
+    stop, config_errors, breaker_errors = threading.Event(), [], []
     if watchdog is not None and not watchdog.is_alive():
         watchdog.start()
+    last_admit = None                               # (time, size) of the previous wave admission
     with ThreadPoolExecutor(max_workers=parallel) as ex:
         for wid in todo:
             size = len(ctx.plan["waves"][wid])
@@ -1392,6 +1532,27 @@ def run_campaign(ctx: Ctx, backend, *, budget_usd: float, parallel: int, resume:
             if stop.is_set():
                 slots.release(size)
                 break
+            if last_admit is not None:
+                # stagger BETWEEN waves: the previous wave's launches (spaced by the launcher) must finish before the next
+                # wave's start, so a wave's arms stay within the launch spread while many waves run at once
+                wait = last_admit[0] + last_admit[1] * stagger_per_session_s + 2.0 - ctx.now()
+                if wait > 0:
+                    ctx.sleep(wait)
+            if hasattr(backend, "forge_terminals"):
+                # live terminal count must leave room for this wave (exited terminals of ours are reaped first)
+                for _ in range(MAX_CAPACITY_WAITS):
+                    try:
+                        if backend.forge_terminals(ctx.campaign_root)["total"] + size <= backend.forge_max_sessions():
+                            break
+                        backend.forge_reap(ctx.campaign_root)
+                    except Exception:  # noqa: BLE001
+                        break
+                    log(f"waiting for Forge terminal capacity before {wid} ({size} sessions)")
+                    ctx.sleep(CAPACITY_WAIT_S)
+            if stop.is_set():
+                slots.release(size)
+                break
+            last_admit = (ctx.now(), size)
             try:
                 need = sum(s["est_usd"] for s in ctx.plan["waves"][wid])
                 if ledger.committed() + need > budget_usd + 1e-9:
@@ -1404,11 +1565,15 @@ def run_campaign(ctx: Ctx, backend, *, budget_usd: float, parallel: int, resume:
 
             def job(wid=wid, size=size):
                 try:
-                    return run_wave(ctx, backend, state, ledger, wid, policy_config or {}, resume, log)
+                    return run_wave(ctx, backend, state, ledger, wid, policy_config or {}, resume, log, breaker=breaker)
                 except ConfigError as exc:
                     config_errors.append(exc)
                     stop.set()           # a configuration error is the same for every wave: launch no further wave
                     return "config_error"
+                except BreakerOpen as exc:
+                    breaker_errors.append(exc)
+                    stop.set()           # repeated infrastructure failures: stop launching, do not burn through the schedule
+                    return "breaker_open"
                 finally:
                     slots.release(size)
             futures.append(ex.submit(job))
@@ -1420,6 +1585,12 @@ def run_campaign(ctx: Ctx, backend, *, budget_usd: float, parallel: int, resume:
                 code = EXIT_BUDGET
     if watchdog is not None:
         watchdog.stop()
+    if breaker_errors:
+        for exc in breaker_errors:
+            log(exc.reason)
+        log("STOPPED: infrastructure is unhealthy. No wave was excluded by this trip; fix the cause (see the attempt reasons "
+            "in state.json) and re-run with --resume.")
+        return EXIT_PRECONDITION
     if config_errors:
         for exc in config_errors:
             log(exc.reason)
@@ -2073,6 +2244,11 @@ def cmd_run(args) -> int:
     safety = memory_safety_check(floor_bytes=int(args.pause_floor_gb * memguard.GB) if args.pause_floor_gb else None)
     print(f"memory check ok: {safety['available_gb']} GB available (floor {safety['floor_gb']} GB)")
     backend = ForgeBackend()
+    try:    # keep the Mac awake while the campaign runs (idle/system sleep killed sessions: markdown-tocclass-r1-opus)
+        subprocess.Popen(["caffeinate", "-i", "-m", "-s", "-w", str(os.getpid())], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        print("caffeinate attached (idle/system sleep prevented; clamshell sleep on battery cannot be prevented: keep the lid open or on AC)")
+    except OSError:
+        pass
     if not args.skip_preflight and not preflight_is_fresh(ctx):
         rep = run_preflight(ctx, backend, Ledger(out / "ledger.json", budget), parallel=parallel)
         if not rep["ok"]:

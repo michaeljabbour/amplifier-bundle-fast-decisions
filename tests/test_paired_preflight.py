@@ -212,7 +212,7 @@ class ConfigErrorRunTests(Base):
         class Flaky(FakeBackend):
             def start(self, root, name):
                 if name.endswith("-shipped") and str(root).endswith("-a1"):
-                    raise RuntimeError("forge launch failed: Maximum sessions")
+                    raise RuntimeError("forge launch failed: Forge unreachable (connection reset)")
                 super().start(root, name)
 
             def wait(self, root, name, timeout):
