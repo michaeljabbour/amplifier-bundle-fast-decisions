@@ -1,4 +1,10 @@
-"""Confirmatory analysis for paired campaign main-v1, implemented as written in evals/paired/PREREGISTRATION-main-v1.md.
+"""Confirmatory analysis for paired campaign main-v1.
+
+The hypotheses, thresholds, train/test split and decision rule are those of evals/paired/PREREGISTRATION-main-v1.md.
+The estimator itself (bootstrap resamples and seed, the pair-level quality filter, which cells count as savings
+claims, and the verdict rule including "contradicted") is NOT in the preregistration: it was fixed in this script,
+written after the campaign's data were collected (first committed in c3ea41a, about 55 minutes after the campaign
+finished, when exploratory all-split summaries from evals/paired_model.py already existed).
 
 Input : <campaign>/rows/{sessions,pairs}.jsonl and <campaign>/model/{model,predictions}.json (from evals/paired_model.py).
 Output: <campaign>/confirm/{confirm.json,CONFIRM.md}. No API calls; seeded and deterministic.
@@ -12,7 +18,8 @@ Confirmatory (test split only)
         is the same as delta_turn_pass >= 0 (the arm passed at least as many scripted turns as its anchor).
       - reading "arm"  (sensitivity): all cost-valid pairs; the arm x host cell counts only if its arm-level quality
         non-inferiority holds (the separate Quality hypothesis).
-  * H1/H2/H3/Quality verdicts. One rule for every hypothesis, fixed before the test numbers were looked at:
+  * H1/H2/H3/Quality verdicts. One rule for every hypothesis, fixed in this script (after data collection, before
+    this script's test-split numbers were looked at):
       confirmed      = the 95% CI lies entirely on the hypothesis side of its preregistered threshold
       contradicted   = the 95% CI lies entirely on the other side of that same threshold
       not confirmed  = otherwise.
@@ -45,7 +52,7 @@ import paired_model as pm  # noqa: E402
 
 SCHEMA = "fast-decisions-paired-confirm/v1"
 SEED = 20261002
-BOOT = 10_000                       # prereg: >= 4000 resamples
+BOOT = 10_000                       # chosen here; the preregistration does not fix the number of resamples
 NI = -0.05                          # turn-pass non-inferiority margin
 ARMS = ("shipped", "sticky", "sonnet")
 HOSTS = ("fable", "opus")
@@ -592,7 +599,7 @@ def main(argv=None) -> int:
     ap.add_argument("--seed", type=int, default=SEED)
     a = ap.parse_args(argv)
     if a.boot < 4000:
-        ap.error("the preregistration requires >= 4000 bootstrap resamples")
+        ap.error("use at least 4000 bootstrap resamples (this script's floor; the preregistration does not set one)")
     root = Path(a.root).expanduser()
     out = Path(a.out).expanduser() if a.out else root / "confirm"
     doc = run(root, a.boot, a.seed)

@@ -1,0 +1,8 @@
+Fri Oct  2 12:32:25 EDT 2026 run #1 start
+Fri Oct  2 14:54:16 EDT 2026 supervisor restarted with PARALLEL=28 (user asked to speed up)
+Fri Oct  2 14:54:19 EDT 2026 run #1 start
+Fri Oct  2 16:19:59 EDT 2026 run #1 ended: EXIT 4
+Fri Oct  2 16:20:00 EDT 2026 breaker caused by Forge daemon restart at 2026-10-02T19:55:28.395Z; resuming in 60s
+Fri Oct  2 16:21:00 EDT 2026 run #2 start
+Fri Oct  2 17:39:07 EDT 2026 run #2 ended: EXIT 0
+Fri Oct  2 17:39:07 EDT 2026 campaign complete

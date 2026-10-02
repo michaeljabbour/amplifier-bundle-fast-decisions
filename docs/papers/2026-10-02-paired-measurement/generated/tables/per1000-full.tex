@@ -1,0 +1,70 @@
+\begin{xltabular}{\textwidth}{@{}l l l r r r c@{}}
+\caption{Savings per 1,000 sessions by host, task type and arm, measured (all splits) and as predicted by the preregistered model. Positive numbers are money saved, negative numbers money lost. Exploratory.}\label{tab:per1000full}\\
+\toprule
+Host & Task type & Arm & measured / 1,000 & 90\,\% range & model / 1,000 & model inside \\
+\midrule
+\endfirsthead
+\multicolumn{7}{@{}l}{\small\emph{(continued)}}\\
+\toprule
+Host & Task type & Arm & measured / 1,000 & 90\,\% range & model / 1,000 & model inside \\
+\midrule
+\endhead
+\bottomrule
+\endlastfoot
+Fable 5.1 & bugfix & sticky & 1{,}346 & 848 to 1{,}882 & 222 & \no \\
+ &  & shipped & 797 & 385 to 1{,}232 & 64 & \no \\
+ &  & sonnet & 871 & 486 to 1{,}270 & $-$352 & \no \\
+\addlinespace[2pt]
+ & feature & sticky & 2{,}183 & 1{,}095 to 3{,}188 & 2{,}820 & \ok \\
+ &  & shipped & 2{,}019 & 1{,}254 to 2{,}784 & 2{,}604 & \ok \\
+ &  & sonnet & 2{,}895 & 2{,}350 to 3{,}484 & 2{,}031 & \no \\
+\addlinespace[2pt]
+ & mixed & sticky & 2{,}020 & 1{,}241 to 2{,}720 & 2{,}771 & \no \\
+ &  & shipped & 1{,}941 & 1{,}532 to 2{,}355 & 2{,}553 & \no \\
+ &  & sonnet & 2{,}405 & 2{,}065 to 2{,}740 & 1{,}975 & \no \\
+\addlinespace[2pt]
+ & docs & sticky & 2{,}615 & 2{,}045 to 3{,}326 & 3{,}661 & \no \\
+ &  & shipped & 2{,}263 & 1{,}924 to 2{,}683 & 3{,}445 & \no \\
+ &  & sonnet & 2{,}246 & 1{,}711 to 3{,}049 & 2{,}871 & \ok \\
+\addlinespace[2pt]
+ & explain & sticky & 2{,}315 & 1{,}945 to 2{,}703 & 2{,}877 & \no \\
+ &  & shipped & 2{,}244 & 1{,}671 to 2{,}723 & 2{,}743 & \no \\
+ &  & sonnet & 2{,}367 & 2{,}058 to 2{,}668 & 2{,}388 & \ok \\
+\addlinespace[2pt]
+ & review & sticky & 3{,}007 & 2{,}469 to 3{,}509 & 3{,}853 & \no \\
+ &  & shipped & 3{,}011 & 2{,}456 to 3{,}522 & 3{,}613 & \no \\
+ &  & sonnet & 2{,}389 & 1{,}863 to 2{,}797 & 2{,}977 & \no \\
+\addlinespace[2pt]
+ & all tasks & sticky & 1{,}980 & 1{,}577 to 2{,}368 & 2{,}531 & \no \\
+ &  & shipped & 1{,}754 & 1{,}481 to 2{,}032 & 2{,}314 & \no \\
+ &  & sonnet & 2{,}090 & 1{,}834 to 2{,}340 & 1{,}739 & \no \\
+\addlinespace[2pt]
+\midrule
+Opus 5.5 & bugfix & sticky & $-$1{,}037 & $-$1{,}339 to $-$752 & $-$1{,}112 & \ok \\
+ &  & shipped & $-$1{,}240 & $-$1{,}501 to $-$996 & $-$1{,}176 & \ok \\
+ &  & sonnet & $-$1{,}948 & $-$2{,}300 to $-$1{,}626 & $-$1{,}347 & \no \\
+\addlinespace[2pt]
+ & feature & sticky & $-$574 & $-$776 to $-$385 & $-$501 & \ok \\
+ &  & shipped & $-$490 & $-$708 to $-$301 & $-$590 & \ok \\
+ &  & sonnet & $-$1{,}099 & $-$1{,}376 to $-$839 & $-$824 & \no \\
+\addlinespace[2pt]
+ & mixed & sticky & $-$303 & $-$511 to $-$104 & $-$537 & \no \\
+ &  & shipped & $-$401 & $-$597 to $-$212 & $-$626 & \no \\
+ &  & sonnet & $-$815 & $-$1{,}257 to $-$458 & $-$862 & \ok \\
+\addlinespace[2pt]
+ & docs & sticky & 264 & 99 to 500 & $-$159 & \no \\
+ &  & shipped & 162 & 1 to 321 & $-$248 & \no \\
+ &  & sonnet & $-$129 & $-$458 to 185 & $-$482 & \no \\
+\addlinespace[2pt]
+ & explain & sticky & 341 & 227 to 434 & 150 & \no \\
+ &  & shipped & 235 & 14 to 397 & 95 & \ok \\
+ &  & sonnet & 242 & 66 to 399 & $-$50 & \no \\
+\addlinespace[2pt]
+ & review & sticky & $-$425 & $-$838 to $-$29 & $-$260 & \ok \\
+ &  & shipped & $-$642 & $-$900 to $-$393 & $-$358 & \no \\
+ &  & sonnet & $-$1{,}193 & $-$1{,}568 to $-$830 & $-$618 & \no \\
+\addlinespace[2pt]
+ & all tasks & sticky & $-$489 & $-$639 to $-$342 & $-$625 & \ok \\
+ &  & shipped & $-$588 & $-$726 to $-$456 & $-$714 & \ok \\
+ &  & sonnet & $-$1{,}096 & $-$1{,}329 to $-$881 & $-$949 & \ok \\
+\end{xltabular}

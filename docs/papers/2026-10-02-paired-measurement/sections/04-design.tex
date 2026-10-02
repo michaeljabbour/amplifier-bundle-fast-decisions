@@ -1,0 +1,167 @@
+\section{Design of the experiment}\label{sec:design}
+
+\subsection{Paired sessions from one frozen snapshot}
+
+The unit of comparison is a \term{pair}: one session of a routed arm and one session of the plain host
+(the \term{anchor}) on the same scenario, repetition and host. Both start from the \emph{same} frozen copy
+of the workspace and receive the \emph{same} scripted user messages, so any difference in their bills
+comes from the policy, not from the task.
+
+All arms of one scenario, repetition and host form a \term{wave}. A wave's sessions are launched within
+seconds of each other, each in its own terminal, so they share the time of day and the provider's load.
+The launch order was fixed, not randomised: measured from the first session of its wave, the anchor started
+on average \StaggerAnchor\,s later, the A/A copy \StaggerAA\,s, shipped \StaggerShipped\,s (at most
+\StaggerShippedMax\,s), sticky \StaggerSticky\,s and Sonnet \StaggerSonnet\,s. A small systematic effect of
+launch order cannot be ruled out (\cref{sec:aa}). Each session carries its own
+nonce, so no arm can read another arm's cache (\cref{sec:caching}). A per-request audit checked every
+session for cache reads it could not have written itself; \AuditFlagged\ sessions were flagged.
+
+\begin{keyidea}
+\textbf{Pairing removes most of the noise.} Two scenarios can differ in cost by a factor of ten; two arms on
+the same scenario differ far less. By comparing each routed session only with its own anchor, the
+analysis looks at the ratio within a pair, and the big differences between scenarios cancel out.
+\end{keyidea}
+
+\subsection{Arms and hosts}
+
+\begin{table}[htbp]
+\centering\small
+\caption{The five arms. Every arm except the Sonnet control runs on both host models.}
+\label{tab:arms}
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}l >{\raggedright\arraybackslash}p{0.62\textwidth}@{}}
+\toprule
+Arm & What it is, and what comparing it with the anchor tells us \\
+\midrule
+anchor & The plain host model, no routing. The baseline every other arm is compared with. \\
+aa & A second, identical anchor on a seeded \AAPct\,\% subsample. Its ratio to the anchor should be 1: its
+  spread is the run-to-run noise floor. \\
+shipped & The fast-decisions bundle as shipped (orch-default): its judge re-chooses the model (Sonnet or the
+  host) at the start of each turn; it never switched in the middle of a turn (\ShippedMidturn\ mid-turn
+  switches in \NShippedSessions\ sessions). \\
+sticky & Uses the same routing judge, but only once, on the first prompt; the session then stays on the
+  chosen model and never switches. Shipped versus sticky isolates the cost of switching. \\
+sonnet & Plain Sonnet for the whole session (``just use the cheap model''). It does not depend on the host,
+  so one run serves as the control for both hosts. \\
+\bottomrule
+\end{tabular*}
+\end{table}
+
+The two hosts are Fable 5.1, an expensive model (\cref{tab:prices}), and Opus 5.5, a cheaper one with very
+cheap cache reads. The sticky judge chose Sonnet for
+\NStickySonnetOnly\ of \NStickySessions\ sticky sessions (\StickyCheap\ of \StickyDecisions\ per host,
+\StickyCheapPct\,\%) and the host for the rest, so in practice the sticky arm is mostly ``Sonnet for the whole
+session''. The judge's own calls are not part of any session's cost: the sticky decision was made once by the
+harness, and the shipped arm's per-turn decisions went to a separate judge service (Jev). An earlier benchmark
+measured Jev at \$\JevPerMillion\ per million decisions on comparable real states; at one decision per turn
+that adds about \JudgeShippedCents\ cents to a shipped session, \JudgeShippedShare\,\% of a plain Fable
+session's cost. That estimate comes from another study and is not measured here.
+
+\subsection{Scenarios}
+
+There are \NScenarios\ scenarios in \NFamilies\ families: \FamPolyglot\ coding exercises from a
+multi-language benchmark (polyglot), \FamRepos\ bug fixes and features in small public repositories
+(repos), \FamMixed\ mixed coding-and-analysis tasks (mixed), and \FamKnowledge\ documentation, explanation
+and review tasks (knowledge). Each is a fixed script of \MinTurns\ to \MaxTurns\ user turns (\MeanTurns\ on
+average), identical for every arm, with automatic checks after each turn and hidden tests at the end.
+Turns are \ShortGapS\,s apart, except that \NLongGapScen\ scenarios contain \LongGapsPerScen\ pauses of
+\LongGapMin\ minutes, longer than the cache's \CacheTTLMin-minute lifetime, so expiry is part of the
+workload. The full list is in \cref{tab:scenarios}.
+
+\paragraph{The preregistered split.} Before any session ran, the scenarios were split with a fixed random
+seed (\SplitSeed) into \NTrain\ \term{training} scenarios and \NTest\ \term{test} scenarios, balanced by
+family and by whether a scenario has long pauses. The savings model is fitted on training scenarios only;
+every confirmatory claim uses test scenarios only.
+
+\begin{table}[htbp]
+\centering\small
+\caption{Scenarios by family and preregistered split.}
+\label{tab:families}
+\begin{tabular*}{0.7\textwidth}{@{\extracolsep{\fill}}l r r r@{}}
+\toprule
+Family & training & test & total \\
+\midrule
+polyglot & \FamPolyglotTrain & \FamPolyglotTest & \FamPolyglot \\
+repos & \FamReposTrain & \FamReposTest & \FamRepos \\
+mixed & \FamMixedTrain & \FamMixedTest & \FamMixed \\
+knowledge & \FamKnowledgeTrain & \FamKnowledgeTest & \FamKnowledge \\
+\midrule
+all & \NTrain & \NTest & \NScenarios \\
+\bottomrule
+\end{tabular*}
+\end{table}
+
+\subsection{Quality}
+
+A routed arm that saves money by doing worse work has not saved anything. Each turn's checks give a
+pass or fail; the \term{turn-pass fraction} is the share of a session's turns that passed. The hidden tests
+at the end give a final pass or fail. A savings claim is allowed only where quality is
+\term{non-inferior}: the 95\,\% lower bound of the mean difference in turn-pass fraction (arm minus anchor)
+must be above \NIMargin, that is, at most \NIMarginPts\ percentage points worse.
+
+\subsection{What a session costs}
+
+Every request's tokens were priced with the fixed table in \cref{tab:prices}; the recomputed cost matched
+the provider's reported cost on every session (\CostMismatch\ mismatches). One adjustment makes the
+comparison fair. Every session's first request writes the shared tool definitions (about \ToolsAllowance\
+tokens) to a cold cache, because the nonce stops sessions from sharing. In production those tools would
+usually be warm. The primary \term{tools-normalized} cost re-prices that shared prefix as a cache read; it
+changes the campaign total by \$\ToolsDeltaTotal, and every result is also reported on the raw basis
+(\cref{sec:rawbasis}).
+
+\subsection{Hypotheses and the decision rule}
+
+The hypotheses, their thresholds, the train/test split and the decision rule were fixed in the
+preregistration. Each is tested on the test split only:
+\begin{itemize}
+  \item \textbf{H1 (Fable host):} sticky and shipped cost less than the anchor (upper end of the interval
+    below 1).
+  \item \textbf{H2 (Opus host):} routing to Sonnet does not save: sticky, shipped and Sonnet all have a
+    lower end above \HTwoLower.
+  \item \textbf{H3 (both hosts):} sticky costs no more than shipped (upper end of sticky/shipped at most
+    \HThreeUpper).
+  \item \textbf{Quality:} every savings claim has non-inferior turn-pass fraction.
+\end{itemize}
+The decision rule: on a host where H1 holds with non-inferior quality, route (preferring sticky if H3
+holds); on a host where H2 holds, do not route to Sonnet. A savings model fitted on training data must
+also pass a check on the test data: its 90\,\% prediction intervals must cover between \CovLow\ and
+\CovHigh\ of test pairs, and the measured test total must fall inside its predicted interval.
+
+\paragraph{What was fixed later.} The \emph{estimator} was not in the preregistration. The confirmatory
+script, \path{evals/paired_confirm.py} (commit \code{\ConfirmSha}), was written after the data were
+collected, about \ConfirmAfterMin\ minutes after the campaign finished, when exploratory summaries over all
+scenarios (the savings-model output in \path{model/}) already existed. It fixed the number of bootstrap
+resamples (\Boot) and the seed (\BootSeed), the pair-level quality filter, which cells count as savings
+claims, and the verdict rule, including what ``contradicted'' means. These choices are listed with the other
+clarifications in \cref{sec:deviations}; the verdicts under the alternative readings are reported alongside.
+
+\paragraph{Ratios and intervals.} The cost of a pair is summarized as a \term{ratio}, arm cost divided by
+anchor cost: 0.80 means 20\,\% cheaper. Ratios are averaged as a \term{geometric mean}, which treats
+``twice as expensive'' and ``half as expensive'' symmetrically. A \term{95\,\% confidence interval} gives
+the range of ratios consistent with the data. It is computed with a \term{scenario-cluster bootstrap}:
+resample whole scenarios (then repetitions) with replacement thousands of times, recompute the ratio each
+time, and take the middle 95\,\%. Resampling scenarios rather than single sessions keeps the interval
+honest about how much the conclusions depend on which tasks were chosen.
+
+\subsection{How big the experiment had to be}
+
+Earlier data gave the spread of log cost ratios between scenarios and within a scenario. Because the
+between-scenario spread dominates, precision is bought with more \emph{scenarios}, not more repetitions.
+\Cref{tab:power} shows the half-widths the design document projected; the campaign used \NScenarios\
+scenarios and \NReps\ repetitions.
+
+\begin{table}[htbp]
+\centering\small
+\caption{Projected precision of the routing ratio, from the design document (before the campaign). The
+projections assumed \PowerSA\ and \PowerSB\ scenarios; the confirmatory test split has \NTest, so its
+intervals are wider than these.}
+\label{tab:power}
+\input{generated/tables/power.tex}
+\end{table}
+
+\subsection{The pilot}
+
+Two small screening pilots preceded the preregistration; the second ran \PilotSessions\ sessions on
+\PilotScen\ scenarios. They confirmed the plumbing (nonce isolation, cache audit, quality checks) and
+measured the A/A noise: a standard deviation of the log ratio of \PilotSDFable\ on Fable and \PilotSDOpus\
+on Opus. Their cost ratios became the hypotheses above, not findings; they are compared with the final
+numbers in \cref{sec:interim}.

@@ -1,0 +1,66 @@
+\section{What it means}\label{sec:recs}
+
+\begin{keyidea}
+\textbf{Fable~5.1 at the \cref{tab:prices} prices: move the session to Sonnet, and decide once.} On Fable 5.1
+at the Table~\ref{tab:prices} prices, sticky routing saved about \CfFableStickySaving\,\%, with turn-pass
+fraction inside the preregistered \NIMarginPts-point margin on the \NTest\ test scenarios. Across all
+\QAllScen\ scenarios that margin was not shown for sticky (\QAllFableSticky, CI \QAllFableStickyCI), and
+routed Fable arms passed the final hidden tests \FinalGapLow--\FinalGapHigh\ points less often
+(exploratory). The sticky policy cost less than the shipped one (\HThreeFable\X\ on Fable, \HThreeOpus\X\ on
+Opus); the preregistered test was only that sticky costs no more than shipped.
+\end{keyidea}
+
+\paragraph{The data support ``use Sonnet'' as much as ``use the router''.} \NStickySonnetOnly\ of
+\NStickySessions\ sticky sessions ran on Sonnet only, so the sticky arm is mostly plain Sonnet. Plain Sonnet
+for the whole session cost about the same on Fable (\CfFableSonnetPair\X\ against \CfFableStickyPair\X\ for
+sticky, test split) and saved more per 1,000 sessions over all scenarios (\$\SavFableSonnet\ against
+\$\SavFableSticky). What the router adds is the option to keep the host for the sessions it judges hard; this
+campaign does not show that option paying for itself. The judge's own calls are not in the session costs
+(\cref{sec:design}); by an estimate from another study they would add about \JudgeShippedCents\ cents per
+shipped session, which does not change these conclusions. A fair reading of the evidence: on Fable~5.1 at
+these prices, running the session on Sonnet saves about as much whether a judge decides or not, with the
+quality caveats above.
+
+\begin{keyidea}
+\textbf{Opus~5.5 at the \cref{tab:prices} prices: do not route to Sonnet.} Opus's cache reads are cheaper than
+Sonnet's, and Sonnet needed more requests for the same scripted work, so every routing arm cost more:
+\CfOpusStickyExtra--\CfOpusSonnetExtra\,\% more in the pair reading and
+\CfOpusStickyArmExtra--\CfOpusSonnetArmExtra\,\% in the arm reading. The plain host is the right default
+\emph{at these prices}. If Opus cache reads cost about \$\BEStickyPair\ rather than \$\PriceOpusRead\ per
+million tokens, sticky routing would roughly break even (\cref{sec:breakeven}).
+\end{keyidea}
+
+\paragraph{Caching guidance (hypotheses).} The mechanisms in \cref{sec:caching,sec:composition} suggest the
+following for other hosts and prices. They are hypotheses drawn from two hosts on one provider, not tested
+findings:
+\begin{itemize}
+  \item \textbf{Compare price per token class, not price per token.} A model that is cheaper on input and
+    output may be dearer in a long conversation if its cache reads cost more.
+  \item \textbf{Every switch re-writes the history.} Switching less often, ideally once at the start, should
+    avoid most rebuild cost.
+  \item \textbf{Count requests, not just tokens.} The cheaper model made more requests for the same scripted
+    work here; that volume, not only the price, decided the Opus result.
+  \item \textbf{Pauses matter.} An idle gap longer than the cache lifetime makes the next request pay to
+    write the history again, on any model.
+  \item \textbf{Measure with isolation.} Give every measured session a private cache key (a nonce), and never
+    start two identical requests at the same instant.
+\end{itemize}
+
+\paragraph{How to use the numbers.} For a deployment that looks like this campaign, use the measured savings
+per 1,000 sessions in \cref{tab:per1000,tab:per1000full}. The savings model is suitable for a pooled
+forecast over a similar mix, with its interval; do not use its per-host or per-task figures
+(\cref{sec:modellimits}).
+
+\paragraph{What to measure next.}
+\begin{itemize}
+  \item \textbf{Longer sessions.} Real sessions often run for many dozens of turns; these ran at most
+    \MaxTurns.
+  \item \textbf{Real traffic.} Scripted users do not wait, wander or abandon sessions as people do.
+  \item \textbf{A production measure mode.} Routed and unrouted paths cannot both run in one live session,
+    but each production session can carry the model's prediction and interval, and sampled offline replays
+    can provide fresh paired measurements.
+  \item \textbf{Other hosts and providers.} The direction of the result depends on the price table; a new
+    host model needs its own measurement, or at least a check of its read and write prices against Sonnet's.
+  \item \textbf{The final-pass signal.} A larger sample would settle whether the small excess of final-test
+    losses on routed Fable arms is real (\cref{sec:finalpass}).
+\end{itemize}

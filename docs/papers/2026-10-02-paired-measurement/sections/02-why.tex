@@ -1,0 +1,32 @@
+\section{Why estimates were not enough}\label{sec:why}
+
+\paragraph{Receipts are claims, not measurements.} The bundle records an \term{efficiency receipt} each time
+it believes it saved money: ``this request went to Sonnet, so it cost \$x less.'' A receipt is the
+policy grading its own homework. It assumes that nothing else about the session changes, which is exactly
+what caching breaks. An earlier survey of \SurveyRoutedPairs\ routed benchmark pairs found that
+\SurveyReceipts\ of them carried receipts at all, so there was nothing to check them against. Where the same
+survey could compare receipts with measurements (\SurveyRcptPairs\ pairs of a different, same-model
+feature), receipts claimed \$\SurveyRcptClaimed\ saved while the measured saving was \$\SurveyRcptMeasured.
+
+\paragraph{Caching makes cost depend on history.} In a long conversation most of each request is a
+re-sent history, and that history is cheap only while it stays in the cache of the model being used
+(\cref{sec:caching}). A router that moves a conversation between models therefore changes not only the
+price per token but also how much of each request has to be paid at the expensive ``write'' rate. Whether
+the cheaper model still wins depends on how long the session is, how often it switches, how long the user
+pauses, and how many more requests the cheaper model makes to do the same work. None of these can be read
+off a price list.
+
+\paragraph{The reviewer's question.} Reviewing an earlier study, a reviewer put it plainly (personal
+communication; the comment is recorded in that study's caching README): for longer chats you have to be
+confident in the savings for the smaller model. That earlier study re-analysed
+existing runs. On an Opus host, the shipped router went from \SurveyOpusOne\X\ the plain host's cost in
+single-turn sessions to \SurveyOpusFour\X\ in \SurveyTurns-turn sessions; on a Fable host, from
+\SurveyFableOne\X\ to \SurveyFableFour\X. But those sessions were short, synthetic, partly used for tuning,
+and the switch itself was never isolated: no arm ``decided once and never switched.'' It proposed a direct
+experiment. This report is that experiment.
+
+\begin{keyidea}
+The only way to know what routing costs is to run the same work twice, once routed and once not, under
+identical conditions, and compare the bills. Everything else in this report is about making ``identical''
+true and checking that it was.
+\end{keyidea}

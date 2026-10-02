@@ -1,0 +1,16 @@
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}>{\raggedright\arraybackslash}p{0.3\textwidth} >{\raggedright\arraybackslash}p{0.38\textwidth} r r@{}}
+\toprule
+Question & What was sent & tokens written & tokens read \\
+\midrule
+Longer entry does not serve its own prefix & Write prompt P+X, then ask for P alone & 10{,}948 & 0 \\
+ & Ask for P alone again & 0 & 10{,}948 \\
+A growing conversation reuses the earlier entry & Write P+X, then send P+X+Y & 2{,}272 & 15{,}455 \\
+Two API keys do not share & Write with key 1, same request with key 2 & 15{,}455 & 0 \\
+Simultaneous identical requests both pay & Two at the same instant (each) & 15{,}455 & 0 \\
+Reads keep an entry alive & Read at 4 min, then again at 7 min & 0 & 15{,}455 \\
+ & Never read, asked again at 7 min & 15{,}455 & 0 \\
+Each model has its own cache & Written on Sonnet, then sent to Opus & 15{,}454 & 0 \\
+Sonnet caches per effort level & Effort medium written, then no effort & 15{,}464 & 0 \\
+ & Same pair on Opus & 0 & 15{,}464 \\
+\bottomrule
+\end{tabular*}

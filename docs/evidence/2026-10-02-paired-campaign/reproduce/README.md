@@ -85,12 +85,17 @@ Descriptive summaries only: `python3 evals/paired_model.py summarize "$S"`. Work
 
 ## 3. Confirmatory analysis
 
-`evals/paired_confirm.py` implements the preregistered tests (H1-H3, quality, prediction-model check, decision rule) and reads
-`<root>/rows/{sessions,pairs}.jsonl` plus `<root>/model/{model,predictions}.json`, writing `<root>/confirm/`:
+`evals/paired_confirm.py` implements the confirmatory analysis and reads `<root>/rows/{sessions,pairs}.jsonl` plus
+`<root>/model/{model,predictions}.json`, writing `<root>/confirm/`. The hypotheses, thresholds, split and decision
+rule are the preregistered ones; the estimator (10,000 bootstrap resamples, seed 20261002, the pair-level quality
+filter, which cells count as savings claims, and the verdict rule) is fixed in the script, which was written after
+the data were collected (first committed in `c3ea41a`).
 
 ```bash
-nice -n 10 python3 evals/paired_confirm.py "$S"      # see `--help` for --out, --boot, --seed
+mkdir -p "$S/model"; cp "$E/model/model.json" "$E/model/predictions.json" "$S/model/"
+nice -n 10 python3 evals/paired_confirm.py "$S"      # about 4 s; see `--help` for --out, --boot, --seed
+cmp "$S/confirm/CONFIRM.md" "$E/confirm/CONFIRM.md" && echo "CONFIRM.md identical"
 ```
 
-`paired_confirm.py` was being written in parallel when this package was assembled; it is referenced by name only and its output was **not** run or verified
-here. Its results belong in the README's Results section.
+Verified on 2026-10-02: run on the **published** rows and model files, `paired_confirm.py` reproduces `confirm/CONFIRM.md`
+byte for byte, and `confirm/confirm.json` is identical except for the `campaign` path field.
