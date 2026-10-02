@@ -213,11 +213,30 @@ class RunTests(Base):
     def test_settings_change_is_refused(self):
         plan = self.plan(scenarios={"tiny-demo"}, hosts=["opus"])
         ctx = self.ctx(plan)
-        paired._write_json(ctx.out / "state.json", {"settings_sha256": "stale", "waves": {}})
-        with patch.object(paired, "settings_sha", return_value="fresh"):
+        paired._write_json(ctx.out / "state.json", {"settings_sha256": "n1:stale", "waves": {}})
+        with patch.object(paired, "settings_sha", return_value="n1:fresh"):
             with self.assertRaises(paired.PairedError) as cm:
                 paired.run_campaign(ctx, FakeBackend(self.tmp / "b", self.specs), budget_usd=100, parallel=6, resume=False, log=lambda *_: None)
         self.assertEqual(cm.exception.code, paired.EXIT_PRECONDITION)
+
+    def test_legacy_settings_hash_is_rebaselined_and_recorded(self):
+        plan = self.plan(scenarios={"tiny-demo"}, hosts=["opus"])
+        ctx = self.ctx(plan)
+        paired._write_json(ctx.out / "state.json", {"settings_sha256": "0123456789abcdef", "waves": {}})
+        with patch.object(paired, "settings_sha", return_value="n1:fresh"):
+            paired.run_campaign(ctx, FakeBackend(self.tmp / "b", self.specs), budget_usd=100, parallel=6,
+                                resume=False, log=lambda *_: None)
+        st = json.loads((ctx.out / "state.json").read_text())
+        self.assertEqual(st["settings_sha256"], "n1:fresh")
+        self.assertEqual(st["settings_rebaselined"][0]["from"], "0123456789abcdef")
+
+    def test_settings_hash_ignores_update_check_timestamp(self):
+        a = self.tmp / "a.yaml"; b = self.tmp / "b.yaml"
+        a.write_text("updates:\n  last_check: '2026-10-01T10:00:00'\nconfig: {x: 1}\n")
+        b.write_text("updates:\n  last_check: '2026-10-01T19:25:17'\nconfig: {x: 1}\n")
+        self.assertEqual(paired.settings_sha(a), paired.settings_sha(b))
+        b.write_text("updates:\n  last_check: '2026-10-01T19:25:17'\nconfig: {x: 2}\n")
+        self.assertNotEqual(paired.settings_sha(a), paired.settings_sha(b))
 
     def test_prompt_hash_mismatch_refuses_launch(self):
         plan = self.plan(scenarios={"tiny-demo"}, hosts=["opus"])

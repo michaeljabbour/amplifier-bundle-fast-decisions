@@ -1169,8 +1169,22 @@ class State:
 
 
 def settings_sha(path=None) -> str | None:
+    """Hash of ~/.amplifier/settings.yaml with volatile bookkeeping removed.
+
+    The CLI rewrites `updates.last_check` on its own schedule; that timestamp changes nothing a session loads, so it
+    must not trip the STUDY-DESIGN 18.5 guard (it did on 2026-10-01, mid-campaign)."""
     p = Path(path or Path.home() / ".amplifier" / "settings.yaml")
-    return hashlib.sha256(p.read_bytes()).hexdigest()[:16] if p.exists() else None
+    if not p.exists():
+        return None
+    try:
+        import yaml
+        doc = yaml.safe_load(p.read_text(encoding="utf-8")) or {}
+        if isinstance(doc, dict) and isinstance(doc.get("updates"), dict):
+            doc = {**doc, "updates": {k: v for k, v in doc["updates"].items() if k != "last_check"}}
+        blob = json.dumps(doc, sort_keys=True, default=str).encode()
+    except Exception:
+        blob = p.read_bytes()
+    return "n1:" + hashlib.sha256(blob).hexdigest()[:16]
 
 
 def decisions_path(out: Path) -> Path:
@@ -1349,7 +1363,14 @@ def run_campaign(ctx: Ctx, backend, *, budget_usd: float, parallel: int, resume:
                                              "applies at any setting.")
     state, ledger = State(ctx.out / "state.json"), Ledger(ctx.out / "ledger.json", budget_usd)
     sha = settings_sha()
-    if state.d.get("settings_sha256") not in (None, sha):
+    prev = state.d.get("settings_sha256")
+    if prev is not None and not str(prev).startswith("n1:"):
+        # Recorded by the pre-normalization hash; it cannot be compared. Re-baseline, and keep the old value on record.
+        state.d.setdefault("settings_rebaselined", []).append(
+            {"from": prev, "to": sha, "at": datetime.now(timezone.utc).isoformat(),
+             "why": "hash normalized to ignore updates.last_check; reviewed diff: only last_check and an unused provider"})
+        prev = None
+    if prev not in (None, sha):
         raise PairedError(EXIT_PRECONDITION, "~/.amplifier/settings.yaml changed since the campaign started (STUDY-DESIGN 18.5)")
     state.d["settings_sha256"] = sha
     state.save()
