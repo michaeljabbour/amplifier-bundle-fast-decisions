@@ -1,0 +1,91 @@
+schema: fast-decisions-paired/design/v1
+id: effort-control-v1
+description: >-
+  Follow-up to main-v1: isolates the reasoning-effort effect. In main-v1 every routed/sticky Sonnet request ran at effort
+  "medium" while the plain-sonnet control set no effort (provider default). Here plain Sonnet at the provider default
+  (`sonnet`, the anchor) is paired with plain Sonnet at medium (`sonnet_medium`) on the 23 TEST scenarios of main-v1,
+  2 reps, started together per scenario-rep from one frozen snapshot, each session isolated by a cache nonce.
+  Preregistration: evals/paired/PREREGISTRATION-effort-control-v1.md.
+
+scenario_dir:
+  - evals/paired/scenarios/main-v1/polyglot
+  - evals/paired/scenarios/main-v1/repos
+  - evals/paired/scenarios/main-v1/mixed
+  - evals/paired/scenarios/main-v1/knowledge
+scenario_filter: {split: test}                     # the 23 preregistered test scenarios (split.json, seed 20261002)
+snapshot_root: ~/dev/afast-paired/snapshots
+campaign_root_base: ~/dev/afast-paired
+cells_file: evals/cells.yaml
+suite_for_argv: {suite: s1m, split: m-dev}
+
+nonce_mode: per_session
+default_reps: 2
+default_parallel: 8                                # memory safety cap (Forge maxSessions is 30); waves are 2 sessions
+budget_usd: 400
+max_wave_launch_spread_s: 60
+max_wave_attempts: 3
+deadline_seconds_per_turn: 900
+
+anchor_arm: sonnet                                 # pairs/ratios are sonnet_medium vs sonnet
+hosts:
+  any: claude-sonnet-5                             # no host: both arms are host-independent (kept so the planner has one stratum)
+
+# Both arms are plain Sonnet 5, host-independent, no fast-decisions. They differ ONLY in the provider reasoning effort
+# (cells.yaml plain-sonnet vs plain-sonnet-medium; the profile diff is a single `reasoning_effort: medium` line).
+# gate: every main request is served by Sonnet 5; effort on main requests (llm:request raw output_config.effort) is
+# absent for `sonnet` (provider default; main-v1: 8415/8415 Sonnet requests had none) and "medium" for `sonnet_medium`.
+arms:
+  sonnet:        {kind: control, cells: {any: plain-sonnet},        host_independent: true, role: anchor,
+                  gate: {served_model_prefix: claude-sonnet-5, effort: absent}}
+  sonnet_medium: {kind: control, cells: {any: plain-sonnet-medium}, host_independent: true, role: treatment,
+                  gate: {served_model_prefix: claude-sonnet-5, effort: medium}}
+
+# Cost model calibrated on main-v1's 140 plain-sonnet sessions (docs/evidence/2026-10-02-paired-campaign/data/sessions.jsonl,
+# cost_usd_tools_normalized): the implied 4-turn unit under main-v1's turn/type/gap scaling averages $0.638 (median 0.59).
+# sonnet_medium has no measured unit cost: ASSUMED 0.85x (main-v1 sticky-on-Sonnet ran 0.83-0.86x plain Sonnet).
+cost_model:
+  source: "main-v1 plain-sonnet sessions (n=140, tools-normalized), medium = 0.85x assumption"
+  unit_usd_4turn:
+    plain-sonnet:        {usd: 0.638, n: 140}
+    plain-sonnet-medium: {usd: 0.542, n: 0}
+  sticky_over_anchor: {}
+  turn_scaling: {4: 1.0, 8: 2.5, 12: 4.2, 16: 5.9}
+  type_factor: {feature: 1.2, bugfix: 1.5, review: 1.0, mixed: 1.2, knowledge: 1.0, docs: 1.0, explain: 1.0}
+  long_gap_extra_fraction: 0.10
+  infra_retry_reserve_fraction: 0.08
+
+wall_model: {minutes_per_turn: 1.0, wave_slowest_factor: 1.4}
+
+analysis:
+  script: evals/paired_effort.py                   # implements the preregistered analysis on `paired.py rows` output
+  preregistration: evals/paired/PREREGISTRATION-effort-control-v1.md
+  primary_cost_basis: cost_usd_tools_normalized
+  secondary_exploratory: sonnet_medium vs main-v1 sticky-on-Sonnet sessions (not concurrent)
+
+# Campaign-owned provider (the isolation mechanism; see docs in forge_e2e.campaign_provider_entry). Every session's
+# generated profile.md declares ONLY this provider, so the user's global ~/.amplifier/settings.yaml provider list
+# (10 entries today, incl. gemini/openai/vllm) is neither mounted nor credential-validated. Mirrors what the earlier
+# campaigns effectively ran (the first provider-anthropic entry, `anthropic-primary`): same module source, 1M context
+# on, api.anthropic.com, prompt caching at the provider default, no reasoning_effort. The resolved module version/sha
+# is recorded by `preflight` and carried into every sessions.jsonl row (`provider_module`).
+campaign_provider:
+  id: campaign-anthropic            # unique id: no global provider entry can match and merge config into it
+  module: provider-anthropic
+  source: git+https://github.com/microsoft/amplifier-module-provider-anthropic@main
+  config:
+    api_key: "${ANTHROPIC_API_KEY}"          # env reference; per-arm key selection sets this var for that session only
+    base_url: https://api.anthropic.com
+    enable_1m_context: "true"
+    raw: true                                # request/response payloads in events (the CLI injects this default for
+                                             # settings-derived providers; rows need it to separate background calls)
+preflight:
+  scenario_dir: evals/paired/preflight
+  max_age_hours: 12
+  est_usd_per_session: 0.10
+
+# Shared tools-prefix allowance for the cache-read audit. The nonce leads the system prompt but the tools block comes
+# BEFORE it in the provider's prefix, so tools-only cache entries are shared across sessions of the same model.
+# Measured by the 2026-10-01 preflight (18 sessions, 2 runs): every first request read 32,029-32,033 tokens. Reads up to
+# this size on a request with no own earlier write are reported (cross_arm_read_tokens) but not flagged.
+cache_audit:
+  tools_prefix_tokens: 32100
