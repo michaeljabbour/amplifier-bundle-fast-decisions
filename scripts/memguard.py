@@ -27,6 +27,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import shutil
 import signal
 import subprocess
 import sys
@@ -321,6 +322,13 @@ def run(args, *, cwd=None, env=None, timeout=None, capture_output=True, text=Tru
     """Drop-in for ``subprocess.run`` for scenario code. Raises ``subprocess.TimeoutExpired`` on timeout and
     ``ResourceLimit`` on a memory / system-floor kill. ``cap_gb`` and the timeout default from the environment
     (PAIRED_GRADER_CAP_GB=4, PAIRED_GRADER_TIMEOUT_S=300); an explicit ``timeout`` wins."""
+    if not shell:
+        prog = args[0] if isinstance(args, (list, tuple)) else str(args).split()[0]
+        search = (env or os.environ).get("PATH") if env else None
+        if os.sep not in str(prog) and shutil.which(str(prog), path=search) is None:
+            raise FileNotFoundError(2, "No such file or directory", str(prog))
+        if os.sep in str(prog) and not os.path.exists(os.path.join(cwd or "", str(prog))):
+            raise FileNotFoundError(2, "No such file or directory", str(prog))
     cap = float(os.environ.get(ENV_CAP, DEFAULT_CAP_GB)) if cap_gb is None else cap_gb
     tmo = float(timeout) if timeout is not None else float(os.environ.get(ENV_TIMEOUT, DEFAULT_TIMEOUT_S))
     with _semaphore():

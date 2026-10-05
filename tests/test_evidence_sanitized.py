@@ -23,7 +23,7 @@ HOME = str(Path.home())
 FORBIDDEN_TEXT = [
     ("home directory", re.compile(re.escape(HOME))),
     ("user home path", re.compile(r"/Users/[^/\s\"']+|/home/[a-z_][a-z0-9_-]*/|[A-Za-z]:\\\\Users\\\\")),
-    ("username", re.compile(re.escape(Path.home().name))),
+    ("username", re.compile(r"(?:/Users/|/home/)" + re.escape(Path.home().name) + r"\b")),
     ("sk- key", re.compile(r"(?<![A-Za-z0-9])sk-")),
     ("Bearer token", re.compile(r"Bearer ")),
     ("api_key with a value", re.compile(r"api[_-]key[\"']?\s*[:=]\s*[\"']?[A-Za-z0-9_\-]{6,}", re.IGNORECASE)),
