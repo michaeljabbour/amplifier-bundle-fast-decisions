@@ -792,6 +792,43 @@ async def decide_start_tier(service: Any, request: Any, model_routing: dict[str,
     return tier
 
 
+def tier_effort_decision(effort_routing: dict[str, Any], *, start_tier: str | None, escalated: bool,
+                         tier_effort: str | None, tier_label: str | None, user_model_pick: bool,
+                         host_pinned: bool) -> tuple[bool, str | None, str | None]:
+    """The session-level effort for a request: ``(decided, effort_or_None, reason_code)``.
+
+    One effort per tier for the whole session/turn (``effort_routing.by_tier``), never per phase: an effort
+    change between requests rewrites the provider's prompt cache (the v3 study plan, section 0, finding 4).
+    ``decided`` is False when no tier rule applies, which leaves the legacy phase path (opt-in, off in every
+    shipped config) to decide. Shared by the orchestrator and ``decide`` so the two cannot drift."""
+    by_tier = effort_routing.get("by_tier")
+    if tier_effort is not None and not host_pinned and not escalated:
+        # Routing levers: the chosen tier's own effort, for the whole turn.
+        return True, tier_effort, f"tier_{tier_label}"
+    if by_tier is not None and user_model_pick and not host_pinned:
+        # A model the user picked runs at its own effort.
+        return True, None, "user_model"
+    effective_tier = "strong" if escalated else start_tier
+    if (by_tier is not None and not host_pinned and effective_tier in by_tier
+            and by_tier[effective_tier] != "phase"):
+        # by_tier.strong is the effort of every host-model request, including a cheap turn escalated to the host.
+        return True, by_tier[effective_tier], f"tier_{effective_tier}"
+    return False, None, None
+
+
+def start_model_is_cheaper(host: Any, start_model: Any) -> bool:
+    """True unless ``host`` is known to be no more expensive than ``start_model`` (list input and output
+    prices). Unknown models keep the previous behavior (route)."""
+    from .savings import DEFAULT_RATES, _rates_for
+
+    if not isinstance(host, str) or not isinstance(start_model, str) or host == start_model:
+        return host != start_model
+    host_rates, start_rates = _rates_for(host, DEFAULT_RATES), _rates_for(start_model, DEFAULT_RATES)
+    if not host_rates or not start_rates:
+        return True
+    return start_rates[0] < host_rates[0] and start_rates[1] < host_rates[1]
+
+
 def _profile_field(service: Any) -> dict:
     profile = getattr(service.policy, "profile", None)
     return {"profile": profile} if profile else {}
@@ -1559,22 +1596,12 @@ docs/UPSTREAM_CONTRACT.md.
             )
             if phase == effort.PHASE_EXPLORE:
                 turn.explore_requests = explore_requests
-            by_tier = effort_routing.get("by_tier")
-            if turn.tier_effort is not None and not host_pinned and not turn.escalated:
-                # Routing levers: the chosen tier's own effort, for the whole turn.
-                applied_effort = turn.tier_effort
-                reason_code = f"tier_{turn.tier_label}"
-            elif by_tier is not None and turn.start_mechanism == "user:model_pick" and not host_pinned:
-                # A model the user picked runs at its own effort.
-                applied_effort, reason_code = None, "user_model"
-            elif (by_tier is not None and not host_pinned
-                    and ("strong" if turn.escalated else turn.start_tier) in by_tier
-                    and by_tier["strong" if turn.escalated else turn.start_tier] != "phase"):
-                # by_tier.strong is the effort of every host-model request,
-                # including a cheap turn escalated to the host.
-                effective_tier = "strong" if turn.escalated else turn.start_tier
-                applied_effort = by_tier[effective_tier]
-                reason_code = f"tier_{effective_tier}"
+            tier_decided, tier_applied, tier_reason = tier_effort_decision(
+                effort_routing, start_tier=turn.start_tier, escalated=turn.escalated,
+                tier_effort=turn.tier_effort, tier_label=turn.tier_label,
+                user_model_pick=turn.start_mechanism == "user:model_pick", host_pinned=host_pinned)
+            if tier_decided:
+                applied_effort, reason_code = tier_applied, tier_reason
             elif effort_routing.get("monotonic") and applied_effort is not None:
                 applied_effort, held = effort.hold_monotonic(applied_effort, turn.max_effort_applied)
                 if held:
@@ -2399,18 +2426,9 @@ docs/UPSTREAM_CONTRACT.md.
             return
 
     def _start_model_is_cheaper(self, start_model: Any) -> bool:
-        """True unless the wrapped provider's default model is known to be no
-        more expensive than ``start_model`` (list input and output prices).
-        Unknown models keep the previous behavior (route)."""
-        from .savings import DEFAULT_RATES, _rates_for
+        """See ``start_model_is_cheaper``; the host is the wrapped provider's default model."""
+        return start_model_is_cheaper(getattr(self._provider, "default_model", None), start_model)
 
-        host = getattr(self._provider, "default_model", None)
-        if not isinstance(host, str) or not isinstance(start_model, str) or host == start_model:
-            return host != start_model
-        host_rates, start_rates = _rates_for(host, DEFAULT_RATES), _rates_for(start_model, DEFAULT_RATES)
-        if not host_rates or not start_rates:
-            return True
-        return start_rates[0] < host_rates[0] and start_rates[1] < host_rates[1]
     def _served_fields(self, response: Any, request: Any, kwargs: dict) -> dict:
         """usage_fields plus a served_model on EVERY ok receipt: the model the
         response names (served_model_source "response"), else the model this

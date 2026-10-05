@@ -23,13 +23,45 @@ explicitly. The research-backed shipped defaults are:
 | `effort_routing.by_tier.cheap` | unset | `medium` |
 | `effort_routing.by_tier.strong` (host effort) | unset | `null` (provider default; opt-in `medium`) |
 | `model_routing.keep_on_host` | off | off (commented example) |
+| `model_routing.start_model` | required when `model_routing` is set | `claude-sonnet-5` |
+| `model_routing.cheap_max_workspace_files` | unset (no scope gate) | `300` |
+| `effort_routing.orient` / `explore` / `implement` | unset | **deleted** (see below): effort is one value per tier |
 | `read_shortcut` | `True` | `false` |
+| `timeout_ms` | `750` | `3000` |
+| `allow_external_state` | `False` (env `FAST_DECISIONS_ALLOW_EXTERNAL_STATE`) | `true` in the bundle (composing it is the consent); `decide`/`select` outside Amplifier take consent only from their argument or the environment variable |
 | `backend` | none | `jev` |
 
 Evidence: the paired campaign ([README](evidence/2026-10-02-paired-campaign/README.md),
 [confirmatory results](evidence/2026-10-02-paired-campaign/confirm/CONFIRM.md)), the
 [paper](papers/2026-10-02-paired-measurement/README.md), and the offline [replay of the recorded campaign through the
 shipped code](evidence/2026-10-05-defaults-replay/REPLAY.md).
+
+## How to configure
+
+There is one source of defaults, `behaviors/fast-decisions.yaml` (`session.orchestrator.config`), and one loader,
+`amplifier_fast_decisions.config.effective_config()`. Precedence, lowest to highest:
+
+1. the shipped behavior (a checkout reads the file in place; an installed wheel carries a copy built from it);
+2. the user overlay `~/.amplifier/fast-decisions/settings.yaml` (or the file named by `AFAST_SETTINGS`): a mapping of
+   orchestrator-config keys, deep-merged, for example
+   `{backend: clef-flash, model_routing: {cheap_max_workspace_files: 500}}`;
+3. explicit overrides: `decide(config=...)`, `--decider`, `--cheap-model`, `--allow-external-state`.
+
+The result goes through `Policy.from_config`, so a bad value fails loudly. `afast doctor` (and the smart tool's
+`diagnose`) print the effective backend, consent, scope gate, effort, read shortcut, timeout and the price-gate
+result for your host (`AFAST_HOST_MODEL`), plus warnings (external judge without consent, missing credential
+variables, a per-phase effort map). `bundles/active*.yaml` carry the same config block; `tests/test_config_parity.py`
+holds them equal to the behavior and `scripts/sync_active_bundles.py` regenerates them.
+
+### Judge backends
+
+One table, `judge_backends.BACKENDS`, feeds the runtime (`backend:`), the smart tool (`select`, `decide`) and
+`afast configure --backend`; `tests/test_backend_table.py` fails when a surface drifts. `jev` is the shipped default.
+`clef` and `clef-flash` are Cloudflare Workers AI decision models, selectable and opt-in: they send the judged
+text off this machine, so they need `allow_external_state: true` (or the CLI consent flag) plus
+`CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` in the environment (never in a file). They were measured only as
+post-hoc benchmark arms ([evidence](evidence/2026-10-04-clef-judges)); no shipped default selects them. Full table
+in `src/amplifier_fast_decisions/SMART_TOOL.md`.
 
 ## Top-level keys
 
@@ -70,9 +102,9 @@ questions only; keep the read shortcut off. See [AnyJev setup](ANYJEV.md).
 
 | Key | Default | Meaning |
 |---|---|---|
-| `orient` / `explore` / `implement` | unset (no override for that phase) | One of `low` / `medium` / `high` / `xhigh` / `max`. |
-| `max_explore_requests` | unset | Positive int; escalates effort after this many explore-phase requests. |
-| `escalate_after_provider_errors` | unset | Positive int. |
+| `orient` / `explore` / `implement` | unset (no override for that phase) | **Legacy, off in every shipped config.** One of `low` / `medium` / `high` / `xhigh` / `max`. A per-phase map changes effort between requests of one session, and every change rewrites the provider's prompt cache (requests after a change wrote 15,642 cache tokens on average vs 900 unchanged in the main-v1 data), so the shipped behaviors no longer carry it and `doctor` warns when one is configured. |
+| `max_explore_requests` | unset | Legacy, phase map only. Positive int; escalates effort after this many explore-phase requests. |
+| `escalate_after_provider_errors` | unset | Legacy, phase map only. Positive int. |
 | `by_tier` | unset | `{cheap: <effort|null|"phase">, strong: <...>}`: one effort per start tier for the whole session/turn (requires `model_routing.start_policy`). `null` = provider default; `"phase"` = keep per-phase efforts. Shipped: `{cheap: medium, strong: null}`. `strong` is the **host-model effort** (see "Host effort" below). |
 | `monotonic` | `False` | Never lower the effort within a turn once raised. |
 | `phase_judge` | `False` | HC05: ask the configured `DecisionBackend` to classify the phase instead of trusting `effort.classify_phase` alone. A non-null, gate-passing answer overrides the deterministic phase for the rest of this request. Gated by `confidence_gates["phase"]` (HC09; default gate `0.0` -- byte-identical to pre-HC09 "any non-abstain answer applies"). |

@@ -1,11 +1,12 @@
-> The selector now defaults to local Laya with external state disabled. Use
-> `backend: jev` plus consent to reproduce the historical Jev measurements below.
+> The selector defaults to Jev (the shipped `behaviors/jev-cua.yaml` sets `backend: jev` and
+> `allow_external_state: true`; the library constructor defaults to Jev with external state off until you pass
+> consent). Local Laya is an experimental opt-in: `backend: laya`. Laya snapshots exceeding its state bound
+> abstain instead of silently truncating controls.
 > The portable CLI is `amplifier-fast-decisions cua --input ui.json`.
-> Laya snapshots exceeding its state bound abstain instead of silently truncating controls.
 
 # Jev computer-use decisions
 
-Experimental, opt-in. The configured judge (local Laya by default) selects an operation and a compatible observed control
+Experimental, opt-in. The configured judge (Jev by default) selects an operation and a compatible observed control
 in one batched request. The host supplies current UI evidence, preserves its
 approval rules, executes the action, and independently verifies completion.
 
@@ -17,9 +18,10 @@ includes:
 ```
 
 This registers `jev_cua` through the normal native tool path. Including the
-behavior sends sanitized, scoped UI text to the local Laya service. Explicitly
-configuring `backend: jev` and `allow_external_state: true` permits the TypeSafe
-path using `TYPESAFE_API_KEY`. It is separate from the default Jevgrep behavior because browser
+behavior sends sanitized, scoped UI text to Jev (TypeSafe) with `TYPESAFE_API_KEY`
+(`backend: jev`, `allow_external_state: true`). Set `backend: laya` and
+`allow_external_state: false` to keep UI text on this machine with the experimental local Laya
+service. It is separate from the default Jevgrep behavior because browser
 and desktop state need their own scope. No Cua package or browser extension is
 installed by this behavior. The host must already have a computer-use tool.
 
@@ -61,7 +63,7 @@ instead handle a bounded sequence directly:
 ```python
 from amplifier_fast_decisions.jev_cua import CuaSelector, run
 
-selector = CuaSelector()  # local Laya; external sharing disabled
+selector = CuaSelector(allow_external_state=True)  # Jev by default; pass backend="laya" for the local judge
 try:
     result = await run(selector, goal, host, max_steps=12, record=record_receipt)
 finally:

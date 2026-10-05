@@ -82,13 +82,19 @@ described elsewhere on this page.
 | OpenCode | Yes | `amplifier-fast-decisions` / `0.1.0` | Yes | 0 |
 | Amplifier (`amplifier run --mode single`) | Yes | `amplifier-fast-decisions` / `0.1.0` | Yes | 0 |
 
-Full commands, raw outputs, and per-harness notes (model-availability retries,
-Forge terminal polling) are in the harness-smoke evidence directory.
+The raw outputs of that 2026-09-20 run were never committed (the directory this
+paragraph once cited does not exist), so the table above is the only record of it, and it
+predates `decide`, `launch` and the Copilot target. What is committed and checkable today:
+`tests/test_smart_tool.py` and `tests/test_launch.py` (manifest, `--help`, `install-skill`
+for every host including Copilot, `decide`/`launch` argv per harness) and
+[the harness-driver smoke](evidence/2026-10-05-harness-drivers/SMOKE.md) (one-sentence runs of
+Claude Code, Codex and Copilot CLI through the drivers and `launch`). Model-backed `select`
+and `decide` per harness inside each harness's own agent loop have no committed evidence yet.
 
 ## A bounded call
 
-The public `select` interface supports `--backend local` (alias `ollama`) and
-`--backend jev`. The default comes from `FAST_DECISIONS_JUDGE`, otherwise Jev 1.13.0.
+The public `select` interface supports `--backend local` (alias `ollama`), `jev`, `clef`,
+`clef-flash` (Cloudflare Workers AI, opt-in) and `laya`. The default comes from `FAST_DECISIONS_JUDGE`, otherwise Jev 1.13.0.
 Jev requires `--allow-external-state` or `FAST_DECISIONS_ALLOW_EXTERNAL_STATE=true`
 and `TYPESAFE_API_KEY` in the environment. Explicit flags override environment
 defaults; `--no-allow-external-state` denies an external call even when the

@@ -21,7 +21,7 @@ import webbrowser
 from datetime import UTC, datetime
 from pathlib import Path
 
-from . import __version__
+from . import __version__, judge_backends
 from .bench import (
     build_report,
     load_suite,
@@ -293,18 +293,28 @@ def doctor(require_amplifier: bool = False) -> int:
                 "note": "Not required for the offline demo",
             }
         )
-    from . import price_gate as _price_gate
+    # The effective configuration (shipped behavior + user settings overlay), validated through Policy: backend,
+    # consent, scope gate, effort, price-gate result for the real host. The same function backs the smart tool's
+    # `diagnose`, so the two cannot disagree.
+    from .config import config_report
 
-    gate_host = os.getenv("AFAST_HOST_MODEL")
-    for host in ([gate_host] if gate_host else ["claude-opus-5-5", "claude-fable-5-1"]):
-        gate = _price_gate.evaluate(host, "claude-sonnet-5", {})
-        ratio = "n/a" if gate.predicted_ratio is None else f"{gate.predicted_ratio:.3f}"
+    report = config_report(os.getenv("AFAST_HOST_MODEL"))
+    checks.append(
+        {
+            "check": "fast_decisions_config",
+            "ok": bool(report["ok"]),
+            "value": "valid" if report["ok"] else "invalid",
+            "report": report,
+            "note": "Set AFAST_HOST_MODEL to check the price gate for your default model",
+        }
+    )
+    for gate in report.get("price_gate", []):
         checks.append(
             {
-                "check": f"price_gate[{host}]",
+                "check": f"price_gate[{gate['host_model']}]",
                 "ok": True,
-                "value": "route" if gate.route else "host",
-                "note": f"{gate.reason}, predicted cost ratio {ratio} (set AFAST_HOST_MODEL to check your default model)",
+                "value": "route" if gate.get("route") else "host",
+                "note": f"{gate.get('reason', 'gate_disabled')}, predicted cost ratio {gate.get('predicted_cost_ratio')}",
             }
         )
     checks.append(
@@ -675,9 +685,11 @@ def configure(args) -> int:
     backend = getattr(args, "backend", None) or (
         "jev" if args.mode == "active" or args.allow_external_state else "deterministic"
     )
-    if args.mode == "active" and backend == "jev" and not args.allow_external_state:
+    chosen = judge_backends.spec(backend)
+    if args.mode == "active" and chosen is not None and chosen.external and not args.allow_external_state:
         raise ValueError(
-            "Active Jev requires --allow-external-state; review docs/PRIVACY.md first"
+            f"Active {chosen.name} sends task text off this machine and requires --allow-external-state; "
+            "review docs/PRIVACY.md first"
         )
     workspace = Path(args.workspace).expanduser().resolve(strict=True)
     events_dir = str(Path(args.events).expanduser().resolve())
@@ -712,9 +724,11 @@ def configure(args) -> int:
                 "backend": backend,
                 "allow_external_state": args.allow_external_state,
                 "events_dir": events_dir,
-                "timeout_ms": args.timeout_ms,
             }
         )
+        # Only an explicit --timeout-ms overrides the shipped value (behaviors/fast-decisions.yaml).
+        if getattr(args, "timeout_ms", None) is not None:
+            config["timeout_ms"] = args.timeout_ms
         orchestrator["config"] = config
         data["session"] = {"orchestrator": orchestrator}
     else:
@@ -736,7 +750,7 @@ def configure(args) -> int:
                 "backend": backend,
                 "allow_external_state": args.allow_external_state,
                 "events_dir": events_dir,
-                "timeout_ms": args.timeout_ms,
+                "timeout_ms": args.timeout_ms if getattr(args, "timeout_ms", None) is not None else 750,
                 "role_router": True,
             }
         )
@@ -893,6 +907,12 @@ def savings_command(args) -> int:
 
 
 def main(argv=None) -> int:
+    raw = list(sys.argv[1:] if argv is None else argv)
+    if raw and raw[0] in ("decide", "launch"):
+        # argparse cannot forward a leading option through a REMAINDER subparser: hand the whole line over.
+        from .smart_cli import main as smart_main
+
+        return smart_main(raw)
     parser = argparse.ArgumentParser(
         prog="afast",
         description=(
@@ -924,8 +944,14 @@ def main(argv=None) -> int:
     command.add_argument("--output", default="decision-observatory.html")
     command = commands.add_parser("doctor")
     command.add_argument("--require-amplifier", action="store_true")
+    for alias, summary in (("decide", "Decide once, at session start, which model/effort to run (same as amplifier-fast-decisions decide)"),
+                           ("launch", "Decide, then start Claude Code, Codex or Copilot CLI (same as amplifier-fast-decisions launch)")):
+        command = commands.add_parser(alias, help=summary, add_help=False)
+        command.add_argument("rest", nargs=argparse.REMAINDER)
     command = commands.add_parser("configure")
-    command.add_argument("--backend", choices=["jev", "deterministic", "ollama"])
+    command.add_argument("--backend", choices=judge_backends.names("configure"),
+                         help="Judge backend (one vocabulary shared with the runtime and the smart tool): "
+                              + judge_backends.describe("configure"))
     command.add_argument("--model")
     command.add_argument("--ollama-url", default="http://127.0.0.1:11434")
     command.add_argument("--local-sources", action="store_true")
@@ -936,7 +962,8 @@ def main(argv=None) -> int:
     )
     command.add_argument("--allow-external-state", action="store_true")
     command.add_argument("--events", default=str(DEFAULT_EVENTS))
-    command.add_argument("--timeout-ms", type=int, default=750)
+    command.add_argument("--timeout-ms", type=int, default=None,
+                         help="Judge deadline; default: the shipped value (active) or 750 (shadow/off)")
     command.add_argument("--output", default=".amplifier/fast-decisions-local.md")
     bench = commands.add_parser(
         "bench", help="Offline analysis of fast_decisions telemetry"

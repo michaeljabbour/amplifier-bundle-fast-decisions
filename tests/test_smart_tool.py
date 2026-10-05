@@ -81,7 +81,8 @@ class SmartToolTests(unittest.IsolatedAsyncioTestCase):
         with tempfile.TemporaryDirectory() as events, patch.dict(os.environ, {'TYPESAFE_API_KEY': 'TEST_KEY'}):
             with patch('amplifier_fast_decisions.smart_tool.JevBackend', return_value=scorer) as factory:
                 result = await select(request(), allow_external_state=True, events_dir=events)
-            factory.assert_called_once_with(model='jev-1.13.0', timeout_ms=500)
+            from amplifier_fast_decisions.config import effective_config
+            factory.assert_called_once_with(model='jev-1.13.0', timeout_ms=effective_config().policy.timeout_ms)
             self.assertTrue(result.ok)
             self.assertEqual(result.backend, 'jev')
             self.assertEqual(result.model, 'jev-1.13.0')
@@ -239,7 +240,7 @@ class SmartToolTests(unittest.IsolatedAsyncioTestCase):
             self.assertFalse(blocked_loop)
 
     def test_deterministic_surface(self):
-        self.assertEqual(manifest()['version'], '0.1.0')
+        self.assertEqual(manifest()['version'], '0.2.0')
         self.assertFalse(describe()['executes_actions'])
         for capability in [None, 'manifest', 'describe', 'select', 'install-skill']:
             text = skill(capability)
@@ -248,7 +249,7 @@ class SmartToolTests(unittest.IsolatedAsyncioTestCase):
 
     def test_cli_help_no_provider_and_invalid_input(self):
         base = [sys.executable, '-m', 'amplifier_fast_decisions.smart_cli']
-        for args in [ ['--help'], ['-h'], ['manifest'], ['describe'], ['select', '--help'], ['select', '-h'], ['install-skill', '--help'], ['install-skill', '-h'] ]:
+        for args in [ ['--help'], ['-h'], ['manifest'], ['describe'], ['select', '--help'], ['select', '-h'], ['install-skill', '--help'], ['install-skill', '-h'], ['decide', '--help'], ['launch', '--help'], ['decide', '-h'] ]:
             run = subprocess.run(base + args, stdin=subprocess.DEVNULL, text=True, capture_output=True, timeout=5)
             self.assertEqual(run.returncode, 0, run.stderr)
             self.assertTrue(run.stdout)
@@ -259,8 +260,9 @@ class SmartToolTests(unittest.IsolatedAsyncioTestCase):
     def test_install_skill_all_and_idempotence(self):
         with tempfile.TemporaryDirectory() as tmp:
             result = install_skill('all', home=tmp)
-            self.assertEqual(result['installed'], 4)
-            self.assertEqual({r['hosts'][0] for r in result['skills']}, {'codex', 'claude', 'amplifier', 'opencode'})
+            self.assertEqual(result['installed'], 5)
+            self.assertEqual({r['hosts'][0] for r in result['skills']}, {'codex', 'claude', 'amplifier', 'opencode', 'copilot'})
+            self.assertTrue((Path(tmp) / '.copilot/skills/amplifier-fast-decisions/SKILL.md').is_file())
             for row in result['skills']:
                 self.assertEqual(Path(row['path']).read_text(), agent_skill())
             second = install_skill('all', home=tmp)
@@ -288,7 +290,7 @@ class SmartToolTests(unittest.IsolatedAsyncioTestCase):
             except OSError as exc:
                 self.skipTest(f'Symlink creation unavailable: {exc}')
             result = install_skill('all', home=tmp)
-            self.assertEqual(result['installed'], 3)
+            self.assertEqual(result['installed'], 4)
             self.assertIn(['codex', 'claude'], [row['hosts'] for row in result['skills']])
 
 

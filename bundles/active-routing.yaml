@@ -1,20 +1,17 @@
-# Screen-validated 2026-09-20 (one repetition): 40/40 aider-polyglot exercises
-# at 26 s median working time (plain Amplifier 100 s; Claude Code 28 s / 35 of
-# 40; Codex 35 s / 37 of 40), 20/20 on the synthetic battery; the plain-on-sonnet
-# control scored 39/40 at 128 s, so the gain is attributable to routing +
-# escalation, not the cheaper model alone. Repetition-confirmed results update
-# this file via evals/apply_recommendation.py. Requires a provider that serves
-# claude-sonnet-5 alongside the pinned model.
+# The orchestrator config below is the SAME config as behaviors/fast-decisions.yaml
+# (Jev judge, price gate, decide once per session, one effort per tier). It is
+# regenerated from that file by scripts/sync_active_bundles.py and held equal by
+# tests/test_config_parity.py -- do not edit it by hand. Earlier revisions of this file
+# carried a local Ollama judge, a 500 ms timeout and a per-phase effort map that
+# silently disagreed with the shipped defaults.
+#
 bundle:
   name: fast-decisions-active-routing
-  version: 0.1.0
+  version: 0.2.0
   description: >-
-    Root fast-decisions bundle plus the decision orchestrator in active mode
-    with phase-specific effort routing and opt-in model routing/escalation
-    (HC03/HC04): a bounded fast path may substitute a prepared read-only
-    action for an LLM turn, effort scales by phase, and the session starts on
-    a cheaper model that escalates to claude-sonnet-5 on failure signals.
-    Opt-in only.
+    Foundation plus the observer-only behavior and the decision orchestrator
+    in active mode, with the shipped defaults (see bundles/active.yaml). The
+    same configuration composed without the root bundle. Opt-in.
 
 includes:
   # foundation + the observer-only behavior (not bundle.md, whose behavior now
@@ -28,29 +25,41 @@ session:
     source: git+https://github.com/michaeljabbour/amplifier-bundle-fast-decisions@main#subdirectory=modules/loop-fast-decisions
     config:
       mode: active
-      backend: ollama
-      # model: jev-1.13.0  # pin the version when thresholds are tuned; aliases move on release
-      model: qwen3:0.6b
-      timeout_ms: 500
-      allow_external_state: false
-      min_probability: 0.90
-      min_margin: 0.20
-      max_fast_streak: 3
-      max_fast_per_turn: 12
-      max_candidates: 12
-      max_state_chars: 12000
-      allowed_tools: [fast_workspace]
+      backend: jev
+      allow_external_state: true
+      read_shortcut: false
+      timeout_ms: 3000
+      allowed_tools:
+      - fast_workspace
       effort_routing:
-        orient: medium
-        explore: low
-        implement: high
-        max_explore_requests: 6
-        escalate_after_provider_errors: 1
+        by_tier:
+          cheap: medium
+          strong: null
       model_routing:
         start_model: claude-sonnet-5
-        max_requests_before_escalation: 6
-        escalate_on_test_failure: true
+        provider_match: anthropic
+        start_policy: judge
+        decision_scope: session
+        price_gate:
+          enabled: true
+        cheap_max_workspace_files: 300
+        max_requests_before_escalation: null
+        escalate_on_test_failure: false
         escalate_on_provider_error: true
-      upstream:
-        max_iterations: 100
-        extended_thinking: true
+      cache_keepalive:
+        enabled: true
+        interval_s: 270
+        max_refreshes: 6
+        min_prefix_tokens: 20000
+        max_output_tokens: 1
+      waste_guards:
+        enabled: true
+        repeat_stop: true
+        retry_stop: true
+        poll_wait: true
+        identical_results: true
+        poll_max_wait_s: 240
+      observatory:
+        enabled: true
+        open_browser: always
+        port: 8765

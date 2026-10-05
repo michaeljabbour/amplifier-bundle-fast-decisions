@@ -48,10 +48,12 @@ session:
       timeout_ms: 3000
       allowed_tools: [fast_workspace]
       effort_routing:
-        orient: medium
-        explore: low
-        implement: high
-        # One effort per tier for the whole session/turn. cheap: medium cut plain
+        # One effort per tier for the whole session/turn, never per phase. The earlier phase map (orient
+        # medium / explore low / implement high) is deleted: an effort change between requests rewrites the
+        # provider's prompt cache (requests after a change wrote 15,642 cache tokens on average vs 900 when
+        # unchanged, v3 study plan, section 0), and the by_tier rule below already overrode it.
+        # tests/test_effort_constant.py keeps effort constant within a session on every tier.
+        # cheap: medium cut plain
         # Sonnet's cost to 0.821x its default effort with non-inferior turn-pass
         # (docs/evidence/2026-10-05-effort-control/RESULT.md). strong is the
         # host-model effort: null = provider default. Opt-in `strong: medium` cut
@@ -60,8 +62,6 @@ session:
         by_tier:
           cheap: medium
           strong: null
-        max_explore_requests: 6
-        escalate_after_provider_errors: 1
       # Research levers (default off; see src/amplifier_fast_decisions/routing_levers.py):
       # one knob, profile: frugal | balanced | careful (balanced = this file),
       # or the individual model_routing keys tiers / large_repo / strong_effort.

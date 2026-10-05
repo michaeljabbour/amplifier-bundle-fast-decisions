@@ -2,7 +2,7 @@ digraph fast_decisions {
     rankdir=LR
     fontname="Helvetica"
     fontsize=12
-    label="fast-decisions v0.1.0 — bundle repo"
+    label="fast-decisions v0.2.0 — bundle repo"
     labelloc=t
     labeljust=c
     nodesep=0.6
@@ -13,7 +13,7 @@ digraph fast_decisions {
     node [fontname="Helvetica", fontsize=11, style="filled,rounded"]
     edge [fontname="Helvetica", fontsize=9]
 
-    root_fast_decisions [label="fast-decisions v0.1.0\n0 tools · 0 agents\n~193 tok aggregate", shape=box, fillcolor="#80cbc4", style="filled,rounded,bold", penwidth=2]
+    root_fast_decisions [label="fast-decisions v0.2.0\n0 tools · 0 agents\n~193 tok aggregate", shape=box, fillcolor="#80cbc4", style="filled,rounded,bold", penwidth=2]
 
     subgraph cluster_behaviors {
         label="Behaviors"
