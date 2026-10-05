@@ -1,0 +1,354 @@
+# holdout-v3 repos scenario (11 turns, review): python-validators/validators at 70de324 with a planted merged change to src/validators/utils.py (four regressions that all 818 existing tests miss): review against docstrings and docs, fix each against hidden tests, prove new regression tests against the merged copy
+id: validators-regress-review
+task_type: review
+language: python
+split: holdout
+source: {desc: 'python-validators/validators at 70de324 with a planted merged change to src/validators/utils.py (four regressions that all 818 existing tests miss): review against docstrings and docs, fix each against hidden tests, prove new regression tests against the merged copy', repo: 'https://github.com/python-validators/validators.git', sha: 70de324322def13a49a93d222f798ec1ab700885}
+workspace:
+  kind: git
+  repo: https://github.com/python-validators/validators.git
+  sha: 70de324322def13a49a93d222f798ec1ab700885
+  local_hint: ~/dev/afast-paired-src/validators
+  add_files:
+    src/validators/utils.py: |
+      """Utils."""
+
+      # standard
+      from functools import wraps
+      from inspect import getfullargspec
+      from itertools import chain
+      from os import environ
+      from typing import Any, Callable, Dict
+
+
+      class ValidationError(Exception):
+          """Exception class when validation failure occurs."""
+
+          def __init__(self, function: Callable[..., Any], arg_dict: Dict[str, Any], message: str = ""):
+              """Initialize Validation Failure."""
+              self.reason = message
+              self.func = function
+              self.__dict__.update(arg_dict)
+
+          def __repr__(self):
+              """Repr Validation Failure."""
+              return (
+                  f"ValidationError(func={self.func.__name__}, "
+                  + f"args={ ({k: v for (k, v) in self.__dict__.items()}) })"
+              )
+
+          def __str__(self):
+              """Str Validation Failure."""
+              return repr(self)
+
+          def __bool__(self):
+              """Bool Validation Failure."""
+              return False
+
+
+      def _func_args_as_dict(func: Callable[..., Any], *args: Any, **kwargs: Any):
+          """Return function's positional and key value arguments as an ordered dictionary."""
+          return dict(
+              list(zip(dict.fromkeys(chain(getfullargspec(func)[0], kwargs.keys())), args))
+              + list(kwargs.items())
+          )
+
+
+      def validator(func: Callable[..., Any]):
+          """A decorator that makes given function validator.
+
+          Whenever the given `func` returns `False` this
+          decorator returns `ValidationError` object.
+
+          Examples:
+              >>> @validator
+              ... def even(value):
+              ...     return not (value % 2)
+              >>> even(4)
+              True
+              >>> even(5)
+              ValidationError(func=even, args={'value': 5})
+
+          Args:
+              func:
+                  Function which is to be decorated.
+
+          Returns:
+              (Callable[..., ValidationError | Literal[True]]):
+                  A decorator which returns either `ValidationError`
+                  or `Literal[True]`.
+
+          Raises:
+              (ValidationError): If `r_ve` or `RAISE_VALIDATION_ERROR` is `True`
+          """
+
+          @wraps(func)
+          def wrapper(*args: Any, **kwargs: Any):
+              raise_validation_error = False
+              if "r_ve" in kwargs:
+                  raise_validation_error = True
+                  del kwargs["r_ve"]
+              if environ.get("RAISE_VALIDATION_ERROR", "False") != "False":
+                  raise_validation_error = True
+
+              try:
+                  if raise_validation_error:
+                      if func(*args, **kwargs):
+                          return True
+                      else:
+                          raise ValidationError(func, _func_args_as_dict(func, *args, **kwargs))
+                  else:
+                      return (
+                          True
+                          if func(*args, **kwargs)
+                          else ValidationError(func, _func_args_as_dict(func, *args, **kwargs))
+                      )
+              except Exception as exp:
+                  if raise_validation_error:
+                      raise ValidationError(
+                          func, _func_args_as_dict(func, *args, **kwargs), str(exp)
+                      ) from exp
+                  else:
+                      return ValidationError(func, _func_args_as_dict(func, *args, **kwargs), str(exp))
+
+          return wrapper
+    patches/merged_utils.py: |
+      """Utils."""
+
+      # standard
+      from functools import wraps
+      from inspect import getfullargspec
+      from itertools import chain
+      from os import environ
+      from typing import Any, Callable, Dict
+
+
+      class ValidationError(Exception):
+          """Exception class when validation failure occurs."""
+
+          def __init__(self, function: Callable[..., Any], arg_dict: Dict[str, Any], message: str = ""):
+              """Initialize Validation Failure."""
+              self.reason = message
+              self.func = function
+              self.__dict__.update(arg_dict)
+
+          def __repr__(self):
+              """Repr Validation Failure."""
+              return (
+                  f"ValidationError(func={self.func.__name__}, "
+                  + f"args={ ({k: v for (k, v) in self.__dict__.items()}) })"
+              )
+
+          def __str__(self):
+              """Str Validation Failure."""
+              return repr(self)
+
+          def __bool__(self):
+              """Bool Validation Failure."""
+              return False
+
+
+      def _func_args_as_dict(func: Callable[..., Any], *args: Any, **kwargs: Any):
+          """Return function's positional and key value arguments as an ordered dictionary."""
+          return dict(
+              list(zip(dict.fromkeys(chain(getfullargspec(func)[0], kwargs.keys())), args))
+              + list(kwargs.items())
+          )
+
+
+      def validator(func: Callable[..., Any]):
+          """A decorator that makes given function validator.
+
+          Whenever the given `func` returns `False` this
+          decorator returns `ValidationError` object.
+
+          Examples:
+              >>> @validator
+              ... def even(value):
+              ...     return not (value % 2)
+              >>> even(4)
+              True
+              >>> even(5)
+              ValidationError(func=even, args={'value': 5})
+
+          Args:
+              func:
+                  Function which is to be decorated.
+
+          Returns:
+              (Callable[..., ValidationError | Literal[True]]):
+                  A decorator which returns either `ValidationError`
+                  or `Literal[True]`.
+
+          Raises:
+              (ValidationError): If `r_ve` or `RAISE_VALIDATION_ERROR` is `True`
+          """
+
+          @wraps(func)
+          def wrapper(*args: Any, **kwargs: Any):
+              raise_validation_error = False
+              if "r_ve" in kwargs:
+                  raise_validation_error = True
+                  del kwargs["r_ve"]
+              if environ.get("RAISE_VALIDATION_ERROR", "False") != "False":
+                  raise_validation_error = True
+
+              try:
+                  if raise_validation_error:
+                      if func(*args, **kwargs):
+                          return True
+                      else:
+                          raise ValidationError(func, _func_args_as_dict(func, *args, **kwargs))
+                  else:
+                      return (
+                          True
+                          if func(*args, **kwargs)
+                          else ValidationError(func, _func_args_as_dict(func, *args, **kwargs))
+                      )
+              except Exception as exp:
+                  if raise_validation_error:
+                      raise ValidationError(
+                          func, _func_args_as_dict(func, *args, **kwargs), str(exp)
+                      ) from exp
+                  else:
+                      return ValidationError(func, _func_args_as_dict(func, *args, **kwargs), str(exp))
+
+          return wrapper
+hidden_files:
+  hidden/test_exc.py: |
+    import pytest
+
+    from validators.utils import ValidationError, validator
+
+
+    @validator
+    def boom(value):
+        return 1 / 0
+
+
+    @validator
+    def picky(value):
+        if value < 0:
+            raise ValueError("negative")
+        return True
+
+
+    def test_programming_errors_propagate():
+        with pytest.raises(ZeroDivisionError):
+            boom(1)
+
+
+    def test_value_errors_become_validation_errors_with_reason():
+        result = picky(-1)
+        assert isinstance(result, ValidationError)
+        assert result.reason == "negative"
+  hidden/test_env.py: |
+    import pytest
+
+    from validators import slug
+    from validators.utils import ValidationError
+
+
+    def test_only_the_string_True_enables_raising(monkeypatch):
+        monkeypatch.setenv("RAISE_VALIDATION_ERROR", "0")
+        assert isinstance(slug("bad.slug"), ValidationError)
+        monkeypatch.setenv("RAISE_VALIDATION_ERROR", "no")
+        assert isinstance(slug("bad.slug"), ValidationError)
+
+
+    def test_True_raises(monkeypatch):
+        monkeypatch.setenv("RAISE_VALIDATION_ERROR", "True")
+        with pytest.raises(ValidationError):
+            slug("bad.slug")
+
+
+    def test_unset_does_not_raise(monkeypatch):
+        monkeypatch.delenv("RAISE_VALIDATION_ERROR", raising=False)
+        assert not slug("bad.slug")
+        assert slug("good-slug")
+  hidden/test_repr.py: |
+    from validators import slug
+
+
+    def test_repr_lists_only_the_arguments():
+        assert repr(slug("my.slug")) == "ValidationError(func=slug, args={'value': 'my.slug'})"
+
+
+    def test_str_matches_repr():
+        err = slug("my.slug")
+        assert str(err) == repr(err)
+  hidden/test_reason.py: |
+    from validators import length, slug
+
+
+    def test_no_reason_without_message():
+        err = slug("my.slug")
+        assert not hasattr(err, "reason")
+        assert "reason" not in repr(err)
+
+
+    def test_reason_present_when_validator_raised():
+        err = length("abc", min_val=-1)
+        assert "negative" in err.reason
+protected: [tests/test_validation_failure.py]
+turns:
+- prompt: 'Give me a map of src/validators/: group the modules (between, card, country, cron, domain, email, encoding, finance, hashes, hostname, iban, ip_address, length, mac_address, slug, uri, url, utils, uuid, _extremes) into the ones that implement a validator, helpers, and data, and say where the tests live. Do not change any files.'
+  checks:
+  - kind: keyed_facts
+    all: [utils\.py, _extremes\.py, _tld\.txt|tld, i18n, crypto_addresses, tests]
+- prompt: A change to src/validators/utils.py was just merged. Run the whole suite (`python3 -m pytest -q --ignore=tests/crypto_addresses tests`, the crypto tests need an extra dependency) and tell me the result. What does that tell you about the change? Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: [818 passed, 'no (test )?fail|all pass|green', cover|gap|not|does not|doesn't|untested]
+- prompt: 'Explain the contract of the `validator` decorator in src/validators/utils.py as documented in its docstring and docs/install_and_use.md: what does a decorated function return, how can raising be enabled, and which exceptions are converted into a ValidationError? Do not change any files.'
+  checks:
+  - kind: keyed_facts
+    all: ['True', ValidationError, r_ve, RAISE_VALIDATION_ERROR, ValueError, TypeError, UnicodeError, reason]
+- prompt: Now review the merged src/validators/utils.py against that contract. List every deviation you can DEMONSTRATE with a short snippet (run it from this checkout with src/ on sys.path) and the output it gives. Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: [ZeroDivisionError|division by zero, '''func''|func.{0,20}key|<function', 'reason.{0,10}''''|empty reason|hasattr', RAISE_VALIDATION_ERROR, '!= ?.False.|0\b|any value']
+- prompt: 'Fix the exception handling in the decorator: only ValueError, TypeError and UnicodeError may be converted.'
+  checks:
+  - {kind: file_regex, path: src/validators/utils.py, pattern: 'except \(ValueError, TypeError, UnicodeError\) as exp:'}
+  - kind: tests
+    runner: python
+    files: [tests/test_validation_failure.py, hidden/test_exc.py]
+    hidden: [hidden/test_exc.py]
+- prompt: Fix how RAISE_VALIDATION_ERROR is interpreted so that only the string True enables raising (as documented).
+  checks:
+  - {kind: file_regex, path: src/validators/utils.py, pattern: == "True"}
+  - kind: tests
+    runner: python
+    files: [tests/test_validation_failure.py, hidden/test_env.py]
+    hidden: [hidden/test_env.py]
+- prompt: Fix `ValidationError.__init__` so `reason` is only set when a message is given.
+  checks:
+  - {kind: file_regex, path: src/validators/utils.py, pattern: 'if message:\n\s+self\.reason = message'}
+  - kind: tests
+    runner: python
+    files: [tests/test_validation_failure.py, hidden/test_reason.py]
+    hidden: [hidden/test_reason.py]
+- prompt: Fix the repr of ValidationError so the func entry is not repeated inside args.
+  checks:
+  - {kind: file_regex, path: src/validators/utils.py, pattern: if k != 'func'}
+  - kind: tests
+    runner: python
+    files: [tests/test_validation_failure.py, hidden/test_repr.py]
+    hidden: [hidden/test_repr.py]
+- prompt: Add tests/test_validator_regress.py with at least five pytest tests covering the four regressions (exception narrowing, exact repr, no empty reason, env value 0 does not raise, env value True raises). They must pass on the fixed utils.py and at least four of them must fail against the merged copy patches/merged_utils.py (prove it by temporarily copying that file over src/validators/utils.py, then restore your fixed version).
+  checks:
+  - {kind: file_regex, path: tests/test_validator_regress.py, pattern: ^def test_, min_count: 5}
+  - {kind: tests, runner: cmd, cmd: 'python3 -m pytest -q -p no:cacheprovider tests/test_validator_regress.py && O=$(mktemp -d) && cp src/validators/utils.py $O/fixed.py && cp patches/merged_utils.py src/validators/utils.py && (python3 -m pytest -q -p no:cacheprovider tests/test_validator_regress.py > $O/out.txt 2>&1; true) && n=$(grep -Eo ''[0-9]+ failed'' $O/out.txt | cut -d'' '' -f1) && [ "${n:-0}" -ge 4 ] && cp $O/fixed.py src/validators/utils.py && python3 -m pytest -q -p no:cacheprovider tests/test_validator_regress.py', timeout: 280}
+- prompt: Write REVIEW.md in the repository root with level-2 sections Summary, Test gaps, except clause, repr, reason and environment variable, each with the concrete input and the wrong output the merged code produced.
+  checks:
+  - kind: doc_sections
+    path: REVIEW.md
+    headings: [Summary, Test gaps, except clause, repr, reason, environment variable]
+  - {kind: file_regex, path: REVIEW.md, pattern: ZeroDivisionError}
+  - {kind: file_regex, path: REVIEW.md, pattern: RAISE_VALIDATION_ERROR=0}
+  - {kind: file_regex, path: REVIEW.md, pattern: '818'}
+- prompt: 'Final check: which files did you change or add, does the whole suite still pass (`python3 -m pytest -q --ignore=tests/crypto_addresses tests`), and which other piece of utils.py would you add a test for? Do not change any files.'
+  checks:
+  - kind: keyed_facts
+    all: [src/validators/utils\.py, test_validator_regress\.py, REVIEW\.md, passed, _func_args_as_dict|r_ve|args]
