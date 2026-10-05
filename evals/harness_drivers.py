@@ -26,7 +26,8 @@ import time
 import uuid
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any, Callable, Sequence
+from collections.abc import Callable, Sequence
+from typing import Any
 
 COPILOT_PREMIUM_USD = 0.04      # list overage price per premium request
 # Premium-request multipliers by model id prefix (GitHub Copilot model multipliers; verify before a study).
@@ -47,6 +48,7 @@ class TurnResult:
     model: str | None = None
     error: str | None = None
     argv: list[str] = field(default_factory=list)         # what was run (no secrets are ever in argv)
+    usage_cumulative: dict[str, int] = field(default_factory=dict)   # codex: the thread's running total after this call
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -210,7 +212,7 @@ class CodexDriver(Driver):
             basis = "tokens_x_rates"
         result = TurnResult("codex", session_id, text, code, wall_ms, usage=usage, cost_usd=cost, cost_basis=basis, model=model,
                             error=error or ((stderr or "")[-300:] if code else None), argv=list(argv))
-        result.usage_cumulative = cumulative          # type: ignore[attr-defined]
+        result.usage_cumulative = cumulative
         return result
 
 
@@ -272,11 +274,12 @@ def run_scripted_session(driver: Driver, prompts: Sequence[str], cwd: str | Path
         if stop_on_failure and (result.exit_code != 0 or result.session_id is None):
             break
     costs = [r.cost_usd for r in results]
+    known = [c for c in costs if c is not None]
     complete = len(results) == len(prompts) and all(r.exit_code == 0 for r in results)
     return {"harness": driver.name, "session_id": session_id, "turns": [r.to_dict() for r in results],
             "complete": complete, "wall_ms": round(sum(r.wall_ms for r in results), 1),
             # the session cost is only stated when every turn's cost was read; otherwise None, never a partial sum
-            "cost_usd": round(sum(costs), 6) if costs and all(c is not None for c in costs) else None,
+            "cost_usd": round(sum(known), 6) if costs and len(known) == len(costs) else None,
             "cost_basis": results[0].cost_basis if results and len({r.cost_basis for r in results}) == 1 else None}
 
 

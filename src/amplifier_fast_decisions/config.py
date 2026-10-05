@@ -20,6 +20,7 @@ import json
 import os
 from dataclasses import dataclass, field
 from functools import lru_cache
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
@@ -149,7 +150,7 @@ KNOWN_HOSTS = ("claude-opus-5-5", "claude-fable-5-1")
 
 
 def config_report(host_model: str | None = None, *, overrides: dict[str, Any] | None = None,
-                  use_settings: bool = True, env: dict[str, str] | None = None) -> dict[str, Any]:
+                  use_settings: bool = True, env: Mapping[str, str] | None = None) -> dict[str, Any]:
     """Load and validate the effective configuration and report what it will do. No network, no model call,
     no secret values (credential variables are reported present/absent only).
 

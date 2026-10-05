@@ -24,7 +24,8 @@ import json
 import os
 import shutil
 from dataclasses import dataclass
-from typing import Any, Callable, Sequence
+from collections.abc import Callable, Sequence
+from typing import Any
 
 from .decide import Decision
 
