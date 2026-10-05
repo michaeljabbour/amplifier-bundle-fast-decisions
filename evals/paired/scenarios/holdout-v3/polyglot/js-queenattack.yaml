@@ -1,0 +1,247 @@
+# holdout-v3 polyglot: js-queenattack -- 11 turns, short gaps.
+id: js-queenattack
+task_type: feature
+language: javascript
+split: holdout
+default_gap_s: 10
+source:
+  desc: >-
+    Aider polyglot-benchmark javascript/queen-attack (Exercism), outside the S2 slice; grown with
+    notation, path, immutability and board-rendering turns
+  repo: https://github.com/Aider-AI/polyglot-benchmark
+  sha: 7e0611e77b54e2dea774cdc0aa00cf9f7ed6144f
+workspace:
+  kind: git
+  repo: https://github.com/Aider-AI/polyglot-benchmark
+  sha: 7e0611e77b54e2dea774cdc0aa00cf9f7ed6144f
+  subdir: javascript/exercises/practice/queen-attack
+  local_hint: ~/dev/afast-campaign-corrected-polyglot-20260919/polyglot/polyglot-benchmark
+  remove:
+  - .meta
+protected: [queen-attack.spec.js]
+hidden_files:
+  jest_shim.mjs: |
+    import { describe as d, test as t } from 'node:test';
+    import assert from 'node:assert/strict';
+
+    const ctx = globalThis;
+    ctx.describe = (name, fn) => d(name, fn);
+    ctx.test = (name, fn) => t(name, fn);
+    ctx.xtest = ctx.test;
+    ctx.it = ctx.test;
+
+    const matchErr = (e) => (err) => {
+      if (e === undefined) return true;
+      if (e instanceof Error) return err.message === e.message;
+      if (typeof e === 'string') return String(err.message).includes(e);
+      if (e instanceof RegExp) return e.test(err.message);
+      if (typeof e === 'function') return err instanceof e;
+      return true;
+    };
+
+    ctx.expect = (actual) => ({
+      toEqual: (e) => assert.deepEqual(actual, e),
+      toBe: (e) => assert.strictEqual(actual, e),
+      toBeCloseTo: (e, digits = 2) => assert.ok(Math.abs(actual - e) < 10 ** -digits / 2, `${actual} is not close to ${e}`),
+      toBeTruthy: () => assert.ok(actual),
+      toBeFalsy: () => assert.ok(!actual),
+      toThrow: (e) => assert.throws(actual, matchErr(e)),
+      not: { toEqual: (e) => assert.notDeepEqual(actual, e), toBe: (e) => assert.notStrictEqual(actual, e) },
+    });
+  hidden_notation.test.mjs: |
+    import { test } from 'node:test';
+    import assert from 'node:assert/strict';
+    import { QueenAttack } from './queen-attack.js';
+
+    test('algebraic positions are accepted', () => {
+      const queens = new QueenAttack({ white: 'c5', black: 'f2' });
+      assert.deepEqual(queens.white, [3, 2]);
+      assert.deepEqual(queens.black, [6, 5]);
+      assert.equal(queens.canAttack, true);
+    });
+
+    test('upper case and padding are accepted', () => {
+      assert.deepEqual(new QueenAttack({ white: ' C5 ' }).white, [3, 2]);
+    });
+
+    test('default notation', () => {
+      assert.deepEqual(new QueenAttack().notation, { white: 'd1', black: 'd8' });
+    });
+
+    test('notation of numeric positions', () => {
+      const queens = new QueenAttack({ white: [3, 2], black: [6, 5] });
+      assert.deepEqual(queens.notation, { white: 'c5', black: 'f2' });
+    });
+
+    test('invalid squares are off the board', () => {
+      for (const bad of ['i9', 'a0', 'a9', 'z1', '', 'c55']) {
+        assert.throws(() => new QueenAttack({ white: bad }), /Queen must be placed on the board/);
+      }
+    });
+
+    test('same square in both notations', () => {
+      assert.throws(() => new QueenAttack({ white: 'c5', black: [3, 2] }), /Queens cannot share the same space/);
+    });
+
+    test('array positions still work', () => {
+      assert.deepEqual(new QueenAttack({ white: [2, 2] }).white, [2, 2]);
+    });
+  hidden_path.test.mjs: |
+    import { test } from 'node:test';
+    import assert from 'node:assert/strict';
+    import { QueenAttack } from './queen-attack.js';
+
+    test('diagonal path from white towards black', () => {
+      const queens = new QueenAttack({ white: [2, 2], black: [5, 5] });
+      assert.deepEqual(queens.attackPath, [[3, 3], [4, 4]]);
+    });
+
+    test('row path', () => {
+      assert.deepEqual(new QueenAttack({ white: [2, 1], black: [2, 4] }).attackPath, [[2, 2], [2, 3]]);
+    });
+
+    test('column path in reverse direction', () => {
+      assert.deepEqual(new QueenAttack({ white: [6, 3], black: [2, 3] }).attackPath, [[5, 3], [4, 3], [3, 3]]);
+    });
+
+    test('black above and left of white', () => {
+      assert.deepEqual(new QueenAttack({ white: [5, 5], black: [2, 2] }).attackPath, [[4, 4], [3, 3]]);
+    });
+
+    test('adjacent queens have an empty path', () => {
+      assert.deepEqual(new QueenAttack({ white: [2, 2], black: [3, 3] }).attackPath, []);
+    });
+
+    test('queens that cannot attack have an empty path', () => {
+      assert.deepEqual(new QueenAttack({ white: [2, 4], black: [6, 6] }).attackPath, []);
+    });
+  hidden_moved.test.mjs: |
+    import { test } from 'node:test';
+    import assert from 'node:assert/strict';
+    import { QueenAttack } from './queen-attack.js';
+
+    test('moved returns a new instance', () => {
+      const queens = new QueenAttack();
+      const next = queens.moved('white', 'c5');
+      assert.notEqual(next, queens);
+      assert.deepEqual(next.white, [3, 2]);
+      assert.deepEqual(next.black, [0, 3]);
+    });
+
+    test('the original is not modified', () => {
+      const queens = new QueenAttack({ white: [2, 2], black: [0, 4] });
+      queens.moved('black', [7, 7]);
+      assert.deepEqual(queens.black, [0, 4]);
+      assert.deepEqual(queens.white, [2, 2]);
+    });
+
+    test('moving black', () => {
+      assert.deepEqual(new QueenAttack().moved('black', [0, 0]).black, [0, 0]);
+    });
+
+    test('moves are validated', () => {
+      const queens = new QueenAttack();
+      assert.throws(() => queens.moved('white', [8, 0]), /Queen must be placed on the board/);
+      assert.throws(() => queens.moved('white', [0, 3]), /Queens cannot share the same space/);
+    });
+
+    test('unknown colour', () => {
+      assert.throws(() => new QueenAttack().moved('red', [1, 1]), /Unknown colour: red/);
+    });
+  hidden_board.test.mjs: |
+    import { test } from 'node:test';
+    import assert from 'node:assert/strict';
+    import { QueenAttack } from './queen-attack.js';
+
+    test('board with coordinates for the starting positions', () => {
+      assert.equal(new QueenAttack().toString({ coordinates: true }), '  a b c d e f g h\n8 _ _ _ B _ _ _ _ 8\n7 _ _ _ _ _ _ _ _ 7\n6 _ _ _ _ _ _ _ _ 6\n5 _ _ _ _ _ _ _ _ 5\n4 _ _ _ _ _ _ _ _ 4\n3 _ _ _ _ _ _ _ _ 3\n2 _ _ _ _ _ _ _ _ 2\n1 _ _ _ W _ _ _ _ 1\n  a b c d e f g h');
+    });
+
+    test('coordinates follow the queens', () => {
+      const text = new QueenAttack({ white: 'c5', black: 'f2' }).toString({ coordinates: true });
+      const lines = text.split('\n');
+      assert.equal(lines[4], '5 _ _ W _ _ _ _ _ 5');
+      assert.equal(lines[7], '2 _ _ _ _ _ B _ _ 2');
+    });
+
+    test('the plain board is unchanged', () => {
+      const queens = new QueenAttack({ white: [3, 2], black: [6, 5] });
+      assert.equal(queens.toString(), queens.toString({ coordinates: false }));
+      assert.equal(queens.toString().split('\n').length, 8);
+    });
+turns:
+  - prompt: >-
+      Read .docs/instructions.md and .docs/instructions.append.md and implement the `QueenAttack`
+      class in queen-attack.js so that the specs in queen-attack.spec.js pass (jest is not installed
+      here, so check them with plain node). Queens default to black at row 0 / column 3 and white at
+      row 7 / column 3 (`[row, column]` pairs, `white` and `black` properties), the error messages are
+      part of the specs, `toString()` draws the 8x8 board and `canAttack` is true on a shared row,
+      column or diagonal. Do not edit the provided spec file.
+    checks:
+      - {kind: tests, runner: cmd, cmd: 'sed "s#from ''./queen-attack''#from ''./queen-attack.js''#" queen-attack.spec.js > spec_run.test.mjs && node --import ./jest_shim.mjs --test --test-reporter=tap spec_run.test.mjs ', expect_regex: '# fail 0', restore: [queen-attack.spec.js], hidden: [jest_shim.mjs], timeout: 120}
+  - prompt: >-
+      In three to five sentences explain in which order the constructor validates its input (board
+      bounds first or the shared square first) and why the destructuring defaults in the signature
+      already give the standard starting positions. Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [board, same|share, default], any: [order, bounds, first, destructur]}
+  - prompt: >-
+      Accept algebraic notation as input: `new QueenAttack({ white: 'c5', black: 'f2' })` must give
+      white `[3, 2]` and black `[6, 5]` (rank 8 is row 0, files a-h are columns 0-7; upper case and
+      surrounding spaces are accepted, arrays keep working). Invalid squares (`'i9'`, `'a0'`, `''`,
+      `'c55'`) fail with `Queen must be placed on the board`, and the same square in either notation
+      with `Queens cannot share the same space`. Also add a `notation` getter returning `{ white:
+      'd1', black: 'd8' }`-style names.
+    checks:
+      - {kind: tests, runner: cmd, cmd: sed "s#from './queen-attack'#from './queen-attack.js'#" queen-attack.spec.js > spec_run.test.mjs && node --import ./jest_shim.mjs --test --test-reporter=tap spec_run.test.mjs hidden_notation.test.mjs, expect_regex: '# fail 0', restore: [queen-attack.spec.js], hidden: [jest_shim.mjs, hidden_notation.test.mjs], timeout: 120}
+  - prompt: >-
+      Add a getter `attackPath`: when the queens can attack each other it returns the squares strictly
+      between them as `[row, column]` pairs, ordered from the white queen towards the black one;
+      adjacent queens, and queens that cannot attack, give an empty array.
+    checks:
+      - {kind: tests, runner: cmd, cmd: sed "s#from './queen-attack'#from './queen-attack.js'#" queen-attack.spec.js > spec_run.test.mjs && node --import ./jest_shim.mjs --test --test-reporter=tap spec_run.test.mjs hidden_notation.test.mjs hidden_path.test.mjs, expect_regex: '# fail 0', restore: [queen-attack.spec.js], hidden: [jest_shim.mjs, hidden_notation.test.mjs, hidden_path.test.mjs], timeout: 120}
+  - prompt: >-
+      Add `moved(color, position)`: it returns a new QueenAttack with that queen (`'white'` or
+      `'black'`) at the new position (array or algebraic), leaves the original untouched, validates
+      exactly like the constructor, and rejects any other colour with `Unknown colour: <value>`.
+    checks:
+      - {kind: tests, runner: cmd, cmd: sed "s#from './queen-attack'#from './queen-attack.js'#" queen-attack.spec.js > spec_run.test.mjs && node --import ./jest_shim.mjs --test --test-reporter=tap spec_run.test.mjs hidden_notation.test.mjs hidden_path.test.mjs hidden_moved.test.mjs, expect_regex: '# fail 0', restore: [queen-attack.spec.js], hidden: [jest_shim.mjs, hidden_notation.test.mjs, hidden_path.test.mjs, hidden_moved.test.mjs], timeout: 120}
+  - prompt: >-
+      Write a JSDoc comment above `export class QueenAttack` that explains the position formats, and
+      what `canAttack`, `attackPath`, `notation` and `moved()` do. Comment only.
+    checks:
+      - {kind: file_regex, path: queen-attack.js, pattern: '(?s)/\*\*(?=(?:(?!\*/).)*canAttack)(?=(?:(?!\*/).)*attackPath)(?=(?:(?!\*/).)*moved)(?:(?!\*/).)*\*/\s*export class QueenAttack'}
+      - {kind: tests, runner: cmd, cmd: sed "s#from './queen-attack'#from './queen-attack.js'#" queen-attack.spec.js > spec_run.test.mjs && node --import ./jest_shim.mjs --test --test-reporter=tap spec_run.test.mjs hidden_notation.test.mjs hidden_path.test.mjs hidden_moved.test.mjs, expect_regex: '# fail 0', restore: [queen-attack.spec.js], hidden: [jest_shim.mjs, hidden_notation.test.mjs, hidden_path.test.mjs, hidden_moved.test.mjs], timeout: 120}
+  - prompt: >-
+      Add your own tests in a new file `extra.test.mjs` using `node:test` and `node:assert/strict`
+      (importing from ./queen-attack.js): at least four `test(` cases covering algebraic input,
+      `attackPath`, `moved` and `notation`. Run it with `node --test extra.test.mjs`.
+    checks:
+      - {kind: file_regex, path: extra.test.mjs, pattern: \btest\(, min_count: 4}
+      - {kind: tests, runner: cmd, cmd: node --test --test-reporter=tap extra.test.mjs, expect_regex: '# pass [1-9]', restore: [], hidden: [], timeout: 120}
+  - prompt: >-
+      Let `toString` print the board with coordinates when asked: `toString({ coordinates: true })`
+      adds the file letters line ` a b c d e f g h` above and below, and the rank number (8 at the top
+      down to 1) before and after every row, like the diagram in .docs/instructions.append.md. Without
+      the option (or with `coordinates: false`) the output stays exactly as before.
+    checks:
+      - {kind: tests, runner: cmd, cmd: sed "s#from './queen-attack'#from './queen-attack.js'#" queen-attack.spec.js > spec_run.test.mjs && node --import ./jest_shim.mjs --test --test-reporter=tap spec_run.test.mjs hidden_notation.test.mjs hidden_path.test.mjs hidden_moved.test.mjs hidden_board.test.mjs, expect_regex: '# fail 0', restore: [queen-attack.spec.js], hidden: [jest_shim.mjs, hidden_notation.test.mjs, hidden_path.test.mjs, hidden_moved.test.mjs, hidden_board.test.mjs], timeout: 120}
+  - prompt: >-
+      Question only: what is the time complexity of `canAttack` and `attackPath` on a board of size N,
+      and would anything change if the board were 1000 x 1000 (think about `toString`)? Do not change
+      any files.
+    checks:
+      - {kind: keyed_facts, all: [canAttack, attackPath, O\(|constant|linear], any: [toString, N\^2|quadratic|rows|cells]}
+  - prompt: >-
+      Refactor queen-attack.js without changing behaviour: move the placement validation into a module
+      level helper `assertPlacement(black, white)` and the step computation of `attackPath` into
+      `stepBetween(from, to)`, next to the existing helpers (`onBoard`, `toSquare`, `squareName`) as
+      `const` arrow functions. All earlier checks must still pass.
+    checks:
+      - {kind: file_regex, path: queen-attack.js, pattern: '^const (?:assertPlacement|stepBetween|squareName) = ', min_count: 3}
+      - {kind: tests, runner: cmd, cmd: sed "s#from './queen-attack'#from './queen-attack.js'#" queen-attack.spec.js > spec_run.test.mjs && node --import ./jest_shim.mjs --test --test-reporter=tap spec_run.test.mjs hidden_notation.test.mjs hidden_path.test.mjs hidden_moved.test.mjs hidden_board.test.mjs, expect_regex: '# fail 0', restore: [queen-attack.spec.js], hidden: [jest_shim.mjs, hidden_notation.test.mjs, hidden_path.test.mjs, hidden_moved.test.mjs, hidden_board.test.mjs], timeout: 120}
+  - prompt: >-
+      Review the changes you made in this session as a code reviewer would: list each file you changed
+      or added, what changed, and any remaining edge case you did not cover. Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [queen-attack\.js, test], any: [edge, risk, not cover, remaining]}

@@ -1,0 +1,298 @@
+# holdout-v3 polyglot: js-linkedlist -- 12 turns, short gaps.
+id: js-linkedlist
+task_type: feature
+language: javascript
+split: holdout
+default_gap_s: 10
+source:
+  desc: >-
+    Aider polyglot-benchmark javascript/simple-linked-list (Exercism), outside the S2 slice; grown
+    with iteration, positional edits, equality and refactoring turns
+  repo: https://github.com/Aider-AI/polyglot-benchmark
+  sha: 7e0611e77b54e2dea774cdc0aa00cf9f7ed6144f
+workspace:
+  kind: git
+  repo: https://github.com/Aider-AI/polyglot-benchmark
+  sha: 7e0611e77b54e2dea774cdc0aa00cf9f7ed6144f
+  subdir: javascript/exercises/practice/simple-linked-list
+  local_hint: ~/dev/afast-campaign-corrected-polyglot-20260919/polyglot/polyglot-benchmark
+  remove:
+  - .meta
+protected: [simple-linked-list.spec.js]
+hidden_files:
+  jest_shim.mjs: |
+    import { describe as d, test as t, beforeEach as b } from 'node:test';
+    import assert from 'node:assert/strict';
+
+    const ctx = globalThis;
+    ctx.describe = (name, fn) => d(name, fn);
+    ctx.test = (name, fn) => t(name, fn);
+    ctx.xtest = ctx.test;
+    ctx.it = ctx.test;
+    ctx.beforeEach = (fn) => b(fn);
+
+    const matchErr = (e) => (err) => {
+      if (e === undefined) return true;
+      if (e instanceof Error) return err.message === e.message;
+      if (typeof e === 'string') return String(err.message).includes(e);
+      if (e instanceof RegExp) return e.test(err.message);
+      if (typeof e === 'function') return err instanceof e;
+      return true;
+    };
+
+    ctx.expect = (actual) => ({
+      toEqual: (e) => assert.deepEqual(actual, e),
+      toBe: (e) => assert.strictEqual(actual, e),
+      toBeCloseTo: (e, digits = 2) => assert.ok(Math.abs(actual - e) < 10 ** -digits / 2, `${actual} is not close to ${e}`),
+      toBeTruthy: () => assert.ok(actual),
+      toBeFalsy: () => assert.ok(!actual),
+      toBeDefined: () => assert.notEqual(actual, undefined),
+      toThrow: (e) => assert.throws(actual, matchErr(e)),
+      not: { toEqual: (e) => assert.notDeepEqual(actual, e), toBe: (e) => assert.notStrictEqual(actual, e), toThrow: () => assert.doesNotThrow(actual) },
+    });
+  hidden_iter.test.mjs: |
+    import { test } from 'node:test';
+    import assert from 'node:assert/strict';
+    import { List, Element } from './simple-linked-list.js';
+
+    test('iterates head first', () => {
+      assert.deepEqual([...new List([1, 2, 3])], [3, 2, 1]);
+    });
+
+    test('from keeps the given order, first value is the head', () => {
+      const list = List.from([1, 2, 3]);
+      assert.equal(list.head.value, 1);
+      assert.deepEqual(list.toArray(), [1, 2, 3]);
+      assert.equal(list.length, 3);
+    });
+
+    test('from accepts any iterable and the empty case', () => {
+      assert.deepEqual(List.from(new Set([4, 5])).toArray(), [4, 5]);
+      assert.equal(List.from([]).head, null);
+    });
+
+    test('map keeps the order', () => {
+      const doubled = List.from([1, 2, 3]).map((x) => x * 2);
+      assert.deepEqual(doubled.toArray(), [2, 4, 6]);
+    });
+
+    test('filter keeps the order', () => {
+      assert.deepEqual(List.from([1, 2, 3, 4]).filter((x) => x % 2 === 0).toArray(), [2, 4]);
+    });
+
+    test('map and filter do not modify the source', () => {
+      const list = List.from([1, 2, 3]);
+      list.map((x) => x + 1);
+      list.filter(() => false);
+      assert.deepEqual(list.toArray(), [1, 2, 3]);
+    });
+  hidden_pop.test.mjs: |
+    import { test } from 'node:test';
+    import assert from 'node:assert/strict';
+    import { List, Element } from './simple-linked-list.js';
+
+    test('peek returns the head value without removing it', () => {
+      const list = List.from([1, 2]);
+      assert.equal(list.peek(), 1);
+      assert.equal(list.length, 2);
+    });
+
+    test('peek on an empty list is undefined', () => {
+      assert.equal(new List().peek(), undefined);
+    });
+
+    test('pop removes and returns the head value', () => {
+      const list = List.from([1, 2, 3]);
+      assert.equal(list.pop(), 1);
+      assert.equal(list.length, 2);
+      assert.deepEqual(list.toArray(), [2, 3]);
+    });
+
+    test('pop on an empty list is undefined and keeps length 0', () => {
+      const list = new List();
+      assert.equal(list.pop(), undefined);
+      assert.equal(list.length, 0);
+    });
+
+    test('popping everything empties the list', () => {
+      const list = List.from([1]);
+      list.pop();
+      assert.equal(list.head, null);
+    });
+  hidden_at.test.mjs: |
+    import { test } from 'node:test';
+    import assert from 'node:assert/strict';
+    import { List, Element } from './simple-linked-list.js';
+
+    test('insertAt the front', () => {
+      const list = List.from([2, 3]);
+      list.insertAt(0, 1);
+      assert.deepEqual(list.toArray(), [1, 2, 3]);
+    });
+
+    test('insertAt the middle and the end', () => {
+      const list = List.from([1, 3]);
+      list.insertAt(1, 2);
+      list.insertAt(3, 4);
+      assert.deepEqual(list.toArray(), [1, 2, 3, 4]);
+      assert.equal(list.length, 4);
+    });
+
+    test('insertAt returns the list', () => {
+      const list = new List();
+      assert.equal(list.insertAt(0, 1), list);
+    });
+
+    test('insertAt rejects bad indexes', () => {
+      const list = List.from([1]);
+      for (const bad of [-1, 2, 1.5, '0']) {
+        assert.throws(() => list.insertAt(bad, 9), (e) => e instanceof RangeError && e.message === `Index out of range: ${bad}`);
+      }
+    });
+
+    test('removeAt returns the removed value', () => {
+      const list = List.from([1, 2, 3]);
+      assert.equal(list.removeAt(1), 2);
+      assert.deepEqual(list.toArray(), [1, 3]);
+      assert.equal(list.removeAt(0), 1);
+      assert.equal(list.removeAt(0), 3);
+      assert.equal(list.length, 0);
+    });
+
+    test('removeAt rejects bad indexes', () => {
+      const list = List.from([1]);
+      for (const bad of [-1, 1, 0.5]) {
+        assert.throws(() => list.removeAt(bad), (e) => e instanceof RangeError && e.message === `Index out of range: ${bad}`);
+      }
+    });
+  hidden_str.test.mjs: |
+    import { test } from 'node:test';
+    import assert from 'node:assert/strict';
+    import { List, Element } from './simple-linked-list.js';
+
+    test('toString joins the values head first', () => {
+      assert.equal(List.from([1, 2, 3]).toString(), '1 -> 2 -> 3');
+    });
+
+    test('toString of one element', () => {
+      assert.equal(List.from(['a']).toString(), 'a');
+    });
+
+    test('toString of an empty list', () => {
+      assert.equal(new List().toString(), '(empty)');
+    });
+
+    test('template literals use toString', () => {
+      assert.equal(`${List.from([2, 1])}`, '2 -> 1');
+    });
+  hidden_eq.test.mjs: |
+    import { test } from 'node:test';
+    import assert from 'node:assert/strict';
+    import { List, Element } from './simple-linked-list.js';
+
+    test('equal lists', () => {
+      assert.equal(List.from([1, 2]).equals(List.from([1, 2])), true);
+    });
+
+    test('different values, order or length', () => {
+      assert.equal(List.from([1, 2]).equals(List.from([2, 1])), false);
+      assert.equal(List.from([1, 2]).equals(List.from([1])), false);
+      assert.equal(List.from([1]).equals(List.from([1, 2])), false);
+    });
+
+    test('values are compared strictly', () => {
+      assert.equal(List.from([1]).equals(List.from(['1'])), false);
+    });
+
+    test('only lists are equal to lists', () => {
+      assert.equal(List.from([1]).equals([1]), false);
+      assert.equal(new List().equals(null), false);
+    });
+
+    test('clone is an equal but independent list', () => {
+      const list = List.from([1, 2, 3]);
+      const copy = list.clone();
+      assert.equal(copy.equals(list), true);
+      copy.pop();
+      assert.deepEqual(list.toArray(), [1, 2, 3]);
+    });
+turns:
+  - prompt: >-
+      Read .docs/instructions.md and implement `Element` and `List` in simple-linked-list.js so that
+      the specs in simple-linked-list.spec.js pass (jest is not installed here, so check them with
+      plain node; the shipped spec uses `beforeEach` and `.not.toThrow()`, which the checker
+      provides). `new Element(value, next = null)` has `value` and `next`; `new List(values = [])`
+      adds the values one by one, `add(element)` puts the element at the head, `length`, `head`,
+      `toArray()` (head first) and `reverse()` (a new list) complete it. Do not edit the provided spec
+      file.
+    checks:
+      - {kind: tests, runner: cmd, cmd: 'sed "s#from ''./simple-linked-list''#from ''./simple-linked-list.js''#" simple-linked-list.spec.js > spec_run.test.mjs && node --import ./jest_shim.mjs --test --test-reporter=tap spec_run.test.mjs ', expect_regex: '# fail 0', restore: [simple-linked-list.spec.js], hidden: [jest_shim.mjs], timeout: 120}
+  - prompt: >-
+      In three to five sentences explain why a list built from `[1, 2, 3]` has 3 at its head and why
+      `reverse()` returns the values in their original input order. Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [head, add, reverse], any: [last|3, front|beginning|prepend, original]}
+  - prompt: >-
+      Make the list easier to use: make it iterable (values head first), add `List.from(iterable)`
+      that builds a list whose head is the FIRST value and whose `toArray()` equals the input (also
+      for any iterable such as a Set, and the empty list), and `map(fn)` / `filter(fn)` that return
+      new lists in that same order without touching the source.
+    checks:
+      - {kind: tests, runner: cmd, cmd: sed "s#from './simple-linked-list'#from './simple-linked-list.js'#" simple-linked-list.spec.js > spec_run.test.mjs && node --import ./jest_shim.mjs --test --test-reporter=tap spec_run.test.mjs hidden_iter.test.mjs, expect_regex: '# fail 0', restore: [simple-linked-list.spec.js], hidden: [jest_shim.mjs, hidden_iter.test.mjs], timeout: 120}
+  - prompt: >-
+      Add `peek()` (the head value without removing it, `undefined` for an empty list) and `pop()`
+      (removes and returns the head value, `undefined` for an empty list; the length follows and an
+      emptied list has a null head).
+    checks:
+      - {kind: tests, runner: cmd, cmd: sed "s#from './simple-linked-list'#from './simple-linked-list.js'#" simple-linked-list.spec.js > spec_run.test.mjs && node --import ./jest_shim.mjs --test --test-reporter=tap spec_run.test.mjs hidden_iter.test.mjs hidden_pop.test.mjs, expect_regex: '# fail 0', restore: [simple-linked-list.spec.js], hidden: [jest_shim.mjs, hidden_iter.test.mjs, hidden_pop.test.mjs], timeout: 120}
+  - prompt: >-
+      Add positional edits with index 0 being the head: `insertAt(index, value)` (returns the list,
+      index may equal the length) and `removeAt(index)` (returns the removed value). Bad indexes
+      (negative, too large, non-integers like `1.5` or `'0'`) throw `RangeError` with the message
+      `Index out of range: <index>`.
+    checks:
+      - {kind: tests, runner: cmd, cmd: sed "s#from './simple-linked-list'#from './simple-linked-list.js'#" simple-linked-list.spec.js > spec_run.test.mjs && node --import ./jest_shim.mjs --test --test-reporter=tap spec_run.test.mjs hidden_iter.test.mjs hidden_pop.test.mjs hidden_at.test.mjs, expect_regex: '# fail 0', restore: [simple-linked-list.spec.js], hidden: [jest_shim.mjs, hidden_iter.test.mjs, hidden_pop.test.mjs, hidden_at.test.mjs], timeout: 120}
+  - prompt: >-
+      Add `toString()`: the values head first joined with ` -> ` (`1 -> 2 -> 3`), and `(empty)` for an
+      empty list, so it also works in template literals.
+    checks:
+      - {kind: tests, runner: cmd, cmd: sed "s#from './simple-linked-list'#from './simple-linked-list.js'#" simple-linked-list.spec.js > spec_run.test.mjs && node --import ./jest_shim.mjs --test --test-reporter=tap spec_run.test.mjs hidden_iter.test.mjs hidden_pop.test.mjs hidden_at.test.mjs hidden_str.test.mjs, expect_regex: '# fail 0', restore: [simple-linked-list.spec.js], hidden: [jest_shim.mjs, hidden_iter.test.mjs, hidden_pop.test.mjs, hidden_at.test.mjs, hidden_str.test.mjs], timeout: 120}
+  - prompt: >-
+      Write a JSDoc comment above `export class List` that explains that the head is the most recently
+      added element, how `List.from` orders values, that the list is iterable, and the main methods.
+      Comment only.
+    checks:
+      - {kind: file_regex, path: simple-linked-list.js, pattern: '(?s)/\*\*(?=(?:(?!\*/).)*head)(?=(?:(?!\*/).)*from)(?=(?:(?!\*/).)*iterable)(?:(?!\*/).)*\*/\s*export class List'}
+      - {kind: tests, runner: cmd, cmd: sed "s#from './simple-linked-list'#from './simple-linked-list.js'#" simple-linked-list.spec.js > spec_run.test.mjs && node --import ./jest_shim.mjs --test --test-reporter=tap spec_run.test.mjs hidden_iter.test.mjs hidden_pop.test.mjs hidden_at.test.mjs hidden_str.test.mjs, expect_regex: '# fail 0', restore: [simple-linked-list.spec.js], hidden: [jest_shim.mjs, hidden_iter.test.mjs, hidden_pop.test.mjs, hidden_at.test.mjs, hidden_str.test.mjs], timeout: 120}
+  - prompt: >-
+      Add your own tests in a new file `extra.test.mjs` using `node:test` and `node:assert/strict`
+      (importing from ./simple-linked-list.js): at least four `test(` cases covering `List.from`,
+      `pop`, `insertAt` and `toString`. Run it with `node --test extra.test.mjs`.
+    checks:
+      - {kind: file_regex, path: extra.test.mjs, pattern: \btest\(, min_count: 4}
+      - {kind: tests, runner: cmd, cmd: node --test --test-reporter=tap extra.test.mjs, expect_regex: '# pass [1-9]', restore: [], hidden: [], timeout: 120}
+  - prompt: >-
+      Add `equals(other)` (true only for another List with the same length and strictly equal values
+      in the same order; non-lists are never equal) and `clone()` (an equal but independent list).
+    checks:
+      - {kind: tests, runner: cmd, cmd: sed "s#from './simple-linked-list'#from './simple-linked-list.js'#" simple-linked-list.spec.js > spec_run.test.mjs && node --import ./jest_shim.mjs --test --test-reporter=tap spec_run.test.mjs hidden_iter.test.mjs hidden_pop.test.mjs hidden_at.test.mjs hidden_str.test.mjs hidden_eq.test.mjs, expect_regex: '# fail 0', restore: [simple-linked-list.spec.js], hidden: [jest_shim.mjs, hidden_iter.test.mjs, hidden_pop.test.mjs, hidden_at.test.mjs, hidden_str.test.mjs, hidden_eq.test.mjs], timeout: 120}
+  - prompt: >-
+      Question only: `reverse()` allocates a whole new list. How would you reverse a list in place in
+      O(n) time and O(1) extra space, and which existing guarantee (the head getter, length) must stay
+      intact? Describe the pointer changes in a few sentences. Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [reverse, in place|in-place, previous|prev, next], any: [O\(1\)|constant, head]}
+  - prompt: >-
+      Refactor simple-linked-list.js without changing behaviour: replace the hand written `for (let e
+      = ...)` and `for (let previous...)` walks by two small private helpers on `List`, a generator
+      `*_elements()` that yields the elements head to tail and `_elementAt(index)`, and use iteration
+      over `this` where only the values are needed. All earlier checks must still pass.
+    checks:
+      - {kind: file_regex, path: simple-linked-list.js, pattern: \*_elements\(\)}
+      - {kind: file_regex, path: simple-linked-list.js, pattern: 'for \(let (?:e|previous) = ', absent: true}
+      - {kind: tests, runner: cmd, cmd: sed "s#from './simple-linked-list'#from './simple-linked-list.js'#" simple-linked-list.spec.js > spec_run.test.mjs && node --import ./jest_shim.mjs --test --test-reporter=tap spec_run.test.mjs hidden_iter.test.mjs hidden_pop.test.mjs hidden_at.test.mjs hidden_str.test.mjs hidden_eq.test.mjs, expect_regex: '# fail 0', restore: [simple-linked-list.spec.js], hidden: [jest_shim.mjs, hidden_iter.test.mjs, hidden_pop.test.mjs, hidden_at.test.mjs, hidden_str.test.mjs, hidden_eq.test.mjs], timeout: 120}
+  - prompt: >-
+      Review the changes you made in this session as a code reviewer would: list each file you changed
+      or added, what changed, and any remaining edge case you did not cover. Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [simple-linked-list\.js, test], any: [edge, risk, not cover, remaining]}
