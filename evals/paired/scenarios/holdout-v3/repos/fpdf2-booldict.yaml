@@ -1,0 +1,119 @@
+# holdout-v3 repos: fpdf2-booldict -- 9 turns, short gaps.
+id: fpdf2-booldict
+task_type: bugfix
+language: python
+split: holdout
+default_gap_s: 10
+source:
+  desc: >-
+    py-pdf/fpdf2, create_dictionary_string serialized booleans as True/False and clear_empty_fields
+    dropped False and 0 (#1973), fixed upstream in dd0d4517; workspace is its parent
+  repo: https://github.com/py-pdf/fpdf2.git
+  sha: a78182be933100521cac008fa84bacbced6968ab
+  fix_sha: dd0d4517d6c7ce131d7f977a45f864b94f93d55d
+workspace:
+  kind: git
+  repo: https://github.com/py-pdf/fpdf2.git
+  sha: a78182be933100521cac008fa84bacbced6968ab
+  local_hint: ~/dev/afast-v3-src/fpdf2
+hidden_files:
+  test/test_syntax.py:
+    from_git:
+      repo: https://github.com/py-pdf/fpdf2.git
+      sha: dd0d4517d6c7ce131d7f977a45f864b94f93d55d
+      path: test/test_syntax.py
+      local_hint: ~/dev/afast-v3-src/fpdf2
+  test/test_syntax_lists_hidden.py: |
+    import pytest
+
+    from fpdf.syntax import create_dictionary_string
+
+
+    def _dict(d, **kw):
+        return create_dictionary_string(d, open_dict="<<", close_dict=">>", field_join=" ", **kw)
+
+
+    @pytest.mark.parametrize(
+        "value,expected",
+        [
+            ([1, 2, 3], "<</K [1 2 3]>>"),
+            ((True, False), "<</K [true false]>>"),
+            ([True, 1, "/N"], "<</K [true 1 /N]>>"),
+            ([[1, 2], [3]], "<</K [[1 2] [3]]>>"),
+            ([], "<</K []>>"),
+        ],
+    )
+    def test_list_values_render_as_pdf_arrays(value, expected):
+        assert _dict({"/K": value}) == expected
+
+
+    def test_empty_list_is_dropped_with_has_empty_fields():
+        assert _dict({"/K": [], "/A": True}, has_empty_fields=True) == "<</A true>>"
+
+
+    def test_scalars_unchanged():
+        assert _dict({"/A": 1.5, "/B": "/Name", "/C": False}) == "<</A 1.5 /B /Name /C false>>"
+turns:
+  - prompt: >-
+      fpdf2 serializes Python booleans in PDF dictionaries as `True` / `False`, which is not valid
+      PDF. `create_dictionary_string({"/Marked": True}, open_dict="<<", close_dict=">>", field_join="
+      ")` returns `<</Marked True>>`; it must be the keyword `true` (and `false`). Related: with
+      `has_empty_fields=True` a `False` value (and `0`) is wrongly treated as empty and removed, while
+      `None` and empty values must still be dropped. Please find the code in the fpdf package and fix
+      both. Run the tests from this directory with `python3 -m pytest -q -o addopts=
+      test/test_syntax.py` (the `-o addopts=` skips the coverage options of pyproject.toml, which need
+      a plugin).
+    checks:
+      - {kind: tests, runner: python, files: [-o, addopts=, test/test_syntax.py], hidden: [test/test_syntax.py]}
+  - prompt: >-
+      In three to five sentences explain the root cause: which two functions are involved, what
+      `str()` does with a bool, and why `False` vanished when `has_empty_fields` was set. Do not
+      change any files.
+    checks:
+      - {kind: keyed_facts, all: [create_dictionary_string, clear_empty_fields, str, 'False'], any: [falsy, if v, 'True']}
+  - prompt: >-
+      Add a test file `test/test_syntax_booleans.py` with at least four test functions (pytest style,
+      parametrize is fine): true/false render as lowercase keywords, False and 0 survive
+      `has_empty_fields=True`, and None, empty string, empty list and empty dict are still dropped.
+      Run it with the same `-o addopts=` command.
+    checks:
+      - {kind: file_regex, path: test/test_syntax_booleans.py, pattern: ^def test_, min_count: 4}
+      - {kind: tests, runner: python, files: [-o, addopts=, test/test_syntax_booleans.py]}
+  - prompt: >-
+      A related gap: list and tuple values in a dictionary are rendered with Python's repr, `{"/K":
+      [True, 1]}` gives `/K [True, 1]`. Make create_dictionary_string render list/tuple values as PDF
+      arrays: items separated by single spaces inside square brackets, booleans as `true` / `false`,
+      other items with str(), nested lists recursively (`[[1 2] [3]]`), and an empty list as `[]`.
+      With `has_empty_fields=True` an empty list is still dropped. Scalars must render exactly as
+      before.
+    checks:
+      - {kind: tests, runner: python, files: [-o, addopts=, test/test_syntax_lists_hidden.py, test/test_syntax.py], hidden: [test/test_syntax_lists_hidden.py, test/test_syntax.py]}
+  - prompt: >-
+      Add a bullet to the Fixed list of the "Not released yet" section (2.8.9) of CHANGELOG.md saying
+      booleans in PDF dictionaries are now serialized as lowercase `true`/`false` keywords and
+      `False`/`0` are no longer dropped, in the same bullet style as the entries around it.
+    checks:
+      - {kind: file_regex, path: CHANGELOG.md, pattern: '^## \[2\.8\.9\][^\n]*\n(?:(?!## \[2\.8\.8).*\n)*?\* .*(?i:boolean)'}
+  - prompt: >-
+      Update the docstring of `create_dictionary_string` so it says booleans become lowercase
+      `true`/`false` keywords and lists/tuples become PDF arrays, and that `has_empty_fields` keeps
+      False and 0. Docstring only.
+    checks:
+      - {kind: file_regex, path: fpdf/syntax.py, pattern: '(?is)def create_dictionary_string\(.*?"""(?=(?:(?!""").)*lowercase)(?=(?:(?!""").)*array)'}
+      - {kind: tests, runner: python, files: [-o, addopts=, test/test_syntax.py], hidden: [test/test_syntax.py]}
+  - prompt: >-
+      Question only: which fpdf modules call `create_dictionary_string` (some import it under the
+      alias `pdf_dict`)? List the files. Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [actions\.py, annotations\.py, encryption\.py, output\.py, prefs\.py, sign\.py]}
+  - prompt: >-
+      Run the syntax tests and your boolean test file together with the viewer preferences and
+      encryption tests that go through these callers, and report the totals (passed / failed). Do not
+      change any files.
+    checks:
+      - {kind: keyed_facts, all: [test_syntax, \d+ passed]}
+  - prompt: >-
+      Review the changes you made in this session as a code reviewer would: list each file you changed
+      or added, what changed, and any remaining edge case you did not cover. Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [syntax\.py, CHANGELOG, test], any: [edge, risk, not cover, remaining]}

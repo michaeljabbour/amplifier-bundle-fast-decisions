@@ -1,0 +1,188 @@
+# holdout-v3 repos: xlsxwriter-filter -- 9 turns, short gaps.
+id: xlsxwriter-filter
+task_type: bugfix
+language: python
+split: holdout
+default_gap_s: 10
+source:
+  desc: >-
+    jmcnamara/XlsxWriter, a worksheet autofilter and a table autofilter could overlap and produce a
+    corrupt file (#1102), fixed upstream in 6b698c2d; workspace is its parent
+  repo: https://github.com/jmcnamara/XlsxWriter.git
+  sha: efd07187f17434788d8aba83ead7d389ad0e777d
+  fix_sha: 6b698c2d283d1cb16a6ec138d8d0de70d1a5453c
+workspace:
+  kind: git
+  repo: https://github.com/jmcnamara/XlsxWriter.git
+  sha: efd07187f17434788d8aba83ead7d389ad0e777d
+  local_hint: ~/dev/afast-v3-src/XlsxWriter
+hidden_files:
+  xlsxwriter/test/workbook/test_overlap_exceptions.py:
+    from_git:
+      repo: https://github.com/jmcnamara/XlsxWriter.git
+      sha: 6b698c2d283d1cb16a6ec138d8d0de70d1a5453c
+      path: xlsxwriter/test/workbook/test_overlap_exceptions.py
+      local_hint: ~/dev/afast-v3-src/XlsxWriter
+  xlsxwriter/test/workbook/test_filter_body_overlap_hidden.py: |
+    import io
+    import unittest
+    import zipfile
+
+    from xlsxwriter import Workbook
+    from xlsxwriter.exceptions import OverlappingRange
+
+
+    def _book():
+        buf = io.BytesIO()
+        return Workbook(buf, {"in_memory": True}), buf
+
+
+    def _parts(workbook, buf):
+        workbook.close()
+        z = zipfile.ZipFile(buf)
+        return z.namelist(), z.read("xl/worksheets/sheet1.xml").decode()
+
+
+    class TestFilterBodyOverlap(unittest.TestCase):
+        def test_autofilter_over_table_body(self):
+            wb, buf = _book()
+            ws = wb.add_worksheet()
+            ws.add_table("A3:C8", {"autofilter": False})
+            with self.assertRaises(OverlappingRange):
+                ws.autofilter("A1:C5")
+            names, xml = _parts(wb, buf)
+            self.assertNotIn("<autoFilter", xml)
+            self.assertIn("xl/tables/table1.xml", names)
+
+        def test_table_over_existing_autofilter(self):
+            wb, buf = _book()
+            ws = wb.add_worksheet()
+            ws.autofilter("A1:C5")
+            with self.assertRaises(OverlappingRange):
+                ws.add_table("A3:C8")
+            names, xml = _parts(wb, buf)
+            self.assertNotIn("xl/tables/table1.xml", names)
+            self.assertEqual(xml.count("<autoFilter"), 1)
+
+        def test_adjacent_and_disjoint_ranges_are_fine(self):
+            wb, buf = _book()
+            ws = wb.add_worksheet()
+            ws.autofilter("A1:C5")
+            ws.add_table("A6:C9")
+            ws.add_table("E1:G4")
+            names, xml = _parts(wb, buf)
+            self.assertIn("xl/tables/table2.xml", names)
+            self.assertEqual(xml.count("<autoFilter"), 1)
+
+        def test_header_row_overlap_still_raises(self):
+            wb, buf = _book()
+            ws = wb.add_worksheet()
+            ws.add_table("A1:C5", {"autofilter": True})
+            with self.assertRaises(OverlappingRange):
+                ws.autofilter("A1:C5")
+  xlsxwriter/test/workbook/test_filter_overlap_message_hidden.py: |
+    import io
+    import unittest
+    import zipfile
+
+    from xlsxwriter import Workbook
+    from xlsxwriter.exceptions import OverlappingRange
+
+
+    def _book():
+        buf = io.BytesIO()
+        return Workbook(buf, {"in_memory": True}), buf
+
+
+    def _parts(workbook, buf):
+        workbook.close()
+        z = zipfile.ZipFile(buf)
+        return z.namelist(), z.read("xl/worksheets/sheet1.xml").decode()
+
+
+    class TestFilterOverlapMessages(unittest.TestCase):
+        def test_autofilter_message_names_both_ranges(self):
+            wb, buf = _book()
+            ws = wb.add_worksheet()
+            ws.add_table("A3:C8", {"autofilter": False})
+            with self.assertRaises(OverlappingRange) as cm:
+                ws.autofilter("A1:C5")
+            message = str(cm.exception)
+            self.assertIn("A1:C5", message)
+            self.assertIn("A3:C8", message)
+            self.assertIn("autofilter", message.lower())
+            wb.close()
+
+        def test_table_message_names_both_ranges(self):
+            wb, buf = _book()
+            ws = wb.add_worksheet()
+            ws.autofilter("A1:C5")
+            with self.assertRaises(OverlappingRange) as cm:
+                ws.add_table("A3:C8")
+            message = str(cm.exception)
+            self.assertIn("A1:C5", message)
+            self.assertIn("A3:C8", message)
+            self.assertIn("autofilter", message.lower())
+            wb.close()
+turns:
+  - prompt: >-
+      XlsxWriter writes a corrupt file when a worksheet autofilter and a table autofilter sit on the
+      same range: `ws.add_table("A1:C5", {"autofilter": True})` followed by `ws.autofilter("A1:C5")`
+      (or the two calls in the opposite order) is accepted silently and Excel then reports the file as
+      damaged. It should raise `xlsxwriter.exceptions.OverlappingRange` like the other overlap checks
+      in worksheet.py. Please find where the two filters are recorded and fix it. Run the tests from
+      this directory with `python3 -m pytest -q xlsxwriter/test/workbook/test_overlap_exceptions.py`.
+    checks:
+      - {kind: tests, runner: python, files: [xlsxwriter/test/workbook/test_overlap_exceptions.py], hidden: [xlsxwriter/test/workbook/test_overlap_exceptions.py]}
+  - prompt: >-
+      In three to five sentences explain the root cause: what `filter_cells` was used for before, what
+      was stored in it, and why that let the two filters overlap unnoticed. Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [filter_cells, autofilter, table], any: [autofit, 'True', overlap, never checked|not checked|no check]}
+  - prompt: >-
+      Add a test file `xlsxwriter/test/workbook/test_filter_overlap_extra.py` in the same unittest
+      style as test_overlap_exceptions.py with at least four tests: table-then-autofilter on the same
+      range raises, autofilter-then-table raises, an autofilter in different columns than the table is
+      fine, and a reversed range such as "C5:A1" is detected too. Run it.
+    checks:
+      - {kind: file_regex, path: xlsxwriter/test/workbook/test_filter_overlap_extra.py, pattern: ^    def test_, min_count: 4}
+      - {kind: tests, runner: python, files: [xlsxwriter/test/workbook/test_filter_overlap_extra.py]}
+  - prompt: >-
+      The check only looks at the filter header row, so partial overlaps still slip through. A
+      worksheet `autofilter("A1:C5")` over a table that starts at A3 (even a table created with
+      `autofilter: False`) must raise OverlappingRange, and so must `add_table("A3:C8")` after
+      `autofilter("A1:C5")`: any shared cell counts. Ranges that only touch (A1:C5 and A6:C9) or sit
+      in other columns are fine. A rejected call has to leave the worksheet exactly as it was, so the
+      workbook still saves without the rejected filter or table, and the existing header-row cases
+      keep raising. Do it in xlsxwriter/worksheet.py.
+    checks:
+      - {kind: tests, runner: python, files: [xlsxwriter/test/workbook/test_filter_body_overlap_hidden.py, xlsxwriter/test/workbook/test_overlap_exceptions.py, xlsxwriter/test/workbook/test_filter_overlap_extra.py], hidden: [xlsxwriter/test/workbook/test_filter_body_overlap_hidden.py, xlsxwriter/test/workbook/test_overlap_exceptions.py]}
+  - prompt: >-
+      Give `Worksheet.autofilter()` a `Raises:` section in its docstring (after `Returns:`) saying it
+      raises OverlappingRange when the filter range shares a cell with a table range. Docstring only.
+    checks:
+      - {kind: file_regex, path: xlsxwriter/worksheet.py, pattern: 'Raises:\n\s+OverlappingRange'}
+      - {kind: tests, runner: python, files: [xlsxwriter/test/workbook/test_overlap_exceptions.py, xlsxwriter/test/workbook/test_filter_body_overlap_hidden.py], hidden: [xlsxwriter/test/workbook/test_overlap_exceptions.py, xlsxwriter/test/workbook/test_filter_body_overlap_hidden.py]}
+  - prompt: >-
+      Question only: which per-worksheet dictionaries track occupied cells for merge ranges, tables
+      and filters, what does each one map a cell to, and which methods read them? Name the attributes
+      and the file. Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [table_cells, filter_cells, merged_cells, worksheet\.py, merge_range]}
+  - prompt: >-
+      The OverlappingRange messages from the two new checks do not say what they collided with. Make
+      them name both ranges: for the autofilter case something like `Worksheet autofilter range
+      'A1:C5' overlaps previous table range 'A3:C8'.` and for add_table `Table range 'A3:C8' overlaps
+      previous worksheet autofilter range 'A1:C5'.` (the word autofilter and both ranges must appear).
+    checks:
+      - {kind: tests, runner: python, files: [xlsxwriter/test/workbook/test_filter_overlap_message_hidden.py, xlsxwriter/test/workbook/test_filter_body_overlap_hidden.py, xlsxwriter/test/workbook/test_overlap_exceptions.py], hidden: [xlsxwriter/test/workbook/test_filter_overlap_message_hidden.py, xlsxwriter/test/workbook/test_filter_body_overlap_hidden.py, xlsxwriter/test/workbook/test_overlap_exceptions.py]}
+  - prompt: >-
+      Run the workbook and worksheet test packages (xlsxwriter/test/workbook and
+      xlsxwriter/test/worksheet) and report the totals (passed / failed). Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [test/workbook|test_overlap, \d+ passed]}
+  - prompt: >-
+      Review the changes you made in this session as a code reviewer would: list each file you changed
+      or added, what changed, and any remaining edge case you did not cover. Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [worksheet\.py, test], any: [edge, risk, not cover, remaining]}
