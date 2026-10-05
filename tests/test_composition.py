@@ -121,7 +121,7 @@ class OrchestratorPrimaryBehaviorOfflineTests(unittest.TestCase):
         data = _load_frontmatter(ROOT / "behaviors" / "fast-decisions.yaml")
         policy = Policy.from_config(data["session"]["orchestrator"]["config"])
         self.assertEqual(policy.mode, "active")
-        self.assertEqual(policy.effort_routing["implement"], "high")
+        self.assertNotIn("implement", policy.effort_routing)  # no per-phase effort map: effort is constant per tier
 
     def test_shadow_behavior_does_not_swap_orchestrator(self):
         data = _load_frontmatter(ROOT / "behaviors" / "fast-decisions-shadow.yaml")
@@ -185,22 +185,23 @@ class ActiveBundleOfflineTests(unittest.TestCase):
     YAML -- runs even when BundleLoadTests below is skipped for lack of
     network access to resolve the foundation include."""
 
-    def test_active_yaml_parses_and_carries_incumbent_config(self):
+    def test_active_yaml_parses_and_carries_shipped_config(self):
+        """bundles/active.yaml carries the shipped defaults (Jev judge, price gate, decide once per session, one
+        effort per tier). tests/test_config_parity.py holds the full block equal to behaviors/fast-decisions.yaml."""
         data = _load_frontmatter(ROOT / "bundles" / "active.yaml")
         self.assertEqual(data["bundle"]["name"], "fast-decisions-active")
         orchestrator = data["session"]["orchestrator"]
         self.assertEqual(orchestrator["module"], "loop-fast-decisions")
         config = orchestrator["config"]
         self.assertEqual(config["mode"], "active")
-        self.assertEqual(config["backend"], "ollama")
-        self.assertEqual(config["model"], "qwen3:0.6b")
-        self.assertEqual(config["timeout_ms"], 500)
-        self.assertIs(config["allow_external_state"], False)
-        self.assertEqual(
-            config["effort_routing"],
-            {"explore": "low", "max_explore_requests": 6, "escalate_after_provider_errors": 1},
-        )
-        self.assertNotIn("model_routing", config)
+        self.assertEqual(config["backend"], "jev")
+        self.assertEqual(config["timeout_ms"], 3000)
+        self.assertIs(config["allow_external_state"], True)
+        self.assertEqual(config["effort_routing"], {"by_tier": {"cheap": "medium", "strong": None}})
+        routing = config["model_routing"]
+        self.assertEqual(routing["start_model"], "claude-sonnet-5")
+        self.assertEqual(routing["decision_scope"], "session")
+        self.assertEqual(routing["price_gate"], {"enabled": True})
         self.assertEqual(len(data["includes"]), 1)
         self.assertRegex(data["includes"][0]["bundle"],
             r"^git\+https://github.com/michaeljabbour/amplifier-bundle-fast-decisions@[0-9a-f]{40}$")
@@ -219,29 +220,12 @@ class ActiveRoutingBundleOfflineTests(unittest.TestCase):
         self.assertEqual(orchestrator["module"], "loop-fast-decisions")
         config = orchestrator["config"]
         self.assertEqual(config["mode"], "active")
-        self.assertEqual(config["backend"], "ollama")
-        self.assertEqual(config["model"], "qwen3:0.6b")
-        self.assertEqual(config["timeout_ms"], 500)
-        self.assertIs(config["allow_external_state"], False)
-        self.assertEqual(
-            config["effort_routing"],
-            {
-                "orient": "medium",
-                "explore": "low",
-                "implement": "high",
-                "max_explore_requests": 6,
-                "escalate_after_provider_errors": 1,
-            },
-        )
-        self.assertEqual(
-            config["model_routing"],
-            {
-                "start_model": "claude-sonnet-5",
-                "max_requests_before_escalation": 6,
-                "escalate_on_test_failure": True,
-                "escalate_on_provider_error": True,
-            },
-        )
+        self.assertEqual(config["backend"], "jev")
+        self.assertEqual(config["timeout_ms"], 3000)
+        self.assertIs(config["allow_external_state"], True)
+        self.assertEqual(config["effort_routing"], {"by_tier": {"cheap": "medium", "strong": None}})
+        self.assertEqual(config["model_routing"]["start_model"], "claude-sonnet-5")
+        self.assertEqual(config["model_routing"]["price_gate"], {"enabled": True})
         self.assertEqual(data["includes"], [
             {"bundle": "git+https://github.com/microsoft/amplifier-foundation@main"},
             {"bundle": "fast-decisions:behaviors/fast-decisions-shadow"},
@@ -260,8 +244,8 @@ class ActiveRoutingBundleOfflineTests(unittest.TestCase):
         policy_config = {k: v for k, v in config.items() if k != "upstream"}
         policy = Policy.from_config(policy_config)
         self.assertEqual(policy.mode, "active")
-        self.assertEqual(policy.effort_routing["orient"], "medium")
-        self.assertEqual(policy.effort_routing["implement"], "high")
+        self.assertEqual(policy.effort_routing["by_tier"], {"cheap": "medium", "strong": None})
+        self.assertNotIn("orient", policy.effort_routing)
         self.assertEqual(policy.model_routing["start_model"], "claude-sonnet-5")
 
 

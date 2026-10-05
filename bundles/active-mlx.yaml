@@ -1,16 +1,16 @@
-# Mirrors bundles/active.yaml with the Apple MLX local judge host instead of
-# Ollama. Screen-validate MLX the same way before relying on these numbers --
-# the ~0.55x figure above active.yaml was measured on the Ollama host and is
-# not assumed to transfer.
+# The shipped orchestrator config (behaviors/fast-decisions.yaml) with the Apple MLX
+# local judge instead of Jev and no external state; backend/model/mlx_url/
+# allow_external_state are the only differences, held by tests/test_config_parity.py
+# (regenerate with scripts/sync_active_bundles.py). No cost or quality result
+# exists for the MLX judge on the routing decision: screen it before relying on it.
 #
 bundle:
   name: fast-decisions-active-mlx
   version: 0.1.0
   description: >-
-    Root fast-decisions bundle plus the decision orchestrator in active mode,
-    judged by a local mlx_lm.server (Apple Silicon only) instead of Ollama:
-    a bounded fast path may substitute a prepared read-only action for an LLM
-    turn. Opt-in only.
+    The shipped decision orchestrator (decide once per session, price gate,
+    one effort per tier) judged by a local mlx_lm.server (Apple Silicon only)
+    instead of Jev. Opt-in only.
 
 includes:
   # foundation + the observer-only behavior (not bundle.md, whose behavior now
@@ -25,21 +25,42 @@ session:
     config:
       mode: active
       backend: mlx
+      allow_external_state: false
+      read_shortcut: false
+      timeout_ms: 3000
+      allowed_tools:
+      - fast_workspace
+      effort_routing:
+        by_tier:
+          cheap: medium
+          strong: null
+      model_routing:
+        start_model: claude-sonnet-5
+        provider_match: anthropic
+        start_policy: judge
+        decision_scope: session
+        price_gate:
+          enabled: true
+        cheap_max_workspace_files: 300
+        max_requests_before_escalation: null
+        escalate_on_test_failure: false
+        escalate_on_provider_error: true
+      cache_keepalive:
+        enabled: true
+        interval_s: 270
+        max_refreshes: 6
+        min_prefix_tokens: 20000
+        max_output_tokens: 1
+      waste_guards:
+        enabled: true
+        repeat_stop: true
+        retry_stop: true
+        poll_wait: true
+        identical_results: true
+        poll_max_wait_s: 240
+      observatory:
+        enabled: true
+        open_browser: always
+        port: 8765
       model: mlx-community/Qwen3-0.6B-4bit
       mlx_url: http://127.0.0.1:8080
-      timeout_ms: 500
-      allow_external_state: false
-      min_probability: 0.90
-      min_margin: 0.20
-      max_fast_streak: 3
-      max_fast_per_turn: 12
-      max_candidates: 12
-      max_state_chars: 12000
-      allowed_tools: [fast_workspace]
-      effort_routing:
-        explore: low
-        max_explore_requests: 6
-        escalate_after_provider_errors: 1
-      upstream:
-        max_iterations: 100
-        extended_thinking: true
