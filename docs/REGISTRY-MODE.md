@@ -70,3 +70,5 @@ audit, the 2026-09-30 naming incident, and the transparency contract every regis
 - End to end in Amplifier Unified 0.20.35 (`work` bundle, `loop-live`, isolated data directory): one tool-using
   turn produced `turn_start` with `engine: registry:amplifier_module_loop_live`, a Jev difficulty judgment, both
   model calls served by `claude-sonnet-5`, the `bash` call observed, efficiency receipts, and `turn_end: ok`.
+
+See [CONFIGURATION.md](CONFIGURATION.md#library-default-vs-shipped-default): the same session-scoped, price-gated routing config applies in registry mode (the shared `RoutedProvider` makes the decision).
