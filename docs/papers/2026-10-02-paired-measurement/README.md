@@ -1,7 +1,7 @@
 # Measured, not estimated: what routing an agent to a cheaper model actually costs
 
 Technical report on the preregistered paired multi-turn measurement campaign main-v1 (2026-10-01 to 2026-10-02).
-Amplifier and Michael J. Jabbour, Microsoft, Office of the CTO. Output: [`paired-measurement.pdf`](paired-measurement.pdf).
+Amplifier, Michael J. Jabbour and David Koleczek (Senior Applied Scientist), Microsoft, Office of the CTO. Output: [`paired-measurement.pdf`](paired-measurement.pdf).
 
 The bundle's shipped defaults (price gate, one decision per session) implement these recommendations; see [docs/CONFIGURATION.md](../../CONFIGURATION.md) and the [offline replay](../../evidence/2026-10-05-defaults-replay/REPLAY.md).
 
