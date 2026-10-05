@@ -1,0 +1,12 @@
+{"n":1,"harness":"claude","via":"ClaudeDriver.start","model_flag":"haiku","effort":"low","prompt":"one word","cost_usd":0.0459,"note":"alias haiku resolved to claude-sonnet-5-5 in modelUsage"}
+{"n":2,"harness":"claude","via":"run_scripted_session (start + --resume)","model_flag":"haiku","turns":2,"cost_usd":0.1281,"note":"resume recalled the word from turn 1: session id preserved"}
+{"n":3,"harness":"codex","via":"CodexDriver.start","effort":"low","tokens":{"input":31113,"cached":13184,"output":5},"cost_usd_at_illustrative_rates":0.0241}
+{"n":4,"harness":"codex","via":"CodexDriver.resume","outcome":"exit 2: `exec resume` rejects -s","cost_usd":0,"note":"fixed: extra_args apply to the first turn only"}
+{"n":5,"harness":"codex","via":"CodexDriver.resume","tokens_cumulative":{"input":73053,"cached":44160,"output":10},"cost_usd_at_illustrative_rates":0.02,"note":"turn.completed.usage is the thread's cumulative total (rollout total_token_usage 73053 vs last_token_usage 41940)"}
+{"n":6,"harness":"codex","via":"run_scripted_session (start + resume, delta usage)","turns":2,"cost_usd_at_illustrative_rates":0.0390}
+{"n":7,"harness":"copilot","via":"run_scripted_session (UUID chosen by the driver, --resume)","model":"gpt-5-mini","turns":2,"premium_requests":2,"multiplier":0.0,"cost_usd":0.0,"note":"one earlier call timed out at my 13 s limit before any result was read"}
+{"n":8,"harness":"jev","via":"amplifier-fast-decisions decide (two prompts, live)","cost_usd":0.00004,"note":"judge_cheap then judge_strong, ~200 ms each"}
+{"n":9,"harness":"copilot","via":"launch (always-cheap, --cheap-model gpt-5-mini)","cost_usd":0.0}
+{"n":10,"harness":"claude","via":"launch (always-cheap, --cheap-model haiku)","cost_usd":0.0374}
+{"n":11,"harness":"codex","via":"launch (always-cheap, --cheap-model gpt-5.2-codex)","outcome":"HTTP 400: model not supported with a ChatGPT account","cost_usd":0,"note":"proves -c model=... reached codex; the model itself is unavailable on this account"}
+{"n":12,"harness":"claude","via":"ClaudeDriver.start x2 (full ids claude-sonnet-5, claude-haiku-4-5)","cost_usd":0.0976,"note":"full ids are honored exactly (modelUsage matches)"}
