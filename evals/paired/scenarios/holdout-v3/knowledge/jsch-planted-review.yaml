@@ -1,4 +1,4 @@
-# holdout-v3 knowledge scenario (12 turns, review): python-jsonschema/jsonschema at 51cd75e (629 files) plus three planted patches (uniq rewrite, multipleOf simplification, minItems off-by-one) to review; answers keyed to the real code, one regression-test file checked against each patch
+# holdout-v3 knowledge scenario (16 turns, review): python-jsonschema/jsonschema at 51cd75e (629 files) plus three planted patches (uniq rewrite, multipleOf simplification, minItems off-by-one) to review; answers keyed to the real code, one regression-test file checked against each patch
 id: jsch-planted-review
 task_type: review
 language: python
@@ -64,6 +64,22 @@ turns:
   checks:
   - kind: keyed_facts
     all: [_uniq_key, hash, already|linear, 'brute|fall.?back|quadratic|unsupported']
+- prompt: 'Show how errors are reported: validate the instance {''a'': ''x'', ''b'': [1]} against a schema with properties a (integer) and b (array of strings with minItems 2) and required [''a'', ''c''] using Draft202012Validator.iter_errors, and print for each error its message, `path`, `schema_path` and `validator`. Run it from this checkout. Do not change repository files.'
+  checks:
+  - kind: keyed_facts
+    all: ['''c'' is a required property', '''x'' is not of type ''integer''', '\[1\] is too short', 1 is not of type 'string', 'properties.{0,6}a.{0,6}type', 'b.{0,6}0']
+- prompt: Which of those errors does `jsonschema.exceptions.best_match` pick and why? Explain `by_relevance`/`relevance` and the WEAK_MATCHES set in jsonschema/exceptions.py. Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: [best_match, relevance, -len\(error\.path\)|shorter path|shallow, WEAK_MATCHES, anyOf, oneOf, '''c'' is a required property']
+- prompt: How does `validators.validator_for` choose a validator class? Show it for a schema with `$schema` draft-07, an empty schema, and an unknown `$schema` with and without a default. Do not change repository files.
+  checks:
+  - kind: keyed_facts
+    all: [Draft7Validator, Draft202012Validator, \$schema, default, latest|newest|most recent]
+- prompt: 'Is the `format` keyword validated by default? Run `Draft202012Validator({''format'': ''email''}).is_valid(''not-an-email'')` with and without `format_checker=Draft202012Validator.FORMAT_CHECKER` and explain, including which module provides FormatChecker. Do not change repository files.'
+  checks:
+  - kind: keyed_facts
+    all: [format_checker|FormatChecker, 'True', 'False', _format\.py, annotation|not (validated|asserted|checked)|only when]
 - prompt: Add a `## Recommendation` section at the end of REVIEW.md with one verdict line per patch (merge, or request changes / reject) and the reason in a few words.
   checks:
   - kind: doc_sections

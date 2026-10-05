@@ -1,4 +1,4 @@
-# holdout-v3 knowledge scenario (9 turns, review): nickstenning/honcho at 2f47b72 plus three planted patches (port block step, Procfile name regex, exit status overwrite) reviewed with real runs
+# holdout-v3 knowledge scenario (8 turns, review): nickstenning/honcho at 2f47b72 plus three planted patches (port block step, Procfile name regex, exit status overwrite) reviewed with real runs
 id: honcho-process-review
 task_type: review
 language: python
@@ -13,6 +13,7 @@ workspace:
     patches/port_step.diff: "--- a/honcho/environ.py\n+++ b/honcho/environ.py\n@@ -118,6 +118,6 @@\n             params = ProcessParams(n, c, q, e)\n             out.append(params)\n         if port is not None:\n-            port += 100\n+            port += 1\n \n     return out\n"
     patches/procfile_name.diff: "--- a/honcho/environ.py\n+++ b/honcho/environ.py\n@@ -3,7 +3,7 @@\n import shlex\n from collections import OrderedDict, defaultdict, namedtuple\n \n-PROCFILE_LINE = re.compile(r'^([A-Za-z0-9_-]+):\\s*(.+)$')\n+PROCFILE_LINE = re.compile(r'^([A-Za-z0-9_]+):\\s*(.+)$')\n \n \n class Env(object):\n"
     patches/last_returncode.diff: "--- a/honcho/manager.py\n+++ b/honcho/manager.py\n@@ -122,8 +122,7 @@\n                     self._processes[msg.name]['returncode'] = msg.data['returncode']\n                     self._system_print(\"%s stopped (rc=%s)\\n\"\n                                        % (msg.name, msg.data['returncode']))\n-                    if self.returncode is None:\n-                        self.returncode = msg.data['returncode']\n+                    self.returncode = msg.data['returncode']\n \n             if self._all_started() and self._all_stopped():\n                 exit = True\n"
+  remove: [.git_archival.txt]
 turns:
 - prompt: Give me a one-line role for each module under honcho/ (and the export package). Do not change any files.
   checks:
@@ -50,10 +51,3 @@ turns:
   checks:
   - {kind: file_regex, path: checks/test_review.py, pattern: ^def test_, min_count: 3}
   - {kind: tests, runner: cmd, cmd: 'O=$(mktemp -d) && cp -R honcho $O/orig && python3 -m pytest -q -p no:cacheprovider checks/test_review.py && for p in port_step procfile_name last_returncode; do rm -rf honcho && cp -R $O/orig honcho && patch -s -p1 < patches/$p.diff && if python3 -m pytest -q -p no:cacheprovider checks/test_review.py; then exit 1; fi; done', timeout: 280}
-- prompt: 'Add a `## Recommendation` section to REVIEW.md: one verdict per patch and one sentence on which of the three is the most dangerous for CI users.'
-  checks:
-  - kind: doc_sections
-    path: REVIEW.md
-    headings: [Recommendation]
-  - {kind: file_regex, path: REVIEW.md, pattern: '(?i)reject', min_count: 3}
-  - {kind: file_regex, path: REVIEW.md, pattern: \bCI\b}

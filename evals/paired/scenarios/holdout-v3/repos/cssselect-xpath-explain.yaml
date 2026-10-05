@@ -1,0 +1,95 @@
+# holdout-v3 repos scenario (10 turns, explain): scrapy/cssselect at 663d908 (1.5.0): explain the parse-then-translate pipeline, HTML versus generic translation, specificity and errors by running the checkout, then add the :required pseudo-class (generic never matches, HTML real condition) against hidden tests with docs, tests and changelog
+id: cssselect-xpath-explain
+task_type: explain
+language: python
+split: holdout
+source: {desc: 'scrapy/cssselect at 663d908 (1.5.0): explain the parse-then-translate pipeline, HTML versus generic translation, specificity and errors by running the checkout, then add the :required pseudo-class (generic never matches, HTML real condition) against hidden tests with docs, tests and changelog', repo: 'https://github.com/scrapy/cssselect.git', sha: 663d90899e3a5d1503d756204565033989d1256f}
+workspace: {kind: git, repo: 'https://github.com/scrapy/cssselect.git', sha: 663d90899e3a5d1503d756204565033989d1256f, local_hint: ~/dev/afast-paired-src/cssselect}
+hidden_files:
+  hidden/test_required.py: |
+    import pytest
+
+    from cssselect import ExpressionError, GenericTranslator, HTMLTranslator, parse
+
+    REQUIRED = "@required and (name(.) = 'input' or name(.) = 'select' or name(.) = 'textarea')"
+
+
+    def test_html_translator_matches_required_form_controls():
+        assert HTMLTranslator().css_to_xpath("input:required") == f"descendant-or-self::input[{REQUIRED}]"
+        assert HTMLTranslator().css_to_xpath("INPUT:required") == f"descendant-or-self::input[{REQUIRED}]"
+
+
+    def test_combines_with_other_conditions():
+        xpath = HTMLTranslator().css_to_xpath("input.big:required")
+        assert xpath == (
+            "descendant-or-self::input[(@class and contains(concat(' ', normalize-space(@class), ' '), ' big ')) "
+            f"and ({REQUIRED})]"
+        )
+
+
+    def test_generic_translator_never_matches():
+        assert GenericTranslator().css_to_xpath("input:required") == "descendant-or-self::input[0]"
+
+
+    def test_other_unknown_pseudo_classes_still_fail():
+        with pytest.raises(ExpressionError):
+            HTMLTranslator().css_to_xpath("input:optional")
+
+
+    def test_specificity_counts_as_a_class():
+        assert parse("input:required")[0].specificity() == (0, 1, 1)
+turns:
+- prompt: 'Give me a map of this repository: the modules in cssselect/, the names exported by cssselect/__init__.py, and where tests, docs and the changelog are. Do not change any files.'
+  checks:
+  - kind: keyed_facts
+    all: [parser\.py, xpath\.py, GenericTranslator, HTMLTranslator, SelectorSyntaxError, ExpressionError, tests, docs, CHANGES]
+- prompt: What is the pipeline from a CSS string to an XPath string? Run `GenericTranslator().css_to_xpath('div.a > p:first-child')` and explain each part of the result (the class test, the child combinator, :first-child). Do not change repository files.
+  checks:
+  - kind: keyed_facts
+    all: ['descendant-or-self::div', 'contains\(concat\('' '', normalize-space\(@class\), '' ''\), '' a ''\)', '/p\[', 'count\(preceding-sibling::\*\) = 0', parse, selector_to_xpath|css_to_xpath]
+- prompt: 'What does HTMLTranslator change compared with GenericTranslator? Run `:checked` through HTMLTranslator and `DIV P` through both translators and describe the differences. Also: what is the `prefix` argument? Do not change repository files.'
+  checks:
+  - kind: keyed_facts
+    all: [lower, checked, '@selected.{0,40}option', '@checked', prefix, 'self::a']
+- prompt: 'What does `parse(''ul li.x::before, #id a'')` return? Run it and print each selector''s type, `specificity()` and `pseudo_element`, and explain how specificity is counted. Do not change repository files.'
+  checks:
+  - kind: keyed_facts
+    all: ['\(0, 1, 3\)', '\(1, 0, 1\)', before, None, id, class]
+  gap_before_s: 420
+- prompt: How do errors work? Parse `a[` and translate `a:foo`; give the exception classes, their bases and the messages. Which one comes from the parser and which from the translator? Do not change repository files.
+  checks:
+  - kind: keyed_facts
+    all: [SelectorSyntaxError, SelectorError, SyntaxError, ExpressionError, 'Expected ident or ''\*'', got <EOF at 2>', 'The pseudo-class :foo is unknown', RuntimeError]
+- prompt: Write ARCHITECTURE.md in the repository root with level-2 sections Overview, Parsing, Translators and Errors, with the real numbers and messages you saw.
+  checks:
+  - kind: doc_sections
+    path: ARCHITECTURE.md
+    headings: [Overview, Parsing, Translators, Errors]
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: '\(0, 1, 3\)'}
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: 'xpath_<name>_pseudo|xpath_.{0,12}_pseudo'}
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: SelectorSyntaxError}
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: ExpressionError}
+- prompt: 'Implement the `:required` pseudo-class: in GenericTranslator it never matches (like :checked), in HTMLTranslator it matches input, select and textarea elements that have a `required` attribute. Follow the style of the neighbouring pseudo-class methods in cssselect/xpath.py.'
+  checks:
+  - {kind: file_regex, path: cssselect/xpath.py, pattern: xpath_required_pseudo = pseudo_never_matches}
+  - {kind: file_regex, path: cssselect/xpath.py, pattern: 'def xpath_required_pseudo\(self, xpath: XPathExpr\)'}
+  - kind: tests
+    runner: python
+    files: [hidden/test_required.py]
+    hidden: [hidden/test_required.py]
+- prompt: Add tests/test_required.py with at least four pytest tests for `:required` (HTML xpath, generic never matches, a descendant selector, case-insensitive element name) and run them.
+  checks:
+  - {kind: file_regex, path: tests/test_required.py, pattern: ^def test_, min_count: 4}
+  - kind: tests
+    runner: python
+    files: [tests/test_required.py]
+  gap_before_s: 420
+- prompt: 'Document it: in docs/index.rst add ``:required`` to the list of HTML-dependent pseudo-classes (the list that ends with ``:checked``), and add a new top section to CHANGES: `Version 1.6.0` with the usual underline, the line `Not released yet.` and a bullet saying `:required` was added.'
+  checks:
+  - {kind: file_regex, path: docs/index.rst, pattern: '\* ``:checked``\n\* ``:required``'}
+  - {kind: file_regex, path: CHANGES, pattern: 'Version 1\.6\.0\n-{10,}\n\nNot released yet\.\n\n\*\s+.*:required'}
+  - {kind: file_regex, path: CHANGES, pattern: 'Version 1\.6\.0[\s\S]*?Version 1\.5\.0'}
+- prompt: 'Summarise: which files did you modify or add, what does `:required` produce in GenericTranslator versus HTMLTranslator for `input:required`, and what specificity does it add? Do not change any files.'
+  checks:
+  - kind: keyed_facts
+    all: [cssselect/xpath\.py, test_required\.py, docs/index\.rst, CHANGES, '\[0\]', '@required', '\(0, 1, 1\)']

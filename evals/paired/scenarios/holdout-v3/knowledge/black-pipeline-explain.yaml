@@ -1,4 +1,4 @@
-# holdout-v3 knowledge scenario (12 turns, explain): psf/black at 77c0cae (504 files, src/black + src/blib2to3): explain the formatting pipeline, parser selection, line splitting, delimiter priorities, exit codes and cache; checked with keyed facts, ARCHITECTURE.md and a mutation-checked demo script
+# holdout-v3 knowledge scenario (14 turns, explain): psf/black at 77c0cae (504 files, src/black + src/blib2to3): explain the formatting pipeline, parser selection, line splitting, delimiter priorities, exit codes and cache; checked with keyed facts, ARCHITECTURE.md and a mutation-checked demo script
 id: black-pipeline-explain
 task_type: explain
 language: python
@@ -57,6 +57,20 @@ turns:
   checks:
   - kind: keyed_facts
     all: [BLACK_CACHE_DIR, pickle, get_cache_key|mode, user_cache_dir|user cache, mtime|size|hash|sha]
+- prompt: |-
+    How do `# fmt: off`, `# fmt: on` and `# fmt: skip` behave? Format the source `# fmt: off
+    x   =  1
+    # fmt: on
+    y   =  2
+    z   = 3  # fmt: skip
+    ` with the default Mode using this checkout (src/ on sys.path), show the result and name the function in src/black/comments.py that handles the off/on regions. Do not change repository files.
+  checks:
+  - kind: keyed_facts
+    all: ['x {3}= {2}1', y = 2, 'z {3}= 3 {2}# fmt: skip', normalize_fmt_off, comments\.py]
+- prompt: 'Explain how blank lines are decided: which class does it, what are the limits at module level and inside functions/classes, and what does Black do to `a = 1` followed by five blank lines and `b = 2`? Run a small example with a def containing blank lines and a class with a method. Do not change repository files.'
+  checks:
+  - kind: keyed_facts
+    all: [EmptyLineTracker, maybe_empty_lines, two|2, one|1, class A, def g, a = 1\\n\\n\\nb = 2|two blank lines]
 - prompt: Add a level-2 `## Priorities and exit codes` section to ARCHITECTURE.md that lists the delimiter priority numbers for COMMA and LOGIC and the exit codes 0, 1 and 123.
   checks:
   - kind: doc_sections

@@ -10,7 +10,7 @@ Per scenario (one invocation per scenario, serial; every grader run goes through
      reported (note) when they already pass on the previous turn's reference state (non-discriminating).
 Reference layout (outside the repo): <ref-root>/<id>/turnN/{message.txt,files/**,_DELETE,wrong/{message.txt,files/**}}.
 
-  validate_holdout.py --ids a [--ref-root DIR] [--cap-gb 4 --grader-timeout 300] [--json out.json]
+  validate_c.py --ids a [--ref-root DIR] [--cap-gb 4 --grader-timeout 300] [--json out.json]
 """
 import argparse, copy, json, os, shutil, sys, tempfile, threading, time
 from pathlib import Path
