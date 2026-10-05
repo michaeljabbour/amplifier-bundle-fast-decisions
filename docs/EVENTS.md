@@ -87,6 +87,8 @@ transport sets `reused_connection` from whether its own client instance was
 already constructed, but leaves `connect_ms` unset -- the SDK does not expose
 a per-call connection/handshake timing hook.
 
+`scored` and `shadow_proposed` records from a Jev backend also carry `criteria_format` (`object` or `string`), the wire format of the choice criteria that request was actually sent with, so judge accuracy is not silently confounded across servers that need string criteria.
+
 `probability_kind`, `reported_confidence`, and `confidence_kind` are separate fields.
 Ollama reports token mass with abstention residual and `confidence_kind: not_reported`.
 Jev confidence remains `typesafe_reported_unspecified`: this adapter does not know
@@ -159,8 +161,8 @@ and the identical `backend.external and not allow_external_state` gate
 (Jev refuses without consent, exactly as for a read candidate). It never
 calls `DecisionService.choose` itself: there is no prepared action to
 submit, only a judgment. State sent to the judge is deliberately tiny and
-bounded (`orchestrator._judge_state`): a 300-char head of the first user
-message, the phase, this turn's slow-request count, tool names used so far,
+bounded (`orchestrator._judge_state`): a 300-char head+tail clip of the current
+turn's user message (reminder envelopes stripped), the phase, this turn's slow-request count, tool names used so far,
 a 600-char excerpt of the last tool result, and the two HC04 failure
 signals (`test_failure_seen`, `provider_errors_seen`) -- trimmed further if
 the serialized state would still exceed `Policy.max_state_chars`. Never the

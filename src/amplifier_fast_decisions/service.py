@@ -215,7 +215,8 @@ class DecisionService:
         domain = classify_domain(candidates)
         common["domain"] = domain
         state_stats: dict[str, Any] = {}
-        state = build_state(request, self.policy.max_state_chars, state_stats, state_instruction)
+        state = build_state(request, self.policy.max_state_chars, state_stats, state_instruction,
+                            task_chars=self.policy.max_task_chars)
         state_chars = len(canonical(state))
         await self.emit(
             "requested",
@@ -298,6 +299,7 @@ class DecisionService:
             "reported_confidence": decision.reported_confidence,
             "confidence_kind": decision.confidence_kind,
             "option_set_hash": decision.option_set_hash,
+            "criteria_format": decision.criteria_format,
             "margin": margin,
             "duration_ms": duration,
             "model": decision.model,

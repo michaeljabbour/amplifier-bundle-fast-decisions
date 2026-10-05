@@ -27,6 +27,7 @@ questions only; keep the read shortcut off. See [AnyJev setup](ANYJEV.md).
 | `max_fast_per_turn` | `12` | Total fast submissions allowed in one turn. |
 | `max_candidates` | `12` | Candidates considered per decision (1..63). |
 | `max_questions` | `8` | Contributed judgment questions considered per decision (0..64). |
+| `max_task_chars` | `2000` | Most characters of the task message kept in the state (256..100000); a longer task keeps its head and tail (tail larger) joined by an omission marker, and injected `<system-reminder(s)>` envelopes are dropped first. |
 | `max_state_chars` | `12000` | Canonical-JSON size budget for the state sent to the backend (512..100000). Also bounds HC05's judge state (`orchestrator._judge_state`). |
 | `allow_external_state` | `False` (env override: `FAST_DECISIONS_ALLOW_EXTERNAL_STATE`) | Required, alongside an external backend (`backend.external == True`, e.g. Jev), before ANY external call is attempted -- read-shortcut, HC05 judge asks, and HC08 batched asks all honor this identical gate. |
 | `allow_synthetic_active` | `False` | Whether an explicitly synthetic backend result (`synthetic=True`, e.g. `ScriptedBackend`) may be submitted in `active` mode. |

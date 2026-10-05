@@ -1,5 +1,6 @@
 """Build bounded task state from the actual provider request, not a stale hook."""
 from __future__ import annotations
+import re
 from typing import Any
 from .contracts import field_value, jsonable, canonical, digest
 from .privacy import scrub
@@ -64,8 +65,49 @@ def _injected_only(message: Any) -> bool:
     return not is_user_turn(message)
 
 
+# Scrubbing runs on the whole task (not the 2000-char default) so the tail
+# still exists when the head+tail clip below picks it.
+_TASK_SCRUB_CHARS = 200_000
+_TASK_HEAD_SHARE = 3  # head gets 1/3 of the kept task chars, tail 2/3
+
+
+def strip_reminders(text: str) -> str:
+    """Remove injected ``<system-reminder(s)>...</...>`` envelopes anywhere in
+    ``text`` (host boilerplate, not the user's task). Matching is the lazy
+    ``step_actions._REMINDER`` pattern: an unclosed opening tag is left in
+    place (nothing to match), and nested envelopes end at the first closing
+    tag of the outer opener."""
+    from .step_actions import _REMINDER
+    return _REMINDER.sub("", text).strip()
+
+
+def _head_tail(text: str, keep: int) -> str:
+    """``keep`` chars of ``text`` as head + omission marker + tail (tail
+    larger). Never longer than ``text``: when the marked form would not be
+    shorter, the full text is returned unchanged."""
+    if keep >= len(text):
+        return text
+    head = keep // _TASK_HEAD_SHARE
+    tail = keep - head
+    out = text[:head] + f"…[{len(text) - keep} chars omitted]…" + (text[-tail:] if tail else "")
+    return out if len(out) < len(text) else text
+
+
+def clip_head_tail(text: str, cap: int) -> str:
+    """Fit ``text`` into ``cap`` chars total (marker included), head + tail."""
+    if len(text) <= cap:
+        return text
+    keep = cap
+    while keep > 0:
+        out = _head_tail(text, keep)
+        if len(out) <= cap:
+            return out
+        keep -= len(out) - cap
+    return text[:cap]
+
+
 def build_state(request: Any, max_chars: int = 12000, stats: dict[str, Any] | None = None,
-                instruction: str | None = None) -> dict[str, Any]:
+                instruction: str | None = None, task_chars: int = 2000) -> dict[str, Any]:
     messages = field_value(request, "messages", []) or []
     # Keep the latest task even after many tool turns. Budget the task and
     # newest evidence before older observations; dropping whole messages can
@@ -78,6 +120,7 @@ def build_state(request: Any, max_chars: int = 12000, stats: dict[str, Any] | No
     if task_index is not None:
         indices.add(task_index)
     available = {}
+    over_cap: set[int] = set()  # task longer than task_chars: head+tail clipped
     for index in sorted(indices):
         message = messages[index]
         role = field_value(message, "role", "")
@@ -85,7 +128,13 @@ def build_state(request: Any, max_chars: int = 12000, stats: dict[str, Any] | No
             continue
         text = message_text(message)
         if text:
-            available[index] = {"role": role, "text": scrub(text, 2000)}
+            if index == task_index:
+                task = scrub(strip_reminders(text), _TASK_SCRUB_CHARS)
+                available[index] = {"role": role, "text": clip_head_tail(task, task_chars)}
+                if len(task) > task_chars:
+                    over_cap.add(index)
+            else:
+                available[index] = {"role": role, "text": scrub(text, 2000)}
     state = {"observations": [], "instruction": instruction or _DEFAULT_INSTRUCTION}
     if len(canonical(state)) > max_chars:
         raise ValueError("State budget cannot hold the routing instructions")
@@ -95,19 +144,27 @@ def build_state(request: Any, max_chars: int = 12000, stats: dict[str, Any] | No
     def include(index: int, limit: int) -> None:
         item = available[index]
         text = item["text"]
+        # The task keeps head and tail (the issue usually follows the rules);
+        # everything else keeps its head.
+        if index == task_index:
+            def render(n: int) -> str:
+                return _head_tail(text, n)
+        else:
+            def render(n: int) -> str:
+                return text[:n] + ("…" if n < len(text) else "")
         # Measure the serialized state, including escaping and field overhead.
         low, high = 0, len(text)
         while low < high:
             middle = (low + high + 1) // 2
-            selected[index] = {**item, "text": text[:middle] + ("…" if middle < len(text) else "")}
+            selected[index] = {**item, "text": render(middle)}
             state["observations"] = [selected[i] for i in sorted(selected)]
             if len(canonical(state)) <= limit:
                 low = middle
             else:
                 high = middle - 1
         if low:
-            selected[index] = {**item, "text": text[:low] + ("…" if low < len(text) else "")}
-            if low < len(text):
+            selected[index] = {**item, "text": render(low)}
+            if render(low) != text or index in over_cap:
                 clipped.add(index)
         else:
             selected.pop(index, None)

@@ -9,6 +9,7 @@ batching, not proof of shared GPU work, lower latency, or answer invariance.
 from __future__ import annotations
 
 import asyncio
+from dataclasses import replace
 import http.client
 import json
 import os
@@ -131,10 +132,26 @@ def _question_payload(question) -> dict[str, Any]:
     return payload
 
 
-def _build_questions(request: DecisionRequest) -> tuple[dict[str, Any], str]:
+CRITERIA_FORMATS = ("object", "string")
+# The message an object-criteria-intolerant System One server (Ollama's
+# /v1/systemone) answers with on HTTP 400.
+_CRITERIA_REJECTED = "choice criteria must map option keys to descriptions or null"
+
+
+class _CriteriaRejected(BackendUnavailable):
+    """HTTP 400 saying choice criteria values must be strings, not objects."""
+
+
+def _build_questions(request: DecisionRequest,
+                     criteria_format: str = "object") -> tuple[dict[str, Any], str]:
     """Shared question/criteria assembly for both the SDK and stdlib
     transports -- one place builds the batched payload, so the two paths
-    can never silently diverge in what they ask."""
+    can never silently diverge in what they ask.
+
+    ``criteria_format="string"`` renders each candidate as
+    ``"<action>: <purpose>"`` for servers that reject object values. The
+    option-set hash is always taken from the object form, so the same
+    candidates hash the same whichever wire format was used."""
     criteria = {
         c.id: {"action": c.label, "purpose": c.rationale, "tool": c.tool}
         for c in request.candidates
@@ -150,11 +167,19 @@ def _build_questions(request: DecisionRequest) -> tuple[dict[str, Any], str]:
             "criteria": criteria,
         }
     }
+    option_set_hash = digest({"format": "jev-options-v1", "options": list(criteria.items())})
+    if criteria_format == "string":
+        questions["next_action"]["criteria"] = {
+            key: f"{value['action']}: {value['purpose']}" if isinstance(value, dict) else value
+            for key, value in criteria.items()
+        }
     for question in request.questions:
         questions[question.name] = _question_payload(question)
-
-    option_set_hash = digest({"format": "jev-options-v1", "options": list(criteria.items())})
     return questions, option_set_hash
+
+
+def _with_criteria_format(result: DecisionResult, fmt: str) -> DecisionResult:
+    return replace(result, action=replace(result.action, criteria_format=fmt))
 
 
 def _decision_from_answer(answer: Any, model: str, input_tokens: Any,
@@ -252,7 +277,14 @@ class JevBackend:
         base_url_env: str | None = None,
         api_key_env: str | None = None,
         label: str | None = None,
+        criteria_format: str = "object",
     ):
+        if criteria_format not in CRITERIA_FORMATS:
+            raise ValueError(f"criteria_format must be one of {CRITERIA_FORMATS}")
+        # "object" (hosted Jev) or "string" (servers such as Ollama's
+        # /v1/systemone). An object-format backend switches itself to
+        # "string" for good after the first HTTP 400 that rejects objects.
+        self.criteria_format = criteria_format
         self.model = model or os.getenv("TYPESAFE_DEFAULT_MODEL") or DEFAULT_JEV_MODEL
         self.timeout_ms = timeout_ms
         self._client = client
@@ -335,11 +367,12 @@ class JevBackend:
         return await self._ask_urllib(request)
 
     async def _ask_sdk(self, request: DecisionRequest) -> DecisionResult:
-        questions, option_set_hash = _build_questions(request)
         # Captured before ``_get_client()`` may construct-and-cache a new
         # client, so this reflects whether *this* call reused an
         # already-authenticated, already-constructed client instance.
         had_client = self._client is not None
+        sent_format = self.criteria_format
+        questions, option_set_hash = _build_questions(request, sent_format)
         result = await self._get_client().system_one(
             state=request.state,
             questions=questions,
@@ -356,7 +389,8 @@ class JevBackend:
         # docs/MODEL-SETUP.md for what is and is not verified here.
         self.last_connect_ms = None
         self.last_vendor_confidence = _vendor_confidence(result)
-        return _result_from_payload(result, self.model, request, option_set_hash)
+        return _with_criteria_format(
+            _result_from_payload(result, self.model, request, option_set_hash), sent_format)
 
     async def _ask_urllib(self, request: DecisionRequest) -> DecisionResult:
         """No-install fallback: a plain ``http.client`` POST over a
@@ -368,30 +402,38 @@ class JevBackend:
         api_key = os.getenv(self.api_key_env)
         if not api_key:
             raise BackendUnavailable(f"{self.api_key_env} is missing")
-        questions, option_set_hash = _build_questions(request)
         model = self.model or DEFAULT_JEV_MODEL
-        body = {
-            "state": request.state,
-            "model": model,
-            "questions": questions,
-        }
         base_url = self._base_url()
         headers = {
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json",
         }
         timeout_s = self.timeout_ms / 1000
-        payload = await asyncio.to_thread(
-            self._post_keepalive,
-            base_url,
-            "/v1/systemone",
-            headers,
-            json.dumps(body).encode("utf-8"),
-            timeout_s,
-        )
+
+        async def post(fmt: str) -> tuple[dict[str, Any], str]:
+            questions, option_set_hash = _build_questions(request, fmt)
+            body = {"state": request.state, "model": model, "questions": questions}
+            payload = await asyncio.to_thread(
+                self._post_keepalive, base_url, "/v1/systemone", headers,
+                json.dumps(body).encode("utf-8"), timeout_s,
+            )
+            return payload, option_set_hash
+
+        # The format THIS request was sent with, captured before the await: a
+        # concurrent request may flip self.criteria_format while we wait.
+        sent_format = self.criteria_format
+        try:
+            payload, option_set_hash = await post(sent_format)
+        except _CriteriaRejected:
+            if sent_format == "string":
+                raise
+            # Retry once with string criteria and remember it for this backend.
+            self.criteria_format = sent_format = "string"
+            payload, option_set_hash = await post("string")
         self.last_transport = "urllib"
         self.last_vendor_confidence = _vendor_confidence(payload)
-        return _result_from_payload(payload, model, request, option_set_hash)
+        return _with_criteria_format(
+            _result_from_payload(payload, model, request, option_set_hash), sent_format)
 
     def _new_connection(
         self, is_https: bool, host: str, port: int, timeout_s: float
@@ -417,6 +459,8 @@ class JevBackend:
         raw = response.read()  # always drain, so the connection stays reusable
         if response.status in (401, 403):
             raise BackendUnavailable("typesafe authentication failed")
+        if response.status == 400 and _CRITERIA_REJECTED.encode() in raw:
+            raise _CriteriaRejected("typesafe request failed: HTTP 400 (object criteria rejected)")
         if response.status >= 400:
             raise BackendUnavailable(f"typesafe request failed: HTTP {response.status}")
         try:

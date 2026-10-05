@@ -829,6 +829,10 @@ class Decision:
     probability_kind: str = "backend_reported"
     confidence_kind: str = "unspecified"
     option_set_hash: str | None = None
+    # Wire format of choice criteria actually sent ("object"/"string"); None when
+    # the backend has no such choice. Recorded so accuracy is not silently
+    # confounded across backends/formats.
+    criteria_format: str | None = None
 
     def validate(self, choices: set[str]) -> None:
         if self.choice not in choices or set(self.probabilities) != choices:
@@ -948,6 +952,8 @@ class Policy:
     max_candidates: int = 12
     max_questions: int = 8
     max_state_chars: int = 12000
+    # Most characters of the task message kept in the state (head + tail when longer).
+    max_task_chars: int = 2000
     allow_external_state: bool = False
     allow_synthetic_active: bool = False
     allowed_tools: tuple[str, ...] = ("fast_workspace",)
@@ -1049,6 +1055,8 @@ class Policy:
             raise ValueError("max_questions must be between 0 and 64")
         if not 512 <= self.max_state_chars <= 100000:
             raise ValueError("max_state_chars must be between 512 and 100000")
+        if not 256 <= self.max_task_chars <= 100000:
+            raise ValueError("max_task_chars must be between 256 and 100000")
         if not 1 <= self.shadow_max_messages <= 200:
             raise ValueError("shadow_max_messages must be between 1 and 200")
         if not 1 <= self.shadow_snapshot_budget_ms <= 5000:
