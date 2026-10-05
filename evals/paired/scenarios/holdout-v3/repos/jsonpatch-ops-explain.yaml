@@ -1,0 +1,93 @@
+# holdout-v3 repos scenario (10 turns, explain): stefankoegl/python-json-patch at d8e1a6e: explain operations, apply semantics, error types and the diff builder by running the checkout, then add JsonPatch.__len__ and paths() against hidden tests plus README and tests
+id: jsonpatch-ops-explain
+task_type: explain
+language: python
+split: holdout
+source: {desc: 'stefankoegl/python-json-patch at d8e1a6e: explain operations, apply semantics, error types and the diff builder by running the checkout, then add JsonPatch.__len__ and paths() against hidden tests plus README and tests', repo: 'https://github.com/stefankoegl/python-json-patch.git', sha: d8e1a6e244728c04229d601bc9a384d9b034c603}
+workspace: {kind: git, repo: 'https://github.com/stefankoegl/python-json-patch.git', sha: d8e1a6e244728c04229d601bc9a384d9b034c603, local_hint: ~/dev/afast-paired-src/python-json-patch}
+hidden_files:
+  hidden/test_len_paths.py: |
+    from jsonpatch import JsonPatch
+
+
+    OPS = [
+        {"op": "add", "path": "/a", "value": 1},
+        {"op": "move", "from": "/a", "path": "/b"},
+        {"op": "remove", "path": "/b"},
+    ]
+
+
+    def test_len_counts_operations():
+        assert len(JsonPatch(OPS)) == 3
+        assert len(JsonPatch([])) == 0
+
+
+    def test_bool_is_unchanged():
+        assert bool(JsonPatch(OPS))
+        assert not JsonPatch([])
+
+
+    def test_paths_in_order():
+        assert JsonPatch(OPS).paths() == ["/a", "/b", "/b"]
+
+
+    def test_paths_of_empty_patch():
+        assert JsonPatch([]).paths() == []
+
+
+    def test_paths_use_target_not_source():
+        assert JsonPatch([{"op": "copy", "from": "/x", "path": "/y"}]).paths() == ["/y"]
+turns:
+- prompt: 'Give me a map of this repository: the main module, the tests, the command line tools in bin/, and what ext_tests.py and tests.js are for. Do not change any files.'
+  checks:
+  - kind: keyed_facts
+    all: [jsonpatch\.py, tests\.py, ext_tests\.py, tests\.js, bin/jsondiff|jsondiff, bin/jsonpatch|jsonpatch\b, README]
+- prompt: 'Which patch operations exist and how does `JsonPatch` turn each dict into an operation object? Run `JsonPatch([{''op'': ''bogus'', ''path'': ''/a''}])` and `JsonPatch([{''path'': ''/a''}])` and quote the exact errors. Do not change repository files.'
+  checks:
+  - kind: keyed_facts
+    all: [remove, add, replace, move, test, copy, operations, _get_operation, InvalidJsonPatch, Unknown operation 'bogus', does not contain 'op' member]
+- prompt: 'How does `apply_patch` treat the original document: show the difference between the default and `in_place=True` by running `d = {''a'': 1}` with an add of /b. Which function makes the copy? Do not change repository files.'
+  checks:
+  - kind: keyed_facts
+    all: [in_place, deepcopy|copy\.deepcopy, '\{''a'': 1, ''b'': 2\}', '\{''a'': 1\}', JsonPatch\.apply|apply]
+- prompt: Which exceptions can applying a patch raise and how are they related? Trigger a failing `test` operation and a `remove` of a missing key and quote the messages. Do not change repository files.
+  checks:
+  - kind: keyed_facts
+    all: [JsonPatchException, JsonPatchConflict, JsonPatchTestFailed, InvalidJsonPatch, AssertionError, non-existent object 'z', is not equal to tested value]
+- prompt: 'How does `make_patch` find moves and replacements? Run `make_patch({''a'': [1, 2, 3], ''b'': 1}, {''a'': [1, 3], ''c'': 2})`, show the result and explain what DiffBuilder does (index storage, move detection and the remove+add merge in `execute`). Do not change repository files.'
+  checks:
+  - kind: keyed_facts
+    all: ['"op": "remove", "path": "/b"', '"op": "move", "from": "/a/1", "path": "/c"', DiffBuilder, index_storage|store_index|take_index, replace, execute]
+- prompt: Write ARCHITECTURE.md in the repository root with level-2 sections Overview, Operations, Errors and Diffing, using real class names.
+  checks:
+  - kind: doc_sections
+    path: ARCHITECTURE.md
+    headings: [Overview, Operations, Errors, Diffing]
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: JsonPatchConflict}
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: DiffBuilder}
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: in_place}
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: _get_operation}
+- prompt: 'Add two things to the `JsonPatch` class in jsonpatch.py, right after `__nonzero__ = __bool__`: `__len__` returning the number of operations, and a method `paths()` returning the target `path` of every operation in patch order (for a move or copy that is the destination, not `from`). Keep bool(patch) behaviour unchanged and give both a short docstring.'
+  checks:
+  - {kind: file_regex, path: jsonpatch.py, pattern: 'def __len__\(self\):'}
+  - {kind: file_regex, path: jsonpatch.py, pattern: 'def paths\(self\):'}
+  - kind: tests
+    runner: python
+    files: [tests.py, hidden/test_len_paths.py]
+    restore: [tests.py]
+    hidden: [hidden/test_len_paths.py]
+- prompt: Add test_patch_len.py (pytest style) next to tests.py with at least four tests for `len(patch)` and `patch.paths()` (counting, empty patch, order, move uses the destination) and run them.
+  checks:
+  - {kind: file_regex, path: test_patch_len.py, pattern: ^def test_, min_count: 4}
+  - kind: tests
+    runner: python
+    files: [test_patch_len.py]
+- prompt: 'Document it in README.md: add a new section titled `Inspecting a patch` (same underline style as the other sections) before `Running external tests`, with two or three sentences and one example using `len(patch)` and `patch.paths()`.'
+  checks:
+  - {kind: file_regex, path: README.md, pattern: 'Inspecting a patch\n-{10,}\n'}
+  - {kind: file_regex, path: README.md, pattern: 'Inspecting a patch[\s\S]*?paths\(\)[\s\S]*?Running external tests'}
+  - {kind: file_regex, path: README.md, pattern: len\(patch\)}
+- prompt: 'Summarise the change: which files did you add or modify, what do `len(patch)` and `patch.paths()` return for a patch with a move, and does `bool(patch)` still work for an empty patch? Do not change any files.'
+  checks:
+  - kind: keyed_facts
+    all: [jsonpatch\.py, test_patch_len\.py, README\.md, ARCHITECTURE\.md, destination|target|path, False|empty|__bool__]
