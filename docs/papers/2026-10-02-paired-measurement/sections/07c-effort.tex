@@ -45,10 +45,39 @@ data cannot separate.
     difference, which is why sticky and plain Sonnet look alike overall.
 \end{itemize}
 
-\begin{keyidea}
-Part of the routing saving is the effort setting, not the routing. A ``just use Sonnet'' deployment at the same
-medium effort may get much of it without a router; this campaign did not run that control, so it cannot say how
-much. The next campaign should include plain Sonnet at medium effort.
-\end{keyidea}
+\subsection{Follow-up: plain Sonnet at medium versus default effort \texorpdfstring{\prereg}{[preregistered]}}\label{sec:effortfollow}
 
-\input{generated/effort-followup.tex}
+To separate the effort setting from the routing, a preregistered follow-up (effort-control-v1) ran plain Sonnet
+twice on the \EcScen\ test scenarios, \EcReps\ repetitions each: once at the provider's default effort and once at
+medium effort, nothing else changed. Each pair started together from the same frozen workspace with separate cache
+nonces, so this comparison is concurrent. Intervals come from \EcResamples\ scenario-cluster resamples (seed
+\EcSeed). The preregistered hypothesis (medium is cheaper, with non-inferior turn-pass fraction) was \EcHE.
+
+\begin{table}[htbp]
+\centering\small
+\caption{Effort-control follow-up (evidence in the \texttt{2026-10-05-effort-control} directory). Cost rows are
+geometric-mean ratios of tools-normalized session cost; below 1 means the first arm is cheaper.}
+\label{tab:effortfollow}
+\input{generated/tables/effort-control.tex}
+\end{table}
+
+\paragraph{Result.} Medium effort cost \EcRatio\X\ the default (95\,\% CI \EcCI), about \EcCutPct\,\% cheaper, and
+was cheaper in \EcCheaperPairs\ of \EcPairs\ pairs. Turn-pass fraction moved by \EcQual\ (\EcQualCI): \EcQualVerdict\
+at the \NIMarginPts-point margin. An exploratory comparison of medium plain Sonnet with the main-campaign sticky
+sessions that ran on Sonnet (also at medium effort) gives \EcSecRatio\ (\EcSecCI, \EcSecN\ scenarios). Those
+sessions ran on different dates, so this second comparison is not concurrent and has no decision rule; the
+remaining gap of about \EcSecGapPct\,\% is within what bundle behaviour or timing could produce.
+
+\paragraph{Provenance caveat.} The follow-up's schedule and plan were created \EcScheduleBefore\ \emph{before} the
+preregistration was committed (\code{\EcPreregSha}), and the first analysed session started \EcFirstAfter\ after it.
+The design file and the analysis script were first committed in that same commit, so the evidence package cannot
+prove that the working-tree copies used to build the schedule match the committed ones. No outcome data from the
+analysed sessions existed before the commit. The follow-up cost \$\EcSpend\ (including a \$\EcPreflight\ preflight).
+
+\begin{keyidea}
+The effort setting alone explains most of the gap between sticky-on-Sonnet and plain Sonnet: in a concurrent test,
+medium effort cost \EcRatio\X\ the default. On Fable~5.1 at the \cref{tab:prices} prices, the saving comes from
+running the session on Sonnet at medium effort; a router adds value only through its choice of model, not beyond
+Sonnet-at-medium. The finding also applies to anyone running plain Sonnet: on these \EcScen\ scenarios, medium
+effort cut cost by about \EcCutPct\,\% with no detectable turn-pass loss.
+\end{keyidea}
