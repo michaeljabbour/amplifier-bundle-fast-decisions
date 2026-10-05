@@ -461,12 +461,42 @@ cells:
 
   # 2026-09-25 re-validation of the corrected shipped default (Jev judge, scope
   # gate, decide once), on the study host (Fable) and on Opus 5.5.
+  # NOTE (research-backed defaults): `composed` cells inherit the shipped behavior, which since
+  # feat/research-defaults also sets decision_scope: session and price_gate: {enabled: true}.
+  # The finished main-v1 / effort-control campaigns are pinned to their frozen build_sha and are
+  # unaffected; a NEW campaign using orch-default* measures the new defaults.
   orch-default:
     harnesses: [amplifier-fd]
     fd: { composition: composed, backend: jev, allow_external_state: true, effort_profile: all_phase,
           model_routing_profile: sonnet_once }
     role: "the shipped default after the decide-once fix: Jev judge, scope gate, no mid-turn escalation"
     purpose: "re-validate the headline with exactly what users install"
+    anchor_cell: plain
+    secondary_anchor: plain-sonnet
+    requires_cells: [plain-sonnet]
+    mechanism_gate: { max_scored: 0 }
+
+  # Follow-up cells for the research-backed defaults (not yet run; no result is claimed).
+  orch-session-gated:
+    harnesses: [amplifier-fd]
+    fd: { composition: composed, backend: jev, allow_external_state: true, effort_profile: all_phase,
+          model_routing_profile: sonnet_once }
+    role: "the shipped defaults: judge, decide once per session, price gate on (Fable host routes, Opus host does not)"
+    purpose: "measure the unrouted-bundle overhead on Opus 5.5 (expected ~1.0x, unmeasured) and the gate on Fable 5.1"
+    anchor_cell: plain
+    secondary_anchor: plain-sonnet
+    requires_cells: [plain-sonnet]
+    mechanism_gate: { max_scored: 0 }
+
+  orch-session-gated-hostmed:
+    harnesses: [amplifier-fd]
+    fd: { composition: composed, backend: jev, allow_external_state: true, effort_profile: all_phase,
+          model_routing_profile: sonnet_once,
+          overrides: { effort_routing: { orient: medium, explore: low, implement: high,
+                                         by_tier: { cheap: medium, strong: medium },
+                                         max_explore_requests: 6, escalate_after_provider_errors: 1 } } }
+    role: "the shipped defaults plus host-model effort medium (effort_routing.by_tier.strong: medium)"
+    purpose: "preregistered test of host medium effort on judged-hard sessions (opt-in; Fable plain 0.860x on 23 scenarios)"
     anchor_cell: plain
     secondary_anchor: plain-sonnet
     requires_cells: [plain-sonnet]

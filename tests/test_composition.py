@@ -106,6 +106,9 @@ class OrchestratorPrimaryBehaviorOfflineTests(unittest.TestCase):
         self.assertEqual(config["model_routing"]["start_policy"], "judge")
         self.assertEqual(config["model_routing"]["cheap_max_workspace_files"], 300)
         self.assertIs(config["read_shortcut"], False)
+        self.assertEqual(config["model_routing"]["decision_scope"], "session")
+        self.assertEqual(config["model_routing"]["price_gate"], {"enabled": True})
+        self.assertNotIn("keep_on_host", config["model_routing"])
         self.assertEqual(config["effort_routing"]["by_tier"], {"cheap": "medium", "strong": None})
         # No explicit upstream block: the root's loop-streaming settings are
         # inherited through composition and forwarded (upstream_config).
