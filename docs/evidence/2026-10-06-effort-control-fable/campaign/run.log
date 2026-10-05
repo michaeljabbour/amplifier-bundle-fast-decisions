@@ -1,0 +1,55 @@
+memory check ok: 58.4 GB available (floor 32.0 GB)
+caffeinate attached (idle/system sleep prevented; clamshell sleep on battery cannot be prevented: keep the lid open or on AC)
+{"prepared": "<campaign>/pf-1791204027391", "runs": ["pf0", "pf1"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+preflight PASS  plain                  claude-fable-5-1     key=default  models=claude-fable-5-1  $0.8648
+preflight PASS  plain-medium           claude-fable-5-1     key=default  models=claude-fable-5-1  $0.8644
+preflight PASSED: 2 sessions, $1.7291
+{"prepared": "<campaign>/w000-a1", "runs": ["js-phone-r2-any-fable", "js-phone-r2-any-fable_medium"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w001-a1", "runs": ["readme-rewrite-r2-any-fable", "readme-rewrite-r2-any-fable_medium"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w002-a1", "runs": ["go-linkedlist-r2-any-fable", "go-linkedlist-r2-any-fable_medium"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w003-a1", "runs": ["filelock-explain-r2-any-fable", "filelock-explain-r2-any-fable_medium"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w004-a1", "runs": ["go-protein-r2-any-fable", "go-protein-r2-any-fable_medium"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w005-a1", "runs": ["fastrand-explain-r1-any-fable", "fastrand-explain-r1-any-fable_medium"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w006-a1", "runs": ["js-listops-r2-any-fable", "js-listops-r2-any-fable_medium"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w007-a1", "runs": ["semver-review-r1-any-fable", "semver-review-r1-any-fable_medium"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w008-a1", "runs": ["js-listops-r1-any-fable", "js-listops-r1-any-fable_medium"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w009-a1", "runs": ["toolz-interpose-r1-any-fable", "toolz-interpose-r1-any-fable_medium"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w010-a1", "runs": ["docstring-audit-r2-any-fable", "docstring-audit-r2-any-fable_medium"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w011-a1", "runs": ["sales-orders-r2-any-fable", "sales-orders-r2-any-fable_medium"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w012-a1", "runs": ["lark-template-r1-any-fable", "lark-template-r1-any-fable_medium"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w013-a1", "runs": ["mistune-escape-r2-any-fable", "mistune-escape-r2-any-fable_medium"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w014-a1", "runs": ["go-protein-r1-any-fable", "go-protein-r1-any-fable_medium"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w015-a1", "runs": ["api-docs-r2-any-fable", "api-docs-r2-any-fable_medium"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w016-a1", "runs": ["survey-analysis-r1-any-fable", "survey-analysis-r1-any-fable_medium"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w017-a1", "runs": ["xmltodict-none-r2-any-fable", "xmltodict-none-r2-any-fable_medium"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w018-a1", "runs": ["discrepancy-docs-r1-any-fable", "discrepancy-docs-r1-any-fable_medium"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w019-a1", "runs": ["semver-review-r2-any-fable", "semver-review-r2-any-fable_medium"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w020-a1", "runs": ["py-go-counting-r2-any-fable", "py-go-counting-r2-any-fable_medium"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w021-a1", "runs": ["readme-rewrite-r1-any-fable", "readme-rewrite-r1-any-fable_medium"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w022-a1", "runs": ["debug-triage-r2-any-fable", "debug-triage-r2-any-fable_medium"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+WATCHDOG killed w020-a1/py-go-counting-r2-any-fable (session_cap): agent tree 8.19 GB, system available 58.5 GB
+{"prepared": "<campaign>/w023-a1", "runs": ["sales-orders-r1-any-fable", "sales-orders-r1-any-fable_medium"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w024-a1", "runs": ["mistune-escape-r1-any-fable", "mistune-escape-r1-any-fable_medium"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w025-a1", "runs": ["debug-triage-r1-any-fable", "debug-triage-r1-any-fable_medium"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w026-a1", "runs": ["humanize-review-r1-any-fable", "humanize-review-r1-any-fable_medium"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w027-a1", "runs": ["go-linkedlist-r1-any-fable", "go-linkedlist-r1-any-fable_medium"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w028-a1", "runs": ["xmltodict-none-r1-any-fable", "xmltodict-none-r1-any-fable_medium"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w029-a1", "runs": ["docstring-audit-r1-any-fable", "docstring-audit-r1-any-fable_medium"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w030-a1", "runs": ["survey-analysis-r2-any-fable", "survey-analysis-r2-any-fable_medium"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w031-a1", "runs": ["py-go-counting-r1-any-fable", "py-go-counting-r1-any-fable_medium"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w032-a1", "runs": ["api-docs-r1-any-fable", "api-docs-r1-any-fable_medium"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w033-a1", "runs": ["rust-ocr-r2-any-fable", "rust-ocr-r2-any-fable_medium"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w034-a1", "runs": ["py-rest-api-r1-any-fable", "py-rest-api-r1-any-fable_medium"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w035-a1", "runs": ["humanize-review-r2-any-fable", "humanize-review-r2-any-fable_medium"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w036-a1", "runs": ["js-phone-r1-any-fable", "js-phone-r1-any-fable_medium"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w037-a1", "runs": ["py-rest-api-r2-any-fable", "py-rest-api-r2-any-fable_medium"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w038-a1", "runs": ["discrepancy-docs-r2-any-fable", "discrepancy-docs-r2-any-fable_medium"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w039-a1", "runs": ["lark-discard-r1-any-fable", "lark-discard-r1-any-fable_medium"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w040-a1", "runs": ["lark-template-r2-any-fable", "lark-template-r2-any-fable_medium"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w041-a1", "runs": ["lark-discard-r2-any-fable", "lark-discard-r2-any-fable_medium"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w042-a1", "runs": ["rust-ocr-r1-any-fable", "rust-ocr-r1-any-fable_medium"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w043-a1", "runs": ["fastrand-explain-r2-any-fable", "fastrand-explain-r2-any-fable_medium"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w044-a1", "runs": ["toolz-interpose-r2-any-fable", "toolz-interpose-r2-any-fable_medium"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w045-a1", "runs": ["filelock-explain-r1-any-fable", "filelock-explain-r1-any-fable_medium"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"exit": 0, "state": "<campaign>/state.json", "ledger": "<campaign>/ledger.json"}
+EXIT 0

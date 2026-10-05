@@ -181,6 +181,35 @@ class FableAnalysisTests(unittest.TestCase):
         self.assertIn("exploratory_per_task_type_turn_pass", out)
 
 
+class PairAuditPropagationTests(unittest.TestCase):
+    """effort-control-fable-v1: the ANCHOR session had a cache-audit flag but the pair row copied only the arm's flag."""
+
+    def row(self, arm, clean):
+        return {"scenario_id": "s", "rep": 1, "host": "any", "arm": arm, "task_type": "feature", "n_long_gaps": 0, "cost_usd_recomputed": 2.0,
+                "cost_usd_tools_normalized": 2.0, "wall_ms": 1000, "turn_pass_frac": 1.0, "final_state_pass": True, "wave_valid": True,
+                "status": "ok", "n_req": 3, "mechanism_engaged": True, "cache_audit_clean": clean, "cost_valid": True}
+
+    def pair(self, anchor_clean, arm_clean):
+        rows = [self.row("fable", anchor_clean), self.row("fable_medium", arm_clean)]
+        turns = [{"scenario_id": "s", "rep": 1, "host": "any", "arm": "fable", "cost_usd_recomputed": 2.0, "cost_usd_tools_normalized": 2.0}]
+        return paired.build_pairs(rows, turns, "fable")[0]
+
+    def test_pair_is_audit_clean_only_if_both_sessions_are(self):
+        self.assertTrue(self.pair(True, True)["cache_audit_clean"])
+        p = self.pair(False, True)                                  # flagged anchor, clean arm
+        self.assertFalse(p["cache_audit_clean"])
+        self.assertEqual((p["arm_cache_audit_clean"], p["anchor_cache_audit_clean"]), (True, False))
+        self.assertFalse(self.pair(True, False)["cache_audit_clean"])
+
+    def test_analysis_excludes_a_pair_with_a_flagged_anchor_from_cost(self):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("paired_effort", REPO_ROOT / "evals" / "paired_effort.py")
+        pe = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(pe)
+        self.assertFalse(pe.valid_cost_pair(self.pair(False, True)))
+        self.assertTrue(pe.valid_cost_pair(self.pair(True, True)))
+
+
 if __name__ == "__main__":
     unittest.main()
 

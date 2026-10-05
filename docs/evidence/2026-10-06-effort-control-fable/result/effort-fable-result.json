@@ -1,0 +1,76 @@
+{
+  "hypothesis": "HF",
+  "arm": "fable_medium",
+  "seed": 20261006,
+  "resamples": 10000,
+  "cost": {
+    "n_scenarios": 23,
+    "geo_mean_ratio": 0.8596025461732419,
+    "ci95": [
+      0.8332355240832271,
+      0.8852608472184094
+    ],
+    "supported": true
+  },
+  "quality": {
+    "n_scenarios": 23,
+    "mean_delta_turn_pass": 0.03341739130434782,
+    "ci95": [
+      -0.001754347826086957,
+      0.07960652173913044
+    ],
+    "non_inferior": true,
+    "margin": -0.05
+  },
+  "n_pairs": 46,
+  "n_valid_cost_pairs": 45,
+  "HF_supported": true,
+  "exploratory_mcnemar_final_pass": {
+    "exploratory": true,
+    "n_matched": 46,
+    "both_pass": 45,
+    "only_medium_passes": 1,
+    "only_default_passes": 0,
+    "exact_p_two_sided": 1.0
+  },
+  "exploratory_per_task_type_turn_pass": {
+    "bugfix": {
+      "n_scenarios": 6,
+      "mean_delta_turn_pass": 0.0625
+    },
+    "explain": {
+      "n_scenarios": 2,
+      "mean_delta_turn_pass": 0.0
+    },
+    "feature": {
+      "n_scenarios": 3,
+      "mean_delta_turn_pass": 0.0
+    },
+    "mixed": {
+      "n_scenarios": 10,
+      "mean_delta_turn_pass": 0.04436
+    },
+    "review": {
+      "n_scenarios": 2,
+      "mean_delta_turn_pass": -0.025
+    }
+  },
+  "secondary_vs_main_v1_sticky_fable_host": {
+    "exploratory": true,
+    "n_scenarios": 23,
+    "geo_mean_ratio": 1.545739010264103,
+    "ci95": [
+      1.343098700729545,
+      1.7593353726775949
+    ]
+  },
+  "secondary_vs_main_v1_anchor_fable_host": {
+    "exploratory": true,
+    "n_scenarios": 23,
+    "geo_mean_ratio": 0.8286325959605997,
+    "ci95": [
+      0.7901118702480083,
+      0.8659546240370143
+    ]
+  }
+}
