@@ -6,7 +6,7 @@ Reads ONLY committed files:
     docs/design/parallel-measurement-mode.md    (design v2: power table)
     docs/design/pilot-20261001/                 (cache-semantics probe)
     evals/paired/                               (memory-safety README, design yaml, scenario directories)
-    origin/eval/judge-realistic:docs/evidence/2026-10-01-caching/results.json  (the earlier caching survey;
+    origin/main:docs/evidence/2026-10-01-caching/results.json  (the earlier caching survey;
         read with `git show`, the build stops if that ref is missing)
 and writes generated/:
     numbers.tex   \\newcommand macros for every number used in prose
@@ -37,7 +37,7 @@ EV = REPO / "docs" / "evidence" / "2026-10-02-paired-campaign"
 DESIGN = REPO / "docs" / "design" / "parallel-measurement-mode.md"
 PROBE = REPO / "docs" / "design" / "pilot-20261001" / "step1_cache_probe.json"
 PAIRED = REPO / "evals" / "paired"
-SURVEY_REF = "origin/eval/judge-realistic:docs/evidence/2026-10-01-caching/results.json"
+SURVEY_REF = "origin/main:docs/evidence/2026-10-01-caching/results.json"
 OUT = HERE / "generated"
 TABLES, DATA = OUT / "tables", OUT / "data"
 
@@ -838,7 +838,7 @@ M("NStickySonnetOnly", len(son_only))
 M("NStickySonnetOnlyHost", sum(s["host"] == "fable" for s in son_only))
 M("NStickyPerHost", sum(s["host"] == "fable" for s in sticky))
 # the judge's own bill (not in session cost): Jev's cost per decision from the trace judge benchmark
-JEV_REF = "origin/eval/judge-realistic:docs/evidence/2026-10-01-trace-judge-benchmark/holdout/summary.json"
+JEV_REF = "origin/main:docs/evidence/2026-10-01-trace-judge-benchmark/holdout/summary.json"
 try:
     TJ = json.loads(subprocess.run(["git", "-C", str(REPO), "show", JEV_REF], capture_output=True, text=True,
                                    check=True).stdout)
@@ -1276,9 +1276,9 @@ for h in ("fable", "opus"):
 
 
 # ================================================================ Cloudflare Clef and Clef-Flash (post-hoc arms)
-# Committed on origin/eval/judge-realistic; read with `git show` so a clean clone builds.
-CLEF_REF = "origin/eval/judge-realistic:docs/evidence/2026-10-04-clef-judges"
-JB_REF = "origin/eval/judge-realistic:docs/evidence/2026-09-30-judge-benchmark"
+# Committed on origin/main; read with `git show` so a clean clone builds.
+CLEF_REF = "origin/main:docs/evidence/2026-10-04-clef-judges"
+JB_REF = "origin/main:docs/evidence/2026-09-30-judge-benchmark"
 
 
 def gshow(path):
@@ -1359,7 +1359,7 @@ M("ClSpend", hu(spend, 2))
 M("ClSpendFour", hu(spend, 4))
 readme = gshow(f"{CLEF_REF}/README.md")
 assert f"${hu(spend, 4)}" in readme.replace("**", ""), "Clef spend differs from the evidence README"
-yaml_ = gshow("origin/eval/judge-realistic:evals/judges.yaml")
+yaml_ = gshow("origin/main:evals/judges.yaml")
 for a, A in (("clef", "Clef"), ("clef-flash", "Flash")):
     blk = yaml_[yaml_.index(f"\n  {a}:"):]
     M(f"Cl{A}Price", "%.2f" % float(re.search(r"price_in:\s*([\d.]+)", blk).group(1)))

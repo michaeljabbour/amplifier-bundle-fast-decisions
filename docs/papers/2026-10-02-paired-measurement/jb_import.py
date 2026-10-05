@@ -14,7 +14,7 @@ import sys
 import tarfile
 from pathlib import Path
 
-REF = "origin/eval/judge-realistic"
+REF = "origin/main"
 PATHS = ["docs/evidence/2026-09-30-judge-benchmark", "docs/evidence/2026-09-30-judge-comparison",
          "docs/evidence/2026-10-01-trace-judge-benchmark", "docs/evidence/2026-10-01-caching",
          "evals/judge_bench", "evals/STUDY-DESIGN.md", "docs/papers/2026-09-30-judge-benchmark"]
