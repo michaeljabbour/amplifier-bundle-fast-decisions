@@ -1,0 +1,211 @@
+# holdout-v3 batch B (docs, 9 turns): Aider polyglot-benchmark python/simple-linked-list (Exercism): implement, then docstrings with runnable doctests, a complexity table, __repr__/clear against hidden tests, type hints, changelog.
+id: py-linked-list-docs
+task_type: docs
+language: python
+split: holdout
+default_gap_s: 10
+source:
+  desc: 'Aider polyglot-benchmark python/simple-linked-list (Exercism): implement, then docstrings with runnable doctests,
+    a complexity table, __repr__/clear against hidden tests, type hints, changelog.'
+  repo: https://github.com/Aider-AI/polyglot-benchmark
+  sha: 7e0611e77b54e2dea774cdc0aa00cf9f7ed6144f
+workspace:
+  kind: git
+  repo: https://github.com/Aider-AI/polyglot-benchmark
+  sha: 7e0611e77b54e2dea774cdc0aa00cf9f7ed6144f
+  subdir: python/exercises/practice/simple-linked-list
+  local_hint: ~/dev/afast-campaign-corrected-polyglot-20260919/polyglot/polyglot-benchmark
+  remove:
+  - .meta
+protected:
+- simple_linked_list_test.py
+hidden_files:
+  hidden_repr_test.py: |
+    import unittest
+
+    from simple_linked_list import LinkedList
+
+
+    class HiddenRepr(unittest.TestCase):
+        def test_repr_empty(self):
+            self.assertEqual(repr(LinkedList()), "LinkedList([])")
+
+        def test_repr_values(self):
+            self.assertEqual(repr(LinkedList([1, 2, 3])), "LinkedList([3, 2, 1])")
+
+        def test_repr_after_pop(self):
+            ll = LinkedList([1, 2, 3])
+            ll.pop()
+            self.assertEqual(repr(ll), "LinkedList([2, 1])")
+  hidden_clear_test.py: |
+    import unittest
+
+    from simple_linked_list import EmptyListException, LinkedList
+
+
+    class HiddenClear(unittest.TestCase):
+        def test_clear_resets_len(self):
+            ll = LinkedList([1, 2, 3])
+            ll.clear()
+            self.assertEqual(len(ll), 0)
+
+        def test_clear_empties_head(self):
+            ll = LinkedList([1])
+            ll.clear()
+            with self.assertRaises(EmptyListException):
+                ll.head()
+
+        def test_clear_on_empty_list_is_fine(self):
+            ll = LinkedList()
+            ll.clear()
+            self.assertEqual(list(ll), [])
+
+        def test_push_after_clear(self):
+            ll = LinkedList([9, 9])
+            ll.clear()
+            ll.push(4)
+            self.assertEqual((len(ll), ll.head().value()), (1, 4))
+turns:
+- prompt: Read .docs/instructions.md and implement the linked list in simple_linked_list.py (Node, LinkedList, EmptyListException)
+    so that simple_linked_list_test.py passes. Do not edit the test file.
+  checks:
+  - kind: tests
+    runner: python
+    files:
+    - simple_linked_list_test.py
+    restore:
+    - simple_linked_list_test.py
+    hidden: []
+- prompt: What does `head()` raise on an empty list, and what is the error message? Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all:
+    - EmptyListException
+    - The list is empty
+- prompt: 'Document the code: add a class docstring to LinkedList and a docstring to head, push, pop and reversed, each containing
+    a runnable doctest example (`>>>` lines with the real output). `python3 -m doctest -v simple_linked_list.py` must pass
+    with at least six examples and the shipped tests must still pass.'
+  checks:
+  - kind: file_regex
+    path: simple_linked_list.py
+    pattern: '^\s+>>> '
+    min_count: 6
+  - &id001
+    kind: tests
+    runner: cmd
+    cmd: python3 -m doctest -v simple_linked_list.py
+    expect_regex: \b([6-9]|\d{2,}) passed( and 0 failed)?\.
+    timeout: 60
+  - kind: tests
+    runner: python
+    files:
+    - simple_linked_list_test.py
+    restore:
+    - simple_linked_list_test.py
+    hidden: []
+- prompt: Write README.md with the sections `## Usage`, `## API` and `## Complexity`. Complexity is a table (columns operation,
+    complexity) with one row each for push, pop, head, len (all O(1)) and reversed (O(n)).
+  checks:
+  - kind: doc_sections
+    path: README.md
+    headings:
+    - Usage
+    - API
+    - Complexity
+  - kind: file_regex
+    path: README.md
+    pattern: ^\|\s*`?push`?\s*\|\s*O\(1\)\s*\|
+  - kind: file_regex
+    path: README.md
+    pattern: ^\|\s*`?pop`?\s*\|\s*O\(1\)\s*\|
+  - kind: file_regex
+    path: README.md
+    pattern: ^\|\s*`?head`?\s*\|\s*O\(1\)\s*\|
+  - kind: file_regex
+    path: README.md
+    pattern: ^\|\s*`?len`?\s*\|\s*O\(1\)\s*\|
+  - kind: file_regex
+    path: README.md
+    pattern: ^\|\s*`?reversed`?\s*\|\s*O\(n\)\s*\|
+  gap_before_s: 420
+- prompt: Add a `__repr__` to LinkedList that shows the values from head to tail, e.g. `LinkedList([3, 2, 1])` for `LinkedList([1,
+    2, 3])` and `LinkedList([])` when empty.
+  checks:
+  - kind: tests
+    runner: python
+    files:
+    - simple_linked_list_test.py
+    - hidden_repr_test.py
+    restore:
+    - simple_linked_list_test.py
+    hidden:
+    - hidden_repr_test.py
+  - *id001
+- prompt: Add a `clear()` method that removes every value (len becomes 0, head() raises EmptyListException again, push works
+    afterwards).
+  checks:
+  - kind: tests
+    runner: python
+    files:
+    - simple_linked_list_test.py
+    - hidden_repr_test.py
+    - hidden_clear_test.py
+    restore:
+    - simple_linked_list_test.py
+    hidden:
+    - hidden_repr_test.py
+    - hidden_clear_test.py
+  - *id001
+- prompt: 'Add type annotations: `push(self, value: int) -> None`, `pop(self) -> int`, `__len__(self) -> int` and `clear(self)
+    -> None`. Keep every test and doctest passing.'
+  checks:
+  - kind: file_regex
+    path: simple_linked_list.py
+    pattern: 'def push\(self, value: int\) -> None:'
+  - kind: file_regex
+    path: simple_linked_list.py
+    pattern: 'def pop\(self\) -> int:'
+  - kind: file_regex
+    path: simple_linked_list.py
+    pattern: 'def __len__\(self\) -> int:'
+  - kind: file_regex
+    path: simple_linked_list.py
+    pattern: 'def clear\(self\) -> None:'
+  - kind: tests
+    runner: python
+    files:
+    - simple_linked_list_test.py
+    - hidden_repr_test.py
+    - hidden_clear_test.py
+    restore:
+    - simple_linked_list_test.py
+    hidden:
+    - hidden_repr_test.py
+    - hidden_clear_test.py
+  - *id001
+- prompt: Does `reversed()` modify the original list or return a new one, and why is it O(n)? Two sentences. Do not change
+    any files.
+  checks:
+  - kind: keyed_facts
+    all:
+    - leaves? the original|original (is|stays|remains) (unchanged|untouched|intact)|does not (modify|mutate|change)|not (modif|mutat)
+    - every|each|all (the )?(nodes|values|elements)|visits|iterates|linear
+  gap_before_s: 420
+- prompt: Create CHANGELOG.md with `## 0.2.0` / `### Added` listing `__repr__` and `clear()` (names in backticks, one bullet
+    each) above a `## 0.1.0` section.
+  checks:
+  - kind: file_regex
+    path: CHANGELOG.md
+    pattern: ^## 0\.2\.0
+  - kind: file_regex
+    path: CHANGELOG.md
+    pattern: ^### Added
+  - kind: file_regex
+    path: CHANGELOG.md
+    pattern: ^- `__repr__`
+  - kind: file_regex
+    path: CHANGELOG.md
+    pattern: ^- `clear\(\)`
+  - kind: file_regex
+    path: CHANGELOG.md
+    pattern: ^## 0\.1\.0

@@ -1,0 +1,462 @@
+# holdout-v3 batch B (mixed, 9 turns): Fleet fuel log CSV: anomaly detection, spend and L/100km tables, a generalising CLI, methodology docs.
+id: fleet-fuel
+task_type: mixed
+language: python
+split: holdout
+default_gap_s: 10
+source:
+  desc: 'Fleet fuel log CSV: anomaly detection, spend and L/100km tables, a generalising CLI, methodology docs.'
+  kind: self-authored deterministic workspace
+  adapted_from:
+  - new self-authored fleet dataset; pattern follows data-question/report tasks in ~/dev/amplifier-agent/.amplifier/evaluation/tasks
+workspace:
+  kind: inline
+  files:
+    data/fuel_log.csv: |
+      date,vehicle,odometer_km,litres,price_per_l,station
+      2025-01-02,V-02,52096,58.1,1.69,Shell
+      2025-01-02,V-08,80872,59,1.55,Costco
+      2025-01-02,V-09,38260,44,1.53,BP
+      2025-01-03,V-04,82236,78.0,1.57,Esso
+      2025-01-04,V-03,49509,46.9,1.49,BP
+      2025-01-06,V-01,48870,59,1.47,Costco
+      2025-01-06,V-10,41035,44,1.73,Costco
+      2025-01-06,V-11,47360,91.3,1.49,Esso
+      2025-01-07,V-05,58703,57.0,1.72,BP
+      2025-01-08,V-06,40799,59,1.76,BP
+      2025-01-08,V-07,63905,79,1.69,Costco
+      2025-01-08,V-12,57326,44,1.78,Shell
+      2025-01-09,V-08,81566,59,1.50,Esso
+      2025-01-10,V-02,52736,79,1.61,Shell
+      2025-01-13,V-09,38898,44,1.57,BP
+      2025-01-14,V-04,82948,79,1.75,Shell
+      2025-01-14,V-11,47786,78.4,1.48,Costco
+      2025-01-15,V-10,41644,44,1.56,Esso
+      2025-01-16,V-01,49291,49.3,1.53,Costco
+      2025-01-16,V-03,50079,42.0,1.68,BP
+      2025-01-16,V-12,57784,44,1.50,Esso
+      2025-01-17,V-02,53454,79,1.74,Costco
+      2025-01-17,V-07,64326,72.2,1.73,Costco
+      2025-01-19,V-05,59240,59,1.52,BP
+      2025-01-19,V-08,82061,59,1.51,Costco
+      2025-01-20,V-06,41399,59,1.46,BP
+      2025-01-24,V-09,39438,44,1.57,Costco
+      2025-01-25,V-11,48372,99,1.65,Esso
+      2025-01-26,V-04,83372,61.4,1.66,Shell
+      2025-01-26,V-05,59706,57.8,1.50,Esso
+      2025-01-26,V-12,58287,44,1.50,Esso
+      2025-01-27,V-01,49703,47.0,1.70,BP
+      2025-01-27,V-03,50606,38.5,1.77,Shell
+      2025-01-27,V-07,64810,79,1.52,Esso
+      2025-01-27,V-08,82693,59,1.50,BP
+      2025-01-27,V-10,42310,44,1.76,Esso
+      2025-01-29,V-02,54082,79,1.78,Esso
+      2025-01-31,V-06,42114,59,1.55,BP
+      2025-02-03,V-05,60386,59,1.49,Shell
+      2025-02-04,V-01,50340,59,1.46,Esso
+      2025-02-04,V-09,39829,44,1.67,Costco
+      2025-02-04,V-11,48925,99,1.58,Costco
+      2025-02-04,V-12,58897,44,1.70,Costco
+      2025-02-05,V-04,84066,79,1.64,Shell
+      2025-02-05,V-07,65450,79,1.60,Shell
+      2025-02-06,V-08,83193,59,1.45,Costco
+      2025-02-06,V-10,42893,44,1.60,Costco
+      2025-02-07,V-03,51324,51.2,1.62,Costco
+      2025-02-08,V-02,54748,79,1.67,Costco
+      2025-02-11,V-06,42507,59,1.51,Shell
+      2025-02-12,V-04,84735,79,1.77,Shell
+      2025-02-12,V-09,40440,44,1.63,Costco
+      2025-02-12,V-12,59530,44,1.74,Costco
+      2025-02-13,V-01,796,52.0,1.55,Costco
+      2025-02-13,V-05,61051,59,1.78,Costco
+      2025-02-13,V-08,83587,59,1.69,Shell
+      2025-02-15,V-02,5321,79,1.58,Costco
+      2025-02-15,V-11,49461,99,1.67,Costco
+      2025-02-16,V-10,43313,44,1.55,Costco
+      2025-02-17,V-07,65868,71.5,1.54,Costco
+      2025-02-19,V-03,51749,30.8,1.58,Costco
+      2025-02-19,V-06,43101,59,1.51,Costco
+      2025-02-20,V-04,85419,79,1.72,Shell
+      2025-02-20,V-09,41042,44,1.63,Shell
+      2025-02-21,V-05,61484,52.2,1.54,BP
+      2025-02-22,V-08,84094,59,1.63,Shell
+      2025-02-23,V-01,51387,59,1.70,Esso
+      2025-02-24,V-10,43944,44,1.61,Costco
+      2025-02-24,V-11,50008,99,1.69,BP
+      2025-02-24,V-12,60014,44,1.49,Costco
+      2025-02-25,V-07,66459,79,1.48,Shell
+      2025-02-26,V-02,55859,76.0,1.67,Esso
+      2025-02-27,V-06,43655,59,1.51,Shell
+      2025-03-01,V-04,85854,87,1.67,Esso
+      2025-03-01,V-08,84555,59,1.66,Costco
+      2025-03-01,V-09,41686,44,1.61,Shell
+      2025-03-02,V-03,52198,31.7,1.71,BP
+      2025-03-03,V-10,44517,44,1.59,BP
+      2025-03-04,V-05,61952,59,1.57,BP
+      2025-03-07,V-01,51784,47.0,1.50,Esso
+      2025-03-07,V-07,67042,79,1.57,Shell
+      2025-03-08,V-08,85189,59,1.53,BP
+      2025-03-08,V-11,50624,99,1.52,Esso
+      2025-03-08,V-12,60639,44,1.60,Costco
+      2025-03-09,V-03,2890,50.4,1.73,BP
+      2025-03-09,V-06,44185,59,1.48,Esso
+      2025-03-10,V-02,56365,70.6,1.48,Costco
+      2025-03-10,V-04,86410,79,1.73,Shell
+      2025-03-12,V-09,42207,44,1.65,BP
+      2025-03-13,V-10,44976,44,1.74,Esso
+      2025-03-14,V-05,62496,70,1.63,BP
+      2025-03-16,V-01,52194,46.6,1.53,Costco
+      2025-03-16,V-06,44643,59,1.73,Shell
+      2025-03-16,V-11,51243,99,1.59,Esso
+      2025-03-17,V-04,86799,55.4,1.67,BP
+      2025-03-18,V-07,67622,79,1.71,Costco
+      2025-03-19,V-08,85787,59,1.61,Shell
+      2025-03-20,V-02,56807,61.6,1.58,BP
+      2025-03-20,V-12,61273,44,1.47,Esso
+      2025-03-21,V-03,53325,31.9,1.71,Costco
+      2025-03-22,V-09,42620,44,1.49,Esso
+      2025-03-23,V-11,51688,84.7,1.57,Esso
+      2025-03-24,V-05,62958,58.6,1.63,Shell
+      2025-03-25,V-10,45628,44,1.69,Shell
+      2025-03-26,V-01,52819,59,1.58,Esso
+      2025-03-26,V-07,68205,79,1.68,Shell
+      2025-03-27,V-04,87396,79,1.66,Esso
+      2025-03-27,V-06,45280,73,1.79,BP
+      2025-03-30,V-02,57445,79,1.71,Shell
+      2025-03-30,V-12,61839,44,1.59,Esso
+      2025-03-31,V-08,86265,59,1.53,BP
+      2025-04-01,V-09,43057,44,1.79,Costco
+      2025-04-02,V-01,53260,51.2,1.63,Costco
+      2025-04-02,V-03,53776,32.4,1.64,Costco
+      2025-04-02,V-05,63602,59,1.52,BP
+      2025-04-02,V-07,68832,79,1.79,BP
+      2025-04-02,V-11,52210,94.5,1.72,Esso
+      2025-04-05,V-10,46178,44,1.71,Esso
+      2025-04-06,V-04,87953,75.1,1.53,Shell
+      2025-04-07,V-02,58144,79,1.74,Shell
+      2025-04-07,V-06,45773,59,1.59,BP
+      2025-04-08,V-09,43603,44,1.63,Costco
+      2025-04-08,V-12,62385,44,1.69,Costco
+      2025-04-09,V-08,86898,59,1.56,Shell
+      2025-04-10,V-03,54488,50.3,1.70,Costco
+      2025-04-11,V-05,64175,59,1.69,Esso
+      2025-04-11,V-07,69503,79,1.76,Shell
+      2025-04-13,V-01,53780,58.3,1.60,Esso
+      2025-04-13,V-04,88438,65.1,1.73,Shell
+      2025-04-14,V-11,52705,93.4,1.58,BP
+      2025-04-16,V-10,46808,44,1.52,Esso
+      2025-04-17,V-08,87362,59,1.70,BP
+      2025-04-18,V-02,58746,79,1.61,Esso
+      2025-04-18,V-05,64795,59,1.47,Costco
+      2025-04-18,V-06,46192,59,1.75,Shell
+      2025-04-18,V-09,44059,44,1.71,Esso
+      2025-04-19,V-12,63085,44,1.54,Shell
+      2025-04-20,V-03,54934,31.5,1.54,Shell
+      2025-04-20,V-04,88851,56.9,1.77,Esso
+      2025-04-22,V-07,69968,79,1.74,BP
+      2025-04-22,V-11,53238,97.7,1.49,Esso
+      2025-04-23,V-01,54412,59,1.53,Costco
+      2025-04-25,V-10,47205,44,1.52,Costco
+      2025-04-27,V-06,46704,59,1.70,Costco
+      2025-04-27,V-08,87767,59,1.45,BP
+      2025-04-28,V-12,63745,44,1.72,Shell
+      2025-04-29,V-02,59145,54.5,1.65,BP
+      2025-04-29,V-03,55609,48.7,1.55,Esso
+      2025-04-29,V-04,89510,79,1.57,BP
+      2025-04-29,V-05,65364,59,1.48,Costco
+      2025-04-29,V-09,44595,44,1.57,Costco
+      2025-04-29,V-11,53869,99,1.73,Costco
+      2025-05-04,V-01,54981,59,1.51,Esso
+      2025-05-04,V-07,70376,71.0,1.63,Costco
+      2025-05-05,V-06,47372,59,1.52,Shell
+      2025-05-06,V-10,47814,44,1.65,BP
+      2025-05-07,V-11,54560,99,1.60,Shell
+      2025-05-08,V-12,64141,44,1.48,Shell
+      2025-05-09,V-02,59707,78.4,1.51,Costco
+      2025-05-09,V-05,65886,59,1.68,Esso
+      2025-05-09,V-09,44986,44,1.58,BP
+      2025-05-10,V-03,56311,49.9,1.65,BP
+      2025-05-16,V-01,55366,45.9,1.70,Shell
+      2025-05-16,V-06,47830,59,1.45,BP
+      2025-05-16,V-07,70832,76.3,1.72,Costco
+      2025-05-16,V-12,64600,44,1.53,Esso
+      2025-05-17,V-10,48247,44,1.77,Costco
+      2025-05-22,V-03,56960,48.9,1.58,BP
+    data/vehicles.csv: |
+      vehicle,make,class,tank_l
+      V-01,Courier,van,60
+      V-02,Ranger,truck,80
+      V-03,Hauler,truck,80
+      V-04,Courier,sedan,80
+      V-05,Ranger,truck,60
+      V-06,Courier,sedan,60
+      V-07,Ranger,sedan,80
+      V-08,Hauler,truck,60
+      V-09,Hauler,van,45
+      V-10,Ranger,truck,45
+      V-11,Courier,sedan,100
+      V-12,Hauler,van,45
+    README.md: |
+      # fleet-fuel
+
+      `data/fuel_log.csv` holds one row per fill-up (date, vehicle, odometer_km, litres, price_per_l, station).
+      `data/vehicles.csv` lists tank capacity per vehicle. Cost of a fill = litres x price_per_l rounded to 2 decimals.
+protected:
+- data/fuel_log.csv
+- data/vehicles.csv
+hidden_files:
+  _grade.py: |
+    import csv, json, os, re, subprocess, sys
+    from pathlib import Path
+
+    W = Path(".")
+
+
+    def fail(msg):
+        print("FAIL:", msg)
+        sys.exit(1)
+
+
+    def need(cond, msg):
+        if not cond:
+            fail(msg)
+
+
+    def read(rel):
+        p = W / rel
+        need(p.exists(), f"missing {rel}")
+        return p.read_text(encoding="utf-8")
+
+
+    def load_json(rel):
+        try:
+            return json.loads(read(rel))
+        except ValueError as e:
+            fail(f"{rel} is not valid JSON: {e}")
+
+
+    def close(a, b, tol=0.011):
+        try:
+            return abs(float(a) - float(b)) <= tol
+        except (TypeError, ValueError):
+            return False
+
+
+    def num(s):
+        m = re.search(r"-?\d[\d,]*\.?\d*", str(s))
+        return float(m.group(0).replace(",", "")) if m else None
+
+
+    def run(cmd, timeout=60, stdin=None):
+        p = subprocess.run(cmd, shell=True, cwd=W, capture_output=True, text=True, timeout=timeout, input=stdin)
+        return p.returncode, p.stdout, p.stderr
+
+
+    def md_lines(rel, under=None):
+        lines = read(rel).splitlines()
+        if not under:
+            return lines
+        out, on, lvl = [], False, 0
+        for ln in lines:
+            m = re.match(r"^(#+)\s+(.*)", ln)
+            if m:
+                if on and len(m.group(1)) <= lvl:
+                    break
+                if not on and re.search(under, m.group(2), re.I):
+                    on, lvl = True, len(m.group(1))
+                continue
+            if on:
+                out.append(ln)
+        need(on, f"no heading matching {under!r} in {rel}")
+        return out
+
+
+    def md_rows(rel, under=None):
+        rows = []
+        for ln in md_lines(rel, under):
+            if ln.strip().startswith("|") and not re.match(r"^\s*\|[\s:|-]+\|\s*$", ln):
+                rows.append([c.strip() for c in ln.strip().strip("|").split("|")])
+        return rows
+
+
+    def cmp(got, want, tol, path):
+        if isinstance(want, dict):
+            need(isinstance(got, dict), f"{path}: expected an object, got {type(got).__name__}")
+            for k, v in want.items():
+                need(k in got, f"{path}.{k}: missing")
+                cmp(got[k], v, tol, f"{path}.{k}")
+        elif isinstance(want, list):
+            need(isinstance(got, list) and len(got) == len(want), f"{path}: expected list of {len(want)}, got {got!r}")
+            for i, (g, w) in enumerate(zip(got, want)):
+                cmp(g, w, tol, f"{path}[{i}]")
+        elif isinstance(want, bool) or want is None or isinstance(want, str):
+            need(got == want, f"{path}: {got!r} != {want!r}")
+        else:
+            need(not isinstance(got, bool) and close(got, want, tol), f"{path}: {got!r} != {want!r}")
+
+
+    def chk_json(rel, exp, tol=0.051):
+        cmp(load_json(rel), exp, tol, rel)
+
+
+    def chk_table(rel, under, exp, col=1, tol=0.051):
+        rows = md_rows(rel, under)
+        need(rows, f"no table under {under!r} in {rel}")
+        got = {r[0].strip("* `"): num(r[col]) for r in rows if len(r) > col and num(r[col]) is not None}
+        for k, v in exp.items():
+            need(k in got and close(got[k], v, tol), f"{k}: {got.get(k)} != {v}")
+
+
+    def chk_cmd_json(cmd, exp, tol=0.051, stdin=None):
+        rc, out, err = run(cmd, stdin=stdin)
+        need(rc == 0, f"`{cmd}` exited {rc}: {err[-200:]}")
+        try:
+            d = json.loads(out)
+        except ValueError as e:
+            fail(f"`{cmd}` stdout is not JSON: {e}")
+        cmp(d, exp, tol, cmd)
+
+
+    def chk_cmd_out(cmd, lines, stdin=None, expect_rc=0):
+        rc, out, err = run(cmd, stdin=stdin)
+        need(rc == expect_rc, f"`{cmd}` exited {rc} (want {expect_rc}): {err[-200:]}")
+        got = [ln.rstrip() for ln in out.strip().splitlines()]
+        need(got == list(lines), f"`{cmd}` output {got[:8]} != {list(lines)[:8]}")
+
+
+    def t3():
+        d = load_json('out/anomalies.json')
+        need(isinstance(d, list), 'must be a list')
+        norm = sorted((a.get('vehicle'), a.get('date'), a.get('reason')) for a in d)
+        need(norm == [('V-01', '2025-02-13', 'odometer_decrease'), ('V-02', '2025-02-15', 'odometer_decrease'), ('V-03', '2025-03-09', 'odometer_decrease'), ('V-04', '2025-03-01', 'over_tank'), ('V-05', '2025-03-14', 'over_tank'), ('V-06', '2025-03-27', 'over_tank')], 'anomalies differ: ' + str(norm))
+
+
+    def t5():
+        import csv
+        need((W / 'out/economy.csv').exists(), 'missing out/economy.csv')
+        rd = list(csv.DictReader(open('out/economy.csv', encoding='utf-8', newline='')))
+        need(rd and list(rd[0].keys()) == ['vehicle', 'km', 'litres', 'l_per_100km'], 'header ' + str(rd and list(rd[0])))
+        got = [[r['vehicle'], int(r['km']), round(float(r['litres']), 1), round(float(r['l_per_100km']), 2)] for r in rd]
+        need(got == [['V-03', 7451, 487.8, 6.55], ['V-12', 7274, 572.0, 7.86], ['V-10', 7212, 572.0, 7.93], ['V-09', 6726, 572.0, 8.5], ['V-05', 7183, 699.6, 9.74], ['V-01', 6496, 640.3, 9.86], ['V-06', 7031, 708.0, 10.07], ['V-08', 6895, 767.0, 11.12], ['V-02', 7611, 894.1, 11.75], ['V-04', 7274, 866.9, 11.92], ['V-07', 6927, 1002.0, 14.47], ['V-11', 7200, 1240.7, 17.23]], 'economy rows differ: ' + str(got[:3]))
+
+
+    def t7():
+        chk_table('report.md', 'monthly', {'2025-01': 3662.04, '2025-02': 3289.95, '2025-03': 3259.66, '2025-04': 4041.64, '2025-05': 1477.25})
+
+
+    def t8():
+        for rel, text in {'data/fuel_log.csv': 'date,vehicle,odometer_km,litres,price_per_l,station\n2025-01-03,V-01,79072,53.6,1.56,Shell\n2025-01-03,V-04,49406,59,1.80,Esso\n2025-01-05,V-02,17734,99,1.60,Costco\n2025-01-06,V-03,62372,44,1.66,Esso\n2025-01-14,V-01,79585,48.9,1.52,BP\n2025-01-15,V-04,50121,59,1.63,Esso\n2025-01-16,V-02,18402,99,1.47,Esso\n2025-01-17,V-03,62889,44,1.76,Esso\n2025-01-21,V-01,80006,41.1,1.69,Esso\n2025-01-24,V-04,50694,59,1.76,Costco\n2025-01-28,V-02,19117,99,1.55,Shell\n2025-01-28,V-03,63481,44,1.55,Esso\n2025-01-31,V-04,51214,59,1.50,Costco\n2025-02-01,V-01,80661,59,1.74,BP\n2025-02-04,V-02,19745,99,1.77,Esso\n2025-02-05,V-03,63870,44,1.47,Shell\n2025-02-12,V-04,51619,59,1.74,Shell\n2025-02-13,V-01,1209,53.6,1.48,Esso\n2025-02-15,V-02,20125,67.5,1.62,Shell\n2025-02-17,V-03,64322,44,1.68,Shell\n2025-02-20,V-01,81864,59,1.55,Shell\n2025-02-23,V-04,52010,59,1.79,Shell\n2025-02-27,V-02,509,69.2,1.68,Esso\n2025-02-28,V-03,64806,44,1.72,BP\n2025-03-01,V-01,82515,59,1.75,Esso\n2025-03-06,V-02,21088,99,1.49,BP\n2025-03-07,V-03,5526,44,1.61,Esso\n2025-03-07,V-04,52455,67,1.51,Costco\n2025-03-12,V-01,83205,59,1.53,Esso\n2025-03-14,V-02,21601,92.3,1.74,BP\n2025-03-14,V-04,53099,59,1.65,Esso\n2025-03-18,V-03,66111,44,1.74,Esso\n2025-03-21,V-04,53632,59,1.61,Shell\n2025-03-22,V-01,83655,43.7,1.58,Shell\n2025-03-22,V-02,22057,80.8,1.79,BP\n2025-03-27,V-03,66636,44,1.76,Costco\n', 'data/vehicles.csv': 'vehicle,make,class,tank_l\nV-01,Ranger,truck,60\nV-02,Hauler,truck,100\nV-03,Courier,van,45\nV-04,Hauler,truck,60\n'}.items():
+            p = W / '_alt' / rel
+            p.parent.mkdir(parents=True, exist_ok=True)
+            p.write_text(text, encoding='utf-8')
+        need((W / 'scripts/fuel.py').exists(), 'missing scripts/fuel.py')
+        chk_cmd_json('python3 scripts/fuel.py --csv _alt/data/fuel_log.csv', {'V-03': 7.22, 'V-01': 8.07, 'V-04': 9.77, 'V-02': 14.73}, tol=0.0051)
+        chk_cmd_json('python3 scripts/fuel.py', {'V-03': 6.55, 'V-12': 7.86, 'V-10': 7.93, 'V-09': 8.5, 'V-05': 9.74, 'V-01': 9.86, 'V-06': 10.07, 'V-08': 11.12, 'V-02': 11.75, 'V-04': 11.92, 'V-07': 14.47, 'V-11': 17.23}, tol=0.0051)
+
+
+    if __name__ == "__main__":
+        fn = globals().get(sys.argv[1]) if len(sys.argv) > 1 else None
+        need(callable(fn) and sys.argv[1] in ['t3', 't5', 't7', 't8'], "unknown check " + str(sys.argv[1:]))
+        fn()
+        print("OK")
+turns:
+- prompt: How many fill-up rows are in data/fuel_log.csv, how many distinct vehicles appear, and what is the total of the
+    litres column over all rows (1 decimal)? Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all:
+    - (?<![\d.,])1,?6,?8(?:\.0+)?(?!\d|[.,]\d)
+    - (?<![\d.,])1,?2(?:\.0+)?(?!\d|[.,]\d)
+    - (?<![\d.,])1,?0,?1,?5,?3\.10*(?!\d|[.,]\d)
+- prompt: 'Some fills are physically impossible: litres larger than the vehicle''s tank_l in data/vehicles.csv. How many such
+    rows are there, and which vehicles are involved? Do not change any files.'
+  checks:
+  - kind: keyed_facts
+    all:
+    - (?<![\d.,])3(?:\.0+)?(?!\d|[.,]\d)
+    - V-04
+    - V-05
+    - V-06
+- prompt: 'Create out/anomalies.json: a JSON list with one object {vehicle, date, reason} per bad row. reason is `over_tank`
+    (litres > tank_l) or `odometer_decrease` (odometer lower than the vehicle''s previous kept fill-up by date; a row flagged
+    earlier does not become the reference). If both apply use odometer_decrease.'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t3
+    hidden:
+    - _grade.py
+    timeout: 60
+- prompt: Ignoring every row listed in out/anomalies.json, what is the total fuel spend over the remaining rows? A fill costs
+    litres x price_per_l rounded to 2 decimals; give the sum to 2 decimals. Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all:
+    - (?<![\d.,])1,?5,?7,?3,?0\.540*(?!\d|[.,]\d)
+- prompt: Write out/economy.csv with columns vehicle, km, litres, l_per_100km over the non-anomalous rows only. Per vehicle,
+    order its rows by date; the first kept row is only a baseline; km is the sum of odometer differences between consecutive
+    kept rows and litres is the sum of the litres of every kept row except the baseline. l_per_100km = litres / km * 100 rounded
+    to 2 decimals (litres to 1 decimal). Sort by l_per_100km ascending.
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t5
+    hidden:
+    - _grade.py
+    timeout: 60
+- prompt: Using out/economy.csv, which vehicle is the most economical and which the least, and what are their l_per_100km
+    values? Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all:
+    - V-03
+    - (?<![\d.,])6\.550*(?!\d|[.,]\d)
+    - V-11
+    - (?<![\d.,])1,?7\.230*(?!\d|[.,]\d)
+- prompt: Write report.md with level-2 sections Summary, Monthly spend and Data quality. Monthly spend is a table (month as
+    YYYY-MM in the first column, spend in the second, 2 decimals) over non-anomalous rows only.
+  checks:
+  - kind: doc_sections
+    path: report.md
+    headings:
+    - Summary
+    - Monthly spend
+    - Data quality
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t7
+    hidden:
+    - _grade.py
+    timeout: 60
+- prompt: 'Add scripts/fuel.py: it prints a JSON object {vehicle: l_per_100km} (2 decimals, same rules as out/economy.csv,
+    anomalous rows ignored). --csv PATH selects the fuel log (default data/fuel_log.csv); vehicles.csv is read from the same
+    folder as that log.'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t8
+    hidden:
+    - _grade.py
+    timeout: 60
+- prompt: Add a '## Methodology' section to README.md describing how anomalies are detected (name both reasons, over_tank
+    and odometer_decrease), how l_per_100km is computed, and how to run scripts/fuel.py with --csv.
+  checks:
+  - kind: doc_sections
+    path: README.md
+    headings:
+    - Methodology
+  - kind: file_regex
+    path: README.md
+    pattern: over_tank
+  - kind: file_regex
+    path: README.md
+    pattern: odometer_decrease
+  - kind: file_regex
+    path: README.md
+    pattern: --csv
+  - kind: file_regex
+    path: README.md
+    pattern: scripts/fuel\.py
+  - kind: file_regex
+    path: README.md
+    pattern: (?i)baseline

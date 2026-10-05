@@ -1,0 +1,373 @@
+# holdout-v3 batch B (docs, 10 turns): Write an onboarding guide for a repo from its Makefile, .env.example, docker-compose.yml, scripts and per-directory READMEs: exact tables for each, an ordered first-run procedure, consistency with the sources.
+id: onboarding-guide
+task_type: docs
+language: markdown
+split: holdout
+default_gap_s: 10
+source:
+  desc: 'Write an onboarding guide for a repo from its Makefile, .env.example, docker-compose.yml, scripts and per-directory
+    READMEs: exact tables for each, an ordered first-run procedure, consistency with the sources.'
+  kind: self-authored deterministic workspace
+  adapted_from:
+  - new self-authored repo skeleton; onboarding/CONTRIBUTING docs theme (cf. amplifier-agent docs tasks)
+workspace:
+  kind: inline
+  files:
+    Makefile: ".DEFAULT_GOAL := help\n.PHONY: help setup migrate up down test lint fmt build clean seed\n\nhelp: ## Show this\
+      \ help\n\t@echo help\nsetup: ## [first-run 1] Install dependencies and create the virtualenv\n\t@echo setup\nmigrate:\
+      \ ## [first-run 2] Apply database migrations\n\t@echo migrate\nup: ## [first-run 3] Start the local stack\n\t@echo up\n\
+      down: ## Stop the local stack\n\t@echo down\ntest: ## [first-run 4] Run the unit tests\n\t@echo test\nlint: ## Run the\
+      \ linters\n\t@echo lint\nfmt: ## Format the code\n\t@echo fmt\nbuild: ## Build the container images\n\t@echo build\n\
+      clean: ## Remove build artefacts\n\t@echo clean\nseed: ## Load demo data\n\t@echo seed\n"
+    .env.example: |
+      # Port the API listens on
+      API_PORT=8080
+      # Database connection URL (required)
+      DATABASE_URL=
+      # Cache and queue URL
+      REDIS_URL=redis://localhost:6379/0
+      # Log verbosity
+      LOG_LEVEL=info
+      # Session signing key (required)
+      SECRET_KEY=
+      # Jobs processed in parallel
+      WORKER_CONCURRENCY=4
+      # Error reporting DSN (optional)
+      SENTRY_DSN=
+    docker-compose.yml: |
+      services:
+        api:
+          image: ghcr.io/acme/shop-api:2.3
+          ports:
+            - "8080:8080"
+        worker:
+          image: ghcr.io/acme/shop-worker:2.3
+        db:
+          image: postgres:15
+          ports:
+            - "5432:5432"
+        redis:
+          image: redis:7
+          ports:
+            - "6379:6379"
+        web:
+          image: ghcr.io/acme/shop-web:1.9
+          ports:
+            - "3000:80"
+    scripts/backup.sh: |
+      #!/usr/bin/env bash
+      # Usage: scripts/backup.sh <dest-dir>
+      # (internal notes below)
+      echo ok
+    scripts/restore.sh: |
+      #!/usr/bin/env bash
+      # Usage: scripts/restore.sh <archive>
+      # (internal notes below)
+      echo ok
+    scripts/seed_demo.py: |
+      #!/usr/bin/env python3
+      # Usage: python3 scripts/seed_demo.py [--count N]
+      # (internal notes below)
+      print('ok')
+    scripts/rotate_keys.sh: |
+      #!/usr/bin/env bash
+      # Usage: scripts/rotate_keys.sh
+      # (internal notes below)
+      echo ok
+    scripts/wait_for_db.sh: |
+      #!/usr/bin/env bash
+      # Usage: scripts/wait_for_db.sh [timeout-seconds]
+      # (internal notes below)
+      echo ok
+    api/README.txt: |
+      HTTP API service (FastAPI).
+      More notes follow.
+    worker/README.txt: |
+      Background job runner.
+      More notes follow.
+    web/README.txt: |
+      Browser front end.
+      More notes follow.
+    infra/README.txt: |
+      Docker and deployment manifests.
+      More notes follow.
+    docs/.keep: ''
+    README.md: |
+      # shop
+
+      A small web shop. See docs/onboarding.md (to be written) for how to get started.
+protected:
+- Makefile
+- .env.example
+- docker-compose.yml
+hidden_files:
+  _grade.py: |
+    import csv, json, os, re, subprocess, sys
+    from pathlib import Path
+
+    W = Path(".")
+
+
+    def fail(msg):
+        print("FAIL:", msg)
+        sys.exit(1)
+
+
+    def need(cond, msg):
+        if not cond:
+            fail(msg)
+
+
+    def read(rel):
+        p = W / rel
+        need(p.exists(), f"missing {rel}")
+        return p.read_text(encoding="utf-8")
+
+
+    def load_json(rel):
+        try:
+            return json.loads(read(rel))
+        except ValueError as e:
+            fail(f"{rel} is not valid JSON: {e}")
+
+
+    def close(a, b, tol=0.011):
+        try:
+            return abs(float(a) - float(b)) <= tol
+        except (TypeError, ValueError):
+            return False
+
+
+    def num(s):
+        m = re.search(r"-?\d[\d,]*\.?\d*", str(s))
+        return float(m.group(0).replace(",", "")) if m else None
+
+
+    def run(cmd, timeout=60, stdin=None):
+        p = subprocess.run(cmd, shell=True, cwd=W, capture_output=True, text=True, timeout=timeout, input=stdin)
+        return p.returncode, p.stdout, p.stderr
+
+
+    def md_lines(rel, under=None):
+        lines = read(rel).splitlines()
+        if not under:
+            return lines
+        out, on, lvl = [], False, 0
+        for ln in lines:
+            m = re.match(r"^(#+)\s+(.*)", ln)
+            if m:
+                if on and len(m.group(1)) <= lvl:
+                    break
+                if not on and re.search(under, m.group(2), re.I):
+                    on, lvl = True, len(m.group(1))
+                continue
+            if on:
+                out.append(ln)
+        need(on, f"no heading matching {under!r} in {rel}")
+        return out
+
+
+    def md_rows(rel, under=None):
+        rows = []
+        for ln in md_lines(rel, under):
+            if ln.strip().startswith("|") and not re.match(r"^\s*\|[\s:|-]+\|\s*$", ln):
+                rows.append([c.strip() for c in ln.strip().strip("|").split("|")])
+        return rows
+
+
+    def cmp(got, want, tol, path):
+        if isinstance(want, dict):
+            need(isinstance(got, dict), f"{path}: expected an object, got {type(got).__name__}")
+            for k, v in want.items():
+                need(k in got, f"{path}.{k}: missing")
+                cmp(got[k], v, tol, f"{path}.{k}")
+        elif isinstance(want, list):
+            need(isinstance(got, list) and len(got) == len(want), f"{path}: expected list of {len(want)}, got {got!r}")
+            for i, (g, w) in enumerate(zip(got, want)):
+                cmp(g, w, tol, f"{path}[{i}]")
+        elif isinstance(want, bool) or want is None or isinstance(want, str):
+            need(got == want, f"{path}: {got!r} != {want!r}")
+        else:
+            need(not isinstance(got, bool) and close(got, want, tol), f"{path}: {got!r} != {want!r}")
+
+
+    def chk_json(rel, exp, tol=0.051):
+        cmp(load_json(rel), exp, tol, rel)
+
+
+    def chk_table(rel, under, exp, col=1, tol=0.051):
+        rows = md_rows(rel, under)
+        need(rows, f"no table under {under!r} in {rel}")
+        got = {r[0].strip("* `"): num(r[col]) for r in rows if len(r) > col and num(r[col]) is not None}
+        for k, v in exp.items():
+            need(k in got and close(got[k], v, tol), f"{k}: {got.get(k)} != {v}")
+
+
+    def chk_cmd_json(cmd, exp, tol=0.051, stdin=None):
+        rc, out, err = run(cmd, stdin=stdin)
+        need(rc == 0, f"`{cmd}` exited {rc}: {err[-200:]}")
+        try:
+            d = json.loads(out)
+        except ValueError as e:
+            fail(f"`{cmd}` stdout is not JSON: {e}")
+        cmp(d, exp, tol, cmd)
+
+
+    def chk_cmd_out(cmd, lines, stdin=None, expect_rc=0):
+        rc, out, err = run(cmd, stdin=stdin)
+        need(rc == expect_rc, f"`{cmd}` exited {rc} (want {expect_rc}): {err[-200:]}")
+        got = [ln.rstrip() for ln in out.strip().splitlines()]
+        need(got == list(lines), f"`{cmd}` output {got[:8]} != {list(lines)[:8]}")
+
+
+    def t2():
+        rows = md_rows('docs/onboarding.md', 'make targets')
+        need(rows and [c.lower() for c in rows[0]] == ['target', 'description'], 'header under make targets: ' + str(rows[:1]))
+        got = [[c.strip('` ') for c in r] for r in rows[1:]]
+        need(got == [['help', 'Show this help'], ['setup', 'Install dependencies and create the virtualenv'], ['migrate', 'Apply database migrations'], ['up', 'Start the local stack'], ['down', 'Stop the local stack'], ['test', 'Run the unit tests'], ['lint', 'Run the linters'], ['fmt', 'Format the code'], ['build', 'Build the container images'], ['clean', 'Remove build artefacts'], ['seed', 'Load demo data']], 'rows differ: ' + str([g for g in got if g not in [['help', 'Show this help'], ['setup', 'Install dependencies and create the virtualenv'], ['migrate', 'Apply database migrations'], ['up', 'Start the local stack'], ['down', 'Stop the local stack'], ['test', 'Run the unit tests'], ['lint', 'Run the linters'], ['fmt', 'Format the code'], ['build', 'Build the container images'], ['clean', 'Remove build artefacts'], ['seed', 'Load demo data']]][:2]) + ' / want ' + str([['help', 'Show this help'], ['setup', 'Install dependencies and create the virtualenv'], ['migrate', 'Apply database migrations'], ['up', 'Start the local stack'], ['down', 'Stop the local stack'], ['test', 'Run the unit tests'], ['lint', 'Run the linters'], ['fmt', 'Format the code'], ['build', 'Build the container images'], ['clean', 'Remove build artefacts'], ['seed', 'Load demo data']][:2]))
+
+
+    def t4():
+        rows = md_rows('docs/onboarding.md', 'environment variables')
+        need(rows and [c.lower() for c in rows[0]] == ['variable', 'default', 'description'], 'header under environment variables: ' + str(rows[:1]))
+        got = [[c.strip('` ') for c in r] for r in rows[1:]]
+        need(got == [['API_PORT', '8080', 'Port the API listens on'], ['DATABASE_URL', '-', 'Database connection URL (required)'], ['REDIS_URL', 'redis://localhost:6379/0', 'Cache and queue URL'], ['LOG_LEVEL', 'info', 'Log verbosity'], ['SECRET_KEY', '-', 'Session signing key (required)'], ['WORKER_CONCURRENCY', '4', 'Jobs processed in parallel'], ['SENTRY_DSN', '-', 'Error reporting DSN (optional)']], 'rows differ: ' + str([g for g in got if g not in [['API_PORT', '8080', 'Port the API listens on'], ['DATABASE_URL', '-', 'Database connection URL (required)'], ['REDIS_URL', 'redis://localhost:6379/0', 'Cache and queue URL'], ['LOG_LEVEL', 'info', 'Log verbosity'], ['SECRET_KEY', '-', 'Session signing key (required)'], ['WORKER_CONCURRENCY', '4', 'Jobs processed in parallel'], ['SENTRY_DSN', '-', 'Error reporting DSN (optional)']]][:2]) + ' / want ' + str([['API_PORT', '8080', 'Port the API listens on'], ['DATABASE_URL', '-', 'Database connection URL (required)'], ['REDIS_URL', 'redis://localhost:6379/0', 'Cache and queue URL'], ['LOG_LEVEL', 'info', 'Log verbosity'], ['SECRET_KEY', '-', 'Session signing key (required)'], ['WORKER_CONCURRENCY', '4', 'Jobs processed in parallel'], ['SENTRY_DSN', '-', 'Error reporting DSN (optional)']][:2]))
+
+
+    def t5():
+        rows = md_rows('docs/onboarding.md', 'services')
+        need(rows and [c.lower() for c in rows[0]] == ['service', 'image', 'ports'], 'header under services: ' + str(rows[:1]))
+        got = [[c.strip('` ') for c in r] for r in rows[1:]]
+        need(got == [['api', 'ghcr.io/acme/shop-api:2.3', '8080:8080'], ['worker', 'ghcr.io/acme/shop-worker:2.3', '-'], ['db', 'postgres:15', '5432:5432'], ['redis', 'redis:7', '6379:6379'], ['web', 'ghcr.io/acme/shop-web:1.9', '3000:80']], 'rows differ: ' + str([g for g in got if g not in [['api', 'ghcr.io/acme/shop-api:2.3', '8080:8080'], ['worker', 'ghcr.io/acme/shop-worker:2.3', '-'], ['db', 'postgres:15', '5432:5432'], ['redis', 'redis:7', '6379:6379'], ['web', 'ghcr.io/acme/shop-web:1.9', '3000:80']]][:2]) + ' / want ' + str([['api', 'ghcr.io/acme/shop-api:2.3', '8080:8080'], ['worker', 'ghcr.io/acme/shop-worker:2.3', '-'], ['db', 'postgres:15', '5432:5432'], ['redis', 'redis:7', '6379:6379'], ['web', 'ghcr.io/acme/shop-web:1.9', '3000:80']][:2]))
+
+
+    def t6():
+        rows = md_rows('docs/onboarding.md', '^scripts$')
+        need(rows and [c.lower() for c in rows[0]] == ['script', 'usage'], 'header under ^scripts$: ' + str(rows[:1]))
+        got = [[c.strip('` ') for c in r] for r in rows[1:]]
+        need(got == [['scripts/backup.sh', 'scripts/backup.sh <dest-dir>'], ['scripts/restore.sh', 'scripts/restore.sh <archive>'], ['scripts/seed_demo.py', 'python3 scripts/seed_demo.py [--count N]'], ['scripts/rotate_keys.sh', 'scripts/rotate_keys.sh'], ['scripts/wait_for_db.sh', 'scripts/wait_for_db.sh [timeout-seconds]']], 'rows differ: ' + str([g for g in got if g not in [['scripts/backup.sh', 'scripts/backup.sh <dest-dir>'], ['scripts/restore.sh', 'scripts/restore.sh <archive>'], ['scripts/seed_demo.py', 'python3 scripts/seed_demo.py [--count N]'], ['scripts/rotate_keys.sh', 'scripts/rotate_keys.sh'], ['scripts/wait_for_db.sh', 'scripts/wait_for_db.sh [timeout-seconds]']]][:2]) + ' / want ' + str([['scripts/backup.sh', 'scripts/backup.sh <dest-dir>'], ['scripts/restore.sh', 'scripts/restore.sh <archive>'], ['scripts/seed_demo.py', 'python3 scripts/seed_demo.py [--count N]'], ['scripts/rotate_keys.sh', 'scripts/rotate_keys.sh'], ['scripts/wait_for_db.sh', 'scripts/wait_for_db.sh [timeout-seconds]']][:2]))
+
+
+    def t7():
+        rows = md_rows('docs/onboarding.md', 'directory map')
+        need(rows and [c.lower() for c in rows[0]] == ['directory', 'purpose'], 'header under directory map: ' + str(rows[:1]))
+        got = [[c.strip('` ') for c in r] for r in rows[1:]]
+        need(got == [['api/', 'HTTP API service (FastAPI).'], ['worker/', 'Background job runner.'], ['web/', 'Browser front end.'], ['infra/', 'Docker and deployment manifests.']], 'rows differ: ' + str([g for g in got if g not in [['api/', 'HTTP API service (FastAPI).'], ['worker/', 'Background job runner.'], ['web/', 'Browser front end.'], ['infra/', 'Docker and deployment manifests.']]][:2]) + ' / want ' + str([['api/', 'HTTP API service (FastAPI).'], ['worker/', 'Background job runner.'], ['web/', 'Browser front end.'], ['infra/', 'Docker and deployment manifests.']][:2]))
+
+
+    def t8():
+        txt = read('docs/onboarding.md')
+        m = re.search(r'^## First run\s*$(.*?)(?=^## |\Z)', txt, re.M | re.S)
+        need(m, 'missing ## First run')
+        steps = re.findall(r'^(\d+)\.\s+`([^`]+)`\s*$', m.group(1), re.M)
+        need([int(a) for a, _ in steps] == list(range(1, 5 + 1)), 'numbering: ' + str(steps))
+        need([b for _, b in steps] == ['cp .env.example .env', 'make setup', 'make migrate', 'make up', 'make test'], 'steps: ' + str([b for _, b in steps]))
+
+
+    def t9():
+        txt = read('docs/onboarding.md')
+        heads = [l[3:].strip() for l in txt.splitlines() if l.startswith('## ')]
+        need(heads == ['First run', 'Make targets', 'Environment variables', 'Services', 'Scripts', 'Directory map'], 'section order: ' + str(heads))
+
+
+    if __name__ == "__main__":
+        fn = globals().get(sys.argv[1]) if len(sys.argv) > 1 else None
+        need(callable(fn) and sys.argv[1] in ['t2', 't4', 't5', 't6', 't7', 't8', 't9'], "unknown check " + str(sys.argv[1:]))
+        fn()
+        print("OK")
+turns:
+- prompt: How many targets in the Makefile have a `##` description comment, and which target is the default goal? Do not change
+    any files.
+  checks:
+  - kind: keyed_facts
+    all:
+    - (?<![\d.,])1,?1(?:\.0+)?(?!\d|[.,]\d)
+    - \bhelp\b
+- prompt: 'Create docs/onboarding.md titled `# Onboarding` with a `## Make targets` section: a table (columns target, description)
+    of every Makefile target in file order; the target name in backticks and its `##` description without any `[first-run
+    N]` tag.'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t2
+    hidden:
+    - _grade.py
+    timeout: 60
+- prompt: Which environment variables in .env.example have an empty value (no default)? Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all:
+    - DATABASE_URL
+    - SECRET_KEY
+    - SENTRY_DSN
+  gap_before_s: 420
+- prompt: 'Add a `## Environment variables` section with a table (columns variable, default, description): every variable
+    from .env.example in order, the default in backticks (or `-` when empty, no backticks), and the comment line above it
+    as the description.'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t4
+    hidden:
+    - _grade.py
+    timeout: 60
+- prompt: 'Add a `## Services` section with a table (columns service, image, ports) from docker-compose.yml: service and image
+    in backticks, ports as `host:container` in backticks, or `-` for services that publish none.'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t5
+    hidden:
+    - _grade.py
+    timeout: 60
+- prompt: 'Add a `## Scripts` section with a table (columns script, usage) covering every file in scripts/: the path in backticks
+    and the text after `Usage:` on the script''s second line, in backticks.'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t6
+    hidden:
+    - _grade.py
+    timeout: 60
+- prompt: 'Add a `## Directory map` section with a table (columns directory, purpose) for every top-level directory that contains
+    a README.txt: the directory with a trailing slash in backticks, and the first line of its README.txt.'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t7
+    hidden:
+    - _grade.py
+    timeout: 60
+  gap_before_s: 420
+- prompt: 'Add a `## First run` section: a numbered list that starts with copying .env.example to .env (`cp .env.example .env`)
+    and then runs, in order, the Makefile targets tagged `[first-run N]` (N = their position), each item being one command
+    in backticks.'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t8
+    hidden:
+    - _grade.py
+    timeout: 60
+- prompt: 'Reorder docs/onboarding.md so the sections appear as: First run, Make targets, Environment variables, Services,
+    Scripts, Directory map. Do not change their content.'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t9
+    hidden:
+    - _grade.py
+    timeout: 60
+- prompt: Replace the placeholder sentence in README.md with a link to [docs/onboarding.md](docs/onboarding.md) and keep the
+    `# shop` title.
+  checks:
+  - kind: file_regex
+    path: README.md
+    pattern: ^# shop\s*$
+  - kind: file_regex
+    path: README.md
+    pattern: \]\(docs/onboarding\.md\)
+  - kind: file_regex
+    path: README.md
+    pattern: to be written
+    absent: true

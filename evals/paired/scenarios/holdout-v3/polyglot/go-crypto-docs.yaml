@@ -1,0 +1,145 @@
+# holdout-v3 batch B (mixed, 8 turns): Aider polyglot-benchmark go/crypto-square (Exercism): implement Encode, add Decode/Rectangle/Normalize against hidden tests, then Go doc comments, a README with exact cipher examples and extra tests.
+id: go-crypto-docs
+task_type: mixed
+language: go
+split: holdout
+default_gap_s: 10
+source:
+  desc: 'Aider polyglot-benchmark go/crypto-square (Exercism): implement Encode, add Decode/Rectangle/Normalize against hidden
+    tests, then Go doc comments, a README with exact cipher examples and extra tests.'
+  repo: https://github.com/Aider-AI/polyglot-benchmark
+  sha: 7e0611e77b54e2dea774cdc0aa00cf9f7ed6144f
+workspace:
+  kind: git
+  repo: https://github.com/Aider-AI/polyglot-benchmark
+  sha: 7e0611e77b54e2dea774cdc0aa00cf9f7ed6144f
+  subdir: go/exercises/practice/crypto-square
+  local_hint: ~/dev/afast-campaign-corrected-polyglot-20260919/polyglot/polyglot-benchmark
+  remove:
+  - .meta
+protected:
+- crypto_square_test.go
+hidden_files:
+  hidden_decode_test.go: "package cryptosquare\n\nimport \"testing\"\n\nfunc TestHiddenDecodeRoundTrip(t *testing.T) {\n\t\
+    want := map[string]string{\n\t\t\"s#$%^&plunk\":                              \"splunk\",\n\t\t\"1, 2, 3 GO!\":      \
+    \                        \"123go\",\n\t\t\"1234\":                                     \"1234\",\n\t\t\"123456789abc\"\
+    :                             \"123456789abc\",\n\t\t\"Never vex thine heart with idle woes\":     \"nevervexthineheartwithidlewoes\"\
+    ,\n\t\t\"ZOMG! ZOMBIES!!!\":                         \"zomgzombies\",\n\t\t\"Time is an illusion. Lunchtime doubly so.\"\
+    : \"timeisanillusionlunchtimedoublyso\",\n\t}\n\tfor in, norm := range want {\n\t\tif got := Decode(Encode(in)); got !=\
+    \ norm {\n\t\t\tt.Errorf(\"Decode(Encode(%q)) = %q, want %q\", in, got, norm)\n\t\t}\n\t}\n}\n\nfunc TestHiddenDecodeKnownCipher(t\
+    \ *testing.T) {\n\tif got := Decode(\"wneiaw eorene awssci liprer lneoid ktcms \"); got != \"weallknowinterspeciesromanceisweird\"\
+    \ {\n\t\tt.Errorf(\"got %q\", got)\n\t}\n\tif got := Decode(\"\"); got != \"\" {\n\t\tt.Errorf(\"empty: %q\", got)\n\t\
+    }\n}\n"
+  hidden_rect_test.go: "package cryptosquare\n\nimport \"testing\"\n\nfunc TestHiddenRectangle(t *testing.T) {\n\tcases :=\
+    \ []struct {\n\t\tin         string\n\t\trows, cols int\n\t}{{\"s#$%^&plunk\", 2, 3}, {\"123456789\", 3, 3}, {\"1234\"\
+    , 2, 2}, {\"123456789abc\", 3, 4}, {\"\", 0, 0}, {\"!!!\", 0, 0}, {\"a\", 1, 1}}\n\tfor _, c := range cases {\n\t\tif\
+    \ r, k := Rectangle(c.in); r != c.rows || k != c.cols {\n\t\t\tt.Errorf(\"Rectangle(%q) = %d,%d want %d,%d\", c.in, r,\
+    \ k, c.rows, c.cols)\n\t\t}\n\t}\n}\n"
+  hidden_norm_test.go: "package cryptosquare\n\nimport \"testing\"\n\nfunc TestHiddenNormalize(t *testing.T) {\n\tcases :=\
+    \ map[string]string{\"Hello, World!\": \"helloworld\", \"1, 2, 3 GO!\": \"123go\", \"\": \"\", \"---\": \"\", \"MiXeD\
+    \ 42\": \"mixed42\"}\n\tfor in, want := range cases {\n\t\tif got := Normalize(in); got != want {\n\t\t\tt.Errorf(\"Normalize(%q)\
+    \ = %q, want %q\", in, got, want)\n\t\t}\n\t}\n}\n"
+turns:
+- prompt: Read .docs/instructions.md and implement `Encode` in crypto_square.go so that `go test ./...` passes. Do not edit
+    the provided test file.
+  checks:
+  - kind: tests
+    runner: go
+    restore:
+    - crypto_square_test.go
+    hidden: []
+- prompt: 'Add `func Decode(ct string) string` to crypto_square.go: it reverses Encode and returns the normalised plaintext
+    (lower-case letters and digits only, padding removed). Decode of the empty string is the empty string.'
+  checks:
+  - kind: tests
+    runner: go
+    restore:
+    - crypto_square_test.go
+    hidden:
+    - hidden_decode_test.go
+- prompt: 'What is the padding rule: when are spaces added to the encoded columns, and how many? Answer in two sentences.
+    Do not change any files.'
+  checks:
+  - kind: keyed_facts
+    all:
+    - pad|space
+    - column|chunk
+    - rectangle|row|short|incomplete|c\s*-\s*r|square
+- prompt: Add `func Rectangle(pt string) (rows, cols int)` returning the dimensions Encode uses for pt (columns c = ceil(sqrt(n))
+    of the normalised length n; rows is c-1 when c*(c-1) >= n, otherwise c). It returns 0, 0 when pt has no letters or digits.
+  checks:
+  - kind: tests
+    runner: go
+    restore:
+    - crypto_square_test.go
+    hidden:
+    - hidden_decode_test.go
+    - hidden_rect_test.go
+- prompt: Export the normalisation step as `func Normalize(s string) string` (lower-case letters and digits only) and make
+    `Encode` use it.
+  checks:
+  - kind: tests
+    runner: go
+    restore:
+    - crypto_square_test.go
+    hidden:
+    - hidden_decode_test.go
+    - hidden_rect_test.go
+    - hidden_norm_test.go
+  - kind: file_regex
+    path: crypto_square.go
+    pattern: Normalize\(pt\)
+- prompt: 'Add Go doc comments: a package comment starting `// Package cryptosquare` and a comment starting with the function
+    name for each of Encode, Decode, Rectangle and Normalize. No behaviour change.'
+  checks:
+  - kind: file_regex
+    path: crypto_square.go
+    pattern: '^// Package cryptosquare '
+  - kind: file_regex
+    path: crypto_square.go
+    pattern: '^// Encode '
+  - kind: file_regex
+    path: crypto_square.go
+    pattern: '^// Decode '
+  - kind: file_regex
+    path: crypto_square.go
+    pattern: '^// Rectangle '
+  - kind: file_regex
+    path: crypto_square.go
+    pattern: '^// Normalize '
+  - &id001
+    kind: tests
+    runner: go
+    restore:
+    - crypto_square_test.go
+    hidden:
+    - hidden_decode_test.go
+    - hidden_rect_test.go
+    - hidden_norm_test.go
+- prompt: 'Create README.md with `## Usage`, `## Algorithm` and `## Examples` sections. In Examples show, in a fenced block,
+    these exact results: Encode("s#$%^&plunk") is "su pn lk" and Encode("We all know interspecies romance is weird.") is "wneiaw
+    eorene awssci liprer lneoid ktcms " (note the trailing space).'
+  checks:
+  - kind: doc_sections
+    path: README.md
+    headings:
+    - Usage
+    - Algorithm
+    - Examples
+  - kind: file_regex
+    path: README.md
+    pattern: '"su pn lk"'
+  - kind: file_regex
+    path: README.md
+    pattern: wneiaw eorene awssci liprer lneoid ktcms \"
+  - kind: file_regex
+    path: README.md
+    pattern: '```'
+- prompt: Add extra_test.go (package cryptosquare) with at least four `func Test...` functions covering Encode, Decode, Rectangle
+    and Normalize; `go test ./...` must pass.
+  checks:
+  - kind: file_regex
+    path: extra_test.go
+    pattern: ^func Test
+    min_count: 4
+  - *id001
