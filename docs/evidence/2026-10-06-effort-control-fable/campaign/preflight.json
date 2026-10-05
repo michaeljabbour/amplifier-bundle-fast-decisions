@@ -1,0 +1,53 @@
+{
+  "ok": true,
+  "run_at": "2026-10-05T12:40:27.392025+00:00",
+  "root": "<campaign>/pf-1791204027391",
+  "sessions": [
+    {
+      "cell": "plain",
+      "model": "claude-fable-5-1",
+      "key_env": null,
+      "variant": "control",
+      "outcome": "done",
+      "models_seen": [
+        "claude-fable-5-1"
+      ],
+      "cost_usd": 0.864753,
+      "raw_events": true,
+      "passed": true
+    },
+    {
+      "cell": "plain-medium",
+      "model": "claude-fable-5-1",
+      "key_env": null,
+      "variant": "control",
+      "outcome": "done",
+      "models_seen": [
+        "claude-fable-5-1"
+      ],
+      "cost_usd": 0.864352,
+      "raw_events": true,
+      "passed": true
+    }
+  ],
+  "total_cost_usd": 1.729105,
+  "fingerprint": "17f179e4ca44fd4f",
+  "provider_module": {
+    "module": "provider-anthropic",
+    "path": "~/.amplifier/cache/amplifier-module-provider-anthropic-5181591dcf06d076/amplifier_module_provider_anthropic",
+    "version": "1.0.0",
+    "git_sha": "9e2f20c9342253666d0bdb3dcf593a58456e72f9",
+    "git_root": "~/.amplifier/cache/amplifier-module-provider-anthropic-5181591dcf06d076/amplifier_module_provider_anthropic"
+  },
+  "campaign_provider": {
+    "id": "campaign-anthropic",
+    "module": "provider-anthropic",
+    "source": "git+https://github.com/microsoft/amplifier-module-provider-anthropic@main",
+    "config_keys": [
+      "api_key",
+      "base_url",
+      "enable_1m_context",
+      "raw"
+    ]
+  }
+}

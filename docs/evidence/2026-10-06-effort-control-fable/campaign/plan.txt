@@ -1,0 +1,86 @@
+plan c077d22aad27  design=effort-control-fable-v1  seed=20261002  reps=2  hosts=any  parallel=8  nonce=per_session
+arms: fable, fable_medium
+92 sessions in 46 waves
+
+scenario         type     lang    turns gaps>=5m
+api-docs         mixed    python     16        2
+debug-triage     mixed    javascript    11        0
+discrepancy-docs mixed    python     16        2
+docstring-audit  mixed    python     12        0
+fastrand-explain explain  rust        9        0
+filelock-explain explain  python      9        0
+go-linkedlist    mixed    go         16        2
+go-protein       feature  go          8        0
+humanize-review  review   python     12        2
+js-listops       feature  javascript     8        0
+js-phone         bugfix   javascript     8        0
+lark-discard     bugfix   python     12        0
+lark-template    bugfix   python      8        2
+mistune-escape   bugfix   python      8        0
+py-go-counting   mixed    python     14        2
+py-rest-api      feature  python      9        0
+readme-rewrite   mixed    python      8        0
+rust-ocr         mixed    rust       16        2
+sales-orders     mixed    python     16        0
+semver-review    review   rust       10        0
+survey-analysis  mixed    python     16        0
+toolz-interpose  bugfix   python      8        2
+xmltodict-none   bugfix   python      8        0
+
+wave (seeded order)                sessions    est $
+js-phone-r2-any                           2     7.38
+readme-rewrite-r2-any                     2     5.90
+go-linkedlist-r2-any                      2    16.72
+filelock-explain-r2-any                   2     5.76
+go-protein-r2-any                         2     5.90
+fastrand-explain-r1-any                   2     5.76
+js-listops-r2-any                         2     5.90
+semver-review-r1-any                      2     6.59
+js-listops-r1-any                         2     5.90
+toolz-interpose-r1-any                    2     8.86
+docstring-audit-r2-any                    2     9.92
+sales-orders-r2-any                       2    13.93
+lark-template-r1-any                      2     8.86
+mistune-escape-r2-any                     2     7.38
+go-protein-r1-any                         2     5.90
+api-docs-r2-any                           2    16.72
+survey-analysis-r1-any                    2    13.93
+xmltodict-none-r2-any                     2     7.38
+discrepancy-docs-r1-any                   2    16.72
+semver-review-r2-any                      2     6.59
+py-go-counting-r2-any                     2    14.31
+readme-rewrite-r1-any                     2     5.90
+debug-triage-r2-any                       2     8.91
+sales-orders-r1-any                       2    13.93
+mistune-escape-r1-any                     2     7.38
+debug-triage-r1-any                       2     8.91
+humanize-review-r1-any                    2     9.92
+go-linkedlist-r1-any                      2    16.72
+xmltodict-none-r1-any                     2     7.38
+docstring-audit-r1-any                    2     9.92
+survey-analysis-r2-any                    2    13.93
+py-go-counting-r1-any                     2    14.31
+api-docs-r1-any                           2    16.72
+rust-ocr-r2-any                           2    16.72
+py-rest-api-r1-any                        2     6.91
+humanize-review-r2-any                    2     9.92
+js-phone-r1-any                           2     7.38
+py-rest-api-r2-any                        2     6.91
+discrepancy-docs-r2-any                   2    16.72
+lark-discard-r1-any                       2    12.40
+lark-template-r2-any                      2     8.86
+lark-discard-r2-any                       2    12.40
+rust-ocr-r1-any                           2    16.72
+fastrand-explain-r2-any                   2     5.76
+toolz-interpose-r2-any                    2     8.86
+filelock-explain-r1-any                   2     5.76
+
+arm        host     n     est $
+fable      any     46    251.71
+fable_medium any     46    213.86
+
+estimate (sessions)      $465.57
+infra retry reserve      $37.25
+estimate incl. reserve   $502.82   budget $700.00
+estimated wall time    4.9 h at --parallel 8 (FIFO waves; wall_model assumptions)
+cost basis: main-v1 plain-Fable anchor sessions (n=140, tools-normalized), medium = 0.85x assumption (4-turn unit means, scaled to scenario turns/type; an estimate)

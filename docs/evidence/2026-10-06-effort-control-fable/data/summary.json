@@ -1,0 +1,16 @@
+{
+  "sessions": 92,
+  "turns": 1032,
+  "requests": 4032,
+  "pairs": 46,
+  "tools_normalized_delta_usd_total": -0.08004,
+  "skipped_no_result": [],
+  "cache_audit_flagged_sessions": [
+    "go-linkedlist-r1-any-fable"
+  ],
+  "mechanism_failed": [],
+  "killed_memory": [
+    "py-go-counting-r2-any-fable"
+  ],
+  "cost_mismatch": []
+}

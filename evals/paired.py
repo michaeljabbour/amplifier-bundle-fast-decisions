@@ -898,7 +898,11 @@ def build_pairs(rows: list, turn_rows: list, anchor_arm: str = "anchor") -> list
                 "both_pass": bool(r["final_state_pass"] and a["final_state_pass"]),
                 "arm_failed_what_anchor_passed": (not r["final_state_pass"]) and a["final_state_pass"],
                 "anchor_cost_usd": ac, "arm_cost_usd": rc, "anchor_cost_usd_raw": ac_raw, "arm_cost_usd_raw": rc_raw,
-                "mechanism_engaged": r["mechanism_engaged"], "cache_audit_clean": r["cache_audit_clean"],
+                "mechanism_engaged": r["mechanism_engaged"],
+                # a pair is only audit-clean when BOTH sessions are (the effort-control-fable-v1 anchor flag was missed when this
+                # copied the arm row only); the per-session values stay available
+                "cache_audit_clean": bool(r["cache_audit_clean"] and a.get("cache_audit_clean", True)),
+                "arm_cache_audit_clean": r["cache_audit_clean"], "anchor_cache_audit_clean": a.get("cache_audit_clean", True),
                 "cost_valid": bool(r.get("cost_valid", True) and a.get("cost_valid", True)),
                 "valid": bool(r["wave_valid"] and a["wave_valid"] and r["status"] != "infra_fail" and a["status"] != "infra_fail"
                               and r.get("cost_valid", True) and a.get("cost_valid", True))})

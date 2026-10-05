@@ -1,0 +1,2473 @@
+{
+  "schema": "fast-decisions-paired/v1",
+  "plan_id": "c077d22aad27",
+  "design": "effort-control-fable-v1",
+  "seed": 20261002,
+  "reps": 2,
+  "hosts": [
+    "any"
+  ],
+  "arms": [
+    "fable",
+    "fable_medium"
+  ],
+  "parallel": 8,
+  "nonce_mode": "per_session",
+  "control_waves_split": false,
+  "anchor_arm": "fable",
+  "scenarios": {
+    "api-docs": {
+      "scenario_hash": "433f349bad439b55ba6e1b5b58952f61caf1ae312f8801a7e30e366b7cebbef1",
+      "prompt_sha256": "060cc62549f46f6232b7d38075ee5e398c49b6c73a8f95c22d69c15eeabd11b5",
+      "turns": 16,
+      "gap_schedule": [
+        0,
+        10,
+        10,
+        10,
+        10,
+        420,
+        10,
+        10,
+        10,
+        10,
+        10,
+        420,
+        10,
+        10,
+        10,
+        10
+      ],
+      "n_long_gaps": 2,
+      "task_type": "mixed",
+      "language": "python",
+      "split": "test"
+    },
+    "debug-triage": {
+      "scenario_hash": "381ae800159ba66cedb8daa9ba4607f877be130b555a01275e3945102a9c9e26",
+      "prompt_sha256": "b125762fb0e5f185f09c6355115523d920476ef37a7ce33e419e2002d209df8c",
+      "turns": 11,
+      "gap_schedule": [
+        0,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10
+      ],
+      "n_long_gaps": 0,
+      "task_type": "mixed",
+      "language": "javascript",
+      "split": "test"
+    },
+    "discrepancy-docs": {
+      "scenario_hash": "eb6b26a6505e60021f21605f77cc26d28f5b98574a503a95f5ea751b3c335680",
+      "prompt_sha256": "40af8c07082b303676b50ead8790e915d5f63e9d90ab7edfd70df0aa5cee8731",
+      "turns": 16,
+      "gap_schedule": [
+        0,
+        10,
+        10,
+        10,
+        10,
+        420,
+        10,
+        10,
+        10,
+        10,
+        10,
+        420,
+        10,
+        10,
+        10,
+        10
+      ],
+      "n_long_gaps": 2,
+      "task_type": "mixed",
+      "language": "python",
+      "split": "test"
+    },
+    "docstring-audit": {
+      "scenario_hash": "38c50d61d2871f7afbc95e8fc6051bdb9a3faa9eac01dbf93231e8279ad5e185",
+      "prompt_sha256": "223a8507f99a8a8f039ea9202163eea4c7fa5eca06da3fc95124d2d8a358a586",
+      "turns": 12,
+      "gap_schedule": [
+        0,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10
+      ],
+      "n_long_gaps": 0,
+      "task_type": "mixed",
+      "language": "python",
+      "split": "test"
+    },
+    "fastrand-explain": {
+      "scenario_hash": "aa54703d92690360ef126a475c058b495807e6631a4bf6fa3be3130d06c85017",
+      "prompt_sha256": "68a38e3dd4172b3025c79477c70241b5f1c371390757f5b1c746b1afb05c6151",
+      "turns": 9,
+      "gap_schedule": [
+        0,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10
+      ],
+      "n_long_gaps": 0,
+      "task_type": "explain",
+      "language": "rust",
+      "split": "test"
+    },
+    "filelock-explain": {
+      "scenario_hash": "90ad12bdf62ad014135a821a0322329e184f7f4bdd2a1ed38ceb6b8a4782c09e",
+      "prompt_sha256": "cf4bcfc7794bf8093b6b5ad6d28fcfe4a7296d37bb6e5106232127b7a59f5812",
+      "turns": 9,
+      "gap_schedule": [
+        0,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10
+      ],
+      "n_long_gaps": 0,
+      "task_type": "explain",
+      "language": "python",
+      "split": "test"
+    },
+    "go-linkedlist": {
+      "scenario_hash": "f567598fd18f115dbab29f021c8770d3b016dc9d568699c306b0aaba039700ad",
+      "prompt_sha256": "3bd3da33fb624bf7d9a0381694a2bd916754b31ed5ead9bdb2f8062f01d984f6",
+      "turns": 16,
+      "gap_schedule": [
+        0,
+        10,
+        10,
+        10,
+        420,
+        10,
+        10,
+        10,
+        10,
+        10,
+        420,
+        10,
+        10,
+        10,
+        10,
+        10
+      ],
+      "n_long_gaps": 2,
+      "task_type": "mixed",
+      "language": "go",
+      "split": "test"
+    },
+    "go-protein": {
+      "scenario_hash": "d881a23edae087532ef18deb3ab73811b85ca3b6f3eb5122e3a73f581cac5bf3",
+      "prompt_sha256": "7599c41c429c138c7d5909f0452ed845feab5ff933118055b3a4db421317c7ad",
+      "turns": 8,
+      "gap_schedule": [
+        0,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10
+      ],
+      "n_long_gaps": 0,
+      "task_type": "feature",
+      "language": "go",
+      "split": "test"
+    },
+    "humanize-review": {
+      "scenario_hash": "bb6a4354ffdb64759b352dde5cf7ad112216d28dd119ffc350ca3e2fdedc2ebc",
+      "prompt_sha256": "6eefd34bfeedae3c8587126becf1ff3dbe4fd9efb21c9a1ef475cbe9534213ad",
+      "turns": 12,
+      "gap_schedule": [
+        0,
+        10,
+        10,
+        10,
+        420,
+        10,
+        10,
+        10,
+        420,
+        10,
+        10,
+        10
+      ],
+      "n_long_gaps": 2,
+      "task_type": "review",
+      "language": "python",
+      "split": "test"
+    },
+    "js-listops": {
+      "scenario_hash": "0a0c4c564fe435f0ed06c84a184a45e1fe8c337aa755a392e6d3008fb0a83c94",
+      "prompt_sha256": "bccda446317437a6c81220d0c86e6980498e193258264e3771b7b95a77818567",
+      "turns": 8,
+      "gap_schedule": [
+        0,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10
+      ],
+      "n_long_gaps": 0,
+      "task_type": "feature",
+      "language": "javascript",
+      "split": "test"
+    },
+    "js-phone": {
+      "scenario_hash": "60fa6b920a8d2e139eeb56560192ca093911333f71e900b8ae899d0190ac15a3",
+      "prompt_sha256": "56a419197265a6f457d717e128574db3d43e368e8645605832a5c9f242129e8a",
+      "turns": 8,
+      "gap_schedule": [
+        0,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10
+      ],
+      "n_long_gaps": 0,
+      "task_type": "bugfix",
+      "language": "javascript",
+      "split": "test"
+    },
+    "lark-discard": {
+      "scenario_hash": "ba957a9daf56e297c0103d75024bbc16fe6cf62c750553da9a300ab212de3ab2",
+      "prompt_sha256": "622e8df3523756970439ea2dd7a63f5c65abcf24b75ec81136cfefa83e3cd778",
+      "turns": 12,
+      "gap_schedule": [
+        0,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10
+      ],
+      "n_long_gaps": 0,
+      "task_type": "bugfix",
+      "language": "python",
+      "split": "test"
+    },
+    "lark-template": {
+      "scenario_hash": "1d8db6d84407ea6d76f3a07db99ded15ec02cb7fcf3285c57fa1cf3f282d9840",
+      "prompt_sha256": "8b05d9107f90c410667b0d1d0ec2402c7b7c7de8949b2ac29aca869ade3a8191",
+      "turns": 8,
+      "gap_schedule": [
+        0,
+        10,
+        10,
+        420,
+        10,
+        10,
+        420,
+        10
+      ],
+      "n_long_gaps": 2,
+      "task_type": "bugfix",
+      "language": "python",
+      "split": "test"
+    },
+    "mistune-escape": {
+      "scenario_hash": "4c6ceb2c0fe3c605acc29f40548dad8b6194db9681712069a2d81cb6327e655c",
+      "prompt_sha256": "f8cea31b19b80c38e7ec6460ef359c46c77832d23351ac93ee84f766481c5417",
+      "turns": 8,
+      "gap_schedule": [
+        0,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10
+      ],
+      "n_long_gaps": 0,
+      "task_type": "bugfix",
+      "language": "python",
+      "split": "test"
+    },
+    "py-go-counting": {
+      "scenario_hash": "7cb3d28fda8d35bf1eaa4edea54277428e8b94c16cd0942e1ca2e462dbb4096b",
+      "prompt_sha256": "c953f902015762b0b484879ade9816a419d2e9414777185b6a5e4603a5b31b5a",
+      "turns": 14,
+      "gap_schedule": [
+        0,
+        10,
+        10,
+        10,
+        420,
+        10,
+        10,
+        10,
+        10,
+        420,
+        10,
+        10,
+        10,
+        10
+      ],
+      "n_long_gaps": 2,
+      "task_type": "mixed",
+      "language": "python",
+      "split": "test"
+    },
+    "py-rest-api": {
+      "scenario_hash": "72ee583b379a2642f55bef815a3d41cc857b53a9b3cca039cb29fb5f79c1923b",
+      "prompt_sha256": "5a3eb7b754f5d36f8c8f77d86b8d0f4c5ff8cecdfac9d0c9e9104218c9d253e8",
+      "turns": 9,
+      "gap_schedule": [
+        0,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10
+      ],
+      "n_long_gaps": 0,
+      "task_type": "feature",
+      "language": "python",
+      "split": "test"
+    },
+    "readme-rewrite": {
+      "scenario_hash": "73eabdc3ec9628b24740d38b6c44e34b19125821a59ed32b6165225075fbb090",
+      "prompt_sha256": "8b89f08b494c190819509b1188ca59cf39a3e1fc35c4800eb6c19f11028831c5",
+      "turns": 8,
+      "gap_schedule": [
+        0,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10
+      ],
+      "n_long_gaps": 0,
+      "task_type": "mixed",
+      "language": "python",
+      "split": "test"
+    },
+    "rust-ocr": {
+      "scenario_hash": "63adda8dc639990d39af0e39deaa406fc09b6aa7e6df41d5fb495cfa9a4fbdfd",
+      "prompt_sha256": "fa1fb762e272da64ca2176657e109a0a0c0b4596b6e486d6b17199eaf302671d",
+      "turns": 16,
+      "gap_schedule": [
+        0,
+        10,
+        10,
+        10,
+        420,
+        10,
+        10,
+        10,
+        10,
+        420,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10
+      ],
+      "n_long_gaps": 2,
+      "task_type": "mixed",
+      "language": "rust",
+      "split": "test"
+    },
+    "sales-orders": {
+      "scenario_hash": "677c1f1e781c445c3e0b559c2bef828f16801e54f2e1b34c67d18ab9796ce80d",
+      "prompt_sha256": "757c387740ae6989c743e8a006553213b5666ccda9b0a77c60fb028d0f086bed",
+      "turns": 16,
+      "gap_schedule": [
+        0,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10
+      ],
+      "n_long_gaps": 0,
+      "task_type": "mixed",
+      "language": "python",
+      "split": "test"
+    },
+    "semver-review": {
+      "scenario_hash": "9079b298768293a2afb5548bc4df0cef56f6131549e6d7d2c5bdad89708ef15c",
+      "prompt_sha256": "fc0d0d08f1a1e4f47e8301a296cab260bec24ff509b2883c71bb12dd76031416",
+      "turns": 10,
+      "gap_schedule": [
+        0,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10
+      ],
+      "n_long_gaps": 0,
+      "task_type": "review",
+      "language": "rust",
+      "split": "test"
+    },
+    "survey-analysis": {
+      "scenario_hash": "53bc2521c03a7c0d68ccac1f4d65d1f70ef617d0c63fd9b11abec92094685464",
+      "prompt_sha256": "f3c32e63c3d2dd7b56d58de835b6440cd0931190cf7bd9c892dc5f904940998c",
+      "turns": 16,
+      "gap_schedule": [
+        0,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10
+      ],
+      "n_long_gaps": 0,
+      "task_type": "mixed",
+      "language": "python",
+      "split": "test"
+    },
+    "toolz-interpose": {
+      "scenario_hash": "a7b3640adcd9013074893bef8328732f9a849d80eb4dfeb5894d66d06e6920de",
+      "prompt_sha256": "f9eba0cc9cbe3e1ab8f78c0a19875e12f592dd4fbdd0a1a04918350c21a6ce96",
+      "turns": 8,
+      "gap_schedule": [
+        0,
+        10,
+        10,
+        420,
+        10,
+        10,
+        420,
+        10
+      ],
+      "n_long_gaps": 2,
+      "task_type": "bugfix",
+      "language": "python",
+      "split": "test"
+    },
+    "xmltodict-none": {
+      "scenario_hash": "e504933936244da5c05695e974ea53b6975c10cfa6e2e5790048cde66a72a8b2",
+      "prompt_sha256": "3dd9887c1f6495a43ddd96d95d87e5d049727a06802f230f29fc22d60e04caa5",
+      "turns": 8,
+      "gap_schedule": [
+        0,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10
+      ],
+      "n_long_gaps": 0,
+      "task_type": "bugfix",
+      "language": "python",
+      "split": "test"
+    }
+  },
+  "wave_order": [
+    "js-phone-r2-any",
+    "readme-rewrite-r2-any",
+    "go-linkedlist-r2-any",
+    "filelock-explain-r2-any",
+    "go-protein-r2-any",
+    "fastrand-explain-r1-any",
+    "js-listops-r2-any",
+    "semver-review-r1-any",
+    "js-listops-r1-any",
+    "toolz-interpose-r1-any",
+    "docstring-audit-r2-any",
+    "sales-orders-r2-any",
+    "lark-template-r1-any",
+    "mistune-escape-r2-any",
+    "go-protein-r1-any",
+    "api-docs-r2-any",
+    "survey-analysis-r1-any",
+    "xmltodict-none-r2-any",
+    "discrepancy-docs-r1-any",
+    "semver-review-r2-any",
+    "py-go-counting-r2-any",
+    "readme-rewrite-r1-any",
+    "debug-triage-r2-any",
+    "sales-orders-r1-any",
+    "mistune-escape-r1-any",
+    "debug-triage-r1-any",
+    "humanize-review-r1-any",
+    "go-linkedlist-r1-any",
+    "xmltodict-none-r1-any",
+    "docstring-audit-r1-any",
+    "survey-analysis-r2-any",
+    "py-go-counting-r1-any",
+    "api-docs-r1-any",
+    "rust-ocr-r2-any",
+    "py-rest-api-r1-any",
+    "humanize-review-r2-any",
+    "js-phone-r1-any",
+    "py-rest-api-r2-any",
+    "discrepancy-docs-r2-any",
+    "lark-discard-r1-any",
+    "lark-template-r2-any",
+    "lark-discard-r2-any",
+    "rust-ocr-r1-any",
+    "fastrand-explain-r2-any",
+    "toolz-interpose-r2-any",
+    "filelock-explain-r1-any"
+  ],
+  "waves": {
+    "js-phone-r2-any": [
+      {
+        "key": "js-phone-r2-any-fable",
+        "wave_id": "js-phone-r2-any",
+        "scenario": "js-phone",
+        "rep": 2,
+        "host": "any",
+        "arm": "fable",
+        "kind": "control",
+        "cell": "plain",
+        "model": "",
+        "nonce": "84f8fe57-85c1-42ee-89ad-69d05bb46ef7",
+        "attempt": 1,
+        "est_usd": 3.99,
+        "sticky_decision": null,
+        "gate": {
+          "served_model_prefix": "claude-fable-5-1",
+          "effort": "absent"
+        }
+      },
+      {
+        "key": "js-phone-r2-any-fable_medium",
+        "wave_id": "js-phone-r2-any",
+        "scenario": "js-phone",
+        "rep": 2,
+        "host": "any",
+        "arm": "fable_medium",
+        "kind": "control",
+        "cell": "plain-medium",
+        "model": "",
+        "nonce": "e2c7769f-9fcf-4c21-8bd9-0bc1ac6f90d1",
+        "attempt": 1,
+        "est_usd": 3.39,
+        "sticky_decision": null,
+        "gate": {
+          "served_model_prefix": "claude-fable-5-1",
+          "effort": "medium"
+        }
+      }
+    ],
+    "readme-rewrite-r2-any": [
+      {
+        "key": "readme-rewrite-r2-any-fable",
+        "wave_id": "readme-rewrite-r2-any",
+        "scenario": "readme-rewrite",
+        "rep": 2,
+        "host": "any",
+        "arm": "fable",
+        "kind": "control",
+        "cell": "plain",
+        "model": "",
+        "nonce": "d3a601b4-b1a2-499b-9573-3eb7c1217c94",
+        "attempt": 1,
+        "est_usd": 3.192,
+        "sticky_decision": null,
+        "gate": {
+          "served_model_prefix": "claude-fable-5-1",
+          "effort": "absent"
+        }
+      },
+      {
+        "key": "readme-rewrite-r2-any-fable_medium",
+        "wave_id": "readme-rewrite-r2-any",
+        "scenario": "readme-rewrite",
+        "rep": 2,
+        "host": "any",
+        "arm": "fable_medium",
+        "kind": "control",
+        "cell": "plain-medium",
+        "model": "",
+        "nonce": "7264831b-662e-4f64-bb8f-01307f995cb9",
+        "attempt": 1,
+        "est_usd": 2.712,
+        "sticky_decision": null,
+        "gate": {
+          "served_model_prefix": "claude-fable-5-1",
+          "effort": "medium"
+        }
+      }
+    ],
+    "go-linkedlist-r2-any": [
+      {
+        "key": "go-linkedlist-r2-any-fable",
+        "wave_id": "go-linkedlist-r2-any",
+        "scenario": "go-linkedlist",
+        "rep": 2,
+        "host": "any",
+        "arm": "fable",
+        "kind": "control",
+        "cell": "plain",
+        "model": "",
+        "nonce": "5b3edb36-3847-4190-94a2-77523053bd08",
+        "attempt": 1,
+        "est_usd": 9.0397,
+        "sticky_decision": null,
+        "gate": {
+          "served_model_prefix": "claude-fable-5-1",
+          "effort": "absent"
+        }
+      },
+      {
+        "key": "go-linkedlist-r2-any-fable_medium",
+        "wave_id": "go-linkedlist-r2-any",
+        "scenario": "go-linkedlist",
+        "rep": 2,
+        "host": "any",
+        "arm": "fable_medium",
+        "kind": "control",
+        "cell": "plain-medium",
+        "model": "",
+        "nonce": "2579b0a1-e7ce-4ed9-9684-d7485a05ca9e",
+        "attempt": 1,
+        "est_usd": 7.6804,
+        "sticky_decision": null,
+        "gate": {
+          "served_model_prefix": "claude-fable-5-1",
+          "effort": "medium"
+        }
+      }
+    ],
+    "filelock-explain-r2-any": [
+      {
+        "key": "filelock-explain-r2-any-fable",
+        "wave_id": "filelock-explain-r2-any",
+        "scenario": "filelock-explain",
+        "rep": 2,
+        "host": "any",
+        "arm": "fable",
+        "kind": "control",
+        "cell": "plain",
+        "model": "",
+        "nonce": "3c6d489a-79bb-4a5f-909e-d71982021da6",
+        "attempt": 1,
+        "est_usd": 3.1122,
+        "sticky_decision": null,
+        "gate": {
+          "served_model_prefix": "claude-fable-5-1",
+          "effort": "absent"
+        }
+      },
+      {
+        "key": "filelock-explain-r2-any-fable_medium",
+        "wave_id": "filelock-explain-r2-any",
+        "scenario": "filelock-explain",
+        "rep": 2,
+        "host": "any",
+        "arm": "fable_medium",
+        "kind": "control",
+        "cell": "plain-medium",
+        "model": "",
+        "nonce": "df81c98b-a98e-4881-8d51-f3edfb5c09d3",
+        "attempt": 1,
+        "est_usd": 2.6442,
+        "sticky_decision": null,
+        "gate": {
+          "served_model_prefix": "claude-fable-5-1",
+          "effort": "medium"
+        }
+      }
+    ],
+    "go-protein-r2-any": [
+      {
+        "key": "go-protein-r2-any-fable",
+        "wave_id": "go-protein-r2-any",
+        "scenario": "go-protein",
+        "rep": 2,
+        "host": "any",
+        "arm": "fable",
+        "kind": "control",
+        "cell": "plain",
+        "model": "",
+        "nonce": "7dd6ce0a-04a0-4772-9286-f3096bcc60fc",
+        "attempt": 1,
+        "est_usd": 3.192,
+        "sticky_decision": null,
+        "gate": {
+          "served_model_prefix": "claude-fable-5-1",
+          "effort": "absent"
+        }
+      },
+      {
+        "key": "go-protein-r2-any-fable_medium",
+        "wave_id": "go-protein-r2-any",
+        "scenario": "go-protein",
+        "rep": 2,
+        "host": "any",
+        "arm": "fable_medium",
+        "kind": "control",
+        "cell": "plain-medium",
+        "model": "",
+        "nonce": "c2564e9e-d427-4ef3-89e5-085c8a89f423",
+        "attempt": 1,
+        "est_usd": 2.712,
+        "sticky_decision": null,
+        "gate": {
+          "served_model_prefix": "claude-fable-5-1",
+          "effort": "medium"
+        }
+      }
+    ],
+    "fastrand-explain-r1-any": [
+      {
+        "key": "fastrand-explain-r1-any-fable",
+        "wave_id": "fastrand-explain-r1-any",
+        "scenario": "fastrand-explain",
+        "rep": 1,
+        "host": "any",
+        "arm": "fable",
+        "kind": "control",
+        "cell": "plain",
+        "model": "",
+        "nonce": "1f16012d-7091-4f16-b4c4-89d08e95fcc8",
+        "attempt": 1,
+        "est_usd": 3.1122,
+        "sticky_decision": null,
+        "gate": {
+          "served_model_prefix": "claude-fable-5-1",
+          "effort": "absent"
+        }
+      },
+      {
+        "key": "fastrand-explain-r1-any-fable_medium",
+        "wave_id": "fastrand-explain-r1-any",
+        "scenario": "fastrand-explain",
+        "rep": 1,
+        "host": "any",
+        "arm": "fable_medium",
+        "kind": "control",
+        "cell": "plain-medium",
+        "model": "",
+        "nonce": "f8cdef67-00df-4a14-8469-8ac03a20adae",
+        "attempt": 1,
+        "est_usd": 2.6442,
+        "sticky_decision": null,
+        "gate": {
+          "served_model_prefix": "claude-fable-5-1",
+          "effort": "medium"
+        }
+      }
+    ],
+    "js-listops-r2-any": [
+      {
+        "key": "js-listops-r2-any-fable",
+        "wave_id": "js-listops-r2-any",
+        "scenario": "js-listops",
+        "rep": 2,
+        "host": "any",
+        "arm": "fable",
+        "kind": "control",
+        "cell": "plain",
+        "model": "",
+        "nonce": "1b13c1f2-a57e-4342-8eeb-b0487806c425",
+        "attempt": 1,
+        "est_usd": 3.192,
+        "sticky_decision": null,
+        "gate": {
+          "served_model_prefix": "claude-fable-5-1",
+          "effort": "absent"
+        }
+      },
+      {
+        "key": "js-listops-r2-any-fable_medium",
+        "wave_id": "js-listops-r2-any",
+        "scenario": "js-listops",
+        "rep": 2,
+        "host": "any",
+        "arm": "fable_medium",
+        "kind": "control",
+        "cell": "plain-medium",
+        "model": "",
+        "nonce": "b8982872-1690-4b94-ae0c-92f093e5b2fd",
+        "attempt": 1,
+        "est_usd": 2.712,
+        "sticky_decision": null,
+        "gate": {
+          "served_model_prefix": "claude-fable-5-1",
+          "effort": "medium"
+        }
+      }
+    ],
+    "semver-review-r1-any": [
+      {
+        "key": "semver-review-r1-any-fable",
+        "wave_id": "semver-review-r1-any",
+        "scenario": "semver-review",
+        "rep": 1,
+        "host": "any",
+        "arm": "fable",
+        "kind": "control",
+        "cell": "plain",
+        "model": "",
+        "nonce": "9c284f1a-a708-4a1b-8649-139d9c8d7620",
+        "attempt": 1,
+        "est_usd": 3.5644,
+        "sticky_decision": null,
+        "gate": {
+          "served_model_prefix": "claude-fable-5-1",
+          "effort": "absent"
+        }
+      },
+      {
+        "key": "semver-review-r1-any-fable_medium",
+        "wave_id": "semver-review-r1-any",
+        "scenario": "semver-review",
+        "rep": 1,
+        "host": "any",
+        "arm": "fable_medium",
+        "kind": "control",
+        "cell": "plain-medium",
+        "model": "",
+        "nonce": "83ac3326-12b6-4c07-856e-678054d0fd21",
+        "attempt": 1,
+        "est_usd": 3.0284,
+        "sticky_decision": null,
+        "gate": {
+          "served_model_prefix": "claude-fable-5-1",
+          "effort": "medium"
+        }
+      }
+    ],
+    "js-listops-r1-any": [
+      {
+        "key": "js-listops-r1-any-fable",
+        "wave_id": "js-listops-r1-any",
+        "scenario": "js-listops",
+        "rep": 1,
+        "host": "any",
+        "arm": "fable",
+        "kind": "control",
+        "cell": "plain",
+        "model": "",
+        "nonce": "0acf3c2e-0675-44a7-8da3-ab1b34ead521",
+        "attempt": 1,
+        "est_usd": 3.192,
+        "sticky_decision": null,
+        "gate": {
+          "served_model_prefix": "claude-fable-5-1",
+          "effort": "absent"
+        }
+      },
+      {
+        "key": "js-listops-r1-any-fable_medium",
+        "wave_id": "js-listops-r1-any",
+        "scenario": "js-listops",
+        "rep": 1,
+        "host": "any",
+        "arm": "fable_medium",
+        "kind": "control",
+        "cell": "plain-medium",
+        "model": "",
+        "nonce": "085f7d78-7426-46fd-86a3-f7db9fbd2b70",
+        "attempt": 1,
+        "est_usd": 2.712,
+        "sticky_decision": null,
+        "gate": {
+          "served_model_prefix": "claude-fable-5-1",
+          "effort": "medium"
+        }
+      }
+    ],
+    "toolz-interpose-r1-any": [
+      {
+        "key": "toolz-interpose-r1-any-fable",
+        "wave_id": "toolz-interpose-r1-any",
+        "scenario": "toolz-interpose",
+        "rep": 1,
+        "host": "any",
+        "arm": "fable",
+        "kind": "control",
+        "cell": "plain",
+        "model": "",
+        "nonce": "6e6a914d-5e8b-47d8-9a93-dce49e14754d",
+        "attempt": 1,
+        "est_usd": 4.788,
+        "sticky_decision": null,
+        "gate": {
+          "served_model_prefix": "claude-fable-5-1",
+          "effort": "absent"
+        }
+      },
+      {
+        "key": "toolz-interpose-r1-any-fable_medium",
+        "wave_id": "toolz-interpose-r1-any",
+        "scenario": "toolz-interpose",
+        "rep": 1,
+        "host": "any",
+        "arm": "fable_medium",
+        "kind": "control",
+        "cell": "plain-medium",
+        "model": "",
+        "nonce": "0dcade98-beea-4979-b489-d0a0fbed6ab4",
+        "attempt": 1,
+        "est_usd": 4.068,
+        "sticky_decision": null,
+        "gate": {
+          "served_model_prefix": "claude-fable-5-1",
+          "effort": "medium"
+        }
+      }
+    ],
+    "docstring-audit-r2-any": [
+      {
+        "key": "docstring-audit-r2-any-fable",
+        "wave_id": "docstring-audit-r2-any",
+        "scenario": "docstring-audit",
+        "rep": 2,
+        "host": "any",
+        "arm": "fable",
+        "kind": "control",
+        "cell": "plain",
+        "model": "",
+        "nonce": "01567157-996f-4f65-a82e-8978843b9acb",
+        "attempt": 1,
+        "est_usd": 5.3626,
+        "sticky_decision": null,
+        "gate": {
+          "served_model_prefix": "claude-fable-5-1",
+          "effort": "absent"
+        }
+      },
+      {
+        "key": "docstring-audit-r2-any-fable_medium",
+        "wave_id": "docstring-audit-r2-any",
+        "scenario": "docstring-audit",
+        "rep": 2,
+        "host": "any",
+        "arm": "fable_medium",
+        "kind": "control",
+        "cell": "plain-medium",
+        "model": "",
+        "nonce": "304cfaa8-dfde-4bda-918f-8ef51e52e9d5",
+        "attempt": 1,
+        "est_usd": 4.5562,
+        "sticky_decision": null,
+        "gate": {
+          "served_model_prefix": "claude-fable-5-1",
+          "effort": "medium"
+        }
+      }
+    ],
+    "sales-orders-r2-any": [
+      {
+        "key": "sales-orders-r2-any-fable",
+        "wave_id": "sales-orders-r2-any",
+        "scenario": "sales-orders",
+        "rep": 2,
+        "host": "any",
+        "arm": "fable",
+        "kind": "control",
+        "cell": "plain",
+        "model": "",
+        "nonce": "ddcf9f66-6c77-4399-9996-5d79e5477979",
+        "attempt": 1,
+        "est_usd": 7.5331,
+        "sticky_decision": null,
+        "gate": {
+          "served_model_prefix": "claude-fable-5-1",
+          "effort": "absent"
+        }
+      },
+      {
+        "key": "sales-orders-r2-any-fable_medium",
+        "wave_id": "sales-orders-r2-any",
+        "scenario": "sales-orders",
+        "rep": 2,
+        "host": "any",
+        "arm": "fable_medium",
+        "kind": "control",
+        "cell": "plain-medium",
+        "model": "",
+        "nonce": "c44693b8-d1c0-40a6-8884-465e77d5136c",
+        "attempt": 1,
+        "est_usd": 6.4003,
+        "sticky_decision": null,
+        "gate": {
+          "served_model_prefix": "claude-fable-5-1",
+          "effort": "medium"
+        }
+      }
+    ],
+    "lark-template-r1-any": [
+      {
+        "key": "lark-template-r1-any-fable",
+        "wave_id": "lark-template-r1-any",
+        "scenario": "lark-template",
+        "rep": 1,
+        "host": "any",
+        "arm": "fable",
+        "kind": "control",
+        "cell": "plain",
+        "model": "",
+        "nonce": "4c34fd36-6af4-455c-991b-20b1021d599c",
+        "attempt": 1,
+        "est_usd": 4.788,
+        "sticky_decision": null,
+        "gate": {
+          "served_model_prefix": "claude-fable-5-1",
+          "effort": "absent"
+        }
+      },
+      {
+        "key": "lark-template-r1-any-fable_medium",
+        "wave_id": "lark-template-r1-any",
+        "scenario": "lark-template",
+        "rep": 1,
+        "host": "any",
+        "arm": "fable_medium",
+        "kind": "control",
+        "cell": "plain-medium",
+        "model": "",
+        "nonce": "f49716cc-2d12-421c-a834-3e61f7a60ccd",
+        "attempt": 1,
+        "est_usd": 4.068,
+        "sticky_decision": null,
+        "gate": {
+          "served_model_prefix": "claude-fable-5-1",
+          "effort": "medium"
+        }
+      }
+    ],
+    "mistune-escape-r2-any": [
+      {
+        "key": "mistune-escape-r2-any-fable",
+        "wave_id": "mistune-escape-r2-any",
+        "scenario": "mistune-escape",
+        "rep": 2,
+        "host": "any",
+        "arm": "fable",
+        "kind": "control",
+        "cell": "plain",
+        "model": "",
+        "nonce": "301efe31-883e-41bb-917a-a38179502f94",
+        "attempt": 1,
+        "est_usd": 3.99,
+        "sticky_decision": null,
+        "gate": {
+          "served_model_prefix": "claude-fable-5-1",
+          "effort": "absent"
+        }
+      },
+      {
+        "key": "mistune-escape-r2-any-fable_medium",
+        "wave_id": "mistune-escape-r2-any",
+        "scenario": "mistune-escape",
+        "rep": 2,
+        "host": "any",
+        "arm": "fable_medium",
+        "kind": "control",
+        "cell": "plain-medium",
+        "model": "",
+        "nonce": "1b734771-933f-455f-83b0-cd403f18704f",
+        "attempt": 1,
+        "est_usd": 3.39,
+        "sticky_decision": null,
+        "gate": {
+          "served_model_prefix": "claude-fable-5-1",
+          "effort": "medium"
+        }
+      }
+    ],
+    "go-protein-r1-any": [
+      {
+        "key": "go-protein-r1-any-fable",
+        "wave_id": "go-protein-r1-any",
+        "scenario": "go-protein",
+        "rep": 1,
+        "host": "any",
+        "arm": "fable",
+        "kind": "control",
+        "cell": "plain",
+        "model": "",
+        "nonce": "cb154839-fc81-4702-8c0d-393810b54c18",
+        "attempt": 1,
+        "est_usd": 3.192,
+        "sticky_decision": null,
+        "gate": {
+          "served_model_prefix": "claude-fable-5-1",
+          "effort": "absent"
+        }
+      },
+      {
+        "key": "go-protein-r1-any-fable_medium",
+        "wave_id": "go-protein-r1-any",
+        "scenario": "go-protein",
+        "rep": 1,
+        "host": "any",
+        "arm": "fable_medium",
+        "kind": "control",
+        "cell": "plain-medium",
+        "model": "",
+        "nonce": "2cd425ef-9986-40dc-86a0-dee09729ee6d",
+        "attempt": 1,
+        "est_usd": 2.712,
+        "sticky_decision": null,
+        "gate": {
+          "served_model_prefix": "claude-fable-5-1",
+          "effort": "medium"
+        }
+      }
+    ],
+    "api-docs-r2-any": [
+      {
+        "key": "api-docs-r2-any-fable",
+        "wave_id": "api-docs-r2-any",
+        "scenario": "api-docs",
+        "rep": 2,
+        "host": "any",
+        "arm": "fable",
+        "kind": "control",
+        "cell": "plain",
+        "model": "",
+        "nonce": "a3967813-2eed-425d-9e81-2cb32a64fe71",
+        "attempt": 1,
+        "est_usd": 9.0397,
+        "sticky_decision": null,
+        "gate": {
+          "served_model_prefix": "claude-fable-5-1",
+          "effort": "absent"
+        }
+      },
+      {
+        "key": "api-docs-r2-any-fable_medium",
+        "wave_id": "api-docs-r2-any",
+        "scenario": "api-docs",
+        "rep": 2,
+        "host": "any",
+        "arm": "fable_medium",
+        "kind": "control",
+        "cell": "plain-medium",
+        "model": "",
+        "nonce": "e0df00b6-e582-492f-9b62-af2ed117abd3",
+        "attempt": 1,
+        "est_usd": 7.6804,
+        "sticky_decision": null,
+        "gate": {
+          "served_model_prefix": "claude-fable-5-1",
+          "effort": "medium"
+        }
+      }
+    ],
+    "survey-analysis-r1-any": [
+      {
+        "key": "survey-analysis-r1-any-fable",
+        "wave_id": "survey-analysis-r1-any",
+        "scenario": "survey-analysis",
+        "rep": 1,
+        "host": "any",
+        "arm": "fable",
+        "kind": "control",
+        "cell": "plain",
+        "model": "",
+        "nonce": "abdc2fe0-a024-4fd2-a52b-144961bac734",
+        "attempt": 1,
+        "est_usd": 7.5331,
+        "sticky_decision": null,
+        "gate": {
+          "served_model_prefix": "claude-fable-5-1",
+          "effort": "absent"
+        }
+      },
+      {
+        "key": "survey-analysis-r1-any-fable_medium",
+        "wave_id": "survey-analysis-r1-any",
+        "scenario": "survey-analysis",
+        "rep": 1,
+        "host": "any",
+        "arm": "fable_medium",
+        "kind": "control",
+        "cell": "plain-medium",
+        "model": "",
+        "nonce": "4ba125e1-0374-4340-8d95-2da3234cc6a9",
+        "attempt": 1,
+        "est_usd": 6.4003,
+        "sticky_decision": null,
+        "gate": {
+          "served_model_prefix": "claude-fable-5-1",
+          "effort": "medium"
+        }
+      }
+    ],
+    "xmltodict-none-r2-any": [
+      {
+        "key": "xmltodict-none-r2-any-fable",
+        "wave_id": "xmltodict-none-r2-any",
+        "scenario": "xmltodict-none",
+        "rep": 2,
+        "host": "any",
+        "arm": "fable",
+        "kind": "control",
+        "cell": "plain",
+        "model": "",
+        "nonce": "06464a9c-f196-410f-a15b-d514e1403fb2",
+        "attempt": 1,
+        "est_usd": 3.99,
+        "sticky_decision": null,
+        "gate": {
+          "served_model_prefix": "claude-fable-5-1",
+          "effort": "absent"
+        }
+      },
+      {
+        "key": "xmltodict-none-r2-any-fable_medium",
+        "wave_id": "xmltodict-none-r2-any",
+        "scenario": "xmltodict-none",
+        "rep": 2,
+        "host": "any",
+        "arm": "fable_medium",
+        "kind": "control",
+        "cell": "plain-medium",
+        "model": "",
+        "nonce": "138443cf-dc3d-4211-9d6f-a781a83cac6a",
+        "attempt": 1,
+        "est_usd": 3.39,
+        "sticky_decision": null,
+        "gate": {
+          "served_model_prefix": "claude-fable-5-1",
+          "effort": "medium"
+        }
+      }
+    ],
+    "discrepancy-docs-r1-any": [
+      {
+        "key": "discrepancy-docs-r1-any-fable",
+        "wave_id": "discrepancy-docs-r1-any",
+        "scenario": "discrepancy-docs",
+        "rep": 1,
+        "host": "any",
+        "arm": "fable",
+        "kind": "control",
+        "cell": "plain",
+        "model": "",
+        "nonce": "09efb007-1ff1-41e1-9d94-1617f7a584d4",
+        "attempt": 1,
+        "est_usd": 9.0397,
+        "sticky_decision": null,
+        "gate": {
+          "served_model_prefix": "claude-fable-5-1",
+          "effort": "absent"
+        }
+      },
+      {
+        "key": "discrepancy-docs-r1-any-fable_medium",
+        "wave_id": "discrepancy-docs-r1-any",
+        "scenario": "discrepancy-docs",
+        "rep": 1,
+        "host": "any",
+        "arm": "fable_medium",
+        "kind": "control",
+        "cell": "plain-medium",
+        "model": "",
+        "nonce": "8c11e9fd-7aed-4529-b6f1-bc902a7f242b",
+        "attempt": 1,
+        "est_usd": 7.6804,
+        "sticky_decision": null,
+        "gate": {
+          "served_model_prefix": "claude-fable-5-1",
+          "effort": "medium"
+        }
+      }
+    ],
+    "semver-review-r2-any": [
+      {
+        "key": "semver-review-r2-any-fable",
+        "wave_id": "semver-review-r2-any",
+        "scenario": "semver-review",
+        "rep": 2,
+        "host": "any",
+        "arm": "fable",
+        "kind": "control",
+        "cell": "plain",
+        "model": "",
+        "nonce": "9d003297-1114-4788-939c-fefee983b091",
+        "attempt": 1,
+        "est_usd": 3.5644,
+        "sticky_decision": null,
+        "gate": {
+          "served_model_prefix": "claude-fable-5-1",
+          "effort": "absent"
+        }
+      },
+      {
+        "key": "semver-review-r2-any-fable_medium",
+        "wave_id": "semver-review-r2-any",
+        "scenario": "semver-review",
+        "rep": 2,
+        "host": "any",
+        "arm": "fable_medium",
+        "kind": "control",
+        "cell": "plain-medium",
+        "model": "",
+        "nonce": "7c8d6a7a-2378-4973-a373-7477330a2f4a",
+        "attempt": 1,
+        "est_usd": 3.0284,
+        "sticky_decision": null,
+        "gate": {
+          "served_model_prefix": "claude-fable-5-1",
+          "effort": "medium"
+        }
+      }
+    ],
+    "py-go-counting-r2-any": [
+      {
+        "key": "py-go-counting-r2-any-fable",
+        "wave_id": "py-go-counting-r2-any",
+        "scenario": "py-go-counting",
+        "rep": 2,
+        "host": "any",
+        "arm": "fable",
+        "kind": "control",
+        "cell": "plain",
+        "model": "",
+        "nonce": "dba9ad58-afc0-4d17-b58c-aa58761b598f",
+        "attempt": 1,
+        "est_usd": 7.7374,
+        "sticky_decision": null,
+        "gate": {
+          "served_model_prefix": "claude-fable-5-1",
+          "effort": "absent"
+        }
+      },
+      {
+        "key": "py-go-counting-r2-any-fable_medium",
+        "wave_id": "py-go-counting-r2-any",
+        "scenario": "py-go-counting",
+        "rep": 2,
+        "host": "any",
+        "arm": "fable_medium",
+        "kind": "control",
+        "cell": "plain-medium",
+        "model": "",
+        "nonce": "e3187365-0214-4a01-aa13-634b3bf5d7b9",
+        "attempt": 1,
+        "est_usd": 6.5739,
+        "sticky_decision": null,
+        "gate": {
+          "served_model_prefix": "claude-fable-5-1",
+          "effort": "medium"
+        }
+      }
+    ],
+    "readme-rewrite-r1-any": [
+      {
+        "key": "readme-rewrite-r1-any-fable",
+        "wave_id": "readme-rewrite-r1-any",
+        "scenario": "readme-rewrite",
+        "rep": 1,
+        "host": "any",
+        "arm": "fable",
+        "kind": "control",
+        "cell": "plain",
+        "model": "",
+        "nonce": "7597472f-b97a-418d-8d58-6e1d7e4ef13d",
+        "attempt": 1,
+        "est_usd": 3.192,
+        "sticky_decision": null,
+        "gate": {
+          "served_model_prefix": "claude-fable-5-1",
+          "effort": "absent"
+        }
+      },
+      {
+        "key": "readme-rewrite-r1-any-fable_medium",
+        "wave_id": "readme-rewrite-r1-any",
+        "scenario": "readme-rewrite",
+        "rep": 1,
+        "host": "any",
+        "arm": "fable_medium",
+        "kind": "control",
+        "cell": "plain-medium",
+        "model": "",
+        "nonce": "ed93e32e-f7fb-4531-b1b9-296da700111c",
+        "attempt": 1,
+        "est_usd": 2.712,
+        "sticky_decision": null,
+        "gate": {
+          "served_model_prefix": "claude-fable-5-1",
+          "effort": "medium"
+        }
+      }
+    ],
+    "debug-triage-r2-any": [
+      {
+        "key": "debug-triage-r2-any-fable",
+        "wave_id": "debug-triage-r2-any",
+        "scenario": "debug-triage",
+        "rep": 2,
+        "host": "any",
+        "arm": "fable",
+        "kind": "control",
+        "cell": "plain",
+        "model": "",
+        "nonce": "dd784dbe-0e28-4873-996a-1757d7647a7f",
+        "attempt": 1,
+        "est_usd": 4.8199,
+        "sticky_decision": null,
+        "gate": {
+          "served_model_prefix": "claude-fable-5-1",
+          "effort": "absent"
+        }
+      },
+      {
+        "key": "debug-triage-r2-any-fable_medium",
+        "wave_id": "debug-triage-r2-any",
+        "scenario": "debug-triage",
+        "rep": 2,
+        "host": "any",
+        "arm": "fable_medium",
+        "kind": "control",
+        "cell": "plain-medium",
+        "model": "",
+        "nonce": "eda8201b-97ca-472b-aa7b-7ec80e00f237",
+        "attempt": 1,
+        "est_usd": 4.0951,
+        "sticky_decision": null,
+        "gate": {
+          "served_model_prefix": "claude-fable-5-1",
+          "effort": "medium"
+        }
+      }
+    ],
+    "sales-orders-r1-any": [
+      {
+        "key": "sales-orders-r1-any-fable",
+        "wave_id": "sales-orders-r1-any",
+        "scenario": "sales-orders",
+        "rep": 1,
+        "host": "any",
+        "arm": "fable",
+        "kind": "control",
+        "cell": "plain",
+        "model": "",
+        "nonce": "2ae09969-e773-44bf-abfa-633b4244b524",
+        "attempt": 1,
+        "est_usd": 7.5331,
+        "sticky_decision": null,
+        "gate": {
+          "served_model_prefix": "claude-fable-5-1",
+          "effort": "absent"
+        }
+      },
+      {
+        "key": "sales-orders-r1-any-fable_medium",
+        "wave_id": "sales-orders-r1-any",
+        "scenario": "sales-orders",
+        "rep": 1,
+        "host": "any",
+        "arm": "fable_medium",
+        "kind": "control",
+        "cell": "plain-medium",
+        "model": "",
+        "nonce": "423ff54c-27b6-4a03-85b3-a29b8e89a843",
+        "attempt": 1,
+        "est_usd": 6.4003,
+        "sticky_decision": null,
+        "gate": {
+          "served_model_prefix": "claude-fable-5-1",
+          "effort": "medium"
+        }
+      }
+    ],
+    "mistune-escape-r1-any": [
+      {
+        "key": "mistune-escape-r1-any-fable",
+        "wave_id": "mistune-escape-r1-any",
+        "scenario": "mistune-escape",
+        "rep": 1,
+        "host": "any",
+        "arm": "fable",
+        "kind": "control",
+        "cell": "plain",
+        "model": "",
+        "nonce": "b9cdf376-1b53-4b8f-abac-fef950a4cc08",
+        "attempt": 1,
+        "est_usd": 3.99,
+        "sticky_decision": null,
+        "gate": {
+          "served_model_prefix": "claude-fable-5-1",
+          "effort": "absent"
+        }
+      },
+      {
+        "key": "mistune-escape-r1-any-fable_medium",
+        "wave_id": "mistune-escape-r1-any",
+        "scenario": "mistune-escape",
+        "rep": 1,
+        "host": "any",
+        "arm": "fable_medium",
+        "kind": "control",
+        "cell": "plain-medium",
+        "model": "",
+        "nonce": "8d0f55d1-9cb1-4547-aa6b-c339005f2725",
+        "attempt": 1,
+        "est_usd": 3.39,
+        "sticky_decision": null,
+        "gate": {
+          "served_model_prefix": "claude-fable-5-1",
+          "effort": "medium"
+        }
+      }
+    ],
+    "debug-triage-r1-any": [
+      {
+        "key": "debug-triage-r1-any-fable",
+        "wave_id": "debug-triage-r1-any",
+        "scenario": "debug-triage",
+        "rep": 1,
+        "host": "any",
+        "arm": "fable",
+        "kind": "control",
+        "cell": "plain",
+        "model": "",
+        "nonce": "f970074b-8f3c-409d-a288-56e5de18bfa3",
+        "attempt": 1,
+        "est_usd": 4.8199,
+        "sticky_decision": null,
+        "gate": {
+          "served_model_prefix": "claude-fable-5-1",
+          "effort": "absent"
+        }
+      },
+      {
+        "key": "debug-triage-r1-any-fable_medium",
+        "wave_id": "debug-triage-r1-any",
+        "scenario": "debug-triage",
+        "rep": 1,
+        "host": "any",
+        "arm": "fable_medium",
+        "kind": "control",
+        "cell": "plain-medium",
+        "model": "",
+        "nonce": "cc0e9fa2-53be-4f0c-8a7a-4b013b99dfd3",
+        "attempt": 1,
+        "est_usd": 4.0951,
+        "sticky_decision": null,
+        "gate": {
+          "served_model_prefix": "claude-fable-5-1",
+          "effort": "medium"
+        }
+      }
+    ],
+    "humanize-review-r1-any": [
+      {
+        "key": "humanize-review-r1-any-fable",
+        "wave_id": "humanize-review-r1-any",
+        "scenario": "humanize-review",
+        "rep": 1,
+        "host": "any",
+        "arm": "fable",
+        "kind": "control",
+        "cell": "plain",
+        "model": "",
+        "nonce": "0851f33e-296f-427c-8bb0-3ec8a9c7c0ae",
+        "attempt": 1,
+        "est_usd": 5.3626,
+        "sticky_decision": null,
+        "gate": {
+          "served_model_prefix": "claude-fable-5-1",
+          "effort": "absent"
+        }
+      },
+      {
+        "key": "humanize-review-r1-any-fable_medium",
+        "wave_id": "humanize-review-r1-any",
+        "scenario": "humanize-review",
+        "rep": 1,
+        "host": "any",
+        "arm": "fable_medium",
+        "kind": "control",
+        "cell": "plain-medium",
+        "model": "",
+        "nonce": "a9f35fc7-ba72-466e-b55b-32d58cb7031b",
+        "attempt": 1,
+        "est_usd": 4.5562,
+        "sticky_decision": null,
+        "gate": {
+          "served_model_prefix": "claude-fable-5-1",
+          "effort": "medium"
+        }
+      }
+    ],
+    "go-linkedlist-r1-any": [
+      {
+        "key": "go-linkedlist-r1-any-fable",
+        "wave_id": "go-linkedlist-r1-any",
+        "scenario": "go-linkedlist",
+        "rep": 1,
+        "host": "any",
+        "arm": "fable",
+        "kind": "control",
+        "cell": "plain",
+        "model": "",
+        "nonce": "98338b47-4bd4-4831-a081-3d9d02a03335",
+        "attempt": 1,
+        "est_usd": 9.0397,
+        "sticky_decision": null,
+        "gate": {
+          "served_model_prefix": "claude-fable-5-1",
+          "effort": "absent"
+        }
+      },
+      {
+        "key": "go-linkedlist-r1-any-fable_medium",
+        "wave_id": "go-linkedlist-r1-any",
+        "scenario": "go-linkedlist",
+        "rep": 1,
+        "host": "any",
+        "arm": "fable_medium",
+        "kind": "control",
+        "cell": "plain-medium",
+        "model": "",
+        "nonce": "6bbe29c4-8833-41dc-88b7-a2ba884dea3a",
+        "attempt": 1,
+        "est_usd": 7.6804,
+        "sticky_decision": null,
+        "gate": {
+          "served_model_prefix": "claude-fable-5-1",
+          "effort": "medium"
+        }
+      }
+    ],
+    "xmltodict-none-r1-any": [
+      {
+        "key": "xmltodict-none-r1-any-fable",
+        "wave_id": "xmltodict-none-r1-any",
+        "scenario": "xmltodict-none",
+        "rep": 1,
+        "host": "any",
+        "arm": "fable",
+        "kind": "control",
+        "cell": "plain",
+        "model": "",
+        "nonce": "013b128d-f44f-4dde-895a-72b084634c29",
+        "attempt": 1,
+        "est_usd": 3.99,
+        "sticky_decision": null,
+        "gate": {
+          "served_model_prefix": "claude-fable-5-1",
+          "effort": "absent"
+        }
+      },
+      {
+        "key": "xmltodict-none-r1-any-fable_medium",
+        "wave_id": "xmltodict-none-r1-any",
+        "scenario": "xmltodict-none",
+        "rep": 1,
+        "host": "any",
+        "arm": "fable_medium",
+        "kind": "control",
+        "cell": "plain-medium",
+        "model": "",
+        "nonce": "56fe3343-57ae-4394-98d5-a8b3772b521f",
+        "attempt": 1,
+        "est_usd": 3.39,
+        "sticky_decision": null,
+        "gate": {
+          "served_model_prefix": "claude-fable-5-1",
+          "effort": "medium"
+        }
+      }
+    ],
+    "docstring-audit-r1-any": [
+      {
+        "key": "docstring-audit-r1-any-fable",
+        "wave_id": "docstring-audit-r1-any",
+        "scenario": "docstring-audit",
+        "rep": 1,
+        "host": "any",
+        "arm": "fable",
+        "kind": "control",
+        "cell": "plain",
+        "model": "",
+        "nonce": "25309c7c-0c26-4575-a9b1-aa0cb3803ccf",
+        "attempt": 1,
+        "est_usd": 5.3626,
+        "sticky_decision": null,
+        "gate": {
+          "served_model_prefix": "claude-fable-5-1",
+          "effort": "absent"
+        }
+      },
+      {
+        "key": "docstring-audit-r1-any-fable_medium",
+        "wave_id": "docstring-audit-r1-any",
+        "scenario": "docstring-audit",
+        "rep": 1,
+        "host": "any",
+        "arm": "fable_medium",
+        "kind": "control",
+        "cell": "plain-medium",
+        "model": "",
+        "nonce": "a9923828-ec3f-4e92-8f21-d9c742df5863",
+        "attempt": 1,
+        "est_usd": 4.5562,
+        "sticky_decision": null,
+        "gate": {
+          "served_model_prefix": "claude-fable-5-1",
+          "effort": "medium"
+        }
+      }
+    ],
+    "survey-analysis-r2-any": [
+      {
+        "key": "survey-analysis-r2-any-fable",
+        "wave_id": "survey-analysis-r2-any",
+        "scenario": "survey-analysis",
+        "rep": 2,
+        "host": "any",
+        "arm": "fable",
+        "kind": "control",
+        "cell": "plain",
+        "model": "",
+        "nonce": "86e5e5b5-7958-45aa-b514-6fe951a32f48",
+        "attempt": 1,
+        "est_usd": 7.5331,
+        "sticky_decision": null,
+        "gate": {
+          "served_model_prefix": "claude-fable-5-1",
+          "effort": "absent"
+        }
+      },
+      {
+        "key": "survey-analysis-r2-any-fable_medium",
+        "wave_id": "survey-analysis-r2-any",
+        "scenario": "survey-analysis",
+        "rep": 2,
+        "host": "any",
+        "arm": "fable_medium",
+        "kind": "control",
+        "cell": "plain-medium",
+        "model": "",
+        "nonce": "f903e34d-601a-40c6-b6b3-8991fd2ebe8d",
+        "attempt": 1,
+        "est_usd": 6.4003,
+        "sticky_decision": null,
+        "gate": {
+          "served_model_prefix": "claude-fable-5-1",
+          "effort": "medium"
+        }
+      }
+    ],
+    "py-go-counting-r1-any": [
+      {
+        "key": "py-go-counting-r1-any-fable",
+        "wave_id": "py-go-counting-r1-any",
+        "scenario": "py-go-counting",
+        "rep": 1,
+        "host": "any",
+        "arm": "fable",
+        "kind": "control",
+        "cell": "plain",
+        "model": "",
+        "nonce": "89da5528-e5ec-4a46-82c8-e36c4cf73edc",
+        "attempt": 1,
+        "est_usd": 7.7374,
+        "sticky_decision": null,
+        "gate": {
+          "served_model_prefix": "claude-fable-5-1",
+          "effort": "absent"
+        }
+      },
+      {
+        "key": "py-go-counting-r1-any-fable_medium",
+        "wave_id": "py-go-counting-r1-any",
+        "scenario": "py-go-counting",
+        "rep": 1,
+        "host": "any",
+        "arm": "fable_medium",
+        "kind": "control",
+        "cell": "plain-medium",
+        "model": "",
+        "nonce": "1c38fa00-e405-475f-81cc-14d5470234ba",
+        "attempt": 1,
+        "est_usd": 6.5739,
+        "sticky_decision": null,
+        "gate": {
+          "served_model_prefix": "claude-fable-5-1",
+          "effort": "medium"
+        }
+      }
+    ],
+    "api-docs-r1-any": [
+      {
+        "key": "api-docs-r1-any-fable",
+        "wave_id": "api-docs-r1-any",
+        "scenario": "api-docs",
+        "rep": 1,
+        "host": "any",
+        "arm": "fable",
+        "kind": "control",
+        "cell": "plain",
+        "model": "",
+        "nonce": "04542c25-7352-4f76-bcc2-0e11846e8e84",
+        "attempt": 1,
+        "est_usd": 9.0397,
+        "sticky_decision": null,
+        "gate": {
+          "served_model_prefix": "claude-fable-5-1",
+          "effort": "absent"
+        }
+      },
+      {
+        "key": "api-docs-r1-any-fable_medium",
+        "wave_id": "api-docs-r1-any",
+        "scenario": "api-docs",
+        "rep": 1,
+        "host": "any",
+        "arm": "fable_medium",
+        "kind": "control",
+        "cell": "plain-medium",
+        "model": "",
+        "nonce": "087b00d0-9051-40df-8e54-57a3cdd0b1f7",
+        "attempt": 1,
+        "est_usd": 7.6804,
+        "sticky_decision": null,
+        "gate": {
+          "served_model_prefix": "claude-fable-5-1",
+          "effort": "medium"
+        }
+      }
+    ],
+    "rust-ocr-r2-any": [
+      {
+        "key": "rust-ocr-r2-any-fable",
+        "wave_id": "rust-ocr-r2-any",
+        "scenario": "rust-ocr",
+        "rep": 2,
+        "host": "any",
+        "arm": "fable",
+        "kind": "control",
+        "cell": "plain",
+        "model": "",
+        "nonce": "ef9981c3-65fa-4577-ae69-8435536a9ad8",
+        "attempt": 1,
+        "est_usd": 9.0397,
+        "sticky_decision": null,
+        "gate": {
+          "served_model_prefix": "claude-fable-5-1",
+          "effort": "absent"
+        }
+      },
+      {
+        "key": "rust-ocr-r2-any-fable_medium",
+        "wave_id": "rust-ocr-r2-any",
+        "scenario": "rust-ocr",
+        "rep": 2,
+        "host": "any",
+        "arm": "fable_medium",
+        "kind": "control",
+        "cell": "plain-medium",
+        "model": "",
+        "nonce": "171194fd-5376-4e2e-9f36-688009013048",
+        "attempt": 1,
+        "est_usd": 7.6804,
+        "sticky_decision": null,
+        "gate": {
+          "served_model_prefix": "claude-fable-5-1",
+          "effort": "medium"
+        }
+      }
+    ],
+    "py-rest-api-r1-any": [
+      {
+        "key": "py-rest-api-r1-any-fable",
+        "wave_id": "py-rest-api-r1-any",
+        "scenario": "py-rest-api",
+        "rep": 1,
+        "host": "any",
+        "arm": "fable",
+        "kind": "control",
+        "cell": "plain",
+        "model": "",
+        "nonce": "c52ce322-f55b-4021-9a9f-3bb3df9b4f9e",
+        "attempt": 1,
+        "est_usd": 3.7346,
+        "sticky_decision": null,
+        "gate": {
+          "served_model_prefix": "claude-fable-5-1",
+          "effort": "absent"
+        }
+      },
+      {
+        "key": "py-rest-api-r1-any-fable_medium",
+        "wave_id": "py-rest-api-r1-any",
+        "scenario": "py-rest-api",
+        "rep": 1,
+        "host": "any",
+        "arm": "fable_medium",
+        "kind": "control",
+        "cell": "plain-medium",
+        "model": "",
+        "nonce": "be747176-5b1f-4afd-b474-728f3b9f545b",
+        "attempt": 1,
+        "est_usd": 3.173,
+        "sticky_decision": null,
+        "gate": {
+          "served_model_prefix": "claude-fable-5-1",
+          "effort": "medium"
+        }
+      }
+    ],
+    "humanize-review-r2-any": [
+      {
+        "key": "humanize-review-r2-any-fable",
+        "wave_id": "humanize-review-r2-any",
+        "scenario": "humanize-review",
+        "rep": 2,
+        "host": "any",
+        "arm": "fable",
+        "kind": "control",
+        "cell": "plain",
+        "model": "",
+        "nonce": "10583314-1410-4b66-82ae-362e7e20c807",
+        "attempt": 1,
+        "est_usd": 5.3626,
+        "sticky_decision": null,
+        "gate": {
+          "served_model_prefix": "claude-fable-5-1",
+          "effort": "absent"
+        }
+      },
+      {
+        "key": "humanize-review-r2-any-fable_medium",
+        "wave_id": "humanize-review-r2-any",
+        "scenario": "humanize-review",
+        "rep": 2,
+        "host": "any",
+        "arm": "fable_medium",
+        "kind": "control",
+        "cell": "plain-medium",
+        "model": "",
+        "nonce": "ba1eaba8-fcfc-4645-b958-372395785198",
+        "attempt": 1,
+        "est_usd": 4.5562,
+        "sticky_decision": null,
+        "gate": {
+          "served_model_prefix": "claude-fable-5-1",
+          "effort": "medium"
+        }
+      }
+    ],
+    "js-phone-r1-any": [
+      {
+        "key": "js-phone-r1-any-fable",
+        "wave_id": "js-phone-r1-any",
+        "scenario": "js-phone",
+        "rep": 1,
+        "host": "any",
+        "arm": "fable",
+        "kind": "control",
+        "cell": "plain",
+        "model": "",
+        "nonce": "b7c15948-49f7-48aa-a1a8-51c2b00e87ed",
+        "attempt": 1,
+        "est_usd": 3.99,
+        "sticky_decision": null,
+        "gate": {
+          "served_model_prefix": "claude-fable-5-1",
+          "effort": "absent"
+        }
+      },
+      {
+        "key": "js-phone-r1-any-fable_medium",
+        "wave_id": "js-phone-r1-any",
+        "scenario": "js-phone",
+        "rep": 1,
+        "host": "any",
+        "arm": "fable_medium",
+        "kind": "control",
+        "cell": "plain-medium",
+        "model": "",
+        "nonce": "44d7a2da-90da-4dea-b0b6-6b2f8289cd5a",
+        "attempt": 1,
+        "est_usd": 3.39,
+        "sticky_decision": null,
+        "gate": {
+          "served_model_prefix": "claude-fable-5-1",
+          "effort": "medium"
+        }
+      }
+    ],
+    "py-rest-api-r2-any": [
+      {
+        "key": "py-rest-api-r2-any-fable",
+        "wave_id": "py-rest-api-r2-any",
+        "scenario": "py-rest-api",
+        "rep": 2,
+        "host": "any",
+        "arm": "fable",
+        "kind": "control",
+        "cell": "plain",
+        "model": "",
+        "nonce": "cf000caa-7bd8-4a83-b3ae-d56200d9a4c9",
+        "attempt": 1,
+        "est_usd": 3.7346,
+        "sticky_decision": null,
+        "gate": {
+          "served_model_prefix": "claude-fable-5-1",
+          "effort": "absent"
+        }
+      },
+      {
+        "key": "py-rest-api-r2-any-fable_medium",
+        "wave_id": "py-rest-api-r2-any",
+        "scenario": "py-rest-api",
+        "rep": 2,
+        "host": "any",
+        "arm": "fable_medium",
+        "kind": "control",
+        "cell": "plain-medium",
+        "model": "",
+        "nonce": "64530dce-d653-4913-96a3-539250e628f3",
+        "attempt": 1,
+        "est_usd": 3.173,
+        "sticky_decision": null,
+        "gate": {
+          "served_model_prefix": "claude-fable-5-1",
+          "effort": "medium"
+        }
+      }
+    ],
+    "discrepancy-docs-r2-any": [
+      {
+        "key": "discrepancy-docs-r2-any-fable",
+        "wave_id": "discrepancy-docs-r2-any",
+        "scenario": "discrepancy-docs",
+        "rep": 2,
+        "host": "any",
+        "arm": "fable",
+        "kind": "control",
+        "cell": "plain",
+        "model": "",
+        "nonce": "18be9dee-693b-42f5-97a9-3b2f062fd1ef",
+        "attempt": 1,
+        "est_usd": 9.0397,
+        "sticky_decision": null,
+        "gate": {
+          "served_model_prefix": "claude-fable-5-1",
+          "effort": "absent"
+        }
+      },
+      {
+        "key": "discrepancy-docs-r2-any-fable_medium",
+        "wave_id": "discrepancy-docs-r2-any",
+        "scenario": "discrepancy-docs",
+        "rep": 2,
+        "host": "any",
+        "arm": "fable_medium",
+        "kind": "control",
+        "cell": "plain-medium",
+        "model": "",
+        "nonce": "0cf92f85-2662-4811-8a75-b2e0ea0ab3b4",
+        "attempt": 1,
+        "est_usd": 7.6804,
+        "sticky_decision": null,
+        "gate": {
+          "served_model_prefix": "claude-fable-5-1",
+          "effort": "medium"
+        }
+      }
+    ],
+    "lark-discard-r1-any": [
+      {
+        "key": "lark-discard-r1-any-fable",
+        "wave_id": "lark-discard-r1-any",
+        "scenario": "lark-discard",
+        "rep": 1,
+        "host": "any",
+        "arm": "fable",
+        "kind": "control",
+        "cell": "plain",
+        "model": "",
+        "nonce": "82ec7949-979f-4b6f-abb3-c1e211a9e699",
+        "attempt": 1,
+        "est_usd": 6.7032,
+        "sticky_decision": null,
+        "gate": {
+          "served_model_prefix": "claude-fable-5-1",
+          "effort": "absent"
+        }
+      },
+      {
+        "key": "lark-discard-r1-any-fable_medium",
+        "wave_id": "lark-discard-r1-any",
+        "scenario": "lark-discard",
+        "rep": 1,
+        "host": "any",
+        "arm": "fable_medium",
+        "kind": "control",
+        "cell": "plain-medium",
+        "model": "",
+        "nonce": "940eda66-2ab0-4b82-9655-650beb8dc089",
+        "attempt": 1,
+        "est_usd": 5.6952,
+        "sticky_decision": null,
+        "gate": {
+          "served_model_prefix": "claude-fable-5-1",
+          "effort": "medium"
+        }
+      }
+    ],
+    "lark-template-r2-any": [
+      {
+        "key": "lark-template-r2-any-fable",
+        "wave_id": "lark-template-r2-any",
+        "scenario": "lark-template",
+        "rep": 2,
+        "host": "any",
+        "arm": "fable",
+        "kind": "control",
+        "cell": "plain",
+        "model": "",
+        "nonce": "b9e1593f-b4c4-4d56-847b-0e9cbcf08f88",
+        "attempt": 1,
+        "est_usd": 4.788,
+        "sticky_decision": null,
+        "gate": {
+          "served_model_prefix": "claude-fable-5-1",
+          "effort": "absent"
+        }
+      },
+      {
+        "key": "lark-template-r2-any-fable_medium",
+        "wave_id": "lark-template-r2-any",
+        "scenario": "lark-template",
+        "rep": 2,
+        "host": "any",
+        "arm": "fable_medium",
+        "kind": "control",
+        "cell": "plain-medium",
+        "model": "",
+        "nonce": "d50bb060-0df5-41dd-ac6e-410c3c065a9d",
+        "attempt": 1,
+        "est_usd": 4.068,
+        "sticky_decision": null,
+        "gate": {
+          "served_model_prefix": "claude-fable-5-1",
+          "effort": "medium"
+        }
+      }
+    ],
+    "lark-discard-r2-any": [
+      {
+        "key": "lark-discard-r2-any-fable",
+        "wave_id": "lark-discard-r2-any",
+        "scenario": "lark-discard",
+        "rep": 2,
+        "host": "any",
+        "arm": "fable",
+        "kind": "control",
+        "cell": "plain",
+        "model": "",
+        "nonce": "cf80d959-5ad3-40e8-8bf7-35562a25719c",
+        "attempt": 1,
+        "est_usd": 6.7032,
+        "sticky_decision": null,
+        "gate": {
+          "served_model_prefix": "claude-fable-5-1",
+          "effort": "absent"
+        }
+      },
+      {
+        "key": "lark-discard-r2-any-fable_medium",
+        "wave_id": "lark-discard-r2-any",
+        "scenario": "lark-discard",
+        "rep": 2,
+        "host": "any",
+        "arm": "fable_medium",
+        "kind": "control",
+        "cell": "plain-medium",
+        "model": "",
+        "nonce": "7024f48e-8dfb-4aa7-919d-8aa53f953d74",
+        "attempt": 1,
+        "est_usd": 5.6952,
+        "sticky_decision": null,
+        "gate": {
+          "served_model_prefix": "claude-fable-5-1",
+          "effort": "medium"
+        }
+      }
+    ],
+    "rust-ocr-r1-any": [
+      {
+        "key": "rust-ocr-r1-any-fable",
+        "wave_id": "rust-ocr-r1-any",
+        "scenario": "rust-ocr",
+        "rep": 1,
+        "host": "any",
+        "arm": "fable",
+        "kind": "control",
+        "cell": "plain",
+        "model": "",
+        "nonce": "87502e1a-5ce6-4969-a754-d675b29725fd",
+        "attempt": 1,
+        "est_usd": 9.0397,
+        "sticky_decision": null,
+        "gate": {
+          "served_model_prefix": "claude-fable-5-1",
+          "effort": "absent"
+        }
+      },
+      {
+        "key": "rust-ocr-r1-any-fable_medium",
+        "wave_id": "rust-ocr-r1-any",
+        "scenario": "rust-ocr",
+        "rep": 1,
+        "host": "any",
+        "arm": "fable_medium",
+        "kind": "control",
+        "cell": "plain-medium",
+        "model": "",
+        "nonce": "515d2f9e-ee2f-4070-b925-f1fe67c08d74",
+        "attempt": 1,
+        "est_usd": 7.6804,
+        "sticky_decision": null,
+        "gate": {
+          "served_model_prefix": "claude-fable-5-1",
+          "effort": "medium"
+        }
+      }
+    ],
+    "fastrand-explain-r2-any": [
+      {
+        "key": "fastrand-explain-r2-any-fable",
+        "wave_id": "fastrand-explain-r2-any",
+        "scenario": "fastrand-explain",
+        "rep": 2,
+        "host": "any",
+        "arm": "fable",
+        "kind": "control",
+        "cell": "plain",
+        "model": "",
+        "nonce": "c0847e2d-4fbc-44ef-929e-514ce1bad7c4",
+        "attempt": 1,
+        "est_usd": 3.1122,
+        "sticky_decision": null,
+        "gate": {
+          "served_model_prefix": "claude-fable-5-1",
+          "effort": "absent"
+        }
+      },
+      {
+        "key": "fastrand-explain-r2-any-fable_medium",
+        "wave_id": "fastrand-explain-r2-any",
+        "scenario": "fastrand-explain",
+        "rep": 2,
+        "host": "any",
+        "arm": "fable_medium",
+        "kind": "control",
+        "cell": "plain-medium",
+        "model": "",
+        "nonce": "1a8f35bb-ef10-4beb-850e-8cbb8aaa3afe",
+        "attempt": 1,
+        "est_usd": 2.6442,
+        "sticky_decision": null,
+        "gate": {
+          "served_model_prefix": "claude-fable-5-1",
+          "effort": "medium"
+        }
+      }
+    ],
+    "toolz-interpose-r2-any": [
+      {
+        "key": "toolz-interpose-r2-any-fable",
+        "wave_id": "toolz-interpose-r2-any",
+        "scenario": "toolz-interpose",
+        "rep": 2,
+        "host": "any",
+        "arm": "fable",
+        "kind": "control",
+        "cell": "plain",
+        "model": "",
+        "nonce": "c5aff5a2-a810-453c-b6af-0c617d9b37f1",
+        "attempt": 1,
+        "est_usd": 4.788,
+        "sticky_decision": null,
+        "gate": {
+          "served_model_prefix": "claude-fable-5-1",
+          "effort": "absent"
+        }
+      },
+      {
+        "key": "toolz-interpose-r2-any-fable_medium",
+        "wave_id": "toolz-interpose-r2-any",
+        "scenario": "toolz-interpose",
+        "rep": 2,
+        "host": "any",
+        "arm": "fable_medium",
+        "kind": "control",
+        "cell": "plain-medium",
+        "model": "",
+        "nonce": "916bbea8-55d1-4c53-8f7f-59ee4020e709",
+        "attempt": 1,
+        "est_usd": 4.068,
+        "sticky_decision": null,
+        "gate": {
+          "served_model_prefix": "claude-fable-5-1",
+          "effort": "medium"
+        }
+      }
+    ],
+    "filelock-explain-r1-any": [
+      {
+        "key": "filelock-explain-r1-any-fable",
+        "wave_id": "filelock-explain-r1-any",
+        "scenario": "filelock-explain",
+        "rep": 1,
+        "host": "any",
+        "arm": "fable",
+        "kind": "control",
+        "cell": "plain",
+        "model": "",
+        "nonce": "d4f46816-11e5-4708-8687-6e3d505f6129",
+        "attempt": 1,
+        "est_usd": 3.1122,
+        "sticky_decision": null,
+        "gate": {
+          "served_model_prefix": "claude-fable-5-1",
+          "effort": "absent"
+        }
+      },
+      {
+        "key": "filelock-explain-r1-any-fable_medium",
+        "wave_id": "filelock-explain-r1-any",
+        "scenario": "filelock-explain",
+        "rep": 1,
+        "host": "any",
+        "arm": "fable_medium",
+        "kind": "control",
+        "cell": "plain-medium",
+        "model": "",
+        "nonce": "40ffdc2c-1ae1-4bf7-8e5c-440273dd23fc",
+        "attempt": 1,
+        "est_usd": 2.6442,
+        "sticky_decision": null,
+        "gate": {
+          "served_model_prefix": "claude-fable-5-1",
+          "effort": "medium"
+        }
+      }
+    ]
+  },
+  "n_sessions": 92,
+  "n_waves": 46,
+  "est_total_usd": 465.57,
+  "est_infra_retry_reserve_usd": 37.25,
+  "est_with_reserve_usd": 502.82,
+  "budget_usd": 700.0,
+  "est_wall_hours": 4.9,
+  "long_block": null,
+  "cost_model_source": "main-v1 plain-Fable anchor sessions (n=140, tools-normalized), medium = 0.85x assumption",
+  "max_encoded_workspace_len": 117,
+  "candidate": {
+    "requested": "<repo>",
+    "frozen_source": "<campaign>/source",
+    "info": {
+      "original_source_root": "<repo>",
+      "snapshot_source_root": "<campaign>/source",
+      "requested_sha": null,
+      "git_sha": "fd6289e1d15c18938319ded59ee36f3004a2a20d",
+      "tree_sha256": "e6ae68f57132c8ffcb953a4ea9c1b51ce1a4d9b87e3b4a598c14cc9f0280bd2b"
+    }
+  },
+  "baseline_source": "<campaign>/source",
+  "campaign_root": "<campaign>",
+  "snapshots": {
+    "api-docs": "<campaigns>/snapshots/api-docs-433f349bad",
+    "debug-triage": "<campaigns>/snapshots/debug-triage-381ae80015",
+    "discrepancy-docs": "<campaigns>/snapshots/discrepancy-docs-eb6b26a650",
+    "docstring-audit": "<campaigns>/snapshots/docstring-audit-38c50d61d2",
+    "fastrand-explain": "<campaigns>/snapshots/fastrand-explain-aa54703d92",
+    "filelock-explain": "<campaigns>/snapshots/filelock-explain-90ad12bdf6",
+    "go-linkedlist": "<campaigns>/snapshots/go-linkedlist-f567598fd1",
+    "go-protein": "<campaigns>/snapshots/go-protein-d881a23eda",
+    "humanize-review": "<campaigns>/snapshots/humanize-review-bb6a4354ff",
+    "js-listops": "<campaigns>/snapshots/js-listops-0a0c4c564f",
+    "js-phone": "<campaigns>/snapshots/js-phone-60fa6b920a",
+    "lark-discard": "<campaigns>/snapshots/lark-discard-ba957a9daf",
+    "lark-template": "<campaigns>/snapshots/lark-template-1d8db6d844",
+    "mistune-escape": "<campaigns>/snapshots/mistune-escape-4c6ceb2c0f",
+    "py-go-counting": "<campaigns>/snapshots/py-go-counting-7cb3d28fda",
+    "py-rest-api": "<campaigns>/snapshots/py-rest-api-72ee583b37",
+    "readme-rewrite": "<campaigns>/snapshots/readme-rewrite-73eabdc3ec",
+    "rust-ocr": "<campaigns>/snapshots/rust-ocr-63adda8dc6",
+    "sales-orders": "<campaigns>/snapshots/sales-orders-677c1f1e78",
+    "semver-review": "<campaigns>/snapshots/semver-review-9079b29876",
+    "survey-analysis": "<campaigns>/snapshots/survey-analysis-53bc2521c0",
+    "toolz-interpose": "<campaigns>/snapshots/toolz-interpose-a7b3640adc",
+    "xmltodict-none": "<campaigns>/snapshots/xmltodict-none-e504933936"
+  },
+  "key_env": {},
+  "offsets": {},
+  "settings_sha256": "n1:1409766246330cc8",
+  "created_at": "2026-10-05T12:33:29.355495+00:00"
+}

@@ -1,0 +1,87 @@
+{
+  "as_run": {
+    "hypothesis": "HF",
+    "arm": "fable_medium",
+    "seed": 20261006,
+    "resamples": 10000,
+    "cost": {
+      "n_scenarios": 23,
+      "geo_mean_ratio": 0.8596025461732419,
+      "ci95": [
+        0.8332355240832271,
+        0.8852608472184094
+      ],
+      "supported": true
+    },
+    "quality": {
+      "n_scenarios": 23,
+      "mean_delta_turn_pass": 0.03341739130434782,
+      "ci95": [
+        -0.001754347826086957,
+        0.07960652173913044
+      ],
+      "non_inferior": true,
+      "margin": -0.05
+    },
+    "n_pairs": 46,
+    "n_valid_cost_pairs": 45,
+    "HF_supported": true
+  },
+  "strict_44": {
+    "hypothesis": "HF",
+    "arm": "fable_medium",
+    "seed": 20261006,
+    "resamples": 10000,
+    "cost": {
+      "n_scenarios": 23,
+      "geo_mean_ratio": 0.8542814007158592,
+      "ci95": [
+        0.8252756509527314,
+        0.8818640723568292
+      ],
+      "supported": true
+    },
+    "quality": {
+      "n_scenarios": 23,
+      "mean_delta_turn_pass": 0.03341739130434782,
+      "ci95": [
+        -0.001754347826086957,
+        0.07960652173913044
+      ],
+      "non_inferior": true,
+      "margin": -0.05
+    },
+    "n_pairs": 46,
+    "n_valid_cost_pairs": 44,
+    "HF_supported": true
+  },
+  "strict_44_and_killed_pair_dropped_from_quality": {
+    "hypothesis": "HF",
+    "arm": "fable_medium",
+    "seed": 20261006,
+    "resamples": 10000,
+    "cost": {
+      "n_scenarios": 23,
+      "geo_mean_ratio": 0.8542814007158592,
+      "ci95": [
+        0.8252756509527314,
+        0.8818640723568292
+      ],
+      "supported": true
+    },
+    "quality": {
+      "n_scenarios": 23,
+      "mean_delta_turn_pass": 0.019441304347826087,
+      "ci95": [
+        -0.004347826086956522,
+        0.05733695652173913
+      ],
+      "non_inferior": true,
+      "margin": -0.05
+    },
+    "n_pairs": 45,
+    "n_valid_cost_pairs": 44,
+    "HF_supported": true
+  },
+  "note": "strict_44 excludes the go-linkedlist rep 1 pair (flagged ANCHOR session); the third variant also drops the py-go-counting rep 2 pair (memory-killed anchor) from the unfiltered quality endpoint"
+}
