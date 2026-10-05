@@ -98,9 +98,11 @@ over 5 minutes (~13%) and after user idle (~9%) and oversized helper context (up
 
 ## Status
 
-As of 2026-09-29, the default judge is local Laya. The historical Jev figures above
-are not Laya measurements. [Live cross-harness acceptance](evidence/2026-09-29-laya/VERIFICATION.md)
-verified invocation and retrieval but demonstrated no avoided reasoning calls.
+As of 2026-09-29 (PR #49) the default judge is Jev again: every shipped behavior sets `backend: jev` with
+`allow_external_state: true`, and the library constructors default to Jev. Laya was the default for a few days
+and is now an experimental, explicit opt-in (`backend: laya`). The historical Jev figures above are Jev
+measurements; the [Laya cross-harness acceptance](evidence/2026-09-29-laya/VERIFICATION.md) verified invocation
+and retrieval of the Laya path but demonstrated no avoided reasoning calls.
 
 See `docs/RESULTS-2026-09-24.md` (top update) for what has been measured so far. As of 2026-09-25 the savings targets are
 **not met**: the shipped router picks one model per request and saved close to nothing on the owner's real work.

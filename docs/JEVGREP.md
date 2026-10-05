@@ -1,15 +1,15 @@
-> The bundle now defaults to local Laya relevance search behind the `jevgrep` tool.
-> This is a separate bounded implementation, not an upstream Jevgrep Laya provider.
-> To run the upstream CLI described below, set `backend: jev` and
-> `allow_external_state: true`. The portable equivalent is `amplifier-fast-decisions
-> search --backend jev --allow-external-state --input query.json --root WORKSPACE`.
+> The bundle defaults to upstream Jevgrep (`backend: jev`, `allow_external_state: true` in
+> `behaviors/jevgrep.yaml`; the library constructor also defaults to `jev`, with external state off
+> until you pass consent). Local Laya relevance search is an experimental opt-in (`backend: laya`);
+> it is a separate bounded implementation, not an upstream Jevgrep Laya provider. The portable
+> equivalent is `amplifier-fast-decisions search --allow-external-state --input query.json --root WORKSPACE`.
 
 # Jevgrep source retrieval
 
 The bundle mounts `jevgrep` by default through its main behavior for questions such as “where
-are events buffered and flushed?” By default it scores bounded source windows
-with local Laya and returns references and excerpts through Amplifier's ordinary
-tool path. Explicit `backend: jev` calls the upstream `jg` CLI. It does not bypass the host's tool hooks or select itself as a fast-path
+are events buffered and flushed?” By default it calls the upstream `jg` CLI and returns references and
+excerpts through Amplifier's ordinary tool path. `backend: laya` instead scores bounded source windows
+with the experimental local Laya service. It does not bypass the host's tool hooks or select itself as a fast-path
 action. It complements the configured difficulty judge: the judge routes a
 request; this tool locates source needed to work on it.
 
@@ -39,19 +39,20 @@ The upstream CLI uses its saved provider and credentials under
 [Upstream authentication implementation](https://github.com/dzhng/jevgrep/blob/24adac80dd57b673eafd8e8c477e4800b39c6c01/apps/cli/src/auth.ts)
 
 `behaviors/fast-decisions.yaml` includes this behavior, so both the root bundle
-and the usual app behavior mount it. The shipped behavior uses local Laya with
-external sharing disabled. To explicitly select upstream Jevgrep and permit
-eligible source sharing with its saved provider or TypeSafe:
+and the usual app behavior mount it. The shipped behavior uses upstream Jevgrep and permits
+eligible source sharing with its saved provider or TypeSafe. To keep source on this machine and use the
+experimental local Laya scorer instead:
 
 ```yaml
 overrides:
   tool-jevgrep:
     config:
-      backend: jev
-      allow_external_state: true
+      backend: laya
+      allow_external_state: false
 ```
 
-The lower-level Python constructor also defaults to local Laya. Setting
+The lower-level Python constructor defaults to `backend="jev"` with `allow_external_state=False`, so a bare
+`JevgrepTool()` returns `status: disabled` until you pass consent. Setting
 `allow_external_state: false` refuses remote Laya and disables upstream Jevgrep.
 The router's separate permission setting does not control retrieval. Update the
 bundle and start a new session to load the tool; an existing session's tool list
@@ -70,14 +71,14 @@ inside Amplifier. Other assistants can use upstream's skill separately.
 
 ## Boundaries and accounting
 
-Local Laya needs `rg` and the [Laya service](MODEL-SETUP.md#laya-local-classifier),
+The experimental local Laya backend needs `rg` and the [Laya service](MODEL-SETUP.md#laya-local-classifier),
 not the optional Node CLI. Local source reads total at most `max_source_bytes`;
 limits yield an incomplete result. Source windows are scored sequentially.
 
 | Setting | Default | Meaning |
 |---|---|---|
 | `root` | `.` | Trusted workspace directory. Tool inputs may only narrow this scope. |
-| `backend` | `laya` | Local relevance scorer; `jev` opts into the upstream CLI. |
+| `backend` | `jev` | Upstream `jg` CLI; `laya` opts into the experimental local relevance scorer. |
 | `executable` | `jg` | Upstream backend only: installed CLI on PATH. |
 | `allow_external_state` | `false` | Required for remote Laya or upstream source sharing. |
 | `timeout_ms` | `60000` | Overall retrieval deadline; upstream includes a version check; range 100–120000. |
