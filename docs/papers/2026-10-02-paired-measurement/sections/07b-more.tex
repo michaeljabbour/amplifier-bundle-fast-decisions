@@ -1,7 +1,9 @@
 \section{More explorations of the campaign data \texorpdfstring{\screen}{[screen]}}\label{sec:more}
 
 Everything in this section is exploratory: it uses all \NScenarios\ scenarios, was not preregistered, and is
-meant to show \emph{how} the costs arise. It uses the \PerTurnN\ turn rows of cost-valid sessions.
+meant to show \emph{how} the costs arise. It uses \PerTurnNFmt\ turn rows: the \NTurns\ turn rows of the campaign minus the \RvKilledTurns\ turns of the
+memory-killed session and \RvNSkips\ final turns that were skipped in sessions that otherwise stayed cost-valid
+(\RvSkipList). Each of those two sessions was billed for one turn fewer than its partner, a negligible pair bias.
 
 \subsection{How cost accumulates over a session}
 
@@ -65,7 +67,12 @@ boundaries; \SwitchTurnTwoPct\,\% of them led into turn 2 (\cref{fig:switch}). E
 at the start; every one of them re-writes the history to the other model's cache.}
 \end{figure}
 
+\FloatBarrier
 \subsection{Scenario by scenario}
+
+Averaging hides how uneven the saving is. Most scenarios saved money on the Fable host, and the expensive ones
+tended to save the most; \ScNegative\ of \ScN\ scenarios cost more with sticky routing on average.
+\Cref{fig:scenario} shows each scenario once.
 
 \begin{figure}[htbp]
 \centering
@@ -78,7 +85,12 @@ scenarios where sticky cost the most extra are labelled.}
 more. \ScNegative\ of \ScN\ scenarios cost more on average; the labelled ones are the worst three.}
 \end{figure}
 
+\FloatBarrier
 \subsection{The noise floor in detail}
+
+The A/A pairs show how far two identical sessions drift apart. \Cref{fig:aahist} shows the whole distribution
+behind the summary in \cref{sec:aa}: most pairs fall within a few per cent, a handful differ by up to a quarter, and
+the Opus distribution sits slightly to the right of zero, a bias we cannot explain (\cref{sec:aa}).
 
 \begin{figure}[htbp]
 \centering
@@ -90,7 +102,15 @@ more. \ScNegative\ of \ScN\ scenarios cost more on average; the labelled ones ar
 bars lean slightly to the right, the small bias discussed in \cref{sec:aa}.}
 \end{figure}
 
-\subsection{Quality by scenario family}
+\FloatBarrier
+\subsection{Quality by scenario family, and savings next to quality}\label{sec:joint}
+
+\Cref{tab:qualityfamily} gives the turn-pass difference by family; \cref{tab:jointfamily,tab:jointtask} put each
+cell's saving per 1,000 sessions (as in \cref{tab:per1000}) next to its turn-pass difference. The family with the
+largest Fable sticky saving, knowledge, also has the largest quality loss: \RvKnowFableSticky\ (95\,\% CI
+\RvKnowFableStickyCI), below the \NIMargin\ margin. Inside knowledge the losses come from the explain and review
+scenarios. This is a family effect, not a general rule that bigger savings cost quality: across scenarios, the rank
+correlation between saving and turn-pass difference for Fable sticky is \RvSpearman.
 
 \begin{table}[htbp]
 \centering\small
@@ -100,7 +120,28 @@ means the arm passed fewer scripted turns.}
 \input{generated/tables/quality-family.tex}
 \end{table}
 
-\subsection{Requests per session and session length}
+\begin{table}[htbp]
+\centering\scriptsize
+\caption{Savings and quality together, by family: saving per 1,000 sessions (US dollars) / mean turn-pass
+difference, all splits. $\dagger$: the mean difference is below the \NIMargin\ margin.}
+\label{tab:jointfamily}
+\input{generated/tables/joint-family.tex}
+\end{table}
+
+\begin{table}[htbp]
+\centering\scriptsize
+\caption{Savings and quality together, by task type (same layout as \cref{tab:jointfamily}). Docs has no test-split
+scenario (\cref{tab:tasksplit}).}
+\label{tab:jointtask}
+\input{generated/tables/joint-task.tex}
+\end{table}
+
+\FloatBarrier
+\subsection{Requests per session}
+
+Sessions on Sonnet needed more main-loop requests for the same scripted work than plain-host sessions did, and
+that volume is part of why routing cost more on the Opus host. The sticky arm made fewer requests than its mix of
+Sonnet and host sessions would suggest (\cref{sec:effort}). \Cref{fig:requests} shows the spread.
 
 \begin{figure}[htbp]
 \centering
@@ -112,6 +153,12 @@ the median, whiskers from the 5th to the 95th percentile.}
 right of the plain Opus sessions, which is part of why routing cost more on Opus.}
 \end{figure}
 
+\FloatBarrier
+\subsection{Session length}
+
+Within the \MinTurns\ to \MaxTurns\ scripted turns of this campaign, session length moved the cost ratios little (\cref{fig:band}).
+On Fable the saving held at every length; on Opus the longer sessions came slightly closer to break-even.
+
 \begin{figure}[htbp]
 \centering
 \pgfplotslegendfromname{bandlegend}\par\smallskip
@@ -121,3 +168,4 @@ right of the plain Opus sessions, which is part of why routing cost more on Opus
 \howtoread{Flat rows mean the ratio does not depend on session length within 8--16 turns. Longer sessions moved
 the Opus ratios slightly toward 1; on Fable the saving held at every length.}
 \end{figure}
+\FloatBarrier

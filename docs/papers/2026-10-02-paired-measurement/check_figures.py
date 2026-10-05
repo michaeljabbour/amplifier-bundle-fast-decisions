@@ -20,7 +20,7 @@ HERE = Path(__file__).resolve().parent
 PDF = HERE / "paired-measurement.pdf"
 MARK_R = 3.2
 LEGENDS = {  # caption start -> (first legend entry words, topmost words of the plot)
-    "Confirmatory cost ratios on the": (["pair", "reading", "(primary)"], ["Fable", "sticky"]),
+    "Confirmatory cost ratios on the": (["pair", "reading", "(co-primary)"], ["Fable", "sticky"]),
     "The savings model on the test": (["prediction", "=", "observation"], ["150"]),
     "Mean cost per session, split by": (["uncached", "input"], ["Fable:", "plain", "host"]),
     "Dollars saved per 1,000 sessions": (["sticky", "(choose", "once)"], ["Fable", "host"]),

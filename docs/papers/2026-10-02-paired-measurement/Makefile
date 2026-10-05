@@ -4,7 +4,7 @@ LATEXMK ?= latexmk
 NICE ?= nice -n 10
 JOB := paired-measurement
 PDF := $(JOB).pdf
-EVIDENCE := ../../evidence/2026-10-02-paired-campaign
+EVIDENCE := ../../evidence/2026-10-02-paired-campaign ../../evidence/2026-10-05-effort-control
 
 .PHONY: all assets pdf check clean distclean
 

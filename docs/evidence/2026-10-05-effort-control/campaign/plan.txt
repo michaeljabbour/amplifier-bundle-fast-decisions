@@ -1,0 +1,86 @@
+plan 626e8a52ffd7  design=effort-control-v1  seed=20261002  reps=2  hosts=any  parallel=8  nonce=per_session
+arms: sonnet, sonnet_medium
+92 sessions in 46 waves
+
+scenario         type     lang    turns gaps>=5m
+api-docs         mixed    python     16        2
+debug-triage     mixed    javascript    11        0
+discrepancy-docs mixed    python     16        2
+docstring-audit  mixed    python     12        0
+fastrand-explain explain  rust        9        0
+filelock-explain explain  python      9        0
+go-linkedlist    mixed    go         16        2
+go-protein       feature  go          8        0
+humanize-review  review   python     12        2
+js-listops       feature  javascript     8        0
+js-phone         bugfix   javascript     8        0
+lark-discard     bugfix   python     12        0
+lark-template    bugfix   python      8        2
+mistune-escape   bugfix   python      8        0
+py-go-counting   mixed    python     14        2
+py-rest-api      feature  python      9        0
+readme-rewrite   mixed    python      8        0
+rust-ocr         mixed    rust       16        2
+sales-orders     mixed    python     16        0
+semver-review    review   rust       10        0
+survey-analysis  mixed    python     16        0
+toolz-interpose  bugfix   python      8        2
+xmltodict-none   bugfix   python      8        0
+
+wave (seeded order)                sessions    est $
+js-phone-r2-any                           2     4.43
+readme-rewrite-r2-any                     2     3.54
+go-linkedlist-r2-any                      2    10.03
+filelock-explain-r2-any                   2     3.45
+go-protein-r2-any                         2     3.54
+fastrand-explain-r1-any                   2     3.45
+js-listops-r2-any                         2     3.54
+semver-review-r1-any                      2     3.95
+js-listops-r1-any                         2     3.54
+toolz-interpose-r1-any                    2     5.31
+docstring-audit-r2-any                    2     5.95
+sales-orders-r2-any                       2     8.35
+lark-template-r1-any                      2     5.31
+mistune-escape-r2-any                     2     4.43
+go-protein-r1-any                         2     3.54
+api-docs-r2-any                           2    10.03
+survey-analysis-r1-any                    2     8.35
+xmltodict-none-r2-any                     2     4.43
+discrepancy-docs-r1-any                   2    10.03
+semver-review-r2-any                      2     3.95
+py-go-counting-r2-any                     2     8.58
+readme-rewrite-r1-any                     2     3.54
+debug-triage-r2-any                       2     5.35
+sales-orders-r1-any                       2     8.35
+mistune-escape-r1-any                     2     4.43
+debug-triage-r1-any                       2     5.35
+humanize-review-r1-any                    2     5.95
+go-linkedlist-r1-any                      2    10.03
+xmltodict-none-r1-any                     2     4.43
+docstring-audit-r1-any                    2     5.95
+survey-analysis-r2-any                    2     8.35
+py-go-counting-r1-any                     2     8.58
+api-docs-r1-any                           2    10.03
+rust-ocr-r2-any                           2    10.03
+py-rest-api-r1-any                        2     4.14
+humanize-review-r2-any                    2     5.95
+js-phone-r1-any                           2     4.43
+py-rest-api-r2-any                        2     4.14
+discrepancy-docs-r2-any                   2    10.03
+lark-discard-r1-any                       2     7.43
+lark-template-r2-any                      2     5.31
+lark-discard-r2-any                       2     7.43
+rust-ocr-r1-any                           2    10.03
+fastrand-explain-r2-any                   2     3.45
+toolz-interpose-r2-any                    2     5.31
+filelock-explain-r1-any                   2     3.45
+
+arm        host     n     est $
+sonnet     any     46    150.93
+sonnet_medium any     46    128.22
+
+estimate (sessions)      $279.15
+infra retry reserve      $22.33
+estimate incl. reserve   $301.48   budget $400.00
+estimated wall time    4.9 h at --parallel 8 (FIFO waves; wall_model assumptions)
+cost basis: main-v1 plain-sonnet sessions (n=140, tools-normalized), medium = 0.85x assumption (4-turn unit means, scaled to scenario turns/type; an estimate)

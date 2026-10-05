@@ -1,0 +1,12 @@
+{
+  "sessions": 92,
+  "turns": 1032,
+  "requests": 5188,
+  "pairs": 46,
+  "tools_normalized_delta_usd_total": -0.24228,
+  "skipped_no_result": [],
+  "cache_audit_flagged_sessions": [],
+  "mechanism_failed": [],
+  "killed_memory": [],
+  "cost_mismatch": []
+}

@@ -1,0 +1,50 @@
+memory check ok: 62.7 GB available (floor 32.0 GB)
+caffeinate attached (idle/system sleep prevented; clamshell sleep on battery cannot be prevented: keep the lid open or on AC)
+{"prepared": "<campaign>/w000-a1", "runs": ["js-phone-r2-any-sonnet", "js-phone-r2-any-sonnet_medium"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w001-a1", "runs": ["readme-rewrite-r2-any-sonnet", "readme-rewrite-r2-any-sonnet_medium"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w002-a1", "runs": ["go-linkedlist-r2-any-sonnet", "go-linkedlist-r2-any-sonnet_medium"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w003-a1", "runs": ["filelock-explain-r2-any-sonnet", "filelock-explain-r2-any-sonnet_medium"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w004-a1", "runs": ["go-protein-r2-any-sonnet", "go-protein-r2-any-sonnet_medium"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w005-a1", "runs": ["fastrand-explain-r1-any-sonnet", "fastrand-explain-r1-any-sonnet_medium"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w006-a1", "runs": ["js-listops-r2-any-sonnet", "js-listops-r2-any-sonnet_medium"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w007-a1", "runs": ["semver-review-r1-any-sonnet", "semver-review-r1-any-sonnet_medium"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w008-a1", "runs": ["js-listops-r1-any-sonnet", "js-listops-r1-any-sonnet_medium"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w009-a1", "runs": ["toolz-interpose-r1-any-sonnet", "toolz-interpose-r1-any-sonnet_medium"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w010-a1", "runs": ["docstring-audit-r2-any-sonnet", "docstring-audit-r2-any-sonnet_medium"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w011-a1", "runs": ["sales-orders-r2-any-sonnet", "sales-orders-r2-any-sonnet_medium"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w012-a1", "runs": ["lark-template-r1-any-sonnet", "lark-template-r1-any-sonnet_medium"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w013-a1", "runs": ["mistune-escape-r2-any-sonnet", "mistune-escape-r2-any-sonnet_medium"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w014-a1", "runs": ["go-protein-r1-any-sonnet", "go-protein-r1-any-sonnet_medium"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w015-a1", "runs": ["api-docs-r2-any-sonnet", "api-docs-r2-any-sonnet_medium"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w016-a1", "runs": ["survey-analysis-r1-any-sonnet", "survey-analysis-r1-any-sonnet_medium"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w017-a1", "runs": ["xmltodict-none-r2-any-sonnet", "xmltodict-none-r2-any-sonnet_medium"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w018-a1", "runs": ["discrepancy-docs-r1-any-sonnet", "discrepancy-docs-r1-any-sonnet_medium"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w019-a1", "runs": ["semver-review-r2-any-sonnet", "semver-review-r2-any-sonnet_medium"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w020-a1", "runs": ["py-go-counting-r2-any-sonnet", "py-go-counting-r2-any-sonnet_medium"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w021-a1", "runs": ["readme-rewrite-r1-any-sonnet", "readme-rewrite-r1-any-sonnet_medium"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w022-a1", "runs": ["debug-triage-r2-any-sonnet", "debug-triage-r2-any-sonnet_medium"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w023-a1", "runs": ["sales-orders-r1-any-sonnet", "sales-orders-r1-any-sonnet_medium"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w024-a1", "runs": ["mistune-escape-r1-any-sonnet", "mistune-escape-r1-any-sonnet_medium"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w025-a1", "runs": ["debug-triage-r1-any-sonnet", "debug-triage-r1-any-sonnet_medium"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w026-a1", "runs": ["humanize-review-r1-any-sonnet", "humanize-review-r1-any-sonnet_medium"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w027-a1", "runs": ["go-linkedlist-r1-any-sonnet", "go-linkedlist-r1-any-sonnet_medium"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w028-a1", "runs": ["xmltodict-none-r1-any-sonnet", "xmltodict-none-r1-any-sonnet_medium"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w029-a1", "runs": ["docstring-audit-r1-any-sonnet", "docstring-audit-r1-any-sonnet_medium"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w030-a1", "runs": ["survey-analysis-r2-any-sonnet", "survey-analysis-r2-any-sonnet_medium"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w031-a1", "runs": ["py-go-counting-r1-any-sonnet", "py-go-counting-r1-any-sonnet_medium"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w032-a1", "runs": ["api-docs-r1-any-sonnet", "api-docs-r1-any-sonnet_medium"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w033-a1", "runs": ["rust-ocr-r2-any-sonnet", "rust-ocr-r2-any-sonnet_medium"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w034-a1", "runs": ["py-rest-api-r1-any-sonnet", "py-rest-api-r1-any-sonnet_medium"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w035-a1", "runs": ["humanize-review-r2-any-sonnet", "humanize-review-r2-any-sonnet_medium"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w036-a1", "runs": ["js-phone-r1-any-sonnet", "js-phone-r1-any-sonnet_medium"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w037-a1", "runs": ["py-rest-api-r2-any-sonnet", "py-rest-api-r2-any-sonnet_medium"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w038-a1", "runs": ["discrepancy-docs-r2-any-sonnet", "discrepancy-docs-r2-any-sonnet_medium"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w039-a1", "runs": ["lark-discard-r1-any-sonnet", "lark-discard-r1-any-sonnet_medium"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w040-a1", "runs": ["lark-template-r2-any-sonnet", "lark-template-r2-any-sonnet_medium"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w041-a1", "runs": ["lark-discard-r2-any-sonnet", "lark-discard-r2-any-sonnet_medium"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w042-a1", "runs": ["rust-ocr-r1-any-sonnet", "rust-ocr-r1-any-sonnet_medium"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w043-a1", "runs": ["fastrand-explain-r2-any-sonnet", "fastrand-explain-r2-any-sonnet_medium"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w044-a1", "runs": ["toolz-interpose-r2-any-sonnet", "toolz-interpose-r2-any-sonnet_medium"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"prepared": "<campaign>/w045-a1", "runs": ["filelock-explain-r1-any-sonnet", "filelock-explain-r1-any-sonnet_medium"], "installed_commit": "62061032277869e7ec6b98c2f6d0b9aaa7799294"}
+{"exit": 0, "state": "<campaign>/state.json", "ledger": "<campaign>/ledger.json"}
+EXIT 0

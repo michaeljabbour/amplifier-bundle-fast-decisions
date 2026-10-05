@@ -57,7 +57,8 @@ session, and cache-read tokens per session (millions).}
 \label{fig:savings}
 \howtoread{Bars to the right of the zero line are savings; bars to the left are extra costs. On Fable every
 bar is to the right. On Opus most bars are to the left, except for the short read-heavy task types (docs,
-explain), which are small and rest on \TaskExplainN\ and \TaskDocsN\ scenarios: treat them as hints, not findings.}
+explain), which are small and rest on \TaskExplainN\ and \TaskDocsN\ scenarios: treat them as hints, not findings.
+None of the \RvDocsTrain\ docs scenarios is in the test split, so the docs results rest on training data only.}
 \end{figure}
 
 \begin{table}[htbp]
@@ -71,7 +72,20 @@ explain), which are small and rest on \TaskExplainN\ and \TaskDocsN\ scenarios: 
 Across all tasks, per 1,000 sessions, sticky saved \$\SavFableSticky\ on Fable (90\,\% range
 \$\SavFableStickyLo--\$\SavFableStickyHi), shipped \$\SavFableShipped\ and Sonnet \$\SavFableSonnet. On Opus
 the same arms \emph{lost} \$\SavOpusSticky, \$\SavOpusShipped\ and \$\SavOpusSonnet. These dollar figures
-assume this campaign's mix of tasks and session lengths.
+assume this campaign's mix of tasks and session lengths. They are mean-difference (spend) measures, not
+geometric means: for Fable sticky, \$\SavFableSticky\ per 1,000 is exactly 1,000 times the drop in mean cost from
+\$\RvSpendAnchor\ to \$\RvSpendSticky. The largest Fable sticky saving by task type is \RvBestTaskFableSticky\
+(\$\RvSavReviewFableSticky), ahead of docs (\$\RvSavDocsFableSticky). \Cref{tab:tasksplit} shows how few
+scenarios some task types have, and that docs has none in the test split. \Cref{tab:jointtask} sets these savings
+next to the quality differences.
+
+\begin{table}[htbp]
+\centering\small
+\caption{Scenarios by task type and preregistered split. The split was stratified by family and pause pattern, not
+by task type.}
+\label{tab:tasksplit}
+\input{generated/tables/task-split.tex}
+\end{table}
 
 Long pauses and session length move the ratios less than the host does (\cref{tab:slicegap,tab:sliceturns}
 in the appendix). On Opus, routed sessions with two long pauses came closer to break-even (shipped
@@ -106,8 +120,13 @@ The \term{A/A} arm runs the plain host twice on the same scenario. Its ratio sho
 says how much two identical sessions differ by chance. The standard deviation of the A/A log ratio was about
 \AAAllSD\ per pair, or \AAAllSDSession\ per session, far smaller than the effects above (\cref{tab:aa}). On
 Fable the A/A ratio was \AAFable\ (\AAFableCI). On Opus it was \AAOpus\ (\AAOpusCI): the interval excludes 1. Two identical Opus
-sessions differed by about \AAOpusPct\,\% on average, plausibly because the launch order was fixed
-(\cref{sec:design}). If every Opus arm carried the same bias, removing it would move the Opus ratios from
+sessions differed by about \AAOpusPct\,\% on average, and we cannot explain why. A linear start-offset effect does not explain it: a
+regression of the A/A log ratio on the start offset between the two copies gives a slope of
+\RvAASlopeOpus\ per second on Opus (95\,\% CI \RvAASlopeOpusCI) and \RvAASlopeFable\ on Fable (\RvAASlopeFableCI),
+and at zero offset the Opus ratio is still \RvAAInterceptOpus. The A/A log ratio does track the difference in
+request counts between the two copies (correlation \RvAAReqCorrOpus\ on Opus, \RvAAReqCorrFable\ on Fable), which
+suggests run-to-run variation in how the agent works, though a harness cause is not ruled out. With two A/A intervals, one
+excluding 1 is not remarkable. If every Opus arm carried the same bias, removing it would move the Opus ratios from
 \CfOpusStickyPairTwo--\CfOpusSonnetPairTwo\ to about \OpusAdjLow--\OpusAdjHigh, with the lowest lower bound at
 \OpusAdjMinLower; the H2 verdicts would hold.
 

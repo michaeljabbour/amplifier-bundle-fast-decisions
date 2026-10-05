@@ -28,11 +28,16 @@ comes from the policy, not from the task.
 
 All arms of one scenario, repetition and host form a \term{wave}. A wave's sessions are launched within
 seconds of each other, each in its own terminal, so they share the time of day and the provider's load.
-The launch order was fixed, not randomised: measured from the first session of its wave, the anchor started
-on average \StaggerAnchor\,s later, the A/A copy \StaggerAA\,s, shipped \StaggerShipped\,s (at most
-\StaggerShippedMax\,s), sticky \StaggerSticky\,s and Sonnet \StaggerSonnet\,s. A small systematic effect of
-launch order cannot be ruled out (\cref{sec:aa}). Each session carries its own
-nonce, so no arm can read another arm's cache (\cref{sec:caching}). A per-request audit checked every
+The intended launch order was anchor, A/A, shipped, sticky, Sonnet; measured from the first session of its wave,
+the anchor started on average \StaggerAnchor\,s later, the A/A copy \StaggerAA\,s, shipped \StaggerShipped\,s (at
+most \StaggerShippedMax\,s), sticky \StaggerSticky\,s and Sonnet \StaggerSonnet\,s. The realised order varied:
+the A/A copy started before its anchor in \RvAAFirstFable\,\% of Fable waves and \RvAAFirstOpus\,\% of Opus waves.
+The A/A cost ratio shows no detectable association with start offset (\cref{sec:aa}). One exception to ``same wave'': the plain-Sonnet
+control does not depend on the host, so it ran once per scenario and repetition, in the Opus wave. Its pairs with
+the Fable anchor therefore started a median \RvSonnetWaveMedianH\ hours apart (at most \RvSonnetWaveMaxH\,h), not
+within seconds. Each session carries its own
+nonce, so no arm can read another arm's cache, except the tool-definition prefix, which precedes the nonce and is
+shared (\cref{sec:caching}; the tools normalization below). A per-request audit checked every
 session for cache reads it could not have written itself; \AuditFlagged\ sessions were flagged.
 
 \begin{keyidea}
@@ -68,8 +73,11 @@ sonnet & Plain Sonnet for the whole session (``just use the cheap model''). It d
 The two hosts are Fable 5.1, an expensive model (\cref{tab:prices}), and Opus 5.5, a cheaper one with very
 cheap cache reads. The sticky judge chose Sonnet for
 \NStickySonnetOnly\ of \NStickySessions\ sticky sessions (\StickyCheap\ of \StickyDecisions\ per host,
-\StickyCheapPct\,\%) and the host for the rest, so in practice the sticky arm is mostly ``Sonnet for the whole
-session''. The judge's own calls are not part of any session's cost: the sticky decision was made once by the
+\StickyCheapPct\,\%) and the host for the rest. That does not make the sticky arm ``plain Sonnet'': its Sonnet
+sessions ran inside the bundle at medium reasoning effort, and made about \RvReqGapFable\,\% (Fable) and
+\RvReqGapOpus\,\% (Opus) fewer requests than a mix of plain-Sonnet and plain-host sessions in the same proportions
+would predict (\RvReqActFable\ against \RvReqPredFable\ per session on Fable; \RvReqActOpus\ against \RvReqPredOpus\ on
+Opus). \Cref{sec:effort} shows why. The judge's own calls are not part of any session's cost: the sticky decision was made once by the
 harness, and the shipped arm's per-turn decisions went to a separate judge service (Jev). Both used the bundle's
 default judge, Jev; the post-hoc Cloudflare Clef judges of \cref{sec:clef} were never run in the campaign. An earlier benchmark
 measured Jev at \$\JevPerMillion\ per million decisions on comparable real states; at one decision per turn
@@ -122,11 +130,36 @@ must be above \NIMargin, that is, at most \NIMarginPts\ percentage points worse.
 
 Every request's tokens were priced with the fixed table in \cref{tab:prices}; the recomputed cost matched
 the provider's reported cost on every session (\CostMismatch\ mismatches). One adjustment makes the
-comparison fair. Every session's first request writes the shared tool definitions (about \ToolsAllowance\
-tokens) to a cold cache, because the nonce stops sessions from sharing. In production those tools would
-usually be warm. The primary \term{tools-normalized} cost re-prices that shared prefix as a cache read; it
+comparison fair. A session's first request on each model carries the shared tool definitions (an allowance of
+\ToolsAllowance\ tokens). In production those tools would usually be cached already. The primary
+\term{tools-normalized} cost re-prices up to that allowance on the first request per model as a cache read; it
 changes the campaign total by \$\ToolsDeltaTotal, and every result is also reported on the raw basis
 (\cref{sec:rawbasis}).
+
+In practice most first requests already found the tool definitions cached: \RvWarmTotal\ of them read the prefix
+from cache (\RvWarmReadFable\ tokens on Fable and Opus, \RvWarmReadSonnet\ on Sonnet, \RvAllowGapFable\ and \RvAllowGapSonnet\ fewer than the
+allowance, so each had a few dozen tokens re-priced, \$\RvWarmUSD\ in all). Only \RvColdTotal\ were cold and had the
+full allowance re-priced (\$\RvColdUSD). The cold ones fell mostly on anchors (\RvColdFableAnchor\ of \NStickyPerHost\ on Fable,
+\RvColdOpusAnchor\ on Opus) and on the Sonnet control (\RvColdSonnet), against \RvColdFableSticky\ to
+\RvColdOpusSticky\ for sticky (\cref{tab:toolsnorm}). The cold rate did not depend on whether the anchor started
+first in its wave (Fable \RvColdFirstFable\ against \RvColdNotFirstFable; Opus \RvColdFirstOpus\ against
+\RvColdNotFirstOpus); the cause is not established. The adjustment therefore lowers the anchors' cost more than the routed arms', which \emph{raises} the routed
+ratios slightly (\cref{tab:toolsratios}): it works against the Fable savings claims, not for them.
+
+\begin{table}[htbp]
+\centering\scriptsize
+\caption{Tools normalization by host and arm: first requests per model that found the tool prefix cold or warm, and
+the dollars moved from the write rate to the read rate.}
+\label{tab:toolsnorm}
+\input{generated/tables/tools-norm.tex}
+\end{table}
+
+\begin{table}[htbp]
+\centering\small
+\caption{Confirmatory cost ratios (test split, pair reading) on the raw and the tools-normalized basis.}
+\label{tab:toolsratios}
+\input{generated/tables/tools-ratios.tex}
+\end{table}
 
 \subsection{Hypotheses and the decision rule}
 

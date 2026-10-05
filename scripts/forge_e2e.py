@@ -815,7 +815,7 @@ def _side_profile(name, side, task, workspace, config):
         raise ValueError(f"amplifier_bundle must be 'foundation' or 'lean', got {amplifier_bundle!r}")
 
     provider_config = {}
-    amplifier_effort = config.get('amplifier_effort')
+    amplifier_effort = side.get('amplifier_effort') or config.get('amplifier_effort')   # a side may pin its own effort
     if amplifier_effort:
         # --amplifier-effort (battery.py prepare) pins Policy-independent generative reasoning
         # effort for the harness model itself -- not to be confused with the fast-decisions

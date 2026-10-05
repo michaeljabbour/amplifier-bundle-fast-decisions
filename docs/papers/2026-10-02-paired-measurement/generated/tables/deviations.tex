@@ -1,7 +1,7 @@
 \begin{enumerate}[leftmargin=1.4em]
 \item Coverage bounds: paired\_model.py (PREREG constant) and MODEL.md use 0.83-0.97 plus a calibration-slope check 0.7-1.3; the preregistration says [0.80, 0.97] and has no slope check. The verdict here uses [0.80, 0.97]; the slope and paired\_model's own checks are reported, not used.
 \item Coverage outcome: the prereg does not say which outcome's PI coverage is checked; both the log-ratio and the delta-\$ model coverage must be in bounds here (stricter of the two readings).
-\item Primary-endpoint restriction is ambiguous (pair-level vs arm-level non-inferiority). Pair-level matches the text ('among pairs where ...') and is primary; arm-level is reported alongside. Pair-level filtering conditions on a post-treatment outcome and in this design keeps only pairs with delta\_turn\_pass >= 0 (steps are >= 1/16).
+\item Primary-endpoint restriction is ambiguous (pair-level vs arm-level non-inferiority). Pair-level matches the text ('among pairs where ...') and is primary; arm-level is reported alongside. Pair-level filtering conditions on a post-treatment outcome and in this design keeps only pairs with delta\_turn\_pass >= 0 (steps are >= 1/16). [This report treats both readings as co-primary.]
 \item Non-inferiority comparison: paired\_model uses lower bound >= -0.05; the prereg says > -0.05, used here.
 \item 'Lower bound' for Quality is the 2.5th percentile (two-sided 95\% bootstrap CI), consistent with the 95\% CIs of the primary endpoint; the prereg does not state the level for this bound.
 \item 'Contradicted' is not defined in the prereg; defined here, before looking at test numbers, as the 95\% CI lying entirely on the other side of the same preregistered threshold.

@@ -1,15 +1,16 @@
-\section{Confirmatory results \texorpdfstring{\prereg}{[preregistered]}}\label{sec:confirm}
+\section{Confirmatory results}\label{sec:confirm}
 
 Everything in this section uses the \NTest\ test scenarios only (\NTestPairs\ pairs). The hypotheses,
 thresholds and decision rule are the preregistered ones; the estimator (resamples, seed, quality filter,
-verdict rule) was fixed afterwards in the confirmatory script (\cref{sec:design}). The preregistration said the cost ratio is computed ``among pairs where quality is
+verdict rule) was fixed afterwards in the confirmatory script (\cref{sec:design}). The results below depend on
+that estimator, so this section is labelled confirmatory but not preregistered. The preregistration said the cost ratio is computed ``among pairs where quality is
 non-inferior.'' That sentence has two readings, so both are reported:
 \begin{itemize}
-  \item \textbf{Pair reading (primary):} keep a pair only if its own turn-pass fraction is not worse than
+  \item \textbf{Pair reading (co-primary):} keep a pair only if its own turn-pass fraction is not worse than
     its anchor's by more than \NIMarginPts\ points. In this design that keeps pairs where the arm did at
-    least as well.
-  \item \textbf{Arm reading (sensitivity):} keep every cost-valid pair, and require non-inferiority of the
-    arm as a whole.
+    least as well. Because this filter conditions on an outcome the arm affects, it is not reported alone.
+  \item \textbf{Arm reading (co-primary, unfiltered):} keep every cost-valid pair, and require non-inferiority of
+    the arm as a whole.
 \end{itemize}
 
 \begin{table}[htbp]
@@ -78,8 +79,16 @@ Every Fable savings claim passes the quality test. (A \term{savings claim} here 
 own cost interval shows a saving; only those cells are tested for quality.) The closest call is Fable sticky,
 whose lower bound is \QFableStickyLow, inside the \NIMargin\ margin by only \QFableStickyMarginGap.
 Across all \QAllScen\ scenarios (exploratory) its mean difference is \QAllFableSticky\ with a 95\,\%
-interval of \QAllFableStickyCI: there the margin is not shown. Opus sticky narrowly fails it (lower bound
-\QOpusStickyLow), but no savings claim is made on Opus, so the quality hypothesis holds as preregistered.
+interval of \QAllFableStickyCI: there the margin is not shown, and on the \NTrain\ training scenarios it is
+\RvQTrainFableSticky\ (\RvQTrainFableStickyCI). So quality passed on the test split only. The quality test itself
+is unfiltered: it uses every quality-valid test pair, so the \QFableStickyMarginGap\ margin does not depend on the
+pair-level cost filter. That margin is thin but is not an artefact of bootstrap randomness: re-drawing the
+resamples moves the lower bound by only \RvQNoise\ (to \RvQAltLow). It is small against the sampling uncertainty (the
+interval is about \RvQWidth\ wide), and the margin is not shown on the training or all-scenario data. Opus sticky did not show
+non-inferior quality (\QOpusSticky, 95\,\% CI \QOpusStickyCI; ``not shown'', which is not the same as ``worse'').
+The preregistration requires quality for each savings claim, and no savings claim is made on Opus, so the quality
+hypothesis is confirmed under that scope; if quality were required of every routed cell, \RvNQualCells\ of
+\RvNRoutedCells\ cells would pass and \RvNHypAllQuality\ of 4 hypotheses would be confirmed.
 
 \subsection{The savings model}\label{sec:modelcheck}
 
