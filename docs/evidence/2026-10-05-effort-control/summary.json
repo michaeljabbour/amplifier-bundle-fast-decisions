@@ -1,0 +1,35 @@
+{
+  "description": "effort-control-v1 (preregistered, 2026-10-05): plain Sonnet 5 at reasoning effort medium vs plain Sonnet 5 at the provider default effort; cost = geometric-mean ratio of tools-normalized session cost per scenario, 95% percentile CI from 10,000 scenario-cluster bootstrap resamples (seed 20261005). The first row is the confirmatory test-split endpoint (23 scenarios x 2 reps = 46 pairs); the second row is exploratory and not concurrent (different run dates, no decision rule; n_pairs counts scenario-level comparisons, 22 scenarios). Ratios below 1.0 mean the first arm is cheaper.",
+  "rows": [
+    {
+      "label": "sonnet_medium / sonnet (HE, test split, confirmatory)",
+      "n_pairs": 46,
+      "gm_ratio": 0.8208647745606144,
+      "ci95": [
+        0.7813527850361646,
+        0.8614352262249376
+      ]
+    },
+    {
+      "label": "sonnet_medium / main-v1 sticky-on-Sonnet (exploratory, non-concurrent)",
+      "n_pairs": 22,
+      "gm_ratio": 0.9579543725453573,
+      "ci95": [
+        0.9127884421127486,
+        0.9989118223773635
+      ]
+    }
+  ],
+  "quality": {
+    "label": "turn-pass delta, sonnet_medium minus sonnet (HE quality endpoint, unfiltered)",
+    "n_pairs": 46,
+    "mean_delta_turn_pass": -0.0034086956521739127,
+    "ci95": [
+      -0.025567391304347823,
+      0.02131956521739131
+    ],
+    "non_inferiority_margin": -0.05,
+    "non_inferior": true
+  },
+  "HE_supported": true
+}
