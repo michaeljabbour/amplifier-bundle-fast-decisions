@@ -344,7 +344,8 @@ class ArmTests(unittest.TestCase):
 
     def test_yaml_determinism_matches_adapters(self):
         cfg = judges.load_config()
-        env = {"TYPESAFE_API_KEY": "x", "OPENAI_API_KEY": "x"}
+        env = {"TYPESAFE_API_KEY": "x", "OPENAI_API_KEY": "x", "CLOUDFLARE_API_TOKEN": "x",
+               "CLOUDFLARE_ACCOUNT_ID": "x"}
         for name, spec in cfg["arms"].items():
             with self.subTest(arm=name):
                 arm = arms.build_arm(spec, cfg["arms"], env)

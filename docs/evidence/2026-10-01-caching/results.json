@@ -1,0 +1,6231 @@
+{
+ "headline": {
+  "runs_indexed": 2240,
+  "s1_result_files_before_attempt_dedupe": 1945,
+  "runs_with_parsed_session": 2232,
+  "pairs_total": 1797,
+  "pairs_with_sessions": 1787,
+  "routed_pairs": 903,
+  "routed_pairs_with_efficiency_receipts": 0,
+  "length": {
+   "all_routed": {
+    "all": {
+     "n_pairs": 903,
+     "n_tasks": 61,
+     "geomean": 0.6786,
+     "ci95": [
+      0.6038,
+      0.7653
+     ]
+    },
+    "time_all": {
+     "n_pairs": 903,
+     "n_tasks": 61,
+     "geomean": 0.7352,
+     "ci95": [
+      0.6796,
+      0.7916
+     ]
+    },
+    "tercile_cuts_task_mean_anchor_requests": [
+     3.67,
+     4.55
+    ],
+    "short": {
+     "cost": {
+      "n_pairs": 299,
+      "n_tasks": 29,
+      "geomean": 0.8437,
+      "ci95": [
+       0.7685,
+       0.9229
+      ]
+     },
+     "time": {
+      "n_pairs": 299,
+      "n_tasks": 29,
+      "geomean": 0.9624,
+      "ci95": [
+       0.8917,
+       1.0194
+      ]
+     },
+     "cost_ex_rebuild": {
+      "n_pairs": 299,
+      "n_tasks": 29,
+      "geomean": 0.8407,
+      "ci95": [
+       0.7682,
+       0.918
+      ]
+     },
+     "task_len_range": [
+      2.0,
+      3.64
+     ],
+     "switch_sessions": 0,
+     "rebuild_usd": 0.0,
+     "treat_cost": 84.9128,
+     "anchor_cost": 95.0562
+    },
+    "mid": {
+     "cost": {
+      "n_pairs": 296,
+      "n_tasks": 28,
+      "geomean": 0.484,
+      "ci95": [
+       0.4256,
+       0.5636
+      ]
+     },
+     "time": {
+      "n_pairs": 296,
+      "n_tasks": 28,
+      "geomean": 0.6036,
+      "ci95": [
+       0.5256,
+       0.6934
+      ]
+     },
+     "cost_ex_rebuild": {
+      "n_pairs": 296,
+      "n_tasks": 28,
+      "geomean": 0.4732,
+      "ci95": [
+       0.4153,
+       0.5517
+      ]
+     },
+     "task_len_range": [
+      3.67,
+      4.33
+     ],
+     "switch_sessions": 1,
+     "rebuild_usd": 0.5081,
+     "treat_cost": 73.2853,
+     "anchor_cost": 144.9468
+    },
+    "long": {
+     "cost": {
+      "n_pairs": 308,
+      "n_tasks": 25,
+      "geomean": 0.7602,
+      "ci95": [
+       0.6022,
+       0.894
+      ]
+     },
+     "time": {
+      "n_pairs": 308,
+      "n_tasks": 25,
+      "geomean": 0.6843,
+      "ci95": [
+       0.5942,
+       0.7798
+      ]
+     },
+     "cost_ex_rebuild": {
+      "n_pairs": 308,
+      "n_tasks": 25,
+      "geomean": 0.646,
+      "ci95": [
+       0.5387,
+       0.728
+      ]
+     },
+     "task_len_range": [
+      4.55,
+      22.0
+     ],
+     "switch_sessions": 89,
+     "rebuild_usd": 38.3528,
+     "treat_cost": 227.5645,
+     "anchor_cost": 274.5259
+    },
+    "slope_logcostratio_per_log_task_len": {
+     "slope": 0.112,
+     "ci95": [
+      -0.0771,
+      0.2519
+     ]
+    },
+    "slope_vs_pair_anchor_requests_BIASED_regression_to_mean": {
+     "slope": 0.0955,
+     "ci95": [
+      -0.0964,
+      0.2326
+     ]
+    }
+   },
+   "all_routed_fable_host": {
+    "all": {
+     "n_pairs": 453,
+     "n_tasks": 56,
+     "geomean": 0.534,
+     "ci95": [
+      0.4617,
+      0.6217
+     ]
+    },
+    "time_all": {
+     "n_pairs": 453,
+     "n_tasks": 56,
+     "geomean": 0.5735,
+     "ci95": [
+      0.5109,
+      0.6504
+     ]
+    },
+    "tercile_cuts_task_mean_anchor_requests": [
+     4.0,
+     5.92
+    ],
+    "short": {
+     "cost": {
+      "n_pairs": 97,
+      "n_tasks": 11,
+      "geomean": 0.7324,
+      "ci95": [
+       0.507,
+       0.9264
+      ]
+     },
+     "time": {
+      "n_pairs": 97,
+      "n_tasks": 11,
+      "geomean": 0.7803,
+      "ci95": [
+       0.6106,
+       0.9376
+      ]
+     },
+     "cost_ex_rebuild": {
+      "n_pairs": 97,
+      "n_tasks": 11,
+      "geomean": 0.7087,
+      "ci95": [
+       0.4921,
+       0.8899
+      ]
+     },
+     "task_len_range": [
+      2.0,
+      3.92
+     ],
+     "switch_sessions": 1,
+     "rebuild_usd": 0.5081,
+     "treat_cost": 48.0885,
+     "anchor_cost": 58.604
+    },
+    "mid": {
+     "cost": {
+      "n_pairs": 192,
+      "n_tasks": 27,
+      "geomean": 0.3642,
+      "ci95": [
+       0.3547,
+       0.3756
+      ]
+     },
+     "time": {
+      "n_pairs": 192,
+      "n_tasks": 27,
+      "geomean": 0.4901,
+      "ci95": [
+       0.4651,
+       0.5136
+      ]
+     },
+     "cost_ex_rebuild": {
+      "n_pairs": 192,
+      "n_tasks": 27,
+      "geomean": 0.3545,
+      "ci95": [
+       0.3436,
+       0.3686
+      ]
+     },
+     "task_len_range": [
+      4.0,
+      5.33
+     ],
+     "switch_sessions": 0,
+     "rebuild_usd": 0.0,
+     "treat_cost": 45.7913,
+     "anchor_cost": 119.2895
+    },
+    "long": {
+     "cost": {
+      "n_pairs": 164,
+      "n_tasks": 18,
+      "geomean": 0.6932,
+      "ci95": [
+       0.548,
+       0.8995
+      ]
+     },
+     "time": {
+      "n_pairs": 164,
+      "n_tasks": 18,
+      "geomean": 0.5746,
+      "ci95": [
+       0.4621,
+       0.8028
+      ]
+     },
+     "cost_ex_rebuild": {
+      "n_pairs": 164,
+      "n_tasks": 18,
+      "geomean": 0.5438,
+      "ci95": [
+       0.4534,
+       0.6947
+      ]
+     },
+     "task_len_range": [
+      5.92,
+      22.0
+     ],
+     "switch_sessions": 60,
+     "rebuild_usd": 32.0438,
+     "treat_cost": 158.4451,
+     "anchor_cost": 200.4911
+    },
+    "slope_logcostratio_per_log_task_len": {
+     "slope": 0.2081,
+     "ci95": [
+      0.0184,
+      0.4422
+     ]
+    },
+    "slope_vs_pair_anchor_requests_BIASED_regression_to_mean": {
+     "slope": 0.1873,
+     "ci95": [
+      0.0024,
+      0.4062
+     ]
+    }
+   },
+   "all_routed_opus_host": {
+    "all": {
+     "n_pairs": 450,
+     "n_tasks": 50,
+     "geomean": 0.8639,
+     "ci95": [
+      0.7768,
+      0.9683
+     ]
+    },
+    "time_all": {
+     "n_pairs": 450,
+     "n_tasks": 50,
+     "geomean": 0.9441,
+     "ci95": [
+      0.879,
+      1.0001
+     ]
+    },
+    "tercile_cuts_task_mean_anchor_requests": [
+     3.0,
+     4.0
+    ],
+    "short": {
+     "cost": {
+      "n_pairs": 28,
+      "n_tasks": 3,
+      "geomean": 1.0286,
+      "ci95": [
+       0.8387,
+       1.0975
+      ]
+     },
+     "time": {
+      "n_pairs": 28,
+      "n_tasks": 3,
+      "geomean": 1.1425,
+      "ci95": [
+       1.019,
+       1.476
+      ]
+     },
+     "cost_ex_rebuild": {
+      "n_pairs": 28,
+      "n_tasks": 3,
+      "geomean": 1.0286,
+      "ci95": [
+       0.8387,
+       1.0975
+      ]
+     },
+     "task_len_range": [
+      2.0,
+      2.67
+     ],
+     "switch_sessions": 0,
+     "rebuild_usd": 0.0,
+     "treat_cost": 6.7637,
+     "anchor_cost": 6.5811
+    },
+    "mid": {
+     "cost": {
+      "n_pairs": 216,
+      "n_tasks": 28,
+      "geomean": 0.831,
+      "ci95": [
+       0.7608,
+       0.929
+      ]
+     },
+     "time": {
+      "n_pairs": 216,
+      "n_tasks": 28,
+      "geomean": 0.979,
+      "ci95": [
+       0.9114,
+       1.0321
+      ]
+     },
+     "cost_ex_rebuild": {
+      "n_pairs": 216,
+      "n_tasks": 28,
+      "geomean": 0.831,
+      "ci95": [
+       0.7608,
+       0.929
+      ]
+     },
+     "task_len_range": [
+      3.0,
+      3.67
+     ],
+     "switch_sessions": 0,
+     "rebuild_usd": 0.0,
+     "treat_cost": 46.9314,
+     "anchor_cost": 52.5204
+    },
+    "long": {
+     "cost": {
+      "n_pairs": 206,
+      "n_tasks": 19,
+      "geomean": 0.8786,
+      "ci95": [
+       0.7139,
+       1.0677
+      ]
+     },
+     "time": {
+      "n_pairs": 206,
+      "n_tasks": 19,
+      "geomean": 0.8856,
+      "ci95": [
+       0.7829,
+       0.9763
+      ]
+     },
+     "cost_ex_rebuild": {
+      "n_pairs": 206,
+      "n_tasks": 19,
+      "geomean": 0.8383,
+      "ci95": [
+       0.7101,
+       0.9796
+      ]
+     },
+     "task_len_range": [
+      4.0,
+      14.0
+     ],
+     "switch_sessions": 29,
+     "rebuild_usd": 6.309,
+     "treat_cost": 79.7427,
+     "anchor_cost": 77.0429
+    },
+    "slope_logcostratio_per_log_task_len": {
+     "slope": 0.2192,
+     "ci95": [
+      -0.1932,
+      0.32
+     ]
+    },
+    "slope_vs_pair_anchor_requests_BIASED_regression_to_mean": {
+     "slope": 0.203,
+     "ci95": [
+      -0.1981,
+      0.306
+     ]
+    }
+   },
+   "S1-single_routed": {
+    "all": {
+     "n_pairs": 667,
+     "n_tasks": 44,
+     "geomean": 0.6119,
+     "ci95": [
+      0.5456,
+      0.6979
+     ]
+    },
+    "time_all": {
+     "n_pairs": 667,
+     "n_tasks": 44,
+     "geomean": 0.7314,
+     "ci95": [
+      0.6642,
+      0.7989
+     ]
+    },
+    "tercile_cuts_task_mean_anchor_requests": [
+     3.0,
+     4.0
+    ],
+    "short": {
+     "cost": {
+      "n_pairs": 79,
+      "n_tasks": 8,
+      "geomean": 0.9404,
+      "ci95": [
+       0.8088,
+       0.9943
+      ]
+     },
+     "time": {
+      "n_pairs": 79,
+      "n_tasks": 8,
+      "geomean": 0.9733,
+      "ci95": [
+       0.8209,
+       1.0555
+      ]
+     },
+     "cost_ex_rebuild": {
+      "n_pairs": 79,
+      "n_tasks": 8,
+      "geomean": 0.9279,
+      "ci95": [
+       0.8069,
+       0.9845
+      ]
+     },
+     "task_len_range": [
+      2.0,
+      2.92
+     ],
+     "switch_sessions": 0,
+     "rebuild_usd": 0.0,
+     "treat_cost": 35.4652,
+     "anchor_cost": 37.6192
+    },
+    "mid": {
+     "cost": {
+      "n_pairs": 262,
+      "n_tasks": 30,
+      "geomean": 0.7816,
+      "ci95": [
+       0.6666,
+       0.902
+      ]
+     },
+     "time": {
+      "n_pairs": 262,
+      "n_tasks": 30,
+      "geomean": 0.9167,
+      "ci95": [
+       0.8017,
+       1.004
+      ]
+     },
+     "cost_ex_rebuild": {
+      "n_pairs": 262,
+      "n_tasks": 30,
+      "geomean": 0.7753,
+      "ci95": [
+       0.6605,
+       0.8907
+      ]
+     },
+     "task_len_range": [
+      3.0,
+      3.92
+     ],
+     "switch_sessions": 1,
+     "rebuild_usd": 0.5081,
+     "treat_cost": 66.3183,
+     "anchor_cost": 80.0862
+    },
+    "long": {
+     "cost": {
+      "n_pairs": 326,
+      "n_tasks": 31,
+      "geomean": 0.4529,
+      "ci95": [
+       0.4058,
+       0.4985
+      ]
+     },
+     "time": {
+      "n_pairs": 326,
+      "n_tasks": 31,
+      "geomean": 0.5692,
+      "ci95": [
+       0.4878,
+       0.6425
+      ]
+     },
+     "cost_ex_rebuild": {
+      "n_pairs": 326,
+      "n_tasks": 31,
+      "geomean": 0.4448,
+      "ci95": [
+       0.3962,
+       0.4921
+      ]
+     },
+     "task_len_range": [
+      4.0,
+      5.92
+     ],
+     "switch_sessions": 0,
+     "rebuild_usd": 0.0,
+     "treat_cost": 73.1389,
+     "anchor_cost": 162.2228
+    },
+    "slope_logcostratio_per_log_task_len": {
+     "slope": -1.3846,
+     "ci95": [
+      -1.7387,
+      -1.1764
+     ]
+    },
+    "slope_vs_pair_anchor_requests_BIASED_regression_to_mean": {
+     "slope": -1.1621,
+     "ci95": [
+      -1.4179,
+      -0.9587
+     ]
+    }
+   },
+   "S1-multi_routed": {
+    "all": {
+     "n_pairs": 165,
+     "n_tasks": 6,
+     "geomean": 0.8762,
+     "ci95": [
+      0.732,
+      0.9759
+     ]
+    },
+    "time_all": {
+     "n_pairs": 165,
+     "n_tasks": 6,
+     "geomean": 0.6828,
+     "ci95": [
+      0.6187,
+      0.7523
+     ]
+    },
+    "tercile_cuts_task_mean_anchor_requests": [
+     13.2,
+     17.93
+    ],
+    "short": {
+     "cost": {
+      "n_pairs": 32,
+      "n_tasks": 3,
+      "geomean": 1.2025,
+      "ci95": [
+       1.1778,
+       1.2061
+      ]
+     },
+     "time": {
+      "n_pairs": 32,
+      "n_tasks": 3,
+      "geomean": 0.9663,
+      "ci95": [
+       0.946,
+       1.1268
+      ]
+     },
+     "cost_ex_rebuild": {
+      "n_pairs": 32,
+      "n_tasks": 3,
+      "geomean": 1.0379,
+      "ci95": [
+       1.0193,
+       1.1782
+      ]
+     },
+     "task_len_range": [
+      11.0,
+      12.13
+     ],
+     "switch_sessions": 13,
+     "rebuild_usd": 2.9664,
+     "treat_cost": 19.2945,
+     "anchor_cost": 15.8419
+    },
+    "mid": {
+     "cost": {
+      "n_pairs": 62,
+      "n_tasks": 5,
+      "geomean": 1.1022,
+      "ci95": [
+       0.4585,
+       1.2368
+      ]
+     },
+     "time": {
+      "n_pairs": 62,
+      "n_tasks": 5,
+      "geomean": 0.9599,
+      "ci95": [
+       0.5112,
+       1.0169
+      ]
+     },
+     "cost_ex_rebuild": {
+      "n_pairs": 62,
+      "n_tasks": 5,
+      "geomean": 1.0173,
+      "ci95": [
+       0.4585,
+       1.1008
+      ]
+     },
+     "task_len_range": [
+      13.2,
+      17.0
+     ],
+     "switch_sessions": 16,
+     "rebuild_usd": 3.3426,
+     "treat_cost": 39.3175,
+     "anchor_cost": 36.8684
+    },
+    "long": {
+     "cost": {
+      "n_pairs": 71,
+      "n_tasks": 4,
+      "geomean": 0.6218,
+      "ci95": [
+       0.4747,
+       0.751
+      ]
+     },
+     "time": {
+      "n_pairs": 71,
+      "n_tasks": 4,
+      "geomean": 0.4336,
+      "ci95": [
+       0.3606,
+       0.5295
+      ]
+     },
+     "cost_ex_rebuild": {
+      "n_pairs": 71,
+      "n_tasks": 4,
+      "geomean": 0.4633,
+      "ci95": [
+       0.4111,
+       0.5018
+      ]
+     },
+     "task_len_range": [
+      17.93,
+      19.07
+     ],
+     "switch_sessions": 33,
+     "rebuild_usd": 17.426,
+     "treat_cost": 61.7964,
+     "anchor_cost": 95.0186
+    },
+    "slope_logcostratio_per_log_task_len": {
+     "slope": -1.7535,
+     "ci95": [
+      -2.5922,
+      -1.3788
+     ]
+    },
+    "slope_vs_pair_anchor_requests_BIASED_regression_to_mean": {
+     "slope": -1.5954,
+     "ci95": [
+      -2.3586,
+      -1.2754
+     ]
+    }
+   },
+   "S1-multi_routed_fable": {
+    "all": {
+     "n_pairs": 75,
+     "n_tasks": 6,
+     "geomean": 0.604,
+     "ci95": [
+      0.4444,
+      0.7254
+     ]
+    },
+    "time_all": {
+     "n_pairs": 75,
+     "n_tasks": 6,
+     "geomean": 0.4329,
+     "ci95": [
+      0.3647,
+      0.5205
+     ]
+    },
+    "tercile_cuts_task_mean_anchor_requests": [
+     17.93,
+     19.0
+    ],
+    "short": {
+     "cost": {
+      "n_pairs": 4,
+      "n_tasks": 2,
+      "geomean": 0.361,
+      "ci95": [
+       0.3599,
+       0.3621
+      ]
+     },
+     "time": {
+      "n_pairs": 4,
+      "n_tasks": 2,
+      "geomean": 0.4205,
+      "ci95": [
+       0.4161,
+       0.425
+      ]
+     },
+     "cost_ex_rebuild": {
+      "n_pairs": 4,
+      "n_tasks": 2,
+      "geomean": 0.361,
+      "ci95": [
+       0.3599,
+       0.3621
+      ]
+     },
+     "task_len_range": [
+      16.0,
+      17.0
+     ],
+     "switch_sessions": 0,
+     "rebuild_usd": 0.0,
+     "treat_cost": 2.1042,
+     "anchor_cost": 5.8274
+    },
+    "mid": {
+     "cost": {
+      "n_pairs": 46,
+      "n_tasks": 2,
+      "geomean": 0.6129,
+      "ci95": [
+       0.4796,
+       0.7833
+      ]
+     },
+     "time": {
+      "n_pairs": 46,
+      "n_tasks": 2,
+      "geomean": 0.4793,
+      "ci95": [
+       0.4248,
+       0.5407
+      ]
+     },
+     "cost_ex_rebuild": {
+      "n_pairs": 46,
+      "n_tasks": 2,
+      "geomean": 0.4943,
+      "ci95": [
+       0.4796,
+       0.5095
+      ]
+     },
+     "task_len_range": [
+      17.93,
+      18.0
+     ],
+     "switch_sessions": 17,
+     "rebuild_usd": 8.5146,
+     "treat_cost": 38.2666,
+     "anchor_cost": 60.0207
+    },
+    "long": {
+     "cost": {
+      "n_pairs": 25,
+      "n_tasks": 2,
+      "geomean": 0.6383,
+      "ci95": [
+       0.4214,
+       0.6618
+      ]
+     },
+     "time": {
+      "n_pairs": 25,
+      "n_tasks": 2,
+      "geomean": 0.3606,
+      "ci95": [
+       0.3561,
+       0.4158
+      ]
+     },
+     "cost_ex_rebuild": {
+      "n_pairs": 25,
+      "n_tasks": 2,
+      "geomean": 0.4111,
+      "ci95": [
+       0.4103,
+       0.4214
+      ]
+     },
+     "task_len_range": [
+      19.0,
+      19.07
+     ],
+     "switch_sessions": 16,
+     "rebuild_usd": 8.9114,
+     "treat_cost": 23.5298,
+     "anchor_cost": 34.9979
+    },
+    "slope_logcostratio_per_log_task_len": {
+     "slope": 2.2982,
+     "ci95": [
+      -3.2855,
+      5.8659
+     ]
+    },
+    "slope_vs_pair_anchor_requests_BIASED_regression_to_mean": {
+     "slope": 0.0119,
+     "ci95": [
+      -1.0883,
+      1.6464
+     ]
+    }
+   },
+   "S1-multi_routed_opus": {
+    "all": {
+     "n_pairs": 90,
+     "n_tasks": 6,
+     "geomean": 1.1947,
+     "ci95": [
+      1.12,
+      1.2628
+     ]
+    },
+    "time_all": {
+     "n_pairs": 90,
+     "n_tasks": 6,
+     "geomean": 0.9981,
+     "ci95": [
+      0.966,
+      1.0406
+     ]
+    },
+    "tercile_cuts_task_mean_anchor_requests": [
+     12.13,
+     13.2
+    ],
+    "short": {
+     "cost": {
+      "n_pairs": 4,
+      "n_tasks": 2,
+      "geomean": 1.178,
+      "ci95": [
+       1.1778,
+       1.1782
+      ]
+     },
+     "time": {
+      "n_pairs": 4,
+      "n_tasks": 2,
+      "geomean": 1.1206,
+      "ci95": [
+       1.1145,
+       1.1268
+      ]
+     },
+     "cost_ex_rebuild": {
+      "n_pairs": 4,
+      "n_tasks": 2,
+      "geomean": 1.178,
+      "ci95": [
+       1.1778,
+       1.1782
+      ]
+     },
+     "task_len_range": [
+      11.0,
+      11.0
+     ],
+     "switch_sessions": 0,
+     "rebuild_usd": 0.0,
+     "treat_cost": 2.0224,
+     "anchor_cost": 1.7153
+    },
+    "mid": {
+     "cost": {
+      "n_pairs": 28,
+      "n_tasks": 1,
+      "geomean": 1.2061,
+      "ci95": [
+       1.2061,
+       1.2061
+      ]
+     },
+     "time": {
+      "n_pairs": 28,
+      "n_tasks": 1,
+      "geomean": 0.946,
+      "ci95": [
+       0.946,
+       0.946
+      ]
+     },
+     "cost_ex_rebuild": {
+      "n_pairs": 28,
+      "n_tasks": 1,
+      "geomean": 1.0193,
+      "ci95": [
+       1.0193,
+       1.0193
+      ]
+     },
+     "task_len_range": [
+      12.13,
+      12.13
+     ],
+     "switch_sessions": 13,
+     "rebuild_usd": 2.9664,
+     "treat_cost": 17.2721,
+     "anchor_cost": 14.1266
+    },
+    "long": {
+     "cost": {
+      "n_pairs": 58,
+      "n_tasks": 3,
+      "geomean": 1.1904,
+      "ci95": [
+       1.1114,
+       1.2748
+      ]
+     },
+     "time": {
+      "n_pairs": 58,
+      "n_tasks": 3,
+      "geomean": 1.0161,
+      "ci95": [
+       1.0117,
+       1.1163
+      ]
+     },
+     "cost_ex_rebuild": {
+      "n_pairs": 58,
+      "n_tasks": 3,
+      "geomean": 1.0927,
+      "ci95": [
+       1.0676,
+       1.1928
+      ]
+     },
+     "task_len_range": [
+      13.2,
+      14.0
+     ],
+     "switch_sessions": 16,
+     "rebuild_usd": 3.3426,
+     "treat_cost": 37.2133,
+     "anchor_cost": 31.041
+    },
+    "slope_logcostratio_per_log_task_len": {
+     "slope": -0.0511,
+     "ci95": [
+      -0.7416,
+      0.5653
+     ]
+    },
+    "slope_vs_pair_anchor_requests_BIASED_regression_to_mean": {
+     "slope": -0.5993,
+     "ci95": [
+      -0.8687,
+      -0.295
+     ]
+    }
+   },
+   "S3_routed": {
+    "all": {
+     "n_pairs": 71,
+     "n_tasks": 11,
+     "geomean": 0.9906,
+     "ci95": [
+      0.8262,
+      1.1274
+     ]
+    },
+    "time_all": {
+     "n_pairs": 71,
+     "n_tasks": 11,
+     "geomean": 0.9172,
+     "ci95": [
+      0.7547,
+      1.0925
+     ]
+    },
+    "tercile_cuts_task_mean_anchor_requests": [
+     11.17,
+     14.0
+    ],
+    "short": {
+     "cost": {
+      "n_pairs": 21,
+      "n_tasks": 3,
+      "geomean": 0.8803,
+      "ci95": [
+       0.4851,
+       1.1975
+      ]
+     },
+     "time": {
+      "n_pairs": 21,
+      "n_tasks": 3,
+      "geomean": 0.7326,
+      "ci95": [
+       0.4636,
+       1.0945
+      ]
+     },
+     "cost_ex_rebuild": {
+      "n_pairs": 21,
+      "n_tasks": 3,
+      "geomean": 0.5739,
+      "ci95": [
+       0.4397,
+       0.6888
+      ]
+     },
+     "task_len_range": [
+      6.83,
+      9.67
+     ],
+     "switch_sessions": 10,
+     "rebuild_usd": 5.3563,
+     "treat_cost": 17.4666,
+     "anchor_cost": 18.0283
+    },
+    "mid": {
+     "cost": {
+      "n_pairs": 21,
+      "n_tasks": 3,
+      "geomean": 1.1034,
+      "ci95": [
+       0.9473,
+       1.2156
+      ]
+     },
+     "time": {
+      "n_pairs": 21,
+      "n_tasks": 3,
+      "geomean": 1.1364,
+      "ci95": [
+       0.8657,
+       1.5223
+      ]
+     },
+     "cost_ex_rebuild": {
+      "n_pairs": 21,
+      "n_tasks": 3,
+      "geomean": 0.9141,
+      "ci95": [
+       0.7489,
+       1.1349
+      ]
+     },
+     "task_len_range": [
+      11.17,
+      13.17
+     ],
+     "switch_sessions": 7,
+     "rebuild_usd": 3.7647,
+     "treat_cost": 27.216,
+     "anchor_cost": 24.6929
+    },
+    "long": {
+     "cost": {
+      "n_pairs": 29,
+      "n_tasks": 5,
+      "geomean": 0.998,
+      "ci95": [
+       0.9309,
+       1.0723
+      ]
+     },
+     "time": {
+      "n_pairs": 29,
+      "n_tasks": 5,
+      "geomean": 0.9241,
+      "ci95": [
+       0.808,
+       1.0228
+      ]
+     },
+     "cost_ex_rebuild": {
+      "n_pairs": 29,
+      "n_tasks": 5,
+      "geomean": 0.8334,
+      "ci95": [
+       0.7083,
+       0.9228
+      ]
+     },
+     "task_len_range": [
+      14.0,
+      22.0
+     ],
+     "switch_sessions": 10,
+     "rebuild_usd": 5.4969,
+     "treat_cost": 45.7492,
+     "anchor_cost": 44.1505
+    },
+    "slope_logcostratio_per_log_task_len": {
+     "slope": 0.0476,
+     "ci95": [
+      -0.2534,
+      0.8355
+     ]
+    },
+    "slope_vs_pair_anchor_requests_BIASED_regression_to_mean": {
+     "slope": -0.1213,
+     "ci95": [
+      -0.4393,
+      0.3165
+     ]
+    }
+   },
+   "model_swap_control_plain-sonnet": {
+    "all": {
+     "n_pairs": 537,
+     "n_tasks": 61,
+     "geomean": 0.6385,
+     "ci95": [
+      0.5948,
+      0.6864
+     ]
+    },
+    "time_all": {
+     "n_pairs": 537,
+     "n_tasks": 61,
+     "geomean": 0.7326,
+     "ci95": [
+      0.6686,
+      0.8181
+     ]
+    },
+    "tercile_cuts_task_mean_anchor_requests": [
+     3.64,
+     4.08
+    ],
+    "short": {
+     "cost": {
+      "n_pairs": 171,
+      "n_tasks": 28,
+      "geomean": 0.7703,
+      "ci95": [
+       0.6683,
+       0.9143
+      ]
+     },
+     "time": {
+      "n_pairs": 171,
+      "n_tasks": 28,
+      "geomean": 0.9089,
+      "ci95": [
+       0.7822,
+       1.1207
+      ]
+     },
+     "cost_ex_rebuild": {
+      "n_pairs": 171,
+      "n_tasks": 28,
+      "geomean": 0.7703,
+      "ci95": [
+       0.6683,
+       0.9143
+      ]
+     },
+     "task_len_range": [
+      2.0,
+      3.33
+     ],
+     "switch_sessions": 0,
+     "rebuild_usd": 0.0,
+     "treat_cost": 42.5349,
+     "anchor_cost": 60.498
+    },
+    "mid": {
+     "cost": {
+      "n_pairs": 177,
+      "n_tasks": 26,
+      "geomean": 0.5101,
+      "ci95": [
+       0.4471,
+       0.5886
+      ]
+     },
+     "time": {
+      "n_pairs": 177,
+      "n_tasks": 26,
+      "geomean": 0.6223,
+      "ci95": [
+       0.5466,
+       0.7233
+      ]
+     },
+     "cost_ex_rebuild": {
+      "n_pairs": 177,
+      "n_tasks": 26,
+      "geomean": 0.5101,
+      "ci95": [
+       0.4471,
+       0.5886
+      ]
+     },
+     "task_len_range": [
+      3.64,
+      4.0
+     ],
+     "switch_sessions": 0,
+     "rebuild_usd": 0.0,
+     "treat_cost": 42.9581,
+     "anchor_cost": 88.5737
+    },
+    "long": {
+     "cost": {
+      "n_pairs": 189,
+      "n_tasks": 29,
+      "geomean": 0.6648,
+      "ci95": [
+       0.536,
+       0.7933
+      ]
+     },
+     "time": {
+      "n_pairs": 189,
+      "n_tasks": 29,
+      "geomean": 0.7023,
+      "ci95": [
+       0.5918,
+       0.8485
+      ]
+     },
+     "cost_ex_rebuild": {
+      "n_pairs": 189,
+      "n_tasks": 29,
+      "geomean": 0.6648,
+      "ci95": [
+       0.536,
+       0.7933
+      ]
+     },
+     "task_len_range": [
+      4.08,
+      22.0
+     ],
+     "switch_sessions": 0,
+     "rebuild_usd": 0.0,
+     "treat_cost": 102.3495,
+     "anchor_cost": 142.7296
+    },
+    "slope_logcostratio_per_log_task_len": {
+     "slope": 0.1082,
+     "ci95": [
+      -0.1695,
+      0.2006
+     ]
+    },
+    "slope_vs_pair_anchor_requests_BIASED_regression_to_mean": {
+     "slope": 0.0881,
+     "ci95": [
+      -0.187,
+      0.1765
+     ]
+    }
+   }
+  },
+  "rebuild": {
+   "routed_sessions": 903,
+   "routed_sessions_with_model_switch": 90,
+   "model_switches": 138,
+   "at_turn_boundary": 110,
+   "midturn": 28,
+   "routed_cost_usd": 385.7626,
+   "anchor_cost_usd": 514.5289,
+   "rebuild_usd_excess": 38.8609,
+   "rebuild_usd_full_write": 40.9021,
+   "same_model_config_switch_usd": 6.2856,
+   "rebuild_share_of_routed_cost": 0.1007,
+   "rebuild_as_share_of_gross_saving": 0.2318,
+   "by_family_host_cell": {
+    "S1-multi|fable|orch-default": {
+     "pairs": 39,
+     "switch_sessions": 17,
+     "switches": 34,
+     "routed_cost": 33.0406,
+     "anchor_cost": 51.0161,
+     "rebuild_usd": 9.1719,
+     "cfg_switch_usd": 0.0
+    },
+    "S1-multi|fable|orch-planner-fable": {
+     "pairs": 15,
+     "switch_sessions": 8,
+     "switches": 9,
+     "routed_cost": 14.1837,
+     "anchor_cost": 21.1979,
+     "rebuild_usd": 4.2841,
+     "cfg_switch_usd": 0.5261
+    },
+    "S1-multi|fable|orch-planner-v12-fable": {
+     "pairs": 12,
+     "switch_sessions": 6,
+     "switches": 12,
+     "routed_cost": 9.9236,
+     "anchor_cost": 16.5845,
+     "rebuild_usd": 2.9608,
+     "cfg_switch_usd": 0.0
+    },
+    "S1-multi|fable|orch-planner-value-fable": {
+     "pairs": 9,
+     "switch_sessions": 2,
+     "switches": 4,
+     "routed_cost": 6.7527,
+     "anchor_cost": 12.0477,
+     "rebuild_usd": 1.0092,
+     "cfg_switch_usd": 0.0
+    },
+    "S1-multi|opus|orch-default-opus": {
+     "pairs": 45,
+     "switch_sessions": 20,
+     "switches": 40,
+     "routed_cost": 30.6765,
+     "anchor_cost": 23.5033,
+     "rebuild_usd": 4.1211,
+     "cfg_switch_usd": 0.0
+    },
+    "S1-multi|opus|orch-planner-opus": {
+     "pairs": 24,
+     "switch_sessions": 4,
+     "switches": 6,
+     "routed_cost": 13.8894,
+     "anchor_cost": 12.3498,
+     "rebuild_usd": 1.2362,
+     "cfg_switch_usd": 0.0
+    },
+    "S1-multi|opus|orch-planner-v12-opus": {
+     "pairs": 12,
+     "switch_sessions": 0,
+     "switches": 0,
+     "routed_cost": 6.195,
+     "anchor_cost": 6.0875,
+     "rebuild_usd": 0.0,
+     "cfg_switch_usd": 0.0
+    },
+    "S1-multi|opus|orch-planner-value-opus": {
+     "pairs": 9,
+     "switch_sessions": 5,
+     "switches": 5,
+     "routed_cost": 5.7469,
+     "anchor_cost": 4.9423,
+     "rebuild_usd": 0.9517,
+     "cfg_switch_usd": 0.0
+    },
+    "S1-single|fable|orch-default": {
+     "pairs": 168,
+     "switch_sessions": 0,
+     "switches": 0,
+     "routed_cost": 56.7965,
+     "anchor_cost": 104.3289,
+     "rebuild_usd": 0.0,
+     "cfg_switch_usd": 0.0
+    },
+    "S1-single|fable|orch-haiku-fable": {
+     "pairs": 24,
+     "switch_sessions": 0,
+     "switches": 0,
+     "routed_cost": 5.205,
+     "anchor_cost": 14.3935,
+     "rebuild_usd": 0.0,
+     "cfg_switch_usd": 0.0
+    },
+    "S1-single|fable|orch-planner-sub-fable": {
+     "pairs": 24,
+     "switch_sessions": 0,
+     "switches": 0,
+     "routed_cost": 7.821,
+     "anchor_cost": 14.3548,
+     "rebuild_usd": 0.0,
+     "cfg_switch_usd": 0.0
+    },
+    "S1-single|fable|orch-planner-v12-sub-fable": {
+     "pairs": 7,
+     "switch_sessions": 0,
+     "switches": 0,
+     "routed_cost": 1.9572,
+     "anchor_cost": 5.5257,
+     "rebuild_usd": 0.0,
+     "cfg_switch_usd": 0.0
+    },
+    "S1-single|fable|orch-planner-value-sub-fable": {
+     "pairs": 24,
+     "switch_sessions": 0,
+     "switches": 0,
+     "routed_cost": 7.6206,
+     "anchor_cost": 14.3766,
+     "rebuild_usd": 0.0,
+     "cfg_switch_usd": 0.0
+    },
+    "S1-single|fable|orch-primary": {
+     "pairs": 12,
+     "switch_sessions": 0,
+     "switches": 0,
+     "routed_cost": 5.5667,
+     "anchor_cost": 7.065,
+     "rebuild_usd": 0.0,
+     "cfg_switch_usd": 2.7887
+    },
+    "S1-single|fable|orch-router-jev": {
+     "pairs": 12,
+     "switch_sessions": 0,
+     "switches": 0,
+     "routed_cost": 3.888,
+     "anchor_cost": 7.1252,
+     "rebuild_usd": 0.0,
+     "cfg_switch_usd": 0.0
+    },
+    "S1-single|fable|orch-router-rules": {
+     "pairs": 36,
+     "switch_sessions": 1,
+     "switches": 1,
+     "routed_cost": 9.1374,
+     "anchor_cost": 23.4972,
+     "rebuild_usd": 0.5081,
+     "cfg_switch_usd": 0.0
+    },
+    "S1-single|opus|orch-default-opus": {
+     "pairs": 204,
+     "switch_sessions": 0,
+     "switches": 0,
+     "routed_cost": 49.0515,
+     "anchor_cost": 51.3608,
+     "rebuild_usd": 0.0,
+     "cfg_switch_usd": 0.0
+    },
+    "S1-single|opus|orch-haiku-low-opus": {
+     "pairs": 24,
+     "switch_sessions": 0,
+     "switches": 0,
+     "routed_cost": 2.587,
+     "anchor_cost": 5.8137,
+     "rebuild_usd": 0.0,
+     "cfg_switch_usd": 0.0
+    },
+    "S1-single|opus|orch-haiku-opus": {
+     "pairs": 48,
+     "switch_sessions": 0,
+     "switches": 0,
+     "routed_cost": 5.5205,
+     "anchor_cost": 11.701,
+     "rebuild_usd": 0.0,
+     "cfg_switch_usd": 0.0
+    },
+    "S1-single|opus|orch-planner-sub-opus": {
+     "pairs": 24,
+     "switch_sessions": 0,
+     "switches": 0,
+     "routed_cost": 5.5285,
+     "anchor_cost": 5.8549,
+     "rebuild_usd": 0.0,
+     "cfg_switch_usd": 0.0
+    },
+    "S1-single|opus|orch-planner-v12-sub-opus": {
+     "pairs": 12,
+     "switch_sessions": 0,
+     "switches": 0,
+     "routed_cost": 2.8883,
+     "anchor_cost": 2.9012,
+     "rebuild_usd": 0.0,
+     "cfg_switch_usd": 0.0
+    },
+    "S1-single|opus|orch-planner-value-sub-opus": {
+     "pairs": 24,
+     "switch_sessions": 0,
+     "switches": 0,
+     "routed_cost": 5.5597,
+     "anchor_cost": 5.8162,
+     "rebuild_usd": 0.0,
+     "cfg_switch_usd": 0.0
+    },
+    "S1-single|opus|orch-sonnetlow-opus": {
+     "pairs": 24,
+     "switch_sessions": 0,
+     "switches": 0,
+     "routed_cost": 5.7945,
+     "anchor_cost": 5.8137,
+     "rebuild_usd": 0.0,
+     "cfg_switch_usd": 0.0
+    },
+    "S3-routing|fable|orch-primary": {
+     "pairs": 11,
+     "switch_sessions": 10,
+     "switches": 10,
+     "routed_cost": 19.8429,
+     "anchor_cost": 13.566,
+     "rebuild_usd": 5.397,
+     "cfg_switch_usd": 2.9708
+    },
+    "S3-routing|fable|orch-router-jev": {
+     "pairs": 30,
+     "switch_sessions": 12,
+     "switches": 12,
+     "routed_cost": 34.9731,
+     "anchor_cost": 37.1218,
+     "rebuild_usd": 6.4587,
+     "cfg_switch_usd": 0.0
+    },
+    "S3-routing|fable|orch-router-local": {
+     "pairs": 10,
+     "switch_sessions": 5,
+     "switches": 5,
+     "routed_cost": 11.8579,
+     "anchor_cost": 12.3252,
+     "rebuild_usd": 2.7621,
+     "cfg_switch_usd": 0.0
+    },
+    "S3-routing|fable|orch-router-rules": {
+     "pairs": 20,
+     "switch_sessions": 0,
+     "switches": 0,
+     "routed_cost": 23.758,
+     "anchor_cost": 23.8587,
+     "rebuild_usd": 0.0,
+     "cfg_switch_usd": 0.0
+    }
+   }
+  },
+  "per_turn_multiturn": {
+   "fable_turn1": {
+    "cost": {
+     "n_pairs": 75,
+     "n_tasks": 6,
+     "geomean": 0.3287,
+     "ci95": [
+      0.2798,
+      0.3539
+     ]
+    },
+    "cost_ex_rebuild": {
+     "n_pairs": 75,
+     "n_tasks": 6,
+     "geomean": 0.3287,
+     "ci95": [
+      0.2798,
+      0.3539
+     ]
+    },
+    "switches_into_turn": 0,
+    "rebuild_usd": 0,
+    "treat_cost": 20.1389,
+    "anchor_cost": 61.9648
+   },
+   "fable_turn2": {
+    "cost": {
+     "n_pairs": 75,
+     "n_tasks": 6,
+     "geomean": 1.5936,
+     "ci95": [
+      0.6239,
+      2.7249
+     ]
+    },
+    "cost_ex_rebuild": {
+     "n_pairs": 75,
+     "n_tasks": 6,
+     "geomean": 0.6711,
+     "ci95": [
+      0.601,
+      0.8338
+     ]
+    },
+    "switches_into_turn": 33,
+    "rebuild_usd": 17.2125,
+    "treat_cost": 24.4519,
+    "anchor_cost": 10.96
+   },
+   "fable_turn3": {
+    "cost": {
+     "n_pairs": 75,
+     "n_tasks": 6,
+     "geomean": 0.699,
+     "ci95": [
+      0.6229,
+      0.8256
+     ]
+    },
+    "cost_ex_rebuild": {
+     "n_pairs": 75,
+     "n_tasks": 6,
+     "geomean": 0.6835,
+     "ci95": [
+      0.6124,
+      0.798
+     ]
+    },
+    "switches_into_turn": 26,
+    "rebuild_usd": 0.2134,
+    "treat_cost": 10.0862,
+    "anchor_cost": 14.0101
+   },
+   "fable_turn4": {
+    "cost": {
+     "n_pairs": 75,
+     "n_tasks": 6,
+     "geomean": 0.6617,
+     "ci95": [
+      0.6078,
+      0.6981
+     ]
+    },
+    "cost_ex_rebuild": {
+     "n_pairs": 75,
+     "n_tasks": 6,
+     "geomean": 0.6617,
+     "ci95": [
+      0.6078,
+      0.6981
+     ]
+    },
+    "switches_into_turn": 0,
+    "rebuild_usd": 0,
+    "treat_cost": 9.2235,
+    "anchor_cost": 13.9111
+   },
+   "opus_turn1": {
+    "cost": {
+     "n_pairs": 90,
+     "n_tasks": 6,
+     "geomean": 0.8879,
+     "ci95": [
+      0.8549,
+      0.9254
+     ]
+    },
+    "cost_ex_rebuild": {
+     "n_pairs": 90,
+     "n_tasks": 6,
+     "geomean": 0.8879,
+     "ci95": [
+      0.8549,
+      0.9254
+     ]
+    },
+    "switches_into_turn": 0,
+    "rebuild_usd": 0,
+    "treat_cost": 24.3878,
+    "anchor_cost": 27.7443
+   },
+   "opus_turn2": {
+    "cost": {
+     "n_pairs": 90,
+     "n_tasks": 6,
+     "geomean": 1.9272,
+     "ci95": [
+      1.3342,
+      2.4168
+     ]
+    },
+    "cost_ex_rebuild": {
+     "n_pairs": 90,
+     "n_tasks": 6,
+     "geomean": 1.134,
+     "ci95": [
+      0.9861,
+      1.345
+     ]
+    },
+    "switches_into_turn": 29,
+    "rebuild_usd": 6.1431,
+    "treat_cost": 12.7894,
+    "anchor_cost": 5.5407
+   },
+   "opus_turn3": {
+    "cost": {
+     "n_pairs": 90,
+     "n_tasks": 6,
+     "geomean": 1.4419,
+     "ci95": [
+      1.3645,
+      1.5348
+     ]
+    },
+    "cost_ex_rebuild": {
+     "n_pairs": 90,
+     "n_tasks": 6,
+     "geomean": 1.4213,
+     "ci95": [
+      1.3626,
+      1.5052
+     ]
+    },
+    "switches_into_turn": 22,
+    "rebuild_usd": 0.1659,
+    "treat_cost": 10.0217,
+    "anchor_cost": 6.7973
+   },
+   "opus_turn4": {
+    "cost": {
+     "n_pairs": 90,
+     "n_tasks": 6,
+     "geomean": 1.3381,
+     "ci95": [
+      1.2733,
+      1.4029
+     ]
+    },
+    "cost_ex_rebuild": {
+     "n_pairs": 90,
+     "n_tasks": 6,
+     "geomean": 1.3381,
+     "ci95": [
+      1.2733,
+      1.4029
+     ]
+    },
+    "switches_into_turn": 0,
+    "rebuild_usd": 0,
+    "treat_cost": 9.3089,
+    "anchor_cost": 6.8005
+   }
+  },
+  "receipts": {
+   "S3-v4 jev-prepared vs plain-matched": {
+    "pairs": 35,
+    "receipts_events": 197,
+    "sum_usd_saved_receipts": 2.2189,
+    "sum_measured_saving_usd": -2.7975,
+    "mean_measured_saving_per_pair": -0.0799,
+    "mean_measured_saving_ci95": [
+     -0.2046,
+     0.0631
+    ],
+    "corr_receipt_vs_measured": -0.115
+   },
+   "S3-v4 laya-prepared vs plain-matched": {
+    "pairs": 35,
+    "receipts_events": 203,
+    "sum_usd_saved_receipts": 0,
+    "sum_measured_saving_usd": -0.9018,
+    "mean_measured_saving_per_pair": -0.0258,
+    "mean_measured_saving_ci95": [
+     -0.2231,
+     0.1756
+    ],
+    "corr_receipt_vs_measured": null
+   },
+   "S3-v4 jevgrep vs plain-matched": {
+    "pairs": 35,
+    "receipts_events": 0,
+    "sum_usd_saved_receipts": 0,
+    "sum_measured_saving_usd": -4.7901,
+    "mean_measured_saving_per_pair": -0.1369,
+    "mean_measured_saving_ci95": [
+     -0.2807,
+     0.028
+    ],
+    "corr_receipt_vs_measured": null
+   },
+   "planner-predicted S1-multi orch-planner-fable vs plain": {
+    "pairs": 15,
+    "plans": 52,
+    "sum_planner_predicted_saving_usd": 13.5217,
+    "sum_measured_saving_usd": 7.0142,
+    "mean_measured_saving_ci95": [
+     0.2743,
+     0.7405
+    ],
+    "corr": 0.6493
+   },
+   "planner-predicted S1-multi orch-planner-opus vs plain-opus": {
+    "pairs": 24,
+    "plans": 82,
+    "sum_planner_predicted_saving_usd": 1.3466,
+    "sum_measured_saving_usd": -1.5395,
+    "mean_measured_saving_ci95": [
+     -0.0889,
+     -0.0307
+    ],
+    "corr": -0.2126
+   },
+   "planner-predicted S1-multi orch-planner-v12-fable vs plain": {
+    "pairs": 12,
+    "plans": 42,
+    "sum_planner_predicted_saving_usd": 7.0408,
+    "sum_measured_saving_usd": 6.6608,
+    "mean_measured_saving_ci95": [
+     0.3613,
+     0.8672
+    ],
+    "corr": 0.8717
+   },
+   "planner-predicted S1-multi orch-planner-v12-opus vs plain-opus": {
+    "pairs": 12,
+    "plans": 42,
+    "sum_planner_predicted_saving_usd": 0.0,
+    "sum_measured_saving_usd": -0.1075,
+    "mean_measured_saving_ci95": [
+     -0.0346,
+     0.0031
+    ],
+    "corr": null
+   },
+   "planner-predicted S1-multi orch-planner-value-fable vs plain": {
+    "pairs": 9,
+    "plans": 34,
+    "sum_planner_predicted_saving_usd": 6.6804,
+    "sum_measured_saving_usd": 5.295,
+    "mean_measured_saving_ci95": [
+     0.3936,
+     0.7231
+    ],
+    "corr": 0.6097
+   },
+   "planner-predicted S1-multi orch-planner-value-opus vs plain-opus": {
+    "pairs": 9,
+    "plans": 31,
+    "sum_planner_predicted_saving_usd": 0.3111,
+    "sum_measured_saving_usd": -0.8046,
+    "mean_measured_saving_ci95": [
+     -0.1618,
+     -0.048
+    ],
+    "corr": 0.2757
+   },
+   "planner-predicted S1-single orch-planner-sub-fable vs plain": {
+    "pairs": 18,
+    "plans": 18,
+    "sum_planner_predicted_saving_usd": 6.755,
+    "sum_measured_saving_usd": 6.6453,
+    "mean_measured_saving_ci95": [
+     0.3409,
+     0.409
+    ],
+    "corr": 0.5879
+   },
+   "planner-predicted S1-single orch-planner-sub-opus vs plain-opus": {
+    "pairs": 18,
+    "plans": 18,
+    "sum_planner_predicted_saving_usd": 0.4887,
+    "sum_measured_saving_usd": 0.3482,
+    "mean_measured_saving_ci95": [
+     -0.0014,
+     0.038
+    ],
+    "corr": -0.0514
+   },
+   "planner-predicted S1-single orch-planner-v12-sub-fable vs plain": {
+    "pairs": 6,
+    "plans": 6,
+    "sum_planner_predicted_saving_usd": 2.3501,
+    "sum_measured_saving_usd": 3.1826,
+    "mean_measured_saving_ci95": [
+     0.3778,
+     0.7037
+    ],
+    "corr": 0.1933
+   },
+   "planner-predicted S1-single orch-planner-v12-sub-opus vs plain-opus": {
+    "pairs": 9,
+    "plans": 9,
+    "sum_planner_predicted_saving_usd": 0.2534,
+    "sum_measured_saving_usd": 0.0255,
+    "mean_measured_saving_ci95": [
+     -0.0255,
+     0.0279
+    ],
+    "corr": -0.5842
+   },
+   "planner-predicted S1-single orch-planner-value-sub-fable vs plain": {
+    "pairs": 18,
+    "plans": 18,
+    "sum_planner_predicted_saving_usd": 7.0441,
+    "sum_measured_saving_usd": 6.7035,
+    "mean_measured_saving_ci95": [
+     0.3499,
+     0.3996
+    ],
+    "corr": 0.6753
+   },
+   "planner-predicted S1-single orch-planner-value-sub-opus vs plain-opus": {
+    "pairs": 18,
+    "plans": 18,
+    "sum_planner_predicted_saving_usd": 0.5067,
+    "sum_measured_saving_usd": 0.2398,
+    "mean_measured_saving_ci95": [
+     0.0027,
+     0.0228
+    ],
+    "corr": 0.0535
+   }
+  },
+  "corrections": {
+   "price_volume_plain_sonnet_vs_plain_opus": {
+    "S1-single": {
+     "pairs": 204,
+     "tasks": 44,
+     "cost_ratio": {
+      "n_pairs": 204,
+      "n_tasks": 44,
+      "geomean": 0.97,
+      "ci95": [
+       0.9215,
+       1.027
+      ]
+     },
+     "price_factor_identical_tokens_pooled": 0.867,
+     "price_factor_identical_tokens_geomean": {
+      "n_pairs": 204,
+      "n_tasks": 44,
+      "geomean": 0.8669,
+      "ci95": [
+       0.8583,
+       0.875
+      ]
+     },
+     "volume_factor_geomean": {
+      "n_pairs": 204,
+      "n_tasks": 44,
+      "geomean": 1.1189,
+      "ci95": [
+       1.0567,
+       1.189
+      ]
+     },
+     "requests_ratio_pooled": 1.1928,
+     "requests_ratio_geomean": {
+      "n_pairs": 204,
+      "n_tasks": 44,
+      "geomean": 1.1822,
+      "ci95": [
+       1.0667,
+       1.3069
+      ]
+     },
+     "cache_read_tokens_ratio_pooled": 1.2362,
+     "cache_read_tokens_ratio_geomean": {
+      "n_pairs": 204,
+      "n_tasks": 44,
+      "geomean": 1.221,
+      "ci95": [
+       1.0821,
+       1.3782
+      ]
+     },
+     "per_class": {
+      "uncached": {
+       "sonnet_over_opus_price": 0.75,
+       "share_of_opus_cost_on_anchor_tokens": 0.0002
+      },
+      "read": {
+       "sonnet_over_opus_price": 1.5,
+       "share_of_opus_cost_on_anchor_tokens": 0.156
+      },
+      "write": {
+       "sonnet_over_opus_price": 0.75,
+       "share_of_opus_cost_on_anchor_tokens": 0.7845
+      },
+      "output": {
+       "sonnet_over_opus_price": 0.75,
+       "share_of_opus_cost_on_anchor_tokens": 0.0593
+      }
+     }
+    },
+    "S1-multi": {
+     "pairs": 45,
+     "tasks": 6,
+     "cost_ratio": {
+      "n_pairs": 45,
+      "n_tasks": 6,
+      "geomean": 1.348,
+      "ci95": [
+       1.2684,
+       1.4077
+      ]
+     },
+     "price_factor_identical_tokens_pooled": 1.0053,
+     "price_factor_identical_tokens_geomean": {
+      "n_pairs": 45,
+      "n_tasks": 6,
+      "geomean": 1.0088,
+      "ci95": [
+       1.0005,
+       1.0183
+      ]
+     },
+     "volume_factor_geomean": {
+      "n_pairs": 45,
+      "n_tasks": 6,
+      "geomean": 1.3362,
+      "ci95": [
+       1.2655,
+       1.3883
+      ]
+     },
+     "requests_ratio_pooled": 1.3785,
+     "requests_ratio_geomean": {
+      "n_pairs": 45,
+      "n_tasks": 6,
+      "geomean": 1.3738,
+      "ci95": [
+       1.3106,
+       1.418
+      ]
+     },
+     "cache_read_tokens_ratio_pooled": 1.4428,
+     "cache_read_tokens_ratio_geomean": {
+      "n_pairs": 45,
+      "n_tasks": 6,
+      "geomean": 1.4347,
+      "ci95": [
+       1.3535,
+       1.4965
+      ]
+     },
+     "per_class": {
+      "uncached": {
+       "sonnet_over_opus_price": 0.75,
+       "share_of_opus_cost_on_anchor_tokens": 0.0003
+      },
+      "read": {
+       "sonnet_over_opus_price": 1.5,
+       "share_of_opus_cost_on_anchor_tokens": 0.3403
+      },
+      "write": {
+       "sonnet_over_opus_price": 0.75,
+       "share_of_opus_cost_on_anchor_tokens": 0.5418
+      },
+      "output": {
+       "sonnet_over_opus_price": 0.75,
+       "share_of_opus_cost_on_anchor_tokens": 0.1176
+      }
+     }
+    },
+    "change_1turn_to_4turn": {
+     "log_cost_change": 0.3291,
+     "log_price_change": 0.1516,
+     "log_volume_change": 0.1775,
+     "price_share": 0.461,
+     "volume_share": 0.539,
+     "note": "log(cost ratio) = log(price factor on identical anchor tokens) + log(volume/mix factor); shares split the 1-turn -> 4-turn change in the plain-sonnet/plain-opus geomean"
+    }
+   },
+   "same_cell_length_contrast": {
+    "cells": {
+     "orch-default-opus vs plain-opus": {
+      "S1-single": {
+       "cost": {
+        "n_pairs": 204,
+        "n_tasks": 44,
+        "geomean": 0.9506,
+        "ci95": [
+         0.9152,
+         0.9857
+        ]
+       },
+       "time": {
+        "n_pairs": 204,
+        "n_tasks": 44,
+        "geomean": 0.8586,
+        "ci95": [
+         0.7905,
+         0.9301
+        ]
+       },
+       "tasks": 44
+      },
+      "S1-multi": {
+       "cost": {
+        "n_pairs": 45,
+        "n_tasks": 6,
+        "geomean": 1.305,
+        "ci95": [
+         1.1857,
+         1.414
+        ]
+       },
+       "time": {
+        "n_pairs": 45,
+        "n_tasks": 6,
+        "geomean": 0.9684,
+        "ci95": [
+         0.9356,
+         1.0091
+        ]
+       },
+       "tasks": [
+        "scn_dev_1",
+        "scn_dev_2",
+        "scn_dev_3",
+        "scn_holdout3_1",
+        "scn_holdout3_2",
+        "scn_holdout3_3"
+       ]
+      }
+     },
+     "orch-default vs plain": {
+      "S1-single": {
+       "cost": {
+        "n_pairs": 168,
+        "n_tasks": 32,
+        "geomean": 0.4909,
+        "ci95": [
+         0.4184,
+         0.5885
+        ]
+       },
+       "time": {
+        "n_pairs": 168,
+        "n_tasks": 32,
+        "geomean": 0.522,
+        "ci95": [
+         0.4459,
+         0.6132
+        ]
+       },
+       "tasks": 32
+      },
+      "S1-multi": {
+       "cost": {
+        "n_pairs": 39,
+        "n_tasks": 6,
+        "geomean": 0.6167,
+        "ci95": [
+         0.4567,
+         0.7374
+        ]
+       },
+       "time": {
+        "n_pairs": 39,
+        "n_tasks": 6,
+        "geomean": 0.4204,
+        "ci95": [
+         0.3389,
+         0.5096
+        ]
+       },
+       "tasks": [
+        "scn_dev_1",
+        "scn_dev_2",
+        "scn_dev_3",
+        "scn_holdout3_1",
+        "scn_holdout3_2",
+        "scn_holdout3_3"
+       ]
+      }
+     },
+     "plain-sonnet vs plain-opus": {
+      "S1-single": {
+       "cost": {
+        "n_pairs": 204,
+        "n_tasks": 44,
+        "geomean": 0.97,
+        "ci95": [
+         0.9215,
+         1.027
+        ]
+       },
+       "time": {
+        "n_pairs": 204,
+        "n_tasks": 44,
+        "geomean": 0.9766,
+        "ci95": [
+         0.8635,
+         1.1313
+        ]
+       },
+       "tasks": 44
+      },
+      "S1-multi": {
+       "cost": {
+        "n_pairs": 45,
+        "n_tasks": 6,
+        "geomean": 1.348,
+        "ci95": [
+         1.2684,
+         1.4077
+        ]
+       },
+       "time": {
+        "n_pairs": 45,
+        "n_tasks": 6,
+        "geomean": 1.1425,
+        "ci95": [
+         1.0124,
+         1.3148
+        ]
+       },
+       "tasks": [
+        "scn_dev_1",
+        "scn_dev_2",
+        "scn_dev_3",
+        "scn_holdout3_1",
+        "scn_holdout3_2",
+        "scn_holdout3_3"
+       ]
+      }
+     },
+     "plain-sonnet vs plain": {
+      "S1-single": {
+       "cost": {
+        "n_pairs": 235,
+        "n_tasks": 39,
+        "geomean": 0.392,
+        "ci95": [
+         0.3751,
+         0.4116
+        ]
+       },
+       "time": {
+        "n_pairs": 235,
+        "n_tasks": 39,
+        "geomean": 0.5418,
+        "ci95": [
+         0.4834,
+         0.6118
+        ]
+       },
+       "tasks": 39
+      },
+      "S1-multi": {
+       "cost": {
+        "n_pairs": 42,
+        "n_tasks": 6,
+        "geomean": 0.5277,
+        "ci95": [
+         0.4557,
+         0.5713
+        ]
+       },
+       "time": {
+        "n_pairs": 42,
+        "n_tasks": 6,
+        "geomean": 0.4997,
+        "ci95": [
+         0.3864,
+         0.5887
+        ]
+       },
+       "tasks": [
+        "scn_dev_1",
+        "scn_dev_2",
+        "scn_dev_3",
+        "scn_holdout3_1",
+        "scn_holdout3_2",
+        "scn_holdout3_3"
+       ]
+      }
+     }
+    },
+    "routed_pool_composition": {
+     "S1-single|fable": {
+      "orch-default": 168,
+      "orch-haiku-fable": 24,
+      "orch-planner-sub-fable": 24,
+      "orch-planner-v12-sub-fable": 7,
+      "orch-planner-value-sub-fable": 24,
+      "orch-primary": 12,
+      "orch-router-jev": 12,
+      "orch-router-rules": 36
+     },
+     "S1-single|opus": {
+      "orch-default-opus": 204,
+      "orch-haiku-low-opus": 24,
+      "orch-haiku-opus": 48,
+      "orch-planner-sub-opus": 24,
+      "orch-planner-v12-sub-opus": 12,
+      "orch-planner-value-sub-opus": 24,
+      "orch-sonnetlow-opus": 24
+     },
+     "S1-multi|fable": {
+      "orch-default": 39,
+      "orch-planner-fable": 15,
+      "orch-planner-v12-fable": 12,
+      "orch-planner-value-fable": 9
+     },
+     "S1-multi|opus": {
+      "orch-default-opus": 45,
+      "orch-planner-opus": 24,
+      "orch-planner-v12-opus": 12,
+      "orch-planner-value-opus": 9
+     }
+    },
+    "note": "1-turn (S1) and 4-turn (s1m) are different task suites; Haiku-routed cells appear only in the 1-turn pool"
+   },
+   "planner_per_scenario": {
+    "orch-planner-opus vs plain-opus": {
+     "pairs": 24,
+     "scenarios": 3,
+     "total_measured_saving_usd": -1.5395,
+     "total_planner_predicted_saving_usd": 1.3466,
+     "per_scenario": {
+      "scn_dev_1": {
+       "pairs": 8,
+       "measured_saving_usd": -0.246,
+       "predicted_saving_usd": 1.1174
+      },
+      "scn_dev_2": {
+       "pairs": 8,
+       "measured_saving_usd": -0.5821,
+       "predicted_saving_usd": 0.115
+      },
+      "scn_dev_3": {
+       "pairs": 8,
+       "measured_saving_usd": -0.7114,
+       "predicted_saving_usd": 0.1142
+      }
+     },
+     "scenarios_negative": 3
+    },
+    "orch-planner-value-opus vs plain-opus": {
+     "pairs": 9,
+     "scenarios": 3,
+     "total_measured_saving_usd": -0.8046,
+     "total_planner_predicted_saving_usd": 0.3111,
+     "per_scenario": {
+      "scn_dev_1": {
+       "pairs": 3,
+       "measured_saving_usd": -0.1439,
+       "predicted_saving_usd": 0.2866
+      },
+      "scn_dev_2": {
+       "pairs": 3,
+       "measured_saving_usd": -0.4853,
+       "predicted_saving_usd": -0.0416
+      },
+      "scn_dev_3": {
+       "pairs": 3,
+       "measured_saving_usd": -0.1753,
+       "predicted_saving_usd": 0.0661
+      }
+     },
+     "scenarios_negative": 3
+    },
+    "orch-planner-v12-opus vs plain-opus": {
+     "pairs": 12,
+     "scenarios": 6,
+     "total_measured_saving_usd": -0.1075,
+     "total_planner_predicted_saving_usd": 0,
+     "per_scenario": {
+      "scn_dev_1": {
+       "pairs": 3,
+       "measured_saving_usd": -0.0029,
+       "predicted_saving_usd": 0
+      },
+      "scn_dev_2": {
+       "pairs": 3,
+       "measured_saving_usd": -0.0121,
+       "predicted_saving_usd": 0
+      },
+      "scn_dev_3": {
+       "pairs": 3,
+       "measured_saving_usd": 0.0384,
+       "predicted_saving_usd": 0
+      },
+      "scn_holdout3_1": {
+       "pairs": 1,
+       "measured_saving_usd": -0.0621,
+       "predicted_saving_usd": 0
+      },
+      "scn_holdout3_2": {
+       "pairs": 1,
+       "measured_saving_usd": -0.053,
+       "predicted_saving_usd": 0
+      },
+      "scn_holdout3_3": {
+       "pairs": 1,
+       "measured_saving_usd": -0.0159,
+       "predicted_saving_usd": 0
+      }
+     },
+     "scenarios_negative": 5
+    },
+    "orch-planner-fable vs plain": {
+     "pairs": 15,
+     "scenarios": 3,
+     "total_measured_saving_usd": 7.0142,
+     "total_planner_predicted_saving_usd": 13.5217,
+     "per_scenario": {
+      "scn_dev_1": {
+       "pairs": 5,
+       "measured_saving_usd": 3.7025,
+       "predicted_saving_usd": 6.5718
+      },
+      "scn_dev_2": {
+       "pairs": 5,
+       "measured_saving_usd": 1.3717,
+       "predicted_saving_usd": 4.7285
+      },
+      "scn_dev_3": {
+       "pairs": 5,
+       "measured_saving_usd": 1.94,
+       "predicted_saving_usd": 2.2214
+      }
+     },
+     "scenarios_negative": 0
+    },
+    "orch-planner-v12-fable vs plain": {
+     "pairs": 12,
+     "scenarios": 6,
+     "total_measured_saving_usd": 6.6608,
+     "total_planner_predicted_saving_usd": 7.0408,
+     "per_scenario": {
+      "scn_dev_1": {
+       "pairs": 3,
+       "measured_saving_usd": 2.1201,
+       "predicted_saving_usd": 2.6073
+      },
+      "scn_dev_2": {
+       "pairs": 3,
+       "measured_saving_usd": 0.7184,
+       "predicted_saving_usd": 0.9106
+      },
+      "scn_dev_3": {
+       "pairs": 3,
+       "measured_saving_usd": 0.9766,
+       "predicted_saving_usd": 0.9153
+      },
+      "scn_holdout3_1": {
+       "pairs": 1,
+       "measured_saving_usd": 0.8871,
+       "predicted_saving_usd": 0.8596
+      },
+      "scn_holdout3_2": {
+       "pairs": 1,
+       "measured_saving_usd": 0.9636,
+       "predicted_saving_usd": 0.8643
+      },
+      "scn_holdout3_3": {
+       "pairs": 1,
+       "measured_saving_usd": 0.995,
+       "predicted_saving_usd": 0.8837
+      }
+     },
+     "scenarios_negative": 0
+    },
+    "orch-planner-value-fable vs plain": {
+     "pairs": 9,
+     "scenarios": 3,
+     "total_measured_saving_usd": 5.295,
+     "total_planner_predicted_saving_usd": 6.6804,
+     "per_scenario": {
+      "scn_dev_1": {
+       "pairs": 3,
+       "measured_saving_usd": 2.1694,
+       "predicted_saving_usd": 2.6071
+      },
+      "scn_dev_2": {
+       "pairs": 3,
+       "measured_saving_usd": 1.1807,
+       "predicted_saving_usd": 2.0435
+      },
+      "scn_dev_3": {
+       "pairs": 3,
+       "measured_saving_usd": 1.9448,
+       "predicted_saving_usd": 2.0298
+      }
+     },
+     "scenarios_negative": 0
+    }
+   },
+   "first_request_warmth": {
+    "groups": {
+     "S1-multi routed opus host": {
+      "raw": {
+       "n_pairs": 90,
+       "n_tasks": 6,
+       "geomean": 1.1947,
+       "ci95": [
+        1.12,
+        1.2628
+       ]
+      },
+      "both_cold": {
+       "n_pairs": 90,
+       "n_tasks": 6,
+       "geomean": 1.1628,
+       "ci95": [
+        1.0928,
+        1.2185
+       ]
+      },
+      "both_warm": {
+       "n_pairs": 90,
+       "n_tasks": 6,
+       "geomean": 1.2683,
+       "ci95": [
+        1.1774,
+        1.3374
+       ]
+      },
+      "normalised_range": [
+       1.1628,
+       1.2683
+      ],
+      "treat_first_request_warm_share": 0.833,
+      "anchor_first_request_warm_share": 0.667
+     },
+     "S1-multi routed fable host": {
+      "raw": {
+       "n_pairs": 75,
+       "n_tasks": 6,
+       "geomean": 0.604,
+       "ci95": [
+        0.4444,
+        0.7254
+       ]
+      },
+      "both_cold": {
+       "n_pairs": 75,
+       "n_tasks": 6,
+       "geomean": 0.5649,
+       "ci95": [
+        0.4453,
+        0.6636
+       ]
+      },
+      "both_warm": {
+       "n_pairs": 75,
+       "n_tasks": 6,
+       "geomean": 0.6531,
+       "ci95": [
+        0.4988,
+        0.7871
+       ]
+      },
+      "normalised_range": [
+       0.5649,
+       0.6531
+      ],
+      "treat_first_request_warm_share": 0.787,
+      "anchor_first_request_warm_share": 0.627
+     },
+     "S1-multi plain-sonnet vs plain-opus": {
+      "raw": {
+       "n_pairs": 45,
+       "n_tasks": 6,
+       "geomean": 1.348,
+       "ci95": [
+        1.2684,
+        1.4077
+       ]
+      },
+      "both_cold": {
+       "n_pairs": 45,
+       "n_tasks": 6,
+       "geomean": 1.1858,
+       "ci95": [
+        1.1227,
+        1.2361
+       ]
+      },
+      "both_warm": {
+       "n_pairs": 45,
+       "n_tasks": 6,
+       "geomean": 1.3368,
+       "ci95": [
+        1.2605,
+        1.3983
+       ]
+      },
+      "normalised_range": [
+       1.1858,
+       1.3368
+      ],
+      "treat_first_request_warm_share": 0.378,
+      "anchor_first_request_warm_share": 0.667
+     },
+     "S1-multi plain-sonnet vs plain": {
+      "raw": {
+       "n_pairs": 42,
+       "n_tasks": 6,
+       "geomean": 0.5277,
+       "ci95": [
+        0.4557,
+        0.5713
+       ]
+      },
+      "both_cold": {
+       "n_pairs": 42,
+       "n_tasks": 6,
+       "geomean": 0.4663,
+       "ci95": [
+        0.4204,
+        0.4989
+       ]
+      },
+      "both_warm": {
+       "n_pairs": 42,
+       "n_tasks": 6,
+       "geomean": 0.5262,
+       "ci95": [
+        0.4653,
+        0.5698
+       ]
+      },
+      "normalised_range": [
+       0.4663,
+       0.5262
+      ],
+      "treat_first_request_warm_share": 0.405,
+      "anchor_first_request_warm_share": 0.667
+     },
+     "S1-single routed opus host": {
+      "raw": {
+       "n_pairs": 360,
+       "n_tasks": 44,
+       "geomean": 0.7966,
+       "ci95": [
+        0.7358,
+        0.8806
+       ]
+      },
+      "both_cold": {
+       "n_pairs": 360,
+       "n_tasks": 44,
+       "geomean": 0.7281,
+       "ci95": [
+        0.6657,
+        0.8156
+       ]
+      },
+      "both_warm": {
+       "n_pairs": 360,
+       "n_tasks": 44,
+       "geomean": 0.7864,
+       "ci95": [
+        0.7281,
+        0.8668
+       ]
+      },
+      "normalised_range": [
+       0.7281,
+       0.7864
+      ],
+      "treat_first_request_warm_share": 0.939,
+      "anchor_first_request_warm_share": 0.975
+     },
+     "S1-single routed fable host": {
+      "raw": {
+       "n_pairs": 307,
+       "n_tasks": 39,
+       "geomean": 0.4491,
+       "ci95": [
+        0.3815,
+        0.5447
+       ]
+      },
+      "both_cold": {
+       "n_pairs": 307,
+       "n_tasks": 39,
+       "geomean": 0.407,
+       "ci95": [
+        0.3418,
+        0.5002
+       ]
+      },
+      "both_warm": {
+       "n_pairs": 307,
+       "n_tasks": 39,
+       "geomean": 0.4489,
+       "ci95": [
+        0.3819,
+        0.542
+       ]
+      },
+      "normalised_range": [
+       0.407,
+       0.4489
+      ],
+      "treat_first_request_warm_share": 0.928,
+      "anchor_first_request_warm_share": 0.941
+     },
+     "S3 routed": {
+      "raw": {
+       "n_pairs": 71,
+       "n_tasks": 11,
+       "geomean": 0.9906,
+       "ci95": [
+        0.8262,
+        1.1274
+       ]
+      },
+      "both_cold": {
+       "n_pairs": 71,
+       "n_tasks": 11,
+       "geomean": 0.9056,
+       "ci95": [
+        0.7657,
+        1.0167
+       ]
+      },
+      "both_warm": {
+       "n_pairs": 71,
+       "n_tasks": 11,
+       "geomean": 0.9964,
+       "ci95": [
+        0.8301,
+        1.1361
+       ]
+      },
+      "normalised_range": [
+       0.9056,
+       0.9964
+      ],
+      "treat_first_request_warm_share": 0.915,
+      "anchor_first_request_warm_share": 0.944
+     }
+    },
+    "method": "cold: each session's first request has its cache reads re-priced as writes; warm: the warmable prefix (median first-request cache read among warm sessions of the same campaign, cell and model) is re-priced from write to read where it was written; applied to both arms"
+   },
+   "multiturn_scenario_origin": {
+    "fable": {
+     "pairs": 75,
+     "dev_scenarios": 69,
+     "holdout_scenarios": 6,
+     "scenarios": [
+      "scn_dev_1",
+      "scn_dev_2",
+      "scn_dev_3",
+      "scn_holdout3_1",
+      "scn_holdout3_2",
+      "scn_holdout3_3"
+     ],
+     "campaigns": [
+      "m-holdout3",
+      "mt-dev",
+      "planner-mt-dev",
+      "planner-smoke",
+      "planner-smoke2",
+      "v12-mt-dev",
+      "value-mt-dev"
+     ]
+    },
+    "opus": {
+     "pairs": 90,
+     "dev_scenarios": 84,
+     "holdout_scenarios": 6,
+     "scenarios": [
+      "scn_dev_1",
+      "scn_dev_2",
+      "scn_dev_3",
+      "scn_holdout3_1",
+      "scn_holdout3_2",
+      "scn_holdout3_3"
+     ],
+     "campaigns": [
+      "m-holdout3",
+      "mt-dev",
+      "mt-smoke",
+      "planner-mt-dev",
+      "planner-smoke",
+      "planner-smoke2",
+      "v12-mt-dev",
+      "value-mt-dev"
+     ]
+    },
+    "dev_scenario_campaigns": {
+     "n": 7,
+     "campaigns": [
+      "mt-dev",
+      "mt-smoke",
+      "planner-mt-dev",
+      "planner-smoke",
+      "planner-smoke2",
+      "v12-mt-dev",
+      "value-mt-dev"
+     ]
+    }
+   },
+   "rebuild_by_stratum": {
+    "strata": {
+     "S1 single-turn routed": {
+      "pairs": 667,
+      "sessions_with_switch": 1,
+      "routed_cost_usd": 174.9224,
+      "rebuild_usd": 0.5081,
+      "effort_change_usd": 2.7887,
+      "rebuild_share": 0.0029,
+      "rebuild_plus_effort_share": 0.0188
+     },
+     "S1 4-turn routed, Opus host": {
+      "pairs": 90,
+      "sessions_with_switch": 29,
+      "routed_cost_usd": 56.5077,
+      "rebuild_usd": 6.309,
+      "effort_change_usd": 0.0,
+      "rebuild_share": 0.1116,
+      "rebuild_plus_effort_share": 0.1116
+     },
+     "S1 4-turn routed, Fable host": {
+      "pairs": 75,
+      "sessions_with_switch": 33,
+      "routed_cost_usd": 63.9006,
+      "rebuild_usd": 17.426,
+      "effort_change_usd": 0.5261,
+      "rebuild_share": 0.2727,
+      "rebuild_plus_effort_share": 0.2809
+     },
+     "S3 orch-primary (mid-turn escalation)": {
+      "pairs": 11,
+      "sessions_with_switch": 10,
+      "routed_cost_usd": 19.8429,
+      "rebuild_usd": 5.397,
+      "effort_change_usd": 2.9708,
+      "rebuild_share": 0.272,
+      "rebuild_plus_effort_share": 0.4217
+     },
+     "S3 turn-start routers (jev, local, rules)": {
+      "pairs": 60,
+      "sessions_with_switch": 17,
+      "routed_cost_usd": 70.589,
+      "rebuild_usd": 9.2209,
+      "effort_change_usd": 0.0,
+      "rebuild_share": 0.1306,
+      "rebuild_plus_effort_share": 0.1306
+     }
+    },
+    "routed_pairs": 903,
+    "unique_anchor_runs": 593,
+    "note": "several routed cells share one anchor run, so pooled anchor cost double-counts"
+   },
+   "midturn_switches_by_cell": {
+    "S1-single|orch-router-rules": {
+     "sessions": 1,
+     "midturn_switches": 1,
+     "first_switch_req_index": {
+      "7": 1
+     },
+     "first_model": {
+      "claude-sonnet-5": 1
+     }
+    },
+    "S3-routing|orch-primary": {
+     "sessions": 10,
+     "midturn_switches": 10,
+     "first_switch_req_index": {
+      "7": 10
+     },
+     "first_model": {
+      "claude-sonnet-5": 10
+     }
+    },
+    "S3-routing|orch-router-jev": {
+     "sessions": 12,
+     "midturn_switches": 12,
+     "first_switch_req_index": {
+      "7": 12
+     },
+     "first_model": {
+      "claude-sonnet-5": 12
+     }
+    },
+    "S3-routing|orch-router-local": {
+     "sessions": 5,
+     "midturn_switches": 5,
+     "first_switch_req_index": {
+      "7": 4,
+      "6": 1
+     },
+     "first_model": {
+      "claude-sonnet-5": 5
+     }
+    }
+   },
+   "cost_source": "cost_usd is the provider adapter's price-table estimate per response (it fits list prices exactly); it is not billing"
+  }
+ },
+ "inferred_prices": {
+  "claude-sonnet-5": {
+   "n": 9743,
+   "usd_per_mtok": {
+    "uncached": 3.0,
+    "read": 0.3,
+    "write": 3.75,
+    "output": 15.0
+   },
+   "max_abs_resid_usd": 7.480127628411992e-15,
+   "total_rel_err": 2.128733736752661e-15
+  },
+  "claude-opus-5-5": {
+   "n": 2235,
+   "usd_per_mtok": {
+    "uncached": 4.0,
+    "read": 0.2,
+    "write": 5.0,
+    "output": 20.0
+   },
+   "max_abs_resid_usd": 3.3306690738754696e-16,
+   "total_rel_err": 2.1067770090857772e-16
+  },
+  "claude-fable-5-1": {
+   "n": 4097,
+   "usd_per_mtok": {
+    "uncached": 10.0,
+    "read": 0.25,
+    "write": 12.5,
+    "output": 50.0
+   },
+   "max_abs_resid_usd": 8.881784197001252e-16,
+   "total_rel_err": 4.0646137772971595e-15
+  },
+  "claude-haiku-4-5-20251001": {
+   "n": 1546,
+   "usd_per_mtok": {
+    "uncached": 1.0,
+    "read": 0.1,
+    "write": 1.25,
+    "output": 5.0
+   },
+   "max_abs_resid_usd": 3.469446951953614e-17,
+   "total_rel_err": 4.564404132613475e-16
+  }
+ },
+ "inventory": {
+  "S1-multi|m-holdout3|orch-default": {
+   "runs": 3,
+   "session_ok": 3
+  },
+  "S1-multi|m-holdout3|orch-default-opus": {
+   "runs": 3,
+   "session_ok": 3
+  },
+  "S1-multi|m-holdout3|orch-planner-v12-fable": {
+   "runs": 3,
+   "session_ok": 3
+  },
+  "S1-multi|m-holdout3|orch-planner-v12-opus": {
+   "runs": 6,
+   "session_ok": 3
+  },
+  "S1-multi|m-holdout3|plain": {
+   "runs": 3,
+   "session_ok": 3
+  },
+  "S1-multi|m-holdout3|plain-opus": {
+   "runs": 3,
+   "session_ok": 3
+  },
+  "S1-multi|m-holdout3|plain-sonnet": {
+   "runs": 6,
+   "session_ok": 6
+  },
+  "S1-multi|mt-dev|orch-default": {
+   "runs": 9,
+   "session_ok": 9
+  },
+  "S1-multi|mt-dev|orch-default-opus": {
+   "runs": 9,
+   "session_ok": 9
+  },
+  "S1-multi|mt-dev|orch-haiku-shaped-fable": {
+   "runs": 9,
+   "session_ok": 9
+  },
+  "S1-multi|mt-dev|orch-haiku-shaped-opus": {
+   "runs": 9,
+   "session_ok": 9
+  },
+  "S1-multi|mt-dev|plain": {
+   "runs": 9,
+   "session_ok": 9
+  },
+  "S1-multi|mt-dev|plain-opus": {
+   "runs": 9,
+   "session_ok": 9
+  },
+  "S1-multi|mt-dev|plain-sonnet": {
+   "runs": 9,
+   "session_ok": 9
+  },
+  "S1-multi|mt-smoke|orch-default-opus": {
+   "runs": 3,
+   "session_ok": 3
+  },
+  "S1-multi|mt-smoke|plain-opus": {
+   "runs": 3,
+   "session_ok": 3
+  },
+  "S1-multi|mt-smoke|plain-sonnet": {
+   "runs": 3,
+   "session_ok": 3
+  },
+  "S1-multi|planner-mt-dev|orch-default": {
+   "runs": 9,
+   "session_ok": 9
+  },
+  "S1-multi|planner-mt-dev|orch-default-opus": {
+   "runs": 9,
+   "session_ok": 9
+  },
+  "S1-multi|planner-mt-dev|orch-planner-fable": {
+   "runs": 9,
+   "session_ok": 9
+  },
+  "S1-multi|planner-mt-dev|orch-planner-opus": {
+   "runs": 9,
+   "session_ok": 9
+  },
+  "S1-multi|planner-mt-dev|plain": {
+   "runs": 9,
+   "session_ok": 9
+  },
+  "S1-multi|planner-mt-dev|plain-opus": {
+   "runs": 9,
+   "session_ok": 9
+  },
+  "S1-multi|planner-mt-dev|plain-sonnet": {
+   "runs": 9,
+   "session_ok": 9
+  },
+  "S1-multi|planner-smoke2|orch-default-opus": {
+   "runs": 3,
+   "session_ok": 3
+  },
+  "S1-multi|planner-smoke2|orch-planner-fable": {
+   "runs": 3,
+   "session_ok": 3
+  },
+  "S1-multi|planner-smoke2|orch-planner-opus": {
+   "runs": 3,
+   "session_ok": 3
+  },
+  "S1-multi|planner-smoke2|plain": {
+   "runs": 3,
+   "session_ok": 3
+  },
+  "S1-multi|planner-smoke2|plain-opus": {
+   "runs": 3,
+   "session_ok": 3
+  },
+  "S1-multi|planner-smoke2|plain-sonnet": {
+   "runs": 3,
+   "session_ok": 3
+  },
+  "S1-multi|planner-smoke|orch-planner-fable": {
+   "runs": 3,
+   "session_ok": 3
+  },
+  "S1-multi|planner-smoke|orch-planner-opus": {
+   "runs": 3,
+   "session_ok": 3
+  },
+  "S1-multi|planner-smoke|plain": {
+   "runs": 3,
+   "session_ok": 3
+  },
+  "S1-multi|planner-smoke|plain-opus": {
+   "runs": 3,
+   "session_ok": 3
+  },
+  "S1-multi|v12-mt-dev|orch-default": {
+   "runs": 9,
+   "session_ok": 9
+  },
+  "S1-multi|v12-mt-dev|orch-default-opus": {
+   "runs": 9,
+   "session_ok": 9
+  },
+  "S1-multi|v12-mt-dev|orch-planner-opus": {
+   "runs": 9,
+   "session_ok": 9
+  },
+  "S1-multi|v12-mt-dev|orch-planner-v12-fable": {
+   "runs": 9,
+   "session_ok": 9
+  },
+  "S1-multi|v12-mt-dev|orch-planner-v12-opus": {
+   "runs": 9,
+   "session_ok": 9
+  },
+  "S1-multi|v12-mt-dev|plain": {
+   "runs": 9,
+   "session_ok": 9
+  },
+  "S1-multi|v12-mt-dev|plain-opus": {
+   "runs": 9,
+   "session_ok": 9
+  },
+  "S1-multi|v12-mt-dev|plain-sonnet": {
+   "runs": 9,
+   "session_ok": 9
+  },
+  "S1-multi|value-mt-dev|orch-default": {
+   "runs": 9,
+   "session_ok": 9
+  },
+  "S1-multi|value-mt-dev|orch-default-opus": {
+   "runs": 9,
+   "session_ok": 9
+  },
+  "S1-multi|value-mt-dev|orch-planner-value-fable": {
+   "runs": 9,
+   "session_ok": 9
+  },
+  "S1-multi|value-mt-dev|orch-planner-value-opus": {
+   "runs": 9,
+   "session_ok": 9
+  },
+  "S1-multi|value-mt-dev|plain": {
+   "runs": 9,
+   "session_ok": 9
+  },
+  "S1-multi|value-mt-dev|plain-opus": {
+   "runs": 9,
+   "session_ok": 9
+  },
+  "S1-multi|value-mt-dev|plain-sonnet": {
+   "runs": 9,
+   "session_ok": 9
+  },
+  "S1-single|holdout2|orch-default": {
+   "runs": 36,
+   "session_ok": 36
+  },
+  "S1-single|holdout2|orch-default-opus": {
+   "runs": 36,
+   "session_ok": 36
+  },
+  "S1-single|holdout2|orch-haiku-shaped-fable": {
+   "runs": 36,
+   "session_ok": 36
+  },
+  "S1-single|holdout2|orch-haiku-shaped-opus": {
+   "runs": 36,
+   "session_ok": 36
+  },
+  "S1-single|holdout2|plain": {
+   "runs": 36,
+   "session_ok": 36
+  },
+  "S1-single|holdout2|plain-opus": {
+   "runs": 36,
+   "session_ok": 36
+  },
+  "S1-single|holdout2|plain-sonnet": {
+   "runs": 36,
+   "session_ok": 36
+  },
+  "S1-single|holdout3|orch-default-opus": {
+   "runs": 12,
+   "session_ok": 12
+  },
+  "S1-single|holdout3|orch-planner-v12-sub-fable": {
+   "runs": 12,
+   "session_ok": 12
+  },
+  "S1-single|holdout3|orch-planner-v12-sub-opus": {
+   "runs": 12,
+   "session_ok": 12
+  },
+  "S1-single|holdout3|plain": {
+   "runs": 12,
+   "session_ok": 7
+  },
+  "S1-single|holdout3|plain-opus": {
+   "runs": 12,
+   "session_ok": 12
+  },
+  "S1-single|holdout3|plain-sonnet": {
+   "runs": 12,
+   "session_ok": 12
+  },
+  "S1-single|planner-st-dev|orch-default": {
+   "runs": 24,
+   "session_ok": 24
+  },
+  "S1-single|planner-st-dev|orch-default-opus": {
+   "runs": 24,
+   "session_ok": 24
+  },
+  "S1-single|planner-st-dev|orch-planner-sub-fable": {
+   "runs": 24,
+   "session_ok": 24
+  },
+  "S1-single|planner-st-dev|orch-planner-sub-opus": {
+   "runs": 24,
+   "session_ok": 24
+  },
+  "S1-single|planner-st-dev|plain": {
+   "runs": 24,
+   "session_ok": 24
+  },
+  "S1-single|planner-st-dev|plain-opus": {
+   "runs": 24,
+   "session_ok": 24
+  },
+  "S1-single|planner-st-dev|plain-sonnet": {
+   "runs": 24,
+   "session_ok": 24
+  },
+  "S1-single|prereg-s1-holdout|orch-router-rules": {
+   "runs": 24,
+   "session_ok": 24
+  },
+  "S1-single|prereg-s1-holdout|plain": {
+   "runs": 24,
+   "session_ok": 24
+  },
+  "S1-single|prereg-s1-holdout|plain-sonnet": {
+   "runs": 24,
+   "session_ok": 24
+  },
+  "S1-single|prereg2-s1-holdout|orch-default": {
+   "runs": 24,
+   "session_ok": 24
+  },
+  "S1-single|prereg2-s1-holdout|orch-default-opus": {
+   "runs": 24,
+   "session_ok": 24
+  },
+  "S1-single|prereg2-s1-holdout|plain": {
+   "runs": 24,
+   "session_ok": 24
+  },
+  "S1-single|prereg2-s1-holdout|plain-opus": {
+   "runs": 24,
+   "session_ok": 24
+  },
+  "S1-single|prereg2-s1-holdout|plain-sonnet": {
+   "runs": 24,
+   "session_ok": 24
+  },
+  "S1-single|reval-s1-dev-reversed|orch-default": {
+   "runs": 12,
+   "session_ok": 12
+  },
+  "S1-single|reval-s1-dev-reversed|orch-default-opus": {
+   "runs": 12,
+   "session_ok": 12
+  },
+  "S1-single|reval-s1-dev-reversed|plain": {
+   "runs": 12,
+   "session_ok": 12
+  },
+  "S1-single|reval-s1-dev-reversed|plain-opus": {
+   "runs": 12,
+   "session_ok": 12
+  },
+  "S1-single|reval-s1-dev-reversed|plain-sonnet": {
+   "runs": 12,
+   "session_ok": 12
+  },
+  "S1-single|reval-s1-dev|orch-default": {
+   "runs": 24,
+   "session_ok": 24
+  },
+  "S1-single|reval-s1-dev|orch-default-opus": {
+   "runs": 24,
+   "session_ok": 24
+  },
+  "S1-single|reval-s1-dev|plain": {
+   "runs": 24,
+   "session_ok": 24
+  },
+  "S1-single|reval-s1-dev|plain-opus": {
+   "runs": 24,
+   "session_ok": 24
+  },
+  "S1-single|reval-s1-dev|plain-sonnet": {
+   "runs": 24,
+   "session_ok": 24
+  },
+  "S1-single|router-rules-s1-dev|orch-router-rules": {
+   "runs": 12,
+   "session_ok": 12
+  },
+  "S1-single|router-rules-s1-dev|plain": {
+   "runs": 12,
+   "session_ok": 12
+  },
+  "S1-single|router-rules-s1-dev|plain-sonnet": {
+   "runs": 12,
+   "session_ok": 12
+  },
+  "S1-single|router-s1-dev|orch-router-jev": {
+   "runs": 12,
+   "session_ok": 12
+  },
+  "S1-single|router-s1-dev|plain": {
+   "runs": 12,
+   "session_ok": 12
+  },
+  "S1-single|router-s1-dev|plain-sonnet": {
+   "runs": 12,
+   "session_ok": 12
+  },
+  "S1-single|screen-s1-dev|orch-primary": {
+   "runs": 12,
+   "session_ok": 12
+  },
+  "S1-single|screen-s1-dev|orch-primary-effort-only": {
+   "runs": 12,
+   "session_ok": 12
+  },
+  "S1-single|screen-s1-dev|plain": {
+   "runs": 12,
+   "session_ok": 12
+  },
+  "S1-single|screen-s1-dev|plain-sonnet": {
+   "runs": 12,
+   "session_ok": 12
+  },
+  "S1-single|shape-opus-dev|orch-default-opus": {
+   "runs": 24,
+   "session_ok": 24
+  },
+  "S1-single|shape-opus-dev|orch-haiku-guided-opus": {
+   "runs": 24,
+   "session_ok": 24
+  },
+  "S1-single|shape-opus-dev|orch-haiku-opus": {
+   "runs": 24,
+   "session_ok": 24
+  },
+  "S1-single|shape-opus-dev|orch-haiku-shaped-opus": {
+   "runs": 24,
+   "session_ok": 24
+  },
+  "S1-single|shape-opus-dev|orch-sonnet-shaped-opus": {
+   "runs": 24,
+   "session_ok": 24
+  },
+  "S1-single|shape-opus-dev|plain-opus": {
+   "runs": 24,
+   "session_ok": 24
+  },
+  "S1-single|shape-opus-dev|plain-sonnet": {
+   "runs": 24,
+   "session_ok": 24
+  },
+  "S1-single|tune-fable-dev|orch-default": {
+   "runs": 24,
+   "session_ok": 24
+  },
+  "S1-single|tune-fable-dev|orch-fablelow": {
+   "runs": 24,
+   "session_ok": 24
+  },
+  "S1-single|tune-fable-dev|orch-haiku-fable": {
+   "runs": 24,
+   "session_ok": 24
+  },
+  "S1-single|tune-fable-dev|plain": {
+   "runs": 24,
+   "session_ok": 24
+  },
+  "S1-single|tune-fable-dev|plain-sonnet": {
+   "runs": 24,
+   "session_ok": 24
+  },
+  "S1-single|tune-opus-dev-b2|orch-default-opus": {
+   "runs": 12,
+   "session_ok": 12
+  },
+  "S1-single|tune-opus-dev-b2|orch-haiku-low-opus": {
+   "runs": 12,
+   "session_ok": 12
+  },
+  "S1-single|tune-opus-dev-b2|orch-haiku-opus": {
+   "runs": 12,
+   "session_ok": 12
+  },
+  "S1-single|tune-opus-dev-b2|orch-opuslow-opus": {
+   "runs": 12,
+   "session_ok": 12
+  },
+  "S1-single|tune-opus-dev-b2|orch-sonnetlow-opus": {
+   "runs": 12,
+   "session_ok": 12
+  },
+  "S1-single|tune-opus-dev-b2|plain-opus": {
+   "runs": 12,
+   "session_ok": 12
+  },
+  "S1-single|tune-opus-dev-b2|plain-sonnet": {
+   "runs": 12,
+   "session_ok": 12
+  },
+  "S1-single|tune-opus-dev|orch-default-opus": {
+   "runs": 12,
+   "session_ok": 12
+  },
+  "S1-single|tune-opus-dev|orch-haiku-low-opus": {
+   "runs": 12,
+   "session_ok": 12
+  },
+  "S1-single|tune-opus-dev|orch-haiku-opus": {
+   "runs": 12,
+   "session_ok": 12
+  },
+  "S1-single|tune-opus-dev|orch-opuslow-opus": {
+   "runs": 12,
+   "session_ok": 12
+  },
+  "S1-single|tune-opus-dev|orch-sonnetlow-opus": {
+   "runs": 12,
+   "session_ok": 12
+  },
+  "S1-single|tune-opus-dev|plain-opus": {
+   "runs": 12,
+   "session_ok": 12
+  },
+  "S1-single|tune-opus-dev|plain-sonnet": {
+   "runs": 12,
+   "session_ok": 12
+  },
+  "S1-single|value-st-dev|orch-default": {
+   "runs": 24,
+   "session_ok": 24
+  },
+  "S1-single|value-st-dev|orch-default-opus": {
+   "runs": 24,
+   "session_ok": 24
+  },
+  "S1-single|value-st-dev|orch-planner-value-sub-fable": {
+   "runs": 24,
+   "session_ok": 24
+  },
+  "S1-single|value-st-dev|orch-planner-value-sub-opus": {
+   "runs": 24,
+   "session_ok": 24
+  },
+  "S1-single|value-st-dev|plain": {
+   "runs": 24,
+   "session_ok": 24
+  },
+  "S1-single|value-st-dev|plain-opus": {
+   "runs": 24,
+   "session_ok": 24
+  },
+  "S1-single|value-st-dev|plain-sonnet": {
+   "runs": 24,
+   "session_ok": 24
+  },
+  "S3-routing|swe-check2|orch-primary": {
+   "runs": 1,
+   "session_ok": 1
+  },
+  "S3-routing|swe-check2|plain": {
+   "runs": 1,
+   "session_ok": 1
+  },
+  "S3-routing|swe-check2|plain-sonnet": {
+   "runs": 1,
+   "session_ok": 1
+  },
+  "S3-routing|swe-complex-speed|orch-router-rules": {
+   "runs": 20,
+   "session_ok": 20
+  },
+  "S3-routing|swe-complex-speed|orch-strong-phase-effort": {
+   "runs": 20,
+   "session_ok": 20
+  },
+  "S3-routing|swe-complex-speed|plain": {
+   "runs": 20,
+   "session_ok": 20
+  },
+  "S3-routing|swe-router-reps|orch-router-jev": {
+   "runs": 20,
+   "session_ok": 20
+  },
+  "S3-routing|swe-router-reps|plain": {
+   "runs": 20,
+   "session_ok": 20
+  },
+  "S3-routing|swe-router-smoke|orch-router-jev": {
+   "runs": 1,
+   "session_ok": 1
+  },
+  "S3-routing|swe-router-smoke|orch-router-local": {
+   "runs": 1,
+   "session_ok": 1
+  },
+  "S3-routing|swe-router10|orch-router-jev": {
+   "runs": 10,
+   "session_ok": 10
+  },
+  "S3-routing|swe-router10|orch-router-local": {
+   "runs": 10,
+   "session_ok": 10
+  },
+  "S3-routing|swe-router10|plain": {
+   "runs": 10,
+   "session_ok": 10
+  },
+  "S3-routing|swe-screen10|orch-primary": {
+   "runs": 10,
+   "session_ok": 10
+  },
+  "S3-routing|swe-screen10|plain": {
+   "runs": 10,
+   "session_ok": 10
+  },
+  "S3-routing|swe-screen10|plain-sonnet": {
+   "runs": 10,
+   "session_ok": 10
+  },
+  "S3-v4-same-model|swebench-complete-v4|jev-prepared": {
+   "runs": 35,
+   "session_ok": 35
+  },
+  "S3-v4-same-model|swebench-complete-v4|jevgrep": {
+   "runs": 35,
+   "session_ok": 35
+  },
+  "S3-v4-same-model|swebench-complete-v4|laya-prepared": {
+   "runs": 35,
+   "session_ok": 35
+  },
+  "S3-v4-same-model|swebench-complete-v4|plain-matched": {
+   "runs": 35,
+   "session_ok": 35
+  }
+ },
+ "session_resolution": {
+  "measurements.scope": 1927,
+  "run_events_filename": 3,
+  "unresolved": 5,
+  "result.session_id": 305
+ },
+ "session_cost_vs_result_json": {
+  "n": 2232,
+  "median_rel_diff": 0.0,
+  "p95_rel_diff": 2.1514966071806729e-16
+ },
+ "groups": {
+  "S1-multi|model_swap_control|fable": {
+   "cost": {
+    "n_pairs": 42,
+    "n_tasks": 6,
+    "geomean": 0.5277,
+    "ci95": [
+     0.4557,
+     0.5713
+    ]
+   },
+   "time": {
+    "n_pairs": 42,
+    "n_tasks": 6,
+    "geomean": 0.4997,
+    "ci95": [
+     0.3864,
+     0.5887
+    ]
+   },
+   "cost_ex_rebuild": {
+    "n_pairs": 42,
+    "n_tasks": 6,
+    "geomean": 0.5277,
+    "ci95": [
+     0.4557,
+     0.5713
+    ]
+   },
+   "treat_pass": 41,
+   "anchor_pass": 41,
+   "sessions_with_switch": 0,
+   "switches": 0,
+   "rebuild_usd": 0.0,
+   "config_switch_usd": 0.0,
+   "treat_cost": 29.3924,
+   "anchor_cost": 55.8295,
+   "median_n_req_anchor": 18.0,
+   "hit_share_treat": 0.9478,
+   "hit_share_anchor": 0.9563
+  },
+  "S1-multi|model_swap_control|opus": {
+   "cost": {
+    "n_pairs": 45,
+    "n_tasks": 6,
+    "geomean": 1.348,
+    "ci95": [
+     1.2684,
+     1.4077
+    ]
+   },
+   "time": {
+    "n_pairs": 45,
+    "n_tasks": 6,
+    "geomean": 1.1425,
+    "ci95": [
+     1.0124,
+     1.3148
+    ]
+   },
+   "cost_ex_rebuild": {
+    "n_pairs": 45,
+    "n_tasks": 6,
+    "geomean": 1.348,
+    "ci95": [
+     1.2684,
+     1.4077
+    ]
+   },
+   "treat_pass": 41,
+   "anchor_pass": 41,
+   "sessions_with_switch": 0,
+   "switches": 0,
+   "rebuild_usd": 0.0,
+   "config_switch_usd": 0.0,
+   "treat_cost": 31.585,
+   "anchor_cost": 23.5033,
+   "median_n_req_anchor": 13,
+   "hit_share_treat": 0.9471,
+   "hit_share_anchor": 0.9399
+  },
+  "S1-multi|orch-default-opus|vs|plain-opus": {
+   "cost": {
+    "n_pairs": 45,
+    "n_tasks": 6,
+    "geomean": 1.305,
+    "ci95": [
+     1.1857,
+     1.414
+    ]
+   },
+   "time": {
+    "n_pairs": 45,
+    "n_tasks": 6,
+    "geomean": 0.9684,
+    "ci95": [
+     0.9356,
+     1.0091
+    ]
+   },
+   "cost_ex_rebuild": {
+    "n_pairs": 45,
+    "n_tasks": 6,
+    "geomean": 1.1366,
+    "ci95": [
+     1.0889,
+     1.2025
+    ]
+   },
+   "treat_pass": 42,
+   "anchor_pass": 41,
+   "sessions_with_switch": 20,
+   "switches": 40,
+   "rebuild_usd": 4.1211,
+   "config_switch_usd": 0.0,
+   "treat_cost": 30.6765,
+   "anchor_cost": 23.5033,
+   "median_n_req_anchor": 13,
+   "hit_share_treat": 0.9398,
+   "hit_share_anchor": 0.9399
+  },
+  "S1-multi|orch-default|vs|plain": {
+   "cost": {
+    "n_pairs": 39,
+    "n_tasks": 6,
+    "geomean": 0.6167,
+    "ci95": [
+     0.4567,
+     0.7374
+    ]
+   },
+   "time": {
+    "n_pairs": 39,
+    "n_tasks": 6,
+    "geomean": 0.4204,
+    "ci95": [
+     0.3389,
+     0.5096
+    ]
+   },
+   "cost_ex_rebuild": {
+    "n_pairs": 39,
+    "n_tasks": 6,
+    "geomean": 0.4686,
+    "ci95": [
+     0.4032,
+     0.5089
+    ]
+   },
+   "treat_pass": 38,
+   "anchor_pass": 38,
+   "sessions_with_switch": 17,
+   "switches": 34,
+   "rebuild_usd": 9.1719,
+   "config_switch_usd": 0.0,
+   "treat_cost": 33.0406,
+   "anchor_cost": 51.0161,
+   "median_n_req_anchor": 18,
+   "hit_share_treat": 0.9351,
+   "hit_share_anchor": 0.9573
+  },
+  "S1-multi|orch-haiku-shaped-fable|vs|plain": {
+   "cost": {
+    "n_pairs": 9,
+    "n_tasks": 3,
+    "geomean": 0.4036,
+    "ci95": [
+     0.1888,
+     0.7384
+    ]
+   },
+   "time": {
+    "n_pairs": 9,
+    "n_tasks": 3,
+    "geomean": 0.7403,
+    "ci95": [
+     0.5974,
+     0.8409
+    ]
+   },
+   "cost_ex_rebuild": {
+    "n_pairs": 9,
+    "n_tasks": 3,
+    "geomean": 0.318,
+    "ci95": [
+     0.1888,
+     0.5237
+    ]
+   },
+   "treat_pass": 8,
+   "anchor_pass": 9,
+   "sessions_with_switch": 5,
+   "switches": 10,
+   "rebuild_usd": 1.6157,
+   "config_switch_usd": 0.0,
+   "treat_cost": 5.4134,
+   "anchor_cost": 10.6142,
+   "median_n_req_anchor": 18,
+   "hit_share_treat": 0.9359,
+   "hit_share_anchor": 0.9641
+  },
+  "S1-multi|orch-haiku-shaped-opus|vs|plain-opus": {
+   "cost": {
+    "n_pairs": 9,
+    "n_tasks": 3,
+    "geomean": 0.6298,
+    "ci95": [
+     0.4402,
+     0.8967
+    ]
+   },
+   "time": {
+    "n_pairs": 9,
+    "n_tasks": 3,
+    "geomean": 1.2764,
+    "ci95": [
+     1.2158,
+     1.3555
+    ]
+   },
+   "cost_ex_rebuild": {
+    "n_pairs": 9,
+    "n_tasks": 3,
+    "geomean": 0.5079,
+    "ci95": [
+     0.4402,
+     0.6185
+    ]
+   },
+   "treat_pass": 6,
+   "anchor_pass": 9,
+   "sessions_with_switch": 5,
+   "switches": 10,
+   "rebuild_usd": 0.7982,
+   "config_switch_usd": 0.0,
+   "treat_cost": 3.2866,
+   "anchor_cost": 4.7835,
+   "median_n_req_anchor": 13,
+   "hit_share_treat": 0.9222,
+   "hit_share_anchor": 0.9414
+  },
+  "S1-multi|orch-planner-fable|vs|plain": {
+   "cost": {
+    "n_pairs": 15,
+    "n_tasks": 3,
+    "geomean": 0.6362,
+    "ci95": [
+     0.46,
+     0.7928
+    ]
+   },
+   "time": {
+    "n_pairs": 15,
+    "n_tasks": 3,
+    "geomean": 0.4965,
+    "ci95": [
+     0.4282,
+     0.5939
+    ]
+   },
+   "cost_ex_rebuild": {
+    "n_pairs": 15,
+    "n_tasks": 3,
+    "geomean": 0.4464,
+    "ci95": [
+     0.4021,
+     0.4809
+    ]
+   },
+   "treat_pass": 15,
+   "anchor_pass": 15,
+   "sessions_with_switch": 8,
+   "switches": 9,
+   "rebuild_usd": 4.2841,
+   "config_switch_usd": 0.5261,
+   "treat_cost": 14.1837,
+   "anchor_cost": 21.1979,
+   "median_n_req_anchor": 19,
+   "hit_share_treat": 0.9314,
+   "hit_share_anchor": 0.9516
+  },
+  "S1-multi|orch-planner-opus|vs|plain-opus": {
+   "cost": {
+    "n_pairs": 24,
+    "n_tasks": 3,
+    "geomean": 1.1054,
+    "ci95": [
+     1.0558,
+     1.1461
+    ]
+   },
+   "time": {
+    "n_pairs": 24,
+    "n_tasks": 3,
+    "geomean": 1.0261,
+    "ci95": [
+     0.9942,
+     1.0487
+    ]
+   },
+   "cost_ex_rebuild": {
+    "n_pairs": 24,
+    "n_tasks": 3,
+    "geomean": 1.026,
+    "ci95": [
+     1.0103,
+     1.0558
+    ]
+   },
+   "treat_pass": 24,
+   "anchor_pass": 24,
+   "sessions_with_switch": 4,
+   "switches": 6,
+   "rebuild_usd": 1.2362,
+   "config_switch_usd": 0.0,
+   "treat_cost": 13.8894,
+   "anchor_cost": 12.3498,
+   "median_n_req_anchor": 13.0,
+   "hit_share_treat": 0.9356,
+   "hit_share_anchor": 0.9413
+  },
+  "S1-multi|orch-planner-v12-fable|vs|plain": {
+   "cost": {
+    "n_pairs": 12,
+    "n_tasks": 6,
+    "geomean": 0.5742,
+    "ci95": [
+     0.4028,
+     0.7231
+    ]
+   },
+   "time": {
+    "n_pairs": 12,
+    "n_tasks": 6,
+    "geomean": 0.4337,
+    "ci95": [
+     0.3796,
+     0.495
+    ]
+   },
+   "cost_ex_rebuild": {
+    "n_pairs": 12,
+    "n_tasks": 6,
+    "geomean": 0.4201,
+    "ci95": [
+     0.3797,
+     0.4481
+    ]
+   },
+   "treat_pass": 12,
+   "anchor_pass": 11,
+   "sessions_with_switch": 6,
+   "switches": 12,
+   "rebuild_usd": 2.9608,
+   "config_switch_usd": 0.0,
+   "treat_cost": 9.9236,
+   "anchor_cost": 16.5845,
+   "median_n_req_anchor": 18.5,
+   "hit_share_treat": 0.9416,
+   "hit_share_anchor": 0.9513
+  },
+  "S1-multi|orch-planner-v12-opus|vs|plain-opus": {
+   "cost": {
+    "n_pairs": 12,
+    "n_tasks": 6,
+    "geomean": 1.0195,
+    "ci95": [
+     0.994,
+     1.0777
+    ]
+   },
+   "time": {
+    "n_pairs": 12,
+    "n_tasks": 6,
+    "geomean": 1.0267,
+    "ci95": [
+     0.9851,
+     1.1269
+    ]
+   },
+   "cost_ex_rebuild": {
+    "n_pairs": 12,
+    "n_tasks": 6,
+    "geomean": 1.0195,
+    "ci95": [
+     0.994,
+     1.0777
+    ]
+   },
+   "treat_pass": 11,
+   "anchor_pass": 11,
+   "sessions_with_switch": 0,
+   "switches": 0,
+   "rebuild_usd": 0.0,
+   "config_switch_usd": 0.0,
+   "treat_cost": 6.195,
+   "anchor_cost": 6.0875,
+   "median_n_req_anchor": 12.5,
+   "hit_share_treat": 0.943,
+   "hit_share_anchor": 0.9423
+  },
+  "S1-multi|orch-planner-value-fable|vs|plain": {
+   "cost": {
+    "n_pairs": 9,
+    "n_tasks": 3,
+    "geomean": 0.5414,
+    "ci95": [
+     0.4681,
+     0.6539
+    ]
+   },
+   "time": {
+    "n_pairs": 9,
+    "n_tasks": 3,
+    "geomean": 0.3899,
+    "ci95": [
+     0.3022,
+     0.5262
+    ]
+   },
+   "cost_ex_rebuild": {
+    "n_pairs": 9,
+    "n_tasks": 3,
+    "geomean": 0.4785,
+    "ci95": [
+     0.419,
+     0.5585
+    ]
+   },
+   "treat_pass": 9,
+   "anchor_pass": 9,
+   "sessions_with_switch": 2,
+   "switches": 4,
+   "rebuild_usd": 1.0092,
+   "config_switch_usd": 0.0,
+   "treat_cost": 6.7527,
+   "anchor_cost": 12.0477,
+   "median_n_req_anchor": 18,
+   "hit_share_treat": 0.945,
+   "hit_share_anchor": 0.9559
+  },
+  "S1-multi|orch-planner-value-opus|vs|plain-opus": {
+   "cost": {
+    "n_pairs": 9,
+    "n_tasks": 3,
+    "geomean": 1.1673,
+    "ci95": [
+     1.0859,
+     1.3166
+    ]
+   },
+   "time": {
+    "n_pairs": 9,
+    "n_tasks": 3,
+    "geomean": 1.0385,
+    "ci95": [
+     0.9265,
+     1.104
+    ]
+   },
+   "cost_ex_rebuild": {
+    "n_pairs": 9,
+    "n_tasks": 3,
+    "geomean": 0.9698,
+    "ci95": [
+     0.885,
+     1.0859
+    ]
+   },
+   "treat_pass": 9,
+   "anchor_pass": 9,
+   "sessions_with_switch": 5,
+   "switches": 5,
+   "rebuild_usd": 0.9517,
+   "config_switch_usd": 0.0,
+   "treat_cost": 5.7469,
+   "anchor_cost": 4.9423,
+   "median_n_req_anchor": 13,
+   "hit_share_treat": 0.939,
+   "hit_share_anchor": 0.9316
+  },
+  "S1-multi|plain-sonnet|vs|plain": {
+   "cost": {
+    "n_pairs": 42,
+    "n_tasks": 6,
+    "geomean": 0.5277,
+    "ci95": [
+     0.4557,
+     0.5713
+    ]
+   },
+   "time": {
+    "n_pairs": 42,
+    "n_tasks": 6,
+    "geomean": 0.4997,
+    "ci95": [
+     0.3864,
+     0.5887
+    ]
+   },
+   "cost_ex_rebuild": {
+    "n_pairs": 42,
+    "n_tasks": 6,
+    "geomean": 0.5277,
+    "ci95": [
+     0.4557,
+     0.5713
+    ]
+   },
+   "treat_pass": 41,
+   "anchor_pass": 41,
+   "sessions_with_switch": 0,
+   "switches": 0,
+   "rebuild_usd": 0.0,
+   "config_switch_usd": 0.0,
+   "treat_cost": 29.3924,
+   "anchor_cost": 55.8295,
+   "median_n_req_anchor": 18.0,
+   "hit_share_treat": 0.9478,
+   "hit_share_anchor": 0.9563
+  },
+  "S1-multi|plain-sonnet|vs|plain-opus": {
+   "cost": {
+    "n_pairs": 45,
+    "n_tasks": 6,
+    "geomean": 1.348,
+    "ci95": [
+     1.2684,
+     1.4077
+    ]
+   },
+   "time": {
+    "n_pairs": 45,
+    "n_tasks": 6,
+    "geomean": 1.1425,
+    "ci95": [
+     1.0124,
+     1.3148
+    ]
+   },
+   "cost_ex_rebuild": {
+    "n_pairs": 45,
+    "n_tasks": 6,
+    "geomean": 1.348,
+    "ci95": [
+     1.2684,
+     1.4077
+    ]
+   },
+   "treat_pass": 41,
+   "anchor_pass": 41,
+   "sessions_with_switch": 0,
+   "switches": 0,
+   "rebuild_usd": 0.0,
+   "config_switch_usd": 0.0,
+   "treat_cost": 31.585,
+   "anchor_cost": 23.5033,
+   "median_n_req_anchor": 13,
+   "hit_share_treat": 0.9471,
+   "hit_share_anchor": 0.9399
+  },
+  "S1-multi|routing|fable": {
+   "cost": {
+    "n_pairs": 75,
+    "n_tasks": 6,
+    "geomean": 0.604,
+    "ci95": [
+     0.4444,
+     0.7254
+    ]
+   },
+   "time": {
+    "n_pairs": 75,
+    "n_tasks": 6,
+    "geomean": 0.4329,
+    "ci95": [
+     0.3647,
+     0.5205
+    ]
+   },
+   "cost_ex_rebuild": {
+    "n_pairs": 75,
+    "n_tasks": 6,
+    "geomean": 0.4571,
+    "ci95": [
+     0.3985,
+     0.495
+    ]
+   },
+   "treat_pass": 74,
+   "anchor_pass": 73,
+   "sessions_with_switch": 33,
+   "switches": 59,
+   "rebuild_usd": 17.426,
+   "config_switch_usd": 0.5261,
+   "treat_cost": 63.9006,
+   "anchor_cost": 100.8461,
+   "median_n_req_anchor": 18,
+   "hit_share_treat": 0.9366,
+   "hit_share_anchor": 0.955
+  },
+  "S1-multi|routing|opus": {
+   "cost": {
+    "n_pairs": 90,
+    "n_tasks": 6,
+    "geomean": 1.1947,
+    "ci95": [
+     1.12,
+     1.2628
+    ]
+   },
+   "time": {
+    "n_pairs": 90,
+    "n_tasks": 6,
+    "geomean": 0.9981,
+    "ci95": [
+     0.966,
+     1.0406
+    ]
+   },
+   "cost_ex_rebuild": {
+    "n_pairs": 90,
+    "n_tasks": 6,
+    "geomean": 1.0729,
+    "ci95": [
+     1.0362,
+     1.1293
+    ]
+   },
+   "treat_pass": 86,
+   "anchor_pass": 85,
+   "sessions_with_switch": 29,
+   "switches": 51,
+   "rebuild_usd": 6.309,
+   "config_switch_usd": 0.0,
+   "treat_cost": 56.5077,
+   "anchor_cost": 46.8829,
+   "median_n_req_anchor": 13.0,
+   "hit_share_treat": 0.939,
+   "hit_share_anchor": 0.9397
+  },
+  "S1-multi|routing_plus_shaping|fable": {
+   "cost": {
+    "n_pairs": 9,
+    "n_tasks": 3,
+    "geomean": 0.4036,
+    "ci95": [
+     0.1888,
+     0.7384
+    ]
+   },
+   "time": {
+    "n_pairs": 9,
+    "n_tasks": 3,
+    "geomean": 0.7403,
+    "ci95": [
+     0.5974,
+     0.8409
+    ]
+   },
+   "cost_ex_rebuild": {
+    "n_pairs": 9,
+    "n_tasks": 3,
+    "geomean": 0.318,
+    "ci95": [
+     0.1888,
+     0.5237
+    ]
+   },
+   "treat_pass": 8,
+   "anchor_pass": 9,
+   "sessions_with_switch": 5,
+   "switches": 10,
+   "rebuild_usd": 1.6157,
+   "config_switch_usd": 0.0,
+   "treat_cost": 5.4134,
+   "anchor_cost": 10.6142,
+   "median_n_req_anchor": 18,
+   "hit_share_treat": 0.9359,
+   "hit_share_anchor": 0.9641
+  },
+  "S1-multi|routing_plus_shaping|opus": {
+   "cost": {
+    "n_pairs": 9,
+    "n_tasks": 3,
+    "geomean": 0.6298,
+    "ci95": [
+     0.4402,
+     0.8967
+    ]
+   },
+   "time": {
+    "n_pairs": 9,
+    "n_tasks": 3,
+    "geomean": 1.2764,
+    "ci95": [
+     1.2158,
+     1.3555
+    ]
+   },
+   "cost_ex_rebuild": {
+    "n_pairs": 9,
+    "n_tasks": 3,
+    "geomean": 0.5079,
+    "ci95": [
+     0.4402,
+     0.6185
+    ]
+   },
+   "treat_pass": 6,
+   "anchor_pass": 9,
+   "sessions_with_switch": 5,
+   "switches": 10,
+   "rebuild_usd": 0.7982,
+   "config_switch_usd": 0.0,
+   "treat_cost": 3.2866,
+   "anchor_cost": 4.7835,
+   "median_n_req_anchor": 13,
+   "hit_share_treat": 0.9222,
+   "hit_share_anchor": 0.9414
+  },
+  "S1-single|effort_only|fable": {
+   "cost": {
+    "n_pairs": 36,
+    "n_tasks": 12,
+    "geomean": 0.9959,
+    "ci95": [
+     0.9459,
+     1.0553
+    ]
+   },
+   "time": {
+    "n_pairs": 36,
+    "n_tasks": 12,
+    "geomean": 0.8679,
+    "ci95": [
+     0.7684,
+     0.9669
+    ]
+   },
+   "cost_ex_rebuild": {
+    "n_pairs": 36,
+    "n_tasks": 12,
+    "geomean": 0.9877,
+    "ci95": [
+     0.9371,
+     1.0482
+    ]
+   },
+   "treat_pass": 36,
+   "anchor_pass": 36,
+   "sessions_with_switch": 0,
+   "switches": 0,
+   "rebuild_usd": 0.0,
+   "config_switch_usd": 0.1846,
+   "treat_cost": 21.5147,
+   "anchor_cost": 21.4585,
+   "median_n_req_anchor": 4.0,
+   "hit_share_treat": 0.8233,
+   "hit_share_anchor": 0.8506
+  },
+  "S1-single|effort_only|opus": {
+   "cost": {
+    "n_pairs": 24,
+    "n_tasks": 12,
+    "geomean": 0.96,
+    "ci95": [
+     0.9289,
+     0.9916
+    ]
+   },
+   "time": {
+    "n_pairs": 24,
+    "n_tasks": 12,
+    "geomean": 0.8983,
+    "ci95": [
+     0.7602,
+     1.0872
+    ]
+   },
+   "cost_ex_rebuild": {
+    "n_pairs": 24,
+    "n_tasks": 12,
+    "geomean": 0.96,
+    "ci95": [
+     0.9289,
+     0.9916
+    ]
+   },
+   "treat_pass": 24,
+   "anchor_pass": 24,
+   "sessions_with_switch": 0,
+   "switches": 0,
+   "rebuild_usd": 0.0,
+   "config_switch_usd": 0.0,
+   "treat_cost": 5.5706,
+   "anchor_cost": 5.8137,
+   "median_n_req_anchor": 3.0,
+   "hit_share_treat": 0.8183,
+   "hit_share_anchor": 0.8263
+  },
+  "S1-single|midturn_escalation|fable": {
+   "cost": {
+    "n_pairs": 12,
+    "n_tasks": 12,
+    "geomean": 0.7669,
+    "ci95": [
+     0.6725,
+     0.8751
+    ]
+   },
+   "time": {
+    "n_pairs": 12,
+    "n_tasks": 12,
+    "geomean": 0.4787,
+    "ci95": [
+     0.4001,
+     0.5725
+    ]
+   },
+   "cost_ex_rebuild": {
+    "n_pairs": 12,
+    "n_tasks": 12,
+    "geomean": 0.3869,
+    "ci95": [
+     0.3534,
+     0.4294
+    ]
+   },
+   "treat_pass": 12,
+   "anchor_pass": 12,
+   "sessions_with_switch": 0,
+   "switches": 0,
+   "rebuild_usd": 0.0,
+   "config_switch_usd": 2.7887,
+   "treat_cost": 5.5667,
+   "anchor_cost": 7.065,
+   "median_n_req_anchor": 4.0,
+   "hit_share_treat": 0.5612,
+   "hit_share_anchor": 0.8457
+  },
+  "S1-single|model_swap_control|fable": {
+   "cost": {
+    "n_pairs": 235,
+    "n_tasks": 39,
+    "geomean": 0.392,
+    "ci95": [
+     0.3751,
+     0.4116
+    ]
+   },
+   "time": {
+    "n_pairs": 235,
+    "n_tasks": 39,
+    "geomean": 0.5418,
+    "ci95": [
+     0.4834,
+     0.6118
+    ]
+   },
+   "cost_ex_rebuild": {
+    "n_pairs": 235,
+    "n_tasks": 39,
+    "geomean": 0.392,
+    "ci95": [
+     0.3751,
+     0.4116
+    ]
+   },
+   "treat_pass": 234,
+   "anchor_pass": 234,
+   "sessions_with_switch": 0,
+   "switches": 0,
+   "rebuild_usd": 0.0,
+   "config_switch_usd": 0.0,
+   "treat_cost": 58.0805,
+   "anchor_cost": 147.5419,
+   "median_n_req_anchor": 4,
+   "hit_share_treat": 0.8404,
+   "hit_share_anchor": 0.8349
+  },
+  "S1-single|model_swap_control|opus": {
+   "cost": {
+    "n_pairs": 204,
+    "n_tasks": 44,
+    "geomean": 0.97,
+    "ci95": [
+     0.9215,
+     1.027
+    ]
+   },
+   "time": {
+    "n_pairs": 204,
+    "n_tasks": 44,
+    "geomean": 0.9766,
+    "ci95": [
+     0.8635,
+     1.1313
+    ]
+   },
+   "cost_ex_rebuild": {
+    "n_pairs": 204,
+    "n_tasks": 44,
+    "geomean": 0.97,
+    "ci95": [
+     0.9215,
+     1.027
+    ]
+   },
+   "treat_pass": 203,
+   "anchor_pass": 203,
+   "sessions_with_switch": 0,
+   "switches": 0,
+   "rebuild_usd": 0.0,
+   "config_switch_usd": 0.0,
+   "treat_cost": 50.3016,
+   "anchor_cost": 51.3608,
+   "median_n_req_anchor": 3.0,
+   "hit_share_treat": 0.8418,
+   "hit_share_anchor": 0.8245
+  },
+  "S1-single|orch-default-opus|vs|plain-opus": {
+   "cost": {
+    "n_pairs": 204,
+    "n_tasks": 44,
+    "geomean": 0.9506,
+    "ci95": [
+     0.9152,
+     0.9857
+    ]
+   },
+   "time": {
+    "n_pairs": 204,
+    "n_tasks": 44,
+    "geomean": 0.8586,
+    "ci95": [
+     0.7905,
+     0.9301
+    ]
+   },
+   "cost_ex_rebuild": {
+    "n_pairs": 204,
+    "n_tasks": 44,
+    "geomean": 0.9506,
+    "ci95": [
+     0.9152,
+     0.9857
+    ]
+   },
+   "treat_pass": 203,
+   "anchor_pass": 203,
+   "sessions_with_switch": 0,
+   "switches": 0,
+   "rebuild_usd": 0.0,
+   "config_switch_usd": 0.0,
+   "treat_cost": 49.0515,
+   "anchor_cost": 51.3608,
+   "median_n_req_anchor": 3.0,
+   "hit_share_treat": 0.8367,
+   "hit_share_anchor": 0.8245
+  },
+  "S1-single|orch-default|vs|plain": {
+   "cost": {
+    "n_pairs": 168,
+    "n_tasks": 32,
+    "geomean": 0.4909,
+    "ci95": [
+     0.4184,
+     0.5885
+    ]
+   },
+   "time": {
+    "n_pairs": 168,
+    "n_tasks": 32,
+    "geomean": 0.522,
+    "ci95": [
+     0.4459,
+     0.6132
+    ]
+   },
+   "cost_ex_rebuild": {
+    "n_pairs": 168,
+    "n_tasks": 32,
+    "geomean": 0.4909,
+    "ci95": [
+     0.4184,
+     0.5885
+    ]
+   },
+   "treat_pass": 168,
+   "anchor_pass": 168,
+   "sessions_with_switch": 0,
+   "switches": 0,
+   "rebuild_usd": 0.0,
+   "config_switch_usd": 0.0,
+   "treat_cost": 56.7965,
+   "anchor_cost": 104.3289,
+   "median_n_req_anchor": 4.0,
+   "hit_share_treat": 0.8272,
+   "hit_share_anchor": 0.8373
+  },
+  "S1-single|orch-fablelow|vs|plain": {
+   "cost": {
+    "n_pairs": 24,
+    "n_tasks": 12,
+    "geomean": 0.9517,
+    "ci95": [
+     0.9188,
+     0.9787
+    ]
+   },
+   "time": {
+    "n_pairs": 24,
+    "n_tasks": 12,
+    "geomean": 0.9195,
+    "ci95": [
+     0.794,
+     1.0631
+    ]
+   },
+   "cost_ex_rebuild": {
+    "n_pairs": 24,
+    "n_tasks": 12,
+    "geomean": 0.9517,
+    "ci95": [
+     0.9188,
+     0.9787
+    ]
+   },
+   "treat_pass": 24,
+   "anchor_pass": 24,
+   "sessions_with_switch": 0,
+   "switches": 0,
+   "rebuild_usd": 0.0,
+   "config_switch_usd": 0.0,
+   "treat_cost": 13.6738,
+   "anchor_cost": 14.3935,
+   "median_n_req_anchor": 4.0,
+   "hit_share_treat": 0.8355,
+   "hit_share_anchor": 0.8531
+  },
+  "S1-single|orch-haiku-fable|vs|plain": {
+   "cost": {
+    "n_pairs": 24,
+    "n_tasks": 12,
+    "geomean": 0.2034,
+    "ci95": [
+     0.1194,
+     0.359
+    ]
+   },
+   "time": {
+    "n_pairs": 24,
+    "n_tasks": 12,
+    "geomean": 0.8211,
+    "ci95": [
+     0.675,
+     1.0107
+    ]
+   },
+   "cost_ex_rebuild": {
+    "n_pairs": 24,
+    "n_tasks": 12,
+    "geomean": 0.2034,
+    "ci95": [
+     0.1194,
+     0.359
+    ]
+   },
+   "treat_pass": 23,
+   "anchor_pass": 24,
+   "sessions_with_switch": 0,
+   "switches": 0,
+   "rebuild_usd": 0.0,
+   "config_switch_usd": 0.0,
+   "treat_cost": 5.205,
+   "anchor_cost": 14.3935,
+   "median_n_req_anchor": 4.0,
+   "hit_share_treat": 0.8606,
+   "hit_share_anchor": 0.8531
+  },
+  "S1-single|orch-haiku-guided-opus|vs|plain-opus": {
+   "cost": {
+    "n_pairs": 24,
+    "n_tasks": 12,
+    "geomean": 0.372,
+    "ci95": [
+     0.2741,
+     0.529
+    ]
+   },
+   "time": {
+    "n_pairs": 24,
+    "n_tasks": 12,
+    "geomean": 1.1822,
+    "ci95": [
+     1.0002,
+     1.4641
+    ]
+   },
+   "cost_ex_rebuild": {
+    "n_pairs": 24,
+    "n_tasks": 12,
+    "geomean": 0.372,
+    "ci95": [
+     0.2741,
+     0.529
+    ]
+   },
+   "treat_pass": 22,
+   "anchor_pass": 24,
+   "sessions_with_switch": 0,
+   "switches": 0,
+   "rebuild_usd": 0.0,
+   "config_switch_usd": 0.0,
+   "treat_cost": 2.6218,
+   "anchor_cost": 5.8873,
+   "median_n_req_anchor": 3.0,
+   "hit_share_treat": 0.8625,
+   "hit_share_anchor": 0.8291
+  },
+  "S1-single|orch-haiku-low-opus|vs|plain-opus": {
+   "cost": {
+    "n_pairs": 24,
+    "n_tasks": 12,
+    "geomean": 0.3704,
+    "ci95": [
+     0.271,
+     0.5268
+    ]
+   },
+   "time": {
+    "n_pairs": 24,
+    "n_tasks": 12,
+    "geomean": 1.2119,
+    "ci95": [
+     1.0083,
+     1.4602
+    ]
+   },
+   "cost_ex_rebuild": {
+    "n_pairs": 24,
+    "n_tasks": 12,
+    "geomean": 0.3704,
+    "ci95": [
+     0.271,
+     0.5268
+    ]
+   },
+   "treat_pass": 23,
+   "anchor_pass": 24,
+   "sessions_with_switch": 0,
+   "switches": 0,
+   "rebuild_usd": 0.0,
+   "config_switch_usd": 0.0,
+   "treat_cost": 2.587,
+   "anchor_cost": 5.8137,
+   "median_n_req_anchor": 3.0,
+   "hit_share_treat": 0.8664,
+   "hit_share_anchor": 0.8263
+  },
+  "S1-single|orch-haiku-opus|vs|plain-opus": {
+   "cost": {
+    "n_pairs": 48,
+    "n_tasks": 12,
+    "geomean": 0.3937,
+    "ci95": [
+     0.2865,
+     0.5554
+    ]
+   },
+   "time": {
+    "n_pairs": 48,
+    "n_tasks": 12,
+    "geomean": 1.2174,
+    "ci95": [
+     1.0187,
+     1.484
+    ]
+   },
+   "cost_ex_rebuild": {
+    "n_pairs": 48,
+    "n_tasks": 12,
+    "geomean": 0.3937,
+    "ci95": [
+     0.2865,
+     0.5554
+    ]
+   },
+   "treat_pass": 47,
+   "anchor_pass": 48,
+   "sessions_with_switch": 0,
+   "switches": 0,
+   "rebuild_usd": 0.0,
+   "config_switch_usd": 0.0,
+   "treat_cost": 5.5205,
+   "anchor_cost": 11.701,
+   "median_n_req_anchor": 3.0,
+   "hit_share_treat": 0.8633,
+   "hit_share_anchor": 0.8277
+  },
+  "S1-single|orch-haiku-shaped-fable|vs|plain": {
+   "cost": {
+    "n_pairs": 36,
+    "n_tasks": 12,
+    "geomean": 0.1797,
+    "ci95": [
+     0.109,
+     0.3224
+    ]
+   },
+   "time": {
+    "n_pairs": 36,
+    "n_tasks": 12,
+    "geomean": 0.7193,
+    "ci95": [
+     0.5836,
+     0.8807
+    ]
+   },
+   "cost_ex_rebuild": {
+    "n_pairs": 36,
+    "n_tasks": 12,
+    "geomean": 0.1797,
+    "ci95": [
+     0.109,
+     0.3224
+    ]
+   },
+   "treat_pass": 34,
+   "anchor_pass": 36,
+   "sessions_with_switch": 0,
+   "switches": 0,
+   "rebuild_usd": 0.0,
+   "config_switch_usd": 0.0,
+   "treat_cost": 7.308,
+   "anchor_cost": 23.1088,
+   "median_n_req_anchor": 4.0,
+   "hit_share_treat": 0.8453,
+   "hit_share_anchor": 0.8144
+  },
+  "S1-single|orch-haiku-shaped-opus|vs|plain-opus": {
+   "cost": {
+    "n_pairs": 60,
+    "n_tasks": 24,
+    "geomean": 0.3663,
+    "ci95": [
+     0.2941,
+     0.473
+    ]
+   },
+   "time": {
+    "n_pairs": 60,
+    "n_tasks": 24,
+    "geomean": 1.1175,
+    "ci95": [
+     0.9607,
+     1.3173
+    ]
+   },
+   "cost_ex_rebuild": {
+    "n_pairs": 60,
+    "n_tasks": 24,
+    "geomean": 0.3663,
+    "ci95": [
+     0.2941,
+     0.473
+    ]
+   },
+   "treat_pass": 58,
+   "anchor_pass": 60,
+   "sessions_with_switch": 0,
+   "switches": 0,
+   "rebuild_usd": 0.0,
+   "config_switch_usd": 0.0,
+   "treat_cost": 6.6806,
+   "anchor_cost": 15.0777,
+   "median_n_req_anchor": 3.0,
+   "hit_share_treat": 0.8457,
+   "hit_share_anchor": 0.8279
+  },
+  "S1-single|orch-opuslow-opus|vs|plain-opus": {
+   "cost": {
+    "n_pairs": 24,
+    "n_tasks": 12,
+    "geomean": 0.96,
+    "ci95": [
+     0.9289,
+     0.9916
+    ]
+   },
+   "time": {
+    "n_pairs": 24,
+    "n_tasks": 12,
+    "geomean": 0.8983,
+    "ci95": [
+     0.7602,
+     1.0872
+    ]
+   },
+   "cost_ex_rebuild": {
+    "n_pairs": 24,
+    "n_tasks": 12,
+    "geomean": 0.96,
+    "ci95": [
+     0.9289,
+     0.9916
+    ]
+   },
+   "treat_pass": 24,
+   "anchor_pass": 24,
+   "sessions_with_switch": 0,
+   "switches": 0,
+   "rebuild_usd": 0.0,
+   "config_switch_usd": 0.0,
+   "treat_cost": 5.5706,
+   "anchor_cost": 5.8137,
+   "median_n_req_anchor": 3.0,
+   "hit_share_treat": 0.8183,
+   "hit_share_anchor": 0.8263
+  },
+  "S1-single|orch-planner-sub-fable|vs|plain": {
+   "cost": {
+    "n_pairs": 24,
+    "n_tasks": 12,
+    "geomean": 0.4985,
+    "ci95": [
+     0.3959,
+     0.6453
+    ]
+   },
+   "time": {
+    "n_pairs": 24,
+    "n_tasks": 12,
+    "geomean": 0.5733,
+    "ci95": [
+     0.4338,
+     0.764
+    ]
+   },
+   "cost_ex_rebuild": {
+    "n_pairs": 24,
+    "n_tasks": 12,
+    "geomean": 0.4985,
+    "ci95": [
+     0.3959,
+     0.6453
+    ]
+   },
+   "treat_pass": 24,
+   "anchor_pass": 24,
+   "sessions_with_switch": 0,
+   "switches": 0,
+   "rebuild_usd": 0.0,
+   "config_switch_usd": 0.0,
+   "treat_cost": 7.821,
+   "anchor_cost": 14.3548,
+   "median_n_req_anchor": 4.0,
+   "hit_share_treat": 0.8456,
+   "hit_share_anchor": 0.8462
+  },
+  "S1-single|orch-planner-sub-opus|vs|plain-opus": {
+   "cost": {
+    "n_pairs": 24,
+    "n_tasks": 12,
+    "geomean": 0.9405,
+    "ci95": [
+     0.8801,
+     0.9999
+    ]
+   },
+   "time": {
+    "n_pairs": 24,
+    "n_tasks": 12,
+    "geomean": 0.8259,
+    "ci95": [
+     0.7225,
+     0.9332
+    ]
+   },
+   "cost_ex_rebuild": {
+    "n_pairs": 24,
+    "n_tasks": 12,
+    "geomean": 0.9405,
+    "ci95": [
+     0.8801,
+     0.9999
+    ]
+   },
+   "treat_pass": 24,
+   "anchor_pass": 24,
+   "sessions_with_switch": 0,
+   "switches": 0,
+   "rebuild_usd": 0.0,
+   "config_switch_usd": 0.0,
+   "treat_cost": 5.5285,
+   "anchor_cost": 5.8549,
+   "median_n_req_anchor": 3.0,
+   "hit_share_treat": 0.8331,
+   "hit_share_anchor": 0.8284
+  },
+  "S1-single|orch-planner-v12-sub-fable|vs|plain": {
+   "cost": {
+    "n_pairs": 7,
+    "n_tasks": 7,
+    "geomean": 0.3438,
+    "ci95": [
+     0.2741,
+     0.4292
+    ]
+   },
+   "time": {
+    "n_pairs": 7,
+    "n_tasks": 7,
+    "geomean": 0.4883,
+    "ci95": [
+     0.4013,
+     0.6577
+    ]
+   },
+   "cost_ex_rebuild": {
+    "n_pairs": 7,
+    "n_tasks": 7,
+    "geomean": 0.3438,
+    "ci95": [
+     0.2741,
+     0.4292
+    ]
+   },
+   "treat_pass": 6,
+   "anchor_pass": 6,
+   "sessions_with_switch": 0,
+   "switches": 0,
+   "rebuild_usd": 0.0,
+   "config_switch_usd": 0.0,
+   "treat_cost": 1.9572,
+   "anchor_cost": 5.5257,
+   "median_n_req_anchor": 4,
+   "hit_share_treat": 0.851,
+   "hit_share_anchor": 0.8103
+  },
+  "S1-single|orch-planner-v12-sub-opus|vs|plain-opus": {
+   "cost": {
+    "n_pairs": 12,
+    "n_tasks": 12,
+    "geomean": 0.9854,
+    "ci95": [
+     0.9095,
+     1.0664
+    ]
+   },
+   "time": {
+    "n_pairs": 12,
+    "n_tasks": 12,
+    "geomean": 0.9362,
+    "ci95": [
+     0.7996,
+     1.0733
+    ]
+   },
+   "cost_ex_rebuild": {
+    "n_pairs": 12,
+    "n_tasks": 12,
+    "geomean": 0.9854,
+    "ci95": [
+     0.9095,
+     1.0664
+    ]
+   },
+   "treat_pass": 11,
+   "anchor_pass": 11,
+   "sessions_with_switch": 0,
+   "switches": 0,
+   "rebuild_usd": 0.0,
+   "config_switch_usd": 0.0,
+   "treat_cost": 2.8883,
+   "anchor_cost": 2.9012,
+   "median_n_req_anchor": 3.0,
+   "hit_share_treat": 0.8391,
+   "hit_share_anchor": 0.8229
+  },
+  "S1-single|orch-planner-value-sub-fable|vs|plain": {
+   "cost": {
+    "n_pairs": 24,
+    "n_tasks": 12,
+    "geomean": 0.4816,
+    "ci95": [
+     0.3851,
+     0.618
+    ]
+   },
+   "time": {
+    "n_pairs": 24,
+    "n_tasks": 12,
+    "geomean": 0.5252,
+    "ci95": [
+     0.4159,
+     0.67
+    ]
+   },
+   "cost_ex_rebuild": {
+    "n_pairs": 24,
+    "n_tasks": 12,
+    "geomean": 0.4816,
+    "ci95": [
+     0.3851,
+     0.618
+    ]
+   },
+   "treat_pass": 24,
+   "anchor_pass": 24,
+   "sessions_with_switch": 0,
+   "switches": 0,
+   "rebuild_usd": 0.0,
+   "config_switch_usd": 0.0,
+   "treat_cost": 7.6206,
+   "anchor_cost": 14.3766,
+   "median_n_req_anchor": 4.0,
+   "hit_share_treat": 0.8421,
+   "hit_share_anchor": 0.8526
+  },
+  "S1-single|orch-planner-value-sub-opus|vs|plain-opus": {
+   "cost": {
+    "n_pairs": 24,
+    "n_tasks": 12,
+    "geomean": 0.956,
+    "ci95": [
+     0.9259,
+     0.9882
+    ]
+   },
+   "time": {
+    "n_pairs": 24,
+    "n_tasks": 12,
+    "geomean": 0.936,
+    "ci95": [
+     0.8686,
+     1.0113
+    ]
+   },
+   "cost_ex_rebuild": {
+    "n_pairs": 24,
+    "n_tasks": 12,
+    "geomean": 0.956,
+    "ci95": [
+     0.9259,
+     0.9882
+    ]
+   },
+   "treat_pass": 24,
+   "anchor_pass": 24,
+   "sessions_with_switch": 0,
+   "switches": 0,
+   "rebuild_usd": 0.0,
+   "config_switch_usd": 0.0,
+   "treat_cost": 5.5597,
+   "anchor_cost": 5.8162,
+   "median_n_req_anchor": 3.0,
+   "hit_share_treat": 0.8464,
+   "hit_share_anchor": 0.8276
+  },
+  "S1-single|orch-primary-effort-only|vs|plain": {
+   "cost": {
+    "n_pairs": 12,
+    "n_tasks": 12,
+    "geomean": 1.0904,
+    "ci95": [
+     0.9857,
+     1.2511
+    ]
+   },
+   "time": {
+    "n_pairs": 12,
+    "n_tasks": 12,
+    "geomean": 0.7731,
+    "ci95": [
+     0.6574,
+     0.8892
+    ]
+   },
+   "cost_ex_rebuild": {
+    "n_pairs": 12,
+    "n_tasks": 12,
+    "geomean": 1.0638,
+    "ci95": [
+     0.9593,
+     1.2244
+    ]
+   },
+   "treat_pass": 12,
+   "anchor_pass": 12,
+   "sessions_with_switch": 0,
+   "switches": 0,
+   "rebuild_usd": 0.0,
+   "config_switch_usd": 0.1846,
+   "treat_cost": 7.841,
+   "anchor_cost": 7.065,
+   "median_n_req_anchor": 4.0,
+   "hit_share_treat": 0.7989,
+   "hit_share_anchor": 0.8457
+  },
+  "S1-single|orch-primary|vs|plain": {
+   "cost": {
+    "n_pairs": 12,
+    "n_tasks": 12,
+    "geomean": 0.7669,
+    "ci95": [
+     0.6725,
+     0.8751
+    ]
+   },
+   "time": {
+    "n_pairs": 12,
+    "n_tasks": 12,
+    "geomean": 0.4787,
+    "ci95": [
+     0.4001,
+     0.5725
+    ]
+   },
+   "cost_ex_rebuild": {
+    "n_pairs": 12,
+    "n_tasks": 12,
+    "geomean": 0.3869,
+    "ci95": [
+     0.3534,
+     0.4294
+    ]
+   },
+   "treat_pass": 12,
+   "anchor_pass": 12,
+   "sessions_with_switch": 0,
+   "switches": 0,
+   "rebuild_usd": 0.0,
+   "config_switch_usd": 2.7887,
+   "treat_cost": 5.5667,
+   "anchor_cost": 7.065,
+   "median_n_req_anchor": 4.0,
+   "hit_share_treat": 0.5612,
+   "hit_share_anchor": 0.8457
+  },
+  "S1-single|orch-router-jev|vs|plain": {
+   "cost": {
+    "n_pairs": 12,
+    "n_tasks": 12,
+    "geomean": 0.5003,
+    "ci95": [
+     0.4023,
+     0.6491
+    ]
+   },
+   "time": {
+    "n_pairs": 12,
+    "n_tasks": 12,
+    "geomean": 0.6083,
+    "ci95": [
+     0.4869,
+     0.7514
+    ]
+   },
+   "cost_ex_rebuild": {
+    "n_pairs": 12,
+    "n_tasks": 12,
+    "geomean": 0.5003,
+    "ci95": [
+     0.4023,
+     0.6491
+    ]
+   },
+   "treat_pass": 12,
+   "anchor_pass": 12,
+   "sessions_with_switch": 0,
+   "switches": 0,
+   "rebuild_usd": 0.0,
+   "config_switch_usd": 0.0,
+   "treat_cost": 3.888,
+   "anchor_cost": 7.1252,
+   "median_n_req_anchor": 4.0,
+   "hit_share_treat": 0.8336,
+   "hit_share_anchor": 0.8452
+  },
+  "S1-single|orch-router-rules|vs|plain": {
+   "cost": {
+    "n_pairs": 36,
+    "n_tasks": 20,
+    "geomean": 0.3804,
+    "ci95": [
+     0.3499,
+     0.4234
+    ]
+   },
+   "time": {
+    "n_pairs": 36,
+    "n_tasks": 20,
+    "geomean": 0.5679,
+    "ci95": [
+     0.4836,
+     0.6543
+    ]
+   },
+   "cost_ex_rebuild": {
+    "n_pairs": 36,
+    "n_tasks": 20,
+    "geomean": 0.3711,
+    "ci95": [
+     0.3472,
+     0.3938
+    ]
+   },
+   "treat_pass": 36,
+   "anchor_pass": 36,
+   "sessions_with_switch": 1,
+   "switches": 1,
+   "rebuild_usd": 0.5081,
+   "config_switch_usd": 0.0,
+   "treat_cost": 9.1374,
+   "anchor_cost": 23.4972,
+   "median_n_req_anchor": 4.0,
+   "hit_share_treat": 0.8345,
+   "hit_share_anchor": 0.821
+  },
+  "S1-single|orch-sonnet-shaped-opus|vs|plain-opus": {
+   "cost": {
+    "n_pairs": 24,
+    "n_tasks": 12,
+    "geomean": 0.9677,
+    "ci95": [
+     0.9024,
+     1.0467
+    ]
+   },
+   "time": {
+    "n_pairs": 24,
+    "n_tasks": 12,
+    "geomean": 0.8451,
+    "ci95": [
+     0.7485,
+     0.9469
+    ]
+   },
+   "cost_ex_rebuild": {
+    "n_pairs": 24,
+    "n_tasks": 12,
+    "geomean": 0.9677,
+    "ci95": [
+     0.9024,
+     1.0467
+    ]
+   },
+   "treat_pass": 24,
+   "anchor_pass": 24,
+   "sessions_with_switch": 0,
+   "switches": 0,
+   "rebuild_usd": 0.0,
+   "config_switch_usd": 0.0,
+   "treat_cost": 5.7469,
+   "anchor_cost": 5.8873,
+   "median_n_req_anchor": 3.0,
+   "hit_share_treat": 0.8371,
+   "hit_share_anchor": 0.8291
+  },
+  "S1-single|orch-sonnetlow-opus|vs|plain-opus": {
+   "cost": {
+    "n_pairs": 24,
+    "n_tasks": 12,
+    "geomean": 0.991,
+    "ci95": [
+     0.935,
+     1.0551
+    ]
+   },
+   "time": {
+    "n_pairs": 24,
+    "n_tasks": 12,
+    "geomean": 0.931,
+    "ci95": [
+     0.8074,
+     1.0772
+    ]
+   },
+   "cost_ex_rebuild": {
+    "n_pairs": 24,
+    "n_tasks": 12,
+    "geomean": 0.991,
+    "ci95": [
+     0.935,
+     1.0551
+    ]
+   },
+   "treat_pass": 24,
+   "anchor_pass": 24,
+   "sessions_with_switch": 0,
+   "switches": 0,
+   "rebuild_usd": 0.0,
+   "config_switch_usd": 0.0,
+   "treat_cost": 5.7945,
+   "anchor_cost": 5.8137,
+   "median_n_req_anchor": 3.0,
+   "hit_share_treat": 0.846,
+   "hit_share_anchor": 0.8263
+  },
+  "S1-single|plain-sonnet|vs|plain": {
+   "cost": {
+    "n_pairs": 235,
+    "n_tasks": 39,
+    "geomean": 0.392,
+    "ci95": [
+     0.3751,
+     0.4116
+    ]
+   },
+   "time": {
+    "n_pairs": 235,
+    "n_tasks": 39,
+    "geomean": 0.5418,
+    "ci95": [
+     0.4834,
+     0.6118
+    ]
+   },
+   "cost_ex_rebuild": {
+    "n_pairs": 235,
+    "n_tasks": 39,
+    "geomean": 0.392,
+    "ci95": [
+     0.3751,
+     0.4116
+    ]
+   },
+   "treat_pass": 234,
+   "anchor_pass": 234,
+   "sessions_with_switch": 0,
+   "switches": 0,
+   "rebuild_usd": 0.0,
+   "config_switch_usd": 0.0,
+   "treat_cost": 58.0805,
+   "anchor_cost": 147.5419,
+   "median_n_req_anchor": 4,
+   "hit_share_treat": 0.8404,
+   "hit_share_anchor": 0.8349
+  },
+  "S1-single|plain-sonnet|vs|plain-opus": {
+   "cost": {
+    "n_pairs": 204,
+    "n_tasks": 44,
+    "geomean": 0.97,
+    "ci95": [
+     0.9215,
+     1.027
+    ]
+   },
+   "time": {
+    "n_pairs": 204,
+    "n_tasks": 44,
+    "geomean": 0.9766,
+    "ci95": [
+     0.8635,
+     1.1313
+    ]
+   },
+   "cost_ex_rebuild": {
+    "n_pairs": 204,
+    "n_tasks": 44,
+    "geomean": 0.97,
+    "ci95": [
+     0.9215,
+     1.027
+    ]
+   },
+   "treat_pass": 203,
+   "anchor_pass": 203,
+   "sessions_with_switch": 0,
+   "switches": 0,
+   "rebuild_usd": 0.0,
+   "config_switch_usd": 0.0,
+   "treat_cost": 50.3016,
+   "anchor_cost": 51.3608,
+   "median_n_req_anchor": 3.0,
+   "hit_share_treat": 0.8418,
+   "hit_share_anchor": 0.8245
+  },
+  "S1-single|routing|fable": {
+   "cost": {
+    "n_pairs": 295,
+    "n_tasks": 39,
+    "geomean": 0.4394,
+    "ci95": [
+     0.3694,
+     0.5384
+    ]
+   },
+   "time": {
+    "n_pairs": 295,
+    "n_tasks": 39,
+    "geomean": 0.5542,
+    "ci95": [
+     0.4794,
+     0.6411
+    ]
+   },
+   "cost_ex_rebuild": {
+    "n_pairs": 295,
+    "n_tasks": 39,
+    "geomean": 0.4381,
+    "ci95": [
+     0.3694,
+     0.5349
+    ]
+   },
+   "treat_pass": 293,
+   "anchor_pass": 294,
+   "sessions_with_switch": 1,
+   "switches": 1,
+   "rebuild_usd": 0.5081,
+   "config_switch_usd": 0.0,
+   "treat_cost": 92.4257,
+   "anchor_cost": 183.6018,
+   "median_n_req_anchor": 4,
+   "hit_share_treat": 0.8343,
+   "hit_share_anchor": 0.8383
+  },
+  "S1-single|routing|opus": {
+   "cost": {
+    "n_pairs": 360,
+    "n_tasks": 44,
+    "geomean": 0.7966,
+    "ci95": [
+     0.7358,
+     0.8806
+    ]
+   },
+   "time": {
+    "n_pairs": 360,
+    "n_tasks": 44,
+    "geomean": 0.931,
+    "ci95": [
+     0.8581,
+     1.0029
+    ]
+   },
+   "cost_ex_rebuild": {
+    "n_pairs": 360,
+    "n_tasks": 44,
+    "geomean": 0.7966,
+    "ci95": [
+     0.7358,
+     0.8806
+    ]
+   },
+   "treat_pass": 356,
+   "anchor_pass": 358,
+   "sessions_with_switch": 0,
+   "switches": 0,
+   "rebuild_usd": 0.0,
+   "config_switch_usd": 0.0,
+   "treat_cost": 76.93,
+   "anchor_cost": 89.2615,
+   "median_n_req_anchor": 3.0,
+   "hit_share_treat": 0.8433,
+   "hit_share_anchor": 0.8256
+  },
+  "S1-single|routing_plus_shaping|fable": {
+   "cost": {
+    "n_pairs": 36,
+    "n_tasks": 12,
+    "geomean": 0.1797,
+    "ci95": [
+     0.109,
+     0.3224
+    ]
+   },
+   "time": {
+    "n_pairs": 36,
+    "n_tasks": 12,
+    "geomean": 0.7193,
+    "ci95": [
+     0.5836,
+     0.8807
+    ]
+   },
+   "cost_ex_rebuild": {
+    "n_pairs": 36,
+    "n_tasks": 12,
+    "geomean": 0.1797,
+    "ci95": [
+     0.109,
+     0.3224
+    ]
+   },
+   "treat_pass": 34,
+   "anchor_pass": 36,
+   "sessions_with_switch": 0,
+   "switches": 0,
+   "rebuild_usd": 0.0,
+   "config_switch_usd": 0.0,
+   "treat_cost": 7.308,
+   "anchor_cost": 23.1088,
+   "median_n_req_anchor": 4.0,
+   "hit_share_treat": 0.8453,
+   "hit_share_anchor": 0.8144
+  },
+  "S1-single|routing_plus_shaping|opus": {
+   "cost": {
+    "n_pairs": 108,
+    "n_tasks": 24,
+    "geomean": 0.4562,
+    "ci95": [
+     0.3768,
+     0.5606
+    ]
+   },
+   "time": {
+    "n_pairs": 108,
+    "n_tasks": 24,
+    "geomean": 1.0635,
+    "ci95": [
+     0.9422,
+     1.215
+    ]
+   },
+   "cost_ex_rebuild": {
+    "n_pairs": 108,
+    "n_tasks": 24,
+    "geomean": 0.4562,
+    "ci95": [
+     0.3768,
+     0.5606
+    ]
+   },
+   "treat_pass": 104,
+   "anchor_pass": 108,
+   "sessions_with_switch": 0,
+   "switches": 0,
+   "rebuild_usd": 0.0,
+   "config_switch_usd": 0.0,
+   "treat_cost": 15.0493,
+   "anchor_cost": 26.8524,
+   "median_n_req_anchor": 3.0,
+   "hit_share_treat": 0.8475,
+   "hit_share_anchor": 0.8284
+  },
+  "S3-routing|effort_only|fable": {
+   "cost": {
+    "n_pairs": 20,
+    "n_tasks": 10,
+    "geomean": 0.8687,
+    "ci95": [
+     0.77,
+     0.9733
+    ]
+   },
+   "time": {
+    "n_pairs": 20,
+    "n_tasks": 10,
+    "geomean": 0.811,
+    "ci95": [
+     0.6463,
+     1.0037
+    ]
+   },
+   "cost_ex_rebuild": {
+    "n_pairs": 20,
+    "n_tasks": 10,
+    "geomean": 0.8427,
+    "ci95": [
+     0.7484,
+     0.9455
+    ]
+   },
+   "treat_pass": 12,
+   "anchor_pass": 14,
+   "sessions_with_switch": 0,
+   "switches": 0,
+   "rebuild_usd": 0.0,
+   "config_switch_usd": 0.5744,
+   "treat_cost": 20.3309,
+   "anchor_cost": 23.8587,
+   "median_n_req_anchor": 14.0,
+   "hit_share_treat": 0.9238,
+   "hit_share_anchor": 0.9402
+  },
+  "S3-routing|midturn_escalation|fable": {
+   "cost": {
+    "n_pairs": 11,
+    "n_tasks": 11,
+    "geomean": 1.3912,
+    "ci95": [
+     1.0934,
+     1.6913
+    ]
+   },
+   "time": {
+    "n_pairs": 11,
+    "n_tasks": 11,
+    "geomean": 1.1384,
+    "ci95": [
+     0.7347,
+     1.6695
+    ]
+   },
+   "cost_ex_rebuild": {
+    "n_pairs": 11,
+    "n_tasks": 11,
+    "geomean": 0.7487,
+    "ci95": [
+     0.5586,
+     0.9724
+    ]
+   },
+   "treat_pass": 9,
+   "anchor_pass": 8,
+   "sessions_with_switch": 10,
+   "switches": 10,
+   "rebuild_usd": 5.397,
+   "config_switch_usd": 2.9708,
+   "treat_cost": 19.8429,
+   "anchor_cost": 13.566,
+   "median_n_req_anchor": 14,
+   "hit_share_treat": 0.8486,
+   "hit_share_anchor": 0.9428
+  },
+  "S3-routing|model_swap_control|fable": {
+   "cost": {
+    "n_pairs": 11,
+    "n_tasks": 11,
+    "geomean": 0.8954,
+    "ci95": [
+     0.5753,
+     1.5203
+    ]
+   },
+   "time": {
+    "n_pairs": 11,
+    "n_tasks": 11,
+    "geomean": 1.5622,
+    "ci95": [
+     0.8439,
+     2.9738
+    ]
+   },
+   "cost_ex_rebuild": {
+    "n_pairs": 11,
+    "n_tasks": 11,
+    "geomean": 0.8954,
+    "ci95": [
+     0.5753,
+     1.5203
+    ]
+   },
+   "treat_pass": 6,
+   "anchor_pass": 8,
+   "sessions_with_switch": 0,
+   "switches": 0,
+   "rebuild_usd": 0.0,
+   "config_switch_usd": 0.0,
+   "treat_cost": 18.483,
+   "anchor_cost": 13.566,
+   "median_n_req_anchor": 14,
+   "hit_share_treat": 0.9569,
+   "hit_share_anchor": 0.9428
+  },
+  "S3-routing|orch-primary|vs|plain": {
+   "cost": {
+    "n_pairs": 11,
+    "n_tasks": 11,
+    "geomean": 1.3912,
+    "ci95": [
+     1.0934,
+     1.6913
+    ]
+   },
+   "time": {
+    "n_pairs": 11,
+    "n_tasks": 11,
+    "geomean": 1.1384,
+    "ci95": [
+     0.7347,
+     1.6695
+    ]
+   },
+   "cost_ex_rebuild": {
+    "n_pairs": 11,
+    "n_tasks": 11,
+    "geomean": 0.7487,
+    "ci95": [
+     0.5586,
+     0.9724
+    ]
+   },
+   "treat_pass": 9,
+   "anchor_pass": 8,
+   "sessions_with_switch": 10,
+   "switches": 10,
+   "rebuild_usd": 5.397,
+   "config_switch_usd": 2.9708,
+   "treat_cost": 19.8429,
+   "anchor_cost": 13.566,
+   "median_n_req_anchor": 14,
+   "hit_share_treat": 0.8486,
+   "hit_share_anchor": 0.9428
+  },
+  "S3-routing|orch-router-jev|vs|plain": {
+   "cost": {
+    "n_pairs": 30,
+    "n_tasks": 10,
+    "geomean": 0.9117,
+    "ci95": [
+     0.6958,
+     1.0993
+    ]
+   },
+   "time": {
+    "n_pairs": 30,
+    "n_tasks": 10,
+    "geomean": 0.8553,
+    "ci95": [
+     0.6857,
+     1.0395
+    ]
+   },
+   "cost_ex_rebuild": {
+    "n_pairs": 30,
+    "n_tasks": 10,
+    "geomean": 0.6958,
+    "ci95": [
+     0.5531,
+     0.8533
+    ]
+   },
+   "treat_pass": 19,
+   "anchor_pass": 23,
+   "sessions_with_switch": 12,
+   "switches": 12,
+   "rebuild_usd": 6.4587,
+   "config_switch_usd": 0.0,
+   "treat_cost": 34.9731,
+   "anchor_cost": 37.1218,
+   "median_n_req_anchor": 12.5,
+   "hit_share_treat": 0.9182,
+   "hit_share_anchor": 0.9405
+  },
+  "S3-routing|orch-router-local|vs|plain": {
+   "cost": {
+    "n_pairs": 10,
+    "n_tasks": 10,
+    "geomean": 0.8853,
+    "ci95": [
+     0.6102,
+     1.1875
+    ]
+   },
+   "time": {
+    "n_pairs": 10,
+    "n_tasks": 10,
+    "geomean": 0.7506,
+    "ci95": [
+     0.4984,
+     1.116
+    ]
+   },
+   "cost_ex_rebuild": {
+    "n_pairs": 10,
+    "n_tasks": 10,
+    "geomean": 0.6401,
+    "ci95": [
+     0.4566,
+     0.8853
+    ]
+   },
+   "treat_pass": 6,
+   "anchor_pass": 7,
+   "sessions_with_switch": 5,
+   "switches": 5,
+   "rebuild_usd": 2.7621,
+   "config_switch_usd": 0.0,
+   "treat_cost": 11.8579,
+   "anchor_cost": 12.3252,
+   "median_n_req_anchor": 13.0,
+   "hit_share_treat": 0.9055,
+   "hit_share_anchor": 0.9454
+  },
+  "S3-routing|orch-router-rules|vs|plain": {
+   "cost": {
+    "n_pairs": 20,
+    "n_tasks": 10,
+    "geomean": 0.9847,
+    "ci95": [
+     0.9091,
+     1.063
+    ]
+   },
+   "time": {
+    "n_pairs": 20,
+    "n_tasks": 10,
+    "geomean": 0.9997,
+    "ci95": [
+     0.855,
+     1.1515
+    ]
+   },
+   "cost_ex_rebuild": {
+    "n_pairs": 20,
+    "n_tasks": 10,
+    "geomean": 0.9847,
+    "ci95": [
+     0.9091,
+     1.063
+    ]
+   },
+   "treat_pass": 13,
+   "anchor_pass": 14,
+   "sessions_with_switch": 0,
+   "switches": 0,
+   "rebuild_usd": 0.0,
+   "config_switch_usd": 0.0,
+   "treat_cost": 23.758,
+   "anchor_cost": 23.8587,
+   "median_n_req_anchor": 14.0,
+   "hit_share_treat": 0.9384,
+   "hit_share_anchor": 0.9402
+  },
+  "S3-routing|orch-strong-phase-effort|vs|plain": {
+   "cost": {
+    "n_pairs": 20,
+    "n_tasks": 10,
+    "geomean": 0.8687,
+    "ci95": [
+     0.77,
+     0.9733
+    ]
+   },
+   "time": {
+    "n_pairs": 20,
+    "n_tasks": 10,
+    "geomean": 0.811,
+    "ci95": [
+     0.6463,
+     1.0037
+    ]
+   },
+   "cost_ex_rebuild": {
+    "n_pairs": 20,
+    "n_tasks": 10,
+    "geomean": 0.8427,
+    "ci95": [
+     0.7484,
+     0.9455
+    ]
+   },
+   "treat_pass": 12,
+   "anchor_pass": 14,
+   "sessions_with_switch": 0,
+   "switches": 0,
+   "rebuild_usd": 0.0,
+   "config_switch_usd": 0.5744,
+   "treat_cost": 20.3309,
+   "anchor_cost": 23.8587,
+   "median_n_req_anchor": 14.0,
+   "hit_share_treat": 0.9238,
+   "hit_share_anchor": 0.9402
+  },
+  "S3-routing|plain-sonnet|vs|plain": {
+   "cost": {
+    "n_pairs": 11,
+    "n_tasks": 11,
+    "geomean": 0.8954,
+    "ci95": [
+     0.5753,
+     1.5203
+    ]
+   },
+   "time": {
+    "n_pairs": 11,
+    "n_tasks": 11,
+    "geomean": 1.5622,
+    "ci95": [
+     0.8439,
+     2.9738
+    ]
+   },
+   "cost_ex_rebuild": {
+    "n_pairs": 11,
+    "n_tasks": 11,
+    "geomean": 0.8954,
+    "ci95": [
+     0.5753,
+     1.5203
+    ]
+   },
+   "treat_pass": 6,
+   "anchor_pass": 8,
+   "sessions_with_switch": 0,
+   "switches": 0,
+   "rebuild_usd": 0.0,
+   "config_switch_usd": 0.0,
+   "treat_cost": 18.483,
+   "anchor_cost": 13.566,
+   "median_n_req_anchor": 14,
+   "hit_share_treat": 0.9569,
+   "hit_share_anchor": 0.9428
+  },
+  "S3-routing|routing|fable": {
+   "cost": {
+    "n_pairs": 60,
+    "n_tasks": 10,
+    "geomean": 0.9308,
+    "ci95": [
+     0.782,
+     1.0668
+    ]
+   },
+   "time": {
+    "n_pairs": 60,
+    "n_tasks": 10,
+    "geomean": 0.8816,
+    "ci95": [
+     0.7524,
+     1.0295
+    ]
+   },
+   "cost_ex_rebuild": {
+    "n_pairs": 60,
+    "n_tasks": 10,
+    "geomean": 0.7704,
+    "ci95": [
+     0.6613,
+     0.89
+    ]
+   },
+   "treat_pass": 38,
+   "anchor_pass": 44,
+   "sessions_with_switch": 17,
+   "switches": 17,
+   "rebuild_usd": 9.2209,
+   "config_switch_usd": 0.0,
+   "treat_cost": 70.589,
+   "anchor_cost": 73.3057,
+   "median_n_req_anchor": 13.0,
+   "hit_share_treat": 0.9228,
+   "hit_share_anchor": 0.9412
+  },
+  "S3-v4-same-model|jev-prepared|vs|plain-matched": {
+   "cost": {
+    "n_pairs": 35,
+    "n_tasks": 35,
+    "geomean": 1.1344,
+    "ci95": [
+     1.0145,
+     1.2793
+    ]
+   },
+   "time": {
+    "n_pairs": 35,
+    "n_tasks": 35,
+    "geomean": 1.2453,
+    "ci95": [
+     1.0582,
+     1.4778
+    ]
+   },
+   "cost_ex_rebuild": {
+    "n_pairs": 35,
+    "n_tasks": 35,
+    "geomean": 1.1344,
+    "ci95": [
+     1.0145,
+     1.2793
+    ]
+   },
+   "treat_pass": 25,
+   "anchor_pass": 23,
+   "sessions_with_switch": 0,
+   "switches": 0,
+   "rebuild_usd": 0.0,
+   "config_switch_usd": 0.0,
+   "treat_cost": 39.8108,
+   "anchor_cost": 37.0133,
+   "median_n_req_anchor": 16,
+   "hit_share_treat": 0.9533,
+   "hit_share_anchor": 0.9487
+  },
+  "S3-v4-same-model|jevgrep|vs|plain-matched": {
+   "cost": {
+    "n_pairs": 35,
+    "n_tasks": 35,
+    "geomean": 1.1514,
+    "ci95": [
+     1.0245,
+     1.2885
+    ]
+   },
+   "time": {
+    "n_pairs": 35,
+    "n_tasks": 35,
+    "geomean": 1.04,
+    "ci95": [
+     0.8679,
+     1.2294
+    ]
+   },
+   "cost_ex_rebuild": {
+    "n_pairs": 35,
+    "n_tasks": 35,
+    "geomean": 1.1514,
+    "ci95": [
+     1.0245,
+     1.2885
+    ]
+   },
+   "treat_pass": 25,
+   "anchor_pass": 23,
+   "sessions_with_switch": 0,
+   "switches": 0,
+   "rebuild_usd": 0.0,
+   "config_switch_usd": 0.0,
+   "treat_cost": 41.8035,
+   "anchor_cost": 37.0133,
+   "median_n_req_anchor": 16,
+   "hit_share_treat": 0.9243,
+   "hit_share_anchor": 0.9487
+  },
+  "S3-v4-same-model|laya-prepared|vs|plain-matched": {
+   "cost": {
+    "n_pairs": 35,
+    "n_tasks": 35,
+    "geomean": 1.0516,
+    "ci95": [
+     0.9105,
+     1.2144
+    ]
+   },
+   "time": {
+    "n_pairs": 35,
+    "n_tasks": 35,
+    "geomean": 1.0737,
+    "ci95": [
+     0.896,
+     1.3052
+    ]
+   },
+   "cost_ex_rebuild": {
+    "n_pairs": 35,
+    "n_tasks": 35,
+    "geomean": 1.0516,
+    "ci95": [
+     0.9105,
+     1.2144
+    ]
+   },
+   "treat_pass": 24,
+   "anchor_pass": 23,
+   "sessions_with_switch": 0,
+   "switches": 0,
+   "rebuild_usd": 0.0,
+   "config_switch_usd": 0.0,
+   "treat_cost": 37.9152,
+   "anchor_cost": 37.0133,
+   "median_n_req_anchor": 16,
+   "hit_share_treat": 0.9539,
+   "hit_share_anchor": 0.9487
+  },
+  "S3-v4-same-model|prepared_or_retrieval_same_model|sonnet": {
+   "cost": {
+    "n_pairs": 105,
+    "n_tasks": 35,
+    "geomean": 1.1116,
+    "ci95": [
+     1.0117,
+     1.2337
+    ]
+   },
+   "time": {
+    "n_pairs": 105,
+    "n_tasks": 35,
+    "geomean": 1.1162,
+    "ci95": [
+     0.9818,
+     1.2855
+    ]
+   },
+   "cost_ex_rebuild": {
+    "n_pairs": 105,
+    "n_tasks": 35,
+    "geomean": 1.1116,
+    "ci95": [
+     1.0117,
+     1.2337
+    ]
+   },
+   "treat_pass": 74,
+   "anchor_pass": 69,
+   "sessions_with_switch": 0,
+   "switches": 0,
+   "rebuild_usd": 0.0,
+   "config_switch_usd": 0.0,
+   "treat_cost": 119.5294,
+   "anchor_cost": 111.0399,
+   "median_n_req_anchor": 16,
+   "hit_share_treat": 0.9438,
+   "hit_share_anchor": 0.9487
+  }
+ },
+ "definitions": {
+  "uncached": "input_tokens - cache_read_tokens (provider input_tokens includes reads, excludes writes; verified by price fit)",
+  "cache_hit_share": "cache_read / (uncached + cache_read + cache_write), main-loop requests",
+  "main_loop": "llm:request with a system prompt and tools; background calls (e.g. session naming) excluded from switch counts, included in cost",
+  "model_switch": "main-loop request whose model differs from the previous main-loop request",
+  "rebuild_excess_write": "max(0, cache_write_i - max(0, prompt_i - prompt_{i-1})): writes beyond the new conversation tail",
+  "rebuild_usd": "rebuild_excess_write x (write price - read price) of the new model: extra paid vs a warm read",
+  "config_switch": "same model, thinking/effort changed (Anthropic also invalidates the message cache)",
+  "cost": "sum of provider-reported cost_usd over all llm:response in the session (estimate, not billing)",
+  "time_ratio": "result.json exec_time_ms (first request to last response), treat/anchor",
+  "ci": "95% percentile bootstrap, resampling tasks (clusters) with replacement"
+ },
+ "invocation": {
+  "command": "python3 caching_survey.py --workers 10 --boot 3000",
+  "boot": 3000,
+  "bootstrap_seed": 7,
+  "note": "read-only: local result.json files and Amplifier session logs; no model calls"
+ }
+}

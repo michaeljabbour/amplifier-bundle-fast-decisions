@@ -1,0 +1,400 @@
+{
+ "a_outcome_label": {
+  "definition": "outcome label = the host model's actual next read, or reason (labels_final.json outcome_label). A wrong automatic read 'matches the host's next read' when it is wrong against the final label but right (automatic) against the outcome label.",
+  "judges": {
+   "clef": {
+    "final_label": {
+     "automatic": 6,
+     "correct": 26,
+     "correct_automatic_reads": 4,
+     "n": 42,
+     "read_cases": 13,
+     "wrong_automatic": {
+      "k": 2,
+      "n": 42,
+      "rate": 0.047619047619047616,
+      "upper95": 0.1579013531547973
+     }
+    },
+    "outcome_label": {
+     "automatic": 6,
+     "correct": 19,
+     "correct_automatic_reads": 2,
+     "n": 42,
+     "read_cases": 19,
+     "wrong_automatic": {
+      "k": 4,
+      "n": 42,
+      "rate": 0.09523809523809523,
+      "upper95": 0.2206539522505333
+     }
+    },
+    "wrong_automatic_matching_host_next_read": {
+     "case_ids": [],
+     "k": 0,
+     "of_wrong_automatic": 2
+    }
+   },
+   "clef-flash": {
+    "final_label": {
+     "automatic": 6,
+     "correct": 21,
+     "correct_automatic_reads": 3,
+     "n": 42,
+     "read_cases": 13,
+     "wrong_automatic": {
+      "k": 3,
+      "n": 42,
+      "rate": 0.07142857142857142,
+      "upper95": 0.19009713288525165
+     }
+    },
+    "outcome_label": {
+     "automatic": 6,
+     "correct": 16,
+     "correct_automatic_reads": 1,
+     "n": 42,
+     "read_cases": 19,
+     "wrong_automatic": {
+      "k": 5,
+      "n": 42,
+      "rate": 0.11904761904761904,
+      "upper95": 0.2500068180710754
+     }
+    },
+    "wrong_automatic_matching_host_next_read": {
+     "case_ids": [],
+     "k": 0,
+     "of_wrong_automatic": 3
+    }
+   },
+   "jev-1.13": {
+    "final_label": {
+     "automatic": 15,
+     "correct": 26,
+     "correct_automatic_reads": 10,
+     "n": 42,
+     "read_cases": 13,
+     "wrong_automatic": {
+      "k": 5,
+      "n": 42,
+      "rate": 0.11904761904761904,
+      "upper95": 0.2500068180710754
+     }
+    },
+    "outcome_label": {
+     "automatic": 15,
+     "correct": 21,
+     "correct_automatic_reads": 4,
+     "n": 42,
+     "read_cases": 19,
+     "wrong_automatic": {
+      "k": 11,
+      "n": 42,
+      "rate": 0.2619047619047619,
+      "upper95": 0.41069019984975563
+     }
+    },
+    "wrong_automatic_matching_host_next_read": {
+     "case_ids": [],
+     "k": 0,
+     "of_wrong_automatic": 5
+    }
+   }
+  },
+  "outcome_read_cases": 19
+ },
+ "b_by_suite": {
+  "S12": {
+   "always_fall_back": {
+    "automatic": 0,
+    "correct": 8,
+    "correct_automatic_reads": 0,
+    "n": 17,
+    "wrong_automatic": {
+     "k": 0,
+     "n": 17,
+     "rate": 0.0,
+     "upper95": 0.18432366037156456
+    }
+   },
+   "judges": {
+    "clef": {
+     "automatic": 4,
+     "correct": 14,
+     "correct_automatic_reads": 2,
+     "n": 17,
+     "read_cases": 9,
+     "wrong_automatic": {
+      "k": 2,
+      "n": 17,
+      "rate": 0.11764705882352941,
+      "upper95": 0.3433684249770991
+     }
+    },
+    "clef-flash": {
+     "automatic": 4,
+     "correct": 8,
+     "correct_automatic_reads": 2,
+     "n": 17,
+     "read_cases": 9,
+     "wrong_automatic": {
+      "k": 2,
+      "n": 17,
+      "rate": 0.11764705882352941,
+      "upper95": 0.3433684249770991
+     }
+    },
+    "jev-1.13": {
+     "automatic": 8,
+     "correct": 12,
+     "correct_automatic_reads": 6,
+     "n": 17,
+     "read_cases": 9,
+     "wrong_automatic": {
+      "k": 2,
+      "n": 17,
+      "rate": 0.11764705882352941,
+      "upper95": 0.3433684249770991
+     }
+    }
+   },
+   "n": 17,
+   "read_cases": 9,
+   "title": "S1+S2 (battery and polyglot)"
+  },
+  "S3": {
+   "always_fall_back": {
+    "automatic": 0,
+    "correct": 21,
+    "correct_automatic_reads": 0,
+    "n": 25,
+    "wrong_automatic": {
+     "k": 0,
+     "n": 25,
+     "rate": 0.0,
+     "upper95": 0.13319649395317873
+    }
+   },
+   "judges": {
+    "clef": {
+     "automatic": 2,
+     "correct": 12,
+     "correct_automatic_reads": 2,
+     "n": 25,
+     "read_cases": 4,
+     "wrong_automatic": {
+      "k": 0,
+      "n": 25,
+      "rate": 0.0,
+      "upper95": 0.13319649395317873
+     }
+    },
+    "clef-flash": {
+     "automatic": 2,
+     "correct": 13,
+     "correct_automatic_reads": 1,
+     "n": 25,
+     "read_cases": 4,
+     "wrong_automatic": {
+      "k": 1,
+      "n": 25,
+      "rate": 0.04,
+      "upper95": 0.19544472405022525
+     }
+    },
+    "jev-1.13": {
+     "automatic": 7,
+     "correct": 14,
+     "correct_automatic_reads": 4,
+     "n": 25,
+     "read_cases": 4,
+     "wrong_automatic": {
+      "k": 3,
+      "n": 25,
+      "rate": 0.12,
+      "upper95": 0.2995619218337349
+     }
+    }
+   },
+   "n": 25,
+   "read_cases": 4,
+   "title": "S3 (SWE-bench: the task is clipped before the issue)"
+  }
+ },
+ "c_selection_effect": {
+  "cases_by_family": {
+   "jev": 19,
+   "laya": 16,
+   "ollama": 7
+  },
+  "judges": {
+   "clef": {
+    "own_family": null
+   },
+   "clef-flash": {
+    "own_family": null
+   },
+   "jev-1.13": {
+    "all_other_cases": {
+     "automatic": 11,
+     "correct": 12,
+     "correct_automatic_reads": 6,
+     "n": 23,
+     "read_cases": 8,
+     "wrong_automatic": {
+      "k": 5,
+      "n": 23,
+      "rate": 0.21739130434782608,
+      "upper95": 0.4190388018273492
+     }
+    },
+    "own_family": "jev",
+    "own_family_cases": {
+     "automatic": 4,
+     "correct": 14,
+     "correct_automatic_reads": 4,
+     "n": 19,
+     "read_cases": 5,
+     "wrong_automatic": {
+      "k": 0,
+      "n": 19,
+      "rate": 0.0,
+      "upper95": 0.16818436536845052
+     }
+    }
+   }
+  },
+  "mapping": "case family = pool.json native.sent.backend (the in-session judge that sent the step to the host; matched by logged option-set hash for 56 of 70 pool cases, profile.md for 14). Arm family: jev-1.13->jev, laya-base->laya, qwen3-0.6b->ollama, qwen3-4b->ollama, qwen3-8b->ollama. Other arms have no own family."
+ },
+ "d_fallback_reasons": {
+  "hypothetical_label": "HYPOTHETICAL: same logged answers, the 3000 ms decision timeout ignored. No judge ran without a timeout; a slower judge would also change the host's wait.",
+  "judges": {
+   "clef": {
+    "fallback_reasons_all_reps": {
+     "automatic": 18,
+     "model_abstained": 45,
+     "selection_threshold": 63
+    },
+    "hypothetical_no_timeout": {
+     "automatic": 6,
+     "correct": 26,
+     "correct_automatic_reads": 4,
+     "n": 42,
+     "read_cases": 13,
+     "wrong_automatic": {
+      "k": 2,
+      "n": 42,
+      "rate": 0.047619047619047616,
+      "upper95": 0.1579013531547973
+     }
+    }
+   },
+   "clef-flash": {
+    "fallback_reasons_all_reps": {
+     "automatic": 18,
+     "model_abstained": 27,
+     "selection_threshold": 81
+    },
+    "hypothetical_no_timeout": {
+     "automatic": 6,
+     "correct": 21,
+     "correct_automatic_reads": 3,
+     "n": 42,
+     "read_cases": 13,
+     "wrong_automatic": {
+      "k": 3,
+      "n": 42,
+      "rate": 0.07142857142857142,
+      "upper95": 0.19009713288525165
+     }
+    }
+   },
+   "jev-1.13": {
+    "fallback_reasons_all_reps": {
+     "automatic": 45,
+     "model_abstained": 49,
+     "selection_threshold": 32
+    },
+    "hypothetical_no_timeout": {
+     "automatic": 15,
+     "correct": 26,
+     "correct_automatic_reads": 10,
+     "n": 42,
+     "read_cases": 13,
+     "wrong_automatic": {
+      "k": 5,
+      "n": 42,
+      "rate": 0.11904761904761904,
+      "upper95": 0.2500068180710754
+     }
+    }
+   }
+  },
+  "unit": "one count per (repetition, case), order 0"
+ },
+ "e_jev_vs_sol": {
+  "note": "exact McNemar, post hoc; the run's contrast list omitted this pair"
+ },
+ "f_correct_automatic_reads_paired": {
+  "cases": [
+   "rt-006",
+   "rt-007",
+   "rt-009",
+   "rt-024",
+   "rt-026",
+   "rt-044",
+   "rt-047",
+   "rt-052",
+   "rt-054",
+   "rt-057",
+   "rt-063",
+   "rt-067",
+   "rt-068"
+  ],
+  "n_read_cases": 13,
+  "note": "exact McNemar on the discordant read cases"
+ },
+ "g_clustering": {
+  "cases_per_group": {
+   "S12:bugfix_add_tag_mutable_default": 1,
+   "S12:bugfix_merge_config_precedence": 1,
+   "S12:bugfix_session_ttl_naive_tz": 2,
+   "S12:poly_rust_acronym": 1,
+   "S12:poly_rust_dot-dsl": 1,
+   "S12:poly_rust_doubly-linked-list": 2,
+   "S12:poly_rust_pig-latin": 1,
+   "S12:poly_rust_scale-generator": 2,
+   "S12:repair_tokenize_kv": 2,
+   "S12:repair_word_wrap": 2,
+   "S12:scheduler": 2,
+   "S3:astropy__astropy-13977": 2,
+   "S3:django__django-10914": 2,
+   "S3:django__django-11276": 3,
+   "S3:django__django-11292": 2,
+   "S3:django__django-13195": 2,
+   "S3:django__django-13741": 1,
+   "S3:django__django-14315": 1,
+   "S3:django__django-9296": 1,
+   "S3:mwaskom__seaborn-3187": 3,
+   "S3:pylint-dev__pylint-4970": 3,
+   "S3:scikit-learn__scikit-learn-25747": 1,
+   "S3:sympy__sympy-15017": 1,
+   "S3:sympy__sympy-15976": 1,
+   "S3:sympy__sympy-20428": 2
+  },
+  "jev_groups_with_a_wrong_automatic": 4,
+  "jev_wrong_automatic_by_group": {
+   "S12:scheduler": 2,
+   "S3:django__django-10914": 1,
+   "S3:django__django-13195": 1,
+   "S3:mwaskom__seaborn-3187": 1
+  },
+  "jev_wrong_automatic_total": 5,
+  "n_groups": 25
+ },
+ "label": "POST-HOC analysis: chosen after the holdout results were seen; not preregistered; no verdict depends on it",
+ "n_cases": 42,
+ "read_cases_final_label": 13,
+ "unit": "per-case majority over repetitions under bundle-read-shortcut, all cases in the denominator"
+}

@@ -1,0 +1,319 @@
+\section{Follow-up: real decisions and the cost of switching models}\label{sec:followup}
+
+A reviewer of this report raised two objections. First, the constructed cases may be too easy and too
+synthetic: he would rather see fewer cases with higher fidelity, taken from real agent runs. Second, prompt
+caching is the most likely pushback against routing: \emph{``for longer chats you have to be confident in
+savings for the smaller model.''} We ran one follow-up study for each. This chapter reports both. Nothing in
+\cref{sec:intro,sec:background,sec:method,sec:validate,sec:dev,sec:holdout,sec:failures,sec:latency} was
+re-measured or changed; the follow-ups are separate runs with their own evidence and their own
+preregistration.
+
+\begin{keyidea}
+Two new questions, two new kinds of evidence. \textbf{Real decisions:} do the judges still help when the
+decisions come from real agent sessions instead of hand-written cases? \textbf{Switching cost:} once a
+conversation is long, does moving it to a cheaper model still save money, given that each model keeps its
+own prompt cache?
+\end{keyidea}
+
+\subsection{Why real traces, and how the cases were built}\label{sec:traces}
+
+\paragraph{What a trace-derived case is.} During earlier benchmark sessions, the bundle's in-session judge
+faced thousands of real \emph{read-shortcut} decisions: ``should the agent just read this file, or think?''
+A \term{trace-derived case} is one such decision point, rebuilt exactly as the judge saw it. We kept only
+steps that the in-session judge had \emph{sent to the host model} (it fell back), because only then do we
+know what the host did next. Steps the judge automated were excluded (\TrFastRouted\ of them): their
+``outcome'' is the judge's own pick, so labelling them would be circular.
+
+\paragraph{Rebuilding and fingerprinting.} The request bytes on the wire were never logged, so each request
+was rebuilt from the session transcript. A rebuilt case was eligible only if it reproduced five logged
+state numbers plus the logged hashes of the candidate ids and their order; \TrRebuildFail\ decisions failed
+and were dropped. This is a fingerprint match, not a capture. From \TrMined\ eligible, de-duplicated
+decisions we drew \TrDrawn\ (seed \TrSeed), stratified by suite and ``hard first'' using outcome-side
+features only (more candidates, line-window candidates, clipped observations), never whether a logged judge
+had been wrong. Whole tasks were assigned to holdout or dev before anyone labelled anything.
+
+\paragraph{Labels.} Two reviewers labelled every case blind: they saw the judge's view and the host's next
+one or two actions, but not the outcome-derived label or any judge's answer. They agreed with each other
+at Cohen's $\kappa = \TrKappaAB$, and with the outcome label at only $\kappa = \TrKappaOutcome$. The final
+label is the reviewers' shared label: \TrAgreed\ cases matched the outcome label, \TrOverridden\ overrode
+it, and the \TrDropped\ cases where the reviewers disagreed were dropped. The holdout has \TrN\ cases
+(\TrReasonLabels\ labelled \code{reason}, \TrReadCases\ labelled with a read); the dev split has \TrDevN\
+and is a screen.
+
+\begin{keyidea}
+\textbf{``What the host did next'' is not the same as ``what was enough.''} The host model might read a file
+it did not need, or read a different, equally good file. A careful reviewer asks a stricter question: from
+what the judge could see, was one prepared read clearly sufficient? The two disagree often (the low $\kappa$
+above), so the reviewers' label is the primary one and the host's next read is kept as a secondary check.
+\end{keyidea}
+
+\paragraph{Replayed in each judge's own form.} Jev received the bundle's own System One request; Laya and
+the Qwen3 models went through the bundle's own local backends. GPT-6 Luna and Sol have no native form and
+got the benchmark's choice question, as did nimble 9B and the tev1 models, because Ollama's System One
+endpoint rejects the bundle's object-valued criteria (\cref{sec:newfindings}). The ``form'' column of
+\cref{tab:trace} records which.
+
+\paragraph{Preregistration.} The case hash, endpoints and decision rules were committed before the holdout
+ran, and the runner refuses a holdout run unless they match. Two primary endpoints: the wrong-automatic rate
+on all \TrN\ cases, and the number of \emph{correct automatic reads} among the \TrReadCases\ cases where a
+read was enough (the savings a judge actually delivers). A new rule asks whether the read shortcut is worth
+running at all: a judge is ``useful here'' if it makes at least \TrUsefulMinReads\ correct automatic reads
+with a wrong-automatic upper 95\,\% bound below \TrUsefulMaxUpperPct\,\%. One erratum: a
+\TrSmokeCases-case smoke test of the adapters on dev cases ran about \TrSmokeMinutes\ minutes before the
+preregistration commit, although the file says it was committed before any judge saw a trace case. No
+holdout case was involved. API spend for the whole study was \$\TrSpendTotal.
+
+\subsection{Results on real decisions \texorpdfstring{\prereg}{[preregistered]}}\label{sec:traceresults}
+
+\begin{table}[htbp]
+\centering\small
+\caption{Real read-shortcut decisions, holdout \prereg: \TrN\ cases, \TrReps\ repetitions, the bundle's
+read-shortcut gate. Per-case majorities over repetitions. ``Upper'' is the upper end of the 95\,\% Wilson
+interval of the wrong-automatic rate. ``Correct reads'' counts correct automatic reads among the
+\TrReadCases\ cases whose label is a read. Latency pools all valid requests. The last row is the reference
+that never acts.}
+\label{tab:trace}
+\input{generated/tables/trace-holdout.tex}
+\end{table}
+\howtoreadtable{A useful judge sits high in the ``correct reads'' column and low in the ``wrong automatic''
+column. Accuracy is shown, but it rewards doing nothing: \TrReasonLabels\ of the \TrN\ labels are
+\code{reason}, so a judge that never acts scores \TrAlwaysK/\TrN.}
+
+\paragraph{No judge met the usefulness bar.} \TrNUseful\ of the \NumBase\ judges qualified. \TrNGeMinReads\
+judges took at least \TrUsefulMinReads\ correct reads, and every one of them also made at least one wrong
+automatic read. With \TrN\ cases, an upper bound below \TrUsefulMaxUpperPct\,\% is only possible with zero
+wrong reads, so the rule effectively asked for a judge that saves several steps and never misfires.
+
+\paragraph{Jev captured the most savings, and also misfired.} Jev took \TrJevReads\ of the \TrReadCases\
+sufficient reads automatically and made \TrJevWaK\ wrong automatic reads (\TrJevWaPct\,\% of cases, upper
+bound \TrJevWaUpper\,\%). GPT-6 Luna took \TrLunaReads\ with \TrLunaWaK\ wrong; GPT-6.1 Sol \TrSolReads\
+with \TrSolWaK\ wrong, but \TrSolTimeouts\ of its \TrSolAnswers\ answers missed the \TrTimeoutMs\,ms timeout
+(its median per repetition was \TrSolPfiftyRangeS\,s) and it cost \TrSolJevCostX$\times$ as much as Jev.
+Ignoring the timeout, the same Sol answers would have taken \TrSolNoTimeoutReads\ reads with
+\TrSolNoTimeoutWa\ wrong; that is hypothetical, because a slower judge also makes the host wait.
+
+\paragraph{Jev, Luna and Sol are within noise.} Jev versus Luna: Holm-adjusted $p = \TrJevLunaAccPHolm$ on
+accuracy and \TrJevLunaWaPHolm\ on wrong automatic reads; Luna versus Sol: \TrLunaSolAccPHolm\ and
+\TrLunaSolWaPHolm. Jev versus Sol was missing from the run's contrast list; a post-hoc exact McNemar test
+gives $p = \TrJevSolAccP$ (accuracy) and \TrJevSolWaP\ (wrong automatic). On the \TrReadCases\ read cases
+alone, Jev's extra reads over Luna and Sol give $p = \TrJevLunaReadsP$ and \TrJevSolReadsP. No candidate
+replaced Jev under the default-judge rule (\TrNReplaces\ did).
+
+\paragraph{The local judges fail in two ways.} Laya and tev1 0.8B never cleared the \MinP\ gate, so they
+never acted. Qwen3 4B never gave an answer at all (\cref{sec:newfindings}): all \TrQwenFourAbstained\ of
+its answers became \code{reason} at probability 1. Nimble 9B, Qwen3 0.6B and Qwen3 8B acted freely and were
+often wrong (\TrNimbleWaK, \TrQwenPtSixWaK\ and \TrQwenEightWaK\ wrong automatic reads).
+
+\begin{figure}[htbp]
+\centering
+\input{figures/fig-reads.tex}
+\caption{Real decisions: correct automatic reads against wrong automatic reads, holdout \prereg, with
+95\,\% Wilson intervals on both axes. Judges with identical results share one marker and one label. The
+shaded strip is where rule 2 would call a judge useful (at least \TrUsefulMinReads\ correct reads and no
+wrong ones).}
+\label{fig:reads}
+\howtoread{Right is more savings; up is more misfires. The ideal judge sits far right on the floor, inside
+the shaded strip. No judge does: everyone that reaches the strip's left edge has also risen off the floor.
+Long whiskers are honest: the horizontal axis has only \TrReadCases\ chances to succeed.}
+\end{figure}
+
+\paragraph{Why accuracy misleads here.} Always falling back scores \TrAlwaysK/\TrN, more than any judge
+that acts. But \TrAlwaysSThreeK\ of those \TrAlwaysK\ come from the \TrSThree\ SWE-bench cases, where the
+judge's view had been clipped before the issue text (\cref{sec:caveats}); on the other \TrSOneTwo\ cases
+it scores \TrAlwaysSOneTwoK. The useful question is not ``how often is the judge right'' but ``how many
+sufficient reads does it capture for each unnecessary one.''
+
+\paragraph{What a wrong automatic read costs.} Every candidate here is a read-only file read. A wrong
+automatic read replaces the host's next step with a read it did not need: one lost step and some extra
+context, and no irreversible effect. That is a very different failure from clicking \emph{Buy now}
+(\cref{sec:worked}). Its cost was assumed, not measured. Real states are also long, about
+\TrJevInputTokens\ input tokens, so Jev cost \$\TrJevCost\ per million decisions here, \TrJevCostXFirst$\times$
+its cost on the constructed holdout.
+
+\paragraph{Against the host's own next read.} Scored against what the host actually read next (\TrHostReadCases\
+cases where it read something), Jev has \TrJevHostReads\ correct automatic reads and \TrJevHostWa\ wrong;
+Luna \TrLunaHostReads\ and \TrLunaHostWa; Sol \TrSolHostReads\ and \TrSolHostWa. None of Jev's \TrJevWaK\
+wrong automatic reads matched the host's next read (\TrJevWaMatchHost). This analysis was chosen after the
+results were seen and is not preregistered.
+
+\subsection{Read this before generalizing}\label{sec:caveats}
+
+\begin{caution}[title={Read this before generalizing}]
+\begin{itemize}[leftmargin=1.1em]
+  \item \textbf{Scope and selection.} These are \TrN\ decisions that some in-session judge had already
+    \emph{declined} and sent to the host. They are not a sample of all decisions: about half are labelled
+    ``a read was enough'' by design, against about \TrPoolReadPct\,\% of the full pool. Jev made
+    \TrJevOwnWa\ wrong automatic reads on the \TrJevOwnN\ cases from its own sessions (cases its
+    in-session self had declined) and \TrJevOtherWa\ on the \TrJevOtherN\ cases from other judges'
+    sessions.
+  \item \textbf{Label overrides.} Reviewers overrode the host-derived label in \TrOverridden\ of
+    \TrKept\ kept cases, leaning strict. Of the \TrHoldOverrides\ holdout overrides, \TrOverReadToReason\
+    turned a read into \code{reason}, \TrOverReasonToRead\ turned \code{reason} into a read and
+    \TrOverReadToRead\ swapped one read for another. Reviewers saw the host's next actions; they were blind
+    only to the proposed label and to judge answers.
+  \item \textbf{Task clipping.} Every case ran at a \TrStateBudget-character state budget (the bundle
+    default is \TrStateDefault). In the \TrSThree\ SWE-bench holdout cases the task text the judge saw ended
+    after about \TrTaskSeen\ characters, inside the operating rules: the judge never saw the issue.
+  \item \textbf{Qwen3 4B is an artifact, not caution.} Its zero wrong automatic reads come from a defect
+    in the candidate path, not from the model's judgement.
+  \item \textbf{Clustering and source.} The \TrN\ cases come from \TrGroups\ task groups; Jev's
+    \TrJevWaK\ wrong reads fall in \TrJevWrongGroups. All cases come from this bundle's own benchmark
+    sessions, not human-driven traffic, and the reviewers are Anthropic models.
+  \item \textbf{Erratum.} A \TrSmokeCases-case dev smoke test ran before the preregistration commit
+    (\cref{sec:traces}); no holdout case was involved.
+\end{itemize}
+\end{caution}
+
+\subsection{Caching: does switching models erase the saving?}\label{sec:caching}
+
+\paragraph{The question.} Routing sends some turns of a conversation to a cheaper model. Providers keep a
+prompt cache \emph{per model}: re-sending a long conversation to the same model is cheap, because most of it
+is read from cache. After a switch, the new model must first \emph{write} the whole conversation into its
+own cache, and cache writes are the most expensive input tokens.
+
+\begin{keyidea}
+Three prices matter. On the Opus host, a cached read costs \$\CaOpusRead\ per million tokens, a cache write
+\$\CaOpusWrite\ and an uncached input token \$\CaOpusIn. A model switch turns cheap reads into expensive
+writes once (a \term{cache rebuild}). A cheaper model is not automatically cheaper in a long chat: Sonnet
+reads its cache at \CaReadPriceX$\times$ Opus's price, while every other token class costs \CaOtherPriceX$\times$.
+\end{keyidea}
+
+\paragraph{The data.} This study made no model calls: it re-read \CaRuns\ earlier benchmark runs and their
+session logs and formed \CaPairs\ matched pairs (\CaRoutedPairs\ of them routed): a routed run and the plain
+run on the same host, task, campaign and repetition. Ratios are geometric means of routed cost over plain
+cost; intervals bootstrap over tasks (\CaBoot\ resamples). The cost field is a price table, not billing:
+it reproduces list prices exactly.
+
+\begin{table}[htbp]
+\centering\small
+\caption{Price table behind every cost in this section (US dollars per million tokens).}
+\label{tab:prices}
+\begin{tabular*}{0.75\textwidth}{@{\extracolsep{\fill}}l r r r r@{}}
+\toprule
+Model & uncached input & cache read & cache write & output \\
+\midrule
+Fable 5.1 & \CaFableIn & \CaFableRead & \CaFableWrite & \CaFableOut \\
+Opus 5.5 & \CaOpusIn & \CaOpusRead & \CaOpusWrite & \CaOpusOut \\
+Sonnet 5 & \CaSonnetIn & \CaSonnetRead & \CaSonnetWrite & \CaSonnetOut \\
+\bottomrule
+\end{tabular*}
+\end{table}
+
+\paragraph{The same-cell contrast.} The fair comparison holds the routing configuration fixed and changes
+only the session length. \Cref{tab:samecell} does that for single-turn and \CaTurns-turn sessions.
+
+\begin{table}[htbp]
+\centering\small
+\caption{Cost ratio (routed or swapped run over plain run on the same host; below 1 saves money) for the
+same cell in single-turn and \CaTurns-turn sessions, with 95\,\% bootstrap intervals. The last row never
+switches models within a session: it is the control.}
+\label{tab:samecell}
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}l r r r r@{}}
+\toprule
+ & \multicolumn{2}{c}{Single-turn} & \multicolumn{2}{c}{\CaTurns-turn} \\
+\cmidrule(lr){2-3}\cmidrule(l){4-5}
+Cell (host) & cost ratio & pairs & cost ratio & pairs \\
+\midrule
+orch-default-opus vs plain-opus (Opus) & \CaOpusRoutedOne\ [\CaOpusRoutedOneCI] & \CaOpusRoutedOnePairs & \CaOpusRoutedFour\ [\CaOpusRoutedFourCI] & \CaOpusRoutedFourPairs \\
+orch-default vs plain (Fable) & \CaFableRoutedOne\ [\CaFableRoutedOneCI] & \CaFableRoutedOnePairs & \CaFableRoutedFour\ [\CaFableRoutedFourCI] & \CaFableRoutedFourPairs \\
+plain-sonnet vs plain-opus (no switch) & \CaControlOne\ [\CaControlOneCI] & \CaControlOnePairs & \CaControlFour\ [\CaControlFourCI] & \CaControlFourPairs \\
+\bottomrule
+\end{tabular*}
+\end{table}
+\howtoreadtable{Read each row left to right. On the Opus host, routing went from a small saving
+(\CaOpusRoutedOne$\times$) to a loss (\CaOpusRoutedFour$\times$). The control, which simply runs Sonnet
+instead of Opus and never switches, moved almost the same way (\CaControlOne$\times$ to
+\CaControlFour$\times$). So most of the Opus-host loss is not the switch itself. On the Fable host routing
+still saved money in longer sessions, though less.}
+
+\paragraph{Price and volume, about half each.} Re-pricing the control's \emph{identical} tokens at Sonnet's
+prices gives \CaPriceOne$\times$ Opus in single-turn sessions, where cache writes dominate, but
+\CaPriceFour$\times$ in \CaTurns-turn sessions, where cache reads are \CaReadShareFour\,\% of Opus's cost
+(against \CaReadShareOne\,\% single-turn). Sonnet also used more: \CaRequestsFour$\times$ the requests and
+\CaCacheReadFour$\times$ the cache-read tokens in \CaTurns-turn sessions. Of the rise from \CaControlOne$\times$
+to \CaControlFour$\times$, about \CaPriceShare\,\% is the price edge eroding and \CaVolumeShare\,\% is extra
+volume (volume factor \CaVolumeOne$\times$ to \CaVolumeFour$\times$).
+
+\paragraph{How much the rebuilds cost.} There were \CaSwitches\ model switches: \CaSwitchBoundary\ at a turn
+boundary and \CaSwitchMid\ in the middle of a turn. Turn 2 is where most routes move to the host model
+(\CaTurnTwoSwitches\ switches); on the Opus host turn 2 cost \CaOpusTurnTwo$\times$ the plain run's turn 2
+(\CaOpusTurnTwoEx$\times$ without the rebuild), and on Fable \CaFableTurnTwo$\times$ (\CaFableTurnTwoEx$\times$).
+The share of routed cost spent on rebuilds depends strongly on the kind of session:
+
+\begin{table}[htbp]
+\centering\small
+\caption{Rebuild cost after model switches, by stratum (share of the routed runs' cost).}
+\label{tab:rebuild}
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}l r r r@{}}
+\toprule
+Stratum & pairs & sessions with a switch & rebuild share \\
+\midrule
+Single-turn routing & \CaRbOnePairs & \CaRbOneSwitch & \CaRbOneShare\,\% \\
+\CaTurns-turn, Opus host & \CaRbFourOpusPairs & \CaRbFourOpusSwitch & \CaRbFourOpusShare\,\% \\
+\CaTurns-turn, Fable host & \CaRbFourFablePairs & \CaRbFourFableSwitch & \CaRbFourFableShare\,\% \\
+SWE-bench, mid-turn escalation & \CaRbPrimaryPairs & \CaRbPrimarySwitch & \CaRbPrimaryShare\,\% (\CaRbPrimaryEffortShare\,\%$^{a}$) \\
+SWE-bench, turn-start routers & \CaRbRoutersPairs & \CaRbRoutersSwitch & \CaRbRoutersShare\,\% \\
+\bottomrule
+\end{tabular*}
+\par\smallskip\raggedright\footnotesize $^{a}$ Including cache rewrites caused by effort-setting changes on
+the same model.
+\end{table}
+
+The shipped default router made no mid-turn switches on SWE-bench (\CaRulesSThreeSwitches\ switches) and
+came in at \CaRulesSThree$\times$. Pooled ``rebuild share'' totals across strata are misleading: several
+routed cells share one plain anchor run (\CaUniqueAnchors\ anchors behind \CaRoutedPairs\ pairs).
+
+\paragraph{Warm first requests.} Runs ran concurrently, so some sessions found their system prompt
+already cached by another run, more often for routed runs (\CaWarmOpusTreat\,\% against
+\CaWarmOpusAnchor\,\% of anchors on the Opus host, \CaTurns-turn). Re-normalizing both arms to all-cold or
+all-warm moves the Opus routing ratio within \CaWarmOpusRange\ (raw \CaWarmOpusRaw), Fable within
+\CaWarmFableRange\ (raw \CaWarmFableRaw) and the control within \CaWarmControlRange\ (raw
+\CaWarmControlRaw). The conclusions hold across these ranges.
+
+\begin{caution}[title={What the caching study does not measure}]
+\begin{itemize}[leftmargin=1.1em]
+  \item \textbf{Longer and real chats.} Only \CaScenarios\ synthetic scenarios, at most \CaTurns\ turns,
+    about \CaTurnGapS\,s apart, and no human chats. \CaOpusFourDevPairs\ of the \CaOpusFourPairs\ Opus
+    \CaTurns-turn pairs (\CaFableFourDevPairs\ of \CaFableFourPairs\ on Fable) come from the
+    \CaDevScenarios\ development scenarios, which were used for tuning.
+  \item \textbf{Cache expiry.} The cache expires after about \CaExpiryMin\ minutes, and turns were seconds
+    apart, so the plain run never paid for an expired cache. With real think time both sides would pay
+    rewrites.
+  \item \textbf{The switch in isolation.} Routed cells also change effort settings and add the
+    orchestrator, and no arm ``decides once and never switches.''
+  \item \textbf{Receipts and billing.} \CaReceipts\ of the \CaRoutedPairs\ routed pairs carry efficiency
+    receipts, and the costs are list-price estimates, not invoices.
+\end{itemize}
+\end{caution}
+
+\paragraph{The proposed experiment (not run).} The caching study proposes a direct test: \CaPropScenarios\
+new, preregistered, \CaPropTurns-turn scenarios with checks after each turn; Opus and Fable hosts; a new
+``sticky'' arm that chooses a model once per session and never switches, to isolate the cost of switching;
+a factor with \CaPropGapMin-minute gaps between turns so the cache expires; \CaPropReps\ repetitions; about
+\$\CaPropUSD\ and \CaPropHours\ hours unattended. \textbf{It needs approval and has not been run}; nothing in
+this report depends on it.
+
+\subsection{New findings for the bundle}\label{sec:newfindings}
+
+Building the trace cases surfaced four defects in the bundle. Each is documented with evidence in
+\path{evals/judge_bench/traces/}. \textbf{None was fixed in this work}, and none changes a number above
+except where stated.
+
+\begin{enumerate}
+  \item \textbf{The state budget clips the task.} The read-shortcut state keeps the \emph{beginning} of the
+    task message. At the \TrStateBudget-character budget used in these sessions, the SWE-bench task text
+    ended after about \TrTaskSeen\ characters, inside the operating rules, so the judge never saw the issue.
+    The bundle's default budget is \TrStateDefault; the shorter budget came from the benchmark profiles.
+  \item \textbf{The escalation and phase judges see the wrong task text.} Their state takes the first user
+    message as the task, and in Amplifier sessions that message is the injected system-reminder block.
+    Neither judge ran in any logged session, so no measured result is affected.
+  \item \textbf{Ollama's System One endpoint rejects object-valued criteria.} A Jev-style backend pointed at
+    Ollama's endpoint cannot answer read-shortcut questions (HTTP 400). This is why nimble 9B and the tev1
+    models ran in the adapted form here.
+  \item \textbf{Qwen3 4B never answers on the candidate path.} Its first generated token is prose
+    (``We\dots''), so no option letter receives probability and everything goes to \code{reason}. The
+    bundle's question path has a guard and a retry for this; the candidate path has neither. Qwen3 4B's
+    zero wrong automatic reads in \cref{tab:trace} are this artifact.
+\end{enumerate}
+Escalation, phase and tool-risk decisions could not be turned into trace cases at all: their payloads were
+never logged live, or carry too little to support an honest label.

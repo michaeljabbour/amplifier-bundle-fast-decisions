@@ -34,6 +34,9 @@ committed evidence files:
 | `label-audit/agreement.json` | blind label audit (kappa, adjudications) |
 | `latency/latency_summary.json` | latency anatomy, cold starts, concurrency, round trips |
 | `changes.json` | the claim-by-claim first-pass comparison (rendered verbatim) |
+| `../2026-10-01-trace-judge-benchmark/{dev,holdout}/*.json[l]`, `holdout/rule2_useful.json`, `holdout/trace_analysis.json` | follow-up on real decisions (Section 10): table, figure, caveats |
+| `evals/judge_bench/traces/{PREREGISTRATION.md,labels_final.json,pool.json,FINDING-*.md}` | trace-case design, labels and kappa (recomputed), usefulness rule, state-budget numbers |
+| `../2026-10-01-caching/results.json`, `README.md` | follow-up on caching (Section 10): same-cell contrast, price x volume, rebuild shares, warm/cold ranges; the proposal's figures |
 
 It writes:
 
@@ -55,6 +58,11 @@ the Fig. 7 legends sit above their axes.
 
 The PR number and commit of the post-study changes (PR #56, `180f919`) are named constants at the top
 of `build_assets.py` (`SINCE_PR`, `SINCE_COMMIT`); they are not in the evidence JSON.
+
+A few follow-up facts exist only as prose in committed Markdown (the state-budget numbers, the smoke-run
+erratum, the proposed caching experiment). `build_assets.py` reads them with anchored patterns and stops
+the build if the text no longer matches. Ratios from the caching study are rounded half-up from the
+values stored in `results.json` (1.305 -> 1.31), as that study's README reports them.
 
 Policy constants that are not stored in the evidence JSON (the gate's 0.90 probability, 0.20 margin and
 0.75 computer-use bar, from `evals/judge_bench/scoring.py`) and the illustrative traffic volume for the
