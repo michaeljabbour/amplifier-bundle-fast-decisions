@@ -1,0 +1,402 @@
+# holdout-v3 batch B (docs, 10 turns): Write an API reference for a small geometry library from its source: public-function inventory, exact signatures, defaults tables, raised exceptions, a new function that must be added to code and docs, a docs-coverage checker, an index table.
+id: lib-reference
+task_type: docs
+language: python
+split: holdout
+default_gap_s: 10
+source:
+  desc: 'Write an API reference for a small geometry library from its source: public-function inventory, exact signatures,
+    defaults tables, raised exceptions, a new function that must be added to code and docs, a docs-coverage checker, an index
+    table.'
+  kind: self-authored deterministic workspace
+  adapted_from:
+  - new self-authored library; reference-docs theme (cf. amplifier-agent api documentation tasks)
+workspace:
+  kind: inline
+  files:
+    geom/__init__.py: |
+      """geom: small geometry helpers."""
+    geom/shapes.py: |
+      """Areas and perimeters of simple shapes."""
+      import math
+
+
+      def area_rect(w: float, h: float) -> float:
+          """Area of a rectangle."""
+          if w < 0 or h < 0:
+              raise ValueError("sides must be non-negative")
+          return w * h
+
+
+      def area_circle(r: float, precision: int = 2) -> float:
+          """Area of a circle, rounded to ``precision`` decimals."""
+          if r < 0:
+              raise ValueError("radius must be non-negative")
+          return round(math.pi * r * r, precision)
+
+
+      def area_triangle(a: float, b: float, c: float) -> float:
+          """Area of a triangle from its three sides (Heron's formula)."""
+          if a + b <= c or a + c <= b or b + c <= a:
+              raise ValueError("sides do not form a triangle")
+          s = (a + b + c) / 2
+          return math.sqrt(s * (s - a) * (s - b) * (s - c))
+
+
+      def perimeter_rect(w: float, h: float) -> float:
+          """Perimeter of a rectangle."""
+          return 2 * (w + h)
+
+
+      def _check(x):
+          return x
+    geom/transform.py: |
+      """Point transformations on lists of (x, y) tuples."""
+      import math
+
+
+      def translate(points, dx: float = 0.0, dy: float = 0.0):
+          """Shift every point by (dx, dy)."""
+          return [(x + dx, y + dy) for x, y in points]
+
+
+      def scale(points, factor: float, origin=(0.0, 0.0)):
+          """Scale points about ``origin``."""
+          ox, oy = origin
+          return [(ox + (x - ox) * factor, oy + (y - oy) * factor) for x, y in points]
+
+
+      def rotate(points, degrees: float, origin=(0.0, 0.0), precision: int = 6):
+          """Rotate points counter-clockwise about ``origin``."""
+          t = math.radians(degrees)
+          ox, oy = origin
+          return [(round(ox + (x - ox) * math.cos(t) - (y - oy) * math.sin(t), precision), round(oy + (x - ox) * math.sin(t) + (y - oy) * math.cos(t), precision)) for x, y in points]
+    geom/stats.py: |
+      """Summary statistics for point sets."""
+
+
+      def centroid(points):
+          """Mean of the points."""
+          if not points:
+              raise ValueError("no points")
+          n = len(points)
+          return (sum(x for x, _ in points) / n, sum(y for _, y in points) / n)
+
+
+      def bounding_box(points):
+          """Smallest axis-aligned box as (xmin, ymin, xmax, ymax)."""
+          if not points:
+              raise ValueError("no points")
+          xs, ys = [p[0] for p in points], [p[1] for p in points]
+          return (min(xs), min(ys), max(xs), max(ys))
+    README.md: |
+      # geom
+
+      Small geometry helpers. Modules: `geom.shapes`, `geom.transform`, `geom.stats`. Private helpers start with an underscore.
+protected:
+- geom/__init__.py
+- geom/transform.py
+- geom/stats.py
+hidden_files:
+  _grade.py: |
+    import csv, json, os, re, subprocess, sys
+    from pathlib import Path
+
+    W = Path(".")
+
+
+    def fail(msg):
+        print("FAIL:", msg)
+        sys.exit(1)
+
+
+    def need(cond, msg):
+        if not cond:
+            fail(msg)
+
+
+    def read(rel):
+        p = W / rel
+        need(p.exists(), f"missing {rel}")
+        return p.read_text(encoding="utf-8")
+
+
+    def load_json(rel):
+        try:
+            return json.loads(read(rel))
+        except ValueError as e:
+            fail(f"{rel} is not valid JSON: {e}")
+
+
+    def close(a, b, tol=0.011):
+        try:
+            return abs(float(a) - float(b)) <= tol
+        except (TypeError, ValueError):
+            return False
+
+
+    def num(s):
+        m = re.search(r"-?\d[\d,]*\.?\d*", str(s))
+        return float(m.group(0).replace(",", "")) if m else None
+
+
+    def run(cmd, timeout=60, stdin=None):
+        p = subprocess.run(cmd, shell=True, cwd=W, capture_output=True, text=True, timeout=timeout, input=stdin)
+        return p.returncode, p.stdout, p.stderr
+
+
+    def md_lines(rel, under=None):
+        lines = read(rel).splitlines()
+        if not under:
+            return lines
+        out, on, lvl = [], False, 0
+        for ln in lines:
+            m = re.match(r"^(#+)\s+(.*)", ln)
+            if m:
+                if on and len(m.group(1)) <= lvl:
+                    break
+                if not on and re.search(under, m.group(2), re.I):
+                    on, lvl = True, len(m.group(1))
+                continue
+            if on:
+                out.append(ln)
+        need(on, f"no heading matching {under!r} in {rel}")
+        return out
+
+
+    def md_rows(rel, under=None):
+        rows = []
+        for ln in md_lines(rel, under):
+            if ln.strip().startswith("|") and not re.match(r"^\s*\|[\s:|-]+\|\s*$", ln):
+                rows.append([c.strip() for c in ln.strip().strip("|").split("|")])
+        return rows
+
+
+    def cmp(got, want, tol, path):
+        if isinstance(want, dict):
+            need(isinstance(got, dict), f"{path}: expected an object, got {type(got).__name__}")
+            for k, v in want.items():
+                need(k in got, f"{path}.{k}: missing")
+                cmp(got[k], v, tol, f"{path}.{k}")
+        elif isinstance(want, list):
+            need(isinstance(got, list) and len(got) == len(want), f"{path}: expected list of {len(want)}, got {got!r}")
+            for i, (g, w) in enumerate(zip(got, want)):
+                cmp(g, w, tol, f"{path}[{i}]")
+        elif isinstance(want, bool) or want is None or isinstance(want, str):
+            need(got == want, f"{path}: {got!r} != {want!r}")
+        else:
+            need(not isinstance(got, bool) and close(got, want, tol), f"{path}: {got!r} != {want!r}")
+
+
+    def chk_json(rel, exp, tol=0.051):
+        cmp(load_json(rel), exp, tol, rel)
+
+
+    def chk_table(rel, under, exp, col=1, tol=0.051):
+        rows = md_rows(rel, under)
+        need(rows, f"no table under {under!r} in {rel}")
+        got = {r[0].strip("* `"): num(r[col]) for r in rows if len(r) > col and num(r[col]) is not None}
+        for k, v in exp.items():
+            need(k in got and close(got[k], v, tol), f"{k}: {got.get(k)} != {v}")
+
+
+    def chk_cmd_json(cmd, exp, tol=0.051, stdin=None):
+        rc, out, err = run(cmd, stdin=stdin)
+        need(rc == 0, f"`{cmd}` exited {rc}: {err[-200:]}")
+        try:
+            d = json.loads(out)
+        except ValueError as e:
+            fail(f"`{cmd}` stdout is not JSON: {e}")
+        cmp(d, exp, tol, cmd)
+
+
+    def chk_cmd_out(cmd, lines, stdin=None, expect_rc=0):
+        rc, out, err = run(cmd, stdin=stdin)
+        need(rc == expect_rc, f"`{cmd}` exited {rc} (want {expect_rc}): {err[-200:]}")
+        got = [ln.rstrip() for ln in out.strip().splitlines()]
+        need(got == list(lines), f"`{cmd}` output {got[:8]} != {list(lines)[:8]}")
+
+
+    def t2():
+        cur, got = None, {}
+        for ln in read('docs/reference.md').splitlines():
+            if ln.startswith('## '):
+                cur = ln[3:].strip()
+                got[cur] = []
+            elif ln.startswith('### ') and cur:
+                got[cur].append(ln[4:].strip())
+        need(got == {'geom.shapes': ['area_rect', 'area_circle', 'area_triangle', 'perimeter_rect'], 'geom.transform': ['translate', 'scale', 'rotate'], 'geom.stats': ['centroid', 'bounding_box']}, 'headings differ: ' + str(got))
+
+
+    def t3():
+        for name, sig in {'area_rect': 'def area_rect(w: float, h: float) -> float', 'area_circle': 'def area_circle(r: float, precision: int = 2) -> float', 'area_triangle': 'def area_triangle(a: float, b: float, c: float) -> float', 'perimeter_rect': 'def perimeter_rect(w: float, h: float) -> float', 'translate': 'def translate(points, dx: float = 0.0, dy: float = 0.0)', 'scale': 'def scale(points, factor: float, origin=(0.0, 0.0))', 'rotate': 'def rotate(points, degrees: float, origin=(0.0, 0.0), precision: int = 6)', 'centroid': 'def centroid(points)', 'bounding_box': 'def bounding_box(points)'}.items():
+            body = '\n'.join(md_lines('docs/reference.md', '^' + name + '$'))
+            m = re.search(r'```python\n(.*?)```', body, re.S)
+            need(m, 'no python block under ' + name)
+            need(sig in m.group(1), f'signature for {name}: want {sig}, block has {m.group(1).strip()}')
+
+
+    def t5():
+        for name, rs in {'area_rect': ['ValueError'], 'area_circle': ['ValueError'], 'area_triangle': ['ValueError'], 'perimeter_rect': [], 'translate': [], 'scale': [], 'rotate': [], 'centroid': ['ValueError'], 'bounding_box': ['ValueError']}.items():
+            body = '\n'.join(md_lines('docs/reference.md', '^' + name + '$'))
+            if rs:
+                m = re.search(r'^\*\*Raises:\*\*\s*(.*)$', body, re.M)
+                need(m, 'no **Raises:** line under ' + name)
+                got = sorted(x.strip('` ') for x in m.group(1).split(','))
+                need(got == rs, f'{name} raises {got} != {rs}')
+            else:
+                need('**Raises:**' not in body, name + ' wrongly documents Raises')
+
+
+    def t6():
+        for name, d in {'area_circle': {'precision': '2'}, 'translate': {'dx': '0.0', 'dy': '0.0'}, 'scale': {'origin': '(0.0, 0.0)'}, 'rotate': {'origin': '(0.0, 0.0)', 'precision': '6'}}.items():
+            rows = md_rows('docs/reference.md', '^' + name + '$')
+            need(rows, 'no defaults table under ' + name)
+            got = {r[0].strip('` '): r[1].strip('` ') for r in rows[1:] if len(r) >= 2}
+            need(got == d, f'{name} defaults {got} != {d}')
+        for name in ['area_rect', 'area_triangle', 'perimeter_rect', 'centroid', 'bounding_box']:
+            need(not md_rows('docs/reference.md', '^' + name + '$'), name + ' has no defaults, so no table')
+
+
+    def t7():
+        import importlib, sys
+        sys.path.insert(0, os.getcwd())
+        sh = importlib.import_module('geom.shapes')
+        need(sh.perimeter_triangle(3, 4, 5) == 12, 'perimeter_triangle(3,4,5)')
+        try:
+            sh.perimeter_triangle(1, 2, 9)
+            fail('no ValueError for impossible triangle')
+        except ValueError:
+            pass
+        need(sh.area_rect(2, 3) == 6, 'existing code broken')
+        body = '\n'.join(md_lines('docs/reference.md', '^perimeter_triangle$'))
+        need('def perimeter_triangle(a: float, b: float, c: float) -> float' in body, 'signature block missing')
+        need(re.search(r'^\*\*Raises:\*\*.*ValueError', body, re.M), 'Raises line missing')
+        heads = [l for l in read('docs/reference.md').splitlines() if l.startswith('### ')]
+        need(heads.index('### perimeter_triangle') == heads.index('### perimeter_rect') + 1, 'must follow perimeter_rect in source order')
+
+
+    def t8():
+        d = W / '_altpkg' / 'demo'
+        d.mkdir(parents=True, exist_ok=True)
+        (d / 'm.py').write_text('def alpha(x):\n    return x\n\n\ndef beta(x):\n    return x\n\n\ndef _hidden():\n    pass\n', encoding='utf-8')
+        (W / '_altpkg' / 'ref.md').write_text('# ref\n\n## demo.m\n\n### alpha\n\ntext\n', encoding='utf-8')
+        need((W / 'scripts/check_docs.py').exists(), 'missing scripts/check_docs.py')
+        chk_cmd_out('python3 scripts/check_docs.py --src _altpkg/demo --docs _altpkg/ref.md', ['MISSING: demo.m.beta'], expect_rc=1)
+        chk_cmd_out('python3 scripts/check_docs.py', ['ok'])
+
+
+    def t9():
+        rows = md_rows('docs/index.md', 'module summary')
+        got = [(r[0].strip('` '), int(num(r[1])), r[2]) for r in rows[1:] if len(r) >= 3]
+        need(got == [('geom.shapes', 5, 'Areas and perimeters of simple shapes.'), ('geom.transform', 3, 'Point transformations on lists of (x, y) tuples.'), ('geom.stats', 2, 'Summary statistics for point sets.')], 'module summary rows: ' + str(got))
+
+
+    if __name__ == "__main__":
+        fn = globals().get(sys.argv[1]) if len(sys.argv) > 1 else None
+        need(callable(fn) and sys.argv[1] in ['t2', 't3', 't5', 't6', 't7', 't8', 't9'], "unknown check " + str(sys.argv[1:]))
+        fn()
+        print("OK")
+turns:
+- prompt: How many public functions (names not starting with an underscore) does each geom module define, and how many in
+    total? Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all:
+    - shapes\D{0,8}(?<![\d.,])4(?:\.0+)?(?!\d|[.,]\d)
+    - transform\D{0,8}(?<![\d.,])3(?:\.0+)?(?!\d|[.,]\d)
+    - stats\D{0,8}(?<![\d.,])2(?:\.0+)?(?!\d|[.,]\d)
+    - total\D{0,8}(?<![\d.,])9(?:\.0+)?(?!\d|[.,]\d)
+- prompt: 'Create docs/reference.md titled `# geom reference`: one `## <module>` heading per module (e.g. `## geom.shapes`)
+    and one `### <function>` heading for every public function, in source order. Put the function''s docstring first line
+    under its heading. Leave private helpers out.'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t2
+    hidden:
+    - _grade.py
+    timeout: 60
+- prompt: Under every function heading add a ```python fenced block containing its exact `def` line from the source (name,
+    parameters with annotations and defaults, return annotation), without the trailing colon or the body.
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t3
+    hidden:
+    - _grade.py
+    timeout: 60
+- prompt: Which public functions raise an exception, and which exception type do they raise? Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all:
+    - \barea_rect\b
+    - \barea_circle\b
+    - \barea_triangle\b
+    - \bcentroid\b
+    - \bbounding_box\b
+    - \bValueError\b
+- prompt: 'Document the exceptions: under each function that raises, add a line `**Raises:** ` followed by the exception type
+    names in backticks, comma-separated. Functions that raise nothing get no Raises line.'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t5
+    hidden:
+    - _grade.py
+    timeout: 60
+- prompt: For every function that has parameters with default values, add a table (columns parameter, default) with one row
+    per defaulted parameter; defaults exactly as written in the code, in backticks. Functions without defaults get no table.
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t6
+    hidden:
+    - _grade.py
+    timeout: 60
+- prompt: 'Add `perimeter_triangle(a: float, b: float, c: float) -> float` to geom/shapes.py right after `perimeter_rect`:
+    it returns a + b + c and raises ValueError when the sides do not form a triangle (same condition as area_triangle). Document
+    it in docs/reference.md like the other functions (docstring line, signature block, Raises line), in source order.'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t7
+    hidden:
+    - _grade.py
+    timeout: 60
+- prompt: 'Add scripts/check_docs.py [--src DIR] [--docs FILE] (defaults geom and docs/reference.md): for every public function
+    in DIR/*.py (skip files and functions starting with an underscore) that lacks a `### <function>` heading under its `##
+    <package>.<module>` heading in FILE, print `MISSING: <package>.<module>.<function>`, sorted, and exit 1; otherwise print
+    `ok` and exit 0.'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t8
+    hidden:
+    - _grade.py
+    timeout: 60
+- prompt: 'Create docs/index.md with a `## Module summary` table (columns module, functions, summary): one row per module,
+    the number of public functions it now defines, and its module docstring verbatim.'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t9
+    hidden:
+    - _grade.py
+    timeout: 60
+- prompt: Add a '## Reference' section to README.md that links docs/reference.md and docs/index.md and explains how to run
+    `python3 scripts/check_docs.py`.
+  checks:
+  - kind: doc_sections
+    path: README.md
+    headings:
+    - Reference
+  - kind: file_regex
+    path: README.md
+    pattern: docs/reference\.md
+  - kind: file_regex
+    path: README.md
+    pattern: docs/index\.md
+  - kind: file_regex
+    path: README.md
+    pattern: scripts/check_docs\.py

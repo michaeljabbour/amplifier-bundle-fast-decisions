@@ -1,0 +1,450 @@
+# holdout-v3 batch B (mixed, 10 turns): Bank statement vs ledger CSV reconciliation: matched/mismatch/one-sided counts and totals, unreconciled CSV, probable-match heuristics, a CLI that generalises, docs.
+id: bank-recon
+task_type: mixed
+language: python
+split: holdout
+default_gap_s: 10
+source:
+  desc: 'Bank statement vs ledger CSV reconciliation: matched/mismatch/one-sided counts and totals, unreconciled CSV, probable-match
+    heuristics, a CLI that generalises, docs.'
+  kind: self-authored deterministic workspace
+  adapted_from:
+  - new self-authored reconciliation dataset (amounts in exact cents); report-from-CSV pattern as in the amplifier-agent benchmark
+    data tasks
+workspace:
+  kind: inline
+  files:
+    data/bank.csv: |
+      date,ref,amount
+      2025-03-01,TX-1000,3164.28
+      2025-03-01,TX-1011,-1036.60
+      2025-03-01,TX-1014,3425.87
+      2025-03-01,TX-1026,4338.37
+      2025-03-01,TX-1027,2241.31
+      2025-03-01,TX-1048,860.69
+      2025-03-01,TX-1054,4461.97
+      2025-03-01,TX-1055,2424.06
+      2025-03-01,TX-1060,4100.19
+      2025-03-02,TX-1007,4638.67
+      2025-03-02,TX-1025,2997.52
+      2025-03-02,TX-1028,1617.33
+      2025-03-02,TX-1041,-1382.75
+      2025-03-02,TX-1047,-786.97
+      2025-03-03,TX-1024,3591.25
+      2025-03-03,TX-1076,-3015.51
+      2025-03-04,TX-1021,697.03
+      2025-03-04,TX-1029,2091.57
+      2025-03-04,TX-1036,3089.62
+      2025-03-04,TX-1046,189.61
+      2025-03-04,TX-1070,-1073.13
+      2025-03-05,TX-1020,1659.11
+      2025-03-05,TX-1030,3925.13
+      2025-03-05,TX-1039,3621.22
+      2025-03-05,TX-1045,2730.86
+      2025-03-06,TX-1059,1738.14
+      2025-03-07,TX-1038,4560.05
+      2025-03-07,TX-1063,436.85
+      2025-03-08,TX-1001,1849.35
+      2025-03-08,TX-1031,4403.40
+      2025-03-08,TX-1071,2994.66
+      2025-03-09,TX-1034,4511.33
+      2025-03-09,TX-1079,2831.23
+      2025-03-10,TX-1019,2583.72
+      2025-03-10,TX-1022,3979.82
+      2025-03-10,TX-1042,-4045.18
+      2025-03-10,TX-1052,4547.33
+      2025-03-10,TX-1078,4510.88
+      2025-03-11,TX-1016,-1411.04
+      2025-03-11,TX-1077,2133.28
+      2025-03-12,TX-1005,148.20
+      2025-03-12,TX-1012,749.85
+      2025-03-12,TX-1035,-1457.68
+      2025-03-13,TX-1017,-108.38
+      2025-03-13,TX-1044,-2565.04
+      2025-03-13,TX-1050,2060.62
+      2025-03-14,TX-1003,4004.05
+      2025-03-14,TX-1010,4032.21
+      2025-03-14,TX-1015,-151.84
+      2025-03-15,TX-1018,937.53
+      2025-03-15,TX-1037,657.39
+      2025-03-15,TX-1053,4220.12
+      2025-03-16,TX-1006,1016.72
+      2025-03-16,TX-1058,344.57
+      2025-03-17,TX-1002,108.72
+      2025-03-19,TX-1040,3356.04
+      2025-03-20,TX-1068,2084.88
+      2025-03-21,TX-1062,3744.68
+      2025-03-21,TX-1065,1186.12
+      2025-03-21,TX-1066,550.13
+      2025-03-21,TX-1069,-2084.86
+      2025-03-22,TX-1009,2023.01
+      2025-03-23,TX-1013,857.84
+      2025-03-23,TX-1043,3138.81
+      2025-03-23,TX-1067,1957.77
+      2025-03-24,TX-1033,3775.08
+      2025-03-24,TX-1051,-2658.07
+      2025-03-26,TX-1061,-2981.91
+      2025-03-26,TX-1064,3171.08
+      2025-03-27,TX-1008,-4667.33
+      2025-03-27,TX-1049,-4368.80
+      2025-03-27,TX-7001,1353.61
+      2025-03-28,TX-1004,3842.62
+      2025-03-28,TX-1023,3739.42
+      2025-03-28,TX-1032,2584.28
+    data/ledger.csv: |
+      date,ref,amount
+      2025-03-01,TX-1011,-1036.60
+      2025-03-01,TX-1026,4338.37
+      2025-03-01,TX-1054,4461.97
+      2025-03-01,TX-1055,2424.06
+      2025-03-02,TX-1014,3426.77
+      2025-03-02,TX-1025,2997.52
+      2025-03-02,TX-1027,2241.31
+      2025-03-02,TX-1028,1617.33
+      2025-03-02,TX-9000,3164.28
+      2025-03-03,TX-1024,3591.25
+      2025-03-03,TX-1047,-786.97
+      2025-03-03,TX-1048,860.69
+      2025-03-03,TX-1057,1332.24
+      2025-03-03,TX-1060,4082.19
+      2025-03-03,TX-1076,-3016.41
+      2025-03-04,TX-1041,-1382.75
+      2025-03-04,TX-1056,3004.10
+      2025-03-04,TX-1072,1310.92
+      2025-03-04,TX-9003,4638.67
+      2025-03-05,TX-1021,697.03
+      2025-03-05,TX-1030,3925.13
+      2025-03-05,TX-1036,3089.62
+      2025-03-05,TX-1045,2730.86
+      2025-03-06,TX-1029,2091.57
+      2025-03-06,TX-1070,-1073.13
+      2025-03-07,TX-1020,1659.11
+      2025-03-07,TX-1039,3621.22
+      2025-03-08,TX-1059,1738.14
+      2025-03-08,TX-1063,436.85
+      2025-03-09,TX-1001,1849.35
+      2025-03-09,TX-1034,4511.33
+      2025-03-09,TX-1038,4560.05
+      2025-03-10,TX-1019,2583.72
+      2025-03-10,TX-1031,4403.40
+      2025-03-10,TX-1042,-4045.18
+      2025-03-10,TX-1071,2994.66
+      2025-03-10,TX-1078,4510.88
+      2025-03-11,TX-1052,4547.33
+      2025-03-11,TX-1075,204.86
+      2025-03-11,TX-1077,2133.28
+      2025-03-11,TX-1079,2831.23
+      2025-03-12,TX-1035,-1457.68
+      2025-03-13,TX-1005,148.20
+      2025-03-13,TX-1012,749.85
+      2025-03-13,TX-1017,-108.38
+      2025-03-13,TX-1044,-2565.04
+      2025-03-13,TX-1050,2060.62
+      2025-03-14,TX-1010,4032.21
+      2025-03-15,TX-1015,-151.84
+      2025-03-15,TX-1018,937.53
+      2025-03-15,TX-1037,657.39
+      2025-03-15,TX-1053,4220.12
+      2025-03-16,TX-1058,344.57
+      2025-03-16,TX-9001,4004.05
+      2025-03-17,TX-1002,108.72
+      2025-03-17,TX-1006,1016.72
+      2025-03-20,TX-1068,2084.88
+      2025-03-21,TX-1040,3356.04
+      2025-03-21,TX-1062,3744.68
+      2025-03-21,TX-1066,550.13
+      2025-03-21,TX-8000,1066.56
+      2025-03-22,TX-1065,1168.12
+      2025-03-22,TX-8001,4087.49
+      2025-03-23,TX-1069,-2084.86
+      2025-03-24,TX-1009,2023.01
+      2025-03-24,TX-1013,857.84
+      2025-03-24,TX-1051,-2658.07
+      2025-03-25,TX-1043,3138.81
+      2025-03-25,TX-1067,1962.27
+      2025-03-25,TX-1074,-2249.64
+      2025-03-26,TX-1033,3775.08
+      2025-03-26,TX-1073,1476.07
+      2025-03-27,TX-1008,-4667.33
+      2025-03-27,TX-1049,-4368.80
+      2025-03-27,TX-1061,-2981.91
+      2025-03-27,TX-1064,3171.08
+      2025-03-29,TX-9002,3842.62
+      2025-03-30,TX-1032,2584.28
+    README.md: |
+      # bank-recon
+
+      `data/bank.csv` and `data/ledger.csv` (date, ref, amount) cover March 2025. Rows are matched on `ref`. Amounts are signed (negative = money out) with two decimals.
+protected:
+- data/bank.csv
+- data/ledger.csv
+hidden_files:
+  _grade.py: |
+    import csv, json, os, re, subprocess, sys
+    from pathlib import Path
+
+    W = Path(".")
+
+
+    def fail(msg):
+        print("FAIL:", msg)
+        sys.exit(1)
+
+
+    def need(cond, msg):
+        if not cond:
+            fail(msg)
+
+
+    def read(rel):
+        p = W / rel
+        need(p.exists(), f"missing {rel}")
+        return p.read_text(encoding="utf-8")
+
+
+    def load_json(rel):
+        try:
+            return json.loads(read(rel))
+        except ValueError as e:
+            fail(f"{rel} is not valid JSON: {e}")
+
+
+    def close(a, b, tol=0.011):
+        try:
+            return abs(float(a) - float(b)) <= tol
+        except (TypeError, ValueError):
+            return False
+
+
+    def num(s):
+        m = re.search(r"-?\d[\d,]*\.?\d*", str(s))
+        return float(m.group(0).replace(",", "")) if m else None
+
+
+    def run(cmd, timeout=60, stdin=None):
+        p = subprocess.run(cmd, shell=True, cwd=W, capture_output=True, text=True, timeout=timeout, input=stdin)
+        return p.returncode, p.stdout, p.stderr
+
+
+    def md_lines(rel, under=None):
+        lines = read(rel).splitlines()
+        if not under:
+            return lines
+        out, on, lvl = [], False, 0
+        for ln in lines:
+            m = re.match(r"^(#+)\s+(.*)", ln)
+            if m:
+                if on and len(m.group(1)) <= lvl:
+                    break
+                if not on and re.search(under, m.group(2), re.I):
+                    on, lvl = True, len(m.group(1))
+                continue
+            if on:
+                out.append(ln)
+        need(on, f"no heading matching {under!r} in {rel}")
+        return out
+
+
+    def md_rows(rel, under=None):
+        rows = []
+        for ln in md_lines(rel, under):
+            if ln.strip().startswith("|") and not re.match(r"^\s*\|[\s:|-]+\|\s*$", ln):
+                rows.append([c.strip() for c in ln.strip().strip("|").split("|")])
+        return rows
+
+
+    def cmp(got, want, tol, path):
+        if isinstance(want, dict):
+            need(isinstance(got, dict), f"{path}: expected an object, got {type(got).__name__}")
+            for k, v in want.items():
+                need(k in got, f"{path}.{k}: missing")
+                cmp(got[k], v, tol, f"{path}.{k}")
+        elif isinstance(want, list):
+            need(isinstance(got, list) and len(got) == len(want), f"{path}: expected list of {len(want)}, got {got!r}")
+            for i, (g, w) in enumerate(zip(got, want)):
+                cmp(g, w, tol, f"{path}[{i}]")
+        elif isinstance(want, bool) or want is None or isinstance(want, str):
+            need(got == want, f"{path}: {got!r} != {want!r}")
+        else:
+            need(not isinstance(got, bool) and close(got, want, tol), f"{path}: {got!r} != {want!r}")
+
+
+    def chk_json(rel, exp, tol=0.051):
+        cmp(load_json(rel), exp, tol, rel)
+
+
+    def chk_table(rel, under, exp, col=1, tol=0.051):
+        rows = md_rows(rel, under)
+        need(rows, f"no table under {under!r} in {rel}")
+        got = {r[0].strip("* `"): num(r[col]) for r in rows if len(r) > col and num(r[col]) is not None}
+        for k, v in exp.items():
+            need(k in got and close(got[k], v, tol), f"{k}: {got.get(k)} != {v}")
+
+
+    def chk_cmd_json(cmd, exp, tol=0.051, stdin=None):
+        rc, out, err = run(cmd, stdin=stdin)
+        need(rc == 0, f"`{cmd}` exited {rc}: {err[-200:]}")
+        try:
+            d = json.loads(out)
+        except ValueError as e:
+            fail(f"`{cmd}` stdout is not JSON: {e}")
+        cmp(d, exp, tol, cmd)
+
+
+    def chk_cmd_out(cmd, lines, stdin=None, expect_rc=0):
+        rc, out, err = run(cmd, stdin=stdin)
+        need(rc == expect_rc, f"`{cmd}` exited {rc} (want {expect_rc}): {err[-200:]}")
+        got = [ln.rstrip() for ln in out.strip().splitlines()]
+        need(got == list(lines), f"`{cmd}` output {got[:8]} != {list(lines)[:8]}")
+
+
+    def t3():
+        chk_json('out/recon.json', {'matched': 61, 'amount_mismatch': 5, 'bank_only': 9, 'ledger_only': 12, 'bank_only_total': 23501.04, 'ledger_only_total': 25882.22}, tol=0.0051)
+
+
+    def t5():
+        import csv
+        rd = list(csv.reader(open('out/unreconciled.csv', encoding='utf-8', newline=''))) if (W / 'out/unreconciled.csv').exists() else fail('missing out/unreconciled.csv')
+        need(rd[0] == ['side', 'ref', 'date', 'amount', 'kind'], 'header ' + str(rd[0]))
+        got = [[r[0], r[1], r[2], r[3], r[4]] for r in rd[1:]]
+        need(got == [['bank', 'TX-1000', '2025-03-01', '3164.28', 'bank_only'], ['bank', 'TX-1003', '2025-03-14', '4004.05', 'bank_only'], ['bank', 'TX-1004', '2025-03-28', '3842.62', 'bank_only'], ['bank', 'TX-1007', '2025-03-02', '4638.67', 'bank_only'], ['bank', 'TX-1014', '2025-03-01', '3425.87', 'amount_mismatch'], ['ledger', 'TX-1014', '2025-03-02', '3426.77', 'amount_mismatch'], ['bank', 'TX-1016', '2025-03-11', '-1411.04', 'bank_only'], ['bank', 'TX-1022', '2025-03-10', '3979.82', 'bank_only'], ['bank', 'TX-1023', '2025-03-28', '3739.42', 'bank_only'], ['bank', 'TX-1046', '2025-03-04', '189.61', 'bank_only'], ['ledger', 'TX-1056', '2025-03-04', '3004.10', 'ledger_only'], ['ledger', 'TX-1057', '2025-03-03', '1332.24', 'ledger_only'], ['bank', 'TX-1060', '2025-03-01', '4100.19', 'amount_mismatch'], ['ledger', 'TX-1060', '2025-03-03', '4082.19', 'amount_mismatch'], ['bank', 'TX-1065', '2025-03-21', '1186.12', 'amount_mismatch'], ['ledger', 'TX-1065', '2025-03-22', '1168.12', 'amount_mismatch'], ['bank', 'TX-1067', '2025-03-23', '1957.77', 'amount_mismatch'], ['ledger', 'TX-1067', '2025-03-25', '1962.27', 'amount_mismatch'], ['ledger', 'TX-1072', '2025-03-04', '1310.92', 'ledger_only'], ['ledger', 'TX-1073', '2025-03-26', '1476.07', 'ledger_only'], ['ledger', 'TX-1074', '2025-03-25', '-2249.64', 'ledger_only'], ['ledger', 'TX-1075', '2025-03-11', '204.86', 'ledger_only'], ['bank', 'TX-1076', '2025-03-03', '-3015.51', 'amount_mismatch'], ['ledger', 'TX-1076', '2025-03-03', '-3016.41', 'amount_mismatch'], ['bank', 'TX-7001', '2025-03-27', '1353.61', 'bank_only'], ['ledger', 'TX-8000', '2025-03-21', '1066.56', 'ledger_only'], ['ledger', 'TX-8001', '2025-03-22', '4087.49', 'ledger_only'], ['ledger', 'TX-9000', '2025-03-02', '3164.28', 'ledger_only'], ['ledger', 'TX-9001', '2025-03-16', '4004.05', 'ledger_only'], ['ledger', 'TX-9002', '2025-03-29', '3842.62', 'ledger_only'], ['ledger', 'TX-9003', '2025-03-04', '4638.67', 'ledger_only']], 'rows differ; first diff: ' + str([g for g in got if g not in [['bank', 'TX-1000', '2025-03-01', '3164.28', 'bank_only'], ['bank', 'TX-1003', '2025-03-14', '4004.05', 'bank_only'], ['bank', 'TX-1004', '2025-03-28', '3842.62', 'bank_only'], ['bank', 'TX-1007', '2025-03-02', '4638.67', 'bank_only'], ['bank', 'TX-1014', '2025-03-01', '3425.87', 'amount_mismatch'], ['ledger', 'TX-1014', '2025-03-02', '3426.77', 'amount_mismatch'], ['bank', 'TX-1016', '2025-03-11', '-1411.04', 'bank_only'], ['bank', 'TX-1022', '2025-03-10', '3979.82', 'bank_only'], ['bank', 'TX-1023', '2025-03-28', '3739.42', 'bank_only'], ['bank', 'TX-1046', '2025-03-04', '189.61', 'bank_only'], ['ledger', 'TX-1056', '2025-03-04', '3004.10', 'ledger_only'], ['ledger', 'TX-1057', '2025-03-03', '1332.24', 'ledger_only'], ['bank', 'TX-1060', '2025-03-01', '4100.19', 'amount_mismatch'], ['ledger', 'TX-1060', '2025-03-03', '4082.19', 'amount_mismatch'], ['bank', 'TX-1065', '2025-03-21', '1186.12', 'amount_mismatch'], ['ledger', 'TX-1065', '2025-03-22', '1168.12', 'amount_mismatch'], ['bank', 'TX-1067', '2025-03-23', '1957.77', 'amount_mismatch'], ['ledger', 'TX-1067', '2025-03-25', '1962.27', 'amount_mismatch'], ['ledger', 'TX-1072', '2025-03-04', '1310.92', 'ledger_only'], ['ledger', 'TX-1073', '2025-03-26', '1476.07', 'ledger_only'], ['ledger', 'TX-1074', '2025-03-25', '-2249.64', 'ledger_only'], ['ledger', 'TX-1075', '2025-03-11', '204.86', 'ledger_only'], ['bank', 'TX-1076', '2025-03-03', '-3015.51', 'amount_mismatch'], ['ledger', 'TX-1076', '2025-03-03', '-3016.41', 'amount_mismatch'], ['bank', 'TX-7001', '2025-03-27', '1353.61', 'bank_only'], ['ledger', 'TX-8000', '2025-03-21', '1066.56', 'ledger_only'], ['ledger', 'TX-8001', '2025-03-22', '4087.49', 'ledger_only'], ['ledger', 'TX-9000', '2025-03-02', '3164.28', 'ledger_only'], ['ledger', 'TX-9001', '2025-03-16', '4004.05', 'ledger_only'], ['ledger', 'TX-9002', '2025-03-29', '3842.62', 'ledger_only'], ['ledger', 'TX-9003', '2025-03-04', '4638.67', 'ledger_only']]][:2]))
+
+
+    def t6():
+        chk_table('report.md', 'unreconciled', {'amount_mismatch': 5, 'bank_only': 9, 'ledger_only': 12})
+
+
+    def t7():
+        chk_json('out/probable.json', [['TX-1000', 'TX-9000'], ['TX-1003', 'TX-9001'], ['TX-1004', 'TX-9002'], ['TX-1007', 'TX-9003']], tol=0)
+
+
+    def t8():
+        for rel, text in {'_alt/bank.csv': 'date,ref,amount\n2025-03-01,TX-1019,505.33\n2025-03-02,TX-1003,-787.80\n2025-03-05,TX-1001,753.48\n2025-03-07,TX-1008,-3144.24\n2025-03-07,TX-1013,-3428.90\n2025-03-11,TX-1014,3841.34\n2025-03-11,TX-1015,2542.56\n2025-03-12,TX-1010,-285.34\n2025-03-13,TX-1006,634.43\n2025-03-13,TX-1007,1055.69\n2025-03-16,TX-1016,1767.91\n2025-03-19,TX-1005,2773.11\n2025-03-20,TX-1018,4714.87\n2025-03-24,TX-1004,731.06\n2025-03-25,TX-1000,79.37\n2025-03-25,TX-1002,2821.05\n2025-03-26,TX-1011,1083.80\n2025-03-27,TX-7001,1418.47\n', '_alt/ledger.csv': 'date,ref,amount\n2025-03-02,TX-1019,505.33\n2025-03-03,TX-9001,-787.80\n2025-03-05,TX-1017,-1132.55\n2025-03-06,TX-9000,753.48\n2025-03-07,TX-1008,-3144.24\n2025-03-09,TX-1013,-3428.90\n2025-03-11,TX-1014,3841.34\n2025-03-12,TX-1010,-285.34\n2025-03-12,TX-1015,2542.56\n2025-03-14,TX-1007,1055.69\n2025-03-17,TX-1016,1767.91\n2025-03-18,TX-1009,2197.80\n2025-03-19,TX-1005,2777.61\n2025-03-19,TX-1012,174.22\n2025-03-21,TX-1018,4714.87\n2025-03-21,TX-8000,2127.53\n2025-03-22,TX-8001,2959.81\n2025-03-25,TX-1002,2821.05\n2025-03-26,TX-1004,731.06\n2025-03-27,TX-1000,79.37\n2025-03-28,TX-1011,1065.80\n'}.items():
+            (W / rel).parent.mkdir(parents=True, exist_ok=True)
+            (W / rel).write_text(text, encoding='utf-8')
+        need((W / 'scripts/recon.py').exists(), 'missing scripts/recon.py')
+        chk_cmd_json('python3 scripts/recon.py --bank _alt/bank.csv --ledger _alt/ledger.csv', {'matched': 12, 'amount_mismatch': 2, 'bank_only': 4, 'ledger_only': 7, 'bank_only_total': 2018.58, 'ledger_only_total': 6292.49}, tol=0.0051)
+        chk_cmd_json('python3 scripts/recon.py', {'matched': 61, 'amount_mismatch': 5, 'bank_only': 9, 'ledger_only': 12, 'bank_only_total': 23501.04, 'ledger_only_total': 25882.22}, tol=0.0051)
+
+
+    def t9():
+        for rel, text in {'_alt/bank.csv': 'date,ref,amount\n2025-03-01,TX-1019,505.33\n2025-03-02,TX-1003,-787.80\n2025-03-05,TX-1001,753.48\n2025-03-07,TX-1008,-3144.24\n2025-03-07,TX-1013,-3428.90\n2025-03-11,TX-1014,3841.34\n2025-03-11,TX-1015,2542.56\n2025-03-12,TX-1010,-285.34\n2025-03-13,TX-1006,634.43\n2025-03-13,TX-1007,1055.69\n2025-03-16,TX-1016,1767.91\n2025-03-19,TX-1005,2773.11\n2025-03-20,TX-1018,4714.87\n2025-03-24,TX-1004,731.06\n2025-03-25,TX-1000,79.37\n2025-03-25,TX-1002,2821.05\n2025-03-26,TX-1011,1083.80\n2025-03-27,TX-7001,1418.47\n', '_alt/ledger.csv': 'date,ref,amount\n2025-03-02,TX-1019,505.33\n2025-03-03,TX-9001,-787.80\n2025-03-05,TX-1017,-1132.55\n2025-03-06,TX-9000,753.48\n2025-03-07,TX-1008,-3144.24\n2025-03-09,TX-1013,-3428.90\n2025-03-11,TX-1014,3841.34\n2025-03-12,TX-1010,-285.34\n2025-03-12,TX-1015,2542.56\n2025-03-14,TX-1007,1055.69\n2025-03-17,TX-1016,1767.91\n2025-03-18,TX-1009,2197.80\n2025-03-19,TX-1005,2777.61\n2025-03-19,TX-1012,174.22\n2025-03-21,TX-1018,4714.87\n2025-03-21,TX-8000,2127.53\n2025-03-22,TX-8001,2959.81\n2025-03-25,TX-1002,2821.05\n2025-03-26,TX-1004,731.06\n2025-03-27,TX-1000,79.37\n2025-03-28,TX-1011,1065.80\n'}.items():
+            (W / rel).parent.mkdir(parents=True, exist_ok=True)
+            (W / rel).write_text(text, encoding='utf-8')
+        chk_json('out/recon.json', {'matched': 61, 'amount_mismatch': 5, 'bank_only': 9, 'ledger_only': 12, 'bank_only_total': 23501.04, 'ledger_only_total': 25882.22, 'probable_matches': 4, 'bank_only_unexplained': 5, 'ledger_only_unexplained': 8}, tol=0.0051)
+        chk_cmd_json('python3 scripts/recon.py --bank _alt/bank.csv --ledger _alt/ledger.csv', {'matched': 12, 'amount_mismatch': 2, 'bank_only': 4, 'ledger_only': 7, 'bank_only_total': 2018.58, 'ledger_only_total': 6292.49, 'probable_matches': 2, 'bank_only_unexplained': 2, 'ledger_only_unexplained': 5}, tol=0.0051)
+
+
+    if __name__ == "__main__":
+        fn = globals().get(sys.argv[1]) if len(sys.argv) > 1 else None
+        need(callable(fn) and sys.argv[1] in ['t3', 't5', 't6', 't7', 't8', 't9'], "unknown check " + str(sys.argv[1:]))
+        fn()
+        print("OK")
+turns:
+- prompt: Match data/bank.csv against data/ledger.csv on the `ref` column. How many refs match with an identical amount, and
+    what is the sum of those matched amounts (2 decimals)? Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all:
+    - (?<![\d.,])6,?1(?:\.0+)?(?!\d|[.,]\d)
+    - (?<![\d.,])8,?7,?6,?4,?0\.480*(?!\d|[.,]\d)
+- prompt: Which refs exist in both files but with different amounts? List them. Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all:
+    - TX-1014
+    - TX-1060
+    - TX-1065
+    - TX-1067
+    - TX-1076
+- prompt: Create out/recon.json with matched, amount_mismatch, bank_only (refs only in the bank file), ledger_only (refs only
+    in the ledger), bank_only_total and ledger_only_total (signed sums, 2 decimals).
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t3
+    hidden:
+    - _grade.py
+    timeout: 60
+- prompt: What is the signed sum of all amounts in the bank file minus the signed sum of all amounts in the ledger file, to
+    2 decimals? Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all:
+    - (?<![\d.,])-2,?3,?4,?9\.680*(?!\d|[.,]\d)
+- prompt: 'Write out/unreconciled.csv (header side,ref,date,amount,kind): one row for every side of every ref that is not
+    an exact match. side is bank or ledger; kind is amount_mismatch, bank_only or ledger_only; sort by ref, then bank before
+    ledger; amount with two decimals.'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t5
+    hidden:
+    - _grade.py
+    timeout: 60
+- prompt: Write report.md with level-2 sections Summary, Unreconciled items and Next steps. Unreconciled items is a table
+    with the kind in the first column (amount_mismatch, bank_only, ledger_only) and the number of refs in the second.
+  checks:
+  - kind: doc_sections
+    path: report.md
+    headings:
+    - Summary
+    - Unreconciled items
+    - Next steps
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t6
+    hidden:
+    - _grade.py
+    timeout: 60
+- prompt: 'Some bank-only rows are really typos in the ledger ref. Create out/probable.json: a list of [bank_ref, ledger_ref]
+    pairs where a bank-only ref and a ledger-only ref have the same amount and dates at most 3 days apart; each ledger ref
+    is used once; sorted by bank_ref.'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t7
+    hidden:
+    - _grade.py
+    timeout: 60
+- prompt: 'Add scripts/recon.py [--bank FILE] [--ledger FILE] (defaults data/bank.csv and data/ledger.csv): prints the six
+    out/recon.json figures as JSON on stdout. Compare amounts as exact cents, not floats.'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t8
+    hidden:
+    - _grade.py
+    timeout: 60
+- prompt: 'Add the probable-match figures to both out/recon.json and the output of scripts/recon.py: probable_matches (pairs
+    as in out/probable.json), bank_only_unexplained and ledger_only_unexplained (the one-sided counts minus the probable pairs).'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t9
+    hidden:
+    - _grade.py
+    timeout: 60
+- prompt: 'Add a ''## Matching rules'' section to README.md: say that rows match on ref with an exact cent amount, name the
+    three kinds (amount_mismatch, bank_only, ledger_only), explain the probable-match rule (same amount, at most 3 days apart),
+    and show how to run `python3 scripts/recon.py --bank ... --ledger ...`.'
+  checks:
+  - kind: doc_sections
+    path: README.md
+    headings:
+    - Matching rules
+  - kind: file_regex
+    path: README.md
+    pattern: amount_mismatch
+  - kind: file_regex
+    path: README.md
+    pattern: bank_only
+  - kind: file_regex
+    path: README.md
+    pattern: ledger_only
+  - kind: file_regex
+    path: README.md
+    pattern: (?i)3 days
+  - kind: file_regex
+    path: README.md
+    pattern: scripts/recon\.py --bank

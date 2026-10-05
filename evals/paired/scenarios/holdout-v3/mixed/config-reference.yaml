@@ -1,0 +1,546 @@
+# holdout-v3 batch B (docs, 11 turns): Write a configuration reference from a JSON schema: section/key inventory, exact type/default/required tables, enum lists, env-var table, a validated example block, a schema change that needs code and docs, a docs-vs-schema checker, rename notes.
+id: config-reference
+task_type: docs
+language: json
+split: holdout
+default_gap_s: 10
+source:
+  desc: 'Write a configuration reference from a JSON schema: section/key inventory, exact type/default/required tables, enum
+    lists, env-var table, a validated example block, a schema change that needs code and docs, a docs-vs-schema checker, rename
+    notes.'
+  kind: self-authored deterministic workspace
+  adapted_from:
+  - new self-authored schema; config-documentation theme (cf. amplifier-agent docs tasks)
+workspace:
+  kind: inline
+  files:
+    schema/app.schema.json: |
+      {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "app config",
+        "type": "object",
+        "properties": {
+          "server": {
+            "type": "object",
+            "description": "HTTP listener settings",
+            "properties": {
+              "host": {
+                "type": "string",
+                "description": "Interface to bind",
+                "default": "0.0.0.0",
+                "x-env": "APP_HOST"
+              },
+              "port": {
+                "type": "integer",
+                "description": "TCP port",
+                "default": 8080,
+                "x-env": "APP_PORT"
+              },
+              "workers": {
+                "type": "integer",
+                "description": "Worker processes",
+                "default": 4
+              },
+              "request_timeout_s": {
+                "type": "number",
+                "description": "Per-request timeout in seconds",
+                "default": 30.0
+              },
+              "tls_enabled": {
+                "type": "boolean",
+                "description": "Terminate TLS in the app",
+                "default": false
+              }
+            },
+            "required": []
+          },
+          "database": {
+            "type": "object",
+            "description": "Primary database",
+            "properties": {
+              "url": {
+                "type": "string",
+                "description": "Connection URL",
+                "x-env": "APP_DB_URL"
+              },
+              "pool_size": {
+                "type": "integer",
+                "description": "Connections kept open",
+                "default": 10
+              },
+              "pool_timeout_s": {
+                "type": "number",
+                "description": "Seconds to wait for a connection",
+                "default": 5.5
+              },
+              "echo": {
+                "type": "boolean",
+                "description": "Log every statement",
+                "default": false
+              }
+            },
+            "required": [
+              "url"
+            ]
+          },
+          "cache": {
+            "type": "object",
+            "description": "Response cache",
+            "properties": {
+              "backend": {
+                "type": "string",
+                "description": "Cache implementation",
+                "default": "memory",
+                "enum": [
+                  "memory",
+                  "redis",
+                  "memcached"
+                ],
+                "x-env": "APP_CACHE_BACKEND"
+              },
+              "ttl_s": {
+                "type": "integer",
+                "description": "Entry lifetime in seconds",
+                "default": 300
+              },
+              "max_items": {
+                "type": "integer",
+                "description": "Maximum entries for the memory backend",
+                "default": 5000
+              },
+              "redis_url": {
+                "type": "string",
+                "description": "Redis URL when backend is redis",
+                "x-env": "APP_REDIS_URL"
+              }
+            },
+            "required": []
+          },
+          "logging": {
+            "type": "object",
+            "description": "Log output",
+            "properties": {
+              "level": {
+                "type": "string",
+                "description": "Minimum level",
+                "default": "info",
+                "enum": [
+                  "debug",
+                  "info",
+                  "warning",
+                  "error"
+                ],
+                "x-env": "APP_LOG_LEVEL"
+              },
+              "format": {
+                "type": "string",
+                "description": "Line format",
+                "default": "text",
+                "enum": [
+                  "text",
+                  "json"
+                ]
+              },
+              "file": {
+                "type": "string",
+                "description": "Log file path; stdout when unset"
+              },
+              "rotate_mb": {
+                "type": "integer",
+                "description": "Rotate after this many MB",
+                "default": 50
+              }
+            },
+            "required": []
+          },
+          "auth": {
+            "type": "object",
+            "description": "Sessions and cookies",
+            "properties": {
+              "secret": {
+                "type": "string",
+                "description": "Session signing secret",
+                "x-env": "APP_SECRET"
+              },
+              "session_ttl_s": {
+                "type": "integer",
+                "description": "Session lifetime in seconds",
+                "default": 3600
+              },
+              "cookie_name": {
+                "type": "string",
+                "description": "Session cookie name",
+                "default": "sid"
+              },
+              "secure_cookies": {
+                "type": "boolean",
+                "description": "Send cookies over HTTPS only",
+                "default": true
+              }
+            },
+            "required": [
+              "secret"
+            ]
+          },
+          "features": {
+            "type": "object",
+            "description": "Feature flags",
+            "properties": {
+              "dark_mode": {
+                "type": "boolean",
+                "description": "Enable the dark theme",
+                "default": false
+              },
+              "export_csv": {
+                "type": "boolean",
+                "description": "Allow CSV export",
+                "default": true
+              },
+              "signup_open": {
+                "type": "boolean",
+                "description": "Allow self-service signup",
+                "default": true,
+                "x-env": "APP_SIGNUP_OPEN"
+              }
+            },
+            "required": []
+          }
+        },
+        "required": [
+          "database",
+          "auth"
+        ]
+      }
+    schema/CHANGES.txt: |
+      v1 -> v2 renames (old key -> new key):
+      server.timeout -> server.request_timeout_s
+      database.max_conn -> database.pool_size
+      cache.size -> cache.max_items
+      logging.rotate -> logging.rotate_mb
+      removed: server.debug
+    config/README.txt: |
+      Config files are JSON documents validated against schema/app.schema.json.
+    README.md: |
+      # app
+
+      Configuration is described by `schema/app.schema.json`; docs belong in `docs/`.
+protected:
+- schema/CHANGES.txt
+- config/README.txt
+hidden_files:
+  _grade.py: |
+    import csv, json, os, re, subprocess, sys
+    from pathlib import Path
+
+    W = Path(".")
+
+
+    def fail(msg):
+        print("FAIL:", msg)
+        sys.exit(1)
+
+
+    def need(cond, msg):
+        if not cond:
+            fail(msg)
+
+
+    def read(rel):
+        p = W / rel
+        need(p.exists(), f"missing {rel}")
+        return p.read_text(encoding="utf-8")
+
+
+    def load_json(rel):
+        try:
+            return json.loads(read(rel))
+        except ValueError as e:
+            fail(f"{rel} is not valid JSON: {e}")
+
+
+    def close(a, b, tol=0.011):
+        try:
+            return abs(float(a) - float(b)) <= tol
+        except (TypeError, ValueError):
+            return False
+
+
+    def num(s):
+        m = re.search(r"-?\d[\d,]*\.?\d*", str(s))
+        return float(m.group(0).replace(",", "")) if m else None
+
+
+    def run(cmd, timeout=60, stdin=None):
+        p = subprocess.run(cmd, shell=True, cwd=W, capture_output=True, text=True, timeout=timeout, input=stdin)
+        return p.returncode, p.stdout, p.stderr
+
+
+    def md_lines(rel, under=None):
+        lines = read(rel).splitlines()
+        if not under:
+            return lines
+        out, on, lvl = [], False, 0
+        for ln in lines:
+            m = re.match(r"^(#+)\s+(.*)", ln)
+            if m:
+                if on and len(m.group(1)) <= lvl:
+                    break
+                if not on and re.search(under, m.group(2), re.I):
+                    on, lvl = True, len(m.group(1))
+                continue
+            if on:
+                out.append(ln)
+        need(on, f"no heading matching {under!r} in {rel}")
+        return out
+
+
+    def md_rows(rel, under=None):
+        rows = []
+        for ln in md_lines(rel, under):
+            if ln.strip().startswith("|") and not re.match(r"^\s*\|[\s:|-]+\|\s*$", ln):
+                rows.append([c.strip() for c in ln.strip().strip("|").split("|")])
+        return rows
+
+
+    def cmp(got, want, tol, path):
+        if isinstance(want, dict):
+            need(isinstance(got, dict), f"{path}: expected an object, got {type(got).__name__}")
+            for k, v in want.items():
+                need(k in got, f"{path}.{k}: missing")
+                cmp(got[k], v, tol, f"{path}.{k}")
+        elif isinstance(want, list):
+            need(isinstance(got, list) and len(got) == len(want), f"{path}: expected list of {len(want)}, got {got!r}")
+            for i, (g, w) in enumerate(zip(got, want)):
+                cmp(g, w, tol, f"{path}[{i}]")
+        elif isinstance(want, bool) or want is None or isinstance(want, str):
+            need(got == want, f"{path}: {got!r} != {want!r}")
+        else:
+            need(not isinstance(got, bool) and close(got, want, tol), f"{path}: {got!r} != {want!r}")
+
+
+    def chk_json(rel, exp, tol=0.051):
+        cmp(load_json(rel), exp, tol, rel)
+
+
+    def chk_table(rel, under, exp, col=1, tol=0.051):
+        rows = md_rows(rel, under)
+        need(rows, f"no table under {under!r} in {rel}")
+        got = {r[0].strip("* `"): num(r[col]) for r in rows if len(r) > col and num(r[col]) is not None}
+        for k, v in exp.items():
+            need(k in got and close(got[k], v, tol), f"{k}: {got.get(k)} != {v}")
+
+
+    def chk_cmd_json(cmd, exp, tol=0.051, stdin=None):
+        rc, out, err = run(cmd, stdin=stdin)
+        need(rc == 0, f"`{cmd}` exited {rc}: {err[-200:]}")
+        try:
+            d = json.loads(out)
+        except ValueError as e:
+            fail(f"`{cmd}` stdout is not JSON: {e}")
+        cmp(d, exp, tol, cmd)
+
+
+    def chk_cmd_out(cmd, lines, stdin=None, expect_rc=0):
+        rc, out, err = run(cmd, stdin=stdin)
+        need(rc == expect_rc, f"`{cmd}` exited {rc} (want {expect_rc}): {err[-200:]}")
+        got = [ln.rstrip() for ln in out.strip().splitlines()]
+        need(got == list(lines), f"`{cmd}` output {got[:8]} != {list(lines)[:8]}")
+
+
+    def t2():
+        got = [(re.sub(r'^##\s*', '', l).strip()) for l in read('docs/configuration.md').splitlines() if l.startswith('## ')]
+        need(got == ['server', 'database', 'cache', 'logging', 'auth', 'features'], 'sections: ' + str(got))
+        for sec, d in {'server': 'HTTP listener settings', 'database': 'Primary database', 'cache': 'Response cache', 'logging': 'Log output', 'auth': 'Sessions and cookies', 'features': 'Feature flags'}.items():
+            need(d in ' '.join(md_lines('docs/configuration.md', '^' + sec + '$')), 'description missing for ' + sec)
+        need(read('docs/configuration.md').lstrip().startswith('# Configuration'), 'title')
+
+
+    def t3():
+        for sec, keys in {'server': {'host': ['string', '"0.0.0.0"', 'no'], 'port': ['integer', '8080', 'no'], 'workers': ['integer', '4', 'no'], 'request_timeout_s': ['number', '30.0', 'no'], 'tls_enabled': ['boolean', 'false', 'no']}, 'database': {'url': ['string', '-', 'yes'], 'pool_size': ['integer', '10', 'no'], 'pool_timeout_s': ['number', '5.5', 'no'], 'echo': ['boolean', 'false', 'no']}, 'cache': {'backend': ['string', '"memory"', 'no'], 'ttl_s': ['integer', '300', 'no'], 'max_items': ['integer', '5000', 'no'], 'redis_url': ['string', '-', 'no']}, 'logging': {'level': ['string', '"info"', 'no'], 'format': ['string', '"text"', 'no'], 'file': ['string', '-', 'no'], 'rotate_mb': ['integer', '50', 'no']}, 'auth': {'secret': ['string', '-', 'yes'], 'session_ttl_s': ['integer', '3600', 'no'], 'cookie_name': ['string', '"sid"', 'no'], 'secure_cookies': ['boolean', 'true', 'no']}, 'features': {'dark_mode': ['boolean', 'false', 'no'], 'export_csv': ['boolean', 'true', 'no'], 'signup_open': ['boolean', 'true', 'no']}}.items():
+            rows = md_rows('docs/configuration.md', '^' + sec + '$')
+            need(rows and [c.lower() for c in rows[0][:4]] == ['key', 'type', 'default', 'required'], 'table header under ' + sec + ': ' + str(rows[:1]))
+            got = {r[0].strip('` '): [r[1], r[2].strip('` '), r[3].lower()] for r in rows[1:] if len(r) >= 4}
+            need(got == keys, f'{sec}: {got} != {keys}')
+
+
+    def t5():
+        for sec, items in {'cache': {'backend': ['memory', 'redis', 'memcached']}, 'logging': {'level': ['debug', 'info', 'warning', 'error'], 'format': ['text', 'json']}}.items():
+            body = md_lines('docs/configuration.md', '^' + sec + '$')
+            idx = [i for i, l in enumerate(body) if False]
+            txt = '\n'.join(body)
+            need(re.search(r'^#{3,4}\s*Allowed values', read('docs/configuration.md'), re.M), 'missing Allowed values heading')
+            got = {}
+            sub = md_lines('docs/configuration.md', '^' + sec + '$')
+            full = read('docs/configuration.md')
+            seg = re.search(r'^## ' + sec + r'\s*$(.*?)(?=^## |\Z)', full, re.M | re.S).group(1)
+            for m in re.finditer(r'^- `(\w+)`:\s*(.*)$', seg, re.M):
+                got[m.group(1)] = [x.strip() for x in m.group(2).split('|')]
+            need(got == items, f'{sec} enums {got} != {items}')
+        for sec in ['server', 'database', 'auth', 'features']:
+            full = read('docs/configuration.md')
+            seg = re.search(r'^## ' + sec + r'\s*$(.*?)(?=^## |\Z)', full, re.M | re.S).group(1)
+            need('Allowed values' not in seg, sec + ' has no enums')
+
+
+    def t6():
+        rows = md_rows('docs/configuration.md', 'environment overrides')
+        got = {r[0].strip('` '): r[1].strip('` ') for r in rows[1:] if len(r) >= 2}
+        need(got == {'APP_HOST': 'server.host', 'APP_PORT': 'server.port', 'APP_DB_URL': 'database.url', 'APP_CACHE_BACKEND': 'cache.backend', 'APP_REDIS_URL': 'cache.redis_url', 'APP_LOG_LEVEL': 'logging.level', 'APP_SECRET': 'auth.secret', 'APP_SIGNUP_OPEN': 'features.signup_open'}, f'env table {got}')
+
+
+    def t7():
+        txt = read('docs/configuration.md')
+        m = re.search(r'^## Example\s*$(.*?)(?=^## |\Z)', txt, re.M | re.S)
+        need(m, 'missing ## Example')
+        b = re.search(r'```json\n(.*?)```', m.group(1), re.S)
+        need(b, 'no json block')
+        try:
+            d = json.loads(b.group(1))
+        except ValueError as e:
+            fail('example is not valid JSON: ' + str(e))
+        need(d == {'database': {'url': 'postgres://localhost/app'}, 'auth': {'secret': 'change-me'}}, 'example must contain exactly the required keys with placeholder values: ' + str(d))
+
+
+    def t8():
+        sc = load_json('schema/app.schema.json')
+        e = sc['properties']['features']['properties'].get('beta_search')
+        need(e and e.get('type') == 'boolean' and e.get('default') is False and e.get('description'), 'schema entry for features.beta_search: ' + str(e))
+        need(len(sc['properties']['features']['properties']) == 4, 'features must have 4 keys')
+        rows = md_rows('docs/configuration.md', '^features$')
+        got = {r[0].strip('` '): [r[1], r[2].strip('` '), r[3].lower()] for r in rows[1:] if len(r) >= 4}
+        need(got.get('beta_search') == ['boolean', 'false', 'no'], 'docs row: ' + str(got.get('beta_search')))
+        need(len(got) == 4, 'features table must have 4 rows')
+
+
+    def t9():
+        (W / '_alt').mkdir(exist_ok=True)
+        (W / '_alt/schema.json').write_text('{\n  "$schema": "http://json-schema.org/draft-07/schema#",\n  "title": "app config",\n  "type": "object",\n  "properties": {\n    "net": {\n      "type": "object",\n      "description": "Network",\n      "properties": {\n        "port": {\n          "type": "integer",\n          "description": "p",\n          "default": 1\n        },\n        "host": {\n          "type": "string",\n          "description": "h",\n          "default": "x"\n        }\n      },\n      "required": []\n    }\n  },\n  "required": []\n}\n', encoding='utf-8')
+        (W / '_alt/docs.md').write_text('# C\n\n## net\n\n| key | type |\n|---|---|\n| `port` | integer |\n| `colour` | string |\n', encoding='utf-8')
+        need((W / 'scripts/check_config_docs.py').exists(), 'missing scripts/check_config_docs.py')
+        chk_cmd_out('python3 scripts/check_config_docs.py --schema _alt/schema.json --docs _alt/docs.md', ['UNDOCUMENTED: net.host', 'UNKNOWN: net.colour'], expect_rc=1)
+        chk_cmd_out('python3 scripts/check_config_docs.py', ['ok'])
+
+
+    def t10():
+        rows = md_rows('docs/migration.md', 'renamed')
+        got = [(r[0].strip('` '), r[1].strip('` ')) for r in rows[1:] if len(r) >= 2]
+        need(got == [('server.timeout', 'server.request_timeout_s'), ('database.max_conn', 'database.pool_size'), ('cache.size', 'cache.max_items'), ('logging.rotate', 'logging.rotate_mb')], 'rename table: ' + str(got))
+        need(re.search(r'(?i)server\.debug', '\n'.join(md_lines('docs/migration.md', 'removed'))), 'removed key server.debug not listed under Removed')
+
+
+    if __name__ == "__main__":
+        fn = globals().get(sys.argv[1]) if len(sys.argv) > 1 else None
+        need(callable(fn) and sys.argv[1] in ['t10', 't2', 't3', 't5', 't6', 't7', 't8', 't9'], "unknown check " + str(sys.argv[1:]))
+        fn()
+        print("OK")
+turns:
+- prompt: Read schema/app.schema.json. How many top-level sections does it define, how many keys in total across all sections,
+    and how many of those keys are required (listed in a section's `required` array)? Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all:
+    - sections?\D{0,12}(?<![\d.,])6(?:\.0+)?(?!\d|[.,]\d)|(?<![\d.,])6(?:\.0+)?(?!\d|[.,]\d)\D{0,12}sections?
+    - (?<![\d.,])2,?4(?:\.0+)?(?!\d|[.,]\d)
+    - (?<![\d.,])2(?:\.0+)?(?!\d|[.,]\d)
+- prompt: Create docs/configuration.md with the title `# Configuration` and one `## <section>` heading per schema section,
+    in schema order, each followed by the section's description from the schema.
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t2
+    hidden:
+    - _grade.py
+    timeout: 60
+- prompt: Under each section add a table with columns key, type, default, required. type is the JSON schema type; default
+    is the schema default as a JSON literal in backticks (strings keep their double quotes, booleans are true/false) or `-`
+    in the cell when the schema has none (no backticks around the dash); required is yes or no.
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t3
+    hidden:
+    - _grade.py
+    timeout: 60
+- prompt: Which schema keys restrict their value with an `enum`, and what are the allowed values? Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all:
+    - \bbackend\b
+    - \blevel\b
+    - \bformat\b
+    - memcached
+    - warning
+    - \bjson\b
+- prompt: 'For sections that have enum-constrained keys add a `### Allowed values` subsection (after the table) with one bullet
+    per such key: `- `key`: a | b | c` using the enum order from the schema. Sections without enums get no such subsection.'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t5
+    hidden:
+    - _grade.py
+    timeout: 60
+- prompt: 'Some keys carry an `x-env` entry in the schema. Add a `## Environment overrides` section with a table (columns
+    variable, key): the environment variable in backticks and the dotted config key (`section.key`) it overrides, in schema
+    order.'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t6
+    hidden:
+    - _grade.py
+    timeout: 60
+- prompt: 'Add a `## Example` section with a ```json block holding a minimal valid config: only the required keys (as listed
+    in the schema), nested under their sections. Use `postgres://localhost/app` for database.url and `change-me` for auth.secret.'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t7
+    hidden:
+    - _grade.py
+    timeout: 60
+- prompt: Add a new boolean key `beta_search` to the features section of schema/app.schema.json (default false, description
+    `Enable the beta search backend`, not required) and add its row to the features table in docs/configuration.md.
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t8
+    hidden:
+    - _grade.py
+    timeout: 60
+- prompt: 'Add scripts/check_config_docs.py [--schema FILE] [--docs FILE] (defaults schema/app.schema.json and docs/configuration.md):
+    print `UNDOCUMENTED: <section>.<key>` for schema keys with no row in that section''s docs table, then `UNKNOWN: <section>.<key>`
+    for documented keys the schema lacks (each group sorted), exit 1 if anything was printed, otherwise print `ok` and exit
+    0.'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t9
+    hidden:
+    - _grade.py
+    timeout: 60
+- prompt: Using schema/CHANGES.txt write docs/migration.md with a `## Renamed keys` table (columns old, new; keys in backticks,
+    same order as the file) and a `## Removed keys` section listing the removed key.
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t10
+    hidden:
+    - _grade.py
+    timeout: 60
+- prompt: Add a '## Documentation' section to README.md linking docs/configuration.md and docs/migration.md and mentioning
+    scripts/check_config_docs.py.
+  checks:
+  - kind: doc_sections
+    path: README.md
+    headings:
+    - Documentation
+  - kind: file_regex
+    path: README.md
+    pattern: docs/configuration\.md
+  - kind: file_regex
+    path: README.md
+    pattern: docs/migration\.md
+  - kind: file_regex
+    path: README.md
+    pattern: scripts/check_config_docs\.py

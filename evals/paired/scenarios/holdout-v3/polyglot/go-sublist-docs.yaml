@@ -1,0 +1,177 @@
+# holdout-v3 batch B (docs, 9 turns): Aider polyglot-benchmark go/sublist (Exercism): implement, then package comment in doc.go, README relation table, a testable Example, an exported helper against hidden tests, godoc and changelog.
+id: go-sublist-docs
+task_type: docs
+language: go
+split: holdout
+default_gap_s: 10
+source:
+  desc: 'Aider polyglot-benchmark go/sublist (Exercism): implement, then package comment in doc.go, README relation table,
+    a testable Example, an exported helper against hidden tests, godoc and changelog.'
+  repo: https://github.com/Aider-AI/polyglot-benchmark
+  sha: 7e0611e77b54e2dea774cdc0aa00cf9f7ed6144f
+workspace:
+  kind: git
+  repo: https://github.com/Aider-AI/polyglot-benchmark
+  sha: 7e0611e77b54e2dea774cdc0aa00cf9f7ed6144f
+  subdir: go/exercises/practice/sublist
+  local_hint: ~/dev/afast-campaign-corrected-polyglot-20260919/polyglot/polyglot-benchmark
+  remove:
+  - .meta
+protected:
+- sublist_test.go
+- cases_test.go
+- relations.go
+hidden_files:
+  hidden_contains_test.go: "package sublist\n\nimport \"testing\"\n\nfunc TestHiddenContains(t *testing.T) {\n\tcases := []struct\
+    \ {\n\t\tbig, small []int\n\t\twant       bool\n\t}{\n\t\t{[]int{1, 2, 3}, []int{2, 3}, true},\n\t\t{[]int{1, 2, 3}, []int{},\
+    \ true},\n\t\t{[]int{}, []int{}, true},\n\t\t{[]int{}, []int{1}, false},\n\t\t{[]int{1, 2, 3}, []int{3, 2}, false},\n\t\
+    \t{[]int{1, 1, 2}, []int{1, 2}, true},\n\t\t{[]int{1, 2}, []int{1, 2, 3}, false},\n\t}\n\tfor _, c := range cases {\n\t\
+    \tif got := Contains(c.big, c.small); got != c.want {\n\t\t\tt.Errorf(\"Contains(%v,%v) = %v, want %v\", c.big, c.small,\
+    \ got, c.want)\n\t\t}\n\t}\n}\n"
+turns:
+- prompt: Read .docs/instructions.md and implement `Sublist` in sublist.go so that `go test ./...` passes. relations.go and
+    the provided tests must stay untouched.
+  checks:
+  - kind: tests
+    runner: go
+    restore:
+    - sublist_test.go
+    - cases_test.go
+    hidden: []
+- prompt: Which relation does `Sublist` return for two empty lists, and which for an empty first list against a non-empty
+    second list? Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all:
+    - \bequal\b
+    - \bsublist\b
+- prompt: Create doc.go containing the package comment, starting `// Package sublist ` and running at least three comment
+    lines, followed by `package sublist`. No other file may carry a `// Package sublist` comment.
+  checks:
+  - kind: file_exists
+    path: doc.go
+  - kind: file_regex
+    path: doc.go
+    pattern: '^// Package sublist '
+  - kind: file_regex
+    path: doc.go
+    pattern: ^//.*\n//.*\n//.*\npackage sublist
+  - kind: file_regex
+    path: sublist.go
+    pattern: ^// Package sublist
+    absent: true
+  - kind: file_regex
+    path: relations.go
+    pattern: ^// Package sublist
+    absent: true
+  - kind: tests
+    runner: go
+    restore:
+    - sublist_test.go
+    - cases_test.go
+    hidden: []
+- prompt: Write README.md with `## Usage`, `## Relations` and `## Examples`. Relations is a table (columns relation, meaning)
+    with exactly one row each for equal, sublist, superlist and unequal. Examples is a fenced go block showing `Sublist([]int{1,
+    2}, []int{0, 1, 2, 3})` is sublist, `Sublist([]int{}, []int{})` is equal and `Sublist([]int{1, 2}, []int{2, 1})` is unequal.
+  checks:
+  - kind: doc_sections
+    path: README.md
+    headings:
+    - Usage
+    - Relations
+    - Examples
+  - kind: file_regex
+    path: README.md
+    pattern: ^\|\s*equal\s*\|
+  - kind: file_regex
+    path: README.md
+    pattern: ^\|\s*sublist\s*\|
+  - kind: file_regex
+    path: README.md
+    pattern: ^\|\s*superlist\s*\|
+  - kind: file_regex
+    path: README.md
+    pattern: ^\|\s*unequal\s*\|
+  - kind: file_regex
+    path: README.md
+    pattern: Sublist\(\[\]int\{1, 2\}, \[\]int\{0, 1, 2, 3\}\)
+  - kind: file_regex
+    path: README.md
+    pattern: Sublist\(\[\]int\{\}, \[\]int\{\}\)
+  - kind: file_regex
+    path: README.md
+    pattern: Sublist\(\[\]int\{1, 2\}, \[\]int\{2, 1\}\)
+  gap_before_s: 420
+- prompt: 'Add example_test.go (package sublist) with a `func ExampleSublist()` that prints, one per line via fmt.Println,
+    the relation for: [1 2] vs [1 2], [1 2] vs [0 1 2 3], [0 1 2 3] vs [1 2], [1 2] vs [2 1], and declares the four expected
+    lines in an `// Output:` block. `go test ./...` must pass.'
+  checks:
+  - kind: file_regex
+    path: example_test.go
+    pattern: func ExampleSublist\(\)
+  - kind: file_regex
+    path: example_test.go
+    pattern: // Output:\n\s*// equal\n\s*// sublist\n\s*// superlist\n\s*// unequal
+  - kind: tests
+    runner: go
+    restore:
+    - sublist_test.go
+    - cases_test.go
+    hidden: []
+- prompt: 'Export the containment helper as `func Contains(big, small []int) bool` (rename `contains`, keep the behaviour:
+    an empty small list is contained in everything) and keep Sublist working.'
+  checks:
+  - kind: tests
+    runner: go
+    restore:
+    - sublist_test.go
+    - cases_test.go
+    hidden:
+    - hidden_contains_test.go
+  - kind: file_regex
+    path: sublist.go
+    pattern: func Contains\(
+- prompt: Give `Contains` a doc comment that starts with `// Contains ` and mentions what an empty list does, and mention
+    `Contains` in README.md under `## Usage`.
+  checks:
+  - kind: file_regex
+    path: sublist.go
+    pattern: ^// Contains .*(?i:empty)
+  - kind: file_regex
+    path: README.md
+    pattern: Contains
+  - kind: tests
+    runner: go
+    restore:
+    - sublist_test.go
+    - cases_test.go
+    hidden:
+    - hidden_contains_test.go
+- prompt: What is the time complexity of `Contains` (and so of Sublist) for lists of length n and m? Answer in one sentence.
+    Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all:
+    - O\(\s*n\s*[*x×·]?\s*m\s*\)|quadratic|n\s*times\s*m|n \* m|product
+  gap_before_s: 420
+- prompt: 'Create CHANGELOG.md with a `## [0.2.0]` section and an `### Added` list (three bullets: `Contains` is exported,
+    `ExampleSublist`, `doc.go`) above `## [0.1.0]`.'
+  checks:
+  - kind: file_regex
+    path: CHANGELOG.md
+    pattern: ^## \[0\.2\.0\]
+  - kind: file_regex
+    path: CHANGELOG.md
+    pattern: ^### Added
+  - kind: file_regex
+    path: CHANGELOG.md
+    pattern: ^- .*Contains
+  - kind: file_regex
+    path: CHANGELOG.md
+    pattern: ^- .*ExampleSublist
+  - kind: file_regex
+    path: CHANGELOG.md
+    pattern: ^- .*doc\.go
+  - kind: file_regex
+    path: CHANGELOG.md
+    pattern: ^## \[0\.1\.0\]

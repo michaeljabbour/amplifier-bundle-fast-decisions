@@ -1,0 +1,2780 @@
+# holdout-v3 batch B (docs, 10 turns): A 320-page documentation tree with broken links, renames, tags and orphans: exact counts, broken-link and orphan reports, rename fixes across many files, tag index, per-section indexes, a link-checker CLI.
+id: docs-corpus
+task_type: docs
+language: markdown
+split: holdout
+default_gap_s: 10
+source:
+  desc: 'A 320-page documentation tree with broken links, renames, tags and orphans: exact counts, broken-link and orphan
+    reports, rename fixes across many files, tag index, per-section indexes, a link-checker CLI.'
+  kind: self-authored deterministic workspace
+  adapted_from:
+  - new generated documentation corpus; docs-maintenance theme (cf. amplifier-agent docs tasks); >300 files for the scope-gate
+    subset
+workspace:
+  kind: inline
+  files:
+    docs/guides/alpha-gui-00.md: |
+      # Alpha guides 00
+
+      Tags: storage
+
+      See [Onyx guides 14](onyx-gui-14.md#usage).
+      See [Harbor api 07](../api/harbor-api-07.md).
+      See [Quartz reference 16](../reference/quartz-ref-16.md).
+    docs/guides/birch-gui-01.md: |
+      # Birch guides 01
+
+      Tags: metrics, setup
+
+      See [Onyx guides 14](onyx-gui-14.md).
+      See [Onyx api 14](../api/onyx-api-14.md).
+    docs/guides/cedar-gui-02.md: |
+      # Cedar guides 02
+
+      Tags: auth, cli, storage
+
+      See [Nectar reference 13](../reference/nectar-ref-13.md).
+      See [Grove ops 26](../ops/grove-ops-26.md#usage).
+    docs/guides/dune-gui-03.md: |
+      # Dune guides 03
+
+      Tags: deploy, limits, metrics
+
+      See [Ember guides 04](ember-gui-04.md).
+      See [Sage security 38](../security/sage-sec-38.md#usage).
+    docs/guides/ember-gui-04.md: |
+      # Ember guides 04
+
+      Tags: auth
+
+      See [Kelp reference 30](../reference/kelp-ref-30.md).
+      See [Nectar concepts 33](../concepts/nectar-con-33.md).
+      See [Cedar faq 02](../faq/cedar-faq-02.md).
+    docs/guides/fjord-gui-05.md: |
+      # Fjord guides 05
+
+      Tags: errors, metrics
+
+      See [Maple reference 32](../reference/maple-ref-32.md).
+      See [Iris api 08](../api/iris-api-08.md#usage).
+    docs/guides/grove-gui-06.md: |
+      # Grove guides 06
+
+      Tags: errors, retries
+
+      See [Harbor guides 07](harbor-gui-07.md#usage).
+      See [Sage guides 38](sage-gui-38.md).
+      See [Alpha concepts 00](../concepts/alpha-con-00.md).
+    docs/guides/harbor-gui-07.md: |
+      # Harbor guides 07
+
+      Tags: deploy, limits, retries
+
+      See [Nectar ops 13](../ops/nectar-ops-13.md).
+      See [Sage concepts 38](../concepts/sage-con-38.md).
+    docs/guides/iris-gui-08.md: |
+      # Iris guides 08
+
+      Tags: retries, upgrade
+
+      See [Birch ops 01](../ops/birch-ops-01.md#usage).
+      See [Juniper api 09](../api/juniper-api-09.md#usage).
+    docs/guides/juniper-gui-09.md: |
+      # Juniper guides 09
+
+      Tags: cli, deploy, storage
+
+      See [Onyx ops 34](../ops/onyx-ops-34.md#usage).
+      See [Maple faq 32](../faq/maple-faq-32.md).
+      See [Juniper tutorials 09](../tutorials/juniper-tut-09.md#usage).
+    docs/guides/kelp-gui-10.md: |
+      # Kelp guides 10
+
+      Tags: billing, limits, perf
+
+      See [Iris faq 08](../faq/iris-faq-08.md).
+      See [Tundra faq 19](../faq/tundra-faq-19.md).
+      See [Kelp concepts 10](../concepts/kelp-con-10.md).
+      See [Ember tutorials 04](../tutorials/ember-tut-04-old.md).
+    docs/guides/lagoon-gui-11.md: |
+      # Lagoon guides 11
+
+      Tags: cli, limits, storage
+
+      See [Juniper concepts 29](../concepts/juniper-con-29.md).
+      See [Onyx reference 14](../reference/onyx-ref-14.md#usage).
+    docs/guides/maple-gui-12.md: |
+      # Maple guides 12
+
+      Tags: auth, cli, retries
+
+      See [Grove guides 06](grove-gui-06.md).
+      See [Maple tutorials 32](../tutorials/maple-tut-32.md#usage).
+      See [Sage guides 18](sage-gui-18.md).
+    docs/guides/nectar-gui-13.md: |
+      # Nectar guides 13
+
+      Tags: metrics, retries
+
+      See [Alpha tutorials 20](../tutorials/alpha-tut-20.md).
+      See [Juniper ops 09](../ops/juniper-ops-09.md#usage).
+      See [Nectar ops 13](../ops/nectar-ops-13.md).
+    docs/guides/onyx-gui-14.md: |
+      # Onyx guides 14
+
+      Tags: storage
+
+      See [Grove guides 06](grove-gui-06.md).
+      See [Birch security 01](../security/birch-sec-01.md#usage).
+      See [Onyx concepts 34](../concepts/onyx-con-34.md#usage).
+    docs/guides/pine-gui-15.md: |
+      # Pine guides 15
+
+      Tags: auth
+
+      See [Tundra concepts 39](../concepts/tundra-con-39.md).
+      See [Maple security 12](../security/maple-sec-12.md#usage).
+      See [Ember reference 04](../reference/ember-ref-04.md).
+    docs/guides/quartz-gui-16.md: |
+      # Quartz guides 16
+
+      Tags: cli, metrics, setup
+
+      See [Birch tutorials 01](../tutorials/birch-tut-01.md).
+      See [Sage guides 38](sage-gui-38.md#usage).
+    docs/guides/reef-gui-17.md: |
+      # Reef guides 17
+
+      Tags: retries, storage, upgrade
+
+      See [Cedar concepts 02](../concepts/cedar-con-02.md).
+      See [Kelp api 10](../api/kelp-api-10.md).
+    docs/guides/sage-gui-18.md: |
+      # Sage guides 18
+
+      Tags: cli
+
+      See [Onyx reference 14](../reference/onyx-ref-14.md).
+      See [Lagoon security 31](../security/lagoon-sec-31.md).
+      See [Sage concepts 18](../concepts/sage-con-18.md).
+    docs/guides/tundra-gui-19.md: |
+      # Tundra guides 19
+
+      Tags: perf
+
+      See [Dune guides 03](dune-gui-03.md).
+      See [Lagoon ops 31](../ops/lagoon-ops-31.md).
+      See [Grove faq 06](../faq/grove-faq-06.md#usage).
+    docs/guides/alpha-gui-20.md: |
+      # Alpha guides 20
+
+      Tags: metrics, retries
+
+      See [Birch reference 01](../reference/birch-ref-01.md).
+      See [Nectar reference 13](../reference/nectar-ref-13.md).
+    docs/guides/birch-gui-21.md: |
+      # Birch guides 21
+
+      Tags: deploy, metrics, storage
+
+      See [Sage tutorials 38](../tutorials/sage-tut-38.md).
+      See [Nectar reference 13](../reference/nectar-ref-13.md).
+    docs/guides/cedar-gui-22.md: |
+      # Cedar guides 22
+
+      Tags: retries
+
+      See [Reef api 17](../api/reef-api-17.md).
+      See [Ember reference 24](../reference/ember-ref-24.md).
+      See [Dune ops 23](../ops/dune-ops-23.md#usage).
+    docs/guides/dune-gui-23.md: |
+      # Dune guides 23
+
+      Tags: deploy
+
+      See [Tundra tutorials 19](../tutorials/tundra-tut-19.md).
+      See [Harbor guides 07](harbor-gui-07.md).
+      See [Harbor ops 07](../ops/harbor-ops-07.md).
+    docs/guides/ember-gui-24.md: |
+      # Ember guides 24
+
+      Tags: perf, setup, upgrade
+
+      See [Alpha reference 00](../reference/alpha-ref-00.md).
+      See [Tundra faq 39](../faq/tundra-faq-39.md).
+      See [Tundra tutorials 39](../tutorials/tundra-tut-39.md).
+    docs/guides/fjord-gui-25.md: |
+      # Fjord guides 25
+
+      Tags: cli, retries
+
+      See [Fjord api 05](../api/fjord-api-05.md).
+      See [Kelp faq 30](../faq/kelp-faq-30.md).
+      See [Juniper ops 29](../ops/juniper-ops-29.md#usage).
+    docs/guides/grove-gui-26.md: |
+      # Grove guides 26
+
+      Tags: billing, deploy, storage
+
+      See [Kelp faq 10](../faq/kelp-faq-10.md).
+      See [Lagoon tutorials 11](../tutorials/lagoon-tut-11.md).
+      See [Sage reference 18](../reference/sage-ref-18.md).
+    docs/guides/harbor-gui-27.md: |
+      # Harbor guides 27
+
+      Tags: deploy, errors, perf
+
+      See [Reef ops 17](../ops/reef-ops-17.md).
+      See [Nectar tutorials 33](../tutorials/nectar-tut-33.md).
+    docs/guides/iris-gui-28.md: |
+      # Iris guides 28
+
+      Tags: auth, deploy, retries
+
+      See [Quartz reference 36](../reference/quartz-ref-36.md#usage).
+      See [Iris reference 28](../reference/iris-ref-28.md#usage).
+    docs/guides/juniper-gui-29.md: |
+      # Juniper guides 29
+
+      Tags: setup, upgrade
+
+      See [Reef reference 37](../reference/reef-ref-37.md).
+      See [Dune guides 23](dune-gui-23.md#usage).
+      See [Quartz concepts 36](../concepts/quartz-con-36.md).
+    docs/guides/kelp-gui-30.md: |
+      # Kelp guides 30
+
+      Tags: errors, limits, setup
+
+      See [Fjord reference 25](../reference/fjord-ref-25.md).
+      See [Ember tutorials 04](../tutorials/ember-tut-04.md).
+      See [Dune guides 23](dune-gui-23.md).
+    docs/guides/lagoon-gui-31.md: |
+      # Lagoon guides 31
+
+      Tags: auth, storage, upgrade
+
+      See [Nectar guides 13](nectar-gui-13.md#usage).
+      See [Quartz security 16](../security/quartz-sec-16.md).
+    docs/guides/maple-gui-32.md: |
+      # Maple guides 32
+
+      Tags: limits, retries
+
+      See [Juniper ops 09](../ops/juniper-ops-09.md).
+      See [Quartz faq 16](../faq/quartz-faq-16.md).
+    docs/guides/nectar-gui-33.md: |
+      # Nectar guides 33
+
+      Tags: auth, setup, storage
+
+      See [Sage reference 18](../reference/sage-ref-18.md).
+      See [Ember security 04](../security/ember-sec-04.md#usage).
+    docs/guides/onyx-gui-34.md: |
+      # Onyx guides 34
+
+      Tags: auth, errors, metrics
+
+      See [Sage faq 18](../faq/sage-faq-18.md).
+      See [Maple reference 12](../reference/maple-ref-12.md#usage).
+    docs/guides/pine-gui-35.md: |
+      # Pine guides 35
+
+      Tags: limits, metrics, perf
+
+      See [Pine ops 15](../ops/pine-ops-15.md).
+      See [Cedar tutorials 02](../tutorials/cedar-tut-02.md).
+      See [Alpha api 20](../api/alpha-api-20.md).
+    docs/guides/quartz-gui-36.md: |
+      # Quartz guides 36
+
+      Tags: deploy, metrics, upgrade
+
+      See [Grove api 26](../api/grove-api-26.md).
+      See [Harbor faq 07](../faq/harbor-faq-07.md).
+      See [Fjord guides 05](fjord-gui-05.md#usage).
+    docs/guides/reef-gui-37.md: |
+      # Reef guides 37
+
+      Tags: billing
+
+      See [Fjord concepts 05](../concepts/fjord-con-05.md).
+      See [Kelp security 30](../security/kelp-sec-30.md).
+      See [Ember guides 04](ember-gui-04.md).
+    docs/guides/sage-gui-38.md: |
+      # Sage guides 38
+
+      Tags: errors, limits
+
+      See [Juniper faq 09](../faq/juniper-faq-09.md).
+      See [Nectar tutorials 13](../tutorials/nectar-tut-13.md).
+    docs/guides/tundra-gui-39.md: |
+      # Tundra guides 39
+
+      Tags: cli, limits
+
+      See [Harbor concepts 07](../concepts/harbor-con-07.md).
+      See [Onyx faq 14](../faq/onyx-faq-14.md).
+      See [Sage concepts 18](../concepts/sage-con-18.md).
+    docs/api/alpha-api-00.md: |
+      # Alpha api 00
+
+      Tags: billing
+
+      See [Quartz guides 16](../guides/quartz-gui-16.md).
+      See [Kelp faq 30](../faq/kelp-faq-30.md).
+      See [Cedar ops 02](../ops/cedar-ops-02.md).
+    docs/api/birch-api-01.md: |
+      # Birch api 01
+
+      Tags: limits, metrics
+
+      See [Quartz concepts 36](../concepts/quartz-con-36.md#usage).
+      See [Harbor reference 27](../reference/harbor-ref-27.md).
+    docs/api/cedar-api-02.md: |
+      # Cedar api 02
+
+      Tags: storage
+
+      See [Quartz security 36](../security/quartz-sec-36.md).
+      See [Reef concepts 17](../concepts/reef-con-17.md).
+      See [Harbor concepts 07](../concepts/harbor-con-07.md).
+    docs/api/dune-api-03.md: |
+      # Dune api 03
+
+      Tags: cli, setup
+
+      See [Kelp ops 10](../ops/kelp-ops-10.md).
+      See [Quartz ops 36](../ops/quartz-ops-36.md#usage).
+      See [Sage guides 38](../guides/sage-gui-38.md).
+    docs/api/ember-api-04.md: |
+      # Ember api 04
+
+      Tags: metrics, storage
+
+      See [Dune concepts 03](../concepts/dune-con-03.md).
+      See [Iris api 08](iris-api-08.md).
+      See [Kelp ops 10](../ops/kelp-ops-10.md).
+    docs/api/fjord-api-05.md: |
+      # Fjord api 05
+
+      Tags: cli, setup
+
+      See [Quartz guides 36](../guides/quartz-gui-36.md).
+      See [Nectar api 13](nectar-api-13.md#usage).
+      See [Cedar tutorials 22](../tutorials/cedar-tut-22.md).
+    docs/api/grove-api-06.md: |
+      # Grove api 06
+
+      Tags: billing, cli, deploy
+
+      See [Sage guides 38](../guides/sage-gui-38.md).
+      See [Grove security 06](../security/grove-sec-06.md).
+      See [Grove guides 26](../guides/grove-gui-26.md).
+    docs/api/harbor-api-07.md: |
+      # Harbor api 07
+
+      Tags: deploy, storage
+
+      See [Maple api 32](maple-api-32.md#usage).
+      See [Onyx ops 34](../ops/onyx-ops-34.md).
+      See [Ember ops 04](../ops/ember-ops-04.md).
+    docs/api/iris-api-08.md: |
+      # Iris api 08
+
+      Tags: errors, metrics, storage
+
+      See [Birch ops 01](../ops/birch-ops-01.md).
+      See [Pine ops 35](../ops/pine-ops-35.md).
+      See [Quartz security 16](../security/quartz-sec-16.md).
+      See [Iris guides 08](../guides/iris-gui-08-old.md).
+    docs/api/juniper-api-09.md: |
+      # Juniper api 09
+
+      Tags: cli, storage
+
+      See [Juniper reference 09](../reference/juniper-ref-09.md).
+      See [Tundra ops 19](../ops/tundra-ops-19.md).
+      See [Fjord guides 05](../guides/fjord-gui-05.md).
+    docs/api/kelp-api-10.md: |
+      # Kelp api 10
+
+      Tags: perf
+
+      See [Pine tutorials 15](../tutorials/pine-tut-15.md).
+      See [Sage guides 18](../guides/sage-gui-18.md).
+    docs/api/lagoon-api-11.md: |
+      # Lagoon api 11
+
+      Tags: errors
+
+      See [Grove reference 26](../reference/grove-ref-26.md).
+      See [Dune reference 03](../reference/dune-ref-03.md).
+      See [Juniper tutorials 29](../tutorials/juniper-tut-29.md).
+    docs/api/maple-api-12.md: |
+      # Maple api 12
+
+      Tags: upgrade
+
+      See [Fjord reference 25](../reference/fjord-ref-25.md#usage).
+      See [Fjord reference 05](../reference/fjord-ref-05.md#usage).
+    docs/api/nectar-api-13.md: |
+      # Nectar api 13
+
+      Tags: metrics, setup, upgrade
+
+      See [Iris concepts 28](../concepts/iris-con-28.md).
+      See [Birch faq 01](../faq/birch-faq-01.md).
+      See [Quartz faq 16](../faq/quartz-faq-16.md#usage).
+    docs/api/onyx-api-14.md: |
+      # Onyx api 14
+
+      Tags: retries, upgrade
+
+      See [Quartz guides 36](../guides/quartz-gui-36.md#usage).
+      See [Juniper concepts 09](../concepts/juniper-con-09.md#usage).
+    docs/api/pine-api-15.md: |
+      # Pine api 15
+
+      Tags: deploy, errors
+
+      See [Cedar reference 02](../reference/cedar-ref-02.md).
+      See [Alpha api 20](alpha-api-20.md).
+    docs/api/quartz-api-16.md: |
+      # Quartz api 16
+
+      Tags: auth, setup
+
+      See [Maple ops 32](../ops/maple-ops-32.md).
+      See [Dune concepts 03](../concepts/dune-con-03.md).
+      See [Grove ops 06](../ops/grove-ops-06.md).
+    docs/api/reef-api-17.md: |
+      # Reef api 17
+
+      Tags: billing, perf, upgrade
+
+      See [Maple reference 12](../reference/maple-ref-12.md).
+      See [Lagoon ops 11](../ops/lagoon-ops-11.md).
+      See [Pine ops 15](../ops/pine-ops-15.md).
+    docs/api/sage-api-18.md: |
+      # Sage api 18
+
+      Tags: auth, perf
+
+      See [Birch ops 21](../ops/birch-ops-21.md).
+      See [Ember reference 04](../reference/ember-ref-04.md#usage).
+      See [Harbor api 07](harbor-api-07.md).
+    docs/api/tundra-api-19.md: |
+      # Tundra api 19
+
+      Tags: deploy
+
+      See [Birch reference 21](../reference/birch-ref-21.md).
+      See [Alpha guides 00](../guides/alpha-gui-00.md).
+      See [Alpha faq 20](../faq/alpha-faq-20.md).
+    docs/api/alpha-api-20.md: |
+      # Alpha api 20
+
+      Tags: billing, storage
+
+      See [Birch reference 21](../reference/birch-ref-21.md).
+      See [Sage guides 18](../guides/sage-gui-18.md#usage).
+      See [Kelp reference 30](../reference/kelp-ref-30.md).
+    docs/api/birch-api-21.md: |
+      # Birch api 21
+
+      Tags: billing, storage
+
+      See [Iris ops 28](../ops/iris-ops-28.md#usage).
+      See [Nectar concepts 13](../concepts/nectar-con-13.md).
+      See [Iris tutorials 08](../tutorials/iris-tut-08.md).
+    docs/api/cedar-api-22.md: |
+      # Cedar api 22
+
+      Tags: errors, metrics
+
+      See [Ember guides 04](../guides/ember-gui-04.md#usage).
+      See [Cedar api 02](cedar-api-02.md).
+      See [Onyx ops 14](../ops/onyx-ops-14.md#usage).
+    docs/api/dune-api-23.md: |
+      # Dune api 23
+
+      Tags: cli, deploy
+
+      See [Iris faq 08](../faq/iris-faq-08.md).
+      See [Onyx concepts 34](../concepts/onyx-con-34.md).
+      See [Kelp guides 10](../guides/kelp-gui-10.md).
+    docs/api/ember-api-24.md: |
+      # Ember api 24
+
+      Tags: perf, upgrade
+
+      See [Tundra security 39](../security/tundra-sec-39.md).
+      See [Dune reference 23](../reference/dune-ref-23.md).
+    docs/api/fjord-api-25.md: |
+      # Fjord api 25
+
+      Tags: perf
+
+      See [Cedar security 02](../security/cedar-sec-02.md).
+      See [Reef faq 37](../faq/reef-faq-37.md).
+    docs/api/grove-api-26.md: |
+      # Grove api 26
+
+      Tags: cli, setup
+
+      See [Alpha api 00](alpha-api-00.md).
+      See [Reef reference 17](../reference/reef-ref-17.md).
+    docs/api/harbor-api-27.md: |
+      # Harbor api 27
+
+      Tags: cli, metrics
+
+      See [Tundra faq 19](../faq/tundra-faq-19.md).
+      See [Birch reference 21](../reference/birch-ref-21.md#usage).
+      See [Quartz reference 16](../reference/quartz-ref-16.md).
+    docs/api/iris-api-28.md: |
+      # Iris api 28
+
+      Tags: perf, setup
+
+      See [Maple reference 32](../reference/maple-ref-32.md).
+      See [Lagoon guides 11](../guides/lagoon-gui-11.md).
+    docs/api/juniper-api-29.md: |
+      # Juniper api 29
+
+      Tags: limits, setup
+
+      See [Alpha ops 00](../ops/alpha-ops-00.md#usage).
+      See [Sage reference 38](../reference/sage-ref-38.md).
+      See [Reef ops 37](../ops/reef-ops-37.md).
+    docs/api/kelp-api-30.md: |
+      # Kelp api 30
+
+      Tags: cli
+
+      See [Fjord api 05](fjord-api-05.md).
+      See [Reef tutorials 17](../tutorials/reef-tut-17.md#usage).
+      See [Fjord reference 05](../reference/fjord-ref-05.md#usage).
+      See [Quartz api 36](quartz-api-36-old.md).
+    docs/api/lagoon-api-31.md: |
+      # Lagoon api 31
+
+      Tags: deploy, limits
+
+      See [Fjord guides 05](../guides/fjord-gui-05.md).
+      See [Ember reference 24](../reference/ember-ref-24.md).
+      See [Harbor security 27](../security/harbor-sec-27.md).
+    docs/api/maple-api-32.md: |
+      # Maple api 32
+
+      Tags: auth
+
+      See [Quartz faq 36](../faq/quartz-faq-36.md).
+      See [Cedar concepts 22](../concepts/cedar-con-22.md).
+      See [Grove api 26](grove-api-26.md).
+    docs/api/nectar-api-33.md: |
+      # Nectar api 33
+
+      Tags: deploy
+
+      See [Birch guides 21](../guides/birch-gui-21.md).
+      See [Quartz faq 36](../faq/quartz-faq-36.md).
+      See [Ember guides 24](../guides/ember-gui-24.md#usage).
+      See [Fjord security 25](../security/fjord-sec-25-old.md).
+    docs/api/onyx-api-34.md: |
+      # Onyx api 34
+
+      Tags: auth, retries
+
+      See [Alpha api 20](alpha-api-20.md).
+      See [Sage concepts 18](../concepts/sage-con-18.md#usage).
+      See [Sage security 38](../security/sage-sec-38.md#usage).
+    docs/api/pine-api-35.md: |
+      # Pine api 35
+
+      Tags: billing, errors, retries
+
+      See [Iris guides 08](../guides/iris-gui-08.md).
+      See [Nectar security 13](../security/nectar-sec-13.md).
+    docs/api/quartz-api-36.md: |
+      # Quartz api 36
+
+      Tags: metrics, setup
+
+      See [Nectar guides 13](../guides/nectar-gui-13.md).
+      See [Quartz reference 16](../reference/quartz-ref-16.md).
+    docs/api/reef-api-37.md: |
+      # Reef api 37
+
+      Tags: storage
+
+      See [Pine security 15](../security/pine-sec-15.md).
+      See [Nectar api 33](nectar-api-33.md#usage).
+      See [Maple concepts 12](../concepts/maple-con-12.md).
+    docs/api/sage-api-38.md: |
+      # Sage api 38
+
+      Tags: retries
+
+      See [Sage security 38](../security/sage-sec-38.md).
+      See [Grove faq 26](../faq/grove-faq-26.md).
+    docs/api/tundra-api-39.md: |
+      # Tundra api 39
+
+      Tags: deploy, setup
+
+      See [Reef concepts 17](../concepts/reef-con-17.md#usage).
+      See [Dune reference 23](../reference/dune-ref-23.md#usage).
+      See [Tundra tutorials 19](../tutorials/tundra-tut-19.md#usage).
+    docs/ops/alpha-ops-00.md: |
+      # Alpha ops 00
+
+      Tags: billing, errors, storage
+
+      See [Sage api 38](../api/sage-api-38.md#usage).
+      See [Iris faq 28](../faq/iris-faq-28.md).
+      See [Grove tutorials 06](../tutorials/grove-tut-06.md).
+    docs/ops/birch-ops-01.md: |
+      # Birch ops 01
+
+      Tags: billing, retries
+
+      See [Alpha api 00](../api/alpha-api-00.md).
+      See [Tundra ops 19](tundra-ops-19.md#usage).
+    docs/ops/cedar-ops-02.md: |
+      # Cedar ops 02
+
+      Tags: upgrade
+
+      See [Onyx tutorials 34](../tutorials/onyx-tut-34.md).
+      See [Tundra tutorials 19](../tutorials/tundra-tut-19.md).
+    docs/ops/dune-ops-03.md: |
+      # Dune ops 03
+
+      Tags: cli, retries
+
+      See [Alpha api 00](../api/alpha-api-00.md).
+      See [Kelp security 30](../security/kelp-sec-30.md).
+      See [Harbor api 27](../api/harbor-api-27.md).
+    docs/ops/ember-ops-04.md: |
+      # Ember ops 04
+
+      Tags: cli, perf
+
+      See [Nectar concepts 13](../concepts/nectar-con-13.md).
+      See [Cedar guides 22](../guides/cedar-gui-22.md).
+      See [Harbor api 07](../api/harbor-api-07.md).
+    docs/ops/fjord-ops-05.md: |
+      # Fjord ops 05
+
+      Tags: auth, cli
+
+      See [Harbor tutorials 07](../tutorials/harbor-tut-07.md).
+      See [Birch tutorials 21](../tutorials/birch-tut-21.md#usage).
+      See [Maple tutorials 12](../tutorials/maple-tut-12.md).
+    docs/ops/grove-ops-06.md: |
+      # Grove ops 06
+
+      Tags: cli, limits, metrics
+
+      See [Sage tutorials 18](../tutorials/sage-tut-18.md#usage).
+      See [Onyx api 14](../api/onyx-api-14.md#usage).
+    docs/ops/harbor-ops-07.md: |
+      # Harbor ops 07
+
+      Tags: storage
+
+      See [Dune security 23](../security/dune-sec-23.md).
+      See [Harbor faq 07](../faq/harbor-faq-07.md).
+    docs/ops/iris-ops-08.md: |
+      # Iris ops 08
+
+      Tags: setup
+
+      See [Nectar security 33](../security/nectar-sec-33.md).
+      See [Nectar security 13](../security/nectar-sec-13.md).
+    docs/ops/juniper-ops-09.md: |
+      # Juniper ops 09
+
+      Tags: storage, upgrade
+
+      See [Grove guides 06](../guides/grove-gui-06.md).
+      See [Juniper guides 09](../guides/juniper-gui-09.md).
+      See [Pine ops 35](pine-ops-35.md).
+    docs/ops/kelp-ops-10.md: |
+      # Kelp ops 10
+
+      Tags: errors, metrics, perf
+
+      See [Grove tutorials 06](../tutorials/grove-tut-06.md).
+      See [Dune reference 23](../reference/dune-ref-23.md).
+    docs/ops/lagoon-ops-11.md: |
+      # Lagoon ops 11
+
+      Tags: setup
+
+      See [Onyx reference 14](../reference/onyx-ref-14.md).
+      See [Grove guides 26](../guides/grove-gui-26.md).
+      See [Fjord reference 05](../reference/fjord-ref-05.md#usage).
+      See [Tundra concepts 39](../concepts/tundra-con-39-old.md).
+    docs/ops/maple-ops-12.md: |
+      # Maple ops 12
+
+      Tags: perf
+
+      See [Pine reference 35](../reference/pine-ref-35.md).
+      See [Birch reference 01](../reference/birch-ref-01.md).
+    docs/ops/nectar-ops-13.md: |
+      # Nectar ops 13
+
+      Tags: cli, deploy, storage
+
+      See [Cedar security 22](../security/cedar-sec-22.md).
+      See [Iris guides 28](../guides/iris-gui-28.md).
+      See [Tundra reference 39](../reference/tundra-ref-39.md#usage).
+    docs/ops/onyx-ops-14.md: |
+      # Onyx ops 14
+
+      Tags: retries, upgrade
+
+      See [Harbor faq 07](../faq/harbor-faq-07.md#usage).
+      See [Onyx concepts 14](../concepts/onyx-con-14.md#usage).
+      See [Ember api 24](../api/ember-api-24.md#usage).
+    docs/ops/pine-ops-15.md: |
+      # Pine ops 15
+
+      Tags: cli, setup
+
+      See [Juniper faq 29](../faq/juniper-faq-29.md).
+      See [Grove guides 26](../guides/grove-gui-26.md#usage).
+      See [Lagoon guides 11](../guides/lagoon-gui-11.md#usage).
+    docs/ops/quartz-ops-16.md: |
+      # Quartz ops 16
+
+      Tags: errors
+
+      See [Grove api 06](../api/grove-api-06.md#usage).
+      See [Harbor concepts 07](../concepts/harbor-con-07.md).
+      See [Ember concepts 04](../concepts/ember-con-04.md).
+    docs/ops/reef-ops-17.md: |
+      # Reef ops 17
+
+      Tags: cli, errors, upgrade
+
+      See [Birch guides 01](../guides/birch-gui-01.md#usage).
+      See [Cedar guides 02](../guides/cedar-gui-02.md#usage).
+      See [Cedar reference 22](../reference/cedar-ref-22.md).
+    docs/ops/sage-ops-18.md: |
+      # Sage ops 18
+
+      Tags: storage
+
+      See [Quartz guides 16](../guides/quartz-gui-16.md).
+      See [Reef security 17](../security/reef-sec-17.md#usage).
+      See [Dune guides 03](../guides/dune-gui-03.md).
+    docs/ops/tundra-ops-19.md: |
+      # Tundra ops 19
+
+      Tags: cli
+
+      See [Alpha tutorials 00](../tutorials/alpha-tut-00.md#usage).
+      See [Nectar tutorials 33](../tutorials/nectar-tut-33.md#usage).
+    docs/ops/alpha-ops-20.md: |
+      # Alpha ops 20
+
+      Tags: billing, retries
+
+      See [Nectar security 33](../security/nectar-sec-33.md#usage).
+      See [Iris api 28](../api/iris-api-28.md).
+      See [Birch tutorials 01](../tutorials/birch-tut-01.md#usage).
+    docs/ops/birch-ops-21.md: |
+      # Birch ops 21
+
+      Tags: deploy, storage
+
+      See [Harbor tutorials 27](../tutorials/harbor-tut-27.md#usage).
+      See [Alpha reference 20](../reference/alpha-ref-20.md).
+    docs/ops/cedar-ops-22.md: |
+      # Cedar ops 22
+
+      Tags: errors
+
+      See [Iris tutorials 08](../tutorials/iris-tut-08.md).
+      See [Kelp security 30](../security/kelp-sec-30.md).
+    docs/ops/dune-ops-23.md: |
+      # Dune ops 23
+
+      Tags: auth, deploy
+
+      See [Sage tutorials 38](../tutorials/sage-tut-38.md).
+      See [Iris security 28](../security/iris-sec-28.md#usage).
+    docs/ops/ember-ops-24.md: |
+      # Ember ops 24
+
+      Tags: limits, retries, setup
+
+      See [Reef tutorials 37](../tutorials/reef-tut-37.md).
+      See [Ember api 24](../api/ember-api-24.md#usage).
+      See [Sage ops 38](sage-ops-38.md#usage).
+    docs/ops/fjord-ops-25.md: |
+      # Fjord ops 25
+
+      Tags: cli, metrics, upgrade
+
+      See [Lagoon faq 31](../faq/lagoon-faq-31.md).
+      See [Dune reference 23](../reference/dune-ref-23.md).
+      See [Birch guides 21](../guides/birch-gui-21.md).
+    docs/ops/grove-ops-26.md: |
+      # Grove ops 26
+
+      Tags: metrics, retries
+
+      See [Tundra faq 19](../faq/tundra-faq-19.md).
+      See [Grove api 26](../api/grove-api-26.md#usage).
+      See [Nectar reference 13](../reference/nectar-ref-13-old.md).
+    docs/ops/harbor-ops-27.md: |
+      # Harbor ops 27
+
+      Tags: setup
+
+      See [Pine security 35](../security/pine-sec-35.md).
+      See [Grove guides 06](../guides/grove-gui-06.md).
+      See [Iris faq 28](../faq/iris-faq-28.md).
+    docs/ops/iris-ops-28.md: |
+      # Iris ops 28
+
+      Tags: cli, deploy
+
+      See [Tundra api 19](../api/tundra-api-19.md).
+      See [Nectar ops 33](nectar-ops-33.md#usage).
+    docs/ops/juniper-ops-29.md: |
+      # Juniper ops 29
+
+      Tags: limits, retries
+
+      See [Iris faq 08](../faq/iris-faq-08.md#usage).
+      See [Kelp guides 30](../guides/kelp-gui-30.md).
+      See [Lagoon concepts 31](../concepts/lagoon-con-31-old.md).
+    docs/ops/kelp-ops-30.md: |
+      # Kelp ops 30
+
+      Tags: cli, errors, storage
+
+      See [Lagoon reference 31](../reference/lagoon-ref-31.md#usage).
+      See [Dune tutorials 03](../tutorials/dune-tut-03.md#usage).
+      See [Quartz ops 36](quartz-ops-36.md#usage).
+    docs/ops/lagoon-ops-31.md: |
+      # Lagoon ops 31
+
+      Tags: upgrade
+
+      See [Grove faq 26](../faq/grove-faq-26.md#usage).
+      See [Harbor tutorials 07](../tutorials/harbor-tut-07.md#usage).
+      See [Reef tutorials 37](../tutorials/reef-tut-37.md#usage).
+    docs/ops/maple-ops-32.md: |
+      # Maple ops 32
+
+      Tags: billing, errors
+
+      See [Reef concepts 17](../concepts/reef-con-17.md#usage).
+      See [Iris faq 28](../faq/iris-faq-28.md#usage).
+    docs/ops/nectar-ops-33.md: |
+      # Nectar ops 33
+
+      Tags: cli, storage, upgrade
+
+      See [Sage guides 18](../guides/sage-gui-18.md#usage).
+      See [Nectar faq 13](../faq/nectar-faq-13.md).
+    docs/ops/onyx-ops-34.md: |
+      # Onyx ops 34
+
+      Tags: cli, retries, storage
+
+      See [Reef faq 17](../faq/reef-faq-17.md#usage).
+      See [Harbor reference 27](../reference/harbor-ref-27.md).
+    docs/ops/pine-ops-35.md: |
+      # Pine ops 35
+
+      Tags: metrics, perf
+
+      See [Alpha reference 00](../reference/alpha-ref-00.md).
+      See [Kelp ops 30](kelp-ops-30.md#usage).
+      See [Ember tutorials 04](../tutorials/ember-tut-04.md#usage).
+    docs/ops/quartz-ops-36.md: |
+      # Quartz ops 36
+
+      Tags: billing, storage
+
+      See [Kelp reference 30](../reference/kelp-ref-30.md#usage).
+      See [Reef ops 17](reef-ops-17.md).
+      See [Maple concepts 32](../concepts/maple-con-32.md).
+    docs/ops/reef-ops-37.md: |
+      # Reef ops 37
+
+      Tags: deploy
+
+      See [Nectar security 33](../security/nectar-sec-33.md#usage).
+      See [Onyx faq 34](../faq/onyx-faq-34.md).
+      See [Onyx guides 34](../guides/onyx-gui-34.md).
+    docs/ops/sage-ops-38.md: |
+      # Sage ops 38
+
+      Tags: billing, deploy, storage
+
+      See [Nectar reference 13](../reference/nectar-ref-13.md).
+      See [Reef concepts 37](../concepts/reef-con-37.md#usage).
+      See [Lagoon reference 11](../reference/lagoon-ref-11.md).
+    docs/ops/tundra-ops-39.md: |
+      # Tundra ops 39
+
+      Tags: limits, metrics
+
+      See [Cedar ops 22](cedar-ops-22.md).
+      See [Sage api 18](../api/sage-api-18.md).
+      See [Birch reference 21](../reference/birch-ref-21.md#usage).
+    docs/faq/alpha-faq-00.md: |
+      # Alpha faq 00
+
+      Tags: cli, deploy, errors
+
+      See [Grove security 06](../security/grove-sec-06.md#usage).
+      See [Pine ops 35](../ops/pine-ops-35.md).
+      See [Cedar reference 02](../reference/cedar-ref-02.md#usage).
+    docs/faq/birch-faq-01.md: |
+      # Birch faq 01
+
+      Tags: auth, storage, upgrade
+
+      See [Onyx reference 14](../reference/onyx-ref-14.md).
+      See [Sage tutorials 18](../tutorials/sage-tut-18.md).
+    docs/faq/cedar-faq-02.md: |
+      # Cedar faq 02
+
+      Tags: deploy, errors
+
+      See [Kelp concepts 30](../concepts/kelp-con-30.md).
+      See [Ember api 24](../api/ember-api-24.md#usage).
+    docs/faq/dune-faq-03.md: |
+      # Dune faq 03
+
+      Tags: billing, errors, retries
+
+      See [Ember ops 04](../ops/ember-ops-04.md#usage).
+      See [Dune ops 03](../ops/dune-ops-03.md).
+      See [Kelp faq 30](kelp-faq-30.md).
+    docs/faq/ember-faq-04.md: |
+      # Ember faq 04
+
+      Tags: auth, cli, setup
+
+      See [Birch ops 01](../ops/birch-ops-01.md#usage).
+      See [Dune faq 23](dune-faq-23.md).
+    docs/faq/fjord-faq-05.md: |
+      # Fjord faq 05
+
+      Tags: limits, perf
+
+      See [Cedar faq 02](cedar-faq-02.md).
+      See [Harbor security 07](../security/harbor-sec-07.md).
+    docs/faq/grove-faq-06.md: |
+      # Grove faq 06
+
+      Tags: billing, deploy, limits
+
+      See [Maple security 32](../security/maple-sec-32.md).
+      See [Dune ops 23](../ops/dune-ops-23.md).
+    docs/faq/harbor-faq-07.md: |
+      # Harbor faq 07
+
+      Tags: deploy, retries
+
+      See [Pine faq 35](pine-faq-35.md).
+      See [Onyx reference 14](../reference/onyx-ref-14.md#usage).
+      See [Juniper reference 29](../reference/juniper-ref-29.md).
+    docs/faq/iris-faq-08.md: |
+      # Iris faq 08
+
+      Tags: metrics, upgrade
+
+      See [Tundra api 19](../api/tundra-api-19.md).
+      See [Quartz reference 36](../reference/quartz-ref-36.md#usage).
+      See [Cedar reference 22](../reference/cedar-ref-22.md).
+    docs/faq/juniper-faq-09.md: |
+      # Juniper faq 09
+
+      Tags: auth, cli
+
+      See [Dune ops 03](../ops/dune-ops-03.md#usage).
+      See [Kelp tutorials 10](../tutorials/kelp-tut-10.md).
+    docs/faq/kelp-faq-10.md: |
+      # Kelp faq 10
+
+      Tags: auth, limits, setup
+
+      See [Sage security 38](../security/sage-sec-38.md).
+      See [Sage ops 18](../ops/sage-ops-18.md#usage).
+    docs/faq/lagoon-faq-11.md: |
+      # Lagoon faq 11
+
+      Tags: storage
+
+      See [Iris api 28](../api/iris-api-28.md).
+      See [Pine reference 35](../reference/pine-ref-35.md#usage).
+      See [Birch concepts 21](../concepts/birch-con-21.md#usage).
+    docs/faq/maple-faq-12.md: |
+      # Maple faq 12
+
+      Tags: cli, deploy, upgrade
+
+      See [Nectar reference 13](../reference/nectar-ref-13.md).
+      See [Cedar faq 22](cedar-faq-22.md#usage).
+      See [Pine ops 15](../ops/pine-ops-15.md).
+    docs/faq/nectar-faq-13.md: |
+      # Nectar faq 13
+
+      Tags: cli, retries
+
+      See [Cedar security 02](../security/cedar-sec-02.md).
+      See [Dune api 23](../api/dune-api-23.md).
+      See [Pine api 35](../api/pine-api-35.md).
+    docs/faq/onyx-faq-14.md: |
+      # Onyx faq 14
+
+      Tags: metrics, retries, storage
+
+      See [Kelp api 10](../api/kelp-api-10.md).
+      See [Ember security 24](../security/ember-sec-24.md).
+    docs/faq/pine-faq-15.md: |
+      # Pine faq 15
+
+      Tags: cli, upgrade
+
+      See [Reef api 37](../api/reef-api-37.md).
+      See [Grove api 26](../api/grove-api-26.md).
+      See [Tundra api 19](../api/tundra-api-19.md).
+    docs/faq/quartz-faq-16.md: |
+      # Quartz faq 16
+
+      Tags: auth, cli, upgrade
+
+      See [Onyx api 34](../api/onyx-api-34.md).
+      See [Birch api 01](../api/birch-api-01.md#usage).
+      See [Juniper reference 29](../reference/juniper-ref-29.md).
+    docs/faq/reef-faq-17.md: |
+      # Reef faq 17
+
+      Tags: errors, perf, storage
+
+      See [Sage faq 38](sage-faq-38.md).
+      See [Harbor concepts 07](../concepts/harbor-con-07.md).
+      See [Tundra reference 19](../reference/tundra-ref-19.md).
+    docs/faq/sage-faq-18.md: |
+      # Sage faq 18
+
+      Tags: errors, retries
+
+      See [Dune guides 23](../guides/dune-gui-23.md#usage).
+      See [Alpha guides 00](../guides/alpha-gui-00.md#usage).
+    docs/faq/tundra-faq-19.md: |
+      # Tundra faq 19
+
+      Tags: retries, storage
+
+      See [Iris concepts 08](../concepts/iris-con-08.md).
+      See [Harbor tutorials 27](../tutorials/harbor-tut-27.md).
+    docs/faq/alpha-faq-20.md: |
+      # Alpha faq 20
+
+      Tags: metrics, upgrade
+
+      See [Cedar ops 22](../ops/cedar-ops-22.md).
+      See [Grove concepts 26](../concepts/grove-con-26.md).
+      See [Cedar tutorials 22](../tutorials/cedar-tut-22.md).
+    docs/faq/birch-faq-21.md: |
+      # Birch faq 21
+
+      Tags: upgrade
+
+      See [Ember faq 24](ember-faq-24.md#usage).
+      See [Kelp concepts 10](../concepts/kelp-con-10.md).
+      See [Quartz concepts 36](../concepts/quartz-con-36.md).
+    docs/faq/cedar-faq-22.md: |
+      # Cedar faq 22
+
+      Tags: deploy
+
+      See [Sage guides 38](../guides/sage-gui-38.md).
+      See [Sage security 38](../security/sage-sec-38.md#usage).
+      See [Quartz api 36](../api/quartz-api-36.md#usage).
+    docs/faq/dune-faq-23.md: |
+      # Dune faq 23
+
+      Tags: retries, storage
+
+      See [Alpha api 00](../api/alpha-api-00.md#usage).
+      See [Juniper tutorials 09](../tutorials/juniper-tut-09.md).
+      See [Pine ops 15](../ops/pine-ops-15.md).
+    docs/faq/ember-faq-24.md: |
+      # Ember faq 24
+
+      Tags: metrics
+
+      See [Ember api 04](../api/ember-api-04.md).
+      See [Reef ops 17](../ops/reef-ops-17.md).
+      See [Tundra faq 19](tundra-faq-19.md#usage).
+    docs/faq/fjord-faq-25.md: |
+      # Fjord faq 25
+
+      Tags: deploy, upgrade
+
+      See [Alpha concepts 00](../concepts/alpha-con-00.md).
+      See [Maple tutorials 32](../tutorials/maple-tut-32.md#usage).
+      See [Lagoon ops 11](../ops/lagoon-ops-11.md).
+      See [Iris faq 08](iris-faq-08-old.md).
+    docs/faq/grove-faq-26.md: |
+      # Grove faq 26
+
+      Tags: limits, retries
+
+      See [Juniper faq 09](juniper-faq-09.md#usage).
+      See [Fjord tutorials 25](../tutorials/fjord-tut-25.md).
+      See [Harbor ops 27](../ops/harbor-ops-27.md).
+    docs/faq/harbor-faq-27.md: |
+      # Harbor faq 27
+
+      Tags: errors, metrics
+
+      See [Lagoon security 31](../security/lagoon-sec-31.md).
+      See [Harbor api 07](../api/harbor-api-07.md#usage).
+      See [Harbor faq 07](harbor-faq-07.md).
+    docs/faq/iris-faq-28.md: |
+      # Iris faq 28
+
+      Tags: auth, cli, perf
+
+      See [Grove api 26](../api/grove-api-26.md).
+      See [Birch security 01](../security/birch-sec-01.md).
+      See [Onyx ops 34](../ops/onyx-ops-34.md#usage).
+    docs/faq/juniper-faq-29.md: |
+      # Juniper faq 29
+
+      Tags: auth, storage
+
+      See [Sage faq 18](sage-faq-18.md).
+      See [Kelp ops 30](../ops/kelp-ops-30.md).
+    docs/faq/kelp-faq-30.md: |
+      # Kelp faq 30
+
+      Tags: billing, upgrade
+
+      See [Cedar faq 02](cedar-faq-02.md).
+      See [Nectar concepts 33](../concepts/nectar-con-33.md).
+      See [Iris security 28](../security/iris-sec-28.md#usage).
+    docs/faq/lagoon-faq-31.md: |
+      # Lagoon faq 31
+
+      Tags: deploy, setup, upgrade
+
+      See [Cedar concepts 02](../concepts/cedar-con-02.md).
+      See [Harbor guides 27](../guides/harbor-gui-27.md).
+    docs/faq/maple-faq-32.md: |
+      # Maple faq 32
+
+      Tags: billing, cli
+
+      See [Onyx tutorials 34](../tutorials/onyx-tut-34.md#usage).
+      See [Iris tutorials 08](../tutorials/iris-tut-08.md).
+      See [Sage api 38](../api/sage-api-38.md).
+    docs/faq/nectar-faq-33.md: |
+      # Nectar faq 33
+
+      Tags: auth, cli, perf
+
+      See [Grove security 06](../security/grove-sec-06.md).
+      See [Tundra faq 39](tundra-faq-39.md).
+      See [Nectar tutorials 33](../tutorials/nectar-tut-33.md).
+    docs/faq/onyx-faq-34.md: |
+      # Onyx faq 34
+
+      Tags: retries, setup, upgrade
+
+      See [Kelp ops 30](../ops/kelp-ops-30.md#usage).
+      See [Dune api 23](../api/dune-api-23.md#usage).
+      See [Nectar guides 13](../guides/nectar-gui-13.md).
+    docs/faq/pine-faq-35.md: |
+      # Pine faq 35
+
+      Tags: perf
+
+      See [Reef api 17](../api/reef-api-17.md).
+      See [Quartz security 16](../security/quartz-sec-16.md#usage).
+    docs/faq/quartz-faq-36.md: |
+      # Quartz faq 36
+
+      Tags: cli, storage
+
+      See [Quartz ops 16](../ops/quartz-ops-16.md#usage).
+      See [Harbor guides 27](../guides/harbor-gui-27.md).
+      See [Birch guides 01](../guides/birch-gui-01.md#usage).
+    docs/faq/reef-faq-37.md: |
+      # Reef faq 37
+
+      Tags: billing, perf, storage
+
+      See [Maple tutorials 12](../tutorials/maple-tut-12.md).
+      See [Juniper security 09](../security/juniper-sec-09.md).
+      See [Cedar faq 02](cedar-faq-02.md).
+    docs/faq/sage-faq-38.md: |
+      # Sage faq 38
+
+      Tags: deploy, errors, retries
+
+      See [Alpha faq 00](alpha-faq-00.md).
+      See [Tundra faq 19](tundra-faq-19.md#usage).
+    docs/faq/tundra-faq-39.md: |
+      # Tundra faq 39
+
+      Tags: metrics
+
+      See [Ember api 24](../api/ember-api-24.md).
+      See [Nectar reference 33](../reference/nectar-ref-33.md).
+      See [Nectar security 33](../security/nectar-sec-33.md).
+    docs/tutorials/alpha-tut-00.md: |
+      # Alpha tutorials 00
+
+      Tags: auth, metrics
+
+      See [Ember security 24](../security/ember-sec-24.md).
+      See [Reef reference 37](../reference/reef-ref-37.md).
+      See [Grove concepts 06](../concepts/grove-con-06.md#usage).
+    docs/tutorials/birch-tut-01.md: |
+      # Birch tutorials 01
+
+      Tags: errors, metrics, storage
+
+      See [Harbor ops 07](../ops/harbor-ops-07.md).
+      See [Lagoon security 11](../security/lagoon-sec-11.md).
+    docs/tutorials/cedar-tut-02.md: |
+      # Cedar tutorials 02
+
+      Tags: billing, deploy, upgrade
+
+      See [Cedar concepts 02](../concepts/cedar-con-02.md).
+      See [Birch guides 21](../guides/birch-gui-21.md).
+    docs/tutorials/dune-tut-03.md: |
+      # Dune tutorials 03
+
+      Tags: cli, limits, upgrade
+
+      See [Tundra security 39](../security/tundra-sec-39.md).
+      See [Alpha api 00](../api/alpha-api-00.md#usage).
+      See [Alpha guides 00](../guides/alpha-gui-00.md#usage).
+    docs/tutorials/ember-tut-04.md: |
+      # Ember tutorials 04
+
+      Tags: perf, retries
+
+      See [Birch faq 01](../faq/birch-faq-01.md).
+      See [Birch tutorials 01](birch-tut-01.md).
+      See [Iris guides 28](../guides/iris-gui-28.md).
+    docs/tutorials/fjord-tut-05.md: |
+      # Fjord tutorials 05
+
+      Tags: perf, storage
+
+      See [Maple reference 32](../reference/maple-ref-32.md).
+      See [Cedar reference 22](../reference/cedar-ref-22.md).
+      See [Nectar faq 13](../faq/nectar-faq-13.md#usage).
+    docs/tutorials/grove-tut-06.md: |
+      # Grove tutorials 06
+
+      Tags: storage
+
+      See [Quartz security 16](../security/quartz-sec-16.md).
+      See [Fjord tutorials 05](fjord-tut-05.md#usage).
+    docs/tutorials/harbor-tut-07.md: |
+      # Harbor tutorials 07
+
+      Tags: metrics, setup
+
+      See [Reef tutorials 37](reef-tut-37.md#usage).
+      See [Quartz concepts 16](../concepts/quartz-con-16.md).
+    docs/tutorials/iris-tut-08.md: |
+      # Iris tutorials 08
+
+      Tags: retries, setup, upgrade
+
+      See [Grove security 06](../security/grove-sec-06.md).
+      See [Onyx tutorials 14](onyx-tut-14.md#usage).
+      See [Kelp security 10](../security/kelp-sec-10.md).
+    docs/tutorials/juniper-tut-09.md: |
+      # Juniper tutorials 09
+
+      Tags: billing
+
+      See [Sage security 38](../security/sage-sec-38.md#usage).
+      See [Birch reference 21](../reference/birch-ref-21.md).
+      See [Grove guides 26](../guides/grove-gui-26.md).
+    docs/tutorials/kelp-tut-10.md: |
+      # Kelp tutorials 10
+
+      Tags: metrics, setup
+
+      See [Iris guides 08](../guides/iris-gui-08.md).
+      See [Pine faq 35](../faq/pine-faq-35.md).
+      See [Lagoon api 31](../api/lagoon-api-31.md).
+    docs/tutorials/lagoon-tut-11.md: |
+      # Lagoon tutorials 11
+
+      Tags: metrics
+
+      See [Juniper tutorials 09](juniper-tut-09.md).
+      See [Grove concepts 26](../concepts/grove-con-26.md).
+      See [Ember reference 24](../reference/ember-ref-24.md#usage).
+    docs/tutorials/maple-tut-12.md: |
+      # Maple tutorials 12
+
+      Tags: auth, limits, setup
+
+      See [Harbor concepts 27](../concepts/harbor-con-27.md#usage).
+      See [Grove faq 06](../faq/grove-faq-06.md).
+      See [Maple faq 12](../faq/maple-faq-12.md).
+    docs/tutorials/nectar-tut-13.md: |
+      # Nectar tutorials 13
+
+      Tags: billing, deploy
+
+      See [Alpha reference 20](../reference/alpha-ref-20.md#usage).
+      See [Ember reference 04](../reference/ember-ref-04.md#usage).
+      See [Cedar api 22](../api/cedar-api-22.md#usage).
+    docs/tutorials/onyx-tut-14.md: |
+      # Onyx tutorials 14
+
+      Tags: auth, limits
+
+      See [Juniper tutorials 09](juniper-tut-09.md).
+      See [Juniper security 09](../security/juniper-sec-09.md).
+      See [Dune tutorials 23](dune-tut-23.md).
+    docs/tutorials/pine-tut-15.md: |
+      # Pine tutorials 15
+
+      Tags: perf, setup
+
+      See [Harbor tutorials 27](harbor-tut-27.md).
+      See [Tundra tutorials 19](tundra-tut-19.md).
+    docs/tutorials/quartz-tut-16.md: |
+      # Quartz tutorials 16
+
+      Tags: cli, limits
+
+      See [Iris guides 08](../guides/iris-gui-08.md#usage).
+      See [Cedar guides 22](../guides/cedar-gui-22.md).
+      See [Onyx api 34](../api/onyx-api-34.md).
+    docs/tutorials/reef-tut-17.md: |
+      # Reef tutorials 17
+
+      Tags: auth, errors
+
+      See [Ember guides 24](../guides/ember-gui-24.md#usage).
+      See [Dune reference 03](../reference/dune-ref-03.md).
+      See [Kelp tutorials 30](kelp-tut-30.md#usage).
+    docs/tutorials/sage-tut-18.md: |
+      # Sage tutorials 18
+
+      Tags: cli, retries
+
+      See [Nectar guides 13](../guides/nectar-gui-13.md).
+      See [Juniper faq 29](../faq/juniper-faq-29.md).
+    docs/tutorials/tundra-tut-19.md: |
+      # Tundra tutorials 19
+
+      Tags: auth, billing, deploy
+
+      See [Alpha reference 00](../reference/alpha-ref-00.md#usage).
+      See [Pine reference 15](../reference/pine-ref-15.md).
+      See [Kelp security 30](../security/kelp-sec-30.md).
+    docs/tutorials/alpha-tut-20.md: |
+      # Alpha tutorials 20
+
+      Tags: auth, limits, perf
+
+      See [Nectar faq 33](../faq/nectar-faq-33.md).
+      See [Onyx api 34](../api/onyx-api-34.md#usage).
+      See [Quartz ops 16](../ops/quartz-ops-16.md).
+    docs/tutorials/birch-tut-21.md: |
+      # Birch tutorials 21
+
+      Tags: cli, perf
+
+      See [Fjord faq 25](../faq/fjord-faq-25.md#usage).
+      See [Reef reference 37](../reference/reef-ref-37.md).
+    docs/tutorials/cedar-tut-22.md: |
+      # Cedar tutorials 22
+
+      Tags: errors
+
+      See [Birch guides 21](../guides/birch-gui-21.md).
+      See [Nectar reference 13](../reference/nectar-ref-13.md#usage).
+      See [Sage concepts 38](../concepts/sage-con-38.md#usage).
+    docs/tutorials/dune-tut-23.md: |
+      # Dune tutorials 23
+
+      Tags: auth, upgrade
+
+      See [Maple concepts 12](../concepts/maple-con-12.md#usage).
+      See [Tundra ops 39](../ops/tundra-ops-39.md#usage).
+      See [Fjord concepts 25](../concepts/fjord-con-25.md#usage).
+    docs/tutorials/ember-tut-24.md: |
+      # Ember tutorials 24
+
+      Tags: cli, deploy
+
+      See [Juniper concepts 29](../concepts/juniper-con-29.md).
+      See [Maple ops 12](../ops/maple-ops-12.md#usage).
+      See [Fjord reference 25](../reference/fjord-ref-25.md).
+    docs/tutorials/fjord-tut-25.md: |
+      # Fjord tutorials 25
+
+      Tags: auth, cli, setup
+
+      See [Reef guides 37](../guides/reef-gui-37.md).
+      See [Alpha faq 00](../faq/alpha-faq-00.md).
+      See [Grove concepts 06](../concepts/grove-con-06.md).
+    docs/tutorials/grove-tut-26.md: |
+      # Grove tutorials 26
+
+      Tags: cli, deploy
+
+      See [Tundra security 19](../security/tundra-sec-19.md#usage).
+      See [Lagoon tutorials 31](lagoon-tut-31.md).
+      See [Nectar api 13](../api/nectar-api-13.md).
+    docs/tutorials/harbor-tut-27.md: |
+      # Harbor tutorials 27
+
+      Tags: retries
+
+      See [Tundra tutorials 39](tundra-tut-39.md).
+      See [Sage tutorials 38](sage-tut-38.md).
+      See [Dune faq 03](../faq/dune-faq-03.md).
+    docs/tutorials/iris-tut-28.md: |
+      # Iris tutorials 28
+
+      Tags: auth, setup, storage
+
+      See [Harbor guides 07](../guides/harbor-gui-07.md#usage).
+      See [Birch security 21](../security/birch-sec-21.md).
+      See [Maple faq 12](../faq/maple-faq-12.md#usage).
+    docs/tutorials/juniper-tut-29.md: |
+      # Juniper tutorials 29
+
+      Tags: billing, cli, errors
+
+      See [Cedar concepts 22](../concepts/cedar-con-22.md).
+      See [Nectar guides 33](../guides/nectar-gui-33.md).
+      See [Harbor security 07](../security/harbor-sec-07.md).
+    docs/tutorials/kelp-tut-30.md: |
+      # Kelp tutorials 30
+
+      Tags: deploy, setup
+
+      See [Cedar reference 02](../reference/cedar-ref-02.md).
+      See [Quartz concepts 16](../concepts/quartz-con-16.md#usage).
+      See [Alpha ops 00](../ops/alpha-ops-00.md).
+    docs/tutorials/lagoon-tut-31.md: |
+      # Lagoon tutorials 31
+
+      Tags: auth
+
+      See [Birch api 01](../api/birch-api-01.md).
+      See [Fjord guides 25](../guides/fjord-gui-25.md).
+      See [Iris guides 28](../guides/iris-gui-28.md).
+    docs/tutorials/maple-tut-32.md: |
+      # Maple tutorials 32
+
+      Tags: billing, upgrade
+
+      See [Onyx faq 14](../faq/onyx-faq-14.md#usage).
+      See [Nectar concepts 13](../concepts/nectar-con-13.md).
+      See [Pine faq 15](../faq/pine-faq-15.md).
+    docs/tutorials/nectar-tut-33.md: |
+      # Nectar tutorials 33
+
+      Tags: auth, cli, metrics
+
+      See [Lagoon tutorials 31](lagoon-tut-31.md).
+      See [Kelp guides 30](../guides/kelp-gui-30.md).
+    docs/tutorials/onyx-tut-34.md: |
+      # Onyx tutorials 34
+
+      Tags: upgrade
+
+      See [Nectar api 13](../api/nectar-api-13.md).
+      See [Kelp tutorials 30](kelp-tut-30.md#usage).
+      See [Iris concepts 08](../concepts/iris-con-08.md).
+    docs/tutorials/pine-tut-35.md: |
+      # Pine tutorials 35
+
+      Tags: upgrade
+
+      See [Reef guides 17](../guides/reef-gui-17.md).
+      See [Reef reference 17](../reference/reef-ref-17.md).
+      See [Cedar reference 02](../reference/cedar-ref-02.md#usage).
+    docs/tutorials/quartz-tut-36.md: |
+      # Quartz tutorials 36
+
+      Tags: auth, deploy, perf
+
+      See [Birch tutorials 01](birch-tut-01.md).
+      See [Dune guides 23](../guides/dune-gui-23.md).
+      See [Iris ops 28](../ops/iris-ops-28.md).
+    docs/tutorials/reef-tut-37.md: |
+      # Reef tutorials 37
+
+      Tags: cli
+
+      See [Reef concepts 17](../concepts/reef-con-17.md#usage).
+      See [Juniper reference 09](../reference/juniper-ref-09.md).
+      See [Birch reference 21](../reference/birch-ref-21.md).
+    docs/tutorials/sage-tut-38.md: |
+      # Sage tutorials 38
+
+      Tags: deploy, setup, upgrade
+
+      See [Juniper faq 29](../faq/juniper-faq-29.md).
+      See [Iris guides 28](../guides/iris-gui-28.md).
+      See [Reef tutorials 37](reef-tut-37.md).
+    docs/tutorials/tundra-tut-39.md: |
+      # Tundra tutorials 39
+
+      Tags: storage
+
+      See [Iris ops 08](../ops/iris-ops-08.md#usage).
+      See [Sage guides 18](../guides/sage-gui-18.md).
+      See [Reef guides 17](../guides/reef-gui-17.md#usage).
+    docs/concepts/alpha-con-00.md: |
+      # Alpha concepts 00
+
+      Tags: upgrade
+
+      See [Reef concepts 17](reef-con-17.md).
+      See [Fjord faq 25](../faq/fjord-faq-25.md).
+      See [Lagoon ops 11](../ops/lagoon-ops-11.md).
+    docs/concepts/birch-con-01.md: |
+      # Birch concepts 01
+
+      Tags: billing, metrics
+
+      See [Iris reference 28](../reference/iris-ref-28.md).
+      See [Iris ops 08](../ops/iris-ops-08.md).
+      See [Alpha api 20](../api/alpha-api-20.md).
+    docs/concepts/cedar-con-02.md: |
+      # Cedar concepts 02
+
+      Tags: auth, setup
+
+      See [Fjord reference 05](../reference/fjord-ref-05.md).
+      See [Quartz api 36](../api/quartz-api-36.md).
+    docs/concepts/dune-con-03.md: |
+      # Dune concepts 03
+
+      Tags: auth
+
+      See [Juniper faq 29](../faq/juniper-faq-29.md).
+      See [Kelp concepts 10](kelp-con-10.md).
+      See [Birch concepts 21](birch-con-21.md).
+    docs/concepts/ember-con-04.md: |
+      # Ember concepts 04
+
+      Tags: storage
+
+      See [Birch security 21](../security/birch-sec-21.md).
+      See [Grove ops 06](../ops/grove-ops-06.md).
+      See [Tundra api 19](../api/tundra-api-19.md).
+    docs/concepts/fjord-con-05.md: |
+      # Fjord concepts 05
+
+      Tags: deploy, limits, storage
+
+      See [Sage security 18](../security/sage-sec-18.md).
+      See [Tundra ops 39](../ops/tundra-ops-39.md#usage).
+      See [Iris api 28](../api/iris-api-28.md#usage).
+    docs/concepts/grove-con-06.md: |
+      # Grove concepts 06
+
+      Tags: deploy
+
+      See [Fjord reference 05](../reference/fjord-ref-05.md).
+      See [Harbor security 07](../security/harbor-sec-07.md).
+      See [Juniper security 29](../security/juniper-sec-29.md).
+    docs/concepts/harbor-con-07.md: |
+      # Harbor concepts 07
+
+      Tags: errors, metrics, perf
+
+      See [Cedar guides 22](../guides/cedar-gui-22.md).
+      See [Sage reference 38](../reference/sage-ref-38.md#usage).
+    docs/concepts/iris-con-08.md: |
+      # Iris concepts 08
+
+      Tags: metrics, setup, storage
+
+      See [Birch faq 01](../faq/birch-faq-01.md).
+      See [Juniper guides 29](../guides/juniper-gui-29.md).
+    docs/concepts/juniper-con-09.md: |
+      # Juniper concepts 09
+
+      Tags: cli, perf
+
+      See [Nectar tutorials 13](../tutorials/nectar-tut-13.md#usage).
+      See [Tundra guides 39](../guides/tundra-gui-39.md).
+      See [Nectar guides 13](../guides/nectar-gui-13.md#usage).
+    docs/concepts/kelp-con-10.md: |
+      # Kelp concepts 10
+
+      Tags: perf, upgrade
+
+      See [Reef reference 37](../reference/reef-ref-37.md#usage).
+      See [Nectar reference 13](../reference/nectar-ref-13.md).
+      See [Onyx security 14](../security/onyx-sec-14.md).
+    docs/concepts/lagoon-con-11.md: |
+      # Lagoon concepts 11
+
+      Tags: retries
+
+      See [Tundra tutorials 39](../tutorials/tundra-tut-39.md).
+      See [Kelp concepts 30](kelp-con-30.md#usage).
+      See [Lagoon faq 11](../faq/lagoon-faq-11.md).
+    docs/concepts/maple-con-12.md: |
+      # Maple concepts 12
+
+      Tags: limits, perf
+
+      See [Tundra reference 19](../reference/tundra-ref-19.md).
+      See [Juniper concepts 29](juniper-con-29.md).
+      See [Kelp tutorials 10](../tutorials/kelp-tut-10.md).
+    docs/concepts/nectar-con-13.md: |
+      # Nectar concepts 13
+
+      Tags: upgrade
+
+      See [Nectar faq 33](../faq/nectar-faq-33.md).
+      See [Kelp security 30](../security/kelp-sec-30.md).
+      See [Harbor reference 07](../reference/harbor-ref-07.md).
+    docs/concepts/onyx-con-14.md: |
+      # Onyx concepts 14
+
+      Tags: billing, errors
+
+      See [Quartz api 16](../api/quartz-api-16.md).
+      See [Kelp tutorials 30](../tutorials/kelp-tut-30.md).
+      See [Sage guides 18](../guides/sage-gui-18.md#usage).
+    docs/concepts/pine-con-15.md: |
+      # Pine concepts 15
+
+      Tags: auth, setup
+
+      See [Quartz security 36](../security/quartz-sec-36.md).
+      See [Sage guides 18](../guides/sage-gui-18.md#usage).
+    docs/concepts/quartz-con-16.md: |
+      # Quartz concepts 16
+
+      Tags: billing, deploy, storage
+
+      See [Nectar security 13](../security/nectar-sec-13.md#usage).
+      See [Fjord tutorials 05](../tutorials/fjord-tut-05.md#usage).
+      See [Tundra tutorials 19](../tutorials/tundra-tut-19-old.md).
+    docs/concepts/reef-con-17.md: |
+      # Reef concepts 17
+
+      Tags: billing, limits
+
+      See [Tundra ops 19](../ops/tundra-ops-19.md#usage).
+      See [Ember reference 24](../reference/ember-ref-24.md).
+      See [Nectar guides 33](../guides/nectar-gui-33.md).
+    docs/concepts/sage-con-18.md: |
+      # Sage concepts 18
+
+      Tags: auth, deploy
+
+      See [Quartz tutorials 16](../tutorials/quartz-tut-16.md#usage).
+      See [Nectar faq 13](../faq/nectar-faq-13.md).
+    docs/concepts/tundra-con-19.md: |
+      # Tundra concepts 19
+
+      Tags: cli, errors, setup
+
+      See [Birch security 21](../security/birch-sec-21.md#usage).
+      See [Dune guides 23](../guides/dune-gui-23.md).
+      See [Alpha reference 00](../reference/alpha-ref-00.md).
+    docs/concepts/alpha-con-20.md: |
+      # Alpha concepts 20
+
+      Tags: auth, metrics
+
+      See [Tundra concepts 39](tundra-con-39.md).
+      See [Sage ops 18](../ops/sage-ops-18.md#usage).
+    docs/concepts/birch-con-21.md: |
+      # Birch concepts 21
+
+      Tags: retries
+
+      See [Juniper security 29](../security/juniper-sec-29.md).
+      See [Tundra security 19](../security/tundra-sec-19.md#usage).
+      See [Dune tutorials 23](../tutorials/dune-tut-23.md).
+    docs/concepts/cedar-con-22.md: |
+      # Cedar concepts 22
+
+      Tags: billing, metrics
+
+      See [Lagoon concepts 31](lagoon-con-31.md).
+      See [Lagoon reference 11](../reference/lagoon-ref-11.md).
+      See [Maple tutorials 32](../tutorials/maple-tut-32.md).
+    docs/concepts/dune-con-23.md: |
+      # Dune concepts 23
+
+      Tags: deploy, perf
+
+      See [Maple security 32](../security/maple-sec-32.md).
+      See [Quartz guides 16](../guides/quartz-gui-16.md).
+      See [Kelp security 10](../security/kelp-sec-10.md).
+    docs/concepts/ember-con-24.md: |
+      # Ember concepts 24
+
+      Tags: auth, limits, storage
+
+      See [Nectar tutorials 33](../tutorials/nectar-tut-33.md).
+      See [Tundra tutorials 19](../tutorials/tundra-tut-19.md).
+      See [Fjord security 05](../security/fjord-sec-05.md).
+    docs/concepts/fjord-con-25.md: |
+      # Fjord concepts 25
+
+      Tags: auth
+
+      See [Dune guides 03](../guides/dune-gui-03.md).
+      See [Iris concepts 08](iris-con-08.md#usage).
+      See [Maple reference 12](../reference/maple-ref-12.md#usage).
+    docs/concepts/grove-con-26.md: |
+      # Grove concepts 26
+
+      Tags: metrics, upgrade
+
+      See [Sage tutorials 18](../tutorials/sage-tut-18.md#usage).
+      See [Dune faq 23](../faq/dune-faq-23.md).
+    docs/concepts/harbor-con-27.md: |
+      # Harbor concepts 27
+
+      Tags: limits
+
+      See [Alpha guides 20](../guides/alpha-gui-20.md).
+      See [Alpha reference 00](../reference/alpha-ref-00.md).
+      See [Birch tutorials 01](../tutorials/birch-tut-01.md#usage).
+    docs/concepts/iris-con-28.md: |
+      # Iris concepts 28
+
+      Tags: auth
+
+      See [Iris faq 08](../faq/iris-faq-08.md).
+      See [Birch tutorials 21](../tutorials/birch-tut-21.md).
+      See [Kelp reference 30](../reference/kelp-ref-30-old.md).
+    docs/concepts/juniper-con-29.md: |
+      # Juniper concepts 29
+
+      Tags: auth, errors
+
+      See [Alpha api 00](../api/alpha-api-00.md).
+      See [Birch api 01](../api/birch-api-01.md#usage).
+      See [Lagoon reference 31](../reference/lagoon-ref-31.md).
+    docs/concepts/kelp-con-30.md: |
+      # Kelp concepts 30
+
+      Tags: billing, upgrade
+
+      See [Harbor api 27](../api/harbor-api-27.md).
+      See [Fjord concepts 25](fjord-con-25.md).
+      See [Grove ops 06](../ops/grove-ops-06.md#usage).
+    docs/concepts/lagoon-con-31.md: |
+      # Lagoon concepts 31
+
+      Tags: limits, upgrade
+
+      See [Tundra guides 19](../guides/tundra-gui-19.md).
+      See [Sage ops 18](../ops/sage-ops-18.md).
+      See [Onyx ops 14](../ops/onyx-ops-14.md).
+    docs/concepts/maple-con-32.md: |
+      # Maple concepts 32
+
+      Tags: auth, errors, upgrade
+
+      See [Kelp security 10](../security/kelp-sec-10.md#usage).
+      See [Sage security 38](../security/sage-sec-38.md#usage).
+      See [Fjord tutorials 25](../tutorials/fjord-tut-25.md).
+    docs/concepts/nectar-con-33.md: |
+      # Nectar concepts 33
+
+      Tags: billing, setup
+
+      See [Tundra tutorials 19](../tutorials/tundra-tut-19.md).
+      See [Onyx security 34](../security/onyx-sec-34.md).
+    docs/concepts/onyx-con-34.md: |
+      # Onyx concepts 34
+
+      Tags: limits, storage
+
+      See [Reef tutorials 37](../tutorials/reef-tut-37.md).
+      See [Reef tutorials 17](../tutorials/reef-tut-17.md).
+    docs/concepts/pine-con-35.md: |
+      # Pine concepts 35
+
+      Tags: errors, limits, storage
+
+      See [Birch tutorials 21](../tutorials/birch-tut-21.md).
+      See [Fjord concepts 05](fjord-con-05.md#usage).
+      See [Lagoon concepts 31](lagoon-con-31.md).
+    docs/concepts/quartz-con-36.md: |
+      # Quartz concepts 36
+
+      Tags: metrics, retries
+
+      See [Juniper ops 29](../ops/juniper-ops-29.md#usage).
+      See [Kelp security 10](../security/kelp-sec-10.md#usage).
+    docs/concepts/reef-con-37.md: |
+      # Reef concepts 37
+
+      Tags: cli, storage
+
+      See [Cedar security 02](../security/cedar-sec-02.md).
+      See [Nectar faq 13](../faq/nectar-faq-13.md).
+      See [Juniper concepts 29](juniper-con-29.md#usage).
+    docs/concepts/sage-con-38.md: |
+      # Sage concepts 38
+
+      Tags: cli, retries, storage
+
+      See [Kelp reference 30](../reference/kelp-ref-30.md).
+      See [Juniper concepts 29](juniper-con-29.md#usage).
+      See [Maple reference 32](../reference/maple-ref-32.md).
+    docs/concepts/tundra-con-39.md: |
+      # Tundra concepts 39
+
+      Tags: billing, deploy, limits
+
+      See [Birch api 21](../api/birch-api-21.md#usage).
+      See [Lagoon concepts 11](lagoon-con-11.md).
+    docs/security/alpha-sec-00.md: |
+      # Alpha security 00
+
+      Tags: billing, errors
+
+      See [Cedar faq 02](../faq/cedar-faq-02.md#usage).
+      See [Fjord guides 25](../guides/fjord-gui-25.md).
+    docs/security/birch-sec-01.md: |
+      # Birch security 01
+
+      Tags: limits, perf
+
+      See [Grove ops 26](../ops/grove-ops-26.md).
+      See [Fjord reference 05](../reference/fjord-ref-05.md).
+    docs/security/cedar-sec-02.md: |
+      # Cedar security 02
+
+      Tags: auth, billing
+
+      See [Pine api 35](../api/pine-api-35.md).
+      See [Lagoon ops 31](../ops/lagoon-ops-31.md).
+      See [Quartz security 36](quartz-sec-36.md#usage).
+    docs/security/dune-sec-03.md: |
+      # Dune security 03
+
+      Tags: auth, storage
+
+      See [Harbor api 07](../api/harbor-api-07.md).
+      See [Quartz tutorials 36](../tutorials/quartz-tut-36.md).
+    docs/security/ember-sec-04.md: |
+      # Ember security 04
+
+      Tags: limits
+
+      See [Pine ops 35](../ops/pine-ops-35.md).
+      See [Pine reference 35](../reference/pine-ref-35.md#usage).
+    docs/security/fjord-sec-05.md: |
+      # Fjord security 05
+
+      Tags: errors
+
+      See [Ember api 04](../api/ember-api-04.md).
+      See [Nectar concepts 13](../concepts/nectar-con-13.md).
+      See [Dune ops 23](../ops/dune-ops-23.md).
+    docs/security/grove-sec-06.md: |
+      # Grove security 06
+
+      Tags: metrics
+
+      See [Lagoon concepts 11](../concepts/lagoon-con-11.md#usage).
+      See [Birch concepts 21](../concepts/birch-con-21.md#usage).
+      See [Birch guides 01](../guides/birch-gui-01.md#usage).
+    docs/security/harbor-sec-07.md: |
+      # Harbor security 07
+
+      Tags: errors, storage
+
+      See [Kelp ops 30](../ops/kelp-ops-30.md).
+      See [Kelp api 10](../api/kelp-api-10.md#usage).
+      See [Pine tutorials 15](../tutorials/pine-tut-15.md#usage).
+    docs/security/iris-sec-08.md: |
+      # Iris security 08
+
+      Tags: upgrade
+
+      See [Ember api 24](../api/ember-api-24.md#usage).
+      See [Kelp ops 10](../ops/kelp-ops-10.md).
+    docs/security/juniper-sec-09.md: |
+      # Juniper security 09
+
+      Tags: deploy, limits, perf
+
+      See [Grove faq 26](../faq/grove-faq-26.md).
+      See [Onyx faq 34](../faq/onyx-faq-34.md).
+      See [Juniper concepts 29](../concepts/juniper-con-29.md).
+    docs/security/kelp-sec-10.md: |
+      # Kelp security 10
+
+      Tags: deploy, perf, upgrade
+
+      See [Alpha concepts 00](../concepts/alpha-con-00.md).
+      See [Harbor api 07](../api/harbor-api-07.md).
+    docs/security/lagoon-sec-11.md: |
+      # Lagoon security 11
+
+      Tags: retries
+
+      See [Harbor reference 07](../reference/harbor-ref-07.md#usage).
+      See [Dune guides 03](../guides/dune-gui-03.md).
+    docs/security/maple-sec-12.md: |
+      # Maple security 12
+
+      Tags: limits, metrics
+
+      See [Grove tutorials 26](../tutorials/grove-tut-26.md).
+      See [Ember reference 24](../reference/ember-ref-24.md).
+      See [Reef tutorials 37](../tutorials/reef-tut-37.md).
+    docs/security/nectar-sec-13.md: |
+      # Nectar security 13
+
+      Tags: errors, perf
+
+      See [Pine faq 15](../faq/pine-faq-15.md).
+      See [Quartz security 36](quartz-sec-36.md).
+      See [Nectar reference 33](../reference/nectar-ref-33.md).
+    docs/security/onyx-sec-14.md: |
+      # Onyx security 14
+
+      Tags: limits, retries
+
+      See [Pine api 15](../api/pine-api-15.md#usage).
+      See [Grove api 06](../api/grove-api-06.md#usage).
+      See [Harbor faq 07](../faq/harbor-faq-07.md).
+    docs/security/pine-sec-15.md: |
+      # Pine security 15
+
+      Tags: auth, metrics
+
+      See [Cedar security 02](cedar-sec-02.md).
+      See [Onyx api 14](../api/onyx-api-14.md#usage).
+      See [Nectar tutorials 33](../tutorials/nectar-tut-33.md).
+    docs/security/quartz-sec-16.md: |
+      # Quartz security 16
+
+      Tags: cli, retries, setup
+
+      See [Kelp ops 10](../ops/kelp-ops-10.md).
+      See [Ember reference 04](../reference/ember-ref-04.md#usage).
+    docs/security/reef-sec-17.md: |
+      # Reef security 17
+
+      Tags: cli, limits
+
+      See [Kelp ops 30](../ops/kelp-ops-30.md).
+      See [Alpha faq 00](../faq/alpha-faq-00.md).
+      See [Cedar concepts 02](../concepts/cedar-con-02.md).
+    docs/security/sage-sec-18.md: |
+      # Sage security 18
+
+      Tags: auth, retries
+
+      See [Maple security 12](maple-sec-12.md).
+      See [Birch concepts 21](../concepts/birch-con-21.md).
+      See [Reef security 37](reef-sec-37.md).
+    docs/security/tundra-sec-19.md: |
+      # Tundra security 19
+
+      Tags: auth
+
+      See [Tundra ops 19](../ops/tundra-ops-19.md).
+      See [Pine reference 15](../reference/pine-ref-15.md).
+      See [Reef reference 17](../reference/reef-ref-17.md).
+    docs/security/alpha-sec-20.md: |
+      # Alpha security 20
+
+      Tags: billing, storage
+
+      See [Quartz concepts 16](../concepts/quartz-con-16.md).
+      See [Quartz faq 16](../faq/quartz-faq-16.md).
+      See [Iris tutorials 08](../tutorials/iris-tut-08.md#usage).
+    docs/security/birch-sec-21.md: |
+      # Birch security 21
+
+      Tags: cli, errors, setup
+
+      See [Pine api 15](../api/pine-api-15.md).
+      See [Juniper faq 09](../faq/juniper-faq-09.md).
+    docs/security/cedar-sec-22.md: |
+      # Cedar security 22
+
+      Tags: billing, metrics
+
+      See [Iris guides 28](../guides/iris-gui-28.md).
+      See [Onyx tutorials 34](../tutorials/onyx-tut-34.md).
+      See [Alpha security 20](alpha-sec-20.md).
+    docs/security/dune-sec-23.md: |
+      # Dune security 23
+
+      Tags: cli, storage, upgrade
+
+      See [Tundra guides 39](../guides/tundra-gui-39.md).
+      See [Maple tutorials 12](../tutorials/maple-tut-12.md).
+      See [Nectar concepts 13](../concepts/nectar-con-13.md).
+    docs/security/ember-sec-24.md: |
+      # Ember security 24
+
+      Tags: billing, storage
+
+      See [Birch tutorials 21](../tutorials/birch-tut-21.md#usage).
+      See [Reef concepts 17](../concepts/reef-con-17.md#usage).
+      See [Sage guides 38](../guides/sage-gui-38.md).
+    docs/security/fjord-sec-25.md: |
+      # Fjord security 25
+
+      Tags: billing, storage, upgrade
+
+      See [Lagoon faq 11](../faq/lagoon-faq-11.md#usage).
+      See [Fjord concepts 25](../concepts/fjord-con-25.md).
+      See [Maple api 32](../api/maple-api-32.md).
+    docs/security/grove-sec-26.md: |
+      # Grove security 26
+
+      Tags: cli, setup
+
+      See [Kelp api 30](../api/kelp-api-30.md).
+      See [Cedar ops 02](../ops/cedar-ops-02.md).
+    docs/security/harbor-sec-27.md: |
+      # Harbor security 27
+
+      Tags: auth, billing
+
+      See [Kelp reference 30](../reference/kelp-ref-30.md).
+      See [Harbor ops 07](../ops/harbor-ops-07.md#usage).
+    docs/security/iris-sec-28.md: |
+      # Iris security 28
+
+      Tags: storage, upgrade
+
+      See [Dune guides 23](../guides/dune-gui-23.md).
+      See [Onyx security 14](onyx-sec-14.md).
+      See [Grove guides 26](../guides/grove-gui-26.md).
+    docs/security/juniper-sec-29.md: |
+      # Juniper security 29
+
+      Tags: errors
+
+      See [Reef faq 17](../faq/reef-faq-17.md).
+      See [Reef api 37](../api/reef-api-37.md).
+      See [Maple api 12](../api/maple-api-12.md#usage).
+    docs/security/kelp-sec-30.md: |
+      # Kelp security 30
+
+      Tags: auth, perf, upgrade
+
+      See [Dune tutorials 23](../tutorials/dune-tut-23.md).
+      See [Harbor reference 07](../reference/harbor-ref-07.md).
+      See [Grove concepts 26](../concepts/grove-con-26.md#usage).
+    docs/security/lagoon-sec-31.md: |
+      # Lagoon security 31
+
+      Tags: storage
+
+      See [Birch guides 01](../guides/birch-gui-01.md).
+      See [Cedar reference 02](../reference/cedar-ref-02.md).
+      See [Kelp guides 10](../guides/kelp-gui-10.md).
+    docs/security/maple-sec-32.md: |
+      # Maple security 32
+
+      Tags: deploy
+
+      See [Kelp ops 10](../ops/kelp-ops-10.md).
+      See [Alpha faq 00](../faq/alpha-faq-00.md).
+      See [Reef api 17](../api/reef-api-17.md).
+    docs/security/nectar-sec-33.md: |
+      # Nectar security 33
+
+      Tags: cli, setup
+
+      See [Juniper security 29](juniper-sec-29.md).
+      See [Iris concepts 08](../concepts/iris-con-08.md).
+    docs/security/onyx-sec-34.md: |
+      # Onyx security 34
+
+      Tags: auth, upgrade
+
+      See [Kelp reference 30](../reference/kelp-ref-30.md#usage).
+      See [Reef tutorials 37](../tutorials/reef-tut-37.md).
+      See [Birch concepts 01](../concepts/birch-con-01.md#usage).
+    docs/security/pine-sec-35.md: |
+      # Pine security 35
+
+      Tags: setup, upgrade
+
+      See [Harbor ops 07](../ops/harbor-ops-07.md#usage).
+      See [Pine concepts 15](../concepts/pine-con-15.md#usage).
+    docs/security/quartz-sec-36.md: |
+      # Quartz security 36
+
+      Tags: upgrade
+
+      See [Reef guides 37](../guides/reef-gui-37.md#usage).
+      See [Reef tutorials 17](../tutorials/reef-tut-17.md).
+    docs/security/reef-sec-37.md: |
+      # Reef security 37
+
+      Tags: limits, upgrade
+
+      See [Harbor reference 07](../reference/harbor-ref-07.md).
+      See [Onyx tutorials 14](../tutorials/onyx-tut-14.md).
+    docs/security/sage-sec-38.md: |
+      # Sage security 38
+
+      Tags: cli, retries
+
+      See [Kelp guides 10](../guides/kelp-gui-10.md).
+      See [Cedar reference 22](../reference/cedar-ref-22.md).
+      See [Tundra guides 19](../guides/tundra-gui-19.md).
+    docs/security/tundra-sec-39.md: |
+      # Tundra security 39
+
+      Tags: billing, errors, perf
+
+      See [Maple tutorials 32](../tutorials/maple-tut-32.md#usage).
+      See [Reef security 17](reef-sec-17.md#usage).
+    docs/reference/alpha-ref-00.md: |
+      # Alpha reference 00
+
+      Tags: setup
+
+      See [Fjord concepts 25](../concepts/fjord-con-25.md#usage).
+      See [Onyx security 14](../security/onyx-sec-14.md).
+      See [Reef faq 37](../faq/reef-faq-37.md).
+      See [Maple ops 32](../ops/maple-ops-32-old.md).
+    docs/reference/birch-ref-01.md: |
+      # Birch reference 01
+
+      Tags: errors
+
+      See [Ember api 04](../api/ember-api-04.md).
+      See [Maple reference 32](maple-ref-32.md).
+      See [Dune faq 23](../faq/dune-faq-23.md).
+    docs/reference/cedar-ref-02.md: |
+      # Cedar reference 02
+
+      Tags: cli, perf
+
+      See [Tundra tutorials 19](../tutorials/tundra-tut-19.md).
+      See [Birch reference 21](birch-ref-21.md).
+      See [Harbor tutorials 07](../tutorials/harbor-tut-07.md#usage).
+    docs/reference/dune-ref-03.md: |
+      # Dune reference 03
+
+      Tags: errors
+
+      See [Birch guides 21](../guides/birch-gui-21.md#usage).
+      See [Sage ops 38](../ops/sage-ops-38.md#usage).
+      See [Juniper guides 29](../guides/juniper-gui-29.md#usage).
+    docs/reference/ember-ref-04.md: |
+      # Ember reference 04
+
+      Tags: metrics, setup, storage
+
+      See [Nectar api 13](../api/nectar-api-13.md).
+      See [Reef security 37](../security/reef-sec-37.md).
+      See [Sage ops 18](../ops/sage-ops-18.md).
+    docs/reference/fjord-ref-05.md: |
+      # Fjord reference 05
+
+      Tags: metrics, upgrade
+
+      See [Cedar api 02](../api/cedar-api-02.md).
+      See [Juniper concepts 09](../concepts/juniper-con-09.md).
+      See [Onyx ops 14](../ops/onyx-ops-14.md).
+    docs/reference/grove-ref-06.md: |
+      # Grove reference 06
+
+      Tags: cli, upgrade
+
+      See [Grove tutorials 26](../tutorials/grove-tut-26.md).
+      See [Reef ops 17](../ops/reef-ops-17.md#usage).
+      See [Nectar faq 13](../faq/nectar-faq-13.md#usage).
+    docs/reference/harbor-ref-07.md: |
+      # Harbor reference 07
+
+      Tags: billing, limits
+
+      See [Ember ops 04](../ops/ember-ops-04.md).
+      See [Lagoon security 31](../security/lagoon-sec-31.md).
+    docs/reference/iris-ref-08.md: |
+      # Iris reference 08
+
+      Tags: billing, limits, upgrade
+
+      See [Alpha guides 20](../guides/alpha-gui-20.md#usage).
+      See [Harbor concepts 27](../concepts/harbor-con-27.md#usage).
+      See [Dune tutorials 03](../tutorials/dune-tut-03.md#usage).
+    docs/reference/juniper-ref-09.md: |
+      # Juniper reference 09
+
+      Tags: retries
+
+      See [Ember guides 04](../guides/ember-gui-04.md).
+      See [Reef guides 37](../guides/reef-gui-37.md).
+      See [Juniper tutorials 09](../tutorials/juniper-tut-09.md).
+    docs/reference/kelp-ref-10.md: |
+      # Kelp reference 10
+
+      Tags: cli, errors
+
+      See [Dune guides 03](../guides/dune-gui-03.md#usage).
+      See [Dune guides 23](../guides/dune-gui-23.md).
+      See [Alpha guides 00](../guides/alpha-gui-00.md).
+    docs/reference/lagoon-ref-11.md: |
+      # Lagoon reference 11
+
+      Tags: perf, upgrade
+
+      See [Lagoon faq 11](../faq/lagoon-faq-11.md).
+      See [Kelp guides 10](../guides/kelp-gui-10.md).
+      See [Maple api 32](../api/maple-api-32.md).
+    docs/reference/maple-ref-12.md: |
+      # Maple reference 12
+
+      Tags: billing, cli, deploy
+
+      See [Iris tutorials 08](../tutorials/iris-tut-08.md).
+      See [Alpha guides 00](../guides/alpha-gui-00.md).
+    docs/reference/nectar-ref-13.md: |
+      # Nectar reference 13
+
+      Tags: limits, setup
+
+      See [Alpha ops 00](../ops/alpha-ops-00.md).
+      See [Juniper guides 29](../guides/juniper-gui-29.md#usage).
+    docs/reference/onyx-ref-14.md: |
+      # Onyx reference 14
+
+      Tags: retries
+
+      See [Kelp api 10](../api/kelp-api-10.md).
+      See [Ember tutorials 04](../tutorials/ember-tut-04.md).
+      See [Tundra ops 39](../ops/tundra-ops-39.md).
+    docs/reference/pine-ref-15.md: |
+      # Pine reference 15
+
+      Tags: deploy, metrics
+
+      See [Maple faq 32](../faq/maple-faq-32.md).
+      See [Fjord guides 05](../guides/fjord-gui-05.md).
+      See [Ember security 04](../security/ember-sec-04.md).
+    docs/reference/quartz-ref-16.md: |
+      # Quartz reference 16
+
+      Tags: storage, upgrade
+
+      See [Juniper ops 29](../ops/juniper-ops-29.md).
+      See [Kelp reference 10](kelp-ref-10.md).
+      See [Birch reference 21](birch-ref-21.md).
+    docs/reference/reef-ref-17.md: |
+      # Reef reference 17
+
+      Tags: errors
+
+      See [Birch reference 21](birch-ref-21.md).
+      See [Juniper ops 09](../ops/juniper-ops-09.md).
+      See [Tundra security 19](../security/tundra-sec-19.md).
+    docs/reference/sage-ref-18.md: |
+      # Sage reference 18
+
+      Tags: auth, deploy
+
+      See [Maple faq 32](../faq/maple-faq-32.md#usage).
+      See [Dune guides 23](../guides/dune-gui-23.md).
+    docs/reference/tundra-ref-19.md: |
+      # Tundra reference 19
+
+      Tags: billing, cli
+
+      See [Alpha ops 00](../ops/alpha-ops-00.md).
+      See [Cedar security 22](../security/cedar-sec-22.md).
+      See [Tundra guides 39](../guides/tundra-gui-39.md).
+    docs/reference/alpha-ref-20.md: |
+      # Alpha reference 20
+
+      Tags: limits, upgrade
+
+      See [Lagoon faq 31](../faq/lagoon-faq-31.md).
+      See [Harbor faq 07](../faq/harbor-faq-07.md).
+      See [Pine api 15](../api/pine-api-15.md).
+    docs/reference/birch-ref-21.md: |
+      # Birch reference 21
+
+      Tags: metrics, setup, upgrade
+
+      See [Sage tutorials 38](../tutorials/sage-tut-38.md).
+      See [Ember ops 04](../ops/ember-ops-04.md#usage).
+      See [Fjord tutorials 25](../tutorials/fjord-tut-25.md).
+    docs/reference/cedar-ref-22.md: |
+      # Cedar reference 22
+
+      Tags: retries
+
+      See [Onyx guides 14](../guides/onyx-gui-14.md).
+      See [Dune ops 03](../ops/dune-ops-03.md).
+      See [Cedar concepts 02](../concepts/cedar-con-02.md).
+    docs/reference/dune-ref-23.md: |
+      # Dune reference 23
+
+      Tags: deploy, perf, upgrade
+
+      See [Harbor reference 27](harbor-ref-27.md).
+      See [Kelp guides 10](../guides/kelp-gui-10.md#usage).
+      See [Fjord api 05](../api/fjord-api-05.md).
+    docs/reference/ember-ref-24.md: |
+      # Ember reference 24
+
+      Tags: errors
+
+      See [Grove ops 06](../ops/grove-ops-06.md).
+      See [Sage reference 18](sage-ref-18.md).
+    docs/reference/fjord-ref-25.md: |
+      # Fjord reference 25
+
+      Tags: auth, cli
+
+      See [Juniper faq 29](../faq/juniper-faq-29.md).
+      See [Kelp tutorials 30](../tutorials/kelp-tut-30.md).
+    docs/reference/grove-ref-26.md: |
+      # Grove reference 26
+
+      Tags: auth, retries
+
+      See [Alpha tutorials 00](../tutorials/alpha-tut-00.md).
+      See [Kelp tutorials 30](../tutorials/kelp-tut-30.md).
+      See [Juniper reference 29](juniper-ref-29.md#usage).
+    docs/reference/harbor-ref-27.md: |
+      # Harbor reference 27
+
+      Tags: storage
+
+      See [Pine guides 35](../guides/pine-gui-35.md).
+      See [Iris tutorials 28](../tutorials/iris-tut-28.md).
+      See [Juniper ops 29](../ops/juniper-ops-29.md#usage).
+    docs/reference/iris-ref-28.md: |
+      # Iris reference 28
+
+      Tags: limits, metrics
+
+      See [Iris tutorials 08](../tutorials/iris-tut-08.md).
+      See [Nectar ops 13](../ops/nectar-ops-13.md).
+    docs/reference/juniper-ref-29.md: |
+      # Juniper reference 29
+
+      Tags: auth, metrics
+
+      See [Lagoon ops 31](../ops/lagoon-ops-31.md).
+      See [Dune guides 23](../guides/dune-gui-23.md).
+    docs/reference/kelp-ref-30.md: |
+      # Kelp reference 30
+
+      Tags: upgrade
+
+      See [Tundra security 39](../security/tundra-sec-39.md#usage).
+      See [Sage api 38](../api/sage-api-38.md#usage).
+    docs/reference/lagoon-ref-31.md: |
+      # Lagoon reference 31
+
+      Tags: auth
+
+      See [Grove faq 06](../faq/grove-faq-06.md).
+      See [Fjord tutorials 05](../tutorials/fjord-tut-05.md#usage).
+      See [Cedar guides 22](../guides/cedar-gui-22.md).
+    docs/reference/maple-ref-32.md: |
+      # Maple reference 32
+
+      Tags: auth, setup
+
+      See [Dune security 23](../security/dune-sec-23.md).
+      See [Tundra guides 39](../guides/tundra-gui-39.md).
+    docs/reference/nectar-ref-33.md: |
+      # Nectar reference 33
+
+      Tags: cli, perf
+
+      See [Juniper reference 29](juniper-ref-29.md).
+      See [Alpha guides 20](../guides/alpha-gui-20.md).
+      See [Tundra tutorials 19](../tutorials/tundra-tut-19.md).
+    docs/reference/onyx-ref-34.md: |
+      # Onyx reference 34
+
+      Tags: upgrade
+
+      See [Reef guides 17](../guides/reef-gui-17.md).
+      See [Juniper tutorials 09](../tutorials/juniper-tut-09.md).
+      See [Sage security 38](../security/sage-sec-38.md).
+    docs/reference/pine-ref-35.md: |
+      # Pine reference 35
+
+      Tags: setup
+
+      See [Iris ops 28](../ops/iris-ops-28.md).
+      See [Onyx tutorials 34](../tutorials/onyx-tut-34.md#usage).
+    docs/reference/quartz-ref-36.md: |
+      # Quartz reference 36
+
+      Tags: setup
+
+      See [Maple faq 12](../faq/maple-faq-12.md).
+      See [Nectar tutorials 13](../tutorials/nectar-tut-13.md#usage).
+      See [Ember security 24](../security/ember-sec-24.md#usage).
+    docs/reference/reef-ref-37.md: |
+      # Reef reference 37
+
+      Tags: auth, errors, setup
+
+      See [Onyx security 34](../security/onyx-sec-34.md).
+      See [Sage reference 18](sage-ref-18.md#usage).
+      See [Cedar security 02](../security/cedar-sec-02.md#usage).
+      See [Alpha guides 00](../guides/alpha-gui-00-old.md).
+    docs/reference/sage-ref-38.md: |
+      # Sage reference 38
+
+      Tags: limits, metrics
+
+      See [Lagoon concepts 31](../concepts/lagoon-con-31.md#usage).
+      See [Lagoon tutorials 31](../tutorials/lagoon-tut-31.md).
+      See [Grove ops 06](../ops/grove-ops-06.md).
+    docs/reference/tundra-ref-39.md: |
+      # Tundra reference 39
+
+      Tags: cli, setup
+
+      See [Lagoon tutorials 11](../tutorials/lagoon-tut-11.md).
+      See [Dune security 23](../security/dune-sec-23.md).
+    docs/RENAMES.txt: |
+      # renamed pages (old path -> new path, relative to docs/)
+      reference/kelp-ref-30-old.md -> reference/kelp-ref-30.md
+      guides/iris-gui-08-old.md -> guides/iris-gui-08.md
+      guides/alpha-gui-00-old.md -> guides/alpha-gui-00.md
+      api/quartz-api-36-old.md -> api/quartz-api-36.md
+      tutorials/tundra-tut-19-old.md -> tutorials/tundra-tut-19.md
+      faq/iris-faq-08-old.md -> faq/iris-faq-08.md
+      ops/maple-ops-32-old.md -> ops/maple-ops-32.md
+      security/fjord-sec-25-old.md -> security/fjord-sec-25.md
+      concepts/lagoon-con-31-old.md -> concepts/lagoon-con-31.md
+      concepts/tundra-con-39-old.md -> concepts/tundra-con-39.md
+      reference/nectar-ref-13-old.md -> reference/nectar-ref-13.md
+      tutorials/ember-tut-04-old.md -> tutorials/ember-tut-04.md
+    docs/index.md: |
+      # Documentation
+
+      Welcome. Sections: guides, api, ops, faq, tutorials, concepts, security, reference.
+    README.md: |
+      # docsite
+
+      Pages live in `docs/<section>/<slug>.md`. Each page has a `# Title` line, a `Tags:` line and links written as `[text](relative/path.md)`.
+protected:
+- docs/RENAMES.txt
+hidden_files:
+  _grade.py: |
+    import csv, json, os, re, subprocess, sys
+    from pathlib import Path
+
+    W = Path(".")
+
+
+    def fail(msg):
+        print("FAIL:", msg)
+        sys.exit(1)
+
+
+    def need(cond, msg):
+        if not cond:
+            fail(msg)
+
+
+    def read(rel):
+        p = W / rel
+        need(p.exists(), f"missing {rel}")
+        return p.read_text(encoding="utf-8")
+
+
+    def load_json(rel):
+        try:
+            return json.loads(read(rel))
+        except ValueError as e:
+            fail(f"{rel} is not valid JSON: {e}")
+
+
+    def close(a, b, tol=0.011):
+        try:
+            return abs(float(a) - float(b)) <= tol
+        except (TypeError, ValueError):
+            return False
+
+
+    def num(s):
+        m = re.search(r"-?\d[\d,]*\.?\d*", str(s))
+        return float(m.group(0).replace(",", "")) if m else None
+
+
+    def run(cmd, timeout=60, stdin=None):
+        p = subprocess.run(cmd, shell=True, cwd=W, capture_output=True, text=True, timeout=timeout, input=stdin)
+        return p.returncode, p.stdout, p.stderr
+
+
+    def md_lines(rel, under=None):
+        lines = read(rel).splitlines()
+        if not under:
+            return lines
+        out, on, lvl = [], False, 0
+        for ln in lines:
+            m = re.match(r"^(#+)\s+(.*)", ln)
+            if m:
+                if on and len(m.group(1)) <= lvl:
+                    break
+                if not on and re.search(under, m.group(2), re.I):
+                    on, lvl = True, len(m.group(1))
+                continue
+            if on:
+                out.append(ln)
+        need(on, f"no heading matching {under!r} in {rel}")
+        return out
+
+
+    def md_rows(rel, under=None):
+        rows = []
+        for ln in md_lines(rel, under):
+            if ln.strip().startswith("|") and not re.match(r"^\s*\|[\s:|-]+\|\s*$", ln):
+                rows.append([c.strip() for c in ln.strip().strip("|").split("|")])
+        return rows
+
+
+    def cmp(got, want, tol, path):
+        if isinstance(want, dict):
+            need(isinstance(got, dict), f"{path}: expected an object, got {type(got).__name__}")
+            for k, v in want.items():
+                need(k in got, f"{path}.{k}: missing")
+                cmp(got[k], v, tol, f"{path}.{k}")
+        elif isinstance(want, list):
+            need(isinstance(got, list) and len(got) == len(want), f"{path}: expected list of {len(want)}, got {got!r}")
+            for i, (g, w) in enumerate(zip(got, want)):
+                cmp(g, w, tol, f"{path}[{i}]")
+        elif isinstance(want, bool) or want is None or isinstance(want, str):
+            need(got == want, f"{path}: {got!r} != {want!r}")
+        else:
+            need(not isinstance(got, bool) and close(got, want, tol), f"{path}: {got!r} != {want!r}")
+
+
+    def chk_json(rel, exp, tol=0.051):
+        cmp(load_json(rel), exp, tol, rel)
+
+
+    def chk_table(rel, under, exp, col=1, tol=0.051):
+        rows = md_rows(rel, under)
+        need(rows, f"no table under {under!r} in {rel}")
+        got = {r[0].strip("* `"): num(r[col]) for r in rows if len(r) > col and num(r[col]) is not None}
+        for k, v in exp.items():
+            need(k in got and close(got[k], v, tol), f"{k}: {got.get(k)} != {v}")
+
+
+    def chk_cmd_json(cmd, exp, tol=0.051, stdin=None):
+        rc, out, err = run(cmd, stdin=stdin)
+        need(rc == 0, f"`{cmd}` exited {rc}: {err[-200:]}")
+        try:
+            d = json.loads(out)
+        except ValueError as e:
+            fail(f"`{cmd}` stdout is not JSON: {e}")
+        cmp(d, exp, tol, cmd)
+
+
+    def chk_cmd_out(cmd, lines, stdin=None, expect_rc=0):
+        rc, out, err = run(cmd, stdin=stdin)
+        need(rc == expect_rc, f"`{cmd}` exited {rc} (want {expect_rc}): {err[-200:]}")
+        got = [ln.rstrip() for ln in out.strip().splitlines()]
+        need(got == list(lines), f"`{cmd}` output {got[:8]} != {list(lines)[:8]}")
+
+
+    def t2():
+        rows = md_rows('docs/_reports/broken-links.md')
+        need(rows and [c.lower() for c in rows[0][:2]] == ['source', 'target'], 'header: ' + str(rows[:1]))
+        got = [(r[0].strip('` '), r[1].strip('` ')) for r in rows[1:]]
+        need(got == [('api/iris-api-08.md', '../guides/iris-gui-08-old.md'), ('api/kelp-api-30.md', 'quartz-api-36-old.md'), ('api/nectar-api-33.md', '../security/fjord-sec-25-old.md'), ('concepts/iris-con-28.md', '../reference/kelp-ref-30-old.md'), ('concepts/quartz-con-16.md', '../tutorials/tundra-tut-19-old.md'), ('faq/fjord-faq-25.md', 'iris-faq-08-old.md'), ('guides/kelp-gui-10.md', '../tutorials/ember-tut-04-old.md'), ('ops/grove-ops-26.md', '../reference/nectar-ref-13-old.md'), ('ops/juniper-ops-29.md', '../concepts/lagoon-con-31-old.md'), ('ops/lagoon-ops-11.md', '../concepts/tundra-con-39-old.md'), ('reference/alpha-ref-00.md', '../ops/maple-ops-32-old.md'), ('reference/reef-ref-37.md', '../guides/alpha-gui-00-old.md')], 'rows differ: missing ' + str([w for w in [('api/iris-api-08.md', '../guides/iris-gui-08-old.md'), ('api/kelp-api-30.md', 'quartz-api-36-old.md'), ('api/nectar-api-33.md', '../security/fjord-sec-25-old.md'), ('concepts/iris-con-28.md', '../reference/kelp-ref-30-old.md'), ('concepts/quartz-con-16.md', '../tutorials/tundra-tut-19-old.md'), ('faq/fjord-faq-25.md', 'iris-faq-08-old.md'), ('guides/kelp-gui-10.md', '../tutorials/ember-tut-04-old.md'), ('ops/grove-ops-26.md', '../reference/nectar-ref-13-old.md'), ('ops/juniper-ops-29.md', '../concepts/lagoon-con-31-old.md'), ('ops/lagoon-ops-11.md', '../concepts/tundra-con-39-old.md'), ('reference/alpha-ref-00.md', '../ops/maple-ops-32-old.md'), ('reference/reef-ref-37.md', '../guides/alpha-gui-00-old.md')] if w not in got][:2]) + ' extra ' + str([g for g in got if g not in [('api/iris-api-08.md', '../guides/iris-gui-08-old.md'), ('api/kelp-api-30.md', 'quartz-api-36-old.md'), ('api/nectar-api-33.md', '../security/fjord-sec-25-old.md'), ('concepts/iris-con-28.md', '../reference/kelp-ref-30-old.md'), ('concepts/quartz-con-16.md', '../tutorials/tundra-tut-19-old.md'), ('faq/fjord-faq-25.md', 'iris-faq-08-old.md'), ('guides/kelp-gui-10.md', '../tutorials/ember-tut-04-old.md'), ('ops/grove-ops-26.md', '../reference/nectar-ref-13-old.md'), ('ops/juniper-ops-29.md', '../concepts/lagoon-con-31-old.md'), ('ops/lagoon-ops-11.md', '../concepts/tundra-con-39-old.md'), ('reference/alpha-ref-00.md', '../ops/maple-ops-32-old.md'), ('reference/reef-ref-37.md', '../guides/alpha-gui-00-old.md')]][:2]))
+
+
+    def t4():
+        import glob
+        for rel, want in {'docs/guides/kelp-gui-10.md': '# Kelp guides 10\n\nTags: billing, limits, perf\n\nSee [Iris faq 08](../faq/iris-faq-08.md).\nSee [Tundra faq 19](../faq/tundra-faq-19.md).\nSee [Kelp concepts 10](../concepts/kelp-con-10.md).\nSee [Ember tutorials 04](../tutorials/ember-tut-04.md).\n', 'docs/api/iris-api-08.md': '# Iris api 08\n\nTags: errors, metrics, storage\n\nSee [Birch ops 01](../ops/birch-ops-01.md).\nSee [Pine ops 35](../ops/pine-ops-35.md).\nSee [Quartz security 16](../security/quartz-sec-16.md).\nSee [Iris guides 08](../guides/iris-gui-08.md).\n', 'docs/api/kelp-api-30.md': '# Kelp api 30\n\nTags: cli\n\nSee [Fjord api 05](fjord-api-05.md).\nSee [Reef tutorials 17](../tutorials/reef-tut-17.md#usage).\nSee [Fjord reference 05](../reference/fjord-ref-05.md#usage).\nSee [Quartz api 36](quartz-api-36.md).\n', 'docs/api/nectar-api-33.md': '# Nectar api 33\n\nTags: deploy\n\nSee [Birch guides 21](../guides/birch-gui-21.md).\nSee [Quartz faq 36](../faq/quartz-faq-36.md).\nSee [Ember guides 24](../guides/ember-gui-24.md#usage).\nSee [Fjord security 25](../security/fjord-sec-25.md).\n', 'docs/ops/lagoon-ops-11.md': '# Lagoon ops 11\n\nTags: setup\n\nSee [Onyx reference 14](../reference/onyx-ref-14.md).\nSee [Grove guides 26](../guides/grove-gui-26.md).\nSee [Fjord reference 05](../reference/fjord-ref-05.md#usage).\nSee [Tundra concepts 39](../concepts/tundra-con-39.md).\n', 'docs/ops/grove-ops-26.md': '# Grove ops 26\n\nTags: metrics, retries\n\nSee [Tundra faq 19](../faq/tundra-faq-19.md).\nSee [Grove api 26](../api/grove-api-26.md#usage).\nSee [Nectar reference 13](../reference/nectar-ref-13.md).\n', 'docs/ops/juniper-ops-29.md': '# Juniper ops 29\n\nTags: limits, retries\n\nSee [Iris faq 08](../faq/iris-faq-08.md#usage).\nSee [Kelp guides 30](../guides/kelp-gui-30.md).\nSee [Lagoon concepts 31](../concepts/lagoon-con-31.md).\n', 'docs/faq/fjord-faq-25.md': '# Fjord faq 25\n\nTags: deploy, upgrade\n\nSee [Alpha concepts 00](../concepts/alpha-con-00.md).\nSee [Maple tutorials 32](../tutorials/maple-tut-32.md#usage).\nSee [Lagoon ops 11](../ops/lagoon-ops-11.md).\nSee [Iris faq 08](iris-faq-08.md).\n', 'docs/concepts/quartz-con-16.md': '# Quartz concepts 16\n\nTags: billing, deploy, storage\n\nSee [Nectar security 13](../security/nectar-sec-13.md#usage).\nSee [Fjord tutorials 05](../tutorials/fjord-tut-05.md#usage).\nSee [Tundra tutorials 19](../tutorials/tundra-tut-19.md).\n', 'docs/concepts/iris-con-28.md': '# Iris concepts 28\n\nTags: auth\n\nSee [Iris faq 08](../faq/iris-faq-08.md).\nSee [Birch tutorials 21](../tutorials/birch-tut-21.md).\nSee [Kelp reference 30](../reference/kelp-ref-30.md).\n', 'docs/reference/alpha-ref-00.md': '# Alpha reference 00\n\nTags: setup\n\nSee [Fjord concepts 25](../concepts/fjord-con-25.md#usage).\nSee [Onyx security 14](../security/onyx-sec-14.md).\nSee [Reef faq 37](../faq/reef-faq-37.md).\nSee [Maple ops 32](../ops/maple-ops-32.md).\n', 'docs/reference/reef-ref-37.md': '# Reef reference 37\n\nTags: auth, errors, setup\n\nSee [Onyx security 34](../security/onyx-sec-34.md).\nSee [Sage reference 18](sage-ref-18.md#usage).\nSee [Cedar security 02](../security/cedar-sec-02.md#usage).\nSee [Alpha guides 00](../guides/alpha-gui-00.md).\n'}.items():
+            need(read(rel).strip() == want.strip(), rel + ': link not fixed as expected')
+        LINK = re.compile(r'\[[^\]]*\]\(([^)\s]+)\)')
+        files = [p.replace(os.sep, '/') for p in glob.glob('docs/*/*.md')]
+        exist = set(files)
+        import posixpath
+        bad = 0
+        for f in files:
+            if f.startswith('docs/_reports/'):
+                continue
+            for t in LINK.findall(read(f)):
+                if not t.startswith(('http', '#')) and posixpath.normpath(posixpath.join(posixpath.dirname(f), t.split('#')[0])) not in exist:
+                    bad += 1
+        need(bad == 0, f'{bad} broken links remain')
+        need(len([f for f in files if not f.startswith('docs/_reports/')]) == 320, 'page count changed')
+
+
+    def t5():
+        txt = read('docs/tags.md')
+        got = {}
+        for m in re.finditer(r'^## (\S+)\s*$(.*?)(?=^## |\Z)', txt, re.M | re.S):
+            got[m.group(1)] = re.findall(r'^- \[([^\]]+)\]\(([^)]+)\)\s*$', m.group(2), re.M)
+        want = {'storage': [('Alpha api 20', 'api/alpha-api-20.md'), ('Alpha guides 00', 'guides/alpha-gui-00.md'), ('Alpha ops 00', 'ops/alpha-ops-00.md'), ('Alpha security 20', 'security/alpha-sec-20.md'), ('Birch api 21', 'api/birch-api-21.md'), ('Birch faq 01', 'faq/birch-faq-01.md'), ('Birch guides 21', 'guides/birch-gui-21.md'), ('Birch ops 21', 'ops/birch-ops-21.md'), ('Birch tutorials 01', 'tutorials/birch-tut-01.md'), ('Cedar api 02', 'api/cedar-api-02.md'), ('Cedar guides 02', 'guides/cedar-gui-02.md'), ('Dune faq 23', 'faq/dune-faq-23.md'), ('Dune security 03', 'security/dune-sec-03.md'), ('Dune security 23', 'security/dune-sec-23.md'), ('Ember api 04', 'api/ember-api-04.md'), ('Ember concepts 04', 'concepts/ember-con-04.md'), ('Ember concepts 24', 'concepts/ember-con-24.md'), ('Ember reference 04', 'reference/ember-ref-04.md'), ('Ember security 24', 'security/ember-sec-24.md'), ('Fjord concepts 05', 'concepts/fjord-con-05.md'), ('Fjord security 25', 'security/fjord-sec-25.md'), ('Fjord tutorials 05', 'tutorials/fjord-tut-05.md'), ('Grove guides 26', 'guides/grove-gui-26.md'), ('Grove tutorials 06', 'tutorials/grove-tut-06.md'), ('Harbor api 07', 'api/harbor-api-07.md'), ('Harbor ops 07', 'ops/harbor-ops-07.md'), ('Harbor reference 27', 'reference/harbor-ref-27.md'), ('Harbor security 07', 'security/harbor-sec-07.md'), ('Iris api 08', 'api/iris-api-08.md'), ('Iris concepts 08', 'concepts/iris-con-08.md'), ('Iris security 28', 'security/iris-sec-28.md'), ('Iris tutorials 28', 'tutorials/iris-tut-28.md'), ('Juniper api 09', 'api/juniper-api-09.md'), ('Juniper faq 29', 'faq/juniper-faq-29.md'), ('Juniper guides 09', 'guides/juniper-gui-09.md'), ('Juniper ops 09', 'ops/juniper-ops-09.md'), ('Kelp ops 30', 'ops/kelp-ops-30.md'), ('Lagoon faq 11', 'faq/lagoon-faq-11.md'), ('Lagoon guides 11', 'guides/lagoon-gui-11.md'), ('Lagoon guides 31', 'guides/lagoon-gui-31.md'), ('Lagoon security 31', 'security/lagoon-sec-31.md'), ('Nectar guides 33', 'guides/nectar-gui-33.md'), ('Nectar ops 13', 'ops/nectar-ops-13.md'), ('Nectar ops 33', 'ops/nectar-ops-33.md'), ('Onyx concepts 34', 'concepts/onyx-con-34.md'), ('Onyx faq 14', 'faq/onyx-faq-14.md'), ('Onyx guides 14', 'guides/onyx-gui-14.md'), ('Onyx ops 34', 'ops/onyx-ops-34.md'), ('Pine concepts 35', 'concepts/pine-con-35.md'), ('Quartz concepts 16', 'concepts/quartz-con-16.md'), ('Quartz faq 36', 'faq/quartz-faq-36.md'), ('Quartz ops 36', 'ops/quartz-ops-36.md'), ('Quartz reference 16', 'reference/quartz-ref-16.md'), ('Reef api 37', 'api/reef-api-37.md'), ('Reef concepts 37', 'concepts/reef-con-37.md'), ('Reef faq 17', 'faq/reef-faq-17.md'), ('Reef faq 37', 'faq/reef-faq-37.md'), ('Reef guides 17', 'guides/reef-gui-17.md'), ('Sage concepts 38', 'concepts/sage-con-38.md'), ('Sage ops 18', 'ops/sage-ops-18.md'), ('Sage ops 38', 'ops/sage-ops-38.md'), ('Tundra faq 19', 'faq/tundra-faq-19.md'), ('Tundra tutorials 39', 'tutorials/tundra-tut-39.md')], 'metrics': [('Alpha concepts 20', 'concepts/alpha-con-20.md'), ('Alpha faq 20', 'faq/alpha-faq-20.md'), ('Alpha guides 20', 'guides/alpha-gui-20.md'), ('Alpha tutorials 00', 'tutorials/alpha-tut-00.md'), ('Birch api 01', 'api/birch-api-01.md'), ('Birch concepts 01', 'concepts/birch-con-01.md'), ('Birch guides 01', 'guides/birch-gui-01.md'), ('Birch guides 21', 'guides/birch-gui-21.md'), ('Birch reference 21', 'reference/birch-ref-21.md'), ('Birch tutorials 01', 'tutorials/birch-tut-01.md'), ('Cedar api 22', 'api/cedar-api-22.md'), ('Cedar concepts 22', 'concepts/cedar-con-22.md'), ('Cedar security 22', 'security/cedar-sec-22.md'), ('Dune guides 03', 'guides/dune-gui-03.md'), ('Ember api 04', 'api/ember-api-04.md'), ('Ember faq 24', 'faq/ember-faq-24.md'), ('Ember reference 04', 'reference/ember-ref-04.md'), ('Fjord guides 05', 'guides/fjord-gui-05.md'), ('Fjord ops 25', 'ops/fjord-ops-25.md'), ('Fjord reference 05', 'reference/fjord-ref-05.md'), ('Grove concepts 26', 'concepts/grove-con-26.md'), ('Grove ops 06', 'ops/grove-ops-06.md'), ('Grove ops 26', 'ops/grove-ops-26.md'), ('Grove security 06', 'security/grove-sec-06.md'), ('Harbor api 27', 'api/harbor-api-27.md'), ('Harbor concepts 07', 'concepts/harbor-con-07.md'), ('Harbor faq 27', 'faq/harbor-faq-27.md'), ('Harbor tutorials 07', 'tutorials/harbor-tut-07.md'), ('Iris api 08', 'api/iris-api-08.md'), ('Iris concepts 08', 'concepts/iris-con-08.md'), ('Iris faq 08', 'faq/iris-faq-08.md'), ('Iris reference 28', 'reference/iris-ref-28.md'), ('Juniper reference 29', 'reference/juniper-ref-29.md'), ('Kelp ops 10', 'ops/kelp-ops-10.md'), ('Kelp tutorials 10', 'tutorials/kelp-tut-10.md'), ('Lagoon tutorials 11', 'tutorials/lagoon-tut-11.md'), ('Maple security 12', 'security/maple-sec-12.md'), ('Nectar api 13', 'api/nectar-api-13.md'), ('Nectar guides 13', 'guides/nectar-gui-13.md'), ('Nectar tutorials 33', 'tutorials/nectar-tut-33.md'), ('Onyx faq 14', 'faq/onyx-faq-14.md'), ('Onyx guides 34', 'guides/onyx-gui-34.md'), ('Pine guides 35', 'guides/pine-gui-35.md'), ('Pine ops 35', 'ops/pine-ops-35.md'), ('Pine reference 15', 'reference/pine-ref-15.md'), ('Pine security 15', 'security/pine-sec-15.md'), ('Quartz api 36', 'api/quartz-api-36.md'), ('Quartz concepts 36', 'concepts/quartz-con-36.md'), ('Quartz guides 16', 'guides/quartz-gui-16.md'), ('Quartz guides 36', 'guides/quartz-gui-36.md'), ('Sage reference 38', 'reference/sage-ref-38.md'), ('Tundra faq 39', 'faq/tundra-faq-39.md'), ('Tundra ops 39', 'ops/tundra-ops-39.md')], 'setup': [('Alpha reference 00', 'reference/alpha-ref-00.md'), ('Birch guides 01', 'guides/birch-gui-01.md'), ('Birch reference 21', 'reference/birch-ref-21.md'), ('Birch security 21', 'security/birch-sec-21.md'), ('Cedar concepts 02', 'concepts/cedar-con-02.md'), ('Dune api 03', 'api/dune-api-03.md'), ('Ember faq 04', 'faq/ember-faq-04.md'), ('Ember guides 24', 'guides/ember-gui-24.md'), ('Ember ops 24', 'ops/ember-ops-24.md'), ('Ember reference 04', 'reference/ember-ref-04.md'), ('Fjord api 05', 'api/fjord-api-05.md'), ('Fjord tutorials 25', 'tutorials/fjord-tut-25.md'), ('Grove api 26', 'api/grove-api-26.md'), ('Grove security 26', 'security/grove-sec-26.md'), ('Harbor ops 27', 'ops/harbor-ops-27.md'), ('Harbor tutorials 07', 'tutorials/harbor-tut-07.md'), ('Iris api 28', 'api/iris-api-28.md'), ('Iris concepts 08', 'concepts/iris-con-08.md'), ('Iris ops 08', 'ops/iris-ops-08.md'), ('Iris tutorials 08', 'tutorials/iris-tut-08.md'), ('Iris tutorials 28', 'tutorials/iris-tut-28.md'), ('Juniper api 29', 'api/juniper-api-29.md'), ('Juniper guides 29', 'guides/juniper-gui-29.md'), ('Kelp faq 10', 'faq/kelp-faq-10.md'), ('Kelp guides 30', 'guides/kelp-gui-30.md'), ('Kelp tutorials 10', 'tutorials/kelp-tut-10.md'), ('Kelp tutorials 30', 'tutorials/kelp-tut-30.md'), ('Lagoon faq 31', 'faq/lagoon-faq-31.md'), ('Lagoon ops 11', 'ops/lagoon-ops-11.md'), ('Maple reference 32', 'reference/maple-ref-32.md'), ('Maple tutorials 12', 'tutorials/maple-tut-12.md'), ('Nectar api 13', 'api/nectar-api-13.md'), ('Nectar concepts 33', 'concepts/nectar-con-33.md'), ('Nectar guides 33', 'guides/nectar-gui-33.md'), ('Nectar reference 13', 'reference/nectar-ref-13.md'), ('Nectar security 33', 'security/nectar-sec-33.md'), ('Onyx faq 34', 'faq/onyx-faq-34.md'), ('Pine concepts 15', 'concepts/pine-con-15.md'), ('Pine ops 15', 'ops/pine-ops-15.md'), ('Pine reference 35', 'reference/pine-ref-35.md'), ('Pine security 35', 'security/pine-sec-35.md'), ('Pine tutorials 15', 'tutorials/pine-tut-15.md'), ('Quartz api 16', 'api/quartz-api-16.md'), ('Quartz api 36', 'api/quartz-api-36.md'), ('Quartz guides 16', 'guides/quartz-gui-16.md'), ('Quartz reference 36', 'reference/quartz-ref-36.md'), ('Quartz security 16', 'security/quartz-sec-16.md'), ('Reef reference 37', 'reference/reef-ref-37.md'), ('Sage tutorials 38', 'tutorials/sage-tut-38.md'), ('Tundra api 39', 'api/tundra-api-39.md'), ('Tundra concepts 19', 'concepts/tundra-con-19.md'), ('Tundra reference 39', 'reference/tundra-ref-39.md')], 'auth': [('Alpha concepts 20', 'concepts/alpha-con-20.md'), ('Alpha tutorials 00', 'tutorials/alpha-tut-00.md'), ('Alpha tutorials 20', 'tutorials/alpha-tut-20.md'), ('Birch faq 01', 'faq/birch-faq-01.md'), ('Cedar concepts 02', 'concepts/cedar-con-02.md'), ('Cedar guides 02', 'guides/cedar-gui-02.md'), ('Cedar security 02', 'security/cedar-sec-02.md'), ('Dune concepts 03', 'concepts/dune-con-03.md'), ('Dune ops 23', 'ops/dune-ops-23.md'), ('Dune security 03', 'security/dune-sec-03.md'), ('Dune tutorials 23', 'tutorials/dune-tut-23.md'), ('Ember concepts 24', 'concepts/ember-con-24.md'), ('Ember faq 04', 'faq/ember-faq-04.md'), ('Ember guides 04', 'guides/ember-gui-04.md'), ('Fjord concepts 25', 'concepts/fjord-con-25.md'), ('Fjord ops 05', 'ops/fjord-ops-05.md'), ('Fjord reference 25', 'reference/fjord-ref-25.md'), ('Fjord tutorials 25', 'tutorials/fjord-tut-25.md'), ('Grove reference 26', 'reference/grove-ref-26.md'), ('Harbor security 27', 'security/harbor-sec-27.md'), ('Iris concepts 28', 'concepts/iris-con-28.md'), ('Iris faq 28', 'faq/iris-faq-28.md'), ('Iris guides 28', 'guides/iris-gui-28.md'), ('Iris tutorials 28', 'tutorials/iris-tut-28.md'), ('Juniper concepts 29', 'concepts/juniper-con-29.md'), ('Juniper faq 09', 'faq/juniper-faq-09.md'), ('Juniper faq 29', 'faq/juniper-faq-29.md'), ('Juniper reference 29', 'reference/juniper-ref-29.md'), ('Kelp faq 10', 'faq/kelp-faq-10.md'), ('Kelp security 30', 'security/kelp-sec-30.md'), ('Lagoon guides 31', 'guides/lagoon-gui-31.md'), ('Lagoon reference 31', 'reference/lagoon-ref-31.md'), ('Lagoon tutorials 31', 'tutorials/lagoon-tut-31.md'), ('Maple api 32', 'api/maple-api-32.md'), ('Maple concepts 32', 'concepts/maple-con-32.md'), ('Maple guides 12', 'guides/maple-gui-12.md'), ('Maple reference 32', 'reference/maple-ref-32.md'), ('Maple tutorials 12', 'tutorials/maple-tut-12.md'), ('Nectar faq 33', 'faq/nectar-faq-33.md'), ('Nectar guides 33', 'guides/nectar-gui-33.md'), ('Nectar tutorials 33', 'tutorials/nectar-tut-33.md'), ('Onyx api 34', 'api/onyx-api-34.md'), ('Onyx guides 34', 'guides/onyx-gui-34.md'), ('Onyx security 34', 'security/onyx-sec-34.md'), ('Onyx tutorials 14', 'tutorials/onyx-tut-14.md'), ('Pine concepts 15', 'concepts/pine-con-15.md'), ('Pine guides 15', 'guides/pine-gui-15.md'), ('Pine security 15', 'security/pine-sec-15.md'), ('Quartz api 16', 'api/quartz-api-16.md'), ('Quartz faq 16', 'faq/quartz-faq-16.md'), ('Quartz tutorials 36', 'tutorials/quartz-tut-36.md'), ('Reef reference 37', 'reference/reef-ref-37.md'), ('Reef tutorials 17', 'tutorials/reef-tut-17.md'), ('Sage api 18', 'api/sage-api-18.md'), ('Sage concepts 18', 'concepts/sage-con-18.md'), ('Sage reference 18', 'reference/sage-ref-18.md'), ('Sage security 18', 'security/sage-sec-18.md'), ('Tundra security 19', 'security/tundra-sec-19.md'), ('Tundra tutorials 19', 'tutorials/tundra-tut-19.md')], 'cli': [('Alpha faq 00', 'faq/alpha-faq-00.md'), ('Birch security 21', 'security/birch-sec-21.md'), ('Birch tutorials 21', 'tutorials/birch-tut-21.md'), ('Cedar guides 02', 'guides/cedar-gui-02.md'), ('Cedar reference 02', 'reference/cedar-ref-02.md'), ('Dune api 03', 'api/dune-api-03.md'), ('Dune api 23', 'api/dune-api-23.md'), ('Dune ops 03', 'ops/dune-ops-03.md'), ('Dune security 23', 'security/dune-sec-23.md'), ('Dune tutorials 03', 'tutorials/dune-tut-03.md'), ('Ember faq 04', 'faq/ember-faq-04.md'), ('Ember ops 04', 'ops/ember-ops-04.md'), ('Ember tutorials 24', 'tutorials/ember-tut-24.md'), ('Fjord api 05', 'api/fjord-api-05.md'), ('Fjord guides 25', 'guides/fjord-gui-25.md'), ('Fjord ops 05', 'ops/fjord-ops-05.md'), ('Fjord ops 25', 'ops/fjord-ops-25.md'), ('Fjord reference 25', 'reference/fjord-ref-25.md'), ('Fjord tutorials 25', 'tutorials/fjord-tut-25.md'), ('Grove api 06', 'api/grove-api-06.md'), ('Grove api 26', 'api/grove-api-26.md'), ('Grove ops 06', 'ops/grove-ops-06.md'), ('Grove reference 06', 'reference/grove-ref-06.md'), ('Grove security 26', 'security/grove-sec-26.md'), ('Grove tutorials 26', 'tutorials/grove-tut-26.md'), ('Harbor api 27', 'api/harbor-api-27.md'), ('Iris faq 28', 'faq/iris-faq-28.md'), ('Iris ops 28', 'ops/iris-ops-28.md'), ('Juniper api 09', 'api/juniper-api-09.md'), ('Juniper concepts 09', 'concepts/juniper-con-09.md'), ('Juniper faq 09', 'faq/juniper-faq-09.md'), ('Juniper guides 09', 'guides/juniper-gui-09.md'), ('Juniper tutorials 29', 'tutorials/juniper-tut-29.md'), ('Kelp api 30', 'api/kelp-api-30.md'), ('Kelp ops 30', 'ops/kelp-ops-30.md'), ('Kelp reference 10', 'reference/kelp-ref-10.md'), ('Lagoon guides 11', 'guides/lagoon-gui-11.md'), ('Maple faq 12', 'faq/maple-faq-12.md'), ('Maple faq 32', 'faq/maple-faq-32.md'), ('Maple guides 12', 'guides/maple-gui-12.md'), ('Maple reference 12', 'reference/maple-ref-12.md'), ('Nectar faq 13', 'faq/nectar-faq-13.md'), ('Nectar faq 33', 'faq/nectar-faq-33.md'), ('Nectar ops 13', 'ops/nectar-ops-13.md'), ('Nectar ops 33', 'ops/nectar-ops-33.md'), ('Nectar reference 33', 'reference/nectar-ref-33.md'), ('Nectar security 33', 'security/nectar-sec-33.md'), ('Nectar tutorials 33', 'tutorials/nectar-tut-33.md'), ('Onyx ops 34', 'ops/onyx-ops-34.md'), ('Pine faq 15', 'faq/pine-faq-15.md'), ('Pine ops 15', 'ops/pine-ops-15.md'), ('Quartz faq 16', 'faq/quartz-faq-16.md'), ('Quartz faq 36', 'faq/quartz-faq-36.md'), ('Quartz guides 16', 'guides/quartz-gui-16.md'), ('Quartz security 16', 'security/quartz-sec-16.md'), ('Quartz tutorials 16', 'tutorials/quartz-tut-16.md'), ('Reef concepts 37', 'concepts/reef-con-37.md'), ('Reef ops 17', 'ops/reef-ops-17.md'), ('Reef security 17', 'security/reef-sec-17.md'), ('Reef tutorials 37', 'tutorials/reef-tut-37.md'), ('Sage concepts 38', 'concepts/sage-con-38.md'), ('Sage guides 18', 'guides/sage-gui-18.md'), ('Sage security 38', 'security/sage-sec-38.md'), ('Sage tutorials 18', 'tutorials/sage-tut-18.md'), ('Tundra concepts 19', 'concepts/tundra-con-19.md'), ('Tundra guides 39', 'guides/tundra-gui-39.md'), ('Tundra ops 19', 'ops/tundra-ops-19.md'), ('Tundra reference 19', 'reference/tundra-ref-19.md'), ('Tundra reference 39', 'reference/tundra-ref-39.md')], 'deploy': [('Alpha faq 00', 'faq/alpha-faq-00.md'), ('Birch guides 21', 'guides/birch-gui-21.md'), ('Birch ops 21', 'ops/birch-ops-21.md'), ('Cedar faq 02', 'faq/cedar-faq-02.md'), ('Cedar faq 22', 'faq/cedar-faq-22.md'), ('Cedar tutorials 02', 'tutorials/cedar-tut-02.md'), ('Dune api 23', 'api/dune-api-23.md'), ('Dune concepts 23', 'concepts/dune-con-23.md'), ('Dune guides 03', 'guides/dune-gui-03.md'), ('Dune guides 23', 'guides/dune-gui-23.md'), ('Dune ops 23', 'ops/dune-ops-23.md'), ('Dune reference 23', 'reference/dune-ref-23.md'), ('Ember tutorials 24', 'tutorials/ember-tut-24.md'), ('Fjord concepts 05', 'concepts/fjord-con-05.md'), ('Fjord faq 25', 'faq/fjord-faq-25.md'), ('Grove api 06', 'api/grove-api-06.md'), ('Grove concepts 06', 'concepts/grove-con-06.md'), ('Grove faq 06', 'faq/grove-faq-06.md'), ('Grove guides 26', 'guides/grove-gui-26.md'), ('Grove tutorials 26', 'tutorials/grove-tut-26.md'), ('Harbor api 07', 'api/harbor-api-07.md'), ('Harbor faq 07', 'faq/harbor-faq-07.md'), ('Harbor guides 07', 'guides/harbor-gui-07.md'), ('Harbor guides 27', 'guides/harbor-gui-27.md'), ('Iris guides 28', 'guides/iris-gui-28.md'), ('Iris ops 28', 'ops/iris-ops-28.md'), ('Juniper guides 09', 'guides/juniper-gui-09.md'), ('Juniper security 09', 'security/juniper-sec-09.md'), ('Kelp security 10', 'security/kelp-sec-10.md'), ('Kelp tutorials 30', 'tutorials/kelp-tut-30.md'), ('Lagoon api 31', 'api/lagoon-api-31.md'), ('Lagoon faq 31', 'faq/lagoon-faq-31.md'), ('Maple faq 12', 'faq/maple-faq-12.md'), ('Maple reference 12', 'reference/maple-ref-12.md'), ('Maple security 32', 'security/maple-sec-32.md'), ('Nectar api 33', 'api/nectar-api-33.md'), ('Nectar ops 13', 'ops/nectar-ops-13.md'), ('Nectar tutorials 13', 'tutorials/nectar-tut-13.md'), ('Pine api 15', 'api/pine-api-15.md'), ('Pine reference 15', 'reference/pine-ref-15.md'), ('Quartz concepts 16', 'concepts/quartz-con-16.md'), ('Quartz guides 36', 'guides/quartz-gui-36.md'), ('Quartz tutorials 36', 'tutorials/quartz-tut-36.md'), ('Reef ops 37', 'ops/reef-ops-37.md'), ('Sage concepts 18', 'concepts/sage-con-18.md'), ('Sage faq 38', 'faq/sage-faq-38.md'), ('Sage ops 38', 'ops/sage-ops-38.md'), ('Sage reference 18', 'reference/sage-ref-18.md'), ('Sage tutorials 38', 'tutorials/sage-tut-38.md'), ('Tundra api 19', 'api/tundra-api-19.md'), ('Tundra api 39', 'api/tundra-api-39.md'), ('Tundra concepts 39', 'concepts/tundra-con-39.md'), ('Tundra tutorials 19', 'tutorials/tundra-tut-19.md')], 'limits': [('Alpha reference 20', 'reference/alpha-ref-20.md'), ('Alpha tutorials 20', 'tutorials/alpha-tut-20.md'), ('Birch api 01', 'api/birch-api-01.md'), ('Birch security 01', 'security/birch-sec-01.md'), ('Dune guides 03', 'guides/dune-gui-03.md'), ('Dune tutorials 03', 'tutorials/dune-tut-03.md'), ('Ember concepts 24', 'concepts/ember-con-24.md'), ('Ember ops 24', 'ops/ember-ops-24.md'), ('Ember security 04', 'security/ember-sec-04.md'), ('Fjord concepts 05', 'concepts/fjord-con-05.md'), ('Fjord faq 05', 'faq/fjord-faq-05.md'), ('Grove faq 06', 'faq/grove-faq-06.md'), ('Grove faq 26', 'faq/grove-faq-26.md'), ('Grove ops 06', 'ops/grove-ops-06.md'), ('Harbor concepts 27', 'concepts/harbor-con-27.md'), ('Harbor guides 07', 'guides/harbor-gui-07.md'), ('Harbor reference 07', 'reference/harbor-ref-07.md'), ('Iris reference 08', 'reference/iris-ref-08.md'), ('Iris reference 28', 'reference/iris-ref-28.md'), ('Juniper api 29', 'api/juniper-api-29.md'), ('Juniper ops 29', 'ops/juniper-ops-29.md'), ('Juniper security 09', 'security/juniper-sec-09.md'), ('Kelp faq 10', 'faq/kelp-faq-10.md'), ('Kelp guides 10', 'guides/kelp-gui-10.md'), ('Kelp guides 30', 'guides/kelp-gui-30.md'), ('Lagoon api 31', 'api/lagoon-api-31.md'), ('Lagoon concepts 31', 'concepts/lagoon-con-31.md'), ('Lagoon guides 11', 'guides/lagoon-gui-11.md'), ('Maple concepts 12', 'concepts/maple-con-12.md'), ('Maple guides 32', 'guides/maple-gui-32.md'), ('Maple security 12', 'security/maple-sec-12.md'), ('Maple tutorials 12', 'tutorials/maple-tut-12.md'), ('Nectar reference 13', 'reference/nectar-ref-13.md'), ('Onyx concepts 34', 'concepts/onyx-con-34.md'), ('Onyx security 14', 'security/onyx-sec-14.md'), ('Onyx tutorials 14', 'tutorials/onyx-tut-14.md'), ('Pine concepts 35', 'concepts/pine-con-35.md'), ('Pine guides 35', 'guides/pine-gui-35.md'), ('Quartz tutorials 16', 'tutorials/quartz-tut-16.md'), ('Reef concepts 17', 'concepts/reef-con-17.md'), ('Reef security 17', 'security/reef-sec-17.md'), ('Reef security 37', 'security/reef-sec-37.md'), ('Sage guides 38', 'guides/sage-gui-38.md'), ('Sage reference 38', 'reference/sage-ref-38.md'), ('Tundra concepts 39', 'concepts/tundra-con-39.md'), ('Tundra guides 39', 'guides/tundra-gui-39.md'), ('Tundra ops 39', 'ops/tundra-ops-39.md')], 'errors': [('Alpha faq 00', 'faq/alpha-faq-00.md'), ('Alpha ops 00', 'ops/alpha-ops-00.md'), ('Alpha security 00', 'security/alpha-sec-00.md'), ('Birch reference 01', 'reference/birch-ref-01.md'), ('Birch security 21', 'security/birch-sec-21.md'), ('Birch tutorials 01', 'tutorials/birch-tut-01.md'), ('Cedar api 22', 'api/cedar-api-22.md'), ('Cedar faq 02', 'faq/cedar-faq-02.md'), ('Cedar ops 22', 'ops/cedar-ops-22.md'), ('Cedar tutorials 22', 'tutorials/cedar-tut-22.md'), ('Dune faq 03', 'faq/dune-faq-03.md'), ('Dune reference 03', 'reference/dune-ref-03.md'), ('Ember reference 24', 'reference/ember-ref-24.md'), ('Fjord guides 05', 'guides/fjord-gui-05.md'), ('Fjord security 05', 'security/fjord-sec-05.md'), ('Grove guides 06', 'guides/grove-gui-06.md'), ('Harbor concepts 07', 'concepts/harbor-con-07.md'), ('Harbor faq 27', 'faq/harbor-faq-27.md'), ('Harbor guides 27', 'guides/harbor-gui-27.md'), ('Harbor security 07', 'security/harbor-sec-07.md'), ('Iris api 08', 'api/iris-api-08.md'), ('Juniper concepts 29', 'concepts/juniper-con-29.md'), ('Juniper security 29', 'security/juniper-sec-29.md'), ('Juniper tutorials 29', 'tutorials/juniper-tut-29.md'), ('Kelp guides 30', 'guides/kelp-gui-30.md'), ('Kelp ops 10', 'ops/kelp-ops-10.md'), ('Kelp ops 30', 'ops/kelp-ops-30.md'), ('Kelp reference 10', 'reference/kelp-ref-10.md'), ('Lagoon api 11', 'api/lagoon-api-11.md'), ('Maple concepts 32', 'concepts/maple-con-32.md'), ('Maple ops 32', 'ops/maple-ops-32.md'), ('Nectar security 13', 'security/nectar-sec-13.md'), ('Onyx concepts 14', 'concepts/onyx-con-14.md'), ('Onyx guides 34', 'guides/onyx-gui-34.md'), ('Pine api 15', 'api/pine-api-15.md'), ('Pine api 35', 'api/pine-api-35.md'), ('Pine concepts 35', 'concepts/pine-con-35.md'), ('Quartz ops 16', 'ops/quartz-ops-16.md'), ('Reef faq 17', 'faq/reef-faq-17.md'), ('Reef ops 17', 'ops/reef-ops-17.md'), ('Reef reference 17', 'reference/reef-ref-17.md'), ('Reef reference 37', 'reference/reef-ref-37.md'), ('Reef tutorials 17', 'tutorials/reef-tut-17.md'), ('Sage faq 18', 'faq/sage-faq-18.md'), ('Sage faq 38', 'faq/sage-faq-38.md'), ('Sage guides 38', 'guides/sage-gui-38.md'), ('Tundra concepts 19', 'concepts/tundra-con-19.md'), ('Tundra security 39', 'security/tundra-sec-39.md')], 'retries': [('Alpha guides 20', 'guides/alpha-gui-20.md'), ('Alpha ops 20', 'ops/alpha-ops-20.md'), ('Birch concepts 21', 'concepts/birch-con-21.md'), ('Birch ops 01', 'ops/birch-ops-01.md'), ('Cedar guides 22', 'guides/cedar-gui-22.md'), ('Cedar reference 22', 'reference/cedar-ref-22.md'), ('Dune faq 03', 'faq/dune-faq-03.md'), ('Dune faq 23', 'faq/dune-faq-23.md'), ('Dune ops 03', 'ops/dune-ops-03.md'), ('Ember ops 24', 'ops/ember-ops-24.md'), ('Ember tutorials 04', 'tutorials/ember-tut-04.md'), ('Fjord guides 25', 'guides/fjord-gui-25.md'), ('Grove faq 26', 'faq/grove-faq-26.md'), ('Grove guides 06', 'guides/grove-gui-06.md'), ('Grove ops 26', 'ops/grove-ops-26.md'), ('Grove reference 26', 'reference/grove-ref-26.md'), ('Harbor faq 07', 'faq/harbor-faq-07.md'), ('Harbor guides 07', 'guides/harbor-gui-07.md'), ('Harbor tutorials 27', 'tutorials/harbor-tut-27.md'), ('Iris guides 08', 'guides/iris-gui-08.md'), ('Iris guides 28', 'guides/iris-gui-28.md'), ('Iris tutorials 08', 'tutorials/iris-tut-08.md'), ('Juniper ops 29', 'ops/juniper-ops-29.md'), ('Juniper reference 09', 'reference/juniper-ref-09.md'), ('Lagoon concepts 11', 'concepts/lagoon-con-11.md'), ('Lagoon security 11', 'security/lagoon-sec-11.md'), ('Maple guides 12', 'guides/maple-gui-12.md'), ('Maple guides 32', 'guides/maple-gui-32.md'), ('Nectar faq 13', 'faq/nectar-faq-13.md'), ('Nectar guides 13', 'guides/nectar-gui-13.md'), ('Onyx api 14', 'api/onyx-api-14.md'), ('Onyx api 34', 'api/onyx-api-34.md'), ('Onyx faq 14', 'faq/onyx-faq-14.md'), ('Onyx faq 34', 'faq/onyx-faq-34.md'), ('Onyx ops 14', 'ops/onyx-ops-14.md'), ('Onyx ops 34', 'ops/onyx-ops-34.md'), ('Onyx reference 14', 'reference/onyx-ref-14.md'), ('Onyx security 14', 'security/onyx-sec-14.md'), ('Pine api 35', 'api/pine-api-35.md'), ('Quartz concepts 36', 'concepts/quartz-con-36.md'), ('Quartz security 16', 'security/quartz-sec-16.md'), ('Reef guides 17', 'guides/reef-gui-17.md'), ('Sage api 38', 'api/sage-api-38.md'), ('Sage concepts 38', 'concepts/sage-con-38.md'), ('Sage faq 18', 'faq/sage-faq-18.md'), ('Sage faq 38', 'faq/sage-faq-38.md'), ('Sage security 18', 'security/sage-sec-18.md'), ('Sage security 38', 'security/sage-sec-38.md'), ('Sage tutorials 18', 'tutorials/sage-tut-18.md'), ('Tundra faq 19', 'faq/tundra-faq-19.md')], 'upgrade': [('Alpha concepts 00', 'concepts/alpha-con-00.md'), ('Alpha faq 20', 'faq/alpha-faq-20.md'), ('Alpha reference 20', 'reference/alpha-ref-20.md'), ('Birch faq 01', 'faq/birch-faq-01.md'), ('Birch faq 21', 'faq/birch-faq-21.md'), ('Birch reference 21', 'reference/birch-ref-21.md'), ('Cedar ops 02', 'ops/cedar-ops-02.md'), ('Cedar tutorials 02', 'tutorials/cedar-tut-02.md'), ('Dune reference 23', 'reference/dune-ref-23.md'), ('Dune security 23', 'security/dune-sec-23.md'), ('Dune tutorials 03', 'tutorials/dune-tut-03.md'), ('Dune tutorials 23', 'tutorials/dune-tut-23.md'), ('Ember api 24', 'api/ember-api-24.md'), ('Ember guides 24', 'guides/ember-gui-24.md'), ('Fjord faq 25', 'faq/fjord-faq-25.md'), ('Fjord ops 25', 'ops/fjord-ops-25.md'), ('Fjord reference 05', 'reference/fjord-ref-05.md'), ('Fjord security 25', 'security/fjord-sec-25.md'), ('Grove concepts 26', 'concepts/grove-con-26.md'), ('Grove reference 06', 'reference/grove-ref-06.md'), ('Iris faq 08', 'faq/iris-faq-08.md'), ('Iris guides 08', 'guides/iris-gui-08.md'), ('Iris reference 08', 'reference/iris-ref-08.md'), ('Iris security 08', 'security/iris-sec-08.md'), ('Iris security 28', 'security/iris-sec-28.md'), ('Iris tutorials 08', 'tutorials/iris-tut-08.md'), ('Juniper guides 29', 'guides/juniper-gui-29.md'), ('Juniper ops 09', 'ops/juniper-ops-09.md'), ('Kelp concepts 10', 'concepts/kelp-con-10.md'), ('Kelp concepts 30', 'concepts/kelp-con-30.md'), ('Kelp faq 30', 'faq/kelp-faq-30.md'), ('Kelp reference 30', 'reference/kelp-ref-30.md'), ('Kelp security 10', 'security/kelp-sec-10.md'), ('Kelp security 30', 'security/kelp-sec-30.md'), ('Lagoon concepts 31', 'concepts/lagoon-con-31.md'), ('Lagoon faq 31', 'faq/lagoon-faq-31.md'), ('Lagoon guides 31', 'guides/lagoon-gui-31.md'), ('Lagoon ops 31', 'ops/lagoon-ops-31.md'), ('Lagoon reference 11', 'reference/lagoon-ref-11.md'), ('Maple api 12', 'api/maple-api-12.md'), ('Maple concepts 32', 'concepts/maple-con-32.md'), ('Maple faq 12', 'faq/maple-faq-12.md'), ('Maple tutorials 32', 'tutorials/maple-tut-32.md'), ('Nectar api 13', 'api/nectar-api-13.md'), ('Nectar concepts 13', 'concepts/nectar-con-13.md'), ('Nectar ops 33', 'ops/nectar-ops-33.md'), ('Onyx api 14', 'api/onyx-api-14.md'), ('Onyx faq 34', 'faq/onyx-faq-34.md'), ('Onyx ops 14', 'ops/onyx-ops-14.md'), ('Onyx reference 34', 'reference/onyx-ref-34.md'), ('Onyx security 34', 'security/onyx-sec-34.md'), ('Onyx tutorials 34', 'tutorials/onyx-tut-34.md'), ('Pine faq 15', 'faq/pine-faq-15.md'), ('Pine security 35', 'security/pine-sec-35.md'), ('Pine tutorials 35', 'tutorials/pine-tut-35.md'), ('Quartz faq 16', 'faq/quartz-faq-16.md'), ('Quartz guides 36', 'guides/quartz-gui-36.md'), ('Quartz reference 16', 'reference/quartz-ref-16.md'), ('Quartz security 36', 'security/quartz-sec-36.md'), ('Reef api 17', 'api/reef-api-17.md'), ('Reef guides 17', 'guides/reef-gui-17.md'), ('Reef ops 17', 'ops/reef-ops-17.md'), ('Reef security 37', 'security/reef-sec-37.md'), ('Sage tutorials 38', 'tutorials/sage-tut-38.md')], 'billing': [('Alpha api 00', 'api/alpha-api-00.md'), ('Alpha api 20', 'api/alpha-api-20.md'), ('Alpha ops 00', 'ops/alpha-ops-00.md'), ('Alpha ops 20', 'ops/alpha-ops-20.md'), ('Alpha security 00', 'security/alpha-sec-00.md'), ('Alpha security 20', 'security/alpha-sec-20.md'), ('Birch api 21', 'api/birch-api-21.md'), ('Birch concepts 01', 'concepts/birch-con-01.md'), ('Birch ops 01', 'ops/birch-ops-01.md'), ('Cedar concepts 22', 'concepts/cedar-con-22.md'), ('Cedar security 02', 'security/cedar-sec-02.md'), ('Cedar security 22', 'security/cedar-sec-22.md'), ('Cedar tutorials 02', 'tutorials/cedar-tut-02.md'), ('Dune faq 03', 'faq/dune-faq-03.md'), ('Ember security 24', 'security/ember-sec-24.md'), ('Fjord security 25', 'security/fjord-sec-25.md'), ('Grove api 06', 'api/grove-api-06.md'), ('Grove faq 06', 'faq/grove-faq-06.md'), ('Grove guides 26', 'guides/grove-gui-26.md'), ('Harbor reference 07', 'reference/harbor-ref-07.md'), ('Harbor security 27', 'security/harbor-sec-27.md'), ('Iris reference 08', 'reference/iris-ref-08.md'), ('Juniper tutorials 09', 'tutorials/juniper-tut-09.md'), ('Juniper tutorials 29', 'tutorials/juniper-tut-29.md'), ('Kelp concepts 30', 'concepts/kelp-con-30.md'), ('Kelp faq 30', 'faq/kelp-faq-30.md'), ('Kelp guides 10', 'guides/kelp-gui-10.md'), ('Maple faq 32', 'faq/maple-faq-32.md'), ('Maple ops 32', 'ops/maple-ops-32.md'), ('Maple reference 12', 'reference/maple-ref-12.md'), ('Maple tutorials 32', 'tutorials/maple-tut-32.md'), ('Nectar concepts 33', 'concepts/nectar-con-33.md'), ('Nectar tutorials 13', 'tutorials/nectar-tut-13.md'), ('Onyx concepts 14', 'concepts/onyx-con-14.md'), ('Pine api 35', 'api/pine-api-35.md'), ('Quartz concepts 16', 'concepts/quartz-con-16.md'), ('Quartz ops 36', 'ops/quartz-ops-36.md'), ('Reef api 17', 'api/reef-api-17.md'), ('Reef concepts 17', 'concepts/reef-con-17.md'), ('Reef faq 37', 'faq/reef-faq-37.md'), ('Reef guides 37', 'guides/reef-gui-37.md'), ('Sage ops 38', 'ops/sage-ops-38.md'), ('Tundra concepts 39', 'concepts/tundra-con-39.md'), ('Tundra reference 19', 'reference/tundra-ref-19.md'), ('Tundra security 39', 'security/tundra-sec-39.md'), ('Tundra tutorials 19', 'tutorials/tundra-tut-19.md')], 'perf': [('Alpha tutorials 20', 'tutorials/alpha-tut-20.md'), ('Birch security 01', 'security/birch-sec-01.md'), ('Birch tutorials 21', 'tutorials/birch-tut-21.md'), ('Cedar reference 02', 'reference/cedar-ref-02.md'), ('Dune concepts 23', 'concepts/dune-con-23.md'), ('Dune reference 23', 'reference/dune-ref-23.md'), ('Ember api 24', 'api/ember-api-24.md'), ('Ember guides 24', 'guides/ember-gui-24.md'), ('Ember ops 04', 'ops/ember-ops-04.md'), ('Ember tutorials 04', 'tutorials/ember-tut-04.md'), ('Fjord api 25', 'api/fjord-api-25.md'), ('Fjord faq 05', 'faq/fjord-faq-05.md'), ('Fjord tutorials 05', 'tutorials/fjord-tut-05.md'), ('Harbor concepts 07', 'concepts/harbor-con-07.md'), ('Harbor guides 27', 'guides/harbor-gui-27.md'), ('Iris api 28', 'api/iris-api-28.md'), ('Iris faq 28', 'faq/iris-faq-28.md'), ('Juniper concepts 09', 'concepts/juniper-con-09.md'), ('Juniper security 09', 'security/juniper-sec-09.md'), ('Kelp api 10', 'api/kelp-api-10.md'), ('Kelp concepts 10', 'concepts/kelp-con-10.md'), ('Kelp guides 10', 'guides/kelp-gui-10.md'), ('Kelp ops 10', 'ops/kelp-ops-10.md'), ('Kelp security 10', 'security/kelp-sec-10.md'), ('Kelp security 30', 'security/kelp-sec-30.md'), ('Lagoon reference 11', 'reference/lagoon-ref-11.md'), ('Maple concepts 12', 'concepts/maple-con-12.md'), ('Maple ops 12', 'ops/maple-ops-12.md'), ('Nectar faq 33', 'faq/nectar-faq-33.md'), ('Nectar reference 33', 'reference/nectar-ref-33.md'), ('Nectar security 13', 'security/nectar-sec-13.md'), ('Pine faq 35', 'faq/pine-faq-35.md'), ('Pine guides 35', 'guides/pine-gui-35.md'), ('Pine ops 35', 'ops/pine-ops-35.md'), ('Pine tutorials 15', 'tutorials/pine-tut-15.md'), ('Quartz tutorials 36', 'tutorials/quartz-tut-36.md'), ('Reef api 17', 'api/reef-api-17.md'), ('Reef faq 17', 'faq/reef-faq-17.md'), ('Reef faq 37', 'faq/reef-faq-37.md'), ('Sage api 18', 'api/sage-api-18.md'), ('Tundra guides 19', 'guides/tundra-gui-19.md'), ('Tundra security 39', 'security/tundra-sec-39.md')]}
+        need(list(got) == sorted(want), 'tag headings: ' + str(list(got)))
+        need(got == want, 'tag membership/order differs for: ' + str([t for t in want if got.get(t) != want[t]][:3]))
+
+
+    def t7():
+        for rel, want in {'docs/guides/index.md': '# Guides\n\n- [Alpha guides 00](alpha-gui-00.md)\n- [Alpha guides 20](alpha-gui-20.md)\n- [Birch guides 01](birch-gui-01.md)\n- [Birch guides 21](birch-gui-21.md)\n- [Cedar guides 02](cedar-gui-02.md)\n- [Cedar guides 22](cedar-gui-22.md)\n- [Dune guides 03](dune-gui-03.md)\n- [Dune guides 23](dune-gui-23.md)\n- [Ember guides 04](ember-gui-04.md)\n- [Ember guides 24](ember-gui-24.md)\n- [Fjord guides 05](fjord-gui-05.md)\n- [Fjord guides 25](fjord-gui-25.md)\n- [Grove guides 06](grove-gui-06.md)\n- [Grove guides 26](grove-gui-26.md)\n- [Harbor guides 07](harbor-gui-07.md)\n- [Harbor guides 27](harbor-gui-27.md)\n- [Iris guides 08](iris-gui-08.md)\n- [Iris guides 28](iris-gui-28.md)\n- [Juniper guides 09](juniper-gui-09.md)\n- [Juniper guides 29](juniper-gui-29.md)\n- [Kelp guides 10](kelp-gui-10.md)\n- [Kelp guides 30](kelp-gui-30.md)\n- [Lagoon guides 11](lagoon-gui-11.md)\n- [Lagoon guides 31](lagoon-gui-31.md)\n- [Maple guides 12](maple-gui-12.md)\n- [Maple guides 32](maple-gui-32.md)\n- [Nectar guides 13](nectar-gui-13.md)\n- [Nectar guides 33](nectar-gui-33.md)\n- [Onyx guides 14](onyx-gui-14.md)\n- [Onyx guides 34](onyx-gui-34.md)\n- [Pine guides 15](pine-gui-15.md)\n- [Pine guides 35](pine-gui-35.md)\n- [Quartz guides 16](quartz-gui-16.md)\n- [Quartz guides 36](quartz-gui-36.md)\n- [Reef guides 17](reef-gui-17.md)\n- [Reef guides 37](reef-gui-37.md)\n- [Sage guides 18](sage-gui-18.md)\n- [Sage guides 38](sage-gui-38.md)\n- [Tundra guides 19](tundra-gui-19.md)\n- [Tundra guides 39](tundra-gui-39.md)\n', 'docs/api/index.md': '# Api\n\n- [Alpha api 00](alpha-api-00.md)\n- [Alpha api 20](alpha-api-20.md)\n- [Birch api 01](birch-api-01.md)\n- [Birch api 21](birch-api-21.md)\n- [Cedar api 02](cedar-api-02.md)\n- [Cedar api 22](cedar-api-22.md)\n- [Dune api 03](dune-api-03.md)\n- [Dune api 23](dune-api-23.md)\n- [Ember api 04](ember-api-04.md)\n- [Ember api 24](ember-api-24.md)\n- [Fjord api 05](fjord-api-05.md)\n- [Fjord api 25](fjord-api-25.md)\n- [Grove api 06](grove-api-06.md)\n- [Grove api 26](grove-api-26.md)\n- [Harbor api 07](harbor-api-07.md)\n- [Harbor api 27](harbor-api-27.md)\n- [Iris api 08](iris-api-08.md)\n- [Iris api 28](iris-api-28.md)\n- [Juniper api 09](juniper-api-09.md)\n- [Juniper api 29](juniper-api-29.md)\n- [Kelp api 10](kelp-api-10.md)\n- [Kelp api 30](kelp-api-30.md)\n- [Lagoon api 11](lagoon-api-11.md)\n- [Lagoon api 31](lagoon-api-31.md)\n- [Maple api 12](maple-api-12.md)\n- [Maple api 32](maple-api-32.md)\n- [Nectar api 13](nectar-api-13.md)\n- [Nectar api 33](nectar-api-33.md)\n- [Onyx api 14](onyx-api-14.md)\n- [Onyx api 34](onyx-api-34.md)\n- [Pine api 15](pine-api-15.md)\n- [Pine api 35](pine-api-35.md)\n- [Quartz api 16](quartz-api-16.md)\n- [Quartz api 36](quartz-api-36.md)\n- [Reef api 17](reef-api-17.md)\n- [Reef api 37](reef-api-37.md)\n- [Sage api 18](sage-api-18.md)\n- [Sage api 38](sage-api-38.md)\n- [Tundra api 19](tundra-api-19.md)\n- [Tundra api 39](tundra-api-39.md)\n', 'docs/ops/index.md': '# Ops\n\n- [Alpha ops 00](alpha-ops-00.md)\n- [Alpha ops 20](alpha-ops-20.md)\n- [Birch ops 01](birch-ops-01.md)\n- [Birch ops 21](birch-ops-21.md)\n- [Cedar ops 02](cedar-ops-02.md)\n- [Cedar ops 22](cedar-ops-22.md)\n- [Dune ops 03](dune-ops-03.md)\n- [Dune ops 23](dune-ops-23.md)\n- [Ember ops 04](ember-ops-04.md)\n- [Ember ops 24](ember-ops-24.md)\n- [Fjord ops 05](fjord-ops-05.md)\n- [Fjord ops 25](fjord-ops-25.md)\n- [Grove ops 06](grove-ops-06.md)\n- [Grove ops 26](grove-ops-26.md)\n- [Harbor ops 07](harbor-ops-07.md)\n- [Harbor ops 27](harbor-ops-27.md)\n- [Iris ops 08](iris-ops-08.md)\n- [Iris ops 28](iris-ops-28.md)\n- [Juniper ops 09](juniper-ops-09.md)\n- [Juniper ops 29](juniper-ops-29.md)\n- [Kelp ops 10](kelp-ops-10.md)\n- [Kelp ops 30](kelp-ops-30.md)\n- [Lagoon ops 11](lagoon-ops-11.md)\n- [Lagoon ops 31](lagoon-ops-31.md)\n- [Maple ops 12](maple-ops-12.md)\n- [Maple ops 32](maple-ops-32.md)\n- [Nectar ops 13](nectar-ops-13.md)\n- [Nectar ops 33](nectar-ops-33.md)\n- [Onyx ops 14](onyx-ops-14.md)\n- [Onyx ops 34](onyx-ops-34.md)\n- [Pine ops 15](pine-ops-15.md)\n- [Pine ops 35](pine-ops-35.md)\n- [Quartz ops 16](quartz-ops-16.md)\n- [Quartz ops 36](quartz-ops-36.md)\n- [Reef ops 17](reef-ops-17.md)\n- [Reef ops 37](reef-ops-37.md)\n- [Sage ops 18](sage-ops-18.md)\n- [Sage ops 38](sage-ops-38.md)\n- [Tundra ops 19](tundra-ops-19.md)\n- [Tundra ops 39](tundra-ops-39.md)\n', 'docs/faq/index.md': '# Faq\n\n- [Alpha faq 00](alpha-faq-00.md)\n- [Alpha faq 20](alpha-faq-20.md)\n- [Birch faq 01](birch-faq-01.md)\n- [Birch faq 21](birch-faq-21.md)\n- [Cedar faq 02](cedar-faq-02.md)\n- [Cedar faq 22](cedar-faq-22.md)\n- [Dune faq 03](dune-faq-03.md)\n- [Dune faq 23](dune-faq-23.md)\n- [Ember faq 04](ember-faq-04.md)\n- [Ember faq 24](ember-faq-24.md)\n- [Fjord faq 05](fjord-faq-05.md)\n- [Fjord faq 25](fjord-faq-25.md)\n- [Grove faq 06](grove-faq-06.md)\n- [Grove faq 26](grove-faq-26.md)\n- [Harbor faq 07](harbor-faq-07.md)\n- [Harbor faq 27](harbor-faq-27.md)\n- [Iris faq 08](iris-faq-08.md)\n- [Iris faq 28](iris-faq-28.md)\n- [Juniper faq 09](juniper-faq-09.md)\n- [Juniper faq 29](juniper-faq-29.md)\n- [Kelp faq 10](kelp-faq-10.md)\n- [Kelp faq 30](kelp-faq-30.md)\n- [Lagoon faq 11](lagoon-faq-11.md)\n- [Lagoon faq 31](lagoon-faq-31.md)\n- [Maple faq 12](maple-faq-12.md)\n- [Maple faq 32](maple-faq-32.md)\n- [Nectar faq 13](nectar-faq-13.md)\n- [Nectar faq 33](nectar-faq-33.md)\n- [Onyx faq 14](onyx-faq-14.md)\n- [Onyx faq 34](onyx-faq-34.md)\n- [Pine faq 15](pine-faq-15.md)\n- [Pine faq 35](pine-faq-35.md)\n- [Quartz faq 16](quartz-faq-16.md)\n- [Quartz faq 36](quartz-faq-36.md)\n- [Reef faq 17](reef-faq-17.md)\n- [Reef faq 37](reef-faq-37.md)\n- [Sage faq 18](sage-faq-18.md)\n- [Sage faq 38](sage-faq-38.md)\n- [Tundra faq 19](tundra-faq-19.md)\n- [Tundra faq 39](tundra-faq-39.md)\n', 'docs/tutorials/index.md': '# Tutorials\n\n- [Alpha tutorials 00](alpha-tut-00.md)\n- [Alpha tutorials 20](alpha-tut-20.md)\n- [Birch tutorials 01](birch-tut-01.md)\n- [Birch tutorials 21](birch-tut-21.md)\n- [Cedar tutorials 02](cedar-tut-02.md)\n- [Cedar tutorials 22](cedar-tut-22.md)\n- [Dune tutorials 03](dune-tut-03.md)\n- [Dune tutorials 23](dune-tut-23.md)\n- [Ember tutorials 04](ember-tut-04.md)\n- [Ember tutorials 24](ember-tut-24.md)\n- [Fjord tutorials 05](fjord-tut-05.md)\n- [Fjord tutorials 25](fjord-tut-25.md)\n- [Grove tutorials 06](grove-tut-06.md)\n- [Grove tutorials 26](grove-tut-26.md)\n- [Harbor tutorials 07](harbor-tut-07.md)\n- [Harbor tutorials 27](harbor-tut-27.md)\n- [Iris tutorials 08](iris-tut-08.md)\n- [Iris tutorials 28](iris-tut-28.md)\n- [Juniper tutorials 09](juniper-tut-09.md)\n- [Juniper tutorials 29](juniper-tut-29.md)\n- [Kelp tutorials 10](kelp-tut-10.md)\n- [Kelp tutorials 30](kelp-tut-30.md)\n- [Lagoon tutorials 11](lagoon-tut-11.md)\n- [Lagoon tutorials 31](lagoon-tut-31.md)\n- [Maple tutorials 12](maple-tut-12.md)\n- [Maple tutorials 32](maple-tut-32.md)\n- [Nectar tutorials 13](nectar-tut-13.md)\n- [Nectar tutorials 33](nectar-tut-33.md)\n- [Onyx tutorials 14](onyx-tut-14.md)\n- [Onyx tutorials 34](onyx-tut-34.md)\n- [Pine tutorials 15](pine-tut-15.md)\n- [Pine tutorials 35](pine-tut-35.md)\n- [Quartz tutorials 16](quartz-tut-16.md)\n- [Quartz tutorials 36](quartz-tut-36.md)\n- [Reef tutorials 17](reef-tut-17.md)\n- [Reef tutorials 37](reef-tut-37.md)\n- [Sage tutorials 18](sage-tut-18.md)\n- [Sage tutorials 38](sage-tut-38.md)\n- [Tundra tutorials 19](tundra-tut-19.md)\n- [Tundra tutorials 39](tundra-tut-39.md)\n', 'docs/concepts/index.md': '# Concepts\n\n- [Alpha concepts 00](alpha-con-00.md)\n- [Alpha concepts 20](alpha-con-20.md)\n- [Birch concepts 01](birch-con-01.md)\n- [Birch concepts 21](birch-con-21.md)\n- [Cedar concepts 02](cedar-con-02.md)\n- [Cedar concepts 22](cedar-con-22.md)\n- [Dune concepts 03](dune-con-03.md)\n- [Dune concepts 23](dune-con-23.md)\n- [Ember concepts 04](ember-con-04.md)\n- [Ember concepts 24](ember-con-24.md)\n- [Fjord concepts 05](fjord-con-05.md)\n- [Fjord concepts 25](fjord-con-25.md)\n- [Grove concepts 06](grove-con-06.md)\n- [Grove concepts 26](grove-con-26.md)\n- [Harbor concepts 07](harbor-con-07.md)\n- [Harbor concepts 27](harbor-con-27.md)\n- [Iris concepts 08](iris-con-08.md)\n- [Iris concepts 28](iris-con-28.md)\n- [Juniper concepts 09](juniper-con-09.md)\n- [Juniper concepts 29](juniper-con-29.md)\n- [Kelp concepts 10](kelp-con-10.md)\n- [Kelp concepts 30](kelp-con-30.md)\n- [Lagoon concepts 11](lagoon-con-11.md)\n- [Lagoon concepts 31](lagoon-con-31.md)\n- [Maple concepts 12](maple-con-12.md)\n- [Maple concepts 32](maple-con-32.md)\n- [Nectar concepts 13](nectar-con-13.md)\n- [Nectar concepts 33](nectar-con-33.md)\n- [Onyx concepts 14](onyx-con-14.md)\n- [Onyx concepts 34](onyx-con-34.md)\n- [Pine concepts 15](pine-con-15.md)\n- [Pine concepts 35](pine-con-35.md)\n- [Quartz concepts 16](quartz-con-16.md)\n- [Quartz concepts 36](quartz-con-36.md)\n- [Reef concepts 17](reef-con-17.md)\n- [Reef concepts 37](reef-con-37.md)\n- [Sage concepts 18](sage-con-18.md)\n- [Sage concepts 38](sage-con-38.md)\n- [Tundra concepts 19](tundra-con-19.md)\n- [Tundra concepts 39](tundra-con-39.md)\n', 'docs/security/index.md': '# Security\n\n- [Alpha security 00](alpha-sec-00.md)\n- [Alpha security 20](alpha-sec-20.md)\n- [Birch security 01](birch-sec-01.md)\n- [Birch security 21](birch-sec-21.md)\n- [Cedar security 02](cedar-sec-02.md)\n- [Cedar security 22](cedar-sec-22.md)\n- [Dune security 03](dune-sec-03.md)\n- [Dune security 23](dune-sec-23.md)\n- [Ember security 04](ember-sec-04.md)\n- [Ember security 24](ember-sec-24.md)\n- [Fjord security 05](fjord-sec-05.md)\n- [Fjord security 25](fjord-sec-25.md)\n- [Grove security 06](grove-sec-06.md)\n- [Grove security 26](grove-sec-26.md)\n- [Harbor security 07](harbor-sec-07.md)\n- [Harbor security 27](harbor-sec-27.md)\n- [Iris security 08](iris-sec-08.md)\n- [Iris security 28](iris-sec-28.md)\n- [Juniper security 09](juniper-sec-09.md)\n- [Juniper security 29](juniper-sec-29.md)\n- [Kelp security 10](kelp-sec-10.md)\n- [Kelp security 30](kelp-sec-30.md)\n- [Lagoon security 11](lagoon-sec-11.md)\n- [Lagoon security 31](lagoon-sec-31.md)\n- [Maple security 12](maple-sec-12.md)\n- [Maple security 32](maple-sec-32.md)\n- [Nectar security 13](nectar-sec-13.md)\n- [Nectar security 33](nectar-sec-33.md)\n- [Onyx security 14](onyx-sec-14.md)\n- [Onyx security 34](onyx-sec-34.md)\n- [Pine security 15](pine-sec-15.md)\n- [Pine security 35](pine-sec-35.md)\n- [Quartz security 16](quartz-sec-16.md)\n- [Quartz security 36](quartz-sec-36.md)\n- [Reef security 17](reef-sec-17.md)\n- [Reef security 37](reef-sec-37.md)\n- [Sage security 18](sage-sec-18.md)\n- [Sage security 38](sage-sec-38.md)\n- [Tundra security 19](tundra-sec-19.md)\n- [Tundra security 39](tundra-sec-39.md)\n', 'docs/reference/index.md': '# Reference\n\n- [Alpha reference 00](alpha-ref-00.md)\n- [Alpha reference 20](alpha-ref-20.md)\n- [Birch reference 01](birch-ref-01.md)\n- [Birch reference 21](birch-ref-21.md)\n- [Cedar reference 02](cedar-ref-02.md)\n- [Cedar reference 22](cedar-ref-22.md)\n- [Dune reference 03](dune-ref-03.md)\n- [Dune reference 23](dune-ref-23.md)\n- [Ember reference 04](ember-ref-04.md)\n- [Ember reference 24](ember-ref-24.md)\n- [Fjord reference 05](fjord-ref-05.md)\n- [Fjord reference 25](fjord-ref-25.md)\n- [Grove reference 06](grove-ref-06.md)\n- [Grove reference 26](grove-ref-26.md)\n- [Harbor reference 07](harbor-ref-07.md)\n- [Harbor reference 27](harbor-ref-27.md)\n- [Iris reference 08](iris-ref-08.md)\n- [Iris reference 28](iris-ref-28.md)\n- [Juniper reference 09](juniper-ref-09.md)\n- [Juniper reference 29](juniper-ref-29.md)\n- [Kelp reference 10](kelp-ref-10.md)\n- [Kelp reference 30](kelp-ref-30.md)\n- [Lagoon reference 11](lagoon-ref-11.md)\n- [Lagoon reference 31](lagoon-ref-31.md)\n- [Maple reference 12](maple-ref-12.md)\n- [Maple reference 32](maple-ref-32.md)\n- [Nectar reference 13](nectar-ref-13.md)\n- [Nectar reference 33](nectar-ref-33.md)\n- [Onyx reference 14](onyx-ref-14.md)\n- [Onyx reference 34](onyx-ref-34.md)\n- [Pine reference 15](pine-ref-15.md)\n- [Pine reference 35](pine-ref-35.md)\n- [Quartz reference 16](quartz-ref-16.md)\n- [Quartz reference 36](quartz-ref-36.md)\n- [Reef reference 17](reef-ref-17.md)\n- [Reef reference 37](reef-ref-37.md)\n- [Sage reference 18](sage-ref-18.md)\n- [Sage reference 38](sage-ref-38.md)\n- [Tundra reference 19](tundra-ref-19.md)\n- [Tundra reference 39](tundra-ref-39.md)\n'}.items():
+            need(read(rel).strip() == want.strip(), rel + ': differs from the expected index')
+
+
+    def t8():
+        for rel, text in {'a.md': '# A\n\n[b](b.md) [ghost](ghost.md#x) [web](https://example.com/x.md)\n', 'sub/c.md': '# C\n\n[up](../a.md) [bad](../zzz.md)\n'}.items():
+            p = W / '_lc' / rel
+            p.parent.mkdir(parents=True, exist_ok=True)
+            p.write_text(text, encoding='utf-8')
+        (W / '_lc' / 'b.md').write_text('# B\n', encoding='utf-8')
+        need((W / 'scripts/linkcheck.py').exists(), 'missing scripts/linkcheck.py')
+        chk_cmd_out('python3 scripts/linkcheck.py --root _lc', ['BROKEN: a.md -> ghost.md#x', 'BROKEN: sub/c.md -> ../zzz.md'], expect_rc=1)
+        chk_cmd_out('python3 scripts/linkcheck.py', ['ok'])
+
+
+    def t9():
+        got = [l[2:].strip() for l in read('docs/_reports/orphans.md').splitlines() if l.startswith('- ')]
+        need(got == ['api/dune-api-03.md', 'api/fjord-api-25.md', 'api/juniper-api-29.md', 'api/lagoon-api-11.md', 'api/tundra-api-39.md', 'concepts/alpha-con-20.md', 'concepts/dune-con-23.md', 'concepts/ember-con-24.md', 'concepts/pine-con-35.md', 'concepts/tundra-con-19.md', 'faq/birch-faq-21.md', 'faq/ember-faq-04.md', 'faq/fjord-faq-05.md', 'faq/harbor-faq-27.md', 'guides/lagoon-gui-31.md', 'guides/maple-gui-12.md', 'guides/maple-gui-32.md', 'guides/pine-gui-15.md', 'ops/alpha-ops-20.md', 'ops/ember-ops-24.md', 'ops/fjord-ops-05.md', 'ops/fjord-ops-25.md', 'reference/grove-ref-06.md', 'reference/iris-ref-08.md', 'reference/onyx-ref-34.md', 'security/alpha-sec-00.md', 'security/dune-sec-03.md', 'security/grove-sec-26.md', 'security/iris-sec-08.md', 'tutorials/ember-tut-24.md', 'tutorials/pine-tut-35.md'], f'orphans: {len(got)} listed, want 31; first diffs: ' + str([g for g in got if g not in ['api/dune-api-03.md', 'api/fjord-api-25.md', 'api/juniper-api-29.md', 'api/lagoon-api-11.md', 'api/tundra-api-39.md', 'concepts/alpha-con-20.md', 'concepts/dune-con-23.md', 'concepts/ember-con-24.md', 'concepts/pine-con-35.md', 'concepts/tundra-con-19.md', 'faq/birch-faq-21.md', 'faq/ember-faq-04.md', 'faq/fjord-faq-05.md', 'faq/harbor-faq-27.md', 'guides/lagoon-gui-31.md', 'guides/maple-gui-12.md', 'guides/maple-gui-32.md', 'guides/pine-gui-15.md', 'ops/alpha-ops-20.md', 'ops/ember-ops-24.md', 'ops/fjord-ops-05.md', 'ops/fjord-ops-25.md', 'reference/grove-ref-06.md', 'reference/iris-ref-08.md', 'reference/onyx-ref-34.md', 'security/alpha-sec-00.md', 'security/dune-sec-03.md', 'security/grove-sec-26.md', 'security/iris-sec-08.md', 'tutorials/ember-tut-24.md', 'tutorials/pine-tut-35.md']][:2]))
+
+
+    if __name__ == "__main__":
+        fn = globals().get(sys.argv[1]) if len(sys.argv) > 1 else None
+        need(callable(fn) and sys.argv[1] in ['t2', 't4', 't5', 't7', 't8', 't9'], "unknown check " + str(sys.argv[1:]))
+        fn()
+        print("OK")
+turns:
+- prompt: How many pages are under docs/<section>/ (every .md file in a section sub-folder), and how many internal links across
+    them point to a file that does not exist? A link is `[text](target)`; resolve the target relative to the page's folder
+    and ignore any `#fragment`. Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all:
+    - (?<![\d.,])3,?2,?0(?:\.0+)?(?!\d|[.,]\d)
+    - (?<![\d.,])1,?2(?:\.0+)?(?!\d|[.,]\d)
+- prompt: 'Write docs/_reports/broken-links.md: a table (columns source, target) with one row per broken link: the page path
+    relative to docs/ and the link target exactly as written; sorted by source, then target.'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t2
+    hidden:
+    - _grade.py
+    timeout: 60
+- prompt: Right now, how many section pages have no inbound link at all from any other section page (links to missing files
+    do not count, self-links do not count)? Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all:
+    - (?<![\d.,])3,?2(?:\.0+)?(?!\d|[.,]\d)
+- prompt: 'docs/RENAMES.txt lists pages that were renamed (old -> new). Fix every broken link by pointing it at the renamed
+    page: keep the link text and any `#fragment`, change only the path (relative to the linking page). Do not touch other
+    lines.'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t4
+    hidden:
+    - _grade.py
+    timeout: 60
+  gap_before_s: 420
+- prompt: 'Create docs/tags.md: for every tag used in the `Tags:` lines of the section pages a `## <tag>` heading (alphabetical)
+    followed by a bullet per page with that tag, `- [<page title>](<path relative to docs/>)`, sorted by title.'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t5
+    hidden:
+    - _grade.py
+    timeout: 60
+- prompt: Which tag is used by the most pages, and by how many? Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all:
+    - \bcli\b
+    - (?<![\d.,])6,?9(?:\.0+)?(?!\d|[.,]\d)
+- prompt: 'Create docs/<section>/index.md for every section: a `# <Section>` title (section folder name capitalised, e.g.
+    `# Guides`) and a bullet per page of that section, `- [<title>](<file name>)`, sorted by title. Do not list index.md itself.'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t7
+    hidden:
+    - _grade.py
+    timeout: 60
+- prompt: 'Add scripts/linkcheck.py [--root DIR] (default docs): it walks DIR for *.md files and checks every `[text](target)`
+    link that is not http(s), mailto or a bare #anchor; the target (fragment removed) resolved against the linking file''s
+    folder must be an existing .md file under DIR. Print `BROKEN: <file relative to DIR> -> <target as written>` sorted, exit
+    1; or print `ok` and exit 0.'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t8
+    hidden:
+    - _grade.py
+    timeout: 60
+- prompt: 'Now that the renamed links are fixed, write docs/_reports/orphans.md: `# Orphan pages` and a bullet `- <path relative
+    to docs/>` for every section page with no inbound link from another section page, sorted by path.'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t9
+    hidden:
+    - _grade.py
+    timeout: 60
+  gap_before_s: 420
+- prompt: Add a '## Maintenance' section to README.md that explains `python3 scripts/linkcheck.py`, points at docs/_reports/broken-links.md
+    and docs/_reports/orphans.md, and mentions docs/RENAMES.txt.
+  checks:
+  - kind: doc_sections
+    path: README.md
+    headings:
+    - Maintenance
+  - kind: file_regex
+    path: README.md
+    pattern: scripts/linkcheck\.py
+  - kind: file_regex
+    path: README.md
+    pattern: docs/_reports/orphans\.md
+  - kind: file_regex
+    path: README.md
+    pattern: docs/RENAMES\.txt

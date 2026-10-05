@@ -1,0 +1,438 @@
+# holdout-v3 batch B (mixed, 13 turns): Schema migration set with dependency headers: ordering, destructive/conflict analysis, rollout and rollback artifacts, a planner CLI that generalises, extending the set.
+id: db-evolution
+task_type: mixed
+language: sql
+split: holdout
+default_gap_s: 10
+source:
+  desc: 'Schema migration set with dependency headers: ordering, destructive/conflict analysis, rollout and rollback artifacts,
+    a planner CLI that generalises, extending the set.'
+  kind: self-authored deterministic workspace
+  adapted_from:
+  - ~/dev/amplifier-agent .amplifier/evaluation migration-style tasks (pattern only); migrations are new and generated
+workspace:
+  kind: inline
+  files:
+    migrations/012_tidy_invoices.sql: |
+      -- migration: 012_tidy_invoices
+      -- depends: none
+      -- touches: invoices, tags
+      -- destructive: no
+      -- down: ALTER TABLE invoices DROP COLUMN c012;
+
+      ALTER TABLE invoices ADD COLUMN c012 TEXT;
+    migrations/008_backfill_invoices.sql: |
+      -- migration: 008_backfill_invoices
+      -- depends: 012
+      -- touches: invoices
+      -- destructive: no
+      -- creates: invoices
+      -- down: DROP TABLE invoices;
+
+      CREATE TABLE invoices (id INTEGER PRIMARY KEY);
+    migrations/003_rework_sessions.sql: |
+      -- migration: 003_rework_sessions
+      -- depends: 012
+      -- touches: sessions
+      -- destructive: yes
+
+      ALTER TABLE sessions DROP COLUMN legacy_003;
+    migrations/006_backfill_orders.sql: |
+      -- migration: 006_backfill_orders
+      -- depends: 003
+      -- touches: orders
+      -- destructive: yes
+
+      ALTER TABLE orders DROP COLUMN legacy_006;
+    migrations/013_rework_payments.sql: |
+      -- migration: 013_rework_payments
+      -- depends: 003
+      -- touches: payments
+      -- destructive: no
+      -- down: ALTER TABLE payments DROP COLUMN c013;
+
+      ALTER TABLE payments ADD COLUMN c013 TEXT;
+    migrations/009_add_orders.sql: |
+      -- migration: 009_add_orders
+      -- depends: none
+      -- touches: orders
+      -- destructive: no
+      -- creates: orders
+      -- down: DROP TABLE orders;
+
+      CREATE TABLE orders (id INTEGER PRIMARY KEY);
+    migrations/002_extend_audit.sql: |
+      -- migration: 002_extend_audit
+      -- depends: 006, 009
+      -- touches: audit
+      -- destructive: yes
+
+      ALTER TABLE audit DROP COLUMN legacy_002;
+    migrations/005_extend_sessions.sql: |
+      -- migration: 005_extend_sessions
+      -- depends: none
+      -- touches: sessions
+      -- destructive: no
+      -- creates: sessions
+      -- down: DROP TABLE sessions;
+
+      CREATE TABLE sessions (id INTEGER PRIMARY KEY);
+    migrations/007_add_users.sql: |
+      -- migration: 007_add_users
+      -- depends: 012
+      -- touches: users
+      -- destructive: no
+      -- creates: users
+      -- down: DROP TABLE users;
+
+      CREATE TABLE users (id INTEGER PRIMARY KEY);
+    migrations/001_rework_orders.sql: |
+      -- migration: 001_rework_orders
+      -- depends: 013
+      -- touches: orders
+      -- destructive: no
+      -- down: ALTER TABLE orders DROP COLUMN c001;
+
+      ALTER TABLE orders ADD COLUMN c001 TEXT;
+    migrations/010_backfill_orders.sql: |
+      -- migration: 010_backfill_orders
+      -- depends: none
+      -- touches: orders, users
+      -- destructive: no
+      -- down: ALTER TABLE orders DROP COLUMN c010;
+
+      ALTER TABLE orders ADD COLUMN c010 TEXT;
+    migrations/004_extend_sessions.sql: |
+      -- migration: 004_extend_sessions
+      -- depends: 009
+      -- touches: sessions
+      -- destructive: no
+      -- down: ALTER TABLE sessions DROP COLUMN c004;
+
+      ALTER TABLE sessions ADD COLUMN c004 TEXT;
+    migrations/011_rework_invoices.sql: |
+      -- migration: 011_rework_invoices
+      -- depends: none
+      -- touches: invoices, orders
+      -- destructive: yes
+
+      ALTER TABLE invoices DROP COLUMN legacy_011;
+    README.md: |
+      # shop-db
+
+      Each file in `migrations/` starts with a header: `depends` (ids that must run first, or none), `touches` (tables), `destructive` (yes/no), optional `creates` and `down`.
+      Migrations without a `down` line cannot be reversed.
+protected:
+- migrations/001_rework_orders.sql
+- migrations/002_extend_audit.sql
+- migrations/003_rework_sessions.sql
+- migrations/004_extend_sessions.sql
+- migrations/005_extend_sessions.sql
+- migrations/006_backfill_orders.sql
+- migrations/007_add_users.sql
+- migrations/008_backfill_invoices.sql
+- migrations/009_add_orders.sql
+- migrations/010_backfill_orders.sql
+- migrations/011_rework_invoices.sql
+- migrations/012_tidy_invoices.sql
+- migrations/013_rework_payments.sql
+hidden_files:
+  _grade.py: |
+    import csv, json, os, re, subprocess, sys
+    from pathlib import Path
+
+    W = Path(".")
+
+
+    def fail(msg):
+        print("FAIL:", msg)
+        sys.exit(1)
+
+
+    def need(cond, msg):
+        if not cond:
+            fail(msg)
+
+
+    def read(rel):
+        p = W / rel
+        need(p.exists(), f"missing {rel}")
+        return p.read_text(encoding="utf-8")
+
+
+    def load_json(rel):
+        try:
+            return json.loads(read(rel))
+        except ValueError as e:
+            fail(f"{rel} is not valid JSON: {e}")
+
+
+    def close(a, b, tol=0.011):
+        try:
+            return abs(float(a) - float(b)) <= tol
+        except (TypeError, ValueError):
+            return False
+
+
+    def num(s):
+        m = re.search(r"-?\d[\d,]*\.?\d*", str(s))
+        return float(m.group(0).replace(",", "")) if m else None
+
+
+    def run(cmd, timeout=60, stdin=None):
+        p = subprocess.run(cmd, shell=True, cwd=W, capture_output=True, text=True, timeout=timeout, input=stdin)
+        return p.returncode, p.stdout, p.stderr
+
+
+    def md_lines(rel, under=None):
+        lines = read(rel).splitlines()
+        if not under:
+            return lines
+        out, on, lvl = [], False, 0
+        for ln in lines:
+            m = re.match(r"^(#+)\s+(.*)", ln)
+            if m:
+                if on and len(m.group(1)) <= lvl:
+                    break
+                if not on and re.search(under, m.group(2), re.I):
+                    on, lvl = True, len(m.group(1))
+                continue
+            if on:
+                out.append(ln)
+        need(on, f"no heading matching {under!r} in {rel}")
+        return out
+
+
+    def md_rows(rel, under=None):
+        rows = []
+        for ln in md_lines(rel, under):
+            if ln.strip().startswith("|") and not re.match(r"^\s*\|[\s:|-]+\|\s*$", ln):
+                rows.append([c.strip() for c in ln.strip().strip("|").split("|")])
+        return rows
+
+
+    def cmp(got, want, tol, path):
+        if isinstance(want, dict):
+            need(isinstance(got, dict), f"{path}: expected an object, got {type(got).__name__}")
+            for k, v in want.items():
+                need(k in got, f"{path}.{k}: missing")
+                cmp(got[k], v, tol, f"{path}.{k}")
+        elif isinstance(want, list):
+            need(isinstance(got, list) and len(got) == len(want), f"{path}: expected list of {len(want)}, got {got!r}")
+            for i, (g, w) in enumerate(zip(got, want)):
+                cmp(g, w, tol, f"{path}[{i}]")
+        elif isinstance(want, bool) or want is None or isinstance(want, str):
+            need(got == want, f"{path}: {got!r} != {want!r}")
+        else:
+            need(not isinstance(got, bool) and close(got, want, tol), f"{path}: {got!r} != {want!r}")
+
+
+    def chk_json(rel, exp, tol=0.051):
+        cmp(load_json(rel), exp, tol, rel)
+
+
+    def chk_table(rel, under, exp, col=1, tol=0.051):
+        rows = md_rows(rel, under)
+        need(rows, f"no table under {under!r} in {rel}")
+        got = {r[0].strip("* `"): num(r[col]) for r in rows if len(r) > col and num(r[col]) is not None}
+        for k, v in exp.items():
+            need(k in got and close(got[k], v, tol), f"{k}: {got.get(k)} != {v}")
+
+
+    def chk_cmd_json(cmd, exp, tol=0.051, stdin=None):
+        rc, out, err = run(cmd, stdin=stdin)
+        need(rc == 0, f"`{cmd}` exited {rc}: {err[-200:]}")
+        try:
+            d = json.loads(out)
+        except ValueError as e:
+            fail(f"`{cmd}` stdout is not JSON: {e}")
+        cmp(d, exp, tol, cmd)
+
+
+    def chk_cmd_out(cmd, lines, stdin=None, expect_rc=0):
+        rc, out, err = run(cmd, stdin=stdin)
+        need(rc == expect_rc, f"`{cmd}` exited {rc} (want {expect_rc}): {err[-200:]}")
+        got = [ln.rstrip() for ln in out.strip().splitlines()]
+        need(got == list(lines), f"`{cmd}` output {got[:8]} != {list(lines)[:8]}")
+
+
+    def t3():
+        chk_json('out/plan.json', {'order': ['005', '009', '004', '010', '011', '012', '003', '006', '002', '007', '008', '013', '001'], 'destructive': ['002', '003', '006', '011']})
+
+
+    def t5():
+        chk_json('out/plan.json', {'order': ['005', '009', '004', '010', '011', '012', '003', '006', '002', '007', '008', '013', '001'], 'destructive': ['002', '003', '006', '011'], 'tables': {'sessions': ['005', '004', '003'], 'orders': ['009', '010', '011', '006', '001'], 'users': ['010', '007'], 'invoices': ['011', '012', '008'], 'tags': ['012'], 'audit': ['002'], 'payments': ['013']}, 'conflicts': [['001', '006'], ['001', '009'], ['001', '010'], ['001', '011'], ['003', '004'], ['003', '005'], ['004', '005'], ['006', '009'], ['006', '010'], ['006', '011'], ['007', '010'], ['008', '011'], ['009', '010'], ['009', '011'], ['010', '011'], ['011', '012']]}, tol=0)
+
+
+    def t6():
+        rows = md_rows('docs/rollout.md', 'order')
+        got = [(r[1], r[2].lower()) for r in rows[1:] if len(r) >= 3 and r[0].strip().isdigit()]
+        need(got == [('005', 'no'), ('009', 'no'), ('004', 'no'), ('010', 'no'), ('011', 'yes'), ('012', 'no'), ('003', 'yes'), ('006', 'yes'), ('002', 'yes'), ('007', 'no'), ('008', 'no'), ('013', 'no'), ('001', 'no')], 'rollout table rows: ' + str(got[:4]))
+        need([int(r[0]) for r in rows[1:] if r[0].strip().isdigit()] == list(range(1, 13 + 1)), 'step numbers')
+
+
+    def t7():
+        got = [ln.strip() for ln in read('out/rollback.sql').splitlines() if ln.strip()]
+        need(got == ['ALTER TABLE orders DROP COLUMN c001;', 'ALTER TABLE payments DROP COLUMN c013;', 'DROP TABLE invoices;', 'DROP TABLE users;', '-- IRREVERSIBLE: 002', '-- IRREVERSIBLE: 006', '-- IRREVERSIBLE: 003', 'ALTER TABLE invoices DROP COLUMN c012;', '-- IRREVERSIBLE: 011', 'ALTER TABLE orders DROP COLUMN c010;', 'ALTER TABLE sessions DROP COLUMN c004;', 'DROP TABLE orders;', 'DROP TABLE sessions;'], 'rollback lines differ: ' + str(got[:4]))
+
+
+    def t8():
+        for rel, text in {'_alt/migrations/027_add_items.sql': '-- migration: 027_add_items\n-- depends: none\n-- touches: items, users\n-- destructive: yes\n\nALTER TABLE items DROP COLUMN legacy_027;\n', '_alt/migrations/021_rework_invoices.sql': '-- migration: 021_rework_invoices\n-- depends: 027\n-- touches: invoices\n-- destructive: no\n-- creates: invoices\n-- down: DROP TABLE invoices;\n\nCREATE TABLE invoices (id INTEGER PRIMARY KEY);\n', '_alt/migrations/025_extend_items.sql': '-- migration: 025_extend_items\n-- depends: 027\n-- touches: items\n-- destructive: no\n-- creates: items\n-- down: DROP TABLE items;\n\nCREATE TABLE items (id INTEGER PRIMARY KEY);\n', '_alt/migrations/026_backfill_users.sql': '-- migration: 026_backfill_users\n-- depends: 025, 027\n-- touches: users\n-- destructive: no\n-- down: ALTER TABLE users DROP COLUMN c026;\n\nALTER TABLE users ADD COLUMN c026 TEXT;\n', '_alt/migrations/023_extend_invoices.sql': '-- migration: 023_extend_invoices\n-- depends: none\n-- touches: invoices\n-- destructive: no\n\nALTER TABLE invoices ADD COLUMN c023 TEXT;\n', '_alt/migrations/022_extend_invoices.sql': '-- migration: 022_extend_invoices\n-- depends: 021, 027\n-- touches: invoices\n-- destructive: no\n-- down: ALTER TABLE invoices DROP COLUMN c022;\n\nALTER TABLE invoices ADD COLUMN c022 TEXT;\n', '_alt/migrations/024_extend_payments.sql': '-- migration: 024_extend_payments\n-- depends: none\n-- touches: payments, users\n-- destructive: no\n-- creates: payments\n-- down: DROP TABLE payments;\n\nCREATE TABLE payments (id INTEGER PRIMARY KEY);\n'}.items():
+            p = W / rel
+            p.parent.mkdir(parents=True, exist_ok=True)
+            p.write_text(text, encoding='utf-8')
+        need((W / 'scripts/plan.py').exists(), 'missing scripts/plan.py')
+        chk_cmd_json('python3 scripts/plan.py --dir _alt/migrations', {'order': ['023', '024', '027', '021', '022', '025', '026'], 'destructive': ['027'], 'tables': {'invoices': ['023', '021', '022'], 'payments': ['024'], 'users': ['024', '027', '026'], 'items': ['027', '025']}, 'conflicts': [['021', '023'], ['022', '023'], ['024', '026'], ['024', '027']]}, tol=0)
+        chk_cmd_json('python3 scripts/plan.py', {'order': ['005', '009', '004', '010', '011', '012', '003', '006', '002', '007', '008', '013', '001'], 'destructive': ['002', '003', '006', '011'], 'tables': {'sessions': ['005', '004', '003'], 'orders': ['009', '010', '011', '006', '001'], 'users': ['010', '007'], 'invoices': ['011', '012', '008'], 'tags': ['012'], 'audit': ['002'], 'payments': ['013']}, 'conflicts': [['001', '006'], ['001', '009'], ['001', '010'], ['001', '011'], ['003', '004'], ['003', '005'], ['004', '005'], ['006', '009'], ['006', '010'], ['006', '011'], ['007', '010'], ['008', '011'], ['009', '010'], ['009', '011'], ['010', '011'], ['011', '012']]}, tol=0)
+
+
+    def t10():
+        chk_json('out/plan.json', {'order': ['005', '009', '004', '010', '011', '012', '003', '006', '002', '007', '008', '013', '001', '014'], 'destructive': ['002', '003', '006', '011'], 'tables': {'sessions': ['005', '004', '003'], 'orders': ['009', '010', '011', '006', '001', '014'], 'users': ['010', '007'], 'invoices': ['011', '012', '008'], 'tags': ['012'], 'audit': ['002'], 'payments': ['013']}, 'conflicts': [['001', '006'], ['001', '009'], ['001', '010'], ['001', '011'], ['001', '014'], ['003', '004'], ['003', '005'], ['004', '005'], ['006', '009'], ['006', '010'], ['006', '011'], ['006', '014'], ['007', '010'], ['008', '011'], ['009', '010'], ['009', '011'], ['010', '011'], ['010', '014'], ['011', '012'], ['011', '014']]}, tol=0)
+
+
+    def t11():
+        got = [ln.strip() for ln in read('out/rollback.sql').splitlines() if ln.strip()]
+        need(got == ['DROP INDEX idx_orders_created;', 'ALTER TABLE orders DROP COLUMN c001;', 'ALTER TABLE payments DROP COLUMN c013;', 'DROP TABLE invoices;', 'DROP TABLE users;', '-- IRREVERSIBLE: 002', '-- IRREVERSIBLE: 006', '-- IRREVERSIBLE: 003', 'ALTER TABLE invoices DROP COLUMN c012;', '-- IRREVERSIBLE: 011', 'ALTER TABLE orders DROP COLUMN c010;', 'ALTER TABLE sessions DROP COLUMN c004;', 'DROP TABLE orders;', 'DROP TABLE sessions;'], 'rollback lines differ: ' + str(got[:4]))
+
+
+    if __name__ == "__main__":
+        fn = globals().get(sys.argv[1]) if len(sys.argv) > 1 else None
+        need(callable(fn) and sys.argv[1] in ['t10', 't11', 't3', 't5', 't6', 't7', 't8'], "unknown check " + str(sys.argv[1:]))
+        fn()
+        print("OK")
+turns:
+- prompt: Read the headers in migrations/. How many migrations declare at least one dependency, and which migration id declares
+    the most dependencies? Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all:
+    - (?<![\d.,])8(?:\.0+)?(?!\d|[.,]\d)
+    - (?<!\d)002(?!\d)
+- prompt: In which order must the migrations be applied? Every migration runs only after all of its dependencies; whenever
+    several are ready, run the one with the smallest id first. List the ids in order. Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all:
+    - (?<!\d)005(?:\D|\d{4,})*?(?<!\d)009(?:\D|\d{4,})*?(?<!\d)004(?:\D|\d{4,})*?(?<!\d)010(?:\D|\d{4,})*?(?<!\d)011(?:\D|\d{4,})*?(?<!\d)012(?:\D|\d{4,})*?(?<!\d)003(?:\D|\d{4,})*?(?<!\d)006(?:\D|\d{4,})*?(?<!\d)002(?:\D|\d{4,})*?(?<!\d)007(?:\D|\d{4,})*?(?<!\d)008(?:\D|\d{4,})*?(?<!\d)013(?:\D|\d{4,})*?(?<!\d)001(?!\d)
+- prompt: 'Create out/plan.json with `order` (the apply order from the previous answer) and `destructive` (ids of migrations
+    whose header says destructive: yes, sorted ascending).'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t3
+    hidden:
+    - _grade.py
+    timeout: 60
+- prompt: Which table is touched by the most migrations (per the `touches` headers), and by how many? Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all:
+    - \borders\b
+    - (?<![\d.,])5(?:\.0+)?(?!\d|[.,]\d)
+- prompt: 'Extend out/plan.json with `tables` (an object: table name -> migration ids touching it, in apply order) and `conflicts`
+    (every pair [a, b] with a < b of migrations that touch a common table where neither is a direct or transitive dependency
+    of the other; pairs sorted ascending).'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t5
+    hidden:
+    - _grade.py
+    timeout: 60
+- prompt: Write docs/rollout.md with level-2 sections Phases, Apply order and Risks. Apply order is a table with columns step
+    (1..N), migration (id) and destructive (yes/no), one row per migration in the correct order.
+  checks:
+  - kind: doc_sections
+    path: docs/rollout.md
+    headings:
+    - Phases
+    - Apply order
+    - Risks
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t6
+    hidden:
+    - _grade.py
+    timeout: 60
+- prompt: 'Write out/rollback.sql: one line per migration, in the reverse of the apply order. The line is the migration''s
+    `-- down:` statement exactly as written after the header key, or `-- IRREVERSIBLE: <id>` when it has no down line.'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t7
+    hidden:
+    - _grade.py
+    timeout: 60
+- prompt: 'Add scripts/plan.py: it reads the migration headers from a directory (--dir, default migrations) and prints on
+    stdout exactly the JSON that out/plan.json holds (order, destructive, tables, conflicts).'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t8
+    hidden:
+    - _grade.py
+    timeout: 60
+- prompt: 'Add migrations/014_orders_index.sql in the same header format: depends on the migration whose header says `-- creates:
+    orders`, touches orders, destructive no, down `DROP INDEX idx_orders_created;`, body `CREATE INDEX idx_orders_created
+    ON orders (created_at);`.'
+  checks:
+  - kind: file_exists
+    path: migrations/014_orders_index.sql
+  - kind: file_regex
+    path: migrations/014_orders_index.sql
+    pattern: '^-- depends: 009\s*$'
+  - kind: file_regex
+    path: migrations/014_orders_index.sql
+    pattern: '^-- touches: orders\s*$'
+  - kind: file_regex
+    path: migrations/014_orders_index.sql
+    pattern: '^-- destructive: no\s*$'
+  - kind: file_regex
+    path: migrations/014_orders_index.sql
+    pattern: '^-- down: DROP INDEX idx_orders_created;\s*$'
+  - kind: file_regex
+    path: migrations/014_orders_index.sql
+    pattern: CREATE INDEX idx_orders_created ON orders \(created_at\);
+- prompt: Regenerate out/plan.json so it includes migration 014 (use scripts/plan.py).
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t10
+    hidden:
+    - _grade.py
+    timeout: 60
+- prompt: Regenerate out/rollback.sql for the new apply order (it now includes migration 014; same one-line-per-migration
+    rule, reverse apply order).
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t11
+    hidden:
+    - _grade.py
+    timeout: 60
+- prompt: How many conflicting pairs does the updated plan list, and what is the first pair? Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all:
+    - (?<![\d.,])2,?0(?:\.0+)?(?!\d|[.,]\d)
+    - (?<!\d)001(?!\d)
+    - (?<!\d)006(?!\d)
+- prompt: Add a '## Planning' section to README.md explaining that `python3 scripts/plan.py` prints the apply order, how --dir
+    changes the folder, and that conflicts means two migrations touching the same table with no dependency path between them.
+  checks:
+  - kind: doc_sections
+    path: README.md
+    headings:
+    - Planning
+  - kind: file_regex
+    path: README.md
+    pattern: scripts/plan\.py
+  - kind: file_regex
+    path: README.md
+    pattern: --dir
+  - kind: file_regex
+    path: README.md
+    pattern: (?i)conflict
+  - kind: file_regex
+    path: README.md
+    pattern: (?i)no dependency path|neither

@@ -1,0 +1,279 @@
+# holdout-v3 batch B (mixed, 10 turns): Aider polyglot-benchmark python/zipper (Exercism): implement, extend with depth/path/find against hidden tests, then docstrings, a doctested README, type hints and a changelog.
+id: py-zipper-docs
+task_type: mixed
+language: python
+split: holdout
+default_gap_s: 10
+source:
+  desc: 'Aider polyglot-benchmark python/zipper (Exercism): implement, extend with depth/path/find against hidden tests, then
+    docstrings, a doctested README, type hints and a changelog.'
+  repo: https://github.com/Aider-AI/polyglot-benchmark
+  sha: 7e0611e77b54e2dea774cdc0aa00cf9f7ed6144f
+workspace:
+  kind: git
+  repo: https://github.com/Aider-AI/polyglot-benchmark
+  sha: 7e0611e77b54e2dea774cdc0aa00cf9f7ed6144f
+  subdir: python/exercises/practice/zipper
+  local_hint: ~/dev/afast-campaign-corrected-polyglot-20260919/polyglot/polyglot-benchmark
+  remove:
+  - .meta
+protected:
+- zipper_test.py
+hidden_files:
+  hidden_depth_test.py: |
+    import unittest
+
+    from zipper import Zipper
+
+    TREE = {"value": 1, "left": {"value": 2, "left": None, "right": {"value": 3, "left": None, "right": None}}, "right": {"value": 4, "left": None, "right": None}}
+
+
+    class HiddenDepth(unittest.TestCase):
+        def test_root_depth_zero(self):
+            self.assertEqual(Zipper.from_tree(TREE).depth(), 0)
+
+        def test_depth_follows_moves(self):
+            z = Zipper.from_tree(TREE)
+            self.assertEqual(z.left().right().depth(), 2)
+            self.assertEqual(z.right().depth(), 1)
+
+        def test_depth_after_up(self):
+            z = Zipper.from_tree(TREE).left().right()
+            self.assertEqual(z.up().depth(), 1)
+            self.assertEqual(z.up().up().depth(), 0)
+  hidden_path_test.py: |
+    import unittest
+
+    from zipper import Zipper
+
+    TREE = {"value": 1, "left": {"value": 2, "left": None, "right": {"value": 3, "left": None, "right": None}}, "right": {"value": 4, "left": None, "right": None}}
+
+
+    class HiddenPath(unittest.TestCase):
+        def test_root_path_empty(self):
+            self.assertEqual(Zipper.from_tree(TREE).path(), [])
+
+        def test_path_records_directions(self):
+            self.assertEqual(Zipper.from_tree(TREE).left().right().path(), ["left", "right"])
+
+        def test_path_after_up(self):
+            z = Zipper.from_tree(TREE).left().right().up()
+            self.assertEqual(z.path(), ["left"])
+
+        def test_path_length_equals_depth(self):
+            z = Zipper.from_tree(TREE).right()
+            self.assertEqual(len(z.path()), z.depth())
+  hidden_find_test.py: |
+    import unittest
+
+    from zipper import Zipper
+
+    TREE = {"value": 1, "left": {"value": 2, "left": None, "right": {"value": 3, "left": None, "right": None}}, "right": {"value": 4, "left": None, "right": None}}
+
+
+    class HiddenFind(unittest.TestCase):
+        def test_find_root(self):
+            self.assertEqual(Zipper.from_tree(TREE).find(1).value(), 1)
+
+        def test_find_deep(self):
+            z = Zipper.from_tree(TREE).find(3)
+            self.assertEqual((z.value(), z.path(), z.depth()), (3, ["left", "right"], 2))
+
+        def test_find_missing(self):
+            self.assertIsNone(Zipper.from_tree(TREE).find(99))
+
+        def test_find_is_preorder(self):
+            tree = {"value": 5, "left": {"value": 7, "left": None, "right": None}, "right": {"value": 7, "left": None, "right": None}}
+            self.assertEqual(Zipper.from_tree(tree).find(7).path(), ["left"])
+
+        def test_find_searches_current_subtree_only(self):
+            z = Zipper.from_tree(TREE).right()
+            self.assertIsNone(z.find(2))
+turns:
+- prompt: Read .docs/instructions.md and implement the Zipper class in zipper.py so that every test in zipper_test.py passes.
+    Do not edit the test file.
+  checks:
+  - kind: tests
+    runner: python
+    files:
+    - zipper_test.py
+    restore:
+    - zipper_test.py
+    hidden: []
+- prompt: In two or three sentences, explain what `up()` returns when the focus is already the root, and what `left()` returns
+    when the focus has no left child. Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all:
+    - \bNone\b
+    - root
+    - left
+- prompt: 'Add a `depth()` method to Zipper: the number of steps from the root to the focus (0 at the root). It must stay
+    correct after `up()`.'
+  checks:
+  - kind: tests
+    runner: python
+    files:
+    - zipper_test.py
+    - hidden_depth_test.py
+    restore:
+    - zipper_test.py
+    hidden:
+    - hidden_depth_test.py
+- prompt: Add a `path()` method that returns the list of directions, 'left' or 'right', taken from the root to the focus (empty
+    at the root). It must stay correct after `up()`.
+  checks:
+  - kind: tests
+    runner: python
+    files:
+    - zipper_test.py
+    - hidden_depth_test.py
+    - hidden_path_test.py
+    restore:
+    - zipper_test.py
+    hidden:
+    - hidden_depth_test.py
+    - hidden_path_test.py
+- prompt: 'Add `find(value)`: search the subtree under the current focus in pre-order (node, then left, then right) and return
+    the Zipper focused on the first node holding `value`, or None if absent. The returned zipper must report the right depth()
+    and path().'
+  checks:
+  - kind: tests
+    runner: python
+    files:
+    - zipper_test.py
+    - hidden_depth_test.py
+    - hidden_path_test.py
+    - hidden_find_test.py
+    restore:
+    - zipper_test.py
+    hidden:
+    - hidden_depth_test.py
+    - hidden_path_test.py
+    - hidden_find_test.py
+  gap_before_s: 420
+- prompt: 'Document the code: give the Zipper class and each of its public methods a docstring (the line right after the `def`
+    line / class line), in zipper.py. Behaviour must not change.'
+  checks:
+  - kind: file_regex
+    path: zipper.py
+    pattern: def from_tree\([^)]*\)[^:\n]*:\n\s+\"\"\"
+  - kind: file_regex
+    path: zipper.py
+    pattern: def value\([^)]*\)[^:\n]*:\n\s+\"\"\"
+  - kind: file_regex
+    path: zipper.py
+    pattern: def set_value\([^)]*\)[^:\n]*:\n\s+\"\"\"
+  - kind: file_regex
+    path: zipper.py
+    pattern: def left\([^)]*\)[^:\n]*:\n\s+\"\"\"
+  - kind: file_regex
+    path: zipper.py
+    pattern: def set_left\([^)]*\)[^:\n]*:\n\s+\"\"\"
+  - kind: file_regex
+    path: zipper.py
+    pattern: def right\([^)]*\)[^:\n]*:\n\s+\"\"\"
+  - kind: file_regex
+    path: zipper.py
+    pattern: def set_right\([^)]*\)[^:\n]*:\n\s+\"\"\"
+  - kind: file_regex
+    path: zipper.py
+    pattern: def up\([^)]*\)[^:\n]*:\n\s+\"\"\"
+  - kind: file_regex
+    path: zipper.py
+    pattern: def to_tree\([^)]*\)[^:\n]*:\n\s+\"\"\"
+  - kind: file_regex
+    path: zipper.py
+    pattern: def depth\([^)]*\)[^:\n]*:\n\s+\"\"\"
+  - kind: file_regex
+    path: zipper.py
+    pattern: def path\([^)]*\)[^:\n]*:\n\s+\"\"\"
+  - kind: file_regex
+    path: zipper.py
+    pattern: def find\([^)]*\)[^:\n]*:\n\s+\"\"\"
+  - kind: file_regex
+    path: zipper.py
+    pattern: class Zipper:\n\s+"""
+  - &id001
+    kind: tests
+    runner: python
+    files:
+    - zipper_test.py
+    - hidden_depth_test.py
+    - hidden_path_test.py
+    - hidden_find_test.py
+    restore:
+    - zipper_test.py
+    hidden:
+    - hidden_depth_test.py
+    - hidden_path_test.py
+    - hidden_find_test.py
+- prompt: 'Create README.md with the sections `## Usage`, `## API` and `## Examples`. Examples must be a fenced block of doctest-style
+    `>>>` lines (importing `from zipper import Zipper`) that really run: it must demonstrate value(), left(), depth(), path()
+    and find(), and `python3 -m doctest -v README.md` must pass.'
+  checks:
+  - kind: doc_sections
+    path: README.md
+    headings:
+    - Usage
+    - API
+    - Examples
+  - kind: file_regex
+    path: README.md
+    pattern: ^>>> from zipper import Zipper
+  - kind: file_regex
+    path: README.md
+    pattern: find\(
+  - kind: file_regex
+    path: README.md
+    pattern: path\(\)
+  - kind: tests
+    runner: cmd
+    cmd: python3 -m doctest -v README.md
+    expect_regex: \b([4-9]|\d{2,}) passed( and 0 failed)?\.
+    timeout: 60
+- prompt: 'Add return-type annotations: `depth() -> int`, `path() -> list[str]` and `find(...)` returning an Optional Zipper
+    (use `from __future__ import annotations` and `typing.Optional`). Keep every test passing.'
+  checks:
+  - kind: file_regex
+    path: zipper.py
+    pattern: 'def depth\(self\) -> int:'
+  - kind: file_regex
+    path: zipper.py
+    pattern: 'def path\(self\) -> list\[str\]:'
+  - kind: file_regex
+    path: zipper.py
+    pattern: 'def find\(self, value\) -> Optional\[Zipper\]:'
+  - kind: file_regex
+    path: zipper.py
+    pattern: ^from __future__ import annotations
+  - *id001
+- prompt: Why does `set_value` return `self`, and what does that allow callers to do? One or two sentences. Do not change
+    any files.
+  checks:
+  - kind: keyed_facts
+    all:
+    - self|zipper|same
+    - chain
+  gap_before_s: 420
+- prompt: Create CHANGELOG.md with a `## 0.2.0` section and a `### Added` list that names `depth()`, `path()` and `find(value)`
+    (one bullet each, method names in backticks), above a `## 0.1.0` section.
+  checks:
+  - kind: file_regex
+    path: CHANGELOG.md
+    pattern: ^## 0\.2\.0
+  - kind: file_regex
+    path: CHANGELOG.md
+    pattern: ^### Added
+  - kind: file_regex
+    path: CHANGELOG.md
+    pattern: ^- `depth\(\)`
+  - kind: file_regex
+    path: CHANGELOG.md
+    pattern: ^- `path\(\)`
+  - kind: file_regex
+    path: CHANGELOG.md
+    pattern: ^- `find\(value\)`
+  - kind: file_regex
+    path: CHANGELOG.md
+    pattern: ^## 0\.1\.0

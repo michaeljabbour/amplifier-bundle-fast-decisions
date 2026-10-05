@@ -1,0 +1,352 @@
+# holdout-v3 batch B (docs, 10 turns): Turn alert definitions (CSV) into runbook pages, an index, an escalation matrix and link-checked cross references; exact per-file content checks across 14 generated pages.
+id: alert-runbooks
+task_type: docs
+language: markdown
+split: holdout
+default_gap_s: 10
+source:
+  desc: Turn alert definitions (CSV) into runbook pages, an index, an escalation matrix and link-checked cross references;
+    exact per-file content checks across 14 generated pages.
+  kind: self-authored deterministic workspace
+  adapted_from:
+  - new self-authored alert catalogue; runbook-writing theme (cf. amplifier-agent docs/ops tasks)
+workspace:
+  kind: inline
+  files:
+    data/alerts.csv: |
+      alert_id,name,severity,service,threshold,owner_team,escalate_after_min
+      AL-101,Stale data (search-api),P1,search-api,data_age_min > 200,search,30
+      AL-119,High error rate (etl),P2,etl,error_rate_5m > 95%,payments,10
+      AL-113,Queue backlog (reports),P2,reports,queue_depth > 200,search,30
+      AL-110,Cert expiring (reports),P2,reports,cert_days_left < 30,platform,10
+      AL-134,Disk nearly full (etl),P4,etl,disk_used_pct > 90,search,15
+      AL-131,Stale data (reports),P3,reports,data_age_min > 5000,data,15
+      AL-116,Queue backlog (reports),P2,reports,queue_depth > 5000,data,5
+      AL-104,Queue backlog (checkout-api),P1,checkout-api,queue_depth > 5000,platform,30
+      AL-137,Pod restarts (checkout-api),P4,checkout-api,restarts_15m >= 5,payments,5
+      AL-140,Cert expiring (etl),P4,etl,cert_days_left < 7,search,5
+      AL-128,Low throughput (ledger),P3,ledger,requests_per_s < 5,data,60
+      AL-122,Pod restarts (ledger),P3,ledger,restarts_15m >= 3,platform,10
+      AL-107,Low throughput (indexer),P1,indexer,requests_per_s < 30,search,10
+      AL-125,Cert expiring (checkout-api),P3,checkout-api,cert_days_left < 5,payments,60
+    data/teams.csv: |
+      team,oncall,channel
+      platform,pat.lee@example.com,#platform-oncall
+      payments,dana.cho@example.com,#payments-oncall
+      search,omar.nash@example.com,#search-oncall
+      data,ines.wu@example.com,#data-oncall
+    data/services.csv: |
+      service,tier
+      gateway,tier1
+      checkout-api,tier1
+      ledger,tier1
+      search-api,tier2
+      indexer,tier2
+      etl,tier3
+      reports,tier3
+      mailer,tier3
+    README.md: |
+      # ops-docs
+
+      Alert definitions live in `data/alerts.csv`; owners in `data/teams.csv`; service tiers in `data/services.csv`. Runbooks go in `docs/runbooks/`.
+protected:
+- data/alerts.csv
+- data/teams.csv
+- data/services.csv
+hidden_files:
+  _grade.py: |
+    import csv, json, os, re, subprocess, sys
+    from pathlib import Path
+
+    W = Path(".")
+
+
+    def fail(msg):
+        print("FAIL:", msg)
+        sys.exit(1)
+
+
+    def need(cond, msg):
+        if not cond:
+            fail(msg)
+
+
+    def read(rel):
+        p = W / rel
+        need(p.exists(), f"missing {rel}")
+        return p.read_text(encoding="utf-8")
+
+
+    def load_json(rel):
+        try:
+            return json.loads(read(rel))
+        except ValueError as e:
+            fail(f"{rel} is not valid JSON: {e}")
+
+
+    def close(a, b, tol=0.011):
+        try:
+            return abs(float(a) - float(b)) <= tol
+        except (TypeError, ValueError):
+            return False
+
+
+    def num(s):
+        m = re.search(r"-?\d[\d,]*\.?\d*", str(s))
+        return float(m.group(0).replace(",", "")) if m else None
+
+
+    def run(cmd, timeout=60, stdin=None):
+        p = subprocess.run(cmd, shell=True, cwd=W, capture_output=True, text=True, timeout=timeout, input=stdin)
+        return p.returncode, p.stdout, p.stderr
+
+
+    def md_lines(rel, under=None):
+        lines = read(rel).splitlines()
+        if not under:
+            return lines
+        out, on, lvl = [], False, 0
+        for ln in lines:
+            m = re.match(r"^(#+)\s+(.*)", ln)
+            if m:
+                if on and len(m.group(1)) <= lvl:
+                    break
+                if not on and re.search(under, m.group(2), re.I):
+                    on, lvl = True, len(m.group(1))
+                continue
+            if on:
+                out.append(ln)
+        need(on, f"no heading matching {under!r} in {rel}")
+        return out
+
+
+    def md_rows(rel, under=None):
+        rows = []
+        for ln in md_lines(rel, under):
+            if ln.strip().startswith("|") and not re.match(r"^\s*\|[\s:|-]+\|\s*$", ln):
+                rows.append([c.strip() for c in ln.strip().strip("|").split("|")])
+        return rows
+
+
+    def cmp(got, want, tol, path):
+        if isinstance(want, dict):
+            need(isinstance(got, dict), f"{path}: expected an object, got {type(got).__name__}")
+            for k, v in want.items():
+                need(k in got, f"{path}.{k}: missing")
+                cmp(got[k], v, tol, f"{path}.{k}")
+        elif isinstance(want, list):
+            need(isinstance(got, list) and len(got) == len(want), f"{path}: expected list of {len(want)}, got {got!r}")
+            for i, (g, w) in enumerate(zip(got, want)):
+                cmp(g, w, tol, f"{path}[{i}]")
+        elif isinstance(want, bool) or want is None or isinstance(want, str):
+            need(got == want, f"{path}: {got!r} != {want!r}")
+        else:
+            need(not isinstance(got, bool) and close(got, want, tol), f"{path}: {got!r} != {want!r}")
+
+
+    def chk_json(rel, exp, tol=0.051):
+        cmp(load_json(rel), exp, tol, rel)
+
+
+    def chk_table(rel, under, exp, col=1, tol=0.051):
+        rows = md_rows(rel, under)
+        need(rows, f"no table under {under!r} in {rel}")
+        got = {r[0].strip("* `"): num(r[col]) for r in rows if len(r) > col and num(r[col]) is not None}
+        for k, v in exp.items():
+            need(k in got and close(got[k], v, tol), f"{k}: {got.get(k)} != {v}")
+
+
+    def chk_cmd_json(cmd, exp, tol=0.051, stdin=None):
+        rc, out, err = run(cmd, stdin=stdin)
+        need(rc == 0, f"`{cmd}` exited {rc}: {err[-200:]}")
+        try:
+            d = json.loads(out)
+        except ValueError as e:
+            fail(f"`{cmd}` stdout is not JSON: {e}")
+        cmp(d, exp, tol, cmd)
+
+
+    def chk_cmd_out(cmd, lines, stdin=None, expect_rc=0):
+        rc, out, err = run(cmd, stdin=stdin)
+        need(rc == expect_rc, f"`{cmd}` exited {rc} (want {expect_rc}): {err[-200:]}")
+        got = [ln.rstrip() for ln in out.strip().splitlines()]
+        need(got == list(lines), f"`{cmd}` output {got[:8]} != {list(lines)[:8]}")
+
+
+    def t3():
+        rows = md_rows('docs/runbooks/index.md')
+        need(rows and [c.lower() for c in rows[0][:5]] == ['alert_id', 'name', 'severity', 'service', 'owner'], 'header: ' + str(rows[:1]))
+        got = [[c.strip('` ') for c in r[:5]] for r in rows[1:]]
+        want = [['AL-101', 'Stale data (search-api)', 'P1', 'search-api', 'search'], ['AL-104', 'Queue backlog (checkout-api)', 'P1', 'checkout-api', 'platform'], ['AL-107', 'Low throughput (indexer)', 'P1', 'indexer', 'search'], ['AL-110', 'Cert expiring (reports)', 'P2', 'reports', 'platform'], ['AL-113', 'Queue backlog (reports)', 'P2', 'reports', 'search'], ['AL-116', 'Queue backlog (reports)', 'P2', 'reports', 'data'], ['AL-119', 'High error rate (etl)', 'P2', 'etl', 'payments'], ['AL-122', 'Pod restarts (ledger)', 'P3', 'ledger', 'platform'], ['AL-125', 'Cert expiring (checkout-api)', 'P3', 'checkout-api', 'payments'], ['AL-128', 'Low throughput (ledger)', 'P3', 'ledger', 'data'], ['AL-131', 'Stale data (reports)', 'P3', 'reports', 'data'], ['AL-134', 'Disk nearly full (etl)', 'P4', 'etl', 'search'], ['AL-137', 'Pod restarts (checkout-api)', 'P4', 'checkout-api', 'payments'], ['AL-140', 'Cert expiring (etl)', 'P4', 'etl', 'search']]
+        need(got == want, 'index rows differ: first mismatch ' + str(next(((g, w) for g, w in zip(got, want) if g != w), len(got))))
+
+
+    def t4():
+        for aid, e in {'AL-101': {'title': 'Stale data (search-api)', 'trig': 'data_age_min > 200', 'svc': 'search-api', 'tier': 'tier2', 'sev': 'P1', 'team': 'search', 'oncall': 'omar.nash@example.com', 'chan': '#search-oncall', 'esc': 30}, 'AL-104': {'title': 'Queue backlog (checkout-api)', 'trig': 'queue_depth > 5000', 'svc': 'checkout-api', 'tier': 'tier1', 'sev': 'P1', 'team': 'platform', 'oncall': 'pat.lee@example.com', 'chan': '#platform-oncall', 'esc': 30}, 'AL-107': {'title': 'Low throughput (indexer)', 'trig': 'requests_per_s < 30', 'svc': 'indexer', 'tier': 'tier2', 'sev': 'P1', 'team': 'search', 'oncall': 'omar.nash@example.com', 'chan': '#search-oncall', 'esc': 10}}.items():
+            p = f'docs/runbooks/{aid}.md'
+            t = read(p)
+            need(t.splitlines()[0].strip() == '# ' + e['title'], aid + ': title')
+            def sec(name):
+                m = re.search(r'^## ' + name + r'\s*$(.*?)(?=^## |\Z)', t, re.M | re.S)
+                need(m, aid + ': missing ## ' + name)
+                return m.group(1)
+            need(e['trig'] in sec('Trigger') and e['svc'] in sec('Trigger') and e['tier'] in sec('Trigger'), aid + ': trigger section')
+            need(sec('Severity').strip() == e['sev'], aid + ': severity section must be just ' + e['sev'])
+            o = sec('Owner')
+            need(e['team'] in o and e['oncall'] in o and e['chan'] in o, aid + ': owner section')
+            need(re.search(r'(?<!\d)' + str(e['esc']) + r'(?!\d)', sec('Escalation')), aid + ': escalation minutes')
+
+
+    def t5():
+        for aid, e in {'AL-101': {'title': 'Stale data (search-api)', 'trig': 'data_age_min > 200', 'svc': 'search-api', 'tier': 'tier2', 'sev': 'P1', 'team': 'search', 'oncall': 'omar.nash@example.com', 'chan': '#search-oncall', 'esc': 30}, 'AL-119': {'title': 'High error rate (etl)', 'trig': 'error_rate_5m > 95%', 'svc': 'etl', 'tier': 'tier3', 'sev': 'P2', 'team': 'payments', 'oncall': 'dana.cho@example.com', 'chan': '#payments-oncall', 'esc': 10}, 'AL-113': {'title': 'Queue backlog (reports)', 'trig': 'queue_depth > 200', 'svc': 'reports', 'tier': 'tier3', 'sev': 'P2', 'team': 'search', 'oncall': 'omar.nash@example.com', 'chan': '#search-oncall', 'esc': 30}, 'AL-110': {'title': 'Cert expiring (reports)', 'trig': 'cert_days_left < 30', 'svc': 'reports', 'tier': 'tier3', 'sev': 'P2', 'team': 'platform', 'oncall': 'pat.lee@example.com', 'chan': '#platform-oncall', 'esc': 10}, 'AL-116': {'title': 'Queue backlog (reports)', 'trig': 'queue_depth > 5000', 'svc': 'reports', 'tier': 'tier3', 'sev': 'P2', 'team': 'data', 'oncall': 'ines.wu@example.com', 'chan': '#data-oncall', 'esc': 5}, 'AL-104': {'title': 'Queue backlog (checkout-api)', 'trig': 'queue_depth > 5000', 'svc': 'checkout-api', 'tier': 'tier1', 'sev': 'P1', 'team': 'platform', 'oncall': 'pat.lee@example.com', 'chan': '#platform-oncall', 'esc': 30}, 'AL-107': {'title': 'Low throughput (indexer)', 'trig': 'requests_per_s < 30', 'svc': 'indexer', 'tier': 'tier2', 'sev': 'P1', 'team': 'search', 'oncall': 'omar.nash@example.com', 'chan': '#search-oncall', 'esc': 10}}.items():
+            p = f'docs/runbooks/{aid}.md'
+            t = read(p)
+            need(t.splitlines()[0].strip() == '# ' + e['title'], aid + ': title')
+            def sec(name):
+                m = re.search(r'^## ' + name + r'\s*$(.*?)(?=^## |\Z)', t, re.M | re.S)
+                need(m, aid + ': missing ## ' + name)
+                return m.group(1)
+            need(e['trig'] in sec('Trigger') and e['svc'] in sec('Trigger') and e['tier'] in sec('Trigger'), aid + ': trigger section')
+            need(sec('Severity').strip() == e['sev'], aid + ': severity section must be just ' + e['sev'])
+            o = sec('Owner')
+            need(e['team'] in o and e['oncall'] in o and e['chan'] in o, aid + ': owner section')
+            need(re.search(r'(?<!\d)' + str(e['esc']) + r'(?!\d)', sec('Escalation')), aid + ': escalation minutes')
+
+
+    def t6():
+        for aid, e in {'AL-101': {'title': 'Stale data (search-api)', 'trig': 'data_age_min > 200', 'svc': 'search-api', 'tier': 'tier2', 'sev': 'P1', 'team': 'search', 'oncall': 'omar.nash@example.com', 'chan': '#search-oncall', 'esc': 30}, 'AL-119': {'title': 'High error rate (etl)', 'trig': 'error_rate_5m > 95%', 'svc': 'etl', 'tier': 'tier3', 'sev': 'P2', 'team': 'payments', 'oncall': 'dana.cho@example.com', 'chan': '#payments-oncall', 'esc': 10}, 'AL-113': {'title': 'Queue backlog (reports)', 'trig': 'queue_depth > 200', 'svc': 'reports', 'tier': 'tier3', 'sev': 'P2', 'team': 'search', 'oncall': 'omar.nash@example.com', 'chan': '#search-oncall', 'esc': 30}, 'AL-110': {'title': 'Cert expiring (reports)', 'trig': 'cert_days_left < 30', 'svc': 'reports', 'tier': 'tier3', 'sev': 'P2', 'team': 'platform', 'oncall': 'pat.lee@example.com', 'chan': '#platform-oncall', 'esc': 10}, 'AL-134': {'title': 'Disk nearly full (etl)', 'trig': 'disk_used_pct > 90', 'svc': 'etl', 'tier': 'tier3', 'sev': 'P4', 'team': 'search', 'oncall': 'omar.nash@example.com', 'chan': '#search-oncall', 'esc': 15}, 'AL-131': {'title': 'Stale data (reports)', 'trig': 'data_age_min > 5000', 'svc': 'reports', 'tier': 'tier3', 'sev': 'P3', 'team': 'data', 'oncall': 'ines.wu@example.com', 'chan': '#data-oncall', 'esc': 15}, 'AL-116': {'title': 'Queue backlog (reports)', 'trig': 'queue_depth > 5000', 'svc': 'reports', 'tier': 'tier3', 'sev': 'P2', 'team': 'data', 'oncall': 'ines.wu@example.com', 'chan': '#data-oncall', 'esc': 5}, 'AL-104': {'title': 'Queue backlog (checkout-api)', 'trig': 'queue_depth > 5000', 'svc': 'checkout-api', 'tier': 'tier1', 'sev': 'P1', 'team': 'platform', 'oncall': 'pat.lee@example.com', 'chan': '#platform-oncall', 'esc': 30}, 'AL-137': {'title': 'Pod restarts (checkout-api)', 'trig': 'restarts_15m >= 5', 'svc': 'checkout-api', 'tier': 'tier1', 'sev': 'P4', 'team': 'payments', 'oncall': 'dana.cho@example.com', 'chan': '#payments-oncall', 'esc': 5}, 'AL-140': {'title': 'Cert expiring (etl)', 'trig': 'cert_days_left < 7', 'svc': 'etl', 'tier': 'tier3', 'sev': 'P4', 'team': 'search', 'oncall': 'omar.nash@example.com', 'chan': '#search-oncall', 'esc': 5}, 'AL-128': {'title': 'Low throughput (ledger)', 'trig': 'requests_per_s < 5', 'svc': 'ledger', 'tier': 'tier1', 'sev': 'P3', 'team': 'data', 'oncall': 'ines.wu@example.com', 'chan': '#data-oncall', 'esc': 60}, 'AL-122': {'title': 'Pod restarts (ledger)', 'trig': 'restarts_15m >= 3', 'svc': 'ledger', 'tier': 'tier1', 'sev': 'P3', 'team': 'platform', 'oncall': 'pat.lee@example.com', 'chan': '#platform-oncall', 'esc': 10}, 'AL-107': {'title': 'Low throughput (indexer)', 'trig': 'requests_per_s < 30', 'svc': 'indexer', 'tier': 'tier2', 'sev': 'P1', 'team': 'search', 'oncall': 'omar.nash@example.com', 'chan': '#search-oncall', 'esc': 10}, 'AL-125': {'title': 'Cert expiring (checkout-api)', 'trig': 'cert_days_left < 5', 'svc': 'checkout-api', 'tier': 'tier1', 'sev': 'P3', 'team': 'payments', 'oncall': 'dana.cho@example.com', 'chan': '#payments-oncall', 'esc': 60}}.items():
+            p = f'docs/runbooks/{aid}.md'
+            t = read(p)
+            need(t.splitlines()[0].strip() == '# ' + e['title'], aid + ': title')
+            def sec(name):
+                m = re.search(r'^## ' + name + r'\s*$(.*?)(?=^## |\Z)', t, re.M | re.S)
+                need(m, aid + ': missing ## ' + name)
+                return m.group(1)
+            need(e['trig'] in sec('Trigger') and e['svc'] in sec('Trigger') and e['tier'] in sec('Trigger'), aid + ': trigger section')
+            need(sec('Severity').strip() == e['sev'], aid + ': severity section must be just ' + e['sev'])
+            o = sec('Owner')
+            need(e['team'] in o and e['oncall'] in o and e['chan'] in o, aid + ': owner section')
+            need(re.search(r'(?<!\d)' + str(e['esc']) + r'(?!\d)', sec('Escalation')), aid + ': escalation minutes')
+
+
+    def t8():
+        rows = md_rows('docs/escalation-matrix.md')
+        need(rows and [c.lower() for c in rows[0][:6]] == ['team', 'p1', 'p2', 'p3', 'p4', 'total'], 'header: ' + str(rows[:1]))
+        got = {r[0].strip('` '): [int(num(c)) for c in r[1:6]] for r in rows[1:] if len(r) >= 6}
+        want = {'platform': [1, 1, 1, 0, 3], 'payments': [0, 1, 1, 1, 3], 'search': [2, 1, 0, 2, 5], 'data': [0, 1, 2, 0, 3]}
+        need(got == want, f'matrix {got} != {want}')
+        need(len(got) == 4, 'one row per team')
+
+
+    def t9():
+        rows = md_rows('docs/runbooks/index.md')
+        need(len(rows[0]) >= 6 and rows[0][5].lower() == 'runbook', 'sixth column must be runbook')
+        for r, a in zip(rows[1:], ['AL-101', 'AL-104', 'AL-107', 'AL-110', 'AL-113', 'AL-116', 'AL-119', 'AL-122', 'AL-125', 'AL-128', 'AL-131', 'AL-134', 'AL-137', 'AL-140']):
+            m = re.fullmatch(r'\[([^\]]+)\]\(([^)]+)\)', r[5].strip())
+            need(m and m.group(1) == a and m.group(2) == a + '.md', a + ': link cell ' + r[5])
+            need((W / 'docs/runbooks' / m.group(2)).exists(), 'broken link ' + m.group(2))
+        need([r[0] for r in rows[1:]] == ['AL-101', 'AL-104', 'AL-107', 'AL-110', 'AL-113', 'AL-116', 'AL-119', 'AL-122', 'AL-125', 'AL-128', 'AL-131', 'AL-134', 'AL-137', 'AL-140'], 'row order preserved')
+
+
+    if __name__ == "__main__":
+        fn = globals().get(sys.argv[1]) if len(sys.argv) > 1 else None
+        need(callable(fn) and sys.argv[1] in ['t3', 't4', 't5', 't6', 't8', 't9'], "unknown check " + str(sys.argv[1:]))
+        fn()
+        print("OK")
+turns:
+- prompt: How many alerts are defined at each severity (P1, P2, P3, P4) in data/alerts.csv? Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all:
+    - P1\D{0,6}(?<![\d.,])3(?:\.0+)?(?!\d|[.,]\d)
+    - P2\D{0,6}(?<![\d.,])4(?:\.0+)?(?!\d|[.,]\d)
+    - P3\D{0,6}(?<![\d.,])4(?:\.0+)?(?!\d|[.,]\d)
+    - P4\D{0,6}(?<![\d.,])3(?:\.0+)?(?!\d|[.,]\d)
+- prompt: Which team owns the most alerts, and how many? Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all:
+    - \bsearch\b
+    - (?<![\d.,])5(?:\.0+)?(?!\d|[.,]\d)
+- prompt: Create docs/runbooks/index.md titled `# Runbooks` with a table (columns alert_id, name, severity, service, owner)
+    listing every alert, sorted by severity (P1 first) and then alert_id.
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t3
+    hidden:
+    - _grade.py
+    timeout: 60
+- prompt: 'Create one runbook page per P1 alert as docs/runbooks/<alert_id>.md with exactly this layout: `# <name>`; `## Trigger`
+    with the threshold in backticks, the service in backticks and its tier from data/services.csv in parentheses (e.g. `error_rate_5m
+    > 5%` on service `ledger` (tier1).); `## Severity` containing only the severity; `## Owner` with `<team>, on-call <oncall
+    email>, channel <channel>` from data/teams.csv; `## Escalation` saying `Escalate after <N> minutes.`'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t4
+    hidden:
+    - _grade.py
+    timeout: 60
+- prompt: Do the same for every P2 alert (same layout, same sources).
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t5
+    hidden:
+    - _grade.py
+    timeout: 60
+- prompt: Do the same for all remaining alerts (P3 and P4). Every alert in data/alerts.csv must now have a runbook.
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t6
+    hidden:
+    - _grade.py
+    timeout: 60
+- prompt: Which alerts escalate after 10 minutes or less? List their alert ids. Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all:
+    - AL-107
+    - AL-110
+    - AL-116
+    - AL-119
+    - AL-122
+    - AL-137
+    - AL-140
+- prompt: 'Write docs/escalation-matrix.md with a table (columns team, P1, P2, P3, P4, total): one row per team in data/teams.csv
+    order, counting the alerts it owns at each severity, plus the row total.'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t8
+    hidden:
+    - _grade.py
+    timeout: 60
+- prompt: 'Add a sixth column `runbook` to the table in docs/runbooks/index.md: a relative markdown link `[<alert_id>](<alert_id>.md)`
+    for each row. Keep the row order.'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t9
+    hidden:
+    - _grade.py
+    timeout: 60
+- prompt: Add a '## Runbooks' section to README.md that links docs/runbooks/index.md and docs/escalation-matrix.md and says
+    every alert in data/alerts.csv has a page.
+  checks:
+  - kind: doc_sections
+    path: README.md
+    headings:
+    - Runbooks
+  - kind: file_regex
+    path: README.md
+    pattern: docs/runbooks/index\.md
+  - kind: file_regex
+    path: README.md
+    pattern: docs/escalation-matrix\.md
+  - kind: file_regex
+    path: README.md
+    pattern: data/alerts\.csv
+    min_count: 2
