@@ -2,7 +2,8 @@
 
 An external reviewer read the 48-page draft of this report and raised the points below. Each was checked against
 the committed evidence before the text changed; where the reviewer's premise did not hold, the response says so.
-We thank the reviewer.
+We thank the reviewer. The review record (the reviewers' points, reconstructed from this response; the verification of
+every round-1 point; and its scripts) is in \path{docs/reviews/2026-10-paired-measurement/}.
 
 \begin{enumerate}[leftmargin=1.6em]
   \item \textbf{``Preregistered'' overstates what was fixed in advance.} Agreed in part. The preregistration fixed the
@@ -71,8 +72,11 @@ grateful for that care. Each item and the response:
     penalty conservatively, and gives the reviewer's extrapolation explicitly as an extrapolation from the Sonnet
     follow-up (effort share about \RgEffShareFable\,\% of the Fable log saving, model-only ratio about
     \RgModelOnlyFable; Opus effort-matched about \RgOpusMatched\X). The Fable recommendation now says the saving is
-    Sonnet-at-medium relative to the host at default; host-at-medium was not measured, and a planned Fable effort
-    follow-up will render in \cref{sec:effort} when its evidence is committed. The host-kept sticky sessions are
+    Sonnet-at-medium relative to the host at default. \emph{Since measured:} a preregistered Fable follow-up found
+    Fable at medium costs \EfRatio\X\ the default (\EfCI) with non-inferior quality, so the host's effort effect is
+    about \EfShare\,\% of the Fable log saving, replacing the extrapolated \RgEffShareFable\,\%; Sonnet-at-medium sticky
+    is about \EfStickyVsMedium\X\ of Fable-at-medium (exploratory, not concurrent; \cref{sec:effortfable}). Opus
+    remains unmeasured. The host-kept sticky sessions are
     described as an indication of bundle overhead (about \RgOverheadFable--\RgOverheadOpus\,\%), not a finding.
   \item \textbf{Quality by task type.} Agreed. \Cref{tab:taskfable} adds 95\,\% intervals; \RgNTaskFail\ of \RgNTask\
     task types miss the margin and \cref{sec:recs} says so. We also accept that the scenario-level rank correlation

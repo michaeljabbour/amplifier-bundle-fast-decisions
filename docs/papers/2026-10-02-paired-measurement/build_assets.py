@@ -1952,27 +1952,48 @@ M("RgOverheadFable", pct(float(MACROS["RvStickyHostFable"]) - 1))
 M("RgOverheadOpus", pct(float(MACROS["RvStickyHostOpus"]) - 1))
 # optional plain-Fable effort follow-up (rendered only if committed)
 EFFF = REPO / "docs" / "evidence" / "2026-10-06-effort-control-fable"
-fab_tex = ""
-if (EFFF / "summary.json").exists():
-    fj = json.loads((EFFF / "summary.json").read_text())
-    try:
-        frows = [f"{tex_escape(r['label'])} & {r['n_pairs']} & {hu(r['gm_ratio'], 3)} & {hu(r['ci95'][0], 3)}--{hu(r['ci95'][1], 3)} \\\\"
-                 for r in fj["rows"]]
-        fq = fj.get("quality") or {}
-        if fq:
-            frows.append(f"Turn-pass difference (unfiltered) & {fq['n_pairs']} & {hu(fq['mean_delta_turn_pass'], 3)} & "
-                         f"{hu(fq['ci95'][0], 3)} to {hu(fq['ci95'][1], 3)} \\\\")
-        sup = fj.get("HF_supported", fj.get("HE_supported"))
-    except (KeyError, TypeError) as exc:
-        raise SystemExit(f"build_assets.py: {EFFF}/summary.json does not match the expected schema: {exc}")
-    write(TABLES / "effort-fable.tex", table(r">{\raggedright\arraybackslash}p{0.5\textwidth} r r r",
-                                             [r"Comparison & n & estimate & 95\,\% CI \\"], frows))
-    fab_tex = (r"\subsection{Follow-up: plain Fable at medium versus default effort}\label{sec:effortfable}" "\n"
-               + tex_escape(fj.get("description", "")) + " The preregistered hypothesis was "
-               + ("supported" if sup else "not supported") + ".\n"
-               r"\begin{table}[htbp]\centering\small\caption{Fable effort follow-up (evidence in the \texttt{2026-10-06-effort-control-fable} directory).}"
-               r"\label{tab:effortfable}\input{generated/tables/effort-fable.tex}\end{table}" "\n")
-write(OUT / "effort-fable.tex", fab_tex)
+fj = json.loads((EFFF / "summary.json").read_text())
+fsens = json.loads((EFFF / "result" / "sensitivity.json").read_text())
+fprov = (EFFF / "prereg" / "PROVENANCE.md").read_text()
+f1, f2, f3 = fj["rows"]
+assert "HF" in f1["label"] and "sticky" in f2["label"] and "anchor" in f3["label"]
+fq = fj["quality"]
+assert fj["HF_supported"] and fq["non_inferior"]
+M("EfRatio", hu(f1["gm_ratio"], 3))
+M("EfCI", f"{hu(f1['ci95'][0], 3)}--{hu(f1['ci95'][1], 3)}")
+M("EfCutPct", pct(1 - f1["gm_ratio"]))
+M("EfPairs", f1["n_pairs"])
+M("EfValid", fsens["as_run"]["n_valid_cost_pairs"])
+M("EfScen", fsens["as_run"]["cost"]["n_scenarios"])
+M("EfSeed", fsens["as_run"]["seed"])
+M("EfQual", hu(fq["mean_delta_turn_pass"], 3))
+M("EfQualCI", f"{hu(fq['ci95'][0], 3)} to {hu(fq['ci95'][1], 3)}")
+fm = fq["final_pass_mcnemar"]
+M("EfFinalBoth", fm["both_pass"])
+M("EfFinalMed", fm["only_medium_passes"])
+M("EfFinalDef", fm["only_default_passes"])
+M("EfVsSticky", hu(f2["gm_ratio"], 3))
+M("EfVsStickyCI", f"{hu(f2['ci95'][0], 3)}--{hu(f2['ci95'][1], 3)}")
+M("EfStickyVsMedium", hu(1 / f2["gm_ratio"], 2))
+M("EfVsAnchor", hu(f3["gm_ratio"], 3))
+M("EfVsAnchorCI", f"{hu(f3['ci95'][0], 3)}--{hu(f3['ci95'][1], 3)}")
+st44 = fsens["strict_44"]["cost"]
+M("EfStrict", hu(st44["geo_mean_ratio"], 3))
+M("EfStrictCI", f"{hu(st44['ci95'][0], 3)}--{hu(st44['ci95'][1], 3)}")
+M("EfShare", pct(math.log(f1["gm_ratio"]) / math.log(pe("pair", "fable", "sticky")["gm_ratio"])))
+M("EfPreregSha", re.search(r"git diff (\w+) HEAD", fprov).group(1))
+M("EfScheduleAfter", hms(re.search(r"\((\d+:\d+:[\d.]+) AFTER the preregistration commit\)", fprov).group(1)))
+fled = json.loads((EFFF / "campaign" / "ledger.json").read_text())
+M("EfSpend", money(sum(fled["spent"].values()) if isinstance(fled["spent"], dict) else fled["spent"]))
+M("EfSurplusTokens", re.search(r"read \*\*(\d+) more cache tokens\*\*", (EFFF / "FLAGS.md").read_text()).group(1))
+frows = [f"Fable medium / default effort (confirmatory, concurrent) & {f1['n_pairs']} pairs ({fsens['as_run']['n_valid_cost_pairs']} cost-valid) & {hu(f1['gm_ratio'], 3)} & {hu(f1['ci95'][0], 3)}--{hu(f1['ci95'][1], 3)} \\\\",
+         f"Same, excluding the audit-flagged pair (sensitivity) & {fsens['strict_44']['n_valid_cost_pairs'] if 'n_valid_cost_pairs' in fsens['strict_44'] else ''} pairs & {hu(st44['geo_mean_ratio'], 3)} & {hu(st44['ci95'][0], 3)}--{hu(st44['ci95'][1], 3)} \\\\",
+         f"Fable medium / main-campaign Fable sticky (exploratory, not concurrent) & {f2['n_pairs']} scenarios & {hu(f2['gm_ratio'], 3)} & {hu(f2['ci95'][0], 3)}--{hu(f2['ci95'][1], 3)} \\\\",
+         f"Fable medium / main-campaign Fable anchor (exploratory, not concurrent) & {f3['n_pairs']} scenarios & {hu(f3['gm_ratio'], 3)} & {hu(f3['ci95'][0], 3)}--{hu(f3['ci95'][1], 3)} \\\\",
+         r"\midrule",
+         f"Turn-pass difference, medium minus default (unfiltered) & {fq['n_pairs']} pairs & {hu(fq['mean_delta_turn_pass'], 3)} & {hu(fq['ci95'][0], 3)} to {hu(fq['ci95'][1], 3)} \\\\"]
+write(TABLES / "effort-fable.tex", table(r">{\raggedright\arraybackslash}p{0.5\textwidth} r r r",
+                                         [r"Comparison & n & estimate & 95\,\% CI \\"], frows))
 
 # R2: Fable sticky by task type with scenario-cluster CIs
 trows_ = []
