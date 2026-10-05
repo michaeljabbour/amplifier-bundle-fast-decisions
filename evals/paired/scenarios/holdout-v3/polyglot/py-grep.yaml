@@ -1,0 +1,322 @@
+# holdout-v3 polyglot: py-grep -- 16 turns, short gaps.
+id: py-grep
+task_type: feature
+language: python
+split: holdout
+default_gap_s: 10
+source:
+  desc: >-
+    Aider polyglot-benchmark python/grep (Exercism), outside the S2 slice; grown with extra flags
+    and refactoring turns
+  repo: https://github.com/Aider-AI/polyglot-benchmark
+  sha: 7e0611e77b54e2dea774cdc0aa00cf9f7ed6144f
+workspace:
+  kind: git
+  repo: https://github.com/Aider-AI/polyglot-benchmark
+  sha: 7e0611e77b54e2dea774cdc0aa00cf9f7ed6144f
+  subdir: python/exercises/practice/grep
+  local_hint: ~/dev/afast-campaign-corrected-polyglot-20260919/polyglot/polyglot-benchmark
+  remove:
+  - .meta
+protected: [grep_test.py]
+hidden_files:
+  hidden_count_test.py: |
+    import os
+    import tempfile
+    import unittest
+
+    from grep import grep
+
+
+    class FileCase(unittest.TestCase):
+        def setUp(self):
+            self._dir = tempfile.TemporaryDirectory()
+            self.addCleanup(self._dir.cleanup)
+            self.a = self.write("a.txt", "alpha one\nBeta two\nalpha three\ngamma\n")
+            self.b = self.write("b.txt", "delta\nalphabet soup\nepsilon alpha\n")
+
+        def write(self, name, text):
+            path = os.path.join(self._dir.name, name)
+            with open(path, "w") as handle:
+                handle.write(text)
+            return path
+
+
+    class CountTest(FileCase):
+        def test_single_file(self):
+            self.assertEqual(grep("alpha", "-c", [self.a]), "2\n")
+
+        def test_several_files_are_prefixed(self):
+            self.assertEqual(grep("alpha", "-c", [self.a, self.b]), f"{self.a}:2\n{self.b}:2\n")
+
+        def test_zero_matches(self):
+            self.assertEqual(grep("zzz", "-c", [self.a]), "0\n")
+
+        def test_with_ignore_case(self):
+            self.assertEqual(grep("beta", "-c -i", [self.a]), "1\n")
+
+        def test_with_invert(self):
+            self.assertEqual(grep("alpha", "-c -v", [self.a]), "2\n")
+
+        def test_names_only_wins_over_count(self):
+            self.assertEqual(grep("alpha", "-c -l", [self.a, self.b]), f"{self.a}\n{self.b}\n")
+  hidden_flags_test.py: |
+    import os
+    import tempfile
+    import unittest
+
+    from grep import grep
+
+
+    class FileCase(unittest.TestCase):
+        def setUp(self):
+            self._dir = tempfile.TemporaryDirectory()
+            self.addCleanup(self._dir.cleanup)
+            self.a = self.write("a.txt", "alpha one\nBeta two\nalpha three\ngamma\n")
+            self.b = self.write("b.txt", "delta\nalphabet soup\nepsilon alpha\n")
+
+        def write(self, name, text):
+            path = os.path.join(self._dir.name, name)
+            with open(path, "w") as handle:
+                handle.write(text)
+            return path
+
+
+    class CombinedFlagsTest(FileCase):
+        def test_ni(self):
+            self.assertEqual(grep("ALPHA", "-ni", [self.a]), "1:alpha one\n3:alpha three\n")
+
+        def test_nx(self):
+            self.assertEqual(grep("gamma", "-nx", [self.a]), "4:gamma\n")
+
+        def test_vc(self):
+            self.assertEqual(grep("alpha", "-vc", [self.a]), "2\n")
+
+        def test_lv(self):
+            self.assertEqual(grep("alpha", "-lv", [self.a]), f"{self.a}\n")
+
+        def test_separate_flags_still_work(self):
+            self.assertEqual(grep("ALPHA", "-n -i", [self.a]), "1:alpha one\n3:alpha three\n")
+  hidden_word_test.py: |
+    import os
+    import tempfile
+    import unittest
+
+    from grep import grep
+
+
+    class FileCase(unittest.TestCase):
+        def setUp(self):
+            self._dir = tempfile.TemporaryDirectory()
+            self.addCleanup(self._dir.cleanup)
+            self.a = self.write("a.txt", "alpha one\nBeta two\nalpha three\ngamma\n")
+            self.b = self.write("b.txt", "delta\nalphabet soup\nepsilon alpha\n")
+
+        def write(self, name, text):
+            path = os.path.join(self._dir.name, name)
+            with open(path, "w") as handle:
+                handle.write(text)
+            return path
+
+
+    class WordTest(FileCase):
+        def test_alphabet_is_not_a_word_match(self):
+            self.assertEqual(grep("alpha", "-w", [self.b]), "epsilon alpha\n")
+
+        def test_plain_words(self):
+            self.assertEqual(grep("alpha", "-w", [self.a]), "alpha one\nalpha three\n")
+
+        def test_with_ignore_case(self):
+            self.assertEqual(grep("ALPHA", "-wi", [self.b]), "epsilon alpha\n")
+
+        def test_with_count(self):
+            self.assertEqual(grep("alpha", "-wc", [self.b]), "1\n")
+
+        def test_whole_line_wins(self):
+            self.assertEqual(grep("alpha", "-w -x", [self.b]), "")
+
+        def test_pattern_is_literal(self):
+            c = self.write("c.txt", "a.b here\naxb there\n")
+            self.assertEqual(grep("a.b", "-w", [c]), "a.b here\n")
+  hidden_max_test.py: |
+    import os
+    import tempfile
+    import unittest
+
+    from grep import grep
+
+
+    class FileCase(unittest.TestCase):
+        def setUp(self):
+            self._dir = tempfile.TemporaryDirectory()
+            self.addCleanup(self._dir.cleanup)
+            self.a = self.write("a.txt", "alpha one\nBeta two\nalpha three\ngamma\n")
+            self.b = self.write("b.txt", "delta\nalphabet soup\nepsilon alpha\n")
+
+        def write(self, name, text):
+            path = os.path.join(self._dir.name, name)
+            with open(path, "w") as handle:
+                handle.write(text)
+            return path
+
+
+    class MaxMatchesTest(FileCase):
+        def test_stops_after_the_first_match(self):
+            self.assertEqual(grep("alpha", "-m 1", [self.a]), "alpha one\n")
+
+        def test_with_line_numbers(self):
+            self.assertEqual(grep("alpha", "-n -m 1", [self.a]), "1:alpha one\n")
+
+        def test_combined_flag_with_argument(self):
+            self.assertEqual(grep("alpha", "-nm 1", [self.a, self.b]),
+                             f"{self.a}:1:alpha one\n{self.b}:2:alphabet soup\n")
+
+        def test_with_count(self):
+            self.assertEqual(grep("alpha", "-c -m 1", [self.a]), "1\n")
+
+        def test_with_invert(self):
+            self.assertEqual(grep("alpha", "-v -m 1", [self.a]), "Beta two\n")
+
+        def test_limit_larger_than_matches(self):
+            self.assertEqual(grep("alpha", "-m 10", [self.a]), "alpha one\nalpha three\n")
+  hidden_missing_test.py: |
+    import os
+    import tempfile
+    import unittest
+
+    from grep import grep
+
+
+    class FileCase(unittest.TestCase):
+        def setUp(self):
+            self._dir = tempfile.TemporaryDirectory()
+            self.addCleanup(self._dir.cleanup)
+            self.a = self.write("a.txt", "alpha one\nBeta two\nalpha three\ngamma\n")
+            self.b = self.write("b.txt", "delta\nalphabet soup\nepsilon alpha\n")
+
+        def write(self, name, text):
+            path = os.path.join(self._dir.name, name)
+            with open(path, "w") as handle:
+                handle.write(text)
+            return path
+
+
+    class MissingFileTest(FileCase):
+        def setUp(self):
+            super().setUp()
+            self.missing = os.path.join(self._dir.name, "nope.txt")
+            self.msg = f"grep: {self.missing}: No such file or directory\n"
+
+        def test_single_missing_file(self):
+            self.assertEqual(grep("x", "", [self.missing]), self.msg)
+
+        def test_other_files_are_still_searched(self):
+            expected = (f"{self.a}:alpha one\n{self.a}:alpha three\n" + self.msg
+                        + f"{self.b}:alphabet soup\n{self.b}:epsilon alpha\n")
+            self.assertEqual(grep("alpha", "", [self.a, self.missing, self.b]), expected)
+
+        def test_names_only(self):
+            self.assertEqual(grep("alpha", "-l", [self.missing, self.a]), self.msg + f"{self.a}\n")
+
+        def test_count(self):
+            self.assertEqual(grep("alpha", "-c", [self.missing, self.a]), self.msg + f"{self.a}:2\n")
+turns:
+  - prompt: >-
+      Implement `grep(pattern, flags, files)` in grep.py as described in .docs/instructions.md: it
+      searches the given files for lines containing the pattern and returns the matching lines as one
+      string (each line ending with a newline). `flags` is a string such as `"-n -i"` supporting `-n`
+      (line numbers), `-l` (names of matching files only), `-i` (ignore case), `-v` (invert) and `-x`
+      (whole line). With several files every line is prefixed by `name:`, and the line number comes
+      after the file name. Run the tests with `python3 -m pytest -q grep_test.py`.
+    checks:
+      - {kind: tests, runner: python, files: [grep_test.py], restore: [grep_test.py]}
+  - prompt: >-
+      In three to five sentences describe how your implementation decides when to prefix the file
+      name, how it combines the flags, and why `-l` can stop reading a file early. Do not change any
+      files.
+    checks:
+      - {kind: keyed_facts, all: [prefix|file name, -l, break|stop|early|first match], any: [flag, -n, -i]}
+  - prompt: >-
+      Add a `-c` flag: instead of the lines print the number of matching lines per file (`2\n` for one
+      file, `name:2\n` per file when there are several), with `-i`, `-v` and `-x` still deciding what
+      matches. `-l` wins when both are given, and a file without matches reports `0`.
+    checks:
+      - {kind: tests, runner: python, files: [grep_test.py, hidden_count_test.py], restore: [grep_test.py], hidden: [hidden_count_test.py]}
+  - prompt: >-
+      Real grep accepts combined short flags. Make `"-ni"`, `"-nx"`, `"-vc"` and `"-lv"` behave
+      exactly like the separated forms (`"-n -i"`, ...), while the separated forms keep working.
+    checks:
+      - {kind: tests, runner: python, files: [grep_test.py, hidden_count_test.py, hidden_flags_test.py], restore: [grep_test.py], hidden: [hidden_count_test.py, hidden_flags_test.py]}
+  - prompt: >-
+      Add `-w` (whole word): the pattern only matches when it is not part of a longer word (`alpha`
+      matches `epsilon alpha` but not `alphabet soup`). It must work with `-i`, `-c` and `-v`, treat
+      the pattern literally (`a.b` is not a regex), and `-x` wins when both `-w` and `-x` are given.
+    checks:
+      - {kind: tests, runner: python, files: [grep_test.py, hidden_count_test.py, hidden_flags_test.py, hidden_word_test.py], restore: [grep_test.py], hidden: [hidden_count_test.py, hidden_flags_test.py, hidden_word_test.py]}
+  - prompt: >-
+      Document the supported flags at the top of grep.py in a module docstring: list -n -l -i -v -x -c
+      -w with one short phrase each, the combined-flag form and the file name prefix rule. Docstring
+      only, no behaviour change.
+    checks:
+      - {kind: file_regex, path: grep.py, pattern: '\A"""(?s:(?:(?!""").)*)-c(?s:(?:(?!""").)*)-w'}
+      - {kind: tests, runner: python, files: [grep_test.py, hidden_count_test.py, hidden_flags_test.py, hidden_word_test.py], restore: [grep_test.py], hidden: [hidden_count_test.py, hidden_flags_test.py, hidden_word_test.py]}
+  - prompt: >-
+      Add your own test file `grep_extra_test.py` (unittest, real temporary files) with at least four
+      tests that cover plain search, `-ni`, `-c -i` and `-w`. Run it together with the shipped tests.
+    checks:
+      - {kind: file_regex, path: grep_extra_test.py, pattern: ^    def test_, min_count: 4}
+      - {kind: tests, runner: python, files: [grep_test.py, grep_extra_test.py], restore: [grep_test.py]}
+  - prompt: >-
+      Add `-m N`: stop after N matching lines per file (`"-m 1"`, and it must combine with the other
+      flags: `"-n -m 1"`, `"-nm 1"` where the number follows the combined flags, `"-c -m 1"` counts at
+      most one, `"-v -m 1"` limits the inverted matches). A limit larger than the number of matches
+      changes nothing.
+    checks:
+      - {kind: tests, runner: python, files: [grep_test.py, hidden_count_test.py, hidden_flags_test.py, hidden_word_test.py, hidden_max_test.py], restore: [grep_test.py], hidden: [hidden_count_test.py, hidden_flags_test.py, hidden_word_test.py, hidden_max_test.py]}
+  - prompt: >-
+      A file that does not exist currently crashes the whole search. Report it as the line `grep:
+      NAME: No such file or directory` in the output at the position of that file and keep searching
+      the other files (`-l` and `-c` still print their normal output for the files that exist).
+    checks:
+      - {kind: tests, runner: python, files: [grep_test.py, hidden_count_test.py, hidden_flags_test.py, hidden_word_test.py, hidden_max_test.py, hidden_missing_test.py], restore: [grep_test.py], hidden: [hidden_count_test.py, hidden_flags_test.py, hidden_word_test.py, hidden_max_test.py, hidden_missing_test.py]}
+  - prompt: >-
+      Question only: grep currently reads every file completely with `readlines()`. What does that
+      mean for memory on a huge file, and what would you change to stream the lines (keeping `-c`,
+      `-l` and `-m` working)? Answer in a few sentences. Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [readlines|whole file|entire file, memory, iterat|stream|lazy|line by line], any: [-m, -l, -c, break]}
+  - prompt: >-
+      Refactor grep.py without changing behaviour: pull the flag expansion, the line matching rule and
+      the file reading into small private helper functions (names starting with an underscore) and
+      keep `grep()` as the public entry point. All earlier checks must still pass.
+    checks:
+      - {kind: file_regex, path: grep.py, pattern: ^def _\w+\(, min_count: 3}
+      - {kind: tests, runner: python, files: [grep_test.py, hidden_count_test.py, hidden_flags_test.py, hidden_word_test.py, hidden_max_test.py, hidden_missing_test.py], restore: [grep_test.py], hidden: [hidden_count_test.py, hidden_flags_test.py, hidden_word_test.py, hidden_max_test.py, hidden_missing_test.py]}
+  - prompt: >-
+      Write a short USAGE.md in the project root with two sections, `## Flags` (every flag with a one
+      line example call and its result) and `## Examples` (a multi-file example and the missing file
+      behaviour). Include at least three `grep(` calls. Do not change any code.
+    checks:
+      - {kind: file_exists, path: USAGE.md}
+      - {kind: doc_sections, path: USAGE.md, headings: [Flags, Examples]}
+      - {kind: file_regex, path: USAGE.md, pattern: grep\(, min_count: 3}
+  - prompt: >-
+      Question only: list every function in grep.py after the refactoring, public and private, with a
+      one line description each. Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [grep, _expand_flags, _line_matcher, _read_lines]}
+  - prompt: >-
+      Question only: which flags interact, and what are the precedence rules in your implementation
+      (think about -l, -c, -x, -w, -v and -m)? Answer as a short list. Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [-l, -c, -x, -w, wins|precedence|overrides|takes priority]}
+  - prompt: >-
+      Question only: name three more tests you would add to the suite to harden grep next, each with
+      the behaviour it pins down. Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [-m, directory|IsADirectoryError|empty file|invalid, test], any: [negative|zero|non-numeric|permission|binary|encoding]}
+  - prompt: >-
+      Review the changes you made in this session as a code reviewer would: list each file you changed
+      or added, what changed, and any remaining edge case you did not cover. Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [grep\.py, test], any: [edge, risk, not cover, remaining]}

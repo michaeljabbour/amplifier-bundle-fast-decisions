@@ -1,0 +1,125 @@
+# holdout-v3 repos: jsonschema-jsonpath -- 10 turns, short gaps.
+id: jsonschema-jsonpath
+task_type: bugfix
+language: python
+split: holdout
+default_gap_s: 10
+source:
+  desc: >-
+    python-jsonschema/jsonschema, ValidationError.json_path did not quote or escape keys that are
+    not simple identifiers (#1389), fixed upstream in 9a957d77; workspace is its parent
+  repo: https://github.com/python-jsonschema/jsonschema.git
+  sha: 11455212a0ee246163b68aba586a865bda75142d
+  fix_sha: 9a957d770d6e63646f4fc874bf8df6be4593f8c8
+workspace:
+  kind: git
+  repo: https://github.com/python-jsonschema/jsonschema.git
+  sha: 11455212a0ee246163b68aba586a865bda75142d
+  local_hint: ~/dev/afast-v3-src/jsonschema
+hidden_files:
+  jsonschema/tests/test_exceptions.py:
+    from_git:
+      repo: https://github.com/python-jsonschema/jsonschema.git
+      sha: 9a957d770d6e63646f4fc874bf8df6be4593f8c8
+      path: jsonschema/tests/test_exceptions.py
+      local_hint: ~/dev/afast-v3-src/jsonschema
+  jsonschema/tests/test_json_pointer_hidden.py: |
+    from unittest import TestCase
+
+    from jsonschema import Draft202012Validator, exceptions
+
+
+    class TestJsonPointer(TestCase):
+        def _err(self, path):
+            return exceptions.ValidationError(
+                path=path, message="1", validator="foo", instance="i",
+            )
+
+        def test_empty_path_is_the_whole_document(self):
+            self.assertEqual(self._err([]).json_pointer, "")
+
+        def test_simple_path(self):
+            self.assertEqual(self._err(["a", 0, "b"]).json_pointer, "/a/0/b")
+
+        def test_escaping(self):
+            self.assertEqual(self._err(["a/b", "c~d", "e~/f"]).json_pointer, "/a~1b/c~0d/e~0~1f")
+
+        def test_empty_key(self):
+            self.assertEqual(self._err([""]).json_pointer, "/")
+            self.assertEqual(self._err(["a", ""]).json_pointer, "/a/")
+
+        def test_space_is_not_escaped(self):
+            self.assertEqual(self._err(["a b"]).json_pointer, "/a b")
+
+        def test_from_real_validation(self):
+            schema = {"properties": {"x/y": {"items": {"type": "integer"}}}}
+            (error,) = Draft202012Validator(schema).iter_errors({"x/y": [1, "s"]})
+            self.assertEqual(error.json_pointer, "/x~1y/1")
+turns:
+  - prompt: >-
+      `ValidationError.json_path` produces ambiguous or invalid JSON paths for keys that are not plain
+      identifiers. A property called `a b`, `a.b`, `1` or `it's` currently renders as `$.a b`,
+      `$.a.b`, `$.1` and `$.it's`. Keys that match `[a-zA-Z][a-zA-Z0-9_]*` should keep the dot form
+      (`$.x`), integers stay `[0]`, and everything else (including the empty string, `_`, `-`,
+      brackets and quotes) must use quoted bracket notation like `$['a b']`, with a backslash and a
+      single quote inside the key escaped by a backslash. Please fix it in the jsonschema package. Run
+      the tests from this directory with `python3 -m pytest -q jsonschema/tests/test_exceptions.py`.
+    checks:
+      - {kind: tests, runner: python, files: [jsonschema/tests/test_exceptions.py], hidden: [jsonschema/tests/test_exceptions.py]}
+  - prompt: >-
+      In three to five sentences explain the root cause: which property builds the path, what it did
+      for string elements, and why that is ambiguous for keys containing dots or brackets. Do not
+      change any files.
+    checks:
+      - {kind: keyed_facts, all: [json_path, absolute_path, \.|dot], any: [ambiguous, quote, bracket, unescaped]}
+  - prompt: >-
+      Add a test file `jsonschema/tests/test_json_path_validation.py` that exercises json_path through
+      real validation (Draft202012Validator and a small schema, not hand-built errors): a key with a
+      space, plain keys plus an array index, a key containing a single quote, and an error at the
+      root. At least four tests. Run it.
+    checks:
+      - {kind: file_regex, path: jsonschema/tests/test_json_path_validation.py, pattern: ^    def test_, min_count: 4}
+      - {kind: tests, runner: python, files: [jsonschema/tests/test_json_path_validation.py]}
+  - prompt: >-
+      Add a sibling property `ValidationError.json_pointer` that renders the same absolute path as an
+      RFC 6901 JSON Pointer: the empty path is "", each element becomes `/` followed by the element
+      with `~` escaped as `~0` and then `/` as `~1` (integers rendered as decimal), an empty-string
+      key gives `/`, and spaces are left alone. Put it right after `json_path`.
+    checks:
+      - {kind: tests, runner: python, files: [jsonschema/tests/test_json_pointer_hidden.py, jsonschema/tests/test_exceptions.py], hidden: [jsonschema/tests/test_json_pointer_hidden.py, jsonschema/tests/test_exceptions.py]}
+      - {kind: file_regex, path: jsonschema/exceptions.py, pattern: def json_pointer}
+  - prompt: >-
+      Document `json_pointer` in docs/errors.rst, as an attribute entry right after the `json_path`
+      one: say it is an RFC 6901 JSON Pointer to the offending element and that `~` and `/` are
+      escaped as `~0` and `~1`.
+    checks:
+      - {kind: file_regex, path: docs/errors.rst, pattern: '\.\. attribute:: json_pointer'}
+      - {kind: file_regex, path: docs/errors.rst, pattern: ~0}
+  - prompt: >-
+      Add a bullet for both changes (the json_path quoting fix and the new json_pointer property) at
+      the top of CHANGELOG.rst, in the top section, in the same bullet style as the entries there.
+    checks:
+      - {kind: file_regex, path: CHANGELOG.rst, pattern: '^v4\.24\.0\n=+\n(?:(?!v4\.23).*\n)*?.*json_pointer'}
+  - prompt: >-
+      Question only: how do `ValidationError.path`, `relative_path` and `absolute_path` differ, and
+      which one do `json_path` and `json_pointer` use? Point at where each is defined. Do not change
+      any files.
+    checks:
+      - {kind: keyed_facts, all: [relative_path, absolute_path, parent, exceptions\.py, json_pointer]}
+  - prompt: >-
+      Give `json_pointer` a docstring: what it returns, the escaping rules, and that it describes the
+      same location as `json_path`. Docstring only.
+    checks:
+      - {kind: file_regex, path: jsonschema/exceptions.py, pattern: 'def json_pointer\(self\) -> str:\n\s+"""'}
+      - {kind: tests, runner: python, files: [jsonschema/tests/test_json_pointer_hidden.py], hidden: [jsonschema/tests/test_json_pointer_hidden.py]}
+  - prompt: >-
+      Run tests/test_exceptions.py style coverage for this change: the exceptions test module, your
+      new validation test file and the json_pointer tests together, and report the totals (passed /
+      failed). Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [test_exceptions, \d+ passed]}
+  - prompt: >-
+      Review the changes you made in this session as a code reviewer would: list each file you changed
+      or added, what changed, and any remaining edge case you did not cover. Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [exceptions\.py, errors\.rst, CHANGELOG, test], any: [edge, risk, not cover, remaining]}

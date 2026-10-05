@@ -1,0 +1,261 @@
+# holdout-v3 polyglot: py-zipper -- 11 turns, short gaps.
+id: py-zipper
+task_type: feature
+language: python
+split: holdout
+default_gap_s: 10
+source:
+  desc: >-
+    Aider polyglot-benchmark python/zipper (Exercism), outside the S2 slice; grown with path
+    helpers, search, mirroring, equality and refactoring turns
+  repo: https://github.com/Aider-AI/polyglot-benchmark
+  sha: 7e0611e77b54e2dea774cdc0aa00cf9f7ed6144f
+workspace:
+  kind: git
+  repo: https://github.com/Aider-AI/polyglot-benchmark
+  sha: 7e0611e77b54e2dea774cdc0aa00cf9f7ed6144f
+  subdir: python/exercises/practice/zipper
+  local_hint: ~/dev/afast-campaign-corrected-polyglot-20260919/polyglot/polyglot-benchmark
+  remove:
+  - .meta
+protected: [zipper_test.py]
+hidden_files:
+  hidden_path_test.py: |
+    import copy
+    import unittest
+
+    from zipper import Zipper
+
+    LEAF3 = {"value": 3, "left": None, "right": None}
+    TREE = {
+        "value": 1,
+        "left": {"value": 2, "left": None, "right": dict(LEAF3)},
+        "right": {"value": 4, "left": None, "right": None},
+    }
+
+
+    class PathTest(unittest.TestCase):
+        def test_root(self):
+            z = Zipper.from_tree(copy.deepcopy(TREE))
+            self.assertEqual((z.depth(), z.path(), z.is_root()), (0, [], True))
+
+        def test_one_step(self):
+            z = Zipper.from_tree(copy.deepcopy(TREE)).left()
+            self.assertEqual((z.depth(), z.path(), z.is_root()), (1, ["left"], False))
+
+        def test_two_steps_and_leaf(self):
+            z = Zipper.from_tree(copy.deepcopy(TREE)).left().right()
+            self.assertEqual((z.depth(), z.path()), (2, ["left", "right"]))
+            self.assertTrue(z.is_leaf())
+            self.assertFalse(Zipper.from_tree(copy.deepcopy(TREE)).left().is_leaf())
+
+        def test_up_shortens_the_path(self):
+            z = Zipper.from_tree(copy.deepcopy(TREE)).left().right().up()
+            self.assertEqual(z.path(), ["left"])
+            self.assertEqual(z.depth(), 1)
+
+        def test_set_value_keeps_the_path(self):
+            z = Zipper.from_tree(copy.deepcopy(TREE)).right().set_value(9)
+            self.assertEqual(z.path(), ["right"])
+  hidden_find_test.py: |
+    import copy
+    import unittest
+
+    from zipper import Zipper
+
+    LEAF3 = {"value": 3, "left": None, "right": None}
+    TREE = {
+        "value": 1,
+        "left": {"value": 2, "left": None, "right": dict(LEAF3)},
+        "right": {"value": 4, "left": None, "right": None},
+    }
+
+
+    class FindTest(unittest.TestCase):
+        def setUp(self):
+            self.z = Zipper.from_tree(copy.deepcopy(TREE))
+
+        def test_root_returns_to_the_top(self):
+            z = self.z.left().right().root()
+            self.assertEqual((z.value(), z.path()), (1, []))
+
+        def test_find_in_the_whole_tree(self):
+            self.assertEqual(self.z.find(3).path(), ["left", "right"])
+            self.assertEqual(self.z.find(4).path(), ["right"])
+            self.assertEqual(self.z.find(1).path(), [])
+            self.assertIsNone(self.z.find(99))
+
+        def test_find_only_searches_the_subtree(self):
+            self.assertIsNone(self.z.left().find(4))
+            self.assertIsNone(self.z.right().find(2))
+            self.assertEqual(self.z.left().find(3).path(), ["left", "right"])
+
+        def test_preorder_first_match_wins(self):
+            tree = {"value": 5, "left": {"value": 7, "left": None, "right": None}, "right": {"value": 7, "left": None, "right": None}}
+            self.assertEqual(Zipper.from_tree(tree).find(7).path(), ["left"])
+
+        def test_found_zipper_can_go_up(self):
+            self.assertEqual(self.z.find(3).up().value(), 2)
+
+        def test_original_is_not_moved(self):
+            self.z.find(3)
+            self.assertEqual(self.z.path(), [])
+  hidden_swap_test.py: |
+    import copy
+    import unittest
+
+    from zipper import Zipper
+
+    LEAF3 = {"value": 3, "left": None, "right": None}
+    TREE = {
+        "value": 1,
+        "left": {"value": 2, "left": None, "right": dict(LEAF3)},
+        "right": {"value": 4, "left": None, "right": None},
+    }
+
+
+    MIRRORED = {
+        "value": 1,
+        "left": {"value": 4, "left": None, "right": None},
+        "right": {"value": 2, "left": {"value": 3, "left": None, "right": None}, "right": None},
+    }
+
+
+    class SwapTest(unittest.TestCase):
+        def setUp(self):
+            self.z = Zipper.from_tree(copy.deepcopy(TREE))
+
+        def test_swap_children(self):
+            tree = self.z.swap_children().to_tree()
+            self.assertEqual((tree["left"]["value"], tree["right"]["value"]), (4, 2))
+            self.assertEqual(tree["right"]["right"], LEAF3)
+
+        def test_swap_on_a_leaf_changes_nothing(self):
+            self.assertEqual(self.z.right().swap_children().to_tree(), TREE)
+
+        def test_mirror_the_whole_tree(self):
+            self.assertEqual(self.z.mirror().to_tree(), MIRRORED)
+
+        def test_mirror_only_the_focus(self):
+            tree = self.z.left().mirror().up().to_tree()
+            self.assertEqual(tree["left"], {"value": 2, "left": LEAF3, "right": None})
+            self.assertEqual(tree["right"], TREE["right"])
+
+        def test_original_tree_is_untouched(self):
+            self.z.mirror()
+            self.assertEqual(self.z.to_tree(), TREE)
+
+        def test_mirror_twice_is_identity(self):
+            self.assertEqual(self.z.mirror().mirror().to_tree(), TREE)
+  hidden_eq_test.py: |
+    import copy
+    import unittest
+
+    from zipper import Zipper
+
+    LEAF3 = {"value": 3, "left": None, "right": None}
+    TREE = {
+        "value": 1,
+        "left": {"value": 2, "left": None, "right": dict(LEAF3)},
+        "right": {"value": 4, "left": None, "right": None},
+    }
+
+
+    class EqReprTest(unittest.TestCase):
+        def test_equal_for_equal_trees(self):
+            self.assertEqual(Zipper.from_tree(copy.deepcopy(TREE)), Zipper.from_tree(copy.deepcopy(TREE)))
+
+        def test_up_returns_an_equal_zipper(self):
+            self.assertEqual(Zipper.from_tree(copy.deepcopy(TREE)).left().up(), Zipper.from_tree(copy.deepcopy(TREE)))
+
+        def test_different_focus_is_different(self):
+            self.assertNotEqual(Zipper.from_tree(copy.deepcopy(TREE)).left(), Zipper.from_tree(copy.deepcopy(TREE)))
+
+        def test_different_value_is_different(self):
+            z = Zipper.from_tree(copy.deepcopy(TREE))
+            self.assertNotEqual(z.set_value(9), z)
+
+        def test_different_paths_to_the_same_focus(self):
+            z = Zipper.from_tree(copy.deepcopy(TREE))
+            self.assertEqual(z.left().up().right(), z.right())
+
+        def test_other_types_are_never_equal(self):
+            self.assertFalse(Zipper.from_tree(copy.deepcopy(TREE)) == 3)
+
+        def test_repr(self):
+            z = Zipper.from_tree(copy.deepcopy(TREE)).left().right()
+            self.assertEqual(repr(z), "Zipper(path=['left', 'right'], value=3)")
+turns:
+  - prompt: >-
+      Implement the `Zipper` class in zipper.py as described in .docs/instructions.md:
+      `Zipper.from_tree(tree)` (trees are dicts with `value`, `left` and `right`, an absent child is
+      None), `value()`, `set_value(v)`, `left()`, `right()`, `up()`, `set_left(tree)`,
+      `set_right(tree)` and `to_tree()`. Moves that are impossible (left/right of a missing child, up
+      from the root) return None, and the edits return a zipper without changing the tree you started
+      from. Run the tests with `python3 -m pytest -q zipper_test.py`.
+    checks:
+      - {kind: tests, runner: python, files: [zipper_test.py], restore: [zipper_test.py]}
+  - prompt: >-
+      In three to five sentences explain what the zipper stores for each step down (the trail), how
+      `up()` uses it to rebuild the parent, and why the edits do not change the tree you started from.
+      Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [trail, up, parent], any: [immutable|new zipper|copy|never change, other|sibling|subtree]}
+  - prompt: >-
+      Add position helpers: `depth()` (number of steps from the root), `path()` (the list of
+      `'left'`/`'right'` steps from the root to the focus), `is_root()` and `is_leaf()` (the focus has
+      no children). `set_value` keeps the path, and `up()` shortens it.
+    checks:
+      - {kind: tests, runner: python, files: [zipper_test.py, hidden_path_test.py], restore: [zipper_test.py], hidden: [hidden_path_test.py]}
+  - prompt: >-
+      Add `root()` (a zipper focused on the root of the same tree, `to_tree` may use it) and
+      `find(value)`: a pre-order search (node, then the left subtree, then the right subtree) of the
+      focused subtree only, returning a zipper focused on the first match (it can go `up()`
+      afterwards) or None. It must not move the zipper it is called on.
+    checks:
+      - {kind: tests, runner: python, files: [zipper_test.py, hidden_path_test.py, hidden_find_test.py], restore: [zipper_test.py], hidden: [hidden_path_test.py, hidden_find_test.py]}
+  - prompt: >-
+      Add `swap_children()` (a zipper whose focus has its left and right subtrees exchanged) and
+      `mirror()` (the whole focused subtree mirrored recursively). Both keep the position in the
+      larger tree, return new zippers and leave the original tree untouched; swapping on a leaf
+      changes nothing and mirroring twice gives the original tree.
+    checks:
+      - {kind: tests, runner: python, files: [zipper_test.py, hidden_path_test.py, hidden_find_test.py, hidden_swap_test.py], restore: [zipper_test.py], hidden: [hidden_path_test.py, hidden_find_test.py, hidden_swap_test.py]}
+  - prompt: >-
+      Give Zipper value semantics: `==` compares two zippers by path and by the complete tree (so
+      `z.left().up() == z` and two zippers built from equal trees are equal, a different focus or
+      value is not), comparison with other types is simply False, and `repr` looks like
+      `Zipper(path=['left', 'right'], value=3)`.
+    checks:
+      - {kind: tests, runner: python, files: [zipper_test.py, hidden_path_test.py, hidden_find_test.py, hidden_swap_test.py, hidden_eq_test.py], restore: [zipper_test.py], hidden: [hidden_path_test.py, hidden_find_test.py, hidden_swap_test.py, hidden_eq_test.py]}
+  - prompt: >-
+      Add a class docstring to `Zipper` that explains the immutability, what `left`/`right`/`up`
+      return at dead ends, and the helper methods `path`, `depth`, `find`, `root`, `swap_children` and
+      `mirror`. Docstring only.
+    checks:
+      - {kind: file_regex, path: zipper.py, pattern: 'class Zipper:\n\s+"""(?=(?s:(?:(?!""").)*)None)(?=(?s:(?:(?!""").)*)find)(?=(?s:(?:(?!""").)*)mirror)'}
+      - {kind: tests, runner: python, files: [zipper_test.py, hidden_path_test.py, hidden_find_test.py, hidden_swap_test.py, hidden_eq_test.py], restore: [zipper_test.py], hidden: [hidden_path_test.py, hidden_find_test.py, hidden_swap_test.py, hidden_eq_test.py]}
+  - prompt: >-
+      Add your own test file `zipper_extra_test.py` (unittest) with at least four tests covering
+      `path`/`depth`, `find`, `mirror` and equality. Run it together with the shipped tests.
+    checks:
+      - {kind: file_regex, path: zipper_extra_test.py, pattern: ^    def test_, min_count: 4}
+      - {kind: tests, runner: python, files: [zipper_test.py, zipper_extra_test.py], restore: [zipper_test.py]}
+  - prompt: >-
+      Question only: what is the time cost of `left()`, `up()` and `to_tree()` in this design for a
+      tree of depth d, and what are the memory implications of keeping the old zipper around after an
+      edit (structural sharing)? Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [O\(, depth|d\b, shar], any: [to_tree, copy, immutable|persistent]}
+  - prompt: >-
+      Refactor zipper.py without changing behaviour: the bodies of `left()` and `right()` are mirror
+      images; replace them by one private method `_descend(side, other_side)` that both call. All
+      earlier checks must still pass.
+    checks:
+      - {kind: file_regex, path: zipper.py, pattern: 'def _descend\(self, side, other_side\)'}
+      - {kind: tests, runner: python, files: [zipper_test.py, hidden_path_test.py, hidden_find_test.py, hidden_swap_test.py, hidden_eq_test.py], restore: [zipper_test.py], hidden: [hidden_path_test.py, hidden_find_test.py, hidden_swap_test.py, hidden_eq_test.py]}
+  - prompt: >-
+      Review the changes you made in this session as a code reviewer would: list each file you changed
+      or added, what changed, and any remaining edge case you did not cover. Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [zipper\.py, test], any: [edge, risk, not cover, remaining]}

@@ -1,0 +1,268 @@
+# holdout-v3 polyglot: go-cryptosquare -- 11 turns, 2 idle gap(s) of 420s before turns 5, 9.
+id: go-cryptosquare
+task_type: feature
+language: go
+split: holdout
+default_gap_s: 10
+source:
+  desc: >-
+    Aider polyglot-benchmark go/crypto-square (Exercism), outside the S2 slice; grown with decoding,
+    rows, options, Unicode and refactoring turns
+  repo: https://github.com/Aider-AI/polyglot-benchmark
+  sha: 7e0611e77b54e2dea774cdc0aa00cf9f7ed6144f
+workspace:
+  kind: git
+  repo: https://github.com/Aider-AI/polyglot-benchmark
+  sha: 7e0611e77b54e2dea774cdc0aa00cf9f7ed6144f
+  subdir: go/exercises/practice/crypto-square
+  local_hint: ~/dev/afast-campaign-corrected-polyglot-20260919/polyglot/polyglot-benchmark
+  remove:
+  - .meta
+protected: [crypto_square_test.go]
+hidden_files:
+  hidden_decode_test.go: |
+    package cryptosquare
+
+    import (
+    	"strings"
+    	"testing"
+    )
+
+    func hv3Norm(s string) string {
+    	var b strings.Builder
+    	for _, r := range strings.ToLower(s) {
+    		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') {
+    			b.WriteRune(r)
+    		}
+    	}
+    	return b.String()
+    }
+
+    func TestHiddenDecodeKnown(t *testing.T) {
+    	cases := map[string]string{
+    		"su pn lk":    "splunk",
+    		"13 2 ":       "123",
+    		"1 2":         "12",
+    		"147 258 36 ": "12345678",
+    		"1":           "1",
+    		"":            "",
+    	}
+    	for cipher, want := range cases {
+    		if got := Decode(cipher); got != want {
+    			t.Fatalf("Decode(%q) = %q, want %q", cipher, got, want)
+    		}
+    	}
+    }
+
+    func TestHiddenDecodeRoundTrip(t *testing.T) {
+    	for _, tc := range tests {
+    		if got, want := Decode(Encode(tc.input)), hv3Norm(tc.input); got != want {
+    			t.Fatalf("Decode(Encode(%q)) = %q, want %q", tc.input, got, want)
+    		}
+    	}
+    }
+
+    func TestHiddenDecodeInvalid(t *testing.T) {
+    	for _, cipher := range []string{"abc de", "ab cd e", "abcdefghij"} {
+    		if got := Decode(cipher); got != "" {
+    			t.Fatalf("Decode(%q) = %q, want an empty string", cipher, got)
+    		}
+    	}
+    }
+  hidden_rows_test.go: |
+    package cryptosquare
+
+    import (
+    	"reflect"
+    	"strings"
+    	"testing"
+    )
+
+    func hv3NormR(s string) string {
+    	var b strings.Builder
+    	for _, r := range strings.ToLower(s) {
+    		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') {
+    			b.WriteRune(r)
+    		}
+    	}
+    	return b.String()
+    }
+
+    func TestHiddenRowsKnown(t *testing.T) {
+    	cases := []struct {
+    		in   string
+    		want []string
+    	}{
+    		{"splunk", []string{"spl", "unk"}},
+    		{"12 3", []string{"12", "3"}},
+    		{"1", []string{"1"}},
+    		{"12345678", []string{"123", "456", "78"}},
+    		{"", nil},
+    	}
+    	for _, tc := range cases {
+    		if got := Rows(tc.in); !reflect.DeepEqual(got, tc.want) {
+    			t.Fatalf("Rows(%q) = %#v, want %#v", tc.in, got, tc.want)
+    		}
+    	}
+    }
+
+    func TestHiddenRowsShape(t *testing.T) {
+    	for _, tc := range tests {
+    		rows := Rows(tc.input)
+    		if joined := strings.Join(rows, ""); joined != hv3NormR(tc.input) {
+    			t.Fatalf("Rows(%q) joined = %q", tc.input, joined)
+    		}
+    		if len(rows) == 0 {
+    			continue
+    		}
+    		c := len(rows[0])
+    		for i, row := range rows {
+    			if i < len(rows)-1 && len(row) != c {
+    				t.Fatalf("Rows(%q): row %d has %d chars, want %d", tc.input, i, len(row), c)
+    			}
+    		}
+    		if last := len(rows[len(rows)-1]); last < 1 || last > c {
+    			t.Fatalf("Rows(%q): last row has %d chars", tc.input, last)
+    		}
+    		if d := c - len(rows); d < 0 || d > 1 {
+    			t.Fatalf("Rows(%q): %d columns and %d rows is not a near square", tc.input, c, len(rows))
+    		}
+    	}
+    }
+  hidden_options_test.go: |
+    package cryptosquare
+
+    import "testing"
+
+    func TestHiddenEncodeWithOptions(t *testing.T) {
+    	cases := []struct {
+    		in   string
+    		o    Options
+    		want string
+    	}{
+    		{"splunk", Options{Separator: "-"}, "su-pn-lk"},
+    		{"12 3", Options{Separator: "-", Pad: '_'}, "13-2_"},
+    		{"123456789a", Options{Pad: '.'}, "159 26a 37. 48."},
+    		{"12 3", Options{}, "13 2 "},
+    		{"", Options{Separator: "-"}, ""},
+    	}
+    	for _, tc := range cases {
+    		if got := EncodeWithOptions(tc.in, tc.o); got != tc.want {
+    			t.Fatalf("EncodeWithOptions(%q, %+v) = %q, want %q", tc.in, tc.o, got, tc.want)
+    		}
+    	}
+    }
+
+    func TestHiddenZeroOptionsEqualEncode(t *testing.T) {
+    	for _, tc := range tests {
+    		if got := EncodeWithOptions(tc.input, Options{}); got != tc.expected {
+    			t.Fatalf("EncodeWithOptions(%q, Options{}) = %q, want %q", tc.input, got, tc.expected)
+    		}
+    	}
+    }
+  hidden_unicode_test.go: |
+    package cryptosquare
+
+    import "testing"
+
+    func TestHiddenUnicodeLetters(t *testing.T) {
+    	cases := map[string]string{
+    		"\u00c4\u00f6 \u00fc":    "\u00e4\u00fc \u00f6 ",
+    		"\u00c9COLE!":               "\u00e9l ce o ",
+    		"a\u20acb":                  "a b",
+    		"Stra\u00dfe 42":            "sa4 t\u00df2 re ",
+    	}
+    	for in, want := range cases {
+    		if got := Encode(in); got != want {
+    			t.Fatalf("Encode(%q) = %q, want %q", in, got, want)
+    		}
+    	}
+    }
+
+    func TestHiddenUnicodeRoundTrip(t *testing.T) {
+    	if got := Decode(Encode("\u00c4\u00f6 \u00fc")); got != "\u00e4\u00f6\u00fc" {
+    		t.Fatalf("round trip = %q", got)
+    	}
+    	if got := Rows("\u00c9COLE!"); len(got) != 2 || got[0] != "\u00e9co" || got[1] != "le" {
+    		t.Fatalf("Rows = %#v", got)
+    	}
+    }
+turns:
+  - prompt: >-
+      Implement `Encode(pt string) string` in crypto_square.go as described in .docs/instructions.md
+      (square code): normalize the text (letters and digits only, lower case), put it into the
+      smallest rectangle with c columns and r rows such that c >= r and c - r <= 1, read it down the
+      columns, pad short columns with a space and join the columns with one space. Run the tests with
+      `go test ./...` (the provided test file must stay unchanged).
+    checks:
+      - {kind: tests, runner: go, restore: [crypto_square_test.go]}
+  - prompt: >-
+      In three to five sentences explain how you pick the number of columns and rows for n characters,
+      why short columns are padded with spaces, and what Encode returns for an empty text. Do not
+      change any files.
+    checks:
+      - {kind: keyed_facts, all: [column, row, pad, empty], any: [sqrt|square root, ceil, n]}
+  - prompt: >-
+      Add `func Decode(cipher string) string` that reverses Encode: it returns the normalized text (no
+      padding). Derive the rectangle from the cipher's length (every chunk has r characters, there are
+      c-1 separators), and return an empty string for text that is not a valid square code (for
+      example `"abc de"`, `"ab cd e"` or `"abcdefghij"`). `Decode(Encode(x))` must equal the
+      normalized x for all the shipped inputs.
+    checks:
+      - {kind: tests, runner: go, restore: [crypto_square_test.go], hidden: [hidden_decode_test.go]}
+  - prompt: >-
+      Add `func Rows(pt string) []string` that returns the normalized text split into the rows of the
+      rectangle (all rows have c characters, the last one may be shorter): `Rows("splunk")` is
+      `["spl", "unk"]`, `Rows("12 3")` is `["12", "3"]` and the empty text gives nil.
+    checks:
+      - {kind: tests, runner: go, restore: [crypto_square_test.go], hidden: [hidden_decode_test.go, hidden_rows_test.go]}
+  - prompt: >-
+      Add an options variant: `type Options struct { Separator string; Pad rune }` and
+      `EncodeWithOptions(pt string, o Options) string`. An empty Separator means a space and a zero
+      Pad means a space, so the zero Options give exactly Encode's output (and Encode should simply
+      use it). For example `Options{Separator: "-"}` turns `splunk` into `su-pn-lk` and
+      `Options{Separator: "-", Pad: '_'}` turns `12 3` into `13-2_`.
+    gap_before_s: 420
+    checks:
+      - {kind: tests, runner: go, restore: [crypto_square_test.go], hidden: [hidden_decode_test.go, hidden_rows_test.go, hidden_options_test.go]}
+  - prompt: >-
+      Encode drops letters that are not ASCII: `Encode("\u00c4\u00f6 \u00fc")` should be
+      `"\u00e4\u00fc \u00f6 "` (normalization keeps every Unicode letter and digit, lower-cased, and
+      counts characters, not bytes), `Encode("\u00c9COLE!")` is `"\u00e9l ce o "` and symbols like the
+      euro sign are still removed. `Decode` and `Rows` must work with such text as well.
+    checks:
+      - {kind: tests, runner: go, restore: [crypto_square_test.go], hidden: [hidden_decode_test.go, hidden_rows_test.go, hidden_options_test.go, hidden_unicode_test.go]}
+  - prompt: >-
+      Add Go doc comments to the exported API in crypto_square.go (`Encode`, `Decode`, `Rows`,
+      `Options`, `EncodeWithOptions`) explaining the arguments, the rectangle rule and the
+      empty-string results. Comments only.
+    checks:
+      - {kind: file_regex, path: crypto_square.go, pattern: '(?m)^// Encode [^\n]*\n(?://[^\n]*\n)*func Encode'}
+      - {kind: file_regex, path: crypto_square.go, pattern: '(?m)^// Decode [^\n]*\n(?://[^\n]*\n)*func Decode'}
+      - {kind: tests, runner: go, restore: [crypto_square_test.go], hidden: [hidden_decode_test.go, hidden_rows_test.go, hidden_options_test.go, hidden_unicode_test.go]}
+  - prompt: >-
+      Add your own tests in a new file `extra_test.go` (package cryptosquare) with at least four `func
+      Test...` functions covering Encode, a Decode round trip, Rows and the empty input. Run `go test
+      ./...`.
+    checks:
+      - {kind: file_regex, path: extra_test.go, pattern: ^func Test, min_count: 4}
+      - {kind: tests, runner: go, restore: [crypto_square_test.go]}
+  - prompt: >-
+      Question only: what is the time and memory complexity of Encode for a text of n characters, and
+      where does a naive version that builds the result with `+=` string concatenation become slow? Do
+      not change any files.
+    gap_before_s: 420
+    checks:
+      - {kind: keyed_facts, all: [O\(n, Builder|strings\.Builder, concatenat|\+=], any: [quadratic|n\^2|O\(n\^2\), allocat|copy]}
+  - prompt: >-
+      Refactor crypto_square.go without changing behaviour: move the computation of the rectangle into
+      a small helper `rectangle(n int) (cols, rows int)` used by the encoder (and keep the doc
+      comments). All earlier checks must still pass.
+    checks:
+      - {kind: file_regex, path: crypto_square.go, pattern: 'func rectangle\(n int\) \(cols, rows int\)'}
+      - {kind: tests, runner: go, restore: [crypto_square_test.go], hidden: [hidden_decode_test.go, hidden_rows_test.go, hidden_options_test.go, hidden_unicode_test.go]}
+  - prompt: >-
+      Review the changes you made in this session as a code reviewer would: list each file you changed
+      or added, what changed, and any remaining edge case you did not cover. Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [crypto_square\.go, test], any: [edge, risk, not cover, remaining]}

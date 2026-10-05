@@ -1,0 +1,153 @@
+# holdout-v3 repos: peewee-filterfk -- 9 turns, short gaps.
+id: peewee-filterfk
+task_type: bugfix
+language: python
+split: holdout
+default_gap_s: 10
+source:
+  desc: >-
+    coleifer/peewee, filter() on a lookup path ending in None skipped the foreign key joins (stopped
+    one short), fixed upstream in c7f0cd45; workspace is its parent
+  repo: https://github.com/coleifer/peewee.git
+  sha: 1f7c96dbe3d84f187f5afa893bf6b59b3a495811
+  fix_sha: c7f0cd45dbd60e91f1acd0ff8e5c1cea20a22722
+workspace:
+  kind: git
+  repo: https://github.com/coleifer/peewee.git
+  sha: 1f7c96dbe3d84f187f5afa893bf6b59b3a495811
+  local_hint: ~/dev/afast-v3-src/peewee
+hidden_files:
+  tests/model_sql.py:
+    from_git:
+      repo: https://github.com/coleifer/peewee.git
+      sha: c7f0cd45dbd60e91f1acd0ff8e5c1cea20a22722
+      path: tests/model_sql.py
+      local_hint: ~/dev/afast-v3-src/peewee
+  tests/models.py:
+    from_git:
+      repo: https://github.com/coleifer/peewee.git
+      sha: c7f0cd45dbd60e91f1acd0ff8e5c1cea20a22722
+      path: tests/models.py
+      local_hint: ~/dev/afast-v3-src/peewee
+  tests/test_filter_isnull_hidden.py: |
+    import unittest
+
+    from peewee import CharField, ForeignKeyField, Model, SqliteDatabase, TextField
+
+    db = SqliteDatabase(":memory:")
+
+
+    class Base(Model):
+        class Meta:
+            database = db
+
+
+    class User(Base):
+        username = CharField(null=True)
+
+
+    class Tweet(Base):
+        user = ForeignKeyField(User, null=True, backref="tweets")
+        content = TextField(null=True)
+
+
+    class TestIsNull(unittest.TestCase):
+        def setUp(self):
+            db.connect(reuse_if_open=True)
+            db.create_tables([User, Tweet])
+            a = User.create(username="a")
+            b = User.create(username=None)
+            Tweet.create(user=a, content="x")
+            Tweet.create(user=b, content=None)
+            Tweet.create(user=None, content="z")
+
+        def tearDown(self):
+            db.drop_tables([Tweet, User])
+
+        def _contents(self, query):
+            return sorted(str(t.content) for t in query)
+
+        def test_isnull_true(self):
+            self.assertEqual(self._contents(Tweet.select().filter(content__isnull=True)), ["None"])
+
+        def test_isnull_false(self):
+            self.assertEqual(self._contents(Tweet.select().filter(content__isnull=False)), ["x", "z"])
+
+        def test_isnull_across_a_join(self):
+            query = Tweet.select().filter(user__username__isnull=False)
+            self.assertEqual(self._contents(query), ["x"])
+            query = Tweet.select().filter(user__username__isnull=True)
+            self.assertEqual(self._contents(query), ["None"])
+
+        def test_sql_uses_is_null_and_is_not_null(self):
+            sql, _ = Tweet.select().filter(content__isnull=True).sql()
+            self.assertIn("IS NULL", sql)
+            sql, _ = Tweet.select().filter(content__isnull=False).sql()
+            self.assertIn("IS NOT NULL", sql)
+
+        def test_existing_is_null_spelling_still_works(self):
+            self.assertEqual(self._contents(Tweet.select().filter(content__is_null=True)), ["None"])
+turns:
+  - prompt: >-
+      peewee's Django-style `filter()` builds the wrong query when a lookup path ends in `None`. With
+      `Tweet.user` a foreign key to `User`, `Tweet.select().filter(user__username=None)` should join
+      `user` and test `username IS NULL`, but the join is skipped. And
+      `Favorite.select().filter(tweet__user=None)` (or `tweet__user=3`) should compare the
+      `tweet.user_id` column of the joined tweet table and not join the `user` table at all. Please
+      find the cause in `peewee.py` (look at how filter kwargs are converted to nodes) and fix it. Run
+      the tests from this directory with `python3 -m pytest -q tests/model_sql.py
+      "tests/models.py::TestDjangoFilterRegression"`.
+    checks:
+      - {kind: tests, runner: python, files: [tests/model_sql.py, 'tests/models.py::TestDjangoFilterRegression'], hidden: [tests/model_sql.py, tests/models.py]}
+  - prompt: >-
+      In three to five sentences explain the root cause: which method walks the `__` path, what
+      condition decided whether to follow a foreign key, and why `None` broke it. Do not change any
+      files.
+    checks:
+      - {kind: keyed_facts, all: [convert_dict_to_node, None, foreign key|fk|ForeignKey], any: [value is not None, join, last, piece]}
+  - prompt: >-
+      Add a test file `tests/test_filter_none_paths.py` that defines tiny models (User, Tweet with a
+      nullable user foreign key, Favorite) on an in-memory SqliteDatabase and checks real query
+      results, not only SQL text: None at the end of a path returns the tweet whose user has no
+      username, `tweet__user=None` finds favorites whose tweet has no user (without joining the user
+      table), a foreign key id compares the column, and a plain value path still joins. At least four
+      tests. Run it.
+    checks:
+      - {kind: file_regex, path: tests/test_filter_none_paths.py, pattern: ^    def test_, min_count: 4}
+      - {kind: tests, runner: python, files: [tests/test_filter_none_paths.py]}
+  - prompt: >-
+      Django spells the null lookup `isnull`, while peewee's filter() only knows `is_null`. Accept
+      `isnull` too: `filter(content__isnull=True)` gives `IS NULL`, `filter(content__isnull=False)`
+      gives `IS NOT NULL`, and it must work across joins (`user__username__isnull=False`). Keep
+      `is_null` working. Do it in peewee.py.
+    checks:
+      - {kind: tests, runner: python, files: [tests/test_filter_isnull_hidden.py, tests/model_sql.py], hidden: [tests/test_filter_isnull_hidden.py, tests/model_sql.py]}
+  - prompt: >-
+      Add an entry to the `## master` section of CHANGELOG.md (in the Improvements list) covering both
+      changes: `filter()` with a path ending in None now joins correctly, and the `isnull` lookup
+      alias. Same bullet style as the entries there.
+    checks:
+      - {kind: file_regex, path: CHANGELOG.md, pattern: '^## master\n(?:(?!## 4\.4\.0).*\n)*?\* .*(?i:filter).*(?i:isnull|none)'}
+  - prompt: >-
+      Question only: where is the table of supported Django-style lookups defined in peewee.py, which
+      lookups does it contain (name a few, including the null and range ones), and which method turns
+      the filter kwargs into query nodes? Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [DJANGO_MAP, is_null, between, convert_dict_to_node, peewee\.py]}
+  - prompt: >-
+      Give `ModelSelect.convert_dict_to_node` a docstring: what it receives (a dict of Django-style
+      lookups), what it returns (the list of expressions and the list of foreign keys to join), and
+      the rule for following foreign keys along a `__` path. Docstring only.
+    checks:
+      - {kind: file_regex, path: peewee.py, pattern: 'def convert_dict_to_node\(self, qdict\):\n\s+"""'}
+      - {kind: tests, runner: python, files: [tests/model_sql.py], hidden: [tests/model_sql.py]}
+  - prompt: >-
+      Run the model SQL tests, the Django filter regression tests and your new test file together and
+      report the totals (passed / failed). Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [model_sql, TestDjangoFilterRegression|models\.py, \d+ passed]}
+  - prompt: >-
+      Review the changes you made in this session as a code reviewer would: list each file you changed
+      or added, what changed, and any remaining edge case you did not cover. Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [peewee\.py, CHANGELOG, test], any: [edge, risk, not cover, remaining]}

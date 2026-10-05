@@ -1,0 +1,2019 @@
+[
+ {
+  "id": "go-bowling",
+  "problems": [],
+  "notes": [],
+  "weak": [],
+  "turns": [
+   {
+    "turn": 1,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 2,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 3,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 4,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 5,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 6,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 7,
+    "checks": 4,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 8,
+    "checks": 3,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 9,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 10,
+    "checks": 3,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 11,
+    "checks": 4,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 12,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 13,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 14,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   }
+  ],
+  "family": "polyglot",
+  "language": "go",
+  "task_type": "feature",
+  "n_turns": 14,
+  "gaps": [
+   0,
+   10,
+   10,
+   10,
+   10,
+   10,
+   10,
+   10,
+   10,
+   10,
+   10,
+   10,
+   10,
+   10
+  ],
+  "long_gaps": 0,
+  "split": "holdout",
+  "tree": "0400605cbc37",
+  "files": 5,
+  "scenario_hash": "fc2108bef582",
+  "start_turn1": [
+   "build_failed"
+  ],
+  "guarded_runs": 17,
+  "kills": 0,
+  "peak_gb": 0.0,
+  "runtime_s": 13.4,
+  "mem_free_before_pct": 87
+ },
+ {
+  "id": "go-cryptosquare",
+  "problems": [],
+  "notes": [],
+  "weak": [],
+  "turns": [
+   {
+    "turn": 1,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 2,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 3,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 4,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 5,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 6,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 7,
+    "checks": 4,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 8,
+    "checks": 3,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 9,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 10,
+    "checks": 3,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 11,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   }
+  ],
+  "family": "polyglot",
+  "language": "go",
+  "task_type": "feature",
+  "n_turns": 11,
+  "gaps": [
+   0,
+   10,
+   10,
+   10,
+   420,
+   10,
+   10,
+   10,
+   420,
+   10,
+   10
+  ],
+  "long_gaps": 2,
+  "split": "holdout",
+  "tree": "65becf853113",
+  "files": 4,
+  "scenario_hash": "5fd6129a96a5",
+  "start_turn1": [
+   "go_test_failures"
+  ],
+  "guarded_runs": 17,
+  "kills": 0,
+  "peak_gb": 0.032,
+  "runtime_s": 13.8,
+  "mem_free_before_pct": 87
+ },
+ {
+  "id": "js-linkedlist",
+  "problems": [],
+  "notes": [],
+  "weak": [],
+  "turns": [
+   {
+    "turn": 1,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 2,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 3,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 4,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 5,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 6,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 7,
+    "checks": 3,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 8,
+    "checks": 3,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 9,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 10,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 11,
+    "checks": 4,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 12,
+    "checks": 4,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 13,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 14,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   }
+  ],
+  "family": "polyglot",
+  "language": "javascript",
+  "task_type": "feature",
+  "n_turns": 14,
+  "gaps": [
+   0,
+   10,
+   10,
+   10,
+   10,
+   10,
+   10,
+   10,
+   10,
+   10,
+   10,
+   10,
+   10,
+   10
+  ],
+  "long_gaps": 0,
+  "split": "holdout",
+  "tree": "52fdaefed263",
+  "files": 9,
+  "scenario_hash": "f46e4a141cf7",
+  "start_turn1": [
+   "cmd_failed"
+  ],
+  "guarded_runs": 19,
+  "kills": 0,
+  "peak_gb": 0.0,
+  "runtime_s": 15.3,
+  "mem_free_before_pct": 86
+ },
+ {
+  "id": "js-queenattack",
+  "problems": [],
+  "notes": [],
+  "weak": [],
+  "turns": [
+   {
+    "turn": 1,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 2,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 3,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 4,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 5,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 6,
+    "checks": 3,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 7,
+    "checks": 3,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 8,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 9,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 10,
+    "checks": 3,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 11,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   }
+  ],
+  "family": "polyglot",
+  "language": "javascript",
+  "task_type": "feature",
+  "n_turns": 11,
+  "gaps": [
+   0,
+   10,
+   10,
+   10,
+   10,
+   10,
+   10,
+   10,
+   10,
+   10,
+   10
+  ],
+  "long_gaps": 0,
+  "split": "holdout",
+  "tree": "2ea6fc3258a6",
+  "files": 9,
+  "scenario_hash": "75e31aa866f9",
+  "start_turn1": [
+   "cmd_failed"
+  ],
+  "guarded_runs": 17,
+  "kills": 0,
+  "peak_gb": 0.0,
+  "runtime_s": 13.2,
+  "mem_free_before_pct": 87
+ },
+ {
+  "id": "py-dotdsl",
+  "problems": [],
+  "notes": [],
+  "weak": [],
+  "turns": [
+   {
+    "turn": 1,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 2,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 3,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 4,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 5,
+    "checks": 3,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 6,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 7,
+    "checks": 3,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 8,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 9,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 10,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 11,
+    "checks": 3,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 12,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   }
+  ],
+  "family": "polyglot",
+  "language": "python",
+  "task_type": "feature",
+  "n_turns": 12,
+  "gaps": [
+   0,
+   10,
+   10,
+   10,
+   10,
+   10,
+   10,
+   10,
+   10,
+   10,
+   10,
+   10
+  ],
+  "long_gaps": 0,
+  "split": "holdout",
+  "tree": "0cf11cfeda2a",
+  "files": 4,
+  "scenario_hash": "fff22ad1fd2a",
+  "start_turn1": [
+   "pytest_failures"
+  ],
+  "guarded_runs": 19,
+  "kills": 0,
+  "peak_gb": 0.0,
+  "runtime_s": 16.9,
+  "mem_free_before_pct": 87
+ },
+ {
+  "id": "py-gradeschool",
+  "problems": [],
+  "notes": [],
+  "weak": [],
+  "turns": [
+   {
+    "turn": 1,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 2,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 3,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 4,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 5,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 6,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 7,
+    "checks": 3,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 8,
+    "checks": 3,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 9,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 10,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   }
+  ],
+  "family": "polyglot",
+  "language": "python",
+  "task_type": "feature",
+  "n_turns": 10,
+  "gaps": [
+   0,
+   10,
+   10,
+   10,
+   10,
+   10,
+   10,
+   10,
+   10,
+   10
+  ],
+  "long_gaps": 0,
+  "split": "holdout",
+  "tree": "d212561229a3",
+  "files": 4,
+  "scenario_hash": "fbbc006fc99e",
+  "start_turn1": [
+   "pytest_failures"
+  ],
+  "guarded_runs": 15,
+  "kills": 0,
+  "peak_gb": 0.0,
+  "runtime_s": 12.0,
+  "mem_free_before_pct": 87
+ },
+ {
+  "id": "py-grep",
+  "problems": [],
+  "notes": [],
+  "weak": [],
+  "turns": [
+   {
+    "turn": 1,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 2,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 3,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 4,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 5,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 6,
+    "checks": 3,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 7,
+    "checks": 3,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 8,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 9,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 10,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 11,
+    "checks": 3,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 12,
+    "checks": 4,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 13,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 14,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 15,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 16,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   }
+  ],
+  "family": "polyglot",
+  "language": "python",
+  "task_type": "feature",
+  "n_turns": 16,
+  "gaps": [
+   0,
+   10,
+   10,
+   10,
+   10,
+   10,
+   10,
+   10,
+   10,
+   10,
+   10,
+   10,
+   10,
+   10,
+   10,
+   10
+  ],
+  "long_gaps": 0,
+  "split": "holdout",
+  "tree": "e4cff6b283d9",
+  "files": 3,
+  "scenario_hash": "5c4eff311ac8",
+  "start_turn1": [
+   "pytest_failures"
+  ],
+  "guarded_runs": 19,
+  "kills": 0,
+  "peak_gb": 0.0,
+  "runtime_s": 13.9,
+  "mem_free_before_pct": 87
+ },
+ {
+  "id": "py-zipper",
+  "problems": [],
+  "notes": [],
+  "weak": [],
+  "turns": [
+   {
+    "turn": 1,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 2,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 3,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 4,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 5,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 6,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 7,
+    "checks": 3,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 8,
+    "checks": 3,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 9,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 10,
+    "checks": 3,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 11,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   }
+  ],
+  "family": "polyglot",
+  "language": "python",
+  "task_type": "feature",
+  "n_turns": 11,
+  "gaps": [
+   0,
+   10,
+   10,
+   10,
+   10,
+   10,
+   10,
+   10,
+   10,
+   10,
+   10
+  ],
+  "long_gaps": 0,
+  "split": "holdout",
+  "tree": "9378758cc002",
+  "files": 3,
+  "scenario_hash": "964436bf69ac",
+  "start_turn1": [
+   "pytest_failures"
+  ],
+  "guarded_runs": 17,
+  "kills": 0,
+  "peak_gb": 0.0,
+  "runtime_s": 13.4,
+  "mem_free_before_pct": 87
+ },
+ {
+  "id": "bottle-etag",
+  "problems": [],
+  "notes": [],
+  "weak": [],
+  "turns": [
+   {
+    "turn": 1,
+    "checks": 1,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 2,
+    "checks": 1,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 3,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 4,
+    "checks": 1,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 5,
+    "checks": 1,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 6,
+    "checks": 1,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 7,
+    "checks": 1,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 8,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 9,
+    "checks": 1,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 10,
+    "checks": 1,
+    "ref_pass": true,
+    "pre_fail": true
+   }
+  ],
+  "family": "repos",
+  "language": "python",
+  "task_type": "bugfix",
+  "n_turns": 10,
+  "gaps": [
+   0,
+   10,
+   10,
+   10,
+   10,
+   10,
+   10,
+   10,
+   10,
+   10
+  ],
+  "long_gaps": 0,
+  "split": "holdout",
+  "tree": "fcf1ca9ee5ec",
+  "files": 219,
+  "scenario_hash": "cf4c7af9f3d0",
+  "start_turn1": [
+   "pytest_failures"
+  ],
+  "guarded_runs": 11,
+  "kills": 0,
+  "peak_gb": 0.0,
+  "runtime_s": 10.9,
+  "mem_free_before_pct": 87
+ },
+ {
+  "id": "faker-nonutf-cli",
+  "problems": [],
+  "notes": [],
+  "weak": [],
+  "turns": [
+   {
+    "turn": 1,
+    "checks": 1,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 2,
+    "checks": 1,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 3,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 4,
+    "checks": 1,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 5,
+    "checks": 1,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 6,
+    "checks": 1,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 7,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 8,
+    "checks": 1,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 9,
+    "checks": 1,
+    "ref_pass": true,
+    "pre_fail": true
+   }
+  ],
+  "family": "repos",
+  "language": "python",
+  "task_type": "bugfix",
+  "n_turns": 9,
+  "gaps": [
+   0,
+   10,
+   10,
+   10,
+   10,
+   10,
+   10,
+   10,
+   10
+  ],
+  "long_gaps": 0,
+  "split": "holdout",
+  "tree": "1390f2515ef4",
+  "files": 818,
+  "scenario_hash": "d422004e3d20",
+  "start_turn1": [
+   "pytest_failures"
+  ],
+  "guarded_runs": 9,
+  "kills": 0,
+  "peak_gb": 0.134,
+  "runtime_s": 27.6,
+  "mem_free_before_pct": 87
+ },
+ {
+  "id": "falcon-regexconv",
+  "problems": [],
+  "notes": [],
+  "weak": [],
+  "turns": [
+   {
+    "turn": 1,
+    "checks": 1,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 2,
+    "checks": 1,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 3,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 4,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 5,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 6,
+    "checks": 1,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 7,
+    "checks": 1,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 8,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 9,
+    "checks": 1,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 10,
+    "checks": 1,
+    "ref_pass": true,
+    "pre_fail": true
+   }
+  ],
+  "family": "repos",
+  "language": "python",
+  "task_type": "feature",
+  "n_turns": 10,
+  "gaps": [
+   0,
+   10,
+   10,
+   10,
+   420,
+   10,
+   10,
+   10,
+   420,
+   10
+  ],
+  "long_gaps": 2,
+  "split": "holdout",
+  "tree": "817decbd4af3",
+  "files": 436,
+  "scenario_hash": "0ea317ae4776",
+  "start_turn1": [
+   "pytest_failures"
+  ],
+  "guarded_runs": 11,
+  "kills": 0,
+  "peak_gb": 0.053,
+  "runtime_s": 14.3,
+  "mem_free_before_pct": 87
+ },
+ {
+  "id": "fpdf2-booldict",
+  "problems": [],
+  "notes": [],
+  "weak": [],
+  "turns": [
+   {
+    "turn": 1,
+    "checks": 1,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 2,
+    "checks": 1,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 3,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 4,
+    "checks": 1,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 5,
+    "checks": 1,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 6,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 7,
+    "checks": 1,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 8,
+    "checks": 1,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 9,
+    "checks": 1,
+    "ref_pass": true,
+    "pre_fail": true
+   }
+  ],
+  "family": "repos",
+  "language": "python",
+  "task_type": "bugfix",
+  "n_turns": 9,
+  "gaps": [
+   0,
+   10,
+   10,
+   10,
+   10,
+   10,
+   10,
+   10,
+   10
+  ],
+  "long_gaps": 0,
+  "split": "holdout",
+  "tree": "be1e24e9d980",
+  "files": 1615,
+  "scenario_hash": "14a52a67ea89",
+  "start_turn1": [
+   "pytest_failures"
+  ],
+  "guarded_runs": 9,
+  "kills": 0,
+  "peak_gb": 0.094,
+  "runtime_s": 24.8,
+  "mem_free_before_pct": 87
+ },
+ {
+  "id": "jsonschema-jsonpath",
+  "problems": [],
+  "notes": [],
+  "weak": [],
+  "turns": [
+   {
+    "turn": 1,
+    "checks": 1,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 2,
+    "checks": 1,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 3,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 4,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 5,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 6,
+    "checks": 1,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 7,
+    "checks": 1,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 8,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 9,
+    "checks": 1,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 10,
+    "checks": 1,
+    "ref_pass": true,
+    "pre_fail": true
+   }
+  ],
+  "family": "repos",
+  "language": "python",
+  "task_type": "bugfix",
+  "n_turns": 10,
+  "gaps": [
+   0,
+   10,
+   10,
+   10,
+   10,
+   10,
+   10,
+   10,
+   10,
+   10
+  ],
+  "long_gaps": 0,
+  "split": "holdout",
+  "tree": "3a5539b46d75",
+  "files": 628,
+  "scenario_hash": "e46db57e4082",
+  "start_turn1": [
+   "pytest_failures"
+  ],
+  "guarded_runs": 9,
+  "kills": 0,
+  "peak_gb": 0.0,
+  "runtime_s": 12.1,
+  "mem_free_before_pct": 87
+ },
+ {
+  "id": "peewee-filterfk",
+  "problems": [],
+  "notes": [],
+  "weak": [],
+  "turns": [
+   {
+    "turn": 1,
+    "checks": 1,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 2,
+    "checks": 1,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 3,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 4,
+    "checks": 1,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 5,
+    "checks": 1,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 6,
+    "checks": 1,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 7,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 8,
+    "checks": 1,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 9,
+    "checks": 1,
+    "ref_pass": true,
+    "pre_fail": true
+   }
+  ],
+  "family": "repos",
+  "language": "python",
+  "task_type": "bugfix",
+  "n_turns": 9,
+  "gaps": [
+   0,
+   10,
+   10,
+   10,
+   10,
+   10,
+   10,
+   10,
+   10
+  ],
+  "long_gaps": 0,
+  "split": "holdout",
+  "tree": "76dbc67fcc9f",
+  "files": 194,
+  "scenario_hash": "4a5145b92bc6",
+  "start_turn1": [
+   "pytest_failures"
+  ],
+  "guarded_runs": 9,
+  "kills": 0,
+  "peak_gb": 0.116,
+  "runtime_s": 14.2,
+  "mem_free_before_pct": 87
+ },
+ {
+  "id": "pyg-rawtoken",
+  "problems": [],
+  "notes": [],
+  "weak": [],
+  "turns": [
+   {
+    "turn": 1,
+    "checks": 1,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 2,
+    "checks": 1,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 3,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 4,
+    "checks": 1,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 5,
+    "checks": 1,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 6,
+    "checks": 1,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 7,
+    "checks": 1,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 8,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 9,
+    "checks": 1,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 10,
+    "checks": 1,
+    "ref_pass": true,
+    "pre_fail": true
+   }
+  ],
+  "family": "repos",
+  "language": "python",
+  "task_type": "bugfix",
+  "n_turns": 10,
+  "gaps": [
+   0,
+   10,
+   10,
+   10,
+   420,
+   10,
+   10,
+   420,
+   10,
+   10
+  ],
+  "long_gaps": 2,
+  "split": "holdout",
+  "tree": "c2e37ec06943",
+  "files": 2783,
+  "scenario_hash": "d5b07eab6bca",
+  "start_turn1": [
+   "pytest_failures"
+  ],
+  "guarded_runs": 11,
+  "kills": 0,
+  "peak_gb": 0.0,
+  "runtime_s": 38.7,
+  "mem_free_before_pct": 87
+ },
+ {
+  "id": "pyparsing-quotedws",
+  "problems": [],
+  "notes": [],
+  "weak": [],
+  "turns": [
+   {
+    "turn": 1,
+    "checks": 1,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 2,
+    "checks": 1,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 3,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 4,
+    "checks": 1,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 5,
+    "checks": 1,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 6,
+    "checks": 1,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 7,
+    "checks": 1,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 8,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 9,
+    "checks": 1,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 10,
+    "checks": 1,
+    "ref_pass": true,
+    "pre_fail": true
+   }
+  ],
+  "family": "repos",
+  "language": "python",
+  "task_type": "bugfix",
+  "n_turns": 10,
+  "gaps": [
+   0,
+   10,
+   10,
+   10,
+   10,
+   10,
+   10,
+   10,
+   10,
+   10
+  ],
+  "long_gaps": 0,
+  "split": "holdout",
+  "tree": "804f49d5092b",
+  "files": 293,
+  "scenario_hash": "cc20fc0d97ea",
+  "start_turn1": [
+   "pytest_failures"
+  ],
+  "guarded_runs": 11,
+  "kills": 0,
+  "peak_gb": 0.107,
+  "runtime_s": 16.0,
+  "mem_free_before_pct": 87
+ },
+ {
+  "id": "rich-softwrap",
+  "problems": [],
+  "notes": [],
+  "weak": [],
+  "turns": [
+   {
+    "turn": 1,
+    "checks": 1,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 2,
+    "checks": 1,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 3,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 4,
+    "checks": 1,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 5,
+    "checks": 1,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 6,
+    "checks": 1,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 7,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 8,
+    "checks": 1,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 9,
+    "checks": 1,
+    "ref_pass": true,
+    "pre_fail": true
+   }
+  ],
+  "family": "repos",
+  "language": "python",
+  "task_type": "bugfix",
+  "n_turns": 9,
+  "gaps": [
+   0,
+   10,
+   10,
+   10,
+   10,
+   10,
+   10,
+   10,
+   10
+  ],
+  "long_gaps": 0,
+  "split": "holdout",
+  "tree": "ec5199e57f33",
+  "files": 550,
+  "scenario_hash": "99e4799a8610",
+  "start_turn1": [
+   "pytest_failures"
+  ],
+  "guarded_runs": 9,
+  "kills": 0,
+  "peak_gb": 0.063,
+  "runtime_s": 11.6,
+  "mem_free_before_pct": 85
+ },
+ {
+  "id": "tornado-zerotimeout",
+  "problems": [],
+  "notes": [],
+  "weak": [],
+  "turns": [
+   {
+    "turn": 1,
+    "checks": 1,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 2,
+    "checks": 1,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 3,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 4,
+    "checks": 1,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 5,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 6,
+    "checks": 1,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 7,
+    "checks": 1,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 8,
+    "checks": 1,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 9,
+    "checks": 1,
+    "ref_pass": true,
+    "pre_fail": true
+   }
+  ],
+  "family": "repos",
+  "language": "python",
+  "task_type": "bugfix",
+  "n_turns": 9,
+  "gaps": [
+   0,
+   10,
+   10,
+   10,
+   10,
+   10,
+   10,
+   10,
+   10
+  ],
+  "long_gaps": 0,
+  "split": "holdout",
+  "tree": "171453f517bc",
+  "files": 320,
+  "scenario_hash": "c8fa702348ca",
+  "start_turn1": [
+   "pytest_failures"
+  ],
+  "guarded_runs": 11,
+  "kills": 0,
+  "peak_gb": 0.058,
+  "runtime_s": 47.4,
+  "mem_free_before_pct": 87
+ },
+ {
+  "id": "xlsxwriter-filter",
+  "problems": [],
+  "notes": [],
+  "weak": [],
+  "turns": [
+   {
+    "turn": 1,
+    "checks": 1,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 2,
+    "checks": 1,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 3,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 4,
+    "checks": 1,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 5,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 6,
+    "checks": 1,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 7,
+    "checks": 1,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 8,
+    "checks": 1,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 9,
+    "checks": 1,
+    "ref_pass": true,
+    "pre_fail": true
+   }
+  ],
+  "family": "repos",
+  "language": "python",
+  "task_type": "bugfix",
+  "n_turns": 9,
+  "gaps": [
+   0,
+   10,
+   10,
+   10,
+   10,
+   10,
+   10,
+   10,
+   10
+  ],
+  "long_gaps": 0,
+  "split": "holdout",
+  "tree": "18c5812321cf",
+  "files": 2839,
+  "scenario_hash": "7785438c4071",
+  "start_turn1": [
+   "pytest_failures"
+  ],
+  "guarded_runs": 11,
+  "kills": 0,
+  "peak_gb": 0.0,
+  "runtime_s": 31.6,
+  "mem_free_before_pct": 87
+ },
+ {
+  "id": "ytdlp-fps",
+  "problems": [],
+  "notes": [],
+  "weak": [],
+  "turns": [
+   {
+    "turn": 1,
+    "checks": 1,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 2,
+    "checks": 1,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 3,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 4,
+    "checks": 1,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 5,
+    "checks": 2,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 6,
+    "checks": 1,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 7,
+    "checks": 1,
+    "ref_pass": true,
+    "pre_fail": true
+   },
+   {
+    "turn": 8,
+    "checks": 1,
+    "ref_pass": true,
+    "pre_fail": true
+   }
+  ],
+  "family": "repos",
+  "language": "python",
+  "task_type": "feature",
+  "n_turns": 8,
+  "gaps": [
+   0,
+   10,
+   10,
+   10,
+   10,
+   10,
+   10,
+   10
+  ],
+  "long_gaps": 0,
+  "split": "holdout",
+  "tree": "4289bf0263d4",
+  "files": 1238,
+  "scenario_hash": "9cb1b8403269",
+  "start_turn1": [
+   "pytest_failures"
+  ],
+  "guarded_runs": 11,
+  "kills": 0,
+  "peak_gb": 0.074,
+  "runtime_s": 20.3,
+  "mem_free_before_pct": 87
+ }
+]

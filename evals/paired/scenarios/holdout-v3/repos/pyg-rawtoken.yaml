@@ -1,0 +1,137 @@
+# holdout-v3 repos: pyg-rawtoken -- 10 turns, 2 idle gap(s) of 420s before turns 5, 8.
+id: pyg-rawtoken
+task_type: bugfix
+language: python
+split: holdout
+default_gap_s: 10
+source:
+  desc: >-
+    pygments/pygments, RawTokenFormatter(error_color=...) crashed with a TypeError on Error tokens
+    (bytes line passed to the str-only colorize helper), fixed upstream in 2f0d713b; workspace is
+    its parent
+  repo: https://github.com/pygments/pygments.git
+  sha: 6a7aa837d5001dd199f0094165d85568faa1142a
+  fix_sha: 2f0d713b396de53e8780c114b00a7adad99cbffc
+workspace:
+  kind: git
+  repo: https://github.com/pygments/pygments.git
+  sha: 6a7aa837d5001dd199f0094165d85568faa1142a
+  local_hint: ~/dev/afast-v3-src/pygments
+hidden_files:
+  tests/test_raw_token.py:
+    from_git:
+      repo: https://github.com/pygments/pygments.git
+      sha: 2f0d713b396de53e8780c114b00a7adad99cbffc
+      path: tests/test_raw_token.py
+      local_hint: ~/dev/afast-v3-src/pygments
+  tests/test_colorize_bytes_hidden.py: |
+    import pytest
+
+    from pygments.console import codes, colorize
+
+
+    def test_colorize_bytes_returns_bytes():
+        out = colorize("red", b"x")
+        assert isinstance(out, bytes)
+        assert out == codes["red"].encode("ascii") + b"x" + codes["reset"].encode("ascii")
+
+
+    def test_colorize_str_is_unchanged():
+        assert colorize("red", "x") == codes["red"] + "x" + codes["reset"]
+
+
+    def test_colorize_empty_bytes():
+        assert colorize("green", b"") == codes["green"].encode("ascii") + codes["reset"].encode("ascii")
+
+
+    def test_colorize_unknown_color_still_keyerror():
+        with pytest.raises(KeyError):
+            colorize("no-such-color", b"x")
+  tests/test_error_color_message_hidden.py: |
+    import pytest
+
+    from pygments.formatters import RawTokenFormatter
+
+
+    def test_unknown_color_lists_valid_colors():
+        with pytest.raises(ValueError) as info:
+            RawTokenFormatter(error_color="purple")
+        message = str(info.value)
+        assert "'purple'" in message
+        assert "valid colors" in message
+        for name in ("red", "green", "brightblue", "bold"):
+            assert name in message
+
+
+    def test_valid_colors_still_accepted():
+        RawTokenFormatter(error_color="red")
+        RawTokenFormatter(error_color=True)
+        RawTokenFormatter()
+turns:
+  - prompt: >-
+      RawTokenFormatter blows up when you ask it to colour errors. Repro: `highlight("a = ?\n",
+      PythonLexer(), RawTokenFormatter(error_color="red"))` raises a TypeError as soon as the lexer
+      emits an Error token (the `?`), while the same call without `error_color` works. Please find the
+      cause in the pygments package and fix it. Run the tests from this directory with `python3 -m
+      pytest -q tests/test_raw_token.py`.
+    checks:
+      - {kind: tests, runner: python, files: [tests/test_raw_token.py], hidden: [tests/test_raw_token.py]}
+  - prompt: >-
+      In three to five sentences explain the root cause: which function receives the wrong type, from
+      which call site, and why the formatter's output being binary makes that a problem. Do not change
+      any files.
+    checks:
+      - {kind: keyed_facts, all: [colorize, bytes, str], any: [error_color, other\.py, console\.py]}
+  - prompt: >-
+      Add a regression test file `tests/test_raw_token_errcolor.py` with at least three test
+      functions: error_color="red" wraps the Error line in the red escape, error_color=True behaves
+      like "red", and the colour also survives compress="gz" and "bz2". Add one more that checks no
+      escape codes appear when there is no Error token. Run it.
+    checks:
+      - {kind: file_regex, path: tests/test_raw_token_errcolor.py, pattern: ^def test_, min_count: 3}
+      - {kind: tests, runner: python, files: [tests/test_raw_token_errcolor.py]}
+  - prompt: >-
+      The decode/encode round trip at the call site is awkward. Make `pygments.console.colorize`
+      itself accept bytes: given a bytes text it must return bytes (escape codes encoded as ASCII),
+      given a str it must behave exactly as today, and an unknown colour name must still raise
+      KeyError. Then simplify RawTokenFormatter to pass the line straight through.
+    checks:
+      - {kind: tests, runner: python, files: [tests/test_colorize_bytes_hidden.py, tests/test_raw_token.py], hidden: [tests/test_colorize_bytes_hidden.py, tests/test_raw_token.py]}
+  - prompt: >-
+      Add an entry to the CHANGES file in the "Version 2.21.0" (not released yet) section: a short
+      "Formatters" item that mentions the RawTokenFormatter `error_color` crash fix, in the same
+      bullet style as the entries around it.
+    gap_before_s: 420
+    checks:
+      - {kind: file_regex, path: CHANGES, pattern: '\(not released yet\)\n(?:(?!Version ).*\n)*?.*error_color'}
+  - prompt: >-
+      Question only: which other places in the pygments package use `pygments.console` (colorize,
+      ansiformat or the `codes` table)? Name the files and say which helper each one uses. Do not
+      change any files.
+    checks:
+      - {kind: keyed_facts, all: [other\.py, terminal\.py, terminal256\.py, ansiformat, codes]}
+  - prompt: >-
+      A user passed `error_color="purple"` and got `ValueError: Invalid color 'purple' specified`,
+      which doesn't say what is allowed. Make that message also list the valid colour names, like
+      `Invalid color 'purple' specified; valid colors: black, blue, bold, ...` (every key of the
+      console table except the empty one, sorted). Keep valid colours, `True` and the default working.
+    checks:
+      - {kind: tests, runner: python, files: [tests/test_error_color_message_hidden.py, tests/test_colorize_bytes_hidden.py, tests/test_raw_token.py], hidden: [tests/test_error_color_message_hidden.py, tests/test_colorize_bytes_hidden.py, tests/test_raw_token.py]}
+  - prompt: >-
+      Document in the module docstring of pygments/formatters/other.py that when `error_color` is set
+      the output contains ANSI escape sequences meant for a terminal and is therefore not suitable as
+      input for RawTokenLexer. Docstring only.
+    gap_before_s: 420
+    checks:
+      - {kind: file_regex, path: pygments/formatters/other.py, pattern: ANSI}
+      - {kind: tests, runner: python, files: [tests/test_raw_token.py], hidden: [tests/test_raw_token.py]}
+  - prompt: >-
+      Run the raw token tests, your regression file and tests/test_cmdline.py together and report the
+      totals (how many passed and failed). Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [test_raw_token, test_cmdline, \d+ passed]}
+  - prompt: >-
+      Review the changes you made in this session as a code reviewer would: list each file you changed
+      or added, what changed, and any remaining edge case you did not cover. Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [other\.py, console\.py, test], any: [edge, risk, not cover, remaining]}

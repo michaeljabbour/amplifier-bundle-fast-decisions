@@ -1,0 +1,363 @@
+# holdout-v3 polyglot: go-bowling -- 14 turns, short gaps.
+id: go-bowling
+task_type: feature
+language: go
+split: holdout
+default_gap_s: 10
+source:
+  desc: >-
+    Aider polyglot-benchmark go/bowling (Exercism), outside the S2 slice; grown with frame scores,
+    game state, scoreboard, sentinel errors and refactoring turns
+  repo: https://github.com/Aider-AI/polyglot-benchmark
+  sha: 7e0611e77b54e2dea774cdc0aa00cf9f7ed6144f
+workspace:
+  kind: git
+  repo: https://github.com/Aider-AI/polyglot-benchmark
+  sha: 7e0611e77b54e2dea774cdc0aa00cf9f7ed6144f
+  subdir: go/exercises/practice/bowling
+  local_hint: ~/dev/afast-campaign-corrected-polyglot-20260919/polyglot/polyglot-benchmark
+  remove:
+  - .meta
+protected: [bowling_test.go, cases_test.go]
+hidden_files:
+  hidden_frames_test.go: |
+    package bowling
+
+    import "testing"
+
+    func hv3SameInts(a, b []int) bool {
+    	if len(a) != len(b) {
+    		return false
+    	}
+    	for i := range a {
+    		if a[i] != b[i] {
+    			return false
+    		}
+    	}
+    	return true
+    }
+
+    func hv3Play(t *testing.T, rolls ...int) *Game {
+    	t.Helper()
+    	g := NewGame()
+    	for i, pins := range rolls {
+    		if err := g.Roll(pins); err != nil {
+    			t.Fatalf("Roll(%d) at index %d: %v", pins, i, err)
+    		}
+    	}
+    	return g
+    }
+
+    func hv3Repeat(pins, n int) []int {
+    	out := make([]int, n)
+    	for i := range out {
+    		out[i] = pins
+    	}
+    	return out
+    }
+
+    func TestHiddenFrameScores(t *testing.T) {
+    	cases := []struct {
+    		name  string
+    		rolls []int
+    		want  []int
+    	}{
+    		{"no rolls", nil, nil},
+    		{"strike waits for its bonus", []int{10}, nil},
+    		{"strike with one bonus roll", []int{10, 3}, nil},
+    		{"strike then open frame", []int{10, 3, 4}, []int{17, 24}},
+    		{"spare waits for its bonus", []int{5, 5}, nil},
+    		{"spare then a roll", []int{5, 5, 3}, []int{13}},
+    		{"spare then open frame", []int{5, 5, 3, 4}, []int{13, 20}},
+    		{"open frames", []int{3, 6, 3, 6}, []int{9, 18}},
+    		{"perfect game", hv3Repeat(10, 12), []int{30, 60, 90, 120, 150, 180, 210, 240, 270, 300}},
+    		{"all zeros", hv3Repeat(0, 20), []int{0, 0, 0, 0, 0, 0, 0, 0, 0, 0}},
+    	}
+    	for _, tc := range cases {
+    		t.Run(tc.name, func(t *testing.T) {
+    			got := hv3Play(t, tc.rolls...).FrameScores()
+    			if !hv3SameInts(got, tc.want) {
+    				t.Fatalf("FrameScores() = %v, want %v", got, tc.want)
+    			}
+    		})
+    	}
+    }
+  hidden_state_test.go: |
+    package bowling
+
+    import "testing"
+
+    func hv3PlayS(t *testing.T, rolls ...int) *Game {
+    	t.Helper()
+    	g := NewGame()
+    	for i, pins := range rolls {
+    		if err := g.Roll(pins); err != nil {
+    			t.Fatalf("Roll(%d) at index %d: %v", pins, i, err)
+    		}
+    	}
+    	return g
+    }
+
+    func hv3RepeatS(pins, n int) []int {
+    	out := make([]int, n)
+    	for i := range out {
+    		out[i] = pins
+    	}
+    	return out
+    }
+
+    func TestHiddenCurrentFrameAndPins(t *testing.T) {
+    	nine := hv3RepeatS(10, 9)
+    	cases := []struct {
+    		name   string
+    		rolls  []int
+    		frame  int
+    		pins   int
+    	}{
+    		{"new game", nil, 1, 10},
+    		{"first ball of a frame", []int{3}, 1, 7},
+    		{"after an open frame", []int{3, 4}, 2, 10},
+    		{"after a strike", []int{10}, 2, 10},
+    		{"after a gutter ball", []int{0}, 1, 10},
+    		{"tenth frame start", nine, 10, 10},
+    		{"tenth frame strike", append(append([]int{}, nine...), 10), 10, 10},
+    		{"first bonus after a tenth strike", append(append([]int{}, nine...), 10, 4), 10, 6},
+    		{"two strikes in the tenth", append(append([]int{}, nine...), 10, 10), 10, 10},
+    		{"tenth frame first ball", append(append([]int{}, nine...), 3), 10, 7},
+    		{"fill ball after a spare", append(append([]int{}, nine...), 3, 7), 10, 10},
+    		{"open tenth frame ends the game", append(append([]int{}, nine...), 3, 4), 0, 0},
+    		{"strike and bonus rolls end the game", append(append([]int{}, nine...), 10, 4, 6), 0, 0},
+    	}
+    	for _, tc := range cases {
+    		t.Run(tc.name, func(t *testing.T) {
+    			g := hv3PlayS(t, tc.rolls...)
+    			if got := g.CurrentFrame(); got != tc.frame {
+    				t.Fatalf("CurrentFrame() = %d, want %d", got, tc.frame)
+    			}
+    			if got := g.PinsStanding(); got != tc.pins {
+    				t.Fatalf("PinsStanding() = %d, want %d", got, tc.pins)
+    			}
+    		})
+    	}
+    }
+  hidden_scoreboard_test.go: |
+    package bowling
+
+    import "testing"
+
+    func hv3PlayB(t *testing.T, rolls ...int) *Game {
+    	t.Helper()
+    	g := NewGame()
+    	for i, pins := range rolls {
+    		if err := g.Roll(pins); err != nil {
+    			t.Fatalf("Roll(%d) at index %d: %v", pins, i, err)
+    		}
+    	}
+    	return g
+    }
+
+    func hv3RepeatB(pins, n int) []int {
+    	out := make([]int, n)
+    	for i := range out {
+    		out[i] = pins
+    	}
+    	return out
+    }
+
+    func TestHiddenScoreboard(t *testing.T) {
+    	cases := []struct {
+    		name  string
+    		rolls []int
+    		want  string
+    	}{
+    		{"empty game", nil, ""},
+    		{"perfect game", hv3RepeatB(10, 12), "X X X X X X X X X XXX"},
+    		{"all zeros", hv3RepeatB(0, 20), "-- -- -- -- -- -- -- -- -- --"},
+    		{"open frames", hv3RepeatB(3, 20), "33 33 33 33 33 33 33 33 33 33"},
+    		{"all spares", hv3RepeatB(5, 21), "5/ 5/ 5/ 5/ 5/ 5/ 5/ 5/ 5/ 5/5"},
+    		{"game in progress", []int{10, 7, 3, 9}, "X 7/ 9"},
+    		{"gutter then ten is a spare", []int{0, 10, 4}, "-/ 4"},
+    		{"strike then spare in the tenth", append(hv3RepeatB(10, 9), 10, 4, 6), "X X X X X X X X X X4/"},
+    		{"spare then strike in the tenth", append(hv3RepeatB(10, 9), 7, 3, 10), "X X X X X X X X X 7/X"},
+    		{"open tenth", append(hv3RepeatB(10, 9), 3, 4), "X X X X X X X X X 34"},
+    	}
+    	for _, tc := range cases {
+    		t.Run(tc.name, func(t *testing.T) {
+    			if got := hv3PlayB(t, tc.rolls...).String(); got != tc.want {
+    				t.Fatalf("String() = %q, want %q", got, tc.want)
+    			}
+    		})
+    	}
+    }
+  hidden_errors_test.go: |
+    package bowling
+
+    import (
+    	"errors"
+    	"testing"
+    )
+
+    func hv3PlayE(t *testing.T, rolls ...int) *Game {
+    	t.Helper()
+    	g := NewGame()
+    	for i, pins := range rolls {
+    		if err := g.Roll(pins); err != nil {
+    			t.Fatalf("Roll(%d) at index %d: %v", pins, i, err)
+    		}
+    	}
+    	return g
+    }
+
+    func hv3RepeatE(pins, n int) []int {
+    	out := make([]int, n)
+    	for i := range out {
+    		out[i] = pins
+    	}
+    	return out
+    }
+
+    func TestHiddenSentinelErrors(t *testing.T) {
+    	nine := hv3RepeatE(10, 9)
+    	cases := []struct {
+    		name  string
+    		setup []int
+    		roll  int
+    		want  error
+    	}{
+    		{"negative roll", nil, -1, ErrNegativePins},
+    		{"more than ten pins", nil, 11, ErrTooManyPins},
+    		{"two rolls over ten", []int{5}, 6, ErrFrameOverflow},
+    		{"tenth frame over ten", append(append([]int{}, nine...), 5), 6, ErrFrameOverflow},
+    		{"bonus rolls over ten", append(append([]int{}, nine...), 10, 5), 6, ErrFrameOverflow},
+    		{"roll after the game", hv3RepeatE(0, 20), 1, ErrGameOver},
+    		{"roll after the bonus rolls", append(append([]int{}, nine...), 10, 10, 10), 1, ErrGameOver},
+    	}
+    	for _, tc := range cases {
+    		t.Run(tc.name, func(t *testing.T) {
+    			g := hv3PlayE(t, tc.setup...)
+    			if err := g.Roll(tc.roll); !errors.Is(err, tc.want) {
+    				t.Fatalf("Roll(%d) error = %v, want %v", tc.roll, err, tc.want)
+    			}
+    		})
+    	}
+    }
+
+    func TestHiddenScoreIncomplete(t *testing.T) {
+    	for name, rolls := range map[string][]int{"unstarted": nil, "half a game": hv3RepeatE(3, 10), "missing bonus": append(hv3RepeatE(10, 9), 10)} {
+    		if _, err := hv3PlayE(t, rolls...).Score(); !errors.Is(err, ErrIncomplete) {
+    			t.Fatalf("%s: Score() error = %v, want ErrIncomplete", name, err)
+    		}
+    	}
+    }
+
+    func TestHiddenRejectedRollsDoNotCount(t *testing.T) {
+    	g := hv3PlayE(t, 5)
+    	if err := g.Roll(6); err == nil {
+    		t.Fatal("expected an error")
+    	}
+    	if err := g.Roll(4); err != nil {
+    		t.Fatalf("Roll(4) after a rejected roll: %v", err)
+    	}
+    	if got := g.CurrentFrame(); got != 2 {
+    		t.Fatalf("CurrentFrame() = %d, want 2", got)
+    	}
+    }
+turns:
+  - prompt: >-
+      Implement the bowling `Game` in bowling.go as described in .docs/instructions.md: `NewGame()`,
+      `Roll(pins int) error` and `Score() (int, error)`. Rolls that cannot happen (negative, more than
+      ten pins, more than ten pins in a frame, bad bonus rolls in the tenth frame, rolling after the
+      game is over) return an error, and `Score` returns an error until the game including its bonus
+      rolls is complete. Run the tests with `go test ./...` (the provided test files must stay
+      unchanged).
+    checks:
+      - {kind: tests, runner: go, restore: [bowling_test.go, cases_test.go]}
+  - prompt: >-
+      In three to five sentences explain how your `Roll` tells the first nine frames from the tenth
+      frame, and when the game counts as complete (open frame, spare, strike) so that `Score` may be
+      calculated. Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [tenth, complete, bonus|fill], any: [strike, spare, open]}
+  - prompt: >-
+      Add `func (g *Game) FrameScores() []int`: the cumulative score after each frame whose score is
+      already known, so a strike or spare whose bonus rolls have not happened yet is not included. For
+      example rolls `10, 3, 4` give `[17, 24]`, rolls `5, 5` give nothing yet and `5, 5, 3` give
+      `[13]`; a perfect game gives `30, 60, ... 300`. No rolls give an empty result.
+    checks:
+      - {kind: tests, runner: go, restore: [bowling_test.go, cases_test.go], hidden: [hidden_frames_test.go]}
+  - prompt: >-
+      Add `func (g *Game) CurrentFrame() int` and `func (g *Game) PinsStanding() int`: the frame
+      number (1-10) the next roll belongs to and the number of pins that can still be knocked down by
+      the next roll. After a strike the next frame has 10 pins; after a first ball of 3 there are 7;
+      in the tenth frame the pins are reset after a strike or a spare (a strike followed by a 4 leaves
+      6), and a finished game returns 0 for both.
+    checks:
+      - {kind: tests, runner: go, restore: [bowling_test.go, cases_test.go], hidden: [hidden_frames_test.go, hidden_state_test.go]}
+  - prompt: >-
+      Add `func (g *Game) String() string` that renders a scoreboard line: frames separated by a
+      space, `X` for a strike, `n/` for a spare, `-` for a gutter ball and the digits for open frames,
+      e.g. `X 7/ 9` for rolls `10, 7, 3, 9`, `-/ 4` for `0, 10, 4` (a gutter ball followed by ten is a
+      spare) and for a perfect game `X X X X X X X X X XXX`. The tenth frame shows all its rolls,
+      resetting after a strike or spare (`X4/` for a strike, 4, 6). An empty game gives an empty
+      string.
+    checks:
+      - {kind: tests, runner: go, restore: [bowling_test.go, cases_test.go], hidden: [hidden_frames_test.go, hidden_state_test.go, hidden_scoreboard_test.go]}
+  - prompt: >-
+      Callers cannot tell the errors apart. Export sentinel errors `ErrNegativePins`, `ErrTooManyPins`
+      (one roll above ten), `ErrFrameOverflow` (two rolls in a frame or bonus rolls adding up to more
+      than ten), `ErrGameOver` (rolling after the last roll) and `ErrIncomplete` (Score before the
+      game is complete) and return them (checked with `errors.Is`). A rejected roll must not change
+      the game.
+    checks:
+      - {kind: tests, runner: go, restore: [bowling_test.go, cases_test.go], hidden: [hidden_frames_test.go, hidden_state_test.go, hidden_scoreboard_test.go, hidden_errors_test.go]}
+  - prompt: >-
+      Add Go doc comments to the exported API in bowling.go: `Game`, `NewGame`, `Roll` and `Score`
+      (what they do, and that a rejected roll leaves the game unchanged). Comments only.
+    checks:
+      - {kind: file_regex, path: bowling.go, pattern: '(?m)^// Game [^\n]*\n(?://[^\n]*\n)*type Game struct'}
+      - {kind: file_regex, path: bowling.go, pattern: '(?m)^// Roll [^\n]*\n(?://[^\n]*\n)*func \(g \*Game\) Roll'}
+      - {kind: tests, runner: go, restore: [bowling_test.go, cases_test.go], hidden: [hidden_frames_test.go, hidden_state_test.go, hidden_scoreboard_test.go, hidden_errors_test.go]}
+  - prompt: >-
+      Add your own tests in a new file `extra_test.go` (package bowling) with at least four `func
+      Test...` functions covering FrameScores, the scoreboard, PinsStanding and a rejected roll. Run
+      `go test ./...`.
+    checks:
+      - {kind: file_regex, path: extra_test.go, pattern: ^func Test, min_count: 4}
+      - {kind: tests, runner: go, restore: [bowling_test.go, cases_test.go]}
+  - prompt: >-
+      Question only: `Score`, `FrameScores` and `String` all walk the recorded rolls from the start
+      each time. What is their complexity for a single game, does it matter for bowling, and what
+      would you change if the Game had to answer thousands of score queries per second for live
+      broadcasting? Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [O\(|linear|constant, Score, cache|incremental|memo], any: [frame, rolls, bonus]}
+  - prompt: >-
+      Refactor bowling.go without changing behaviour: split `Roll` into the validation of the pin
+      count and game state plus two private methods, `rollFrame(pins)` for frames one to nine and
+      `rollTenth(pins)` for the tenth frame. All earlier checks must still pass.
+    checks:
+      - {kind: file_regex, path: bowling.go, pattern: 'func \(g \*Game\) (?:rollFrame|rollTenth)\(pins int\) error', min_count: 2}
+      - {kind: tests, runner: go, restore: [bowling_test.go, cases_test.go], hidden: [hidden_frames_test.go, hidden_state_test.go, hidden_scoreboard_test.go, hidden_errors_test.go]}
+  - prompt: >-
+      Write a short USAGE.md in the project root with the sections `## Rolling`, `## Scoring` and `##
+      Scoreboard`, each with two or three sentences that use the exported API (NewGame, Roll, Score,
+      FrameScores, String, CurrentFrame, PinsStanding). Do not change any code.
+    checks:
+      - {kind: file_exists, path: USAGE.md}
+      - {kind: doc_sections, path: USAGE.md, headings: [Rolling, Scoring, Scoreboard]}
+      - {kind: file_regex, path: USAGE.md, pattern: Roll|Score, min_count: 3}
+  - prompt: >-
+      Question only: list the exported identifiers of the bowling package with one line each, and say
+      which of them can return an error. Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [NewGame, Roll, Score, FrameScores, CurrentFrame, PinsStanding, String, Err]}
+  - prompt: >-
+      Question only: which behaviours of the tenth frame are the easiest to get wrong, and which test
+      in the suite protects each one? Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [tenth, bonus|fill, strike, spare], any: [test|case, PinsStanding|reset]}
+  - prompt: >-
+      Review the changes you made in this session as a code reviewer would: list each file you changed
+      or added, what changed, and any remaining edge case you did not cover. Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [bowling\.go, test], any: [edge, risk, not cover, remaining]}

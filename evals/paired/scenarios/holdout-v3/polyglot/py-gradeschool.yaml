@@ -1,0 +1,237 @@
+# holdout-v3 polyglot: py-gradeschool -- 10 turns, short gaps.
+id: py-gradeschool
+task_type: feature
+language: python
+split: holdout
+default_gap_s: 10
+source:
+  desc: >-
+    Aider polyglot-benchmark python/grade-school (Exercism), outside the S2 slice; grown with
+    remove/move, statistics and validation turns
+  repo: https://github.com/Aider-AI/polyglot-benchmark
+  sha: 7e0611e77b54e2dea774cdc0aa00cf9f7ed6144f
+workspace:
+  kind: git
+  repo: https://github.com/Aider-AI/polyglot-benchmark
+  sha: 7e0611e77b54e2dea774cdc0aa00cf9f7ed6144f
+  subdir: python/exercises/practice/grade-school
+  local_hint: ~/dev/afast-campaign-corrected-polyglot-20260919/polyglot/polyglot-benchmark
+  remove:
+  - .meta
+protected: [grade_school_test.py]
+hidden_files:
+  hidden_remove_test.py: |
+    import unittest
+
+    from grade_school import School
+
+
+    class RemoveTest(unittest.TestCase):
+        def test_remove_existing(self):
+            s = School()
+            s.add_student("Aimee", 2)
+            self.assertTrue(s.remove_student("Aimee"))
+            self.assertEqual(s.roster(), [])
+
+        def test_remove_unknown(self):
+            self.assertFalse(School().remove_student("Nobody"))
+
+        def test_removed_student_can_be_added_again(self):
+            s = School()
+            s.add_student("Aimee", 2)
+            s.remove_student("Aimee")
+            s.add_student("Aimee", 3)
+            self.assertEqual(s.grade(3), ["Aimee"])
+            self.assertEqual(s.added(), [True, True])
+
+        def test_added_history_is_not_rewritten(self):
+            s = School()
+            s.add_student("Aimee", 2)
+            s.remove_student("Aimee")
+            self.assertEqual(s.added(), [True])
+
+        def test_empty_grade_has_no_students(self):
+            s = School()
+            s.add_student("Aimee", 2)
+            s.remove_student("Aimee")
+            self.assertEqual(s.grade(2), [])
+  hidden_move_test.py: |
+    import unittest
+
+    from grade_school import School
+
+
+    class MoveTest(unittest.TestCase):
+        def test_move(self):
+            s = School()
+            s.add_student("Aimee", 2)
+            s.add_student("Blair", 2)
+            self.assertTrue(s.move_student("Aimee", 3))
+            self.assertEqual(s.grade(2), ["Blair"])
+            self.assertEqual(s.grade(3), ["Aimee"])
+            self.assertEqual(s.roster(), ["Blair", "Aimee"])
+
+        def test_move_unknown(self):
+            self.assertFalse(School().move_student("Nobody", 3))
+
+        def test_move_to_the_same_grade(self):
+            s = School()
+            s.add_student("Aimee", 2)
+            self.assertTrue(s.move_student("Aimee", 2))
+            self.assertEqual(s.roster(), ["Aimee"])
+
+        def test_alphabetical_order_in_the_new_grade(self):
+            s = School()
+            s.add_student("Blair", 2)
+            s.add_student("Aimee", 3)
+            s.move_student("Blair", 3)
+            self.assertEqual(s.grade(3), ["Aimee", "Blair"])
+
+        def test_history_is_untouched(self):
+            s = School()
+            s.add_student("Aimee", 2)
+            s.move_student("Aimee", 3)
+            self.assertEqual(s.added(), [True])
+  hidden_stats_test.py: |
+    import unittest
+
+    from grade_school import School
+
+
+    class StatsTest(unittest.TestCase):
+        def setUp(self):
+            self.s = School()
+            for name, grade in (("Logan", 7), ("James", 2), ("Blair", 2)):
+                self.s.add_student(name, grade)
+
+        def test_grades(self):
+            self.assertEqual(School().grades(), [])
+            self.assertEqual(self.s.grades(), [2, 7])
+
+        def test_count(self):
+            self.assertEqual(self.s.count(), 3)
+            self.assertEqual(self.s.count(2), 2)
+            self.assertEqual(self.s.count(5), 0)
+
+        def test_as_dict_is_sorted(self):
+            self.assertEqual(self.s.as_dict(), {2: ["Blair", "James"], 7: ["Logan"]})
+            self.assertEqual(list(self.s.as_dict()), [2, 7])
+
+        def test_as_dict_is_a_copy(self):
+            d = self.s.as_dict()
+            d[2].append("Zed")
+            self.assertEqual(self.s.grade(2), ["Blair", "James"])
+
+        def test_grades_forget_emptied_grades(self):
+            self.s.remove_student("Logan")
+            self.assertEqual(self.s.grades(), [2])
+  hidden_validation_test.py: |
+    import unittest
+
+    from grade_school import School
+
+
+    class ValidationTest(unittest.TestCase):
+        def test_blank_name(self):
+            with self.assertRaises(ValueError) as err:
+                School().add_student("  ", 2)
+            self.assertEqual(err.exception.args[0], "Invalid name: '  '")
+
+        def test_non_string_name(self):
+            with self.assertRaises(TypeError) as err:
+                School().add_student(5, 2)
+            self.assertEqual(err.exception.args[0], "Name must be a string")
+
+        def test_non_positive_grade(self):
+            for bad in (0, -1):
+                with self.assertRaises(ValueError) as err:
+                    School().add_student("Aimee", bad)
+                self.assertEqual(err.exception.args[0], f"Invalid grade: {bad}")
+
+        def test_non_integer_grade(self):
+            for bad in ("2", 2.5, True, None):
+                with self.assertRaises(TypeError) as err:
+                    School().add_student("Aimee", bad)
+                self.assertEqual(err.exception.args[0], "Grade must be an integer")
+
+        def test_rejected_calls_are_not_recorded(self):
+            s = School()
+            for name, grade in (("", 2), ("Aimee", 0)):
+                with self.assertRaises(ValueError):
+                    s.add_student(name, grade)
+            self.assertEqual(s.added(), [])
+
+        def test_names_are_stripped(self):
+            s = School()
+            s.add_student(" Aimee ", 2)
+            s.add_student("Aimee", 2)
+            self.assertEqual(s.roster(), ["Aimee"])
+            self.assertEqual(s.added(), [True, False])
+turns:
+  - prompt: >-
+      Implement the `School` class in grade_school.py as described in .docs/instructions.md:
+      `add_student(name, grade)`, `roster()` (every student, sorted by grade and then by name),
+      `grade(n)` (the sorted names of grade n, empty if none) and `added()` (a list with one boolean
+      per add_student call: True if the student was new, False if the name already exists in any
+      grade). Run the tests with `python3 -m pytest -q grade_school_test.py`.
+    checks:
+      - {kind: tests, runner: python, files: [grade_school_test.py], restore: [grade_school_test.py]}
+  - prompt: >-
+      In three to five sentences explain how `add_student` detects a duplicate and why a student
+      cannot be in two grades, how `roster()` produces its order, and what `added()` records. Do not
+      change any files.
+    checks:
+      - {kind: keyed_facts, all: [add_student, roster, added, sorted], any: [duplicate, grade, history|every call|one per call]}
+  - prompt: >-
+      Add `School.remove_student(name)`: it returns True when the student existed and was removed,
+      False otherwise. A grade without students must disappear completely, a removed student can be
+      added again later (to any grade), and the `added()` history is not rewritten by a removal.
+    checks:
+      - {kind: tests, runner: python, files: [grade_school_test.py, hidden_remove_test.py], restore: [grade_school_test.py], hidden: [hidden_remove_test.py]}
+  - prompt: >-
+      Add `School.move_student(name, grade)`: moves an existing student to the given grade and returns
+      True, returns False for an unknown student (nothing changes). Moving to the grade the student is
+      already in is a successful no-op, the new grade stays alphabetical, and the `added()` history is
+      untouched.
+    checks:
+      - {kind: tests, runner: python, files: [grade_school_test.py, hidden_remove_test.py, hidden_move_test.py], restore: [grade_school_test.py], hidden: [hidden_remove_test.py, hidden_move_test.py]}
+  - prompt: >-
+      Add three read helpers: `grades()` (the sorted grade numbers that currently have students, empty
+      list for an empty school), `count(grade=None)` (the total number of students, or the number in
+      that grade, 0 for an unknown grade) and `as_dict()` (a new dict `{grade: [sorted names]}`
+      ordered by grade; changing the result must not affect the school).
+    checks:
+      - {kind: tests, runner: python, files: [grade_school_test.py, hidden_remove_test.py, hidden_move_test.py, hidden_stats_test.py], restore: [grade_school_test.py], hidden: [hidden_remove_test.py, hidden_move_test.py, hidden_stats_test.py]}
+  - prompt: >-
+      `add_student` accepts nonsense. Validate its input before anything is recorded: a name that is
+      not a str raises `TypeError("Name must be a string")`, a grade that is not an int (a bool counts
+      as not an int) raises `TypeError("Grade must be an integer")`, a blank name raises `ValueError`
+      with the message `Invalid name: ' '` (the repr of what was passed), and a grade below 1 raises
+      `ValueError("Invalid grade: 0")`. Names are stored stripped, so `" Aimee "` and `"Aimee"` are
+      the same student. Rejected calls do not appear in `added()`.
+    checks:
+      - {kind: tests, runner: python, files: [grade_school_test.py, hidden_remove_test.py, hidden_move_test.py, hidden_stats_test.py, hidden_validation_test.py], restore: [grade_school_test.py], hidden: [hidden_remove_test.py, hidden_move_test.py, hidden_stats_test.py, hidden_validation_test.py]}
+  - prompt: >-
+      Add your own test file `grade_school_extra_test.py` (unittest) with at least four tests covering
+      removal, moving, the counts and an invalid grade. Run it together with the shipped tests.
+    checks:
+      - {kind: file_regex, path: grade_school_extra_test.py, pattern: ^    def test_, min_count: 4}
+      - {kind: tests, runner: python, files: [grade_school_test.py, grade_school_extra_test.py], restore: [grade_school_test.py]}
+  - prompt: >-
+      Add a class docstring to `School` that explains the add/remove/move semantics, what `added()`
+      records (and that removals and moves do not change it), the read methods and the exceptions
+      raised for invalid input. Docstring only.
+    checks:
+      - {kind: file_regex, path: grade_school.py, pattern: 'class School:\n\s+"""(?=(?s:(?:(?!""").)*)added)(?=(?s:(?:(?!""").)*)remove_student)(?=(?s:(?:(?!""").)*)TypeError)'}
+      - {kind: tests, runner: python, files: [grade_school_test.py, hidden_remove_test.py, hidden_move_test.py, hidden_stats_test.py, hidden_validation_test.py], restore: [grade_school_test.py], hidden: [hidden_remove_test.py, hidden_move_test.py, hidden_stats_test.py, hidden_validation_test.py]}
+  - prompt: >-
+      Question only: `added()` keeps growing and a removed student stays in its history. Is that a
+      good design? Name one problem it can cause for long running programs and one alternative design
+      for tracking what happened. Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [added, history|log|record, memory|grow|unbounded], any: [event|journal|counter|bounded|last]}
+  - prompt: >-
+      Review the changes you made in this session as a code reviewer would: list each file you changed
+      or added, what changed, and any remaining edge case you did not cover. Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [grade_school\.py, test], any: [edge, risk, not cover, remaining]}
