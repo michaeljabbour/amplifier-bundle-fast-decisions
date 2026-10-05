@@ -72,3 +72,9 @@ and `1f3b0e4` (history of this branch).
 Cloudflare Clef and Clef-Flash (post-hoc arms) are read with `git show origin/main:docs/evidence/2026-10-04-clef-judges/...`
 (summary, run, requests and rule-2 files for dev, holdout, trace-dev and trace-holdout) plus `evals/judges.yaml` for their prices,
 so a clean clone builds without any sibling checkout.
+
+## Review record
+
+The external reviews (reconstructed from the authors' response), the verification of the round-1 points and its
+scripts are in [`docs/reviews/2026-10-paired-measurement/`](../../reviews/2026-10-paired-measurement/). The responses
+are Appendix C of the report.

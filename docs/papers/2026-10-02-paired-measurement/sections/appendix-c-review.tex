@@ -2,7 +2,8 @@
 
 An external reviewer read the 48-page draft of this report and raised the points below. Each was checked against
 the committed evidence before the text changed; where the reviewer's premise did not hold, the response says so.
-We thank the reviewer.
+We thank the reviewer. The review record (the reviewers' points, reconstructed from this response; the verification of
+every round-1 point; and its scripts) is in \path{docs/reviews/2026-10-paired-measurement/}.
 
 \begin{enumerate}[leftmargin=1.6em]
   \item \textbf{``Preregistered'' overstates what was fixed in advance.} Agreed in part. The preregistration fixed the
@@ -58,3 +59,44 @@ and figure; the summary's caution count matches its list; the cold tools-prefix 
 without a causal claim; the effort follow-up carries its provenance caveat wherever it is called designed in advance;
 the router conclusion, the scope of ``no detectable loss'', the cache-isolation exception, the A/A wording, the
 spend split, the wave definition and the Opus effort check are stated as in this version.
+
+\subsection*{Round 2}\label{app:round2}
+
+The same reviewer read the revised report and recommended acceptance with minor revisions. In checking the earlier
+tools-normalization point he also corrected his own round-2 reproduction of the \$\ToolsDeltaTotal\ total; we are
+grateful for that care. Each item and the response:
+\begin{enumerate}[leftmargin=1.6em]
+  \item \textbf{Effort on the primary endpoint.} Agreed. \Cref{tab:effortmix} now gives main-request effort by host,
+    arm and model, and the arms table states it. A new limitation explains that the primary endpoints compare
+    default-effort hosts with medium-effort routed Sonnet, biasing the Fable saving optimistically and the Opus
+    penalty conservatively, and gives the reviewer's extrapolation explicitly as an extrapolation from the Sonnet
+    follow-up (effort share about \RgEffShareFable\,\% of the Fable log saving, model-only ratio about
+    \RgModelOnlyFable; Opus effort-matched about \RgOpusMatched\X). The Fable recommendation now says the saving is
+    Sonnet-at-medium relative to the host at default. \emph{Since measured:} a preregistered Fable follow-up found
+    Fable at medium costs \EfRatio\X\ the default (\EfCI) with non-inferior quality, so the host's effort effect is
+    about \EfShare\,\% of the Fable log saving, replacing the extrapolated \RgEffShareFable\,\%; Sonnet-at-medium sticky
+    is about \EfStickyVsMedium\X\ of Fable-at-medium (exploratory, not concurrent; \cref{sec:effortfable}). Opus
+    remains unmeasured. The host-kept sticky sessions are
+    described as an indication of bundle overhead (about \RgOverheadFable--\RgOverheadOpus\,\%), not a finding.
+  \item \textbf{Quality by task type.} Agreed. \Cref{tab:taskfable} adds 95\,\% intervals; \RgNTaskFail\ of \RgNTask\
+    task types miss the margin and \cref{sec:recs} says so. We also accept that the scenario-level rank correlation
+    (\RvSpearman) in our first response was an underpowered test of a between-group effect; it does not show that
+    the task-type pattern is absent.
+  \item \textbf{Cross-arm reads.} Published: \RgCrossTokens\ shared-prefix tokens, \RgCrossShare\,\% of all cache
+    reads, in \RgCrossSessions\ sessions; the text now says exactly what the foreign-read audit tests.
+  \item \textbf{Normalization allowance.} Agreed that the allowance is below the median first-request write
+    (\RgStaticMedian\ tokens). Priced at each request's own model rates, the residual is \$\RgResidFableAnchor\ per
+    Fable anchor session (the reviewer's figure was close) and \$\RgResidFableSticky\ per Fable sticky session (lower
+    than the reviewer's, which priced sticky at the host rate). Removing it moves no confirmatory cell by more than
+    \RgResidShiftMax, somewhat more than the reviewer's estimate; no verdict changes. The \RgBigN\ very large first
+    writes are the sessions that found the shared tool prefix cold.
+  \item \textbf{Effort-control mechanism.} Added: all \RgEcMainMedium\ main requests of the medium arm ran at medium;
+    its \RgEcNonMainDefault\ default-effort requests are background requests.
+  \item \textbf{Tag.} The follow-up is now labelled ``preregistered, provenance-limited''.
+  \item \textbf{The quality instrument.} New \cref{sec:instrument}: what the checks assert, how they were validated,
+    the weak checks found and fixed, difficulty by family, three examples and the turn-pass versus final-test
+    correlation.
+  \item \textbf{What the evidence does not show.} \Cref{sec:recs} now says the cumulative evidence does not establish
+    the decision-judge machinery's value, while Jev remains the best judge tested; \cref{sec:limits} adds
+    multiplicity and the \NTest-scenario confirmatory basis.
+\end{enumerate}

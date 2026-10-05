@@ -38,7 +38,12 @@ the Fable anchor therefore started a median \RvSonnetWaveMedianH\ hours apart (a
 within seconds. Each session carries its own
 nonce, so no arm can read another arm's cache, except the tool-definition prefix, which precedes the nonce and is
 shared (\cref{sec:caching}; the tools normalization below). A per-request audit checked every
-session for cache reads it could not have written itself; \AuditFlagged\ sessions were flagged.
+session for cache reads it could not have written itself: a request is flagged as a \term{foreign read} when it reads
+more cached tokens than the session's own earlier writes plus the tool-prefix allowance. The shared prefix is by
+construction never foreign, so the audit tests leakage between arms beyond it, not the prefix itself.
+\AuditFlagged\ sessions were flagged (\RgForeignRequests\ foreign-read requests). Reads of the shared prefix are
+published separately: \RgCrossTokens\ tokens in all, \RgCrossShare\,\% of all cache-read tokens, non-zero in
+\RgCrossSessions\ of \NSessions\ sessions.
 
 \begin{keyidea}
 \textbf{Pairing removes most of the noise.} Two scenarios can differ in cost by a factor of ten; two arms on
@@ -50,7 +55,9 @@ analysis looks at the ratio within a pair, and the big differences between scena
 
 \begin{table}[htbp]
 \centering\small
-\caption{The five arms. Every arm except the Sonnet control runs on both host models.}
+\caption{The five arms. Every arm except the Sonnet control runs on both host models. Reasoning effort differs by
+arm: the anchor, the A/A copy and the Sonnet control leave it unset (the provider default), while routed Sonnet
+requests run at medium (\cref{tab:effortmix}).}
 \label{tab:arms}
 \begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}l >{\raggedright\arraybackslash}p{0.62\textwidth}@{}}
 \toprule
@@ -68,6 +75,21 @@ sonnet & Plain Sonnet for the whole session (``just use the cheap model''). It d
   so one run serves as the control for both hosts. \\
 \bottomrule
 \end{tabular*}
+\end{table}
+
+\paragraph{Reasoning effort, by arm.} The arms did not run at the same reasoning effort (\cref{tab:effortmix}). The
+plain-host anchors left effort unset, the provider default (\RgEffAnchorFable\ Fable and \RgEffAnchorOpus\ Opus main
+requests). Every routed Sonnet request, in shipped and in sticky, ran at medium. The \RvStickyHostNFable\ sticky
+sessions per host that kept the host model used the bundle's effort routing (\RgStickyHostHigh\ high,
+\RgStickyHostMedium\ medium and \RgStickyHostLow\ low requests across both hosts). The primary endpoints therefore
+compare default-effort host sessions with medium-effort routed sessions; \cref{sec:effort,sec:limits} discuss what
+that does to the ratios.
+
+\begin{table}[htbp]
+\centering\small
+\caption{Main-loop requests by host, arm, model and reasoning effort (``unset'' is the provider default).}
+\label{tab:effortmix}
+\input{generated/tables/effort-mix.tex}
 \end{table}
 
 The two hosts are Fable 5.1, an expensive model (\cref{tab:prices}), and Opus 5.5, a cheaper one with very
@@ -126,6 +148,35 @@ at the end give a final pass or fail. A savings claim is allowed only where qual
 \term{non-inferior}: the 95\,\% lower bound of the mean difference in turn-pass fraction (arm minus anchor)
 must be above \NIMargin, that is, at most \NIMarginPts\ percentage points worse.
 
+\subsection{The quality instrument}\label{sec:instrument}
+
+The turn-pass fraction is only as good as its checks. Each of the \RgNTurnsScripted\ scripted turns carries one or
+more automatic checks: \RgCheckKinds. A \code{tests} check runs the project's test suite (or the turn's tests); a
+\code{file\_regex} check looks for a pattern in a named file; \code{keyed\_facts} checks that an answer states given
+facts; \code{doc\_sections} checks that a document has the required headings. The checks were written by agents
+and then validated mechanically (\path{evals/paired/scenarios/main-v1/VALIDATION.md}): every one of the
+\RgValN\ scenarios had to fail its checks on the starting workspace and pass every turn on a reference solution,
+under the memory guard. \RgValOK\ of \RgValN\ passed, in \RgValRuns\ guarded runs with \RgValKills\ resource kills
+or timeouts. The validation also looked for weak checks, ones a plausible wrong answer would pass: it found
+\RgValWeak\ in \RgValWeakScen\ scenarios (patterns that already matched the untouched file) and tightened them before
+the campaign. Three examples, one per family:
+\input{generated/tables/quality-examples.tex}
+
+The families differ in difficulty: the plain host passed \RgAnchorTPPolyglot\ of its turns on polyglot,
+\RgAnchorTPRepos\ on repos, \RgAnchorTPMixed\ on mixed and \RgAnchorTPKnowledge\ on knowledge. Turn-pass fraction
+tracks the final hidden-test outcome only moderately (\cref{tab:tpfinal}): the session-level point-biserial
+correlation is \RgPbisAll\ overall, from \RgPbisRepos\ on repos to \RgPbisPolyglot\ on polyglot. The two
+measures answer different questions (did each step land, and is the end state right), which is why both are
+reported.
+
+\begin{table}[htbp]
+\centering\small
+\caption{Correlation between a session's turn-pass fraction and whether it passed the final hidden tests
+(point-biserial, all sessions), by arm and by family.}
+\label{tab:tpfinal}
+\input{generated/tables/tp-final-corr.tex}
+\end{table}
+
 \subsection{What a session costs}
 
 Every request's tokens were priced with the fixed table in \cref{tab:prices}; the recomputed cost matched
@@ -145,6 +196,26 @@ full allowance re-priced (\$\RvColdUSD). The cold ones fell mostly on anchors (\
 first in its wave (Fable \RvColdFirstFable\ against \RvColdNotFirstFable; Opus \RvColdFirstOpus\ against
 \RvColdNotFirstOpus); the cause is not established. The adjustment therefore lowers the anchors' cost more than the routed arms', which \emph{raises} the routed
 ratios slightly (\cref{tab:toolsratios}): it works against the Fable savings claims, not for them.
+
+The allowance is smaller than a typical first-request write: the median session wrote \RgStaticMedian\ tokens to
+cache on its first main request, against the \ToolsAllowance-token allowance. Most of that is the session's own
+context, which every session writes, warm or cold. Pricing the excess over the allowance at each request's model
+rates leaves an un-normalized cost per session of \$\RgResidFableAnchor\ for Fable anchors against
+\$\RgResidFableSticky\ for Fable sticky, and \$\RgResidOpusAnchor\ against \$\RgResidOpusSticky\ on Opus
+(\cref{tab:staticresid}). Removing it from every session would move the confirmatory sticky ratios from
+\CfFableStickyPair\ to \RgResidAdjFableSticky\ (Fable) and from \CfOpusStickyPair\ to \RgResidAdjOpusSticky\ (Opus),
+and no cell by more than \RgResidShiftMax; no verdict changes. The \RgBigN\ sessions whose first request wrote more
+than \RgBigThreshold\ tokens (\RgBigAnchors\ anchors, \RgBigSonnet\ Sonnet controls, \RgBigSticky\ sticky; between
+\RgBigLow\ and \RgBigHigh\ tokens) are exactly the ones that found the shared tool prefix cold (\RgBigInCold\ of
+\RgBigN): they wrote that prefix and their own context, which gives the second mode of the first-request writes.
+
+\begin{table}[htbp]
+\centering\small
+\caption{Un-normalized static-write cost per session: the first main request's cache write beyond the
+\ToolsAllowance-token allowance, priced at the write-minus-read rate of that request's model.}
+\label{tab:staticresid}
+\input{generated/tables/static-residual.tex}
+\end{table}
 
 \begin{table}[htbp]
 \centering\scriptsize

@@ -40,6 +40,18 @@
     effort setting (\cref{sec:effort}); the follow-up measured the effort effect on plain Sonnet concurrently
     (\cref{sec:effortfollow}), but its comparison with the routed sessions is not concurrent. The control also ran only in the Opus waves, hours away from the Fable
     sessions it is compared with.
+  \item \textbf{The primary endpoints are not effort-matched.} They compare default-effort host sessions with
+    medium-effort routed Sonnet sessions (\cref{tab:effortmix}). That biases the Fable saving optimistically and the Opus
+    penalty conservatively. For Fable this is now measured: Fable at medium costs \EfRatio\X\ the default
+    (\cref{sec:effortfable}), so the host's own effort effect is $\ln \EfRatio / \ln \RgFabStickyPair \approx
+    \EfShare\,\%$ of the sticky log saving (the round-2 extrapolation from the Sonnet follow-up gave
+    \RgEffShareFable\,\%). For Opus it is still an extrapolation: if Opus responded to effort as plain Sonnet did
+    (\EcRatio\X), sticky-on-Sonnet at matched effort would cost about
+    $\RvEffVsAnchorOpus / \EcRatio \approx \RgOpusMatched$\X\ the plain host. Opus's response to effort was not
+    measured.
+  \item \textbf{Multiplicity and a small confirmatory basis.} Many contrasts are reported (hosts, arms, readings,
+    task types, families); only the preregistered hypotheses carry a decision rule, and they rest on \NTest\
+    test scenarios. Exploratory contrasts are not corrected for multiplicity.
   \item \textbf{No held-out docs scenario.} All \RvDocsTrain\ docs scenarios are in the training split; the test
     split has \RvDocsTest\ docs, \RvExplainTest\ explain and \RvReviewTest\ review scenarios (\cref{tab:tasksplit}).
     Docs results, including the Opus docs exception, rest on training data only.

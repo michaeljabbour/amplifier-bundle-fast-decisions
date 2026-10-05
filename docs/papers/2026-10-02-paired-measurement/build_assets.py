@@ -1546,6 +1546,7 @@ LP.place_labels("reads-holdout-ph", pts, (-1.0, 14.0), (-1.5, 22.0), obstacles=[
 from datetime import datetime as _dtr
 import numpy as _np
 SI = {(s["scenario_id"], s["rep"], s["host"], s["arm"]): s for s in SESS}
+SI_K = {s["session_key"]: s for s in SESS}
 
 
 def Cn(s):
@@ -1918,6 +1919,245 @@ for grp, G_ in (("in", "KT"), ("out", "Rest")):
     M(f"Rv{G_}Dtp", hu(e, 3))
     M(f"Rv{G_}DtpCI", f"{hu(lo, 3)}, {hu(hi, 3)}")
     M(f"Rv{G_}N", nsc)
+
+
+# ================================================================ Round-2 review (2026-10-05)
+import yaml as _yaml
+# R1: main-request effort by host x arm x model (sticky split by its decision)
+effmix = defaultdict(int)
+for r in REQS:
+    if r["main"]:
+        s_ = SI[(r["scenario_id"], r["rep"], r["host"], r["arm"])]
+        arm_ = r["arm"] + (f" ({'Sonnet' if s_['sticky_decision'] == 'cheap' else 'host'})" if r["arm"] == "sticky" else "")
+        effmix[(r["host"], arm_, r["model"], r["effort"] or "unset")] += 1
+MODEL_NAME = {"claude-fable-5-1": "Fable 5.1", "claude-opus-5-5": "Opus 5.5", "claude-sonnet-5": "Sonnet 5"}
+host_order = {"fable": 0, "opus": 1, "any": 2}
+erows_ = []
+for (h, a_, m_, e_), n_ in sorted(effmix.items(), key=lambda kv: (host_order[kv[0][0]], kv[0][1], kv[0][2], kv[0][3])):
+    erows_.append(f"{'Sonnet control' if h == 'any' else h.capitalize()} & {a_} & {MODEL_NAME[m_]} & {e_} & {thousands(n_)} \\\\")
+write(TABLES / "effort-mix.tex", table("l l l l r", [r"Host & Arm & Model & Effort & main requests \\"], erows_))
+M("RgEffAnchorFable", thousands(effmix[("fable", "anchor", "claude-fable-5-1", "unset")]))
+M("RgEffAnchorOpus", thousands(effmix[("opus", "anchor", "claude-opus-5-5", "unset")]))
+for lv in ("high", "medium", "low"):
+    M(f"RgStickyHost{lv.capitalize()}", thousands(sum(n_ for (h, a_, m_, e_), n_ in effmix.items() if a_ == "sticky (host)" and e_ == lv)))
+# extrapolation from the Sonnet follow-up (labelled as such in the text)
+eff_f = he["gm_ratio"]
+fab = pe("pair", "fable", "sticky")["gm_ratio"]
+M("RgEffShareFable", pct(math.log(eff_f) / math.log(fab)))
+M("RgModelOnlyFable", hu(fab / eff_f, 3))
+ops = float(MACROS["RvEffVsAnchorOpus"])
+M("RgOpusMatched", hu(ops / eff_f, 2))
+M("RgFabStickyPair", hu(fab, 3))
+M("RgOverheadFable", pct(float(MACROS["RvStickyHostFable"]) - 1))
+M("RgOverheadOpus", pct(float(MACROS["RvStickyHostOpus"]) - 1))
+# optional plain-Fable effort follow-up (rendered only if committed)
+EFFF = REPO / "docs" / "evidence" / "2026-10-06-effort-control-fable"
+fj = json.loads((EFFF / "summary.json").read_text())
+fsens = json.loads((EFFF / "result" / "sensitivity.json").read_text())
+fprov = (EFFF / "prereg" / "PROVENANCE.md").read_text()
+f1, f2, f3 = fj["rows"]
+assert "HF" in f1["label"] and "sticky" in f2["label"] and "anchor" in f3["label"]
+fq = fj["quality"]
+assert fj["HF_supported"] and fq["non_inferior"]
+M("EfRatio", hu(f1["gm_ratio"], 3))
+M("EfCI", f"{hu(f1['ci95'][0], 3)}--{hu(f1['ci95'][1], 3)}")
+M("EfCutPct", pct(1 - f1["gm_ratio"]))
+M("EfPairs", f1["n_pairs"])
+M("EfValid", fsens["as_run"]["n_valid_cost_pairs"])
+M("EfScen", fsens["as_run"]["cost"]["n_scenarios"])
+M("EfSeed", fsens["as_run"]["seed"])
+M("EfQual", hu(fq["mean_delta_turn_pass"], 3))
+M("EfQualCI", f"{hu(fq['ci95'][0], 3)} to {hu(fq['ci95'][1], 3)}")
+fm = fq["final_pass_mcnemar"]
+M("EfFinalBoth", fm["both_pass"])
+M("EfFinalMed", fm["only_medium_passes"])
+M("EfFinalDef", fm["only_default_passes"])
+M("EfVsSticky", hu(f2["gm_ratio"], 3))
+M("EfVsStickyCI", f"{hu(f2['ci95'][0], 3)}--{hu(f2['ci95'][1], 3)}")
+M("EfStickyVsMedium", hu(1 / f2["gm_ratio"], 2))
+M("EfVsAnchor", hu(f3["gm_ratio"], 3))
+M("EfVsAnchorCI", f"{hu(f3['ci95'][0], 3)}--{hu(f3['ci95'][1], 3)}")
+st44 = fsens["strict_44"]["cost"]
+M("EfStrict", hu(st44["geo_mean_ratio"], 3))
+M("EfStrictCI", f"{hu(st44['ci95'][0], 3)}--{hu(st44['ci95'][1], 3)}")
+M("EfShare", pct(math.log(f1["gm_ratio"]) / math.log(pe("pair", "fable", "sticky")["gm_ratio"])))
+M("EfPreregSha", re.search(r"git diff (\w+) HEAD", fprov).group(1))
+M("EfScheduleAfter", hms(re.search(r"\((\d+:\d+:[\d.]+) AFTER the preregistration commit\)", fprov).group(1)))
+fled = json.loads((EFFF / "campaign" / "ledger.json").read_text())
+M("EfSpend", money(sum(fled["spent"].values()) if isinstance(fled["spent"], dict) else fled["spent"]))
+M("EfSurplusTokens", re.search(r"read \*\*(\d+) more cache tokens\*\*", (EFFF / "FLAGS.md").read_text()).group(1))
+frows = [f"Fable medium / default effort (confirmatory, concurrent) & {f1['n_pairs']} pairs ({fsens['as_run']['n_valid_cost_pairs']} cost-valid) & {hu(f1['gm_ratio'], 3)} & {hu(f1['ci95'][0], 3)}--{hu(f1['ci95'][1], 3)} \\\\",
+         f"Same, excluding the audit-flagged pair (sensitivity) & {fsens['strict_44']['n_valid_cost_pairs'] if 'n_valid_cost_pairs' in fsens['strict_44'] else ''} pairs & {hu(st44['geo_mean_ratio'], 3)} & {hu(st44['ci95'][0], 3)}--{hu(st44['ci95'][1], 3)} \\\\",
+         f"Fable medium / main-campaign Fable sticky (exploratory, not concurrent) & {f2['n_pairs']} scenarios & {hu(f2['gm_ratio'], 3)} & {hu(f2['ci95'][0], 3)}--{hu(f2['ci95'][1], 3)} \\\\",
+         f"Fable medium / main-campaign Fable anchor (exploratory, not concurrent) & {f3['n_pairs']} scenarios & {hu(f3['gm_ratio'], 3)} & {hu(f3['ci95'][0], 3)}--{hu(f3['ci95'][1], 3)} \\\\",
+         r"\midrule",
+         f"Turn-pass difference, medium minus default (unfiltered) & {fq['n_pairs']} pairs & {hu(fq['mean_delta_turn_pass'], 3)} & {hu(fq['ci95'][0], 3)} to {hu(fq['ci95'][1], 3)} \\\\"]
+write(TABLES / "effort-fable.tex", table(r">{\raggedright\arraybackslash}p{0.5\textwidth} r r r",
+                                         [r"Comparison & n & estimate & 95\,\% CI \\"], frows))
+
+# R2: Fable sticky by task type with scenario-cluster CIs
+trows_ = []
+fails_ = []
+for t_ in TASKS:
+    ps = [p for p in PAIRS if p["host"] == "fable" and p["arm"] == "sticky" and p["task_type"] == t_]
+    sv = [(p["scenario_id"], -1000 * p["delta_usd"]) for p in ps if p["valid"]]
+    dv = [(p["scenario_id"], p["delta_turn_pass"]) for p in ps if p["delta_turn_pass"] is not None]
+    e1, l1, h1, n1 = PM.cluster_boot_mean([v for _, v in sv], [k for k, _ in sv], PM.rng_for(CONF["seed"], "r2s", t_), 10000)
+    e2, l2, h2, _ = PM.cluster_boot_mean([v for _, v in dv], [k for k, _ in dv], PM.rng_for(CONF["seed"], "r2q", t_), 10000)
+    flag = r"\textsuperscript{$\dagger$}" if e2 < CONF["ni_margin"] else ""
+    trows_.append(f"{t_} & {n1} & {money(e1, 0)} & {money(l1, 0)} to {money(h1, 0)} & {hu(e2, 3)}{flag} & {hu(l2, 3)} to {hu(h2, 3)} \\\\")
+    M(f"RgTask{t_.capitalize()}Dtp", hu(e2, 3))
+    M(f"RgTask{t_.capitalize()}N", n1)
+    M(f"RgTask{t_.capitalize()}Sav", money(e1, 0))
+    if e2 < CONF["ni_margin"]:
+        fails_.append((t_, e2))
+write(TABLES / "task-fable-sticky.tex", table("l r r r r r", [
+    r"Task type & scenarios & saving / 1,000 & 95\,\% CI & turn-pass $\Delta$ & 95\,\% CI \\"], trows_))
+M("RgNTaskFail", len(fails_))
+M("RgNTask", len(TASKS))
+M("RgTaskFailList", ", ".join(f"{t_} {hu(v, 3)}" for t_, v in sorted(fails_, key=lambda x: x[1])))
+M("RgNTaskThreeX", sum(1 for _, v in fails_ if v / CONF["ni_margin"] >= 2.5))
+
+# R3: cross-arm read volume
+cross = sum(s["cross_arm_read_tokens"] or 0 for s in SESS)
+allread = sum(r["tokens"]["cache_read"] for r in REQS)
+M("RgCrossTokens", thousands(int(cross)))
+M("RgCrossShare", pct(cross / allread, 2))
+M("RgCrossSessions", sum(1 for s in SESS if (s["cross_arm_read_tokens"] or 0) > 0))
+M("RgForeignRequests", sum(s["foreign_read_requests"] for s in SESS))
+
+# R4: static writes beyond the allowance
+ALLOW = int(MACROS["ToolsAllowance"].replace("{,}", ""))
+statics = [s["first_req_write_static"] for s in SESS if s["first_req_write_static"] is not None]
+M("RgStaticMedian", thousands(int(_st.median(statics))))
+BIG_T = 50000
+M("RgBigThreshold", thousands(BIG_T))
+big = [s for s in SESS if (s["first_req_write_static"] or 0) > BIG_T]
+M("RgBigN", len(big))
+M("RgBigAnchors", sum(1 for s in big if s["arm"] == "anchor"))
+M("RgBigSonnet", sum(1 for s in big if s["arm"] == "sonnet"))
+M("RgBigSticky", sum(1 for s in big if s["arm"] == "sticky"))
+bigv = sorted(int(s["first_req_write_static"]) for s in big)
+M("RgBigLow", thousands(bigv[0]))
+M("RgBigHigh", thousands(bigv[-1]))
+M("RgBigInCold", sum(1 for s in big if s["session_key"] in cold_keys))
+first_main = {}
+for r in REQS:
+    if r["main"] and (r["session_key"] not in first_main or r["request_index"] < first_main[r["session_key"]]["request_index"]):
+        first_main[r["session_key"]] = r
+resid_usd = {}
+for s in SESS:
+    r = first_main.get(s["session_key"])
+    if r is None or s["first_req_write_static"] is None:
+        resid_usd[s["session_key"]] = 0.0
+        continue
+    pr = PRICE[r["model"]]
+    resid_usd[s["session_key"]] = max(0.0, s["first_req_write_static"] - ALLOW) * (pr[2] - pr[1]) / 1e6
+rrows = []
+for h, a_ in order_tn:
+    v = [resid_usd[s["session_key"]] for s in SESS if s["host"] == h and s["arm"] == a_]
+    rrows.append(f"{'Sonnet control' if a_ == 'sonnet' else h.capitalize() + ' ' + a_} & \\${money(_st.mean(v), 3)} \\\\")
+    if a_ in ("anchor", "sticky"):
+        M(f"RgResid{h.capitalize()}{a_.capitalize()}", money(_st.mean(v), 3))
+write(TABLES / "static-residual.tex", table("l r", [r"Host and arm & residual per session \\"], rrows, width=r"0.6\textwidth"))
+key_of = {(s["scenario_id"], s["rep"], s["host"], s["arm"]): s["session_key"] for s in SESS}
+shift = []
+for h, H, _ in HOSTS:
+    for a_, A_, _ in ARMS:
+        ys = []
+        for r in PM._cost_rows(DS["pairs"]):
+            if r["host"] != h or r["arm"] != a_ or r["split"] != "test" or not PC.pair_noninferior(r):
+                continue
+            ka = key_of[(r["scenario"], r["rep"], h, "anchor")]
+            kb = key_of.get((r["scenario"], r["rep"], h, a_)) or key_of[(r["scenario"], r["rep"], "any", a_)]
+            ca, cb = SI_K[ka], SI_K[kb]
+            ys.append(math.log((Cn(cb) - resid_usd[kb]) / (Cn(ca) - resid_usd[ka])))
+        adj = math.exp(_st.mean(ys))
+        shift.append(abs(adj - pe("pair", h, a_)["gm_ratio"]))
+        if a_ == "sticky":
+            M(f"RgResidAdj{H}Sticky", hu(adj, 3))
+M("RgResidShiftMax", hu(max(shift), 3))
+
+# R5: effort-control mechanism check
+ereq = [json.loads(x) for x in gzip.open(EFF / "data" / "requests.jsonl.gz", "rt")]
+med_main = [r for r in ereq if r["arm"] == "sonnet_medium" and r["main"]]
+M("RgEcMainMedium", thousands(sum(1 for r in med_main if r["effort"] == "medium")))
+M("RgEcMainTotal", thousands(len(med_main)))
+M("RgEcNonMainDefault", sum(1 for r in ereq if r["arm"] == "sonnet_medium" and not r["main"] and r["effort"] is None))
+assert sum(1 for r in ereq if r["arm"] == "sonnet_medium" and r["main"] and r["effort"] != "medium") == 0
+
+# R7: the quality instrument
+SCN = REPO / "evals" / "paired" / "scenarios" / "main-v1"
+VAL = json.loads((SCN / "validation.json").read_text())
+M("RgValN", len(VAL["scenarios"]))
+M("RgValStartFail", sum(1 for s in VAL["scenarios"] if s["start_fail"]))
+M("RgValOK", sum(1 for s in VAL["scenarios"] if s["validator_ok"]))
+M("RgValRuns", thousands(sum(s["guarded_runs"] for s in VAL["scenarios"])))
+M("RgValKills", sum(s["resource_limit_kills"] + s["timeouts"] for s in VAL["scenarios"]))
+M("RgValWeak", sum(len(s["weak"]) for s in VAL["scenarios"]))
+M("RgValWeakScen", sum(1 for s in VAL["scenarios"] if s["weak"]))
+kinds = defaultdict(int)
+nturns = 0
+scen_yaml = {}
+for f in sorted(SCN.glob("*/*.yaml")):
+    d = _yaml.safe_load(f.read_text())
+    scen_yaml[d["id"]] = (f.parent.name, d)
+    for t in d["turns"]:
+        nturns += 1
+        for c in t.get("checks", []):
+            kinds[c["kind"]] += 1
+M("RgNTurnsScripted", thousands(nturns))
+M("RgCheckKinds", ", ".join(f"{tex_escape(k)} ({thousands(v)})" for k, v in sorted(kinds.items(), key=lambda kv: -kv[1])))
+for f_ in fam:
+    v = [s["turn_pass_frac"] for s in SESS if s["arm"] == "anchor" and famof[s["scenario_id"]] == f_ and s["turn_pass_frac"] is not None]
+    M(f"RgAnchorTP{f_.capitalize()}", hu(_st.mean(v), 3))
+
+
+def ex_turn(sid, ti):
+    fam_, d = scen_yaml[sid]
+    t = d["turns"][ti - 1]
+    pr_ = " ".join(t["prompt"].split())
+    if len(pr_) > 260:
+        pr_ = pr_[:257].rsplit(" ", 1)[0] + "\u2026"
+    chk = "; ".join(", ".join(f"{k}: {v}" for k, v in c.items()) for c in t.get("checks", []))
+    if len(chk) > 220:
+        chk = chk[:217].rsplit(" ", 1)[0] + "\u2026"
+    code = lambda x: re.sub(r"`([^`]*)`", r"\\texttt{\1}", x)
+    return fam_, code(tex_escape(pr_)).replace("\u2026", r"\dots{}"), tex_escape(chk).replace("\u2026", r"\dots{}")
+
+
+exs = []
+for sid, ti in (("go-say", 1), ("fastrand-explain", 4), ("schema-wrongkey", 7)):
+    if sid in scen_yaml:
+        fam_, p_, c_ = ex_turn(sid, ti)
+        exs.append(f"\\item \\textbf{{{fam_}, \\code{{{tex_escape(sid)}}} turn {ti}.}} User: ``{p_}'' Check: \\code{{{c_}}}")
+brk = lambda x: x.replace(", ", ",\\allowbreak{} ").replace("/", "/\\allowbreak{}").replace("(", "\\allowbreak{}(")
+write(TABLES / "quality-examples.tex", "{\\raggedright\n\\begin{itemize}[leftmargin=1.2em]\n" + "\n".join(brk(e) for e in exs)
+      + "\n\\end{itemize}\n\\par}\n")
+
+
+def pbis(rows):
+    xs = [r[0] for r in rows]
+    ys = [1.0 if r[1] else 0.0 for r in rows]
+    if len(set(ys)) < 2 or len(set(xs)) < 2:
+        return None
+    return float(_np.corrcoef(xs, ys)[0, 1])
+
+
+crows_ = []
+for a_ in ("anchor", "aa", "shipped", "sticky", "sonnet"):
+    rows = [(s["turn_pass_frac"], s["final_state_pass"]) for s in SESS if s["arm"] == a_ and s["turn_pass_frac"] is not None]
+    v = pbis(rows)
+    crows_.append(f"{a_} & {len(rows)} & {'n/a' if v is None else hu(v, 2)} \\\\")
+allrows = [(s["turn_pass_frac"], s["final_state_pass"]) for s in SESS if s["turn_pass_frac"] is not None]
+M("RgPbisAll", hu(pbis(allrows), 2))
+crows_.append(r"\midrule")
+for f_ in fam:
+    rows = [(s["turn_pass_frac"], s["final_state_pass"]) for s in SESS if famof[s["scenario_id"]] == f_ and s["turn_pass_frac"] is not None]
+    v = pbis(rows)
+    crows_.append(f"family: {f_} & {len(rows)} & {'n/a' if v is None else hu(v, 2)} \\\\")
+    M(f"RgPbis{f_.capitalize()}", "n/a" if v is None else hu(v, 2))
+write(TABLES / "tp-final-corr.tex", table("l r r", [r"Sessions & n & point-biserial $r$ \\"], crows_, width=r"0.6\textwidth"))
 
 # ------------------------------------------------------------ numbers.tex
 header = ("% Generated by build_assets.py from docs/evidence/2026-10-02-paired-campaign/ and the files listed there. "

@@ -9,7 +9,12 @@ fraction inside the preregistered \NIMarginPts-point margin on the \NTest\ test 
 \QAllScen\ scenarios that margin was not shown for sticky (\QAllFableSticky, CI \QAllFableStickyCI), and
 routed Fable arms passed the final hidden tests \FinalGapLow--\FinalGapHigh\ points less often
 (exploratory). The sticky policy cost less than the shipped one (\HThreeFable\X\ on Fable, \HThreeOpus\X\ on
-Opus); the preregistered test was only that sticky costs no more than shipped.
+Opus); the preregistered test was only that sticky costs no more than shipped. At these prices the saving is
+Sonnet-at-medium relative to the host at its default effort. Lowering the host's own effort to medium is a smaller
+saving (about \EfCutPct\,\%, \EfRatio\X) with no detectable quality loss (\cref{sec:effortfable}); routing to Sonnet
+once per session remains the larger saving, but lowering the host's effort avoids the task-type quality losses seen
+with routing, which makes it a reasonable choice where explain, review or feature quality matters. Opus's response to
+effort was not measured.
 \end{keyidea}
 
 \paragraph{How much of the saving is the router, and how much the effort setting.} An earlier draft read the data
@@ -50,10 +55,19 @@ the effort setting: sticky sessions that ran Sonnet at medium effort still cost 
 \RvEffVsAnchorOpusCI) the plain Opus host.
 \end{keyidea}
 
+\paragraph{Quality by task type.} The aggregate Fable sticky quality hides a split (\cref{tab:taskfable}):
+\RgNTaskFail\ of \RgNTask\ task types fall below the \NIMarginPts-point margin (\RgTaskFailList), \RgNTaskThreeX\
+of them by about three times, and they are among the largest savers. The aggregate passes because bugfix and
+mixed scenarios are numerous. Routing only the task types that hold their quality could avoid most of the loss;
+that is a hypothesis for the next campaign, not a finding.
+
 \paragraph{The judge.} Keep Jev as the default judge. The post-hoc Cloudflare Clef judge matched its accuracy but
 was \ClClefCostXLow--\ClClefCostXHigh\X\ the cost per decision and about three times slower from this machine; it is
 worth re-testing if it can be hosted close to the agent or if its measured latency improves. Clef-Flash was cheaper
-but less accurate (\cref{sec:clef}). Neither was part of the paired campaign.
+but less accurate (\cref{sec:clef}). Neither was part of the paired campaign. Taken together, the evidence does not
+establish the value of the decision-judge machinery itself: no judge met the usefulness rule on real decisions
+(\cref{sec:traces}), and the router showed no benefit beyond the decision to use Sonnet (\cref{sec:effort}). Jev
+remains the best of the judges tested.
 
 \paragraph{Caching guidance (hypotheses).} The mechanisms in \cref{sec:caching,sec:composition} suggest the
 following for other hosts and prices. They are hypotheses drawn from two hosts on one provider, not tested

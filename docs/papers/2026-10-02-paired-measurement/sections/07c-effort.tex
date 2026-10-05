@@ -42,14 +42,18 @@ data cannot separate.
     sessions per host that stayed on the host model cost \RvStickyHostFable\X\ the plain host on Fable and
     \RvStickyHostOpus\X\ on Opus. On Fable, sticky-on-Sonnet cost \RvEffVsAnchorFable\X\ the plain host where the
     control cost \RvCtlVsAnchorFable\X\ on the same scenarios; the dearer host-kept sessions offset most of that
-    difference, which is why sticky and plain Sonnet look alike overall.
+    difference, which is why sticky and plain Sonnet look alike overall. Because those host-kept sessions ran the
+    host near its default effort mix, \RvStickyHostFable\X\ and \RvStickyHostOpus\X\ are a near-effort-matched estimate
+    of the bundle's own overhead on the host, about \RgOverheadFable--\RgOverheadOpus\,\%. With \RvStickyHostNFable\
+    sessions per host and an approximate effort match, this is an indication, not a finding.
 \end{itemize}
 
-\subsection{Follow-up: plain Sonnet at medium versus default effort \texorpdfstring{\prereg}{[preregistered]}}\label{sec:effortfollow}
+\subsection{Follow-up: plain Sonnet at medium versus default effort \texorpdfstring{[preregistered, provenance-limited]}{[preregistered, provenance-limited]}}\label{sec:effortfollow}
 
-To separate the effort setting from the routing, a preregistered follow-up (effort-control-v1) ran plain Sonnet
+To separate the effort setting from the routing, a preregistered, provenance-limited follow-up (effort-control-v1) ran plain Sonnet
 twice on the \EcScen\ test scenarios, \EcReps\ repetitions each: once at the provider's default effort and once at
-medium effort, nothing else changed. Each pair started together from the same frozen workspace with separate cache
+medium effort, nothing else changed (all \RgEcMainMedium\ of \RgEcMainTotal\ main requests of the medium arm ran at
+medium; its \RgEcNonMainDefault\ default-effort requests are all background, not main-loop). Each pair started together from the same frozen workspace with separate cache
 nonces, so this comparison is concurrent. Intervals come from \EcResamples\ scenario-cluster resamples (seed
 \EcSeed). The preregistered hypothesis (medium is cheaper, with non-inferior turn-pass fraction) was \EcHE.
 
@@ -88,3 +92,35 @@ hints at a loss on docs, explain and review work (sticky-on-Sonnet at medium min
 \RvKTDtp\ [\RvKTDtpCI] on those \RvKTN\ scenarios against \RvRestDtp\ [\RvRestDtpCI] on the rest; post hoc, and
 confounded with the bundle's context) that the follow-up is too small to settle.
 \end{keyidea}
+
+\subsection{Follow-up: plain Fable at medium versus default effort \texorpdfstring{[preregistered]}{[preregistered]}}\label{sec:effortfable}
+
+The round-2 review asked how the host itself responds to effort. A second preregistered follow-up
+(effort-control-fable-v1) ran plain Fable~5.1 twice on the \EcScen\ test scenarios, \EcReps\ repetitions each, at the
+provider default and at medium effort, concurrently, with the same design and \EcResamples\ scenario-cluster resamples
+(seed \EcSeed). This time the preregistration was committed (\code{\EfPreregSha}) before the schedule was created
+(\EfScheduleAfter\ later); a throwaway feasibility schedule and a two-session mechanism check made before the commit
+are disclosed in its provenance record.
+
+\begin{table}[htbp]
+\centering\small
+\caption{Fable effort follow-up (evidence in the \texttt{2026-10-06-effort-control-fable} directory). Cost rows are
+geometric-mean ratios of tools-normalized session cost; below 1 means the first arm is cheaper.}
+\label{tab:effortfable}
+\input{generated/tables/effort-fable.tex}
+\end{table}
+
+\paragraph{Result.} Plain Fable at medium effort cost \EfRatio\X\ the default (95\,\% CI \EfCI; \EfValid\ cost-valid of
+\EfPairs\ pairs), about \EfCutPct\,\% cheaper. Turn-pass fraction moved by \EfQual\ (\EfQualCI), non-inferior, and the
+final hidden tests passed in both arms in \EfFinalBoth\ pairs, only at medium in \EfFinalMed\ and only at default in
+\EfFinalDef. The preregistered hypothesis was supported. Two sessions in the default arm were flagged and are explained
+in the evidence (\path{FLAGS.md}): one anchor read \EfSurplusTokens\ more cache tokens than the audit could account
+for, worth about half a cent, and one anchor was stopped by the memory guard when the agent's own verification script
+ran away. Excluding the flagged pair gives \EfStrict\ (\EfStrictCI). The follow-up cost \$\EfSpend.
+
+\paragraph{What it replaces.} The round-2 extrapolation from the Sonnet follow-up is now a measurement. Fable's own
+effort effect, $\ln \EfRatio / \ln \RgFabStickyPair$, is about \EfShare\,\% of the log saving of sticky routing on
+Fable, not the \RgEffShareFable\,\% extrapolated. Keeping Fable and lowering its effort leaves most of the saving on the
+table: exploratory and not concurrent, Fable at medium cost \EfVsSticky\X\ the main campaign's Fable sticky sessions
+(\EfVsStickyCI), so Sonnet-at-medium sticky is about \EfStickyVsMedium\X\ of Fable-at-medium, and \EfVsAnchor\X\ the
+main campaign's Fable anchors (\EfVsAnchorCI). How Opus responds to effort is still unmeasured.
