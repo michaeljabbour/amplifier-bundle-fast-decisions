@@ -1,0 +1,67 @@
+# holdout-v3 knowledge scenario (12 turns, explain): sissaschool/xmlschema 4.3.2 at 627c179 (523 files): explain the package architecture, schema discovery, loaders, limits, converters and exceptions from source (elementpath is not installed, so answers are read from the code), with an ARCHITECTURE.md and a mutation-checked inventory tool
+id: xmlschema-arch-explain
+task_type: explain
+language: python
+split: holdout
+source: {desc: 'sissaschool/xmlschema 4.3.2 at 627c179 (523 files): explain the package architecture, schema discovery, loaders, limits, converters and exceptions from source (elementpath is not installed, so answers are read from the code), with an ARCHITECTURE.md and a mutation-checked inventory tool', repo: 'https://github.com/sissaschool/xmlschema.git', sha: 627c179541ec2e79c0b42c1d493074f7450324c1}
+workspace: {kind: git, repo: 'https://github.com/sissaschool/xmlschema.git', sha: 627c179541ec2e79c0b42c1d493074f7450324c1, local_hint: ~/dev/afast-paired-src/xmlschema}
+turns:
+- prompt: 'I am new to this codebase. Give me a map of the xmlschema/ package: one line per sub-package or data directory directly under xmlschema/, saying what it is for. Do not change any files.'
+  checks:
+  - kind: keyed_facts
+    all: [converters, resources, utils, extras, xpath, validators, schemas, locale|translation, testing]
+- prompt: When I call `xmlschema.validate(xml)` with NO schema argument, how does the library find a schema? Walk through `get_context` and `get_resource_schema` in xmlschema/documents.py, including the fallbacks and the final error. Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: [get_resource_schema, fetch_schema_locations|schemaLocation|location hints, XMLSchema10, meta_schema|meta.schema, get_dummy_schema|dummy, 'xsi:type|XSI_TYPE|skip', cannot get a schema]
+- prompt: What is the relation between XMLSchemaBase, XMLSchema10, XMLSchema11 and the `XMLSchema` name, and which class attributes differ between the two versions (meta-schema and base schemas)? Answer from xmlschema/validators/schemas.py. Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: [XMLSchemaBase, XMLSchema10, XMLSchema11, XMLSchema = XMLSchema10|alias, META_SCHEMA, XSD_1\.0, XSD_1\.1, BASE_SCHEMAS|xml\.xsd|XMLSchema-instance]
+- prompt: 'Explain the validation modes: which values exist, which is the default, and what each does with a schema or document that has errors (xmlschema/validators/xsdbase.py and schemas.py). Do not change any files.'
+  checks:
+  - kind: keyed_facts
+    all: [strict, lax, skip, default, raise|error, collect|log|ignore|not built]
+- prompt: 'Compare SchemaLoader, LocationSchemaLoader and SafeSchemaLoader in xmlschema/loaders.py: when does each process an import, and what extra work does the safe one do? Do not change any files.'
+  checks:
+  - kind: keyed_facts
+    all: [SchemaLoader, LocationSchemaLoader, SafeSchemaLoader, namespace, location, collision|conflict|clash, global_maps|excluded_locations|partial]
+- prompt: What are the package protection limits, their default values, the minimum value each accepts, and how can they be changed at runtime? Why are there two modules (limits.py and _limits.py)? Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: ['MAX_MODEL_DEPTH.{0,40}15', 'MAX_SCHEMA_SOURCES.{0,40}1000', 'MAX_XML_DEPTH.{0,40}1000', 'MAX_XML_ELEMENTS.{0,40}(10 ?\*\* ?6|1000000|10\^6)', LimitsModule|__setattr__|setattr, _limits|performance|specular|mirror]
+  gap_before_s: 420
+- prompt: Which security modes does XMLResource's `allow` argument accept, what is the default, and what does each allow? Answer from xmlschema/resources/xml_resource.py. Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: ['''all''|all', remote, local, sandbox, base_url, none]
+- prompt: List the converter classes available under xmlschema/converters/, say which is the default and which exporting functions or arguments accept a converter. Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: [XMLSchemaConverter, Unordered, Parker, BadgerFish, GData, Abdera, JsonML, Columnar, default]
+- prompt: Write ARCHITECTURE.md in the repository root with level-2 sections Overview, Packages, Limits and Loaders, using only facts from the source (default limit values, the XMLSchema alias, the loader class names).
+  checks:
+  - kind: doc_sections
+    path: ARCHITECTURE.md
+    headings: [Overview, Packages, Limits, Loaders]
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: MAX_MODEL_DEPTH}
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: \b15\b}
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: XMLSchema = XMLSchema10|XMLSchema10}
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: SafeSchemaLoader}
+- prompt: 'Create tools/inventory.py: a stdlib-only script that, for every sub-package of xmlschema/ (a directory with an __init__.py), prints one line `<name>: <N>` where N is the number of .py modules in it excluding __init__.py (sorted by name). Run it and show the output.'
+  checks:
+  - {kind: file_regex, path: tools/inventory.py, pattern: __init__}
+  - {kind: tests, runner: cmd, cmd: 'O=$(mktemp -d) && python3 tools/inventory.py > $O/a.txt && grep -qx ''converters: 8'' $O/a.txt && grep -qx ''validators: 20'' $O/a.txt && grep -qx ''resources: 5'' $O/a.txt && grep -qx ''xpath: 7'' $O/a.txt && rm xmlschema/converters/gdata.py && python3 tools/inventory.py > $O/b.txt && grep -qx ''converters: 7'' $O/b.txt && grep -qx ''validators: 20'' $O/b.txt', timeout: 240}
+  gap_before_s: 420
+- prompt: Which exception classes does the package define and how are they related? Show the hierarchy for validation errors and for resource errors, including which are also built-in exception types. Answer from xmlschema/exceptions.py and xmlschema/validators/exceptions.py. Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: [XMLSchemaException, XMLSchemaValidatorError, 'XMLSchemaValidationError.{0,80}ValueError|ValueError.{0,80}XMLSchemaValidationError', XMLSchemaDecodeError, 'XMLSchemaParseError.{0,80}SyntaxError|SyntaxError.{0,80}XMLSchemaParseError', XMLResourceError]
+- prompt: Add a level-2 `## Exceptions` section to ARCHITECTURE.md summarising the hierarchy in a few sentences, naming the root class and at least three subclasses.
+  checks:
+  - kind: doc_sections
+    path: ARCHITECTURE.md
+    headings: [Exceptions]
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: XMLSchemaException}
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: XMLSchemaDecodeError}
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: XMLResourceForbidden|XMLResourceExceeded}

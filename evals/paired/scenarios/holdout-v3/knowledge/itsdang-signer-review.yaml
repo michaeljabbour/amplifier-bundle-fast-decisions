@@ -1,0 +1,75 @@
+# holdout-v3 knowledge scenario (13 turns, review): pallets/itsdangerous at 672971d plus three planted patches (compare_digest replaced by ==, future-timestamp check removed, key rotation reduced to one key) reviewed with security impact
+id: itsdang-signer-review
+task_type: review
+language: python
+split: holdout
+source: {desc: 'pallets/itsdangerous at 672971d plus three planted patches (compare_digest replaced by ==, future-timestamp check removed, key rotation reduced to one key) reviewed with security impact', repo: 'https://github.com/pallets/itsdangerous.git', sha: 672971d66a2ef9f85151e53283113f33d642dabd}
+workspace:
+  kind: git
+  repo: https://github.com/pallets/itsdangerous.git
+  sha: 672971d66a2ef9f85151e53283113f33d642dabd
+  local_hint: ~/dev/afast-paired-src/itsdangerous
+  add_files:
+    patches/plain_eq.diff: "--- a/src/itsdangerous/signer.py\n+++ b/src/itsdangerous/signer.py\n@@ -25,7 +25,7 @@\n         \"\"\"Verifies the given signature matches the expected\n         signature.\n         \"\"\"\n-        return hmac.compare_digest(sig, self.get_signature(key, value))\n+        return sig == self.get_signature(key, value)\n \n \n class NoneAlgorithm(SigningAlgorithm):\n"
+    patches/no_future_check.diff: "--- a/src/itsdangerous/timed.py\n+++ b/src/itsdangerous/timed.py\n@@ -145,12 +145,6 @@\n                     date_signed=self.timestamp_to_datetime(ts_int),\n                 )\n \n-            if age < 0:\n-                raise SignatureExpired(\n-                    f\"Signature age {age} < 0 seconds\",\n-                    payload=value,\n-                    date_signed=self.timestamp_to_datetime(ts_int),\n-                )\n \n         if return_timestamp:\n             return value, self.timestamp_to_datetime(ts_int)\n"
+    patches/single_key.diff: "--- a/src/itsdangerous/signer.py\n+++ b/src/itsdangerous/signer.py\n@@ -233,13 +233,9 @@\n \n         value = want_bytes(value)\n \n-        for secret_key in reversed(self.secret_keys):\n-            key = self.derive_key(secret_key)\n-\n-            if self.algorithm.verify_signature(key, value, sig):\n-                return True\n-\n-        return False\n+        key = self.derive_key()\n+\n+        return self.algorithm.verify_signature(key, value, sig)\n \n     def unsign(self, signed_value: str | bytes) -> bytes:\n         \"\"\"Unsigns the given string.\"\"\"\n"
+turns:
+- prompt: Give me a one-line role for each module under src/itsdangerous/. Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: [signer\.py, timed\.py, serializer\.py, url_safe\.py, encoding\.py, exc\.py, _json\.py]
+- prompt: 'Explain how `Signer.sign` and `Signer.unsign` work in src/itsdangerous/signer.py: the layout of a signed value, how the signature is computed, and how verification copes with a list of secret keys. Do not change any files.'
+  checks:
+  - kind: keyed_facts
+    all: [sep|separator, base64, rsplit, derive_key, compare_digest, reversed|newest|rotation|rotate]
+- prompt: What are the key-derivation modes of `Signer.derive_key` and which is the default? Spell out what each mixes together. Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: [django-concat, concat, hmac, none, salt, signer]
+- prompt: Review patches/plain_eq.diff. Does it change any observable result of `validate`/`unsign`? What is the problem, and how severe? Do not apply it.
+  checks:
+  - kind: keyed_facts
+    all: [compare_digest, timing|constant.time|side.channel, same|identical|no (observable|functional)|equal]
+- prompt: A reviewer needs evidence. How would you write a deterministic unit test that fails on plain_eq.diff even though the results are identical? Describe it concretely (what is patched, what is asserted). Do not change files.
+  checks:
+  - kind: keyed_facts
+    all: [monkeypatch|mock|spy|patch, compare_digest, called|call count|assert]
+- prompt: Review patches/no_future_check.diff (a change in `TimestampSigner.unsign`). What input is now accepted that was rejected, and what error did it raise before? Do not apply it.
+  checks:
+  - kind: keyed_facts
+    all: [age < 0|negative|future, SignatureExpired, max_age, clock|skew|forg|tamper]
+- prompt: 'Prove it with real output, without changing the repository: in a scratch copy under /tmp (src first on sys.path) create a token whose timestamp is one hour in the future (override `get_timestamp` on the signing instance) and call `unsign(token, max_age=10)` before and after applying the diff. Show what each prints.'
+  checks:
+  - kind: keyed_facts
+    all: [Signature age -3600 < 0 seconds|age -\d+ < 0, SignatureExpired, b'x'|b\"x\"|x]
+- prompt: Review patches/single_key.diff (a change in `Signer.verify_signature`). What breaks and in which concrete operational scenario? Give an example with two keys. Do not apply it.
+  checks:
+  - kind: keyed_facts
+    all: [rotat, old, new, newest|last|only|single, validate|unsign|False]
+- prompt: Write REVIEW.md in the repository root with level-2 sections Summary, plain_eq, no_future_check and single_key. Each patch section must contain a line starting `Risk:` followed by high, medium or low.
+  checks:
+  - kind: doc_sections
+    path: REVIEW.md
+    headings: [Summary, plain_eq, no_future_check, single_key]
+  - {kind: file_regex, path: REVIEW.md, pattern: '(?im)^Risk:\s*(high|medium|low)', min_count: 3}
+  - {kind: file_regex, path: REVIEW.md, pattern: compare_digest}
+  - {kind: file_regex, path: REVIEW.md, pattern: rotat}
+- prompt: 'Create checks/test_review.py (pytest) with executable checks: it must pass on the current tree and fail when ANY ONE of the three diffs is applied. Import from this checkout (PYTHONPATH=src) and prove each failure in a scratch copy.'
+  checks:
+  - {kind: file_regex, path: checks/test_review.py, pattern: ^def test_, min_count: 3}
+  - {kind: tests, runner: cmd, cmd: 'O=$(mktemp -d) && cp -R src $O/orig && PYTHONPATH=src python3 -m pytest -q -p no:cacheprovider checks/test_review.py && for p in plain_eq no_future_check single_key; do rm -rf src && cp -R $O/orig src && patch -s -p1 < patches/$p.diff && if PYTHONPATH=src python3 -m pytest -q -p no:cacheprovider checks/test_review.py; then exit 1; fi; done', timeout: 240}
+- prompt: 'Explain how `Serializer.loads` finds the right signer: what does `iter_unsigners` yield, in what order, and how do `fallback_signers` and the secret key list interact? Answer from src/itsdangerous/serializer.py. Do not change any files.'
+  checks:
+  - kind: keyed_facts
+    all: [iter_unsigners, make_signer|primary|first, fallback, 'secret_keys|each (secret )?key|keys', BadSignature]
+- prompt: What does `URLSafeSerializerMixin.dump_payload` do differently from the base class, and how does `load_payload` know a payload was compressed? Answer from src/itsdangerous/url_safe.py. Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: [zlib, base64, \bcompress, 'b?\x27?\.\x27?|leading dot|starts? with|prefix', BadPayload]
+- prompt: Append a `## Recommendation` section to REVIEW.md with one verdict per patch and say in one sentence what the author should do instead for no_future_check.
+  checks:
+  - kind: doc_sections
+    path: REVIEW.md
+    headings: [Recommendation]
+  - {kind: file_regex, path: REVIEW.md, pattern: '(?i)reject', min_count: 2}
+  - {kind: file_regex, path: REVIEW.md, pattern: '(?i)skew|tolerance|leeway'}

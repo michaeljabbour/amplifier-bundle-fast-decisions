@@ -1,0 +1,85 @@
+# holdout-v3 repos scenario (10 turns, explain): python-poetry/tomlkit at 0518af2 (0.15.1): explain round-trip parsing, item types, editing, errors and the public API by running the checkout, then add tomlkit.is_valid against hidden tests with export, tests and changelog
+id: tomlkit-roundtrip-explain
+task_type: explain
+language: python
+split: holdout
+source: {desc: 'python-poetry/tomlkit at 0518af2 (0.15.1): explain round-trip parsing, item types, editing, errors and the public API by running the checkout, then add tomlkit.is_valid against hidden tests with export, tests and changelog', repo: 'https://github.com/python-poetry/tomlkit.git', sha: 0518af253901e57872c03835db6fe9bacab40ee7}
+workspace: {kind: git, repo: 'https://github.com/python-poetry/tomlkit.git', sha: 0518af253901e57872c03835db6fe9bacab40ee7, local_hint: ~/dev/afast-paired-src/_v3c/tomlkit}
+hidden_files:
+  hidden/test_is_valid.py: |
+    import tomlkit
+
+    from tomlkit import is_valid
+
+
+    def test_valid_documents():
+        assert is_valid("a = 1") is True
+        assert is_valid("") is True
+        assert is_valid(b"a = 1") is True
+        assert is_valid("[t]\nx = [1, 2]\n") is True
+
+
+    def test_invalid_documents():
+        assert is_valid("a = ") is False
+        assert is_valid("a = 1\na = 2") is False
+        assert is_valid("[t") is False
+
+
+    def test_exported_and_sorted():
+        assert "is_valid" in tomlkit.__all__
+        assert tomlkit.is_valid is tomlkit.api.is_valid
+        assert tomlkit.__all__ == sorted(tomlkit.__all__)
+        assert len(tomlkit.__all__) == 28
+turns:
+- prompt: Give me a one-line role for each module in the tomlkit/ package and say where the tests and docs are. Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: [api\.py, parser\.py, container\.py, items\.py, source\.py, exceptions\.py, toml_document\.py, toml_file\.py, _utils\.py, tests, docs]
+- prompt: What does `tomlkit.parse(text)` return, does `dumps(parse(text)) == text` hold, and what item types appear for a title string, a table, an inline list and an array of tables? Run it on a document with comments, a table, a multi-line array and two `[[products]]` entries. Do not change repository files.
+  checks:
+  - kind: keyed_facts
+    all: [TOMLDocument, 'True', String, Table, Array, AoT]
+- prompt: 'Show what happens to comments and layout when you edit a parsed document: change `owner.name` to ''Tim'' and add a new top-level key `new = 1`. Where does the new key end up in the output and what stays untouched? Run it. Do not change repository files.'
+  checks:
+  - kind: keyed_facts
+    all: ['# top', '# inline', name = \"Tim\", new = 1, before|above|first|top-level|root, preserv|unchanged|untouched|kept]
+- prompt: 'What does `doc.unwrap()` return and why would you use it? Also: how many names are in `tomlkit.__all__`? Run both. Do not change repository files.'
+  checks:
+  - kind: keyed_facts
+    all: [unwrap, dict, list, plain|native|python, \b27\b]
+- prompt: How do errors work? Parse `a = ` and `a = 1\na = 2`, print the exception classes (their bases), messages and the `line`/`col` attributes. Which exceptions derive from which? Do not change repository files.
+  checks:
+  - kind: keyed_facts
+    all: [ParseError, UnexpectedCharError, ValueError, TOMLKitError, already exists, 'line 2 col 5|line.{0,5}2', 'line 1 col 4|col.{0,5}4']
+- prompt: Write ARCHITECTURE.md in the repository root with level-2 sections Overview, Modules, Round trip and Errors, naming real classes and the number of names in __all__.
+  checks:
+  - kind: doc_sections
+    path: ARCHITECTURE.md
+    headings: [Overview, Modules, Round trip, Errors]
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: TOMLDocument}
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: ParseError}
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: \b27\b}
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: unwrap}
+- prompt: 'Add a public function `is_valid(string)` to tomlkit/api.py, right after `parse`: it returns True if a str or bytes parses and False if it raises a ParseError (other exceptions are not swallowed). Import what you need and export it from tomlkit/__init__.py keeping `__all__` sorted.'
+  checks:
+  - {kind: file_regex, path: tomlkit/api.py, pattern: 'def is_valid\(string: str \| bytes\) -> bool:'}
+  - {kind: file_regex, path: tomlkit/__init__.py, pattern: from tomlkit\.api import is_valid}
+  - {kind: file_regex, path: tomlkit/__init__.py, pattern: '"is_valid"'}
+  - kind: tests
+    runner: python
+    files: [hidden/test_is_valid.py]
+    hidden: [hidden/test_is_valid.py]
+- prompt: Add tests/test_is_valid.py with at least four pytest tests for `is_valid` (valid, empty, bad syntax, duplicate key) and run them.
+  checks:
+  - {kind: file_regex, path: tests/test_is_valid.py, pattern: ^def test_, min_count: 4}
+  - kind: tests
+    runner: python
+    files: [tests/test_is_valid.py]
+- prompt: 'Add a changelog entry: in CHANGELOG.md insert a new `## [Unreleased]` section above `## [0.15.1]` with a `### Added` bullet mentioning `tomlkit.is_valid`.'
+  checks:
+  - {kind: file_regex, path: CHANGELOG.md, pattern: '## \[Unreleased\]\n\n### Added\n\n- .*is_valid'}
+  - {kind: file_regex, path: CHANGELOG.md, pattern: '## \[Unreleased\][\s\S]*?## \[0\.15\.1\]'}
+- prompt: 'Summarise: which files did you add or modify, how many names does `tomlkit.__all__` have now, and which exceptions does `is_valid` swallow versus let through? Do not change any files.'
+  checks:
+  - kind: keyed_facts
+    all: [tomlkit/api\.py, tomlkit/__init__\.py, test_is_valid\.py, CHANGELOG, \b28\b, ParseError, propagate|let through|not swallow|other]

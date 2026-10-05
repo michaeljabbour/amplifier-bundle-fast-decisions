@@ -1,0 +1,64 @@
+# holdout-v3 knowledge scenario (10 turns, review): mozilla/bleach 6.4.0 at f0355a7 plus three planted patches (URI normalisation removed, nofollow callback overwrite, clean() fast path) to review as a security reviewer
+id: bleach-sanitize-review
+task_type: review
+language: python
+split: holdout
+source: {desc: 'mozilla/bleach 6.4.0 at f0355a7 plus three planted patches (URI normalisation removed, nofollow callback overwrite, clean() fast path) to review as a security reviewer', repo: 'https://github.com/mozilla/bleach.git', sha: f0355a7af00500482c5292c6c83290c6a178068d}
+workspace:
+  kind: git
+  repo: https://github.com/mozilla/bleach.git
+  sha: f0355a7af00500482c5292c6c83290c6a178068d
+  local_hint: ~/dev/afast-paired-src/bleach
+  add_files:
+    patches/uri_normalize.diff: "--- a/bleach/sanitizer.py\n+++ b/bleach/sanitizer.py\n@@ -488,9 +488,6 @@\n         # Convert all character entities in the value\n         normalized_uri = html5lib_shim.convert_entities(value)\n \n-        # Strip backtick, whitespace, and control characters\n-        normalized_uri = re.sub(r\"[`\\000-\\040\\177-\\240\\s]+\", \"\", normalized_uri)\n-\n         # Strip non-ASCII characters so that urlparse can parse the url into\n         # components correctly. This drops invisible and whitespace unicode\n         # characters among other things.\n"
+    patches/nofollow_simple.diff: "--- a/bleach/callbacks.py\n+++ b/bleach/callbacks.py\n@@ -10,11 +10,7 @@\n     if attrs[href_key].startswith(\"mailto:\"):\n         return attrs\n \n-    rel_key = (None, \"rel\")\n-    rel_values = [val for val in attrs.get(rel_key, \"\").split(\" \") if val]\n-    if \"nofollow\" not in [rel_val.lower() for rel_val in rel_values]:\n-        rel_values.append(\"nofollow\")\n-    attrs[rel_key] = \" \".join(rel_values)\n+    attrs[(None, \"rel\")] = \"nofollow\"\n \n     return attrs\n \n"
+    patches/clean_fast_path.diff: "--- a/bleach/sanitizer.py\n+++ b/bleach/sanitizer.py\n@@ -188,6 +188,10 @@\n         if not text:\n             return \"\"\n \n+        # fast path: no markup, nothing to sanitize\n+        if \"<\" not in text:\n+            return text\n+\n         dom = self.parser.parseFragment(text)\n         filtered = BleachSanitizerFilter(\n             source=self.walker(dom),\n"
+turns:
+- prompt: Give me a one-line role for each module directly under bleach/ (ignore tests and docs). Which module is the HTML sanitizer, which turns URLs into links, and what is html5lib_shim for? Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: [sanitizer\.py, linkifier\.py, callbacks\.py, css_sanitizer\.py, html5lib_shim\.py, _vendor]
+- prompt: 'Explain `BleachSanitizerFilter.sanitize_uri_value` in bleach/sanitizer.py step by step: what normalisation does it apply before looking at the scheme, what does it return, and what happens for a value with no scheme at all? Do not change any files.'
+  checks:
+  - kind: keyed_facts
+    all: [convert_entities, 'normali[sz]', whitespace|control, urlparse, scheme, allowed_protocols, '#|anchor']
+- prompt: Review patches/uri_normalize.diff. What does it remove, what concrete href value now passes `bleach.clean` that did not before, and why is that a security problem? Do not apply it to the repository.
+  checks:
+  - kind: keyed_facts
+    all: [javascript, whitespace|control|space, scheme, XSS|script|attack|bypass]
+- prompt: 'Prove it without touching the repo: in a scratch copy under /tmp apply patches/uri_normalize.diff and print `bleach.clean(''<a href=" javascript:alert(1)">x</a>'')` before and after. Show the real output.'
+  checks:
+  - kind: keyed_facts
+    all: [<a>x</a>, '<a href=.{0,4} javascript:alert\(1\).{0,4}>x</a>']
+- prompt: Review patches/nofollow_simple.diff (a simplification of `nofollow` in bleach/callbacks.py). What changes for a link that already has a rel attribute? Give the concrete before and after for `<a rel="noopener" href="http://example.com">`. Do not apply it.
+  checks:
+  - kind: keyed_facts
+    all: [noopener, nofollow, 'overwrit|replace|drops?|lost|loses', append|keep|preserv]
+  gap_before_s: 420
+- prompt: Review patches/clean_fast_path.diff (a proposed shortcut in `Cleaner.clean`). Which inputs behave differently, with concrete input and output, and is there a security angle? Do not apply it.
+  checks:
+  - kind: keyed_facts
+    all: [AT&T|&amp;|ampersand|escap, '<.{0,20}not in|fast path|no markup|skip', '&gt;|&amp;']
+- prompt: Write REVIEW.md in the repository root with level-2 sections Summary, uri_normalize, nofollow_simple and clean_fast_path. In each patch section start with `Severity:` and one of critical/high/medium/low, then quote the concrete input.
+  checks:
+  - kind: doc_sections
+    path: REVIEW.md
+    headings: [Summary, uri_normalize, nofollow_simple, clean_fast_path]
+  - {kind: file_regex, path: REVIEW.md, pattern: '(?im)^Severity:\s*(critical|high|medium|low)', min_count: 3}
+  - {kind: file_regex, path: REVIEW.md, pattern: 'javascript:alert'}
+  - {kind: file_regex, path: REVIEW.md, pattern: noopener}
+- prompt: 'Turn the review into executable checks: create checks/test_review.py (pytest) that passes on the current tree and fails when ANY ONE of the three diffs is applied (apply each in a scratch copy to prove it).'
+  checks:
+  - {kind: file_regex, path: checks/test_review.py, pattern: ^def test_, min_count: 4}
+  - {kind: tests, runner: cmd, cmd: 'O=$(mktemp -d) && cp -R bleach $O/orig && python3 -m pytest -q -p no:cacheprovider checks/test_review.py && for p in uri_normalize nofollow_simple clean_fast_path; do rm -rf bleach && cp -R $O/orig bleach && patch -s -p1 < patches/$p.diff && if python3 -m pytest -q -p no:cacheprovider checks/test_review.py; then exit 1; fi; done', timeout: 240}
+- prompt: 'Explain `attribute_filter_factory` in bleach/sanitizer.py: which shapes can `attributes` have, how is the wildcard handled, and what is raised for anything else? Do not change any files.'
+  checks:
+  - kind: keyed_facts
+    all: [callable, dict, list, \*|wildcard, ValueError]
+  gap_before_s: 420
+- prompt: Add a `## Recommendation` section to REVIEW.md with one verdict line per patch (reject, or request changes) and a few words of reason.
+  checks:
+  - kind: doc_sections
+    path: REVIEW.md
+    headings: [Recommendation]
+  - {kind: file_regex, path: REVIEW.md, pattern: '(?i)(reject|request changes)', min_count: 3}

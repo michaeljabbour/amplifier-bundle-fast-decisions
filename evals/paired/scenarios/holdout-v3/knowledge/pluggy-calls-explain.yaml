@@ -1,0 +1,57 @@
+# holdout-v3 knowledge scenario (10 turns, explain): pytest-dev/pluggy at 1ca1d52 (post-split module layout with re-export shims): explain registration, call ordering, wrappers, firstresult, argument errors; verified by running the checkout and a mutation-checked order demo
+id: pluggy-calls-explain
+task_type: explain
+language: python
+split: holdout
+source: {desc: 'pytest-dev/pluggy at 1ca1d52 (post-split module layout with re-export shims): explain registration, call ordering, wrappers, firstresult, argument errors; verified by running the checkout and a mutation-checked order demo', repo: 'https://github.com/pytest-dev/pluggy.git', sha: 1ca1d5272f3db0a0793db4f9b53174391d88973e}
+workspace: {kind: git, repo: 'https://github.com/pytest-dev/pluggy.git', sha: 1ca1d5272f3db0a0793db4f9b53174391d88973e, local_hint: ~/dev/afast-paired-src/_v3c/pluggy}
+turns:
+- prompt: Give me a one-line role for each module under src/pluggy/, and point out which modules are just compatibility re-exports. Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: [_manager\.py, _caller\.py, _execution\.py, _decorators\.py, _impl\.py, _config\.py, _result\.py, _tracing\.py, _warnings\.py, 're-?export|backward|compat']
+- prompt: Which names does `pluggy/__init__.py` export publicly (its `__all__`), and which of them are exceptions or warnings? Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: [PluginManager, HookspecMarker, HookimplMarker, HookCaller, HookRelay, Result, HookCallError, PluginValidationError, PluggyWarning, PluggyTeardownRaisedWarning]
+- prompt: 'In what order are hook implementations called? Set it up with real code from this checkout (src/ on sys.path): a hookspec `calc(x)`, plugin classes A and B with plain impls, C with `tryfirst=True`, and W with `wrapper=True` printing before/after the yield, registered in the order A, B, C, W; print the call order and the final result. Do not change repository files.'
+  checks:
+  - kind: keyed_facts
+    all: ['W before.{0,100}C tryfirst.{0,60}\bB\b.{0,60}\bA\b.{0,100}W after', '\[''c'', ''b'', ''a''\]|c.{0,6}b.{0,6}a']
+- prompt: 'Explain how that ordering is built: how does `HookCaller._add_hookimpl` place a new implementation in the list, and why does `_multicall` iterate `reversed(hook_impls)`? Answer from src/pluggy/_caller.py and _execution.py. Do not change any files.'
+  checks:
+  - kind: keyed_facts
+    all: [_add_hookimpl, 'splitpoint|wrappers?', trylast, tryfirst, reversed, end of the list|last|LIFO|later]
+- prompt: 'What does `firstresult=True` on a hookspec change in `_multicall`? Show it with a spec `pick(x)` and plugins registered in the order A (returns None), B (returns ''pb''), C (trylast, returns ''pc''): what is returned and which impls run? Verify by running. Do not change repository files.'
+  checks:
+  - kind: keyed_facts
+    all: [firstresult, pb, None|skip, break|stop|halt|first non, not (run|called|executed)|never|skipped]
+- prompt: What happens when a hook is called with a missing argument or with positional arguments? Reproduce both against a hookspec `h(x)` with one plugin, and quote the exact exception types and messages (and any warning). Do not change repository files.
+  checks:
+  - kind: keyed_facts
+    all: [HookCallError, hook call must provide argument 'x'|must provide argument, TypeError, takes 1 positional argument but 2 were given, declared in the hookspec]
+- prompt: Write ARCHITECTURE.md in the repository root with level-2 sections Overview, Modules, Call order and Errors using the real module and class names.
+  checks:
+  - kind: doc_sections
+    path: ARCHITECTURE.md
+    headings: [Overview, Modules, Call order, Errors]
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: _multicall}
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: HookCallError}
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: PluginManager}
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: _execution\.py}
+- prompt: 'Create tools/order_demo.py: the A/B/C/W ordering demo as a standalone script (this checkout''s src/ on sys.path) that prints each plugin''s marker when called and finally the hook result. Run it and show the output.'
+  checks:
+  - {kind: file_regex, path: tools/order_demo.py, pattern: tryfirst}
+  - {kind: tests, runner: cmd, cmd: 'O=$(mktemp -d) && python3 tools/order_demo.py 2>/dev/null | tr ''\n'' '','' > $O/a.txt && grep -q ''^W before,C tryfirst,B,A,W after '' $O/a.txt && perl -pi -e ''s/for hook_impl in reversed\(hook_impls\):/for hook_impl in hook_impls:/'' src/pluggy/_execution.py && python3 tools/order_demo.py 2>/dev/null | tr ''\n'' '','' > $O/b.txt && ! cmp -s $O/a.txt $O/b.txt && grep -q ''^A,B,C tryfirst,W before,W after '' $O/b.txt', timeout: 240}
+- prompt: 'Explain `PluginManager.register`: how is the name chosen, what do `ValueError`, a blocked name and a hookimpl that does not match a spec each do? Answer from src/pluggy/_manager.py and verify the naming and the blocked case by running. Do not change repository files.'
+  checks:
+  - kind: keyed_facts
+    all: [get_canonical_name|id\(, ValueError, already registered, set_blocked|blocked, None, _verify_hook|PluginValidationError|check_pending|optionalhook]
+- prompt: Add a level-2 `## Registration` section to ARCHITECTURE.md covering the default plugin name, the duplicate-registration ValueError and blocked names.
+  checks:
+  - kind: doc_sections
+    path: ARCHITECTURE.md
+    headings: [Registration]
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: get_canonical_name|id\(}
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: different name|duplicate}
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: set_blocked|blocked}

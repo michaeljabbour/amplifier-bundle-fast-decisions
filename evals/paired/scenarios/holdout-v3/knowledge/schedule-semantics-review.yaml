@@ -1,0 +1,63 @@
+# holdout-v3 knowledge scenario (10 turns, review): dbader/schedule at 82a43db plus three planted patches (sorted() dropped in run_pending, weekday boundary, until-cancel after last run) reviewed with real runs
+id: schedule-semantics-review
+task_type: review
+language: python
+split: holdout
+source: {desc: 'dbader/schedule at 82a43db plus three planted patches (sorted() dropped in run_pending, weekday boundary, until-cancel after last run) reviewed with real runs', repo: 'https://github.com/dbader/schedule.git', sha: 82a43db1b938d8fdf60103bd41f329e06c8d3651}
+workspace:
+  kind: git
+  repo: https://github.com/dbader/schedule.git
+  sha: 82a43db1b938d8fdf60103bd41f329e06c8d3651
+  local_hint: ~/dev/afast-paired-src/schedule
+  add_files:
+    patches/unsorted.diff: "--- a/schedule/__init__.py\n+++ b/schedule/__init__.py\n@@ -97,7 +97,7 @@\n         between but only once.\n         \"\"\"\n         runnable_jobs = (job for job in self.jobs if job.should_run)\n-        for job in sorted(runnable_jobs):\n+        for job in runnable_jobs:\n             self._run_job(job)\n \n     def run_all(self, delay_seconds: int = 0) -> None:\n"
+    patches/weekday_strict.diff: "--- a/schedule/__init__.py\n+++ b/schedule/__init__.py\n@@ -922,7 +922,7 @@\n     weekday_index = _weekday_index(weekday)\n \n     days_ahead = weekday_index - moment.weekday()\n-    if days_ahead < 0:\n+    if days_ahead <= 0:\n         # Target day already happened this week, move to next week\n         days_ahead += 7\n     return moment + datetime.timedelta(days=days_ahead)\n"
+    patches/until_cancel.diff: "--- a/schedule/__init__.py\n+++ b/schedule/__init__.py\n@@ -691,10 +691,6 @@\n         ret = self.job_func()\n         self.last_run = datetime.datetime.now()\n         self._schedule_next_run()\n-\n-        if self._is_overdue(self.next_run):\n-            logger.debug(\"Cancelling job %s\", self)\n-            return CancelJob\n         return ret\n \n     def _schedule_next_run(self) -> None:\n"
+turns:
+- prompt: Where does everything live in this repository? Name the main classes and exceptions in the schedule package and say which file holds the tests and which the docs. Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: [schedule/__init__\.py|__init__\.py, Scheduler, Job, CancelJob, ScheduleError, test_schedule\.py, docs]
+- prompt: 'Explain `Scheduler.run_pending` precisely: which jobs run, in which order, what happens to jobs that missed several intervals, and how CancelJob is processed. Do not change any files.'
+  checks:
+  - kind: keyed_facts
+    all: [should_run, sorted|order, next_run, missed|only once|not run, CancelJob, cancel_job]
+- prompt: Review patches/unsorted.diff. Besides the obvious order change, is there a second, subtler consequence involving CancelJob? Give a concrete three-job example and the result. Do not apply it.
+  checks:
+  - kind: keyed_facts
+    all: [sorted, live|mutat|list|iterat, CancelJob|cancel, skip|miss|not run, \bb\b]
+- prompt: 'Prove the unsorted.diff behaviour with real output: in a scratch copy under /tmp (repo root first on sys.path) set up three due jobs a, b, c where a returns CancelJob, call `run_pending()`, and print which ran, before and after the diff. Do not change the repository.'
+  checks:
+  - kind: keyed_facts
+    all: ['\[.a., .b., .c.\]|a, b, c', '\[.a., .c.\]|a, c']
+- prompt: 'Review patches/weekday_strict.diff (a change in `_move_to_next_weekday`). Use a concrete date: what does `every().monday.at(''10:00'')` do when it is scheduled on a Monday morning, before and after? Do not apply it.'
+  checks:
+  - kind: keyed_facts
+    all: [days_ahead, '<= ?0|< ?0', 2024-01-01|Monday|same day|today, 2024-01-08|next week|a week]
+- prompt: Review patches/until_cancel.diff (a change in `Job.run`). What is lost, what is the observable symptom with `every(5).seconds.until(timedelta(seconds=2))` after `run_all()`, and why does `next_run` become misleading? Do not apply it.
+  checks:
+  - kind: keyed_facts
+    all: [_is_overdue, CancelJob, next_run, 'len\(.*jobs|still|remain|stays?', deadline|until]
+- prompt: Write REVIEW.md in the repository root with level-2 sections Summary, unsorted, weekday_strict and until_cancel. Each patch section must contain a line starting `Severity:` followed by high, medium or low and a concrete example.
+  checks:
+  - kind: doc_sections
+    path: REVIEW.md
+    headings: [Summary, unsorted, weekday_strict, until_cancel]
+  - {kind: file_regex, path: REVIEW.md, pattern: '(?im)^Severity:\s*(high|medium|low)', min_count: 3}
+  - {kind: file_regex, path: REVIEW.md, pattern: '2024-01-0[18]'}
+  - {kind: file_regex, path: REVIEW.md, pattern: CancelJob}
+- prompt: Create checks/test_review.py (pytest) that passes on the current tree and fails when ANY ONE of the three diffs is applied; prove each failure in a scratch copy. Use the repo-root `schedule` package.
+  checks:
+  - {kind: file_regex, path: checks/test_review.py, pattern: ^def test_, min_count: 4}
+  - {kind: tests, runner: cmd, cmd: 'O=$(mktemp -d) && cp -R schedule $O/orig && python3 -m pytest -q -p no:cacheprovider checks/test_review.py && for p in unsorted weekday_strict until_cancel; do rm -rf schedule && cp -R $O/orig schedule && patch -s -p1 < patches/$p.diff && if python3 -m pytest -q -p no:cacheprovider checks/test_review.py; then exit 1; fi; done', timeout: 240}
+- prompt: 'Explain `Job._schedule_next_run`: in which order are the weekday, the at-time and the interval applied, what does the `while next_run <= now` loop do, and why is the stored `next_run` naive? Answer from the code. Do not change any files.'
+  checks:
+  - kind: keyed_facts
+    all: [start_day|_move_to_next_weekday, at_time|_move_to_at_time, interval != 1|period, while next_run <= now|loop, _correct_utc_offset|offset, naive|tzinfo]
+- prompt: Add a `## Recommendation` section to REVIEW.md with one verdict per patch and name the most serious one.
+  checks:
+  - kind: doc_sections
+    path: REVIEW.md
+    headings: [Recommendation]
+  - {kind: file_regex, path: REVIEW.md, pattern: '(?i)reject', min_count: 2}
+  - {kind: file_regex, path: REVIEW.md, pattern: '(?i)most serious|most dangerous|worst'}

@@ -1,0 +1,53 @@
+# holdout-v3 knowledge scenario (8 turns, review): nickstenning/honcho at 2f47b72 plus three planted patches (port block step, Procfile name regex, exit status overwrite) reviewed with real runs
+id: honcho-process-review
+task_type: review
+language: python
+split: holdout
+source: {desc: 'nickstenning/honcho at 2f47b72 plus three planted patches (port block step, Procfile name regex, exit status overwrite) reviewed with real runs', repo: 'https://github.com/nickstenning/honcho.git', sha: 2f47b723587c65ecbadc99e674b515b20a749179}
+workspace:
+  kind: git
+  repo: https://github.com/nickstenning/honcho.git
+  sha: 2f47b723587c65ecbadc99e674b515b20a749179
+  local_hint: ~/dev/afast-paired-src/honcho
+  add_files:
+    patches/port_step.diff: "--- a/honcho/environ.py\n+++ b/honcho/environ.py\n@@ -118,6 +118,6 @@\n             params = ProcessParams(n, c, q, e)\n             out.append(params)\n         if port is not None:\n-            port += 100\n+            port += 1\n \n     return out\n"
+    patches/procfile_name.diff: "--- a/honcho/environ.py\n+++ b/honcho/environ.py\n@@ -3,7 +3,7 @@\n import shlex\n from collections import OrderedDict, defaultdict, namedtuple\n \n-PROCFILE_LINE = re.compile(r'^([A-Za-z0-9_-]+):\\s*(.+)$')\n+PROCFILE_LINE = re.compile(r'^([A-Za-z0-9_]+):\\s*(.+)$')\n \n \n class Env(object):\n"
+    patches/last_returncode.diff: "--- a/honcho/manager.py\n+++ b/honcho/manager.py\n@@ -122,8 +122,7 @@\n                     self._processes[msg.name]['returncode'] = msg.data['returncode']\n                     self._system_print(\"%s stopped (rc=%s)\\n\"\n                                        % (msg.name, msg.data['returncode']))\n-                    if self.returncode is None:\n-                        self.returncode = msg.data['returncode']\n+                    self.returncode = msg.data['returncode']\n \n             if self._all_started() and self._all_stopped():\n                 exit = True\n"
+  remove: [.git_archival.txt]
+turns:
+- prompt: Give me a one-line role for each module under honcho/ (and the export package). Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: [command\.py, manager\.py, process\.py, environ\.py, printer\.py, colour\.py, compat\.py, export]
+- prompt: 'Explain how `honcho start` runs the processes in src terms: which objects are created, how do the child processes report back, and what are the message types the manager loop handles? Answer from honcho/manager.py and honcho/process.py. Do not change any files.'
+  checks:
+  - kind: keyed_facts
+    all: [Manager, multiprocessing, events, Queue, start, line, stop, Popen|shell]
+- prompt: What decides the exit status of `honcho start`, and what happens when one process dies while the others keep running? Include the timings and signals. Answer from manager.py. Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: [returncode, first|None, terminate|SIGTERM, KILL_WAIT|5 seconds|five, SIGKILL|kill, '130', '143']
+- prompt: Review patches/port_step.diff (a change in `expand_processes`). Give a concrete Procfile/concurrency example, the PORT values before and after, and what goes wrong. Do not apply it.
+  checks:
+  - kind: keyed_facts
+    all: ['5100', '5001', collid|collision|conflict|same port|clash, web\.2|concurrency]
+- prompt: Review patches/procfile_name.diff. What input is now treated differently? Show the result of parse_procfile on a concrete two-line Procfile before and after (run it in a scratch copy under /tmp, not in the repository).
+  checks:
+  - kind: keyed_facts
+    all: [web-api, worker, drop|ignore|silently|skipp|missing|not (parsed|matched)]
+- prompt: 'Review patches/last_returncode.diff, then verify it with a real run in a scratch copy under /tmp: Procfile with `a: sh -c ''exit 3''` and `b: sleep 20`; run `python3 -m honcho start` and report the exit status before and after applying the diff. Do not change the repository.'
+  checks:
+  - kind: keyed_facts
+    all: [\b3\b, 241|-15|SIGTERM|143, first|last]
+- prompt: Write REVIEW.md in the repository root with level-2 sections Summary, port_step, procfile_name and last_returncode. Every patch section must contain a line starting `Impact:` followed by high, medium or low and a concrete example.
+  checks:
+  - kind: doc_sections
+    path: REVIEW.md
+    headings: [Summary, port_step, procfile_name, last_returncode]
+  - {kind: file_regex, path: REVIEW.md, pattern: '(?im)^Impact:\s*(high|medium|low)', min_count: 3}
+  - {kind: file_regex, path: REVIEW.md, pattern: '5001'}
+  - {kind: file_regex, path: REVIEW.md, pattern: '241'}
+- prompt: Create checks/test_review.py (pytest) that passes on the current tree and fails when ANY ONE of the three diffs is applied; prove each failure in a scratch copy. Use a real `python3 -m honcho start` subprocess for the exit status test.
+  checks:
+  - {kind: file_regex, path: checks/test_review.py, pattern: ^def test_, min_count: 3}
+  - {kind: tests, runner: cmd, cmd: 'O=$(mktemp -d) && cp -R honcho $O/orig && python3 -m pytest -q -p no:cacheprovider checks/test_review.py && for p in port_step procfile_name last_returncode; do rm -rf honcho && cp -R $O/orig honcho && patch -s -p1 < patches/$p.diff && if python3 -m pytest -q -p no:cacheprovider checks/test_review.py; then exit 1; fi; done', timeout: 280}
