@@ -1,0 +1,246 @@
+# holdout-v3 polyglot: py-dotdsl -- 12 turns, short gaps.
+id: py-dotdsl
+task_type: feature
+language: python
+split: holdout
+default_gap_s: 10
+source:
+  desc: >-
+    Aider polyglot-benchmark python/dot-dsl (Exercism), outside the S2 slice; grown with
+    serialization, lookup, validation and refactoring turns
+  repo: https://github.com/Aider-AI/polyglot-benchmark
+  sha: 7e0611e77b54e2dea774cdc0aa00cf9f7ed6144f
+workspace:
+  kind: git
+  repo: https://github.com/Aider-AI/polyglot-benchmark
+  sha: 7e0611e77b54e2dea774cdc0aa00cf9f7ed6144f
+  subdir: python/exercises/practice/dot-dsl
+  local_hint: ~/dev/afast-campaign-corrected-polyglot-20260919/polyglot/polyglot-benchmark
+  remove:
+  - .meta
+protected: [dot_dsl_test.py]
+hidden_files:
+  hidden_eq_test.py: |
+    import unittest
+
+    from dot_dsl import ATTR, EDGE, NODE, Edge, Graph, Node
+
+
+    class EqReprTest(unittest.TestCase):
+        def test_node_is_not_equal_to_other_types(self):
+            self.assertFalse(Node("a", {}) == 3)
+            self.assertFalse(Node("a", {}) == "a")
+            self.assertTrue(Node("a", {}) != None)
+
+        def test_edge_is_not_equal_to_other_types(self):
+            self.assertFalse(Edge("a", "b", {}) == ("a", "b", {}))
+            self.assertFalse(Edge("a", "b", {}) == Node("a", {}))
+
+        def test_node_is_not_an_edge(self):
+            self.assertNotEqual(Node("a", {}), Edge("a", "a", {}))
+
+        def test_equal_values_still_equal(self):
+            self.assertEqual(Node("a", {"x": "1"}), Node("a", {"x": "1"}))
+            self.assertEqual(Edge("a", "b", {}), Edge("a", "b", {}))
+
+        def test_repr(self):
+            self.assertEqual(repr(Node("a", {"color": "green"})), "Node('a', {'color': 'green'})")
+            self.assertEqual(repr(Edge("a", "b", {})), "Edge('a', 'b', {})")
+  hidden_dot_test.py: |
+    import unittest
+
+    from dot_dsl import ATTR, EDGE, NODE, Edge, Graph, Node
+
+
+    class ToDotTest(unittest.TestCase):
+        def test_empty_graph(self):
+            self.assertEqual(Graph().to_dot(), "graph {\n}\n")
+
+        def test_full_graph(self):
+            g = Graph([
+                (ATTR, "foo", "1"),
+                (NODE, "a", {"color": "green"}),
+                (NODE, "b", {}),
+                (EDGE, "a", "b", {"color": "blue"}),
+            ])
+            self.assertEqual(g.to_dot(), 'graph {\n  foo="1";\n  a [color="green"];\n  b;\n  a -- b [color="blue"];\n}\n')
+
+        def test_several_attributes(self):
+            g = Graph([(NODE, "a", {"color": "green", "shape": "box"})])
+            self.assertEqual(g.to_dot(), 'graph {\n  a [color="green", shape="box"];\n}\n')
+
+        def test_quotes_are_escaped(self):
+            g = Graph([(NODE, "a", {"label": 'say "hi"'})])
+            self.assertEqual(g.to_dot(), 'graph {\n  a [label="say \\"hi\\""];\n}\n')
+
+        def test_edge_without_attributes(self):
+            g = Graph([(EDGE, "a", "b", {})])
+            self.assertEqual(g.to_dot(), "graph {\n  a -- b;\n}\n")
+  hidden_neighbors_test.py: |
+    import unittest
+
+    from dot_dsl import ATTR, EDGE, NODE, Edge, Graph, Node
+
+
+    class NeighborsTest(unittest.TestCase):
+        def setUp(self):
+            self.g = Graph([
+                (NODE, "a", {}), (NODE, "b", {}), (NODE, "c", {}),
+                (EDGE, "a", "b", {}), (EDGE, "b", "c", {}), (EDGE, "a", "c", {}),
+            ])
+
+        def test_neighbors_in_edge_order(self):
+            self.assertEqual(self.g.neighbors("b"), ["a", "c"])
+            self.assertEqual(self.g.neighbors("a"), ["b", "c"])
+
+        def test_unknown_name_has_no_neighbors(self):
+            self.assertEqual(self.g.neighbors("zz"), [])
+
+        def test_no_duplicates_for_parallel_edges(self):
+            g = Graph([(EDGE, "a", "b", {}), (EDGE, "b", "a", {"x": "1"})])
+            self.assertEqual(g.neighbors("a"), ["b"])
+
+        def test_self_loop(self):
+            self.assertEqual(Graph([(EDGE, "a", "a", {})]).neighbors("a"), ["a"])
+
+        def test_node_lookup(self):
+            self.assertEqual(self.g.node("b"), Node("b", {}))
+            with self.assertRaises(KeyError):
+                self.g.node("zz")
+  hidden_dup_test.py: |
+    import unittest
+
+    from dot_dsl import ATTR, EDGE, NODE, Edge, Graph, Node
+
+
+    class DuplicateNodeTest(unittest.TestCase):
+        def test_duplicate_node_name(self):
+            with self.assertRaises(ValueError) as err:
+                Graph([(NODE, "a", {}), (NODE, "a", {"x": "1"})])
+            self.assertEqual(err.exception.args[0], "Duplicate node: a")
+
+        def test_distinct_names_are_fine(self):
+            self.assertEqual(len(Graph([(NODE, "a", {}), (NODE, "b", {})]).nodes), 2)
+
+        def test_malformed_node_is_reported_before_duplicates(self):
+            with self.assertRaises(ValueError) as err:
+                Graph([(NODE, "a", {}), (NODE, "a", {}, 1)])
+            self.assertEqual(err.exception.args[0], "Node is malformed")
+  hidden_sub_test.py: |
+    import unittest
+
+    from dot_dsl import ATTR, EDGE, NODE, Edge, Graph, Node
+
+
+    class SubgraphTest(unittest.TestCase):
+        def setUp(self):
+            self.g = Graph([
+                (ATTR, "title", "T"),
+                (NODE, "a", {"color": "green"}), (NODE, "b", {}), (NODE, "c", {}),
+                (EDGE, "a", "b", {"w": "1"}), (EDGE, "b", "c", {}), (EDGE, "a", "c", {}),
+            ])
+
+        def test_keeps_only_requested_nodes_and_edges_between_them(self):
+            s = self.g.subgraph(["a", "b"])
+            self.assertEqual(s.nodes, [Node("a", {"color": "green"}), Node("b", {})])
+            self.assertEqual(s.edges, [Edge("a", "b", {"w": "1"})])
+
+        def test_graph_attributes_are_kept(self):
+            self.assertEqual(self.g.subgraph(["c"]).attrs, {"title": "T"})
+
+        def test_unknown_names_are_ignored(self):
+            self.assertEqual(self.g.subgraph(["zz"]).nodes, [])
+
+        def test_result_is_independent_of_the_original(self):
+            s = self.g.subgraph(["a"])
+            s.nodes[0].attrs["color"] = "red"
+            s.attrs["title"] = "other"
+            self.assertEqual(self.g.nodes[0].attrs, {"color": "green"})
+            self.assertEqual(self.g.attrs, {"title": "T"})
+
+        def test_original_order_is_kept(self):
+            self.assertEqual([n.name for n in self.g.subgraph(["c", "a"]).nodes], ["a", "c"])
+turns:
+  - prompt: >-
+      Implement the `Graph` class in dot_dsl.py (Node and Edge are provided) as described in
+      .docs/instructions.md and .docs/instructions.append.md: `Graph(data)` takes a list of tuples
+      `(ATTR, key, value)`, `(NODE, name, attrs)` and `(EDGE, src, dst, attrs)` and exposes `nodes`,
+      `edges` and `attrs` (a dict) in input order. A non-list raises `TypeError("Graph data
+      malformed")`, an item with fewer than two parts `TypeError("Graph item incomplete")`, and
+      malformed attribute/node/edge items or an unknown kind raise `ValueError` with the messages the
+      tests expect. Run the tests with `python3 -m pytest -q dot_dsl_test.py`.
+    checks:
+      - {kind: tests, runner: python, files: [dot_dsl_test.py], restore: [dot_dsl_test.py]}
+  - prompt: >-
+      In three to five sentences explain how `Graph.__init__` validates its input: in which order the
+      checks happen, which exception type is used for each kind of problem and why a `TypeError` is
+      used for some and a `ValueError` for others. Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [TypeError, ValueError, len|length, item], any: [malformed, incomplete, unknown]}
+  - prompt: >-
+      `Node("a", {}) == 3` currently raises an AttributeError instead of being False, and comparing a
+      Node with an Edge blows up the same way. Make equality return NotImplemented for foreign types
+      (for both Node and Edge) so `==` is simply False and `!=` True, and add a readable `__repr__`
+      for both: `Node('a', {'color': 'green'})` and `Edge('a', 'b', {})`.
+    checks:
+      - {kind: tests, runner: python, files: [dot_dsl_test.py, hidden_eq_test.py], restore: [dot_dsl_test.py], hidden: [hidden_eq_test.py]}
+  - prompt: >-
+      Add `Graph.to_dot()` returning the graph in DOT text: `graph {` first, then one line per graph
+      attribute (` foo="1";`), per node (` a;` or ` a [color="green", shape="box"];`) and per edge (`
+      a -- b;` or with attributes in the same bracket form), then `}`; every line ends with a newline,
+      the empty graph is `graph {\n}\n`, attribute values are always double quoted and `"` inside a
+      value is escaped as `\"` (and a backslash as `\\`).
+    checks:
+      - {kind: tests, runner: python, files: [dot_dsl_test.py, hidden_eq_test.py, hidden_dot_test.py], restore: [dot_dsl_test.py], hidden: [hidden_eq_test.py, hidden_dot_test.py]}
+  - prompt: >-
+      Add a class docstring to `Graph` that describes the accepted item tuples, the order guarantees
+      of nodes, edges and attrs, which methods exist and which exceptions the constructor raises.
+      Docstring only.
+    checks:
+      - {kind: file_regex, path: dot_dsl.py, pattern: 'class Graph:\n\s+"""(?=(?s:(?:(?!""").)*)NODE)(?=(?s:(?:(?!""").)*)TypeError)(?=(?s:(?:(?!""").)*)ValueError)'}
+      - {kind: tests, runner: python, files: [dot_dsl_test.py, hidden_eq_test.py, hidden_dot_test.py], restore: [dot_dsl_test.py], hidden: [hidden_eq_test.py, hidden_dot_test.py]}
+  - prompt: >-
+      Add two lookup helpers: `Graph.node(name)` returns the Node with that name or raises
+      `KeyError(name)`, and `Graph.neighbors(name)` returns the names of nodes joined to `name` by an
+      edge in either direction, in the order the edges appear, without duplicates (parallel edges
+      count once, a self loop makes the node its own neighbour). An unknown name has no neighbours.
+    checks:
+      - {kind: tests, runner: python, files: [dot_dsl_test.py, hidden_eq_test.py, hidden_dot_test.py, hidden_neighbors_test.py], restore: [dot_dsl_test.py], hidden: [hidden_eq_test.py, hidden_dot_test.py, hidden_neighbors_test.py]}
+  - prompt: >-
+      Add your own test file `dot_dsl_extra_test.py` (unittest) with at least four tests that cover
+      `to_dot()`, `neighbors()`, `node()` for an unknown name and equality with a foreign type. Run it
+      with the shipped tests.
+    checks:
+      - {kind: file_regex, path: dot_dsl_extra_test.py, pattern: ^    def test_, min_count: 4}
+      - {kind: tests, runner: python, files: [dot_dsl_test.py, dot_dsl_extra_test.py], restore: [dot_dsl_test.py]}
+  - prompt: >-
+      Reject duplicate node names: a second `(NODE, "a", ...)` must raise `ValueError("Duplicate node:
+      a")`. A malformed node item must still be reported as `Node is malformed` before any duplicate
+      check, and graphs with distinct names are unaffected.
+    checks:
+      - {kind: tests, runner: python, files: [dot_dsl_test.py, hidden_eq_test.py, hidden_dot_test.py, hidden_neighbors_test.py, hidden_dup_test.py], restore: [dot_dsl_test.py], hidden: [hidden_eq_test.py, hidden_dot_test.py, hidden_neighbors_test.py, hidden_dup_test.py]}
+  - prompt: >-
+      Add `Graph.subgraph(names)` returning a new Graph with all graph attributes, only the requested
+      nodes (in their original order), and only the edges whose both ends are requested. Unknown names
+      are ignored, and the result must not share attribute dicts with the original (changing the
+      subgraph must not change the source graph).
+    checks:
+      - {kind: tests, runner: python, files: [dot_dsl_test.py, hidden_eq_test.py, hidden_dot_test.py, hidden_neighbors_test.py, hidden_dup_test.py, hidden_sub_test.py], restore: [dot_dsl_test.py], hidden: [hidden_eq_test.py, hidden_dot_test.py, hidden_neighbors_test.py, hidden_dup_test.py, hidden_sub_test.py]}
+  - prompt: >-
+      Question only: which of the Graph methods become slow for a graph with 100 000 nodes and 500 000
+      edges, and what data structure would you add to fix each of them (keeping insertion order and
+      the public attributes)? Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [neighbors|node\(, dict|index|adjacency, O\(|linear|slow|scan], any: [duplicate, name]}
+  - prompt: >-
+      Refactor `Graph.__init__` without changing behaviour: replace the if/elif chain by a small
+      dispatch (a dict from item kind to private `_add_attr`, `_add_node` and `_add_edge` methods that
+      each validate their own item). All earlier checks must still pass.
+    checks:
+      - {kind: file_regex, path: dot_dsl.py, pattern: '^    def _add_(?:attr|node|edge)\(self, item\):', min_count: 3}
+      - {kind: tests, runner: python, files: [dot_dsl_test.py, hidden_eq_test.py, hidden_dot_test.py, hidden_neighbors_test.py, hidden_dup_test.py, hidden_sub_test.py], restore: [dot_dsl_test.py], hidden: [hidden_eq_test.py, hidden_dot_test.py, hidden_neighbors_test.py, hidden_dup_test.py, hidden_sub_test.py]}
+  - prompt: >-
+      Review the changes you made in this session as a code reviewer would: list each file you changed
+      or added, what changed, and any remaining edge case you did not cover. Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [dot_dsl\.py, test], any: [edge, risk, not cover, remaining]}
