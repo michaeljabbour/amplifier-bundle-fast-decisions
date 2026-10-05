@@ -1,6 +1,6 @@
 ---
 name: "amplifier-fast-decisions"
-description: "Suggests a prepared read or list action using a bounded local model call. Use when a harness has eligible workspace targets and wants a fast advisory choice with explicit abstention."
+description: "Decide once at session start which model and effort a coding session should run on (the same price-gated, scope-gated decision the Amplifier orchestrator makes), and use Jev for bounded read/list decisions, source relevance search, and proposals on observed UI controls. The host keeps execution and approval authority; uncertain decisions abstain."
 ---
 
 Install the CLI if needed:

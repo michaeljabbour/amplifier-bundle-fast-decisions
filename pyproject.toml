@@ -21,7 +21,7 @@ classifiers = [
   "Programming Language :: Python :: 3.13",
   "Topic :: Software Development",
 ]
-dependencies = []
+dependencies = ["PyYAML>=6"]
 
 [project.optional-dependencies]
 jev = ["typesafe-sdk"]

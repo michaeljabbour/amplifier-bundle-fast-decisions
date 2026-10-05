@@ -8,6 +8,7 @@ CUA proposes actions and leaves all UI execution to the host.
 from __future__ import annotations
 
 import asyncio
+import dataclasses
 from dataclasses import asdict, dataclass, field
 from importlib import metadata, resources
 import json
@@ -19,12 +20,18 @@ from typing import Any
 from uuid import uuid4
 
 from .contracts import Candidate, DecisionRequest, SLOW
-from .backends import DEFAULT_JEV_MODEL, JevBackend
+from . import judge_backends
+from .backends import DEFAULT_JEV_MODEL, ClefBackend, JevBackend
+from .config import effective_config
 from .local_backend import LayaBackend, OllamaBackend, PROBABILITY_KIND
 from .privacy import scrub
 from .telemetry import Emitter, JsonlRecorder
 
 MAX_INPUT_BYTES = 16384
+WORKERS_AI = frozenset({'clef', 'clef-flash'})
+# Environment variables that must be set before an external backend is even constructed (names only).
+_REQUIRED_ENV = {'jev': ('TYPESAFE_API_KEY',), 'clef': ('CLOUDFLARE_API_TOKEN', 'CLOUDFLARE_ACCOUNT_ID'),
+                 'clef-flash': ('CLOUDFLARE_API_TOKEN', 'CLOUDFLARE_ACCOUNT_ID')}
 DEFAULT_EVENTS = Path.home() / '.amplifier' / 'fast-decisions' / 'events'
 CAPABILITIES = {
     'manifest': ('deterministic', 'Read the installed tool manifest as JSON.'),
@@ -33,13 +40,16 @@ CAPABILITIES = {
     'diagnose': ('deterministic', 'Inspect installation, session integration, local model and viewer health.'),
     'measure': ('deterministic', 'Count observed provider and tool executions across a session tree.'),
     'compare': ('deterministic', 'Compare matched baseline/enabled runs with explicit outcome checks.'),
+    'decide': ('model-backed', 'Decide once, at session start, which model and effort a session should run on (route or stay on the host).'),
+    'launch': ('model-backed', 'Run `decide`, then start Claude Code, Codex or Copilot CLI with the chosen model and effort.'),
     'select': ('model-backed', 'Suggest one caller-supplied read/list target, or abstain.'),
     'search': ('model-backed', 'Retrieve bounded source windows using upstream Jevgrep (Laya is experimental).'),
     'cua': ('model-backed', 'Propose an action on observed UI controls; the host owns all execution.'),
 }
 
 HARNESSES = frozenset({'amplifier', 'claude', 'codex', 'copilot', 'cursor', 'gemini', 'grok', 'opencode', 'other'})
-SKILL_HOSTS = {'codex': '.agents', 'claude': '.claude', 'amplifier': '.amplifier', 'opencode': '.config/opencode'}
+SKILL_HOSTS = {'codex': '.agents', 'claude': '.claude', 'amplifier': '.amplifier', 'opencode': '.config/opencode',
+               'copilot': '.copilot'}
 
 
 def agent_skill() -> str:
@@ -61,7 +71,7 @@ def install_skill(host: str, *, home: str | Path | None = None) -> dict[str, Any
     No host configuration, approvals, or model services are modified.
     """
     if host not in {*SKILL_HOSTS, 'all'}:
-        raise ValueError('Choose codex, claude, amplifier, opencode, or all.')
+        raise ValueError('Choose codex, claude, amplifier, opencode, copilot, or all.')
     base = Path(home).expanduser() if home is not None else Path.home()
     selected = list(SKILL_HOSTS) if host == 'all' else [host]
     name, content = manifest()['name'], agent_skill()
@@ -151,6 +161,23 @@ def describe() -> dict[str, Any]:
                    'effect': 'advisory_only; no execution or savings established'},
         'exit_codes': {'0': 'selected or normal model/policy abstention', '1': 'failed capability',
                        '2': 'invalid command line or JSON'},
+        'decide': {
+            'capability': 'decide', 'model_backed': True, 'effect': 'advisory_only', 'executes_actions': False,
+            'input_schema': {
+                'type': 'object', 'additionalProperties': False, 'required': ['task', 'host_model'],
+                'properties': {
+                    'task': {'type': 'string', 'minLength': 1, 'maxLength': MAX_DECIDE_TASK_CHARS},
+                    'host_model': {'type': 'string', 'description': 'the model the session would run on without routing'},
+                    'workspace': {'type': 'string', 'description': 'directory whose file count feeds the scope gate; default cwd'},
+                    'user_model': {'type': 'string', 'description': 'a model the user already picked; it always wins'}}},
+            'result': {'ok': 'false only for an invalid request or configuration', 'route': 'true: start the cheaper model',
+                       'model': 'the model to run (the host model when route is false)',
+                       'effort': 'set for the whole session, or null to leave the harness default',
+                       'reason': 'judge_cheap, judge_strong, price_gate_strong, scope_strong, rules_*, user_model_strong, ...',
+                       'gate': 'price-gate inputs and predicted cost ratio', 'judge': 'backend, status, p_complex, task_type, duration_ms',
+                       'schema': 'fd-decision/1'},
+            'constraints': ['Decide once per session; switching model or effort later rewrites the provider cache.',
+                            'External judges need explicit consent; the shipped bundle consent is not inherited.']},
     }
 
 
@@ -193,15 +220,46 @@ def skill(capability: str | None = None) -> str:
     elif capability == 'install-skill':
         lines += [
             'Deterministic installation of a minimal discovery skill; no model is used.',
-            'Required argument: --host codex|claude|amplifier|opencode|all.',
+            'Required argument: --host codex|claude|amplifier|opencode|copilot|all.',
             'Example: amplifier-fast-decisions install-skill --host all',
-            'Writes SKILL.md below ~/.agents/skills, ~/.claude/skills, ~/.amplifier/skills, or ~/.config/opencode/skills.',
+            'Writes SKILL.md below ~/.agents/skills, ~/.claude/skills, ~/.amplifier/skills, ~/.config/opencode/skills or ~/.copilot/skills.',
             'All destinations are checked first. Identical files are unchanged; modified existing files',
             'cause failure before any writes. Symlink aliases resolving to the same destination are deduplicated.',
             'Result: JSON paths, host names, and installed/unchanged status. Exit 0 on success,',
             '1 for a conflict/filesystem error, 2 for bad arguments. No force/overwrite option exists.',
             'The library equivalent is install_skill(host, home=None). Set home to isolate tests.',
             'No host settings, permissions, or provider pipelines are changed. Refresh skill discovery if needed.',
+        ]
+    elif capability == 'decide':
+        lines += [
+            CAPABILITIES[capability][1],
+            'Decide once per session, at its start, before any prompt cache exists; never switch model or effort mid-session.',
+            'Arguments: --task TEXT (or --input FILE / - with JSON {"task","host_model","workspace","user_model"}),',
+            '--host-model ID (default $AFAST_HOST_MODEL), --workspace DIR (default cwd; the scope gate counts its files).',
+            '--decider jev|clef|clef-flash|ollama|local|laya|mlx|hosted|deterministic|rules|always-host|always-cheap',
+            '(default: the effective configuration\'s backend, jev). --cheap-model ID replaces the start model.',
+            '--allow-external-state / --no-allow-external-state overrides FAST_DECISIONS_ALLOW_EXTERNAL_STATE (default false):',
+            'a remote judge (jev, clef, clef-flash) receives the first 2,500 characters of the task, scrubbed of secrets.',
+            'Without consent the decision falls back to the prompt-length rule and judge.status says no_consent.',
+            '--no-settings ignores the user overlay (~/.amplifier/fast-decisions/settings.yaml, or $AFAST_SETTINGS).',
+            'Result: one JSON object. route (true: start the cheaper model), tier, model (what to run), effort (set it for the',
+            'whole session, or null), reason, host_model, start_model, decider, gate (price-gate inputs and predicted cost ratio),',
+            'judge {backend,status,p_complex,task_type,duration_ms}, workspace_files, scope_limit, latency_ms, usd, config_sha.',
+            'route=false means: run the host model unchanged. Same Policy, price gate and scope gate as the Amplifier',
+            'orchestrator; the defaults come from behaviors/fast-decisions.yaml. Exit 0 when a decision is produced; 1 for an',
+            'invalid configuration; 2 for bad arguments. Library: await decide(payload) here, or decide.decide(task, host).',
+            'Advisory only: the harness applies model and effort. `launch` does that for Claude Code, Codex and Copilot CLI.',
+        ]
+    elif capability == 'launch':
+        lines += [
+            CAPABILITIES[capability][1],
+            'Usage: launch --harness claude|codex|copilot --host-model ID [--task TEXT] [decide options] [--dry-run] -- HARNESS_ARGS',
+            'Runs `decide` (same options as decide), then replaces this process with the harness: claude --model M --effort E;',
+            'codex -c model="M" -c model_reasoning_effort="E"; copilot --model M (Copilot has no effort flag).',
+            'The model is set only when the decision routes; staying on the host leaves the harness defaults untouched.',
+            'The task is --task, else the prompt in HARNESS_ARGS (copilot -p TEXT, or one unambiguous positional); an interactive',
+            'launch without --task cannot be decided and fails with exit 2. --dry-run prints the decision and the argv.',
+            'Flags are confirmed against each CLI\'s --help; a live launch of each harness is not part of the offline checks.',
         ]
     elif capability in {'search', 'cua'}:
         lines += [CAPABILITIES[capability][1],
@@ -225,13 +283,14 @@ def skill(capability: str | None = None) -> str:
             'Model-backed advisory selection. Use only for an already bounded read/list choice.',
             'Arguments: --input FILE reads a UTF-8 JSON object; --input - reads stdin.',
             'Without --input, stdin must be piped; an interactive terminal fails without prompting.',
-            '--backend laya|local|ollama|jev overrides FAST_DECISIONS_JUDGE (default jev).',
+            '--backend jev|clef|clef-flash|ollama|local|laya overrides FAST_DECISIONS_JUDGE (default jev).',
+            'clef and clef-flash are Cloudflare Workers AI judges (opt-in): CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID, external-state consent.',
             '--laya-url URL overrides FAST_DECISIONS_LAYA_URL (default http://127.0.0.1:8090).',
             '--model NAME defaults to qwen3:0.6b locally, or TYPESAFE_DEFAULT_MODEL / jev-1.13.0 for Jev.',
             '--ollama-url ORIGIN overrides FAST_DECISIONS_OLLAMA_URL (default http://127.0.0.1:11434).',
             '--allow-external-state / --no-allow-external-state overrides FAST_DECISIONS_ALLOW_EXTERNAL_STATE.',
             'Jev requires explicit external-state consent and TYPESAFE_API_KEY in the environment.',
-            '--timeout-ms INTEGER defaults to 500 (10–500); --events DIRECTORY sets the metadata recorder location.',
+            '--timeout-ms INTEGER defaults to the shared Policy timeout (3000 as shipped; bounds 10–60000); --events DIRECTORY sets the metadata recorder location.',
             'Use describe for the complete task/context/candidates/session/parent/harness input schema.',
             'Only task and optional context content are provided as observations. Candidate targets are data.',
             'Example: amplifier-fast-decisions select --input request.json --timeout-ms 500',
@@ -315,11 +374,13 @@ def _validated(payload: Any) -> tuple[DecisionRequest, str, str | None, str]:
 
 async def select(payload: dict[str, Any], *, model: str | None = None,
                  backend: str | None = None, allow_external_state: bool | None = None,
-                 ollama_url: str | None = None, laya_url: str | None = None, timeout_ms: int = 500,
+                 ollama_url: str | None = None, laya_url: str | None = None, timeout_ms: int | None = None,
                  events_dir: str | Path | None = None, _backend: Any = None) -> Selection:
     """Score bounded caller data without reading/executing targets.
 
-    Uses native token probabilities, score >= .90 and margin >= .20. Optional
+    Uses native token probabilities, score >= Policy.min_probability and margin >= Policy.min_margin (the shared
+    ``Policy`` of the effective configuration: .90 / .20 unless the user settings overlay changes them), and a
+    deadline defaulting to ``Policy.timeout_ms``. Optional
     context is content in payload, never a file reference. Missing model or bad
     output produces a failed typed abstention. Cancellation propagates normally.
     ``_backend`` is a private test seam; callers select laya, local/ollama or jev.
@@ -329,10 +390,12 @@ async def select(payload: dict[str, Any], *, model: str | None = None,
     session, parent, decision_id = 'portable-' + uuid4().hex, None, uuid4().hex
     try:
         request, session, parent, harness = _validated(payload)
+        policy = effective_config().policy
         backend_name = backend if backend is not None else os.getenv('FAST_DECISIONS_JUDGE', 'jev')
-        if backend_name not in ('local', 'ollama', 'jev', 'laya'):
+        chosen = judge_backends.spec(backend_name)
+        if chosen is None or not chosen.select:
             raise ValueError('Unsupported backend')
-        backend_name = 'ollama' if backend_name == 'local' else backend_name
+        backend_name = chosen.name
         if allow_external_state is None:
             consent = os.getenv('FAST_DECISIONS_ALLOW_EXTERNAL_STATE', 'false').strip().lower()
             if consent not in ('true', 'false', '1', '0', 'yes', 'no'):
@@ -340,21 +403,27 @@ async def select(payload: dict[str, Any], *, model: str | None = None,
             allow_external_state = consent in ('true', '1', 'yes')
         if not isinstance(allow_external_state, bool):
             raise ValueError('Consent must be boolean')
-        external = backend_name == 'jev' or bool(getattr(_backend, 'external', False))
+        external = chosen.external or bool(getattr(_backend, 'external', False))
         if external and not allow_external_state:
             return Selection(False, 'abstain', 'external_state_not_enabled', session, parent, decision_id,
-                             backend=backend_name, remediation='Enable external state explicitly before using Jev.')
-        if backend_name == 'jev' and _backend is None and not os.getenv('TYPESAFE_API_KEY'):
+                             backend=backend_name, remediation=f'Enable external state explicitly before using {backend_name}.')
+        missing = [name for name in _REQUIRED_ENV.get(backend_name, ()) if not os.getenv(name)]
+        if missing and _backend is None:
             return Selection(False, 'abstain', 'missing_api_key', session, parent, decision_id,
-                             backend=backend_name, remediation='Set TYPESAFE_API_KEY in the process environment.')
+                             backend=backend_name, remediation='Set ' + ' and '.join(missing) + ' in the process environment.')
         if model is None:
-            model = (os.getenv('TYPESAFE_DEFAULT_MODEL') or DEFAULT_JEV_MODEL) if backend_name == 'jev' else (os.getenv('FAST_DECISIONS_LOCAL_MODEL') or 'qwen3:0.6b')
-        if isinstance(timeout_ms, bool) or not isinstance(timeout_ms, int) or not 10 <= timeout_ms <= 500:
-            raise ValueError('Deadline must be 10–500 ms')
+            model = ((os.getenv('TYPESAFE_DEFAULT_MODEL') or DEFAULT_JEV_MODEL) if backend_name == 'jev'
+                     else backend_name if backend_name in WORKERS_AI else (os.getenv('FAST_DECISIONS_LOCAL_MODEL') or 'qwen3:0.6b'))
+        if timeout_ms is None:
+            timeout_ms = policy.timeout_ms
+        if isinstance(timeout_ms, bool) or not isinstance(timeout_ms, int):
+            raise ValueError('Deadline must be an integer')
+        dataclasses.replace(policy, timeout_ms=timeout_ms)  # the shared Policy owns the bounds; raises ValueError
         if not isinstance(model, str) or not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_.:/-]{0,127}', model):
             raise ValueError('Invalid model name')
         scorer = _backend if _backend is not None else (
             JevBackend(model=model, timeout_ms=timeout_ms) if backend_name == 'jev' else
+            ClefBackend(model=backend_name, timeout_ms=timeout_ms) if backend_name in WORKERS_AI else
             LayaBackend(url=laya_url, timeout_ms=timeout_ms) if backend_name == 'laya' else
             OllamaBackend(model=model, url=ollama_url or os.getenv('FAST_DECISIONS_OLLAMA_URL', 'http://127.0.0.1:11434'), timeout_ms=timeout_ms))
         if getattr(scorer, 'external', False) and not allow_external_state:
@@ -391,10 +460,10 @@ async def select(payload: dict[str, Any], *, model: str | None = None,
                     or not decision.model.strip() or decision.model == 'unknown'
                     or response.model != decision.model or decision.probability_kind != 'model_reported'):
                     raise ValueError('Unexpected Laya model evidence')
-            elif (scorer.name != 'jev' or not isinstance(decision.model, str)
+            elif (scorer.name != backend_name or not isinstance(decision.model, str)
                   or not decision.model.strip() or decision.model == 'unknown'
                   or response.model != decision.model or decision.probability_kind != 'backend_reported'):
-                raise ValueError('Unexpected Jev model evidence')
+                raise ValueError('Unexpected System One model evidence')
             probability = decision.probabilities[decision.choice]
             margin = probability - max((p for k, p in decision.probabilities.items() if k != decision.choice), default=0)
             await emitter.emit('scored', {**common, 'model': decision.model, 'choice': decision.choice,
@@ -404,7 +473,7 @@ async def select(payload: dict[str, Any], *, model: str | None = None,
                 'input_tokens': response.input_tokens, 'output_tokens': response.output_tokens,
                 'selected_probability': probability, 'margin': margin, 'duration_ms': duration,
                 'latency_kind': 'decision_model_wall_time'}, decision_id=decision_id)
-            selected = decision.choice != SLOW and probability >= .90 and margin >= .20
+            selected = decision.choice != SLOW and probability >= policy.min_probability and margin >= policy.min_margin
             reason = 'advisory_selected' if selected else ('model_abstained' if decision.choice == SLOW else 'selection_threshold')
             result = Selection(True, 'selected' if selected else 'abstain', reason, session, parent, decision_id,
                 choice=decision.choice if selected else None, model=decision.model, backend=scorer.name,
@@ -418,7 +487,7 @@ async def select(payload: dict[str, Any], *, model: str | None = None,
             duration = (time.perf_counter() - started) * 1000
             result = Selection(False, 'abstain', 'model_unavailable_or_invalid', session, parent, decision_id,
                 backend=backend_name, duration_ms=duration,
-                remediation=('Check Jev reachability, credentials and model; no alternate backend was used.' if backend_name == 'jev' else
+                remediation=(f'Check {backend_name} reachability, credentials and model; no alternate backend was used.' if backend_name == 'jev' or backend_name in WORKERS_AI else
                              'Start the Laya decide server and verify its health and queue latency.' if backend_name == 'laya' else
                              'Start Ollama, pull and warm the configured model; verify native token-log-probability support and input bounds.'))
         await emitter.emit('health', {**common, 'phase': 'advisory_result', 'status': result.status,
@@ -457,3 +526,52 @@ async def cua(payload, *, backend="jev", laya_url=None,
         return await selector.choose(payload["goal"], payload["snapshot"])
     finally:
         await selector.close()
+
+
+DECIDE_FIELDS = {'task', 'host_model', 'workspace', 'user_model'}
+MAX_DECIDE_TASK_CHARS = 20000
+
+
+def _validated_decide(payload: Any) -> dict[str, Any]:
+    if not isinstance(payload, dict) or set(payload) - DECIDE_FIELDS:
+        raise ValueError('Unsupported request fields')
+    task, host = payload.get('task'), payload.get('host_model')
+    if not isinstance(task, str) or not task.strip() or len(task) > MAX_DECIDE_TASK_CHARS:
+        raise ValueError('task must be a non-empty string under 20000 characters')
+    pattern = r'[A-Za-z0-9][A-Za-z0-9_.:/@+-]{0,127}'
+    if host is None:
+        raise ValueError('host_model is required: the price gate prices the cheaper model against it')
+    for name, value in (('host_model', host), ('user_model', payload.get('user_model'))):
+        if value is not None and (not isinstance(value, str) or not re.fullmatch(pattern, value)):
+            raise ValueError(f'invalid {name}')
+    workspace = payload.get('workspace')
+    if workspace is not None and (not isinstance(workspace, str) or not workspace or '\x00' in workspace):
+        raise ValueError('invalid workspace')
+    return payload
+
+
+async def decide(payload: dict[str, Any], *, decider: str | None = None, allow_external_state: bool | None = None,
+                 cheap_model: str | None = None, use_settings: bool = True, _backend: Any = None) -> dict[str, Any]:
+    """Decide once, at session start, whether a session should run on the cheaper start model and at which effort.
+
+    ``payload``: ``{"task": str, "host_model": str, "workspace": dir (optional), "user_model": str (optional)}``.
+    Returns the ``decide.Decision`` as a JSON-able dict plus ``ok`` (false only when the request or configuration is
+    invalid, with ``reason_code`` and ``remediation``). Same code and defaults as the Amplifier orchestrator; see
+    ``amplifier_fast_decisions.decide``. Advisory: nothing is executed. The task text is scrubbed of secret-shaped
+    strings before it is sent to any judge; consent is explicit (argument or FAST_DECISIONS_ALLOW_EXTERNAL_STATE).
+    """
+    from . import decide as decide_lib
+    from .config import ConfigError
+    try:
+        request = _validated_decide(payload)
+    except (ValueError, TypeError):
+        return {'ok': False, 'reason_code': 'unsupported_request',
+                'remediation': 'Check `decide --help` for the bounded input: task, host_model, optional workspace/user_model.'}
+    try:
+        result = await decide_lib.adecide(
+            scrub(request['task'], MAX_DECIDE_TASK_CHARS), request.get('host_model'), request.get('workspace'),
+            decider=decider, allow_external_state=allow_external_state, cheap_model=cheap_model,
+            user_model=request.get('user_model'), use_settings=use_settings, _backend=_backend)
+    except (ConfigError, ValueError) as exc:
+        return {'ok': False, 'reason_code': 'invalid_configuration', 'remediation': str(exc)[:300]}
+    return {'ok': True, **result.to_dict()}

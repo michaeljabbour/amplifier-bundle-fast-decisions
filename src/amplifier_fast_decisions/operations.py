@@ -9,6 +9,7 @@ from collections import Counter, deque
 from datetime import datetime, timezone
 from importlib import metadata
 import json
+import os
 import math
 from pathlib import Path
 from typing import Any
@@ -265,7 +266,12 @@ def diagnose(*, events_dir: str | Path = DEFAULT_EVENTS, session_id: str | None 
         actions.append('No real score was observed in this scope. Check fallback reasons and use an explicit eligible read/list target.')
     if report['totals']['provider_calls_failed']:
         actions.append('The generative provider failed; decision-model readiness does not establish provider availability.')
-    return {'installation': installed, 'local_backend': local, 'viewer': viewer, 'activity': report, 'next_actions': actions}
+    # The effective configuration, from the same function `afast doctor` uses (no network, no secret values).
+    from .config import config_report
+    config = config_report(os.getenv('AFAST_HOST_MODEL'))
+    actions += [f'Configuration: {w}' for w in config.get('warnings', [])]
+    return {'installation': installed, 'config': config, 'local_backend': local, 'viewer': viewer, 'activity': report,
+            'next_actions': actions}
 
 
 def compare(payload: dict, *, base_dir: str | Path = '.') -> dict:

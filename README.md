@@ -181,8 +181,11 @@ was cheaper on a set of all-easy tasks because it kept fewer requests on the usu
 - **Hosts that own their loop (Amplifier Unified):** `behaviors/fast-decisions-registry.yaml` does the same
   routing, prepared actions and waste guards without replacing the orchestrator, so it runs under Unified's
   `loop-live` as well as `loop-streaming` ([docs/REGISTRY-MODE.md](docs/REGISTRY-MODE.md)).
-- **Other assistants:** Claude Code, Codex and OpenCode can call the same decision service as a tool; it suggests,
-  it doesn't change how they run ([docs/SMART-TOOL.md](docs/SMART-TOOL.md)).
+- **Other assistants:** Claude Code, Codex, Copilot CLI and OpenCode can call the same decision service as a tool; it
+  suggests, it doesn't change how they run ([docs/SMART-TOOL.md](docs/SMART-TOOL.md)).
+- **Decide once, from any harness:** `amplifier-fast-decisions decide --host-model M --task "..."` (alias `afast decide`)
+  returns the orchestrator's session-start decision (cheaper model and effort, or stay on the host) as JSON, and
+  `launch --harness claude|codex|copilot` starts the harness on it. Same price gate, scope gate and defaults.
 
 ## Limits
 
