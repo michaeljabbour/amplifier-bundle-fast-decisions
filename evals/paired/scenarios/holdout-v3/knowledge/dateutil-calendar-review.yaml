@@ -1,0 +1,86 @@
+# holdout-v3 knowledge scenario (10 turns, review): dateutil/dateutil at 2642afa (src layout) plus three planted patches (relativedelta day clamp removed, within_delta abs() rewrite, rrule xafter count off-by-one) to review
+id: dateutil-calendar-review
+task_type: review
+language: python
+split: holdout
+source: {desc: 'dateutil/dateutil at 2642afa (src layout) plus three planted patches (relativedelta day clamp removed, within_delta abs() rewrite, rrule xafter count off-by-one) to review', repo: 'https://github.com/dateutil/dateutil.git', sha: 2642afacc33fb839c404b75b230fff58b79793f2}
+workspace:
+  kind: git
+  repo: https://github.com/dateutil/dateutil.git
+  sha: 2642afacc33fb839c404b75b230fff58b79793f2
+  local_hint: ~/dev/afast-paired-src/dateutil
+  add_files:
+    patches/day_clamp.diff: |
+      --- a/src/dateutil/relativedelta.py
+      +++ b/src/dateutil/relativedelta.py
+      @@ -374,8 +374,7 @@
+                   elif month < 1:
+                       year -= 1
+                       month += 12
+      -        day = min(calendar.monthrange(year, month)[1],
+      -                  self.day or other.day)
+      +        day = self.day or other.day
+               repl = {"year": year, "month": month, "day": day}
+               for attr in ["hour", "minute", "second", "microsecond"]:
+                   value = getattr(self, attr)
+    patches/within_delta_abs.diff: |
+      --- a/src/dateutil/utils.py
+      +++ b/src/dateutil/utils.py
+      @@ -66,6 +66,4 @@
+           Useful for comparing two datetimes that may have a negligible difference
+           to be considered equal.
+           """
+      -    delta = abs(delta)
+      -    difference = dt1 - dt2
+      -    return -delta <= difference <= delta
+      +    return abs(dt1 - dt2) <= delta
+    patches/xafter_count.diff: "--- a/src/dateutil/rrule.py\n+++ b/src/dateutil/rrule.py\n@@ -263,7 +263,7 @@\n             if comp(d, dt):\n                 if count is not None:\n                     n += 1\n-                    if n > count:\n+                    if n >= count:\n                         break\n \n                 yield d\n"
+turns:
+- prompt: Give me a one-line role for each module and sub-package directly under src/dateutil/ (relativedelta, rrule, easter, utils, parser, tz, zoneinfo, _common). Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: [relativedelta\.py, rrule\.py, easter\.py, utils\.py, parser, tz, zoneinfo, _common]
+- prompt: 'Explain what `relativedelta.__add__` does when adding to a datetime: in which order are absolute fields, relative months/years, the day, the time fields, leapdays and the weekday applied, and what protects against ''February 31''? Answer from src/dateutil/relativedelta.py. Do not change any files.'
+  checks:
+  - kind: keyed_facts
+    all: [monthrange, min\(|clamp|last day, leapdays, weekday, timedelta, replace]
+- prompt: Review patches/day_clamp.diff. What exactly does it remove, and which concrete addition now misbehaves (input and result)? Do not apply it to the repository.
+  checks:
+  - kind: keyed_facts
+    all: [monthrange|clamp|min\(, '2021-01-31|Jan(uary)? 31|31', ValueError, '2021-02-28|Feb(ruary)? 28|28']
+- prompt: 'Verify with real output, without touching the repo: in a scratch copy under /tmp apply patches/day_clamp.diff and run `datetime(2021,1,31) + relativedelta(months=1)` before and after (put the scratch copy''s src/ first on sys.path). Show the output.'
+  checks:
+  - kind: keyed_facts
+    all: ['2021-02-28', ValueError, day 31 must be in range|day is out of range]
+  gap_before_s: 420
+- prompt: Review patches/within_delta_abs.diff (a rewrite of `within_delta` in src/dateutil/utils.py). Is it equivalent? Find an input where the result differs and say what the old code does with that input. Do not apply it.
+  checks:
+  - kind: keyed_facts
+    all: [abs\(delta\)|negative, -5|negative, within_delta, False|True]
+- prompt: Review patches/xafter_count.diff (a change in `rrulebase.xafter` in src/dateutil/rrule.py). What does `count` mean today, what changes, and what does `list(r.xafter(dt, count=2))` return before and after for a daily rule starting 2020-01-01 with dt=2020-01-01? Do not apply it.
+  checks:
+  - kind: keyed_facts
+    all: [count, n >= count|>=, one|off.by.one|1 item|single, '2020-01-02|\b2\b.{0,20}\b3\b|Jan(uary)? 2']
+- prompt: Write REVIEW.md in the repository root with level-2 sections Summary, day_clamp, within_delta_abs and xafter_count. Every patch section must contain a line starting `Verdict:` followed by approve, request changes or reject.
+  checks:
+  - kind: doc_sections
+    path: REVIEW.md
+    headings: [Summary, day_clamp, within_delta_abs, xafter_count]
+  - {kind: file_regex, path: REVIEW.md, pattern: '(?im)^Verdict:\s*(approve|request changes|reject)', min_count: 3}
+  - {kind: file_regex, path: REVIEW.md, pattern: '2021'}
+  - {kind: file_regex, path: REVIEW.md, pattern: -5|negative}
+- prompt: 'Turn the review into executable checks: create checks/test_review.py (pytest) that passes on the current tree and fails when ANY ONE of the three diffs is applied. Import dateutil from this checkout (src layout: run with PYTHONPATH=src) and prove each failure in a scratch copy.'
+  checks:
+  - {kind: file_regex, path: checks/test_review.py, pattern: ^def test_, min_count: 4}
+  - {kind: tests, runner: cmd, cmd: 'O=$(mktemp -d) && cp -R src $O/orig && PYTHONPATH=src python3 -m pytest -q -p no:cacheprovider checks/test_review.py && for p in day_clamp within_delta_abs xafter_count; do rm -rf src && cp -R $O/orig src && patch -s -p1 < patches/$p.diff && if PYTHONPATH=src python3 -m pytest -q -p no:cacheprovider checks/test_review.py; then exit 1; fi; done', timeout: 240}
+  gap_before_s: 420
+- prompt: 'Explain how an `rrule` stops: how do `count` and `until` interact in the generator `rrule._iter`, what does the `_len` attribute record, and what does `cache=True` on rrulebase change? Answer from src/dateutil/rrule.py. Do not change any files.'
+  checks:
+  - kind: keyed_facts
+    all: ['count.{0,160}(decrement|-= ?1|< ?0|below|reach|zero|exhaust)', 'until.{0,120}(>|after|exceed|beyond|past)', '_len.{0,120}(total|number|how many|produced|length)', _cache_gen|lock|lazil|replay|_iter_cached]
+- prompt: Add a `## Recommendation` section at the end of REVIEW.md giving the overall decision per patch in a sentence each.
+  checks:
+  - kind: doc_sections
+    path: REVIEW.md
+    headings: [Recommendation]
+  - {kind: file_regex, path: REVIEW.md, pattern: '(?i)(do not merge|reject|request changes)', min_count: 4}
