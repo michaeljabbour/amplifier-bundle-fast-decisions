@@ -1,4 +1,4 @@
-# holdout-v3 polyglot: js-linkedlist -- 12 turns, short gaps.
+# holdout-v3 polyglot: js-linkedlist -- 14 turns, short gaps.
 id: js-linkedlist
 task_type: feature
 language: javascript
@@ -291,6 +291,18 @@ turns:
       - {kind: file_regex, path: simple-linked-list.js, pattern: \*_elements\(\)}
       - {kind: file_regex, path: simple-linked-list.js, pattern: 'for \(let (?:e|previous) = ', absent: true}
       - {kind: tests, runner: cmd, cmd: sed "s#from './simple-linked-list'#from './simple-linked-list.js'#" simple-linked-list.spec.js > spec_run.test.mjs && node --import ./jest_shim.mjs --test --test-reporter=tap spec_run.test.mjs hidden_iter.test.mjs hidden_pop.test.mjs hidden_at.test.mjs hidden_str.test.mjs hidden_eq.test.mjs, expect_regex: '# fail 0', restore: [simple-linked-list.spec.js], hidden: [jest_shim.mjs, hidden_iter.test.mjs, hidden_pop.test.mjs, hidden_at.test.mjs, hidden_str.test.mjs, hidden_eq.test.mjs], timeout: 120}
+  - prompt: >-
+      Write a short USAGE.md in the project root with the sections `## Building` and `## Editing`,
+      each with a couple of example calls. Do not change any code.
+    checks:
+      - {kind: file_exists, path: USAGE.md}
+      - {kind: doc_sections, path: USAGE.md, headings: [Building, Editing]}
+      - {kind: file_regex, path: USAGE.md, pattern: List\.from|new List, min_count: 2}
+  - prompt: >-
+      Question only: list the methods and getters of `List` after the refactoring, grouped into
+      reading, editing and creating, one line each. Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [toArray, pop, insertAt, removeAt, from, equals, clone]}
   - prompt: >-
       Review the changes you made in this session as a code reviewer would: list each file you changed
       or added, what changed, and any remaining edge case you did not cover. Do not change any files.

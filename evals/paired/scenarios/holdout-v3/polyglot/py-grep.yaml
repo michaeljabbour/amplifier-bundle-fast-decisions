@@ -1,4 +1,4 @@
-# holdout-v3 polyglot: py-grep -- 12 turns, short gaps.
+# holdout-v3 polyglot: py-grep -- 16 turns, short gaps.
 id: py-grep
 task_type: feature
 language: python
@@ -292,6 +292,29 @@ turns:
     checks:
       - {kind: file_regex, path: grep.py, pattern: ^def _\w+\(, min_count: 3}
       - {kind: tests, runner: python, files: [grep_test.py, hidden_count_test.py, hidden_flags_test.py, hidden_word_test.py, hidden_max_test.py, hidden_missing_test.py], restore: [grep_test.py], hidden: [hidden_count_test.py, hidden_flags_test.py, hidden_word_test.py, hidden_max_test.py, hidden_missing_test.py]}
+  - prompt: >-
+      Write a short USAGE.md in the project root with two sections, `## Flags` (every flag with a one
+      line example call and its result) and `## Examples` (a multi-file example and the missing file
+      behaviour). Include at least three `grep(` calls. Do not change any code.
+    checks:
+      - {kind: file_exists, path: USAGE.md}
+      - {kind: doc_sections, path: USAGE.md, headings: [Flags, Examples]}
+      - {kind: file_regex, path: USAGE.md, pattern: grep\(, min_count: 3}
+  - prompt: >-
+      Question only: list every function in grep.py after the refactoring, public and private, with a
+      one line description each. Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [grep, _expand_flags, _line_matcher, _read_lines]}
+  - prompt: >-
+      Question only: which flags interact, and what are the precedence rules in your implementation
+      (think about -l, -c, -x, -w, -v and -m)? Answer as a short list. Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [-l, -c, -x, -w, wins|precedence|overrides|takes priority]}
+  - prompt: >-
+      Question only: name three more tests you would add to the suite to harden grep next, each with
+      the behaviour it pins down. Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [-m, directory|IsADirectoryError|empty file|invalid, test], any: [negative|zero|non-numeric|permission|binary|encoding]}
   - prompt: >-
       Review the changes you made in this session as a code reviewer would: list each file you changed
       or added, what changed, and any remaining edge case you did not cover. Do not change any files.
