@@ -366,25 +366,21 @@ class BundleLoadTests(unittest.TestCase):
         self.assertIn("tool-fast-workspace", tool_modules)
 
     def test_active_bundle(self):
-        # Screen-validated 2026-09-20 incumbent config: ollama/qwen3:0.6b,
-        # allow_external_state False (no TypeSafe key required to install).
+        # bundles/active.yaml now carries the shipped defaults (scripts/sync_active_bundles.py keeps it equal to
+        # behaviors/fast-decisions.yaml): Jev judge with consent, price gate, decide once per session.
         self._assert_decision_bundle(
             "bundles/active.yaml",
             expected_name="fast-decisions-active",
             expected_mode="active",
-            expected_allow_external=False,
+            expected_allow_external=True,
         )
         bundle = self._load("bundles/active.yaml")
         config = bundle.to_mount_plan()["session"]["orchestrator"]["config"]
-        self.assertEqual(config["backend"], "ollama")
-        self.assertEqual(config["model"], "qwen3:0.6b")
-        self.assertEqual(config["timeout_ms"], 500)
-        self.assertEqual(
-            config["effort_routing"],
-            {"explore": "low", "max_explore_requests": 6, "escalate_after_provider_errors": 1},
-        )
-        self.assertNotIn("model_routing", config)
-
+        self.assertEqual(config["backend"], "jev")
+        self.assertEqual(config["timeout_ms"], 3000)
+        self.assertEqual(config["effort_routing"], {"by_tier": {"cheap": "medium", "strong": None}})
+        self.assertEqual(config["model_routing"]["decision_scope"], "session")
+        self.assertEqual(config["model_routing"]["price_gate"], {"enabled": True})
 
 def _configure(tmp_path: Path, mode: str, output_name: str) -> Path:
     from types import SimpleNamespace
