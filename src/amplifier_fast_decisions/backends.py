@@ -330,6 +330,14 @@ class JevBackend:
         self._conn_target: tuple[bool, str, int] | None = None
         self._conn_lock = threading.Lock()
 
+    def _systemone_path(self) -> str:
+        """Request path under the base URL; a subclass for another System One host overrides it."""
+        return "/v1/systemone"
+
+    def _unwrap(self, payload: dict[str, Any]) -> dict[str, Any]:
+        """Hook for hosts that wrap the System One body (see ``ClefBackend``); identity for Jev."""
+        return payload
+
     def _base_url(self) -> str:
         if self.base_url:
             return self.base_url
@@ -414,10 +422,10 @@ class JevBackend:
             questions, option_set_hash = _build_questions(request, fmt)
             body = {"state": request.state, "model": model, "questions": questions}
             payload = await asyncio.to_thread(
-                self._post_keepalive, base_url, "/v1/systemone", headers,
+                self._post_keepalive, base_url, self._systemone_path(), headers,
                 json.dumps(body).encode("utf-8"), timeout_s,
             )
-            return payload, option_set_hash
+            return self._unwrap(payload), option_set_hash
 
         # The format THIS request was sent with, captured before the await: a
         # concurrent request may flip self.criteria_format while we wait.
@@ -591,6 +599,69 @@ class JevBackend:
             self._client = None
         with self._conn_lock:
             self._close_connection_locked()
+
+
+WORKERS_AI_API = "https://api.cloudflare.com/client/v4"
+WORKERS_AI_MODELS: dict[str, str] = {"clef": "@cf/cloudflare/clef", "clef-flash": "@cf/cloudflare/clef-flash"}
+WORKERS_AI_TOKEN_ENV = "CLOUDFLARE_API_TOKEN"
+WORKERS_AI_ACCOUNT_ENV = "CLOUDFLARE_ACCOUNT_ID"
+
+
+def unwrap_workers_ai(payload: Any) -> dict[str, Any]:
+    """Workers AI wraps a System One body as ``{"result": {...}, "success": bool, "errors": [...]}``.
+
+    Returns the inner body. ``success: false`` or a non-empty ``errors`` list raises ``BackendUnavailable`` with
+    the error codes only (never the request). A body without the envelope passes through unchanged."""
+    if not isinstance(payload, dict) or not ("success" in payload or "errors" in payload):
+        return payload
+    errors = payload.get("errors") or []
+    if payload.get("success") is False or errors:
+        codes = ", ".join(str(e.get("code")) for e in errors if isinstance(e, dict)) or "success=false"
+        raise BackendUnavailable(f"workers-ai request failed: {codes}")
+    result = payload.get("result")
+    if not isinstance(result, dict):
+        raise BackendUnavailable("workers-ai response had no result")
+    return result
+
+
+class ClefBackend(JevBackend):
+    """Cloudflare Workers AI decision models (``clef``, ``clef-flash``): the System One body inside the
+    Workers AI envelope. Opt-in, external (state leaves the machine), gated by ``allow_external_state``.
+
+    Same request, parsing and consent behavior as ``JevBackend`` (it is the same protocol); only the endpoint
+    (``/accounts/{account}/ai/run/@cf/cloudflare/<model>``), the credential (``CLOUDFLARE_API_TOKEN`` and
+    ``CLOUDFLARE_ACCOUNT_ID`` from the environment, never stored) and the envelope differ. Always the stdlib
+    transport. No warmup (every call is billed)."""
+
+    external = True
+
+    def __init__(self, *, model: str = "clef", timeout_ms: int = 750, account_env: str | None = None,
+                 api_key_env: str | None = None, base_url: str | None = None, label: str | None = None,
+                 criteria_format: str = "object"):
+        if model not in WORKERS_AI_MODELS:
+            raise ValueError(f"Workers AI model must be one of {sorted(WORKERS_AI_MODELS)}")
+        super().__init__(model=model, timeout_ms=timeout_ms, base_url=base_url or WORKERS_AI_API,
+                         api_key_env=api_key_env or WORKERS_AI_TOKEN_ENV, label=label or model,
+                         criteria_format=criteria_format)
+        self.name = model
+        self.account_env = account_env or WORKERS_AI_ACCOUNT_ENV
+
+    def _systemone_path(self) -> str:
+        account = os.getenv(self.account_env)
+        if not account:
+            raise BackendUnavailable(f"{self.account_env} is missing")
+        if not account.replace("-", "").replace("_", "").isalnum():
+            raise BackendUnavailable(f"{self.account_env} is not a valid account id")
+        return f"/accounts/{account}/ai/run/{WORKERS_AI_MODELS[self.model]}"
+
+    def _unwrap(self, payload: dict[str, Any]) -> dict[str, Any]:
+        return unwrap_workers_ai(payload)
+
+    async def ask(self, request: DecisionRequest) -> DecisionResult:
+        return await self._ask_urllib(request)
+
+    async def warmup(self) -> None:
+        return None
 
 
 class UnavailableBackend:

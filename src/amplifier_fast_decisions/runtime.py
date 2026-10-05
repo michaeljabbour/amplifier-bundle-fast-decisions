@@ -10,7 +10,8 @@ from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
-from .backends import JevBackend, ScriptedBackend, UnavailableBackend
+from . import judge_backends
+from .backends import ClefBackend, JevBackend, ScriptedBackend, UnavailableBackend
 from .contracts import SERVICE_CAPABILITY, RUNTIME_CAPABILITY, EVENT_NAMES, Policy
 from .service import DecisionService
 from .shadow import ShadowJob, ShadowOutcome, ShadowWorker
@@ -348,15 +349,18 @@ class Runtime:
                 await asyncio.to_thread(self.recorder.close)
 
 
-def _build_backend(config: dict[str, Any], policy: Policy) -> Any:
+def build_backend(config: dict[str, Any], policy: Policy) -> Any:
     """The judge backend a module's config asks for. Raises ValueError on a bad config."""
     backend_name = config.get("backend") or _env_backend_default() or "jev"
     if backend_name == "none":  # readable alias: routing-only, no judge
         backend_name = "unavailable"
-    if backend_name not in {"jev", "unavailable", "deterministic", "ollama", "mlx", "hosted", "gateway", "laya", "anyjev"}:
-        raise ValueError(
-            "Backend must be jev, deterministic, ollama, mlx, hosted (alias gateway), laya, anyjev, or unavailable"
-        )
+    if judge_backends.spec(backend_name) is None:
+        raise ValueError(f"Backend must be one of {', '.join(judge_backends.names('runtime', aliases=True))}")
+    if backend_name in ("clef", "clef-flash"):
+        # Cloudflare Workers AI; credentials come from the environment only.
+        backend = ClefBackend(model=backend_name, timeout_ms=policy.timeout_ms,
+                              account_env=config.get("account_env"), api_key_env=config.get("key_env"))
+        return backend
     if backend_name == "jev":
         # jev_url / jev_url_env / jev_key_env point the Jev client at any
         # other Jev System One-compatible server; backend_label names it.
@@ -429,6 +433,9 @@ def _build_backend(config: dict[str, Any], policy: Policy) -> Any:
     else:
         backend = UnavailableBackend()
     return backend
+
+
+_build_backend = build_backend  # historical private name, still used inside this module
 
 
 def get_runtime(coordinator: Any, config: dict[str, Any], *, owner: bool = False) -> tuple[Runtime, bool]:
