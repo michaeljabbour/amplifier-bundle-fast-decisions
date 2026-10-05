@@ -5,12 +5,18 @@
 # (docs/evidence/2026-09-30-judge-comparison), rounded up; used only for the budget guard.
 schema: fast-decisions-evals/judges/v1
 
+# native_form (trace-dev / trace-holdout only): how the arm is asked about a real read-shortcut decision.
+# Arms without one (gpt-6-luna, gpt-6.1-sol, openai-decisions) have no native form and run `form: adapted`
+# on the bench choice-question payload; so do the +sideeffect-clause arms whose base has no instruction
+# slot in its native prompt (everything except System One servers: jev, tev1). For read-shortcut the bundle's real gate is exactly the
+# `bundle-read-shortcut` policy, which stays primary.
+
 defaults:
   timeout_ms: 3000            # behaviors/fast-decisions.yaml timeout_ms
   order_passes: 2             # pass 0 as authored, pass 1 with Choice options reversed
   warmups: 2                  # per arm block, excluded from results
   primary_policy: bundle-read-shortcut
-  reps: {dev: 3, holdout: 3}   # STUDY-DESIGN R8: no claim before 3 repetitions
+  reps: {dev: 3, holdout: 3, trace-dev: 3, trace-holdout: 3}   # STUDY-DESIGN R8: no claim before 3 repetitions
   policies:                   # recomputed at summary time from raw answers
     - bundle-read-shortcut
     - bundle-cua
@@ -36,6 +42,7 @@ arms:
     adapter: systemone
     url: https://api.typesafe.ai/v1/systemone
     model: jev-1.13.0
+    native_form: systemone_body   # trace splits: POST the bundle's own next_action body
     key_env: TYPESAFE_API_KEY
     external_state: true      # the full state leaves the machine
     price_in: 0.042
@@ -48,6 +55,9 @@ arms:
     adapter: systemone
     url: http://127.0.0.1:11434/v1/systemone
     model: nimble
+    # No native_form: Ollama 0.35's /v1/systemone rejects the bundle's next_action body (criteria are objects;
+    # it requires string descriptions: HTTP 400). Trace splits therefore ask these arms in the bench shape
+    # (form: adapted). Finding: JevBackend pointed at Ollama System One cannot answer read-shortcut today.
     local: true
     residency_block: true     # run as one contiguous block; swapping models would pollute latency
     est_tokens_in: 0
@@ -58,6 +68,9 @@ arms:
     adapter: systemone
     url: http://127.0.0.1:11434/v1/systemone
     model: "tev1:4b"
+    # No native_form: Ollama 0.35's /v1/systemone rejects the bundle's next_action body (criteria are objects;
+    # it requires string descriptions: HTTP 400). Trace splits therefore ask these arms in the bench shape
+    # (form: adapted). Finding: JevBackend pointed at Ollama System One cannot answer read-shortcut today.
     local: true
     residency_block: true
     est_tokens_in: 0
@@ -68,6 +81,9 @@ arms:
     adapter: systemone
     url: http://127.0.0.1:11434/v1/systemone
     model: "tev1:0.8b"
+    # No native_form: Ollama 0.35's /v1/systemone rejects the bundle's next_action body (criteria are objects;
+    # it requires string descriptions: HTTP 400). Trace splits therefore ask these arms in the bench shape
+    # (form: adapted). Finding: JevBackend pointed at Ollama System One cannot answer read-shortcut today.
     local: true
     residency_block: true
     est_tokens_in: 0
@@ -78,6 +94,7 @@ arms:
     adapter: systemone
     url: http://127.0.0.1:8090/v1/decide
     model: null
+    native_form: laya_backend     # trace splits: the real LayaBackend candidate path
     local: true
     est_tokens_in: 0
     est_tokens_out: 0
@@ -86,6 +103,7 @@ arms:
   qwen3-0.6b:
     adapter: ollama_backend
     model: "qwen3:0.6b"
+    native_form: ollama_backend   # trace splits: the real OllamaBackend.ask(DecisionRequest) path
     local: true
     order_averaged_internally: true   # the backend asks both option orders and averages them
     keep_reason_option: true
@@ -96,6 +114,7 @@ arms:
   qwen3-4b:
     adapter: ollama_backend
     model: "qwen3:4b"
+    native_form: ollama_backend   # trace splits: the real OllamaBackend.ask(DecisionRequest) path
     local: true
     order_averaged_internally: true
     keep_reason_option: true
@@ -106,6 +125,7 @@ arms:
   qwen3-8b:
     adapter: ollama_backend
     model: "qwen3:8b"
+    native_form: ollama_backend   # trace splits: the real OllamaBackend.ask(DecisionRequest) path
     local: true
     order_averaged_internally: true
     keep_reason_option: true
@@ -190,6 +210,42 @@ arms:
     est_tokens_out: 0
     determinism: {temperature_sent: 0, seed_sent: null}
 
+  # Cloudflare Workers AI decision models (post-hoc additions: not in the preregistration, 2026-10-04).
+  # System One body inside the Workers AI envelope {result, success, errors}; `{account}` in the url is filled
+  # from the env var named by account_env, the bearer token comes from token_env. Neither value is stored.
+  # Prices: Cloudflare Workers AI, USD per million input tokens; output tokens are not charged.
+  clef:
+    adapter: systemone
+    url: https://api.cloudflare.com/client/v4/accounts/{account}/ai/run/@cf/cloudflare/clef
+    model: clef
+    envelope: true
+    token_env: CLOUDFLARE_API_TOKEN
+    account_env: CLOUDFLARE_ACCOUNT_ID
+    native_form: systemone_body   # accepts the bundle's next_action body (object-valued criteria)
+    local: false
+    external_state: true
+    price_in: 0.24
+    price_out: 0.0
+    est_tokens_in: 400
+    est_tokens_out: 0
+    determinism: {temperature_sent: null, seed_sent: null}
+
+  clef-flash:
+    adapter: systemone
+    url: https://api.cloudflare.com/client/v4/accounts/{account}/ai/run/@cf/cloudflare/clef-flash
+    model: clef-flash
+    envelope: true
+    token_env: CLOUDFLARE_API_TOKEN
+    account_env: CLOUDFLARE_ACCOUNT_ID
+    native_form: systemone_body
+    local: false
+    external_state: true
+    price_in: 0.09
+    price_out: 0.0
+    est_tokens_in: 400
+    est_tokens_out: 0
+    determinism: {temperature_sent: null, seed_sent: null}
+
 contrasts:
   - [jev-1.13, gpt-6-luna]
   - [jev-1.13, nimble-9b]
@@ -204,3 +260,6 @@ contrasts:
   - [gpt-6-luna+sideeffect-clause, gpt-6-luna]
   - [tev1-0.8b+sideeffect-clause, tev1-0.8b]
   - [qwen3-8b+sideeffect-clause, qwen3-8b]
+  - [jev-1.13, clef]
+  - [jev-1.13, clef-flash]
+  - [clef, clef-flash]

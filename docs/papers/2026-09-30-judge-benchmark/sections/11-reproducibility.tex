@@ -14,6 +14,15 @@ and its three reruns; \path{label-audit/} the blind reviews; \path{latency/} the
 \$\DevSpendUSD\ (dev), \$\HoldSpendUSD\ (holdout) and \$\LatencySpendUSD\ (latency study),
 \$\LoggedSpendTotal\ in total.
 
+\paragraph{Follow-up evidence.} The evidence of the real-decision benchmark is in the directory
+\path{docs/evidence/2026-10-01-trace-judge-benchmark/} (the same file layout per split, plus
+\path{rule2_useful.json} and the post-hoc \path{trace_analysis.json}), with its preregistration, final
+labels, case pool and findings in \path{evals/judge_bench/traces/}. Its holdout ran from commit
+\code{\TrCommit}; API spend was \$\TrSpendHold\ (holdout), \$\TrSpendDev\ (dev) and \$\TrSpendSmoke\
+(adapter smoke test). The caching re-analysis is in \path{docs/evidence/2026-10-01-caching/}
+(\code{results.json}, \code{pairs.csv}, \code{sessions.csv}); it made no model calls, and regenerating it
+needs local session logs that are not committed.
+
 \paragraph{Replaying the numbers.} Summaries are pure functions of the request logs: the repository test
 \path{tests/test_judge_replay.py} recomputes every committed \code{summary.json} from its \code{requests.jsonl}: every count, label and
 key exactly, and every float to within $10^{-9}$ relative, because platform math libraries differ in the

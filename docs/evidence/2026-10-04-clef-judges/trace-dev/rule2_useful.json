@@ -1,0 +1,26 @@
+{
+ "clef": {
+  "correct_automatic_reads": 7,
+  "n": 21,
+  "read_cases": 11,
+  "useful": false,
+  "wrong_automatic": 2,
+  "wrong_automatic_upper95": 0.2891458386074067
+ },
+ "clef-flash": {
+  "correct_automatic_reads": 4,
+  "n": 21,
+  "read_cases": 11,
+  "useful": false,
+  "wrong_automatic": 1,
+  "wrong_automatic_upper95": 0.22669816586235464
+ },
+ "jev-1.13": {
+  "correct_automatic_reads": 11,
+  "n": 21,
+  "read_cases": 11,
+  "useful": false,
+  "wrong_automatic": 3,
+  "wrong_automatic_upper95": 0.346364941492295
+ }
+}

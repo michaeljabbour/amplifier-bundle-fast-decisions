@@ -25,6 +25,8 @@ PANELS = {  # panel -> (caption start, x ticks, y ticks, x range, y range, log x
                       [0, 10, 20, 30, 40], (15, 100), (0, 40), False),
     "acclat-holdout": ("Accuracy against p95 latency", [30, 100, 300, 1000, 3000],
                        [30, 40, 50, 60, 70, 80, 90, 100], (25, 9000), (25, 102), True),
+    "reads-holdout": ("Real decisions: correct automatic reads",
+                      [0, 2, 4, 6, 8, 10, 12], [0, 5, 10, 15, 20], (-1, 14), (-1.5, 22), False),
 }
 
 

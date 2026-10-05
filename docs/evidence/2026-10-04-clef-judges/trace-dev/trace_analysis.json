@@ -1,0 +1,384 @@
+{
+ "a_outcome_label": {
+  "definition": "outcome label = the host model's actual next read, or reason (labels_final.json outcome_label). A wrong automatic read 'matches the host's next read' when it is wrong against the final label but right (automatic) against the outcome label.",
+  "judges": {
+   "clef": {
+    "final_label": {
+     "automatic": 9,
+     "correct": 17,
+     "correct_automatic_reads": 7,
+     "n": 21,
+     "read_cases": 11,
+     "wrong_automatic": {
+      "k": 2,
+      "n": 21,
+      "rate": 0.09523809523809523,
+      "upper95": 0.2891458386074067
+     }
+    },
+    "outcome_label": {
+     "automatic": 9,
+     "correct": 12,
+     "correct_automatic_reads": 5,
+     "n": 21,
+     "read_cases": 12,
+     "wrong_automatic": {
+      "k": 4,
+      "n": 21,
+      "rate": 0.19047619047619047,
+      "upper95": 0.40000986539273287
+     }
+    },
+    "wrong_automatic_matching_host_next_read": {
+     "case_ids": [],
+     "k": 0,
+     "of_wrong_automatic": 2
+    }
+   },
+   "clef-flash": {
+    "final_label": {
+     "automatic": 5,
+     "correct": 12,
+     "correct_automatic_reads": 4,
+     "n": 21,
+     "read_cases": 11,
+     "wrong_automatic": {
+      "k": 1,
+      "n": 21,
+      "rate": 0.047619047619047616,
+      "upper95": 0.22669816586235464
+     }
+    },
+    "outcome_label": {
+     "automatic": 5,
+     "correct": 8,
+     "correct_automatic_reads": 2,
+     "n": 21,
+     "read_cases": 12,
+     "wrong_automatic": {
+      "k": 3,
+      "n": 21,
+      "rate": 0.14285714285714285,
+      "upper95": 0.346364941492295
+     }
+    },
+    "wrong_automatic_matching_host_next_read": {
+     "case_ids": [],
+     "k": 0,
+     "of_wrong_automatic": 1
+    }
+   },
+   "jev-1.13": {
+    "final_label": {
+     "automatic": 14,
+     "correct": 16,
+     "correct_automatic_reads": 11,
+     "n": 21,
+     "read_cases": 11,
+     "wrong_automatic": {
+      "k": 3,
+      "n": 21,
+      "rate": 0.14285714285714285,
+      "upper95": 0.346364941492295
+     }
+    },
+    "outcome_label": {
+     "automatic": 14,
+     "correct": 11,
+     "correct_automatic_reads": 7,
+     "n": 21,
+     "read_cases": 12,
+     "wrong_automatic": {
+      "k": 7,
+      "n": 21,
+      "rate": 0.3333333333333333,
+      "upper95": 0.5462692434278971
+     }
+    },
+    "wrong_automatic_matching_host_next_read": {
+     "case_ids": [],
+     "k": 0,
+     "of_wrong_automatic": 3
+    }
+   }
+  },
+  "outcome_read_cases": 12
+ },
+ "b_by_suite": {
+  "S12": {
+   "always_fall_back": {
+    "automatic": 0,
+    "correct": 4,
+    "correct_automatic_reads": 0,
+    "n": 8,
+    "wrong_automatic": {
+     "k": 0,
+     "n": 8,
+     "rate": 0.0,
+     "upper95": 0.3244156195108769
+    }
+   },
+   "judges": {
+    "clef": {
+     "automatic": 3,
+     "correct": 7,
+     "correct_automatic_reads": 2,
+     "n": 8,
+     "read_cases": 4,
+     "wrong_automatic": {
+      "k": 1,
+      "n": 8,
+      "rate": 0.125,
+      "upper95": 0.4708948057698615
+     }
+    },
+    "clef-flash": {
+     "automatic": 3,
+     "correct": 4,
+     "correct_automatic_reads": 2,
+     "n": 8,
+     "read_cases": 4,
+     "wrong_automatic": {
+      "k": 1,
+      "n": 8,
+      "rate": 0.125,
+      "upper95": 0.4708948057698615
+     }
+    },
+    "jev-1.13": {
+     "automatic": 5,
+     "correct": 7,
+     "correct_automatic_reads": 4,
+     "n": 8,
+     "read_cases": 4,
+     "wrong_automatic": {
+      "k": 1,
+      "n": 8,
+      "rate": 0.125,
+      "upper95": 0.4708948057698615
+     }
+    }
+   },
+   "n": 8,
+   "read_cases": 4,
+   "title": "S1+S2 (battery and polyglot)"
+  },
+  "S3": {
+   "always_fall_back": {
+    "automatic": 0,
+    "correct": 6,
+    "correct_automatic_reads": 0,
+    "n": 13,
+    "wrong_automatic": {
+     "k": 0,
+     "n": 13,
+     "rate": 0.0,
+     "upper95": 0.22810184305529166
+    }
+   },
+   "judges": {
+    "clef": {
+     "automatic": 6,
+     "correct": 10,
+     "correct_automatic_reads": 5,
+     "n": 13,
+     "read_cases": 7,
+     "wrong_automatic": {
+      "k": 1,
+      "n": 13,
+      "rate": 0.07692307692307693,
+      "upper95": 0.3331453392824736
+     }
+    },
+    "clef-flash": {
+     "automatic": 2,
+     "correct": 8,
+     "correct_automatic_reads": 2,
+     "n": 13,
+     "read_cases": 7,
+     "wrong_automatic": {
+      "k": 0,
+      "n": 13,
+      "rate": 0.0,
+      "upper95": 0.22810184305529166
+     }
+    },
+    "jev-1.13": {
+     "automatic": 9,
+     "correct": 9,
+     "correct_automatic_reads": 7,
+     "n": 13,
+     "read_cases": 7,
+     "wrong_automatic": {
+      "k": 2,
+      "n": 13,
+      "rate": 0.15384615384615385,
+      "upper95": 0.4223517050863101
+     }
+    }
+   },
+   "n": 13,
+   "read_cases": 7,
+   "title": "S3 (SWE-bench: the task is clipped before the issue)"
+  }
+ },
+ "c_selection_effect": {
+  "cases_by_family": {
+   "jev": 6,
+   "laya": 11,
+   "ollama": 4
+  },
+  "judges": {
+   "clef": {
+    "own_family": null
+   },
+   "clef-flash": {
+    "own_family": null
+   },
+   "jev-1.13": {
+    "all_other_cases": {
+     "automatic": 10,
+     "correct": 11,
+     "correct_automatic_reads": 7,
+     "n": 15,
+     "read_cases": 7,
+     "wrong_automatic": {
+      "k": 3,
+      "n": 15,
+      "rate": 0.2,
+      "upper95": 0.4518593533465045
+     }
+    },
+    "own_family": "jev",
+    "own_family_cases": {
+     "automatic": 4,
+     "correct": 5,
+     "correct_automatic_reads": 4,
+     "n": 6,
+     "read_cases": 4,
+     "wrong_automatic": {
+      "k": 0,
+      "n": 6,
+      "rate": 0.0,
+      "upper95": 0.3903430336530645
+     }
+    }
+   }
+  },
+  "mapping": "case family = pool.json native.sent.backend (the in-session judge that sent the step to the host; matched by logged option-set hash for 56 of 70 pool cases, profile.md for 14). Arm family: jev-1.13->jev, laya-base->laya, qwen3-0.6b->ollama, qwen3-4b->ollama, qwen3-8b->ollama. Other arms have no own family."
+ },
+ "d_fallback_reasons": {
+  "hypothetical_label": "HYPOTHETICAL: same logged answers, the 3000 ms decision timeout ignored. No judge ran without a timeout; a slower judge would also change the host's wait.",
+  "judges": {
+   "clef": {
+    "fallback_reasons_all_reps": {
+     "automatic": 27,
+     "model_abstained": 18,
+     "selection_threshold": 18
+    },
+    "hypothetical_no_timeout": {
+     "automatic": 9,
+     "correct": 17,
+     "correct_automatic_reads": 7,
+     "n": 21,
+     "read_cases": 11,
+     "wrong_automatic": {
+      "k": 2,
+      "n": 21,
+      "rate": 0.09523809523809523,
+      "upper95": 0.2891458386074067
+     }
+    }
+   },
+   "clef-flash": {
+    "fallback_reasons_all_reps": {
+     "automatic": 15,
+     "model_abstained": 3,
+     "selection_threshold": 45
+    },
+    "hypothetical_no_timeout": {
+     "automatic": 5,
+     "correct": 12,
+     "correct_automatic_reads": 4,
+     "n": 21,
+     "read_cases": 11,
+     "wrong_automatic": {
+      "k": 1,
+      "n": 21,
+      "rate": 0.047619047619047616,
+      "upper95": 0.22669816586235464
+     }
+    }
+   },
+   "jev-1.13": {
+    "fallback_reasons_all_reps": {
+     "automatic": 42,
+     "model_abstained": 15,
+     "selection_threshold": 6
+    },
+    "hypothetical_no_timeout": {
+     "automatic": 14,
+     "correct": 16,
+     "correct_automatic_reads": 11,
+     "n": 21,
+     "read_cases": 11,
+     "wrong_automatic": {
+      "k": 3,
+      "n": 21,
+      "rate": 0.14285714285714285,
+      "upper95": 0.346364941492295
+     }
+    }
+   }
+  },
+  "unit": "one count per (repetition, case), order 0"
+ },
+ "e_jev_vs_sol": {
+  "note": "exact McNemar, post hoc; the run's contrast list omitted this pair"
+ },
+ "f_correct_automatic_reads_paired": {
+  "cases": [
+   "rt-003",
+   "rt-014",
+   "rt-017",
+   "rt-025",
+   "rt-028",
+   "rt-035",
+   "rt-041",
+   "rt-042",
+   "rt-043",
+   "rt-051",
+   "rt-055"
+  ],
+  "n_read_cases": 11,
+  "note": "exact McNemar on the discordant read cases"
+ },
+ "g_clustering": {
+  "cases_per_group": {
+   "S12:bugfix_average_score_truncation": 1,
+   "S12:bugfix_paginate_off_by_one": 2,
+   "S12:edit_clean_text_strict": 1,
+   "S12:event_reducer": 2,
+   "S12:repair_parse_duration": 2,
+   "S3:django__django-13794": 1,
+   "S3:django__django-15503": 1,
+   "S3:matplotlib__matplotlib-24177": 1,
+   "S3:pydata__xarray-6461": 3,
+   "S3:pytest-dev__pytest-6197": 2,
+   "S3:sphinx-doc__sphinx-7454": 2,
+   "S3:sphinx-doc__sphinx-7748": 3
+  },
+  "jev_groups_with_a_wrong_automatic": 3,
+  "jev_wrong_automatic_by_group": {
+   "S12:event_reducer": 1,
+   "S3:sphinx-doc__sphinx-7454": 1,
+   "S3:sphinx-doc__sphinx-7748": 1
+  },
+  "jev_wrong_automatic_total": 3,
+  "n_groups": 12
+ },
+ "label": "POST-HOC analysis: chosen after the holdout results were seen; not preregistered; no verdict depends on it",
+ "n_cases": 21,
+ "read_cases_final_label": 11,
+ "unit": "per-case majority over repetitions under bundle-read-shortcut, all cases in the denominator"
+}

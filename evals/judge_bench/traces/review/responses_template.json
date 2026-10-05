@@ -1,0 +1,495 @@
+{
+ "reviewer": "",
+ "responses": [
+  {
+   "id": "rt-001",
+   "label": null,
+   "confidence": null,
+   "unanswerable": false,
+   "rationale": ""
+  },
+  {
+   "id": "rt-002",
+   "label": null,
+   "confidence": null,
+   "unanswerable": false,
+   "rationale": ""
+  },
+  {
+   "id": "rt-003",
+   "label": null,
+   "confidence": null,
+   "unanswerable": false,
+   "rationale": ""
+  },
+  {
+   "id": "rt-004",
+   "label": null,
+   "confidence": null,
+   "unanswerable": false,
+   "rationale": ""
+  },
+  {
+   "id": "rt-005",
+   "label": null,
+   "confidence": null,
+   "unanswerable": false,
+   "rationale": ""
+  },
+  {
+   "id": "rt-006",
+   "label": null,
+   "confidence": null,
+   "unanswerable": false,
+   "rationale": ""
+  },
+  {
+   "id": "rt-007",
+   "label": null,
+   "confidence": null,
+   "unanswerable": false,
+   "rationale": ""
+  },
+  {
+   "id": "rt-008",
+   "label": null,
+   "confidence": null,
+   "unanswerable": false,
+   "rationale": ""
+  },
+  {
+   "id": "rt-009",
+   "label": null,
+   "confidence": null,
+   "unanswerable": false,
+   "rationale": ""
+  },
+  {
+   "id": "rt-010",
+   "label": null,
+   "confidence": null,
+   "unanswerable": false,
+   "rationale": ""
+  },
+  {
+   "id": "rt-011",
+   "label": null,
+   "confidence": null,
+   "unanswerable": false,
+   "rationale": ""
+  },
+  {
+   "id": "rt-012",
+   "label": null,
+   "confidence": null,
+   "unanswerable": false,
+   "rationale": ""
+  },
+  {
+   "id": "rt-013",
+   "label": null,
+   "confidence": null,
+   "unanswerable": false,
+   "rationale": ""
+  },
+  {
+   "id": "rt-014",
+   "label": null,
+   "confidence": null,
+   "unanswerable": false,
+   "rationale": ""
+  },
+  {
+   "id": "rt-015",
+   "label": null,
+   "confidence": null,
+   "unanswerable": false,
+   "rationale": ""
+  },
+  {
+   "id": "rt-016",
+   "label": null,
+   "confidence": null,
+   "unanswerable": false,
+   "rationale": ""
+  },
+  {
+   "id": "rt-017",
+   "label": null,
+   "confidence": null,
+   "unanswerable": false,
+   "rationale": ""
+  },
+  {
+   "id": "rt-018",
+   "label": null,
+   "confidence": null,
+   "unanswerable": false,
+   "rationale": ""
+  },
+  {
+   "id": "rt-019",
+   "label": null,
+   "confidence": null,
+   "unanswerable": false,
+   "rationale": ""
+  },
+  {
+   "id": "rt-020",
+   "label": null,
+   "confidence": null,
+   "unanswerable": false,
+   "rationale": ""
+  },
+  {
+   "id": "rt-021",
+   "label": null,
+   "confidence": null,
+   "unanswerable": false,
+   "rationale": ""
+  },
+  {
+   "id": "rt-022",
+   "label": null,
+   "confidence": null,
+   "unanswerable": false,
+   "rationale": ""
+  },
+  {
+   "id": "rt-023",
+   "label": null,
+   "confidence": null,
+   "unanswerable": false,
+   "rationale": ""
+  },
+  {
+   "id": "rt-024",
+   "label": null,
+   "confidence": null,
+   "unanswerable": false,
+   "rationale": ""
+  },
+  {
+   "id": "rt-025",
+   "label": null,
+   "confidence": null,
+   "unanswerable": false,
+   "rationale": ""
+  },
+  {
+   "id": "rt-026",
+   "label": null,
+   "confidence": null,
+   "unanswerable": false,
+   "rationale": ""
+  },
+  {
+   "id": "rt-027",
+   "label": null,
+   "confidence": null,
+   "unanswerable": false,
+   "rationale": ""
+  },
+  {
+   "id": "rt-028",
+   "label": null,
+   "confidence": null,
+   "unanswerable": false,
+   "rationale": ""
+  },
+  {
+   "id": "rt-029",
+   "label": null,
+   "confidence": null,
+   "unanswerable": false,
+   "rationale": ""
+  },
+  {
+   "id": "rt-030",
+   "label": null,
+   "confidence": null,
+   "unanswerable": false,
+   "rationale": ""
+  },
+  {
+   "id": "rt-031",
+   "label": null,
+   "confidence": null,
+   "unanswerable": false,
+   "rationale": ""
+  },
+  {
+   "id": "rt-032",
+   "label": null,
+   "confidence": null,
+   "unanswerable": false,
+   "rationale": ""
+  },
+  {
+   "id": "rt-033",
+   "label": null,
+   "confidence": null,
+   "unanswerable": false,
+   "rationale": ""
+  },
+  {
+   "id": "rt-034",
+   "label": null,
+   "confidence": null,
+   "unanswerable": false,
+   "rationale": ""
+  },
+  {
+   "id": "rt-035",
+   "label": null,
+   "confidence": null,
+   "unanswerable": false,
+   "rationale": ""
+  },
+  {
+   "id": "rt-036",
+   "label": null,
+   "confidence": null,
+   "unanswerable": false,
+   "rationale": ""
+  },
+  {
+   "id": "rt-037",
+   "label": null,
+   "confidence": null,
+   "unanswerable": false,
+   "rationale": ""
+  },
+  {
+   "id": "rt-038",
+   "label": null,
+   "confidence": null,
+   "unanswerable": false,
+   "rationale": ""
+  },
+  {
+   "id": "rt-039",
+   "label": null,
+   "confidence": null,
+   "unanswerable": false,
+   "rationale": ""
+  },
+  {
+   "id": "rt-040",
+   "label": null,
+   "confidence": null,
+   "unanswerable": false,
+   "rationale": ""
+  },
+  {
+   "id": "rt-041",
+   "label": null,
+   "confidence": null,
+   "unanswerable": false,
+   "rationale": ""
+  },
+  {
+   "id": "rt-042",
+   "label": null,
+   "confidence": null,
+   "unanswerable": false,
+   "rationale": ""
+  },
+  {
+   "id": "rt-043",
+   "label": null,
+   "confidence": null,
+   "unanswerable": false,
+   "rationale": ""
+  },
+  {
+   "id": "rt-044",
+   "label": null,
+   "confidence": null,
+   "unanswerable": false,
+   "rationale": ""
+  },
+  {
+   "id": "rt-045",
+   "label": null,
+   "confidence": null,
+   "unanswerable": false,
+   "rationale": ""
+  },
+  {
+   "id": "rt-046",
+   "label": null,
+   "confidence": null,
+   "unanswerable": false,
+   "rationale": ""
+  },
+  {
+   "id": "rt-047",
+   "label": null,
+   "confidence": null,
+   "unanswerable": false,
+   "rationale": ""
+  },
+  {
+   "id": "rt-048",
+   "label": null,
+   "confidence": null,
+   "unanswerable": false,
+   "rationale": ""
+  },
+  {
+   "id": "rt-049",
+   "label": null,
+   "confidence": null,
+   "unanswerable": false,
+   "rationale": ""
+  },
+  {
+   "id": "rt-050",
+   "label": null,
+   "confidence": null,
+   "unanswerable": false,
+   "rationale": ""
+  },
+  {
+   "id": "rt-051",
+   "label": null,
+   "confidence": null,
+   "unanswerable": false,
+   "rationale": ""
+  },
+  {
+   "id": "rt-052",
+   "label": null,
+   "confidence": null,
+   "unanswerable": false,
+   "rationale": ""
+  },
+  {
+   "id": "rt-053",
+   "label": null,
+   "confidence": null,
+   "unanswerable": false,
+   "rationale": ""
+  },
+  {
+   "id": "rt-054",
+   "label": null,
+   "confidence": null,
+   "unanswerable": false,
+   "rationale": ""
+  },
+  {
+   "id": "rt-055",
+   "label": null,
+   "confidence": null,
+   "unanswerable": false,
+   "rationale": ""
+  },
+  {
+   "id": "rt-056",
+   "label": null,
+   "confidence": null,
+   "unanswerable": false,
+   "rationale": ""
+  },
+  {
+   "id": "rt-057",
+   "label": null,
+   "confidence": null,
+   "unanswerable": false,
+   "rationale": ""
+  },
+  {
+   "id": "rt-058",
+   "label": null,
+   "confidence": null,
+   "unanswerable": false,
+   "rationale": ""
+  },
+  {
+   "id": "rt-059",
+   "label": null,
+   "confidence": null,
+   "unanswerable": false,
+   "rationale": ""
+  },
+  {
+   "id": "rt-060",
+   "label": null,
+   "confidence": null,
+   "unanswerable": false,
+   "rationale": ""
+  },
+  {
+   "id": "rt-061",
+   "label": null,
+   "confidence": null,
+   "unanswerable": false,
+   "rationale": ""
+  },
+  {
+   "id": "rt-062",
+   "label": null,
+   "confidence": null,
+   "unanswerable": false,
+   "rationale": ""
+  },
+  {
+   "id": "rt-063",
+   "label": null,
+   "confidence": null,
+   "unanswerable": false,
+   "rationale": ""
+  },
+  {
+   "id": "rt-064",
+   "label": null,
+   "confidence": null,
+   "unanswerable": false,
+   "rationale": ""
+  },
+  {
+   "id": "rt-065",
+   "label": null,
+   "confidence": null,
+   "unanswerable": false,
+   "rationale": ""
+  },
+  {
+   "id": "rt-066",
+   "label": null,
+   "confidence": null,
+   "unanswerable": false,
+   "rationale": ""
+  },
+  {
+   "id": "rt-067",
+   "label": null,
+   "confidence": null,
+   "unanswerable": false,
+   "rationale": ""
+  },
+  {
+   "id": "rt-068",
+   "label": null,
+   "confidence": null,
+   "unanswerable": false,
+   "rationale": ""
+  },
+  {
+   "id": "rt-069",
+   "label": null,
+   "confidence": null,
+   "unanswerable": false,
+   "rationale": ""
+  },
+  {
+   "id": "rt-070",
+   "label": null,
+   "confidence": null,
+   "unanswerable": false,
+   "rationale": ""
+  }
+ ]
+}
