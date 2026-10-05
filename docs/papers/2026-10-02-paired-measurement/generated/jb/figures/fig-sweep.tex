@@ -1,0 +1,32 @@
+% Threshold sweep: coverage and wrong-automatic rate as the certainty cutoff rises.
+\begin{tikzpicture}
+\begin{groupplot}[benchmark,
+  group style={group size=2 by 2, horizontal sep=1.6cm, vertical sep=1.7cm},
+  width=0.46\linewidth, height=5.6cm,
+  xmin=0.48, xmax=1.0, xtick={0.5,0.6,0.7,0.8,0.9,1.0},
+  xticklabel style={/pgf/number format/fixed, /pgf/number format/precision=1},
+  xmajorgrids, ymajorgrids, title style={font=\small\bfseries},
+  cycle list={
+    {okorange, mark=square*, solid},
+    {okblue, mark=*, solid},
+    {okblue, mark=diamond*, dashed},
+    {okgreen, mark=triangle*, solid},
+    {okgreen, mark=pentagon*, dashed},
+    {okgray, mark=star, mark options={solid}, densely dotted},
+  },
+]
+\nextgroupplot[title={Dev (screen): coverage}, ylabel={Coverage (\%)}, ymin=0, ymax=100]
+\pgfplotsinvokeforeach{Jev,Luna,Sol,Nimble,TevFour,TevPtEight}{\addplot+[mark size=2pt] table[x=cutoff, y=cov#1]{generated/jb/data/sweep-dev.dat};}
+\nextgroupplot[title={Dev (screen): wrong automatic}, ylabel={Wrong automatic (\%)}, ymin=0, ymax=25,
+  legend to name=sweeplegend, legend columns=3, legend cell align=left]
+\pgfplotsinvokeforeach{Jev,Luna,Sol,Nimble,TevFour,TevPtEight}{\addplot+[mark size=2pt] table[x=cutoff, y=wa#1]{generated/jb/data/sweep-dev.dat};}
+\legend{Jev 1.13, GPT-6 Luna, GPT-6.1 Sol, nimble 9B, tev1 4B, tev1 0.8B}
+\nextgroupplot[title={Holdout (preregistered): coverage}, ylabel={Coverage (\%)}, xlabel={Certainty cutoff}, ymin=0, ymax=100]
+\pgfplotsinvokeforeach{Jev,Luna,Sol,Nimble,TevFour,TevPtEight}{\addplot+[mark size=2pt] table[x=cutoff, y=cov#1]{generated/jb/data/sweep-holdout.dat};}
+\nextgroupplot[title={Holdout (preregistered): wrong automatic}, ylabel={Wrong automatic (\%)}, xlabel={Certainty cutoff}, ymin=0, ymax=36]
+\pgfplotsinvokeforeach{Jev,Luna,Sol,Nimble,TevFour,TevPtEight}{\addplot+[mark size=2pt] table[x=cutoff, y=wa#1]{generated/jb/data/sweep-holdout.dat};}
+\end{groupplot}
+\end{tikzpicture}
+
+\smallskip
+\centering\pgfplotslegendfromname{sweeplegend}

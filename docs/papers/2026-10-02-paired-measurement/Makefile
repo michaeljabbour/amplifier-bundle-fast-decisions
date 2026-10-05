@@ -16,7 +16,7 @@ check: $(PDF)
 
 assets: generated/numbers.tex
 
-generated/numbers.tex: build_assets.py labelplacer.py $(shell find $(EVIDENCE) -type f) \
+generated/numbers.tex: build_assets.py labelplacer.py jb_import.py $(shell find $(EVIDENCE) -type f) \
 		../../design/parallel-measurement-mode.md ../../design/pilot-20261001/step1_cache_probe.json
 	$(NICE) $(PYTHON) build_assets.py
 
@@ -29,7 +29,7 @@ $(PDF): generated/numbers.tex main.tex $(wildcard sections/*.tex) $(wildcard fig
 clean:
 	$(LATEXMK) -c -jobname=$(JOB) main.tex
 	rm -f $(JOB).bbl $(JOB).run.xml $(JOB).xdv
-	rm -rf __pycache__
+	rm -rf __pycache__ generated/src
 
 # Also remove generated assets and the PDF.
 distclean: clean

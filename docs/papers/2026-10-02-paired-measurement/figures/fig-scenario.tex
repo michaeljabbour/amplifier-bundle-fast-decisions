@@ -1,0 +1,15 @@
+% Scenario-level view (Fable host, sticky): mean plain-host cost vs mean saving per session.
+\begin{tikzpicture}
+\begin{axis}[benchmark, scale only axis, width=\ScAxisW, height=\ScAxisH, xmin=0, xmax=\ScXMax, xtick distance=2, ytick distance=2,
+  ymin=\ScYMin, ymax=\ScYMax, xlabel={Plain Fable session cost (\$, mean of 2 repetitions)},
+  ylabel={Saving of sticky (\$ per session)}, xmajorgrids, ymajorgrids, clip=false,
+  title={One point per scenario}, title style={font=\small\bfseries},
+  legend to name=scenariolegend, legend columns=2, legend cell align=left,
+  legend style={/tikz/every even column/.append style={column sep=10pt}}]
+\addplot[okgray, dashed, line width=0.8pt, domain=0:\ScXMax, samples=2] {0};
+\addlegendentry{no saving}
+\addplot[only marks, mark=*, mark size=2pt, color=okblue] table[x=anchor, y=saving]{generated/data/scenario-scatter.dat};
+\addlegendentry{scenario (sticky arm, Fable host)}
+\input{generated/labels/scenario-scatter.tex}
+\end{axis}
+\end{tikzpicture}

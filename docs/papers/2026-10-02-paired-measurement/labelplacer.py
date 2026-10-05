@@ -123,8 +123,9 @@ def _seg_dist(p, q, c):
     return math.hypot(p[0] + t * vx - c[0], p[1] + t * vy - c[1])
 
 
-def place_labels(name, points, xr, yr, xlog=False, obstacles=()):
-    """points: [(key, text, x, y)] in data units. Returns placements; exits non-zero if impossible."""
+def place_labels(name, points, xr, yr, xlog=False, obstacles=(), extra=()):
+    """points: [(key, text, x, y)] in data units; extra: unlabelled markers [(x, y)] that labels must also keep
+    clear of and be farther from than from their own marker. Returns placements; exits non-zero if impossible."""
     def tx(x):
         if xlog:
             return AXIS_W * (math.log10(x) - math.log10(xr[0])) / (math.log10(xr[1]) - math.log10(xr[0]))
@@ -135,6 +136,8 @@ def place_labels(name, points, xr, yr, xlog=False, obstacles=()):
 
     pts = [(k, t, x, y, tx(x), ty(y)) for k, t, x, y in points]
     centers = {p[0]: (p[4], p[5]) for p in pts}
+    for i, (ex, ey) in enumerate(extra):
+        centers[f"_unlabelled{i}"] = (tx(ex), ty(ey))
     blocked = [(tx(a), ty(b), tx(c), ty(d)) for a, b, c, d in obstacles]  # e.g. a shaded zone
 
     def options(p):

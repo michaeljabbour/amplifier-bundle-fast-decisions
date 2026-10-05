@@ -1,0 +1,23 @@
+% Campaign progress reconstructed from session rows and FAILURES.md: completed sessions, spend, hourly throughput.
+\begin{tikzpicture}
+\begin{groupplot}[benchmark, group style={group size=1 by 3, vertical sep=0.9cm, xlabels at=edge bottom, xticklabels at=edge bottom},
+  scale only axis, width=12cm, height=2.6cm, xmin=0, xmax=\ProgressMaxH, xmajorgrids, ymajorgrids,
+  title style={font=\small\bfseries}]
+\nextgroupplot[title={Sessions completed}, ylabel={sessions}, ymin=0,
+  legend to name=progresslegend, legend columns=4, legend cell align=left,
+  legend style={/tikz/every even column/.append style={column sep=8pt}}]
+\addplot[okblue, line width=1pt] table[x=h, y=sessions]{generated/data/progress.dat};
+\addlegendentry{accepted sessions}
+\addplot[only marks, mark=x, mark size=3pt, color=okorange, line width=1pt] table[x=h, y expr=40, restrict expr to domain={\thisrow{cause}}{0:0}]{generated/data/failures-time.dat};
+\addlegendentry{failed: session cap}
+\addplot[only marks, mark=triangle*, mark size=3pt, color=black] table[x=h, y expr=120, restrict expr to domain={\thisrow{cause}}{1:1}]{generated/data/failures-time.dat};
+\addlegendentry{failed: daemon restart}
+\addplot[only marks, mark=o, mark size=3pt, color=okgreen, line width=1pt] table[x=h, y expr=200, restrict expr to domain={\thisrow{cause}}{2:2}]{generated/data/failures-time.dat};
+\addlegendentry{failed: laptop asleep}
+\nextgroupplot[title={Spend on accepted sessions}, ylabel={US dollars}, ymin=0]
+\addplot[okorange, line width=1pt] table[x=h, y=spend]{generated/data/progress.dat};
+\nextgroupplot[title={Sessions completed per hour}, ylabel={sessions}, xlabel={Hours since the first session}, ymin=0,
+  ybar, bar width=3pt]
+\addplot[fill=okgreen!70, draw=black!60] table[x=h, y=n]{generated/data/throughput.dat};
+\end{groupplot}
+\end{tikzpicture}

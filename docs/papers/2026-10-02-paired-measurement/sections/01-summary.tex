@@ -47,9 +47,19 @@ quality that the preregistration allows (\cref{sec:confirm}). Three cautions tra
     table (\cref{sec:limits}).
 \end{itemize}
 
-\paragraph{How to read this report.} \Cref{sec:why} explains why estimates were not enough, and
-\cref{sec:caching} explains prompt caching with a small diagram and a direct probe of the provider.
-\Cref{sec:design} describes the experiment and \cref{sec:running} how it was run safely. \Cref{sec:confirm}
-gives the confirmatory results; \cref{sec:explore} the exploratory ones, labelled as such.
-\Cref{sec:recs,sec:limits,sec:repro} give recommendations, limitations and how to reproduce every number.
-A glossary is in \cref{app:glossary}.
+\paragraph{How to read this report.} The report follows the whole study arc in four parts.
+\begin{itemize}
+  \item \textbf{Part~\ref{part:judges}, fast judges.} What a decision judge is, how \NumBase\ judges did on
+    constructed cases (\cref{sec:judges}) and on real decisions rebuilt from agent traces (\cref{sec:traces}),
+    and the four bundle defects those studies found and fixed.
+  \item \textbf{Part~\ref{part:caching}, what caching does to savings.} Why estimates were not enough
+    (\cref{sec:why}), what an earlier caching survey showed (\cref{sec:survey}), and how prompt caching works,
+    with a direct probe of the provider (\cref{sec:caching}).
+  \item \textbf{Part~\ref{part:measuring}, measuring savings.} How the design evolved and how big it had to be
+    (\cref{sec:design}), how it was run safely (\cref{sec:running}), the confirmatory results
+    (\cref{sec:confirm}) and the exploratory ones (\cref{sec:explore,sec:more}), labelled as such.
+  \item \textbf{Part~\ref{part:implications}.} Recommendations, limitations and how to reproduce every number
+    (\cref{sec:recs,sec:limits,sec:repro}). A glossary is in \cref{app:glossary}.
+\end{itemize}
+Results marked \prereg\ test hypotheses fixed in advance on held-out data; results marked \screen\ are exploratory.
+Every figure has a ``How to read this figure'' note.

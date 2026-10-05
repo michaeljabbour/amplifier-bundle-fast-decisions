@@ -8,7 +8,7 @@ one scenario grew to between \MemGrowLow\ and \MemGrowHigh\,GB of memory and dro
 benchmark that occasionally crashes its own machine produces gaps that are not random: the heavy scenarios
 go missing.
 
-From then on nothing that executes scenario code ran unguarded:
+The operating system's own out-of-memory killer (JetsamEvents in the macOS logs) recorded each of those events. From then on nothing that executes scenario code ran unguarded:
 \begin{itemize}
   \item \textbf{memguard} runs every grader and hidden test in its own process group, measures the memory
     of the whole process tree every \MemPollS\,s, and kills it above \MemGraderGB\,GB or after
@@ -47,6 +47,26 @@ terminals than the terminal server allowed, and the excess launches failed at on
 anything. The fix (wait for capacity) went into the running harness that evening. Restarts of the terminal
 server killed sessions mid-run; a circuit breaker then paused and resumed the campaign. The laptop's lid
 being closed on battery put the machine to sleep twice, and those attempts timed out.
+
+\subsection{What the live dashboard showed}
+
+During the run a local dashboard refreshed every minute with progress, throughput and spend. Its final snapshot
+is packaged as \path{dashboard/index.html}. \Cref{fig:progress} rebuilds the same views from the session rows and
+the failure log, so it can be checked against the data.
+
+\begin{figure}[htbp]
+\centering
+\pgfplotslegendfromname{progresslegend}\par\smallskip
+\input{figures/fig-progress.tex}
+\caption{Campaign progress reconstructed from the data: accepted sessions completed and their spend over the
+\ProgressHours\ hours from the first session to the last, sessions completed per hour, and when failed attempts
+started, by cause.}
+\label{fig:progress}
+\howtoread{Flat stretches in the top two panels are pauses: the laptop asleep, a terminal-server restart, or the
+runner waiting for capacity. The markers on the top panel show when failed attempts started; the burst of crosses
+is the session-cap bug, which cost nothing because those launches failed immediately. The bottom panel peaks at
+\ThroughputMax\ sessions in an hour.}
+\end{figure}
 
 \subsection{Spend and time}
 

@@ -59,3 +59,15 @@ paired-measurement.pdf
 
 Two evidence files are matched by a global `*.log` ignore rule and must be committed with `git add -f`:
 `campaign/run.log` and `campaign/supervisor.log` (build_assets.py reads `supervisor.log`).
+
+## Part I sources (judge studies) and optional Clef data
+
+`jb_import.py` (called by `build_assets.py`) runs `git archive origin/eval/judge-realistic` for the judge-benchmark,
+trace-benchmark and caching-survey evidence, `evals/judge_bench/` and that branch's judge-benchmark paper code, extracts
+them into `generated/src/` (gitignored, removed by `make clean`), runs that paper's own `build_assets.py` on the
+extracted evidence, and copies its numbers, tables, data, labels and path-rewritten figure sources into `generated/jb/`.
+The build therefore needs the `origin/eval/judge-realistic` ref. The four bundle fixes are read from commits `a15c439`
+and `1f3b0e4` (history of this branch).
+
+Cloudflare Clef results are read only if `CLEF_EVIDENCE` (default `../fd-judge-realistic/docs/evidence/2026-10-04-clef-judges`
+next to this repository) contains `dev/` or `holdout/summary.json` in the judge-bench schema; otherwise no Clef text is rendered.

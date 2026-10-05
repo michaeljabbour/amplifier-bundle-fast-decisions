@@ -29,6 +29,7 @@ from decimal import ROUND_HALF_UP, Decimal
 from pathlib import Path
 
 import labelplacer as LP
+import jb_import
 
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[2]
@@ -120,6 +121,9 @@ def table(spec, head, rows, width=r"\textwidth"):
 
 
 # ------------------------------------------------------------------ inputs
+
+# Part I sources: the judge-benchmark paper's own build, run on evidence extracted from its branch
+JR_SRC, JR_SHA = jb_import.run(REPO, OUT)
 
 CONF = json.loads((EV / "confirm/confirm.json").read_text())
 SUMM = json.loads((EV / "model/summary.json").read_text())
@@ -1009,6 +1013,295 @@ rc = SURVEY["headline"]["receipts"]["S3-v4 jev-prepared vs plain-matched"]
 M("SurveyRcptPairs", rc["pairs"])
 M("SurveyRcptClaimed", money(rc["sum_usd_saved_receipts"]))
 M("SurveyRcptMeasured", money(rc["sum_measured_saving_usd"]))
+
+
+# ================================================================ Part I extras: the four bundle defects (PR #58)
+PR58 = 58  # PR number (stated by the maintainer; not recorded in the evidence)
+M("PRFixNumber", PR58)
+fixes = []
+for sha in ("a15c439", "1f3b0e4"):
+    out = subprocess.run(["git", "-C", str(REPO), "show", "-s", "--format=%h|%cI|%s", sha], capture_output=True,
+                         text=True, check=True).stdout.strip().split("|")
+    fixes.append(out)
+M("PRFixSha", fixes[0][0])
+M("PRFixReviewSha", fixes[1][0])
+M("PRFixDate", fixes[0][1][:10])
+msg = subprocess.run(["git", "-C", str(REPO), "show", "-s", "--format=%B", "1f3b0e4"], capture_output=True, text=True,
+                     check=True).stdout
+M("PRFixTaskBudget", grab(Path("1f3b0e4"), r"keeps the old (\d+)-char budget", text=msg))
+stat = subprocess.run(["git", "-C", str(REPO), "show", "--shortstat", "--format=", "a15c439"], capture_output=True,
+                      text=True, check=True).stdout
+M("PRFixFiles", grab(Path("a15c439"), r"(\d+) files changed", text=stat))
+M("PRFixTests", len(re.findall(r"tests/test_\w+\.py", subprocess.run(
+    ["git", "-C", str(REPO), "show", "--stat", "--format=", "a15c439"], capture_output=True, text=True, check=True).stdout)))
+M("JRSha", JR_SHA)
+
+
+# ================================================================ Part II figures: caching survey and probe
+CSV = json.loads((JR_SRC / "docs/evidence/2026-10-01-caching/results.json").read_text())
+cc_cells = CSV["headline"]["corrections"]["same_cell_length_contrast"]["cells"]
+crow = []
+for i, (cell, lab) in enumerate((("plain-sonnet vs plain-opus", "Sonnet instead of Opus (no switch)"),
+                                  ("orch-default vs plain", "Routed, Fable host"),
+                                  ("orch-default-opus vs plain-opus", "Routed, Opus host"))):
+    one, four = cc_cells[cell]["S1-single"]["cost"], cc_cells[cell]["S1-multi"]["cost"]
+    crow.append([i, "{" + lab + "}", f"{one['geomean']:.4f}", f"{one['geomean'] - one['ci95'][0]:.4f}",
+                 f"{one['ci95'][1] - one['geomean']:.4f}", f"{four['geomean']:.4f}",
+                 f"{four['geomean'] - four['ci95'][0]:.4f}", f"{four['ci95'][1] - four['geomean']:.4f}"])
+dat("survey-samecell.dat", ["y", "label", "one", "om", "op", "four", "fm", "fp"], crow)
+pv = CSV["headline"]["corrections"]["price_volume_plain_sonnet_vs_plain_opus"]
+dat("survey-pricevolume.dat", ["x", "label", "price", "volume", "total"],
+    [[i, "{" + lab + "}", f"{pv[k]['price_factor_identical_tokens_pooled']:.4f}",
+      f"{pv[k]['volume_factor_geomean']['geomean']:.4f}", f"{pv[k]['cost_ratio']['geomean']:.4f}"]
+     for i, (k, lab) in enumerate((("S1-single", "single-turn"), ("S1-multi", "4-turn")))])
+prow = []
+for i, (q, what, (w, r)) in enumerate(probe_rows):
+    prow.append([i, f"{w / 1000:.3f}", f"{r / 1000:.3f}"])
+dat("probe.dat", ["idx", "written", "read"], prow)
+M("ProbeRows", len(probe_rows) - 1)
+write(TABLES / "probe-ticks.tex", ",".join("{" + f"P{i + 1}" + "}" for i in range(len(probe_rows))) + "\n")
+write(TABLES / "probe-key.tex", "; ".join(f"\\textbf{{P{i + 1}}} {tex_escape(what)}" for i, (q, what, _) in enumerate(probe_rows)) + ".\n")
+
+
+# ================================================================ Part III additions
+import statistics as _st
+
+# (D) power curves from step0_variance.json: 95% half-width of the ratio vs number of scenarios (m = 2 reps)
+STEP0 = json.loads((REPO / "docs/design/pilot-20261001/step0_variance.json").read_text())
+pcells = [c for c in STEP0["per_cell"] if c["cell"] in ("orch-default", "orch-default-opus")]
+M("PowerPairs", thousands(STEP0["n_pairs_used"]))
+prows, pnames = [], []
+SGRID = list(range(10, 101, 5))
+for c in pcells:
+    pnames.append(f"{'Fable' if c['host'] == 'fable' else 'Opus'}, {'1-turn' if c['suite'] == 'S1' else '4-turn'}")
+for S in SGRID:
+    row = [S]
+    for c in pcells:
+        hw = 1.96 * math.sqrt(c["sigma_between"] ** 2 / S + c["sigma_within"] ** 2 / (2 * S))
+        row.append(f"{100 * (math.exp(hw) - 1):.3f}")
+    prows.append(row)
+dat("power-curve.dat", ["S"] + [f"c{i}" for i in range(len(pcells))], prows)
+write(TABLES / "power-legend.tex", "\n".join(f"\\addlegendentry{{{n}}}" for n in pnames) + "\n")
+for c, n in zip(pcells, ("PowFableOne", "PowFableFour", "PowOpusOne", "PowOpusFour")):
+    pass
+for c in pcells:
+    key = ("Fable" if c["host"] == "fable" else "Opus") + ("One" if c["suite"] == "S1" else "Four")
+    M(f"Pow{key}SB", hu(c["sigma_between"], 2))
+    M(f"Pow{key}SW", hu(c["sigma_within"], 2))
+    M(f"Pow{key}ICC", hu(c["icc"], 2))
+
+# (D) pilot-2 ratios against the final all-split ratios
+PP = jsonl(EV / "pilot/pairs.jsonl")
+plrows = []
+order_ = [("fable", "sticky"), ("fable", "shipped"), ("fable", "sonnet"), ("fable", "aa"),
+          ("opus", "sticky"), ("opus", "shipped"), ("opus", "sonnet"), ("opus", "aa")]
+for i, (h, a_) in enumerate(reversed(order_)):
+    ys = [p_["log_cost_ratio"] for p_ in PP if p_["host"] == h and p_["arm"] == a_ and p_["valid"]]
+    g = G[(a_, h, "overall", "all")]
+    plrows.append([i + (1 if h == "fable" else 0), "{" + f"{h.capitalize()} {'A/A' if a_ == 'aa' else a_}" + "}",
+                   f"{math.exp(sum(ys) / len(ys)):.4f}", f"{g['gm_cost_ratio']:.4f}",
+                   f"{g['gm_cost_ratio'] - g['gm_cost_ratio_ci95'][0]:.4f}", f"{g['gm_cost_ratio_ci95'][1] - g['gm_cost_ratio']:.4f}", len(ys)])
+dat("pilot.dat", ["y", "label", "pilot", "final", "fm", "fp", "n"], plrows)
+M("PilotPairs", len(PP))
+M("PilotScenariosN", len({p_["scenario_id"] for p_ in PP}))
+
+# (E) campaign progress: sessions finishing over time, spend, failure times
+from datetime import timezone as _tz
+t0 = min(_dt.fromisoformat(x["actual_start"]) for x in SESS)
+fin = sorted((_dt.fromisoformat(x["actual_start"]) + __import__("datetime").timedelta(milliseconds=x["wall_ms"] or 0),
+              x["cost_usd_provider"]) for x in SESS)
+grow, cum, cs = [], 0, 0.0
+for t, c_ in fin:
+    cum += 1
+    cs += c_
+    grow.append([f"{(t - t0).total_seconds() / 3600:.3f}", cum, f"{cs:.2f}"])
+dat("progress.dat", ["h", "sessions", "spend"], grow)
+M("ProgressHours", hu((fin[-1][0] - t0).total_seconds() / 3600, 1))
+ftimes = re.findall(r"^\| [a-z0-9-]+-r\d-(?:opus|fable) \| \d+ \| [a-z_>-]+ \| \d+ \| (\S+) \| ([a-z_]+) \|",
+                     (EV / "campaign/FAILURES.md").read_text(), re.M)
+assert len(ftimes) == int(MACROS["NFailed"])
+frows = []
+for ts, cause in ftimes:
+    h_ = (_dt.fromisoformat(ts) - t0).total_seconds() / 3600
+    frows.append([f"{h_:.3f}", {"forge_session_cap": 0, "forge_daemon_restart": 1, "mac_sleep": 2}[cause]])
+dat("failures-time.dat", ["h", "cause"], frows)
+hours = math.ceil((fin[-1][0] - t0).total_seconds() / 3600)
+thr = [0] * hours
+for t, _ in fin:
+    thr[min(int((t - t0).total_seconds() // 3600), hours - 1)] += 1
+dat("throughput.dat", ["h", "n"], [[i + 0.5, n] for i, n in enumerate(thr)])
+M("ThroughputMax", max(thr))
+M("ProgressMaxH", hours)
+
+# (F) explorations from turns.jsonl
+TURNS = jsonl(EV / "data/turns.jsonl")
+valid = {x["session_key"] for x in SESS if x["cost_valid"]}
+TV = [t for t in TURNS if t["session_key"] in valid and not t["skipped"]]
+# F1 cost per turn by turn index, per arm and host
+cpt = defaultdict(list)
+for t in TV:
+    cpt[(t["host"], t["arm"], t["turn_index"])].append(t["cost_usd_tools_normalized"])
+for h in ("fable", "opus"):
+    rows_ = []
+    for k in range(1, 17):
+        row = [k]
+        for a_ in ("anchor", "shipped", "sticky"):
+            v = cpt.get((h, a_, k), [])
+            row.append(f"{_st.mean(v):.4f}" if v else "nan")
+        v = cpt.get(("any", "sonnet", k), [])
+        row.append(f"{_st.mean(v):.4f}" if v else "nan")
+        rows_.append(row)
+    dat(f"perturn-{h}.dat", ["turn", "anchor", "shipped", "sticky", "sonnet"], rows_)
+M("TurnOneShareFable", pct(_st.mean(cpt[("fable", "anchor", 1)]) / (sum(x["cost_usd_tools_normalized"] for x in SESS if x["arm"] == "anchor" and x["host"] == "fable" and x["cost_valid"]) / 140)))
+M("PerTurnN", sum(1 for t in TV))
+# F2 composition by turn index (anchor sessions), dollars per class
+for h, mdl in (("fable", "claude-fable-5-1"), ("opus", "claude-opus-5-5")):
+    pr_ = PRICE[mdl]
+    rows_ = []
+    for k in range(1, 17):
+        ts_ = [t for t in TV if t["host"] == h and t["arm"] == "anchor" and t["turn_index"] == k]
+        if not ts_:
+            continue
+        cls = [_st.mean(t["tokens"][c] for t in ts_) * pr_[i] / 1e6
+               for i, c in enumerate(("input", "cache_read", "cache_write", "output"))]
+        rows_.append([k] + [f"{v:.4f}" for v in cls] + [len(ts_)])
+    dat(f"turncomp-{h}.dat", ["turn", "input", "read", "write", "output", "n"], rows_)
+# F3 first-request cache writes after a long gap vs a short gap
+LG = int(MACROS["LongGapS"])
+grows = []
+gm_ = {}
+for i, (h, a_, lab) in enumerate((("fable", "anchor", "Fable plain"), ("fable", "sticky", "Fable sticky"),
+                                   ("opus", "anchor", "Opus plain"), ("opus", "sticky", "Opus sticky"),
+                                   ("any", "sonnet", "Sonnet"))):
+    sh_ = [t["first_req_cache_write"] for t in TV if t["host"] == h and t["arm"] == a_ and t["turn_index"] > 1
+           and t["gap_before_s"] < LG and t["first_req_cache_write"] is not None]
+    lo_ = [t["first_req_cache_write"] for t in TV if t["host"] == h and t["arm"] == a_ and t["gap_before_s"] >= LG
+           and t["first_req_cache_write"] is not None]
+    gm_[lab] = (_st.mean(sh_), _st.mean(lo_))
+    grows.append([i, "{" + lab + "}", f"{_st.mean(sh_) / 1000:.3f}", f"{_st.mean(lo_) / 1000:.3f}", len(sh_), len(lo_)])
+dat("gapwrites.dat", ["idx", "label", "short", "long", "nshort", "nlong"], grows)
+M("GapWriteFableShort", thousands(gm_["Fable plain"][0]))
+M("GapWriteFableLong", thousands(gm_["Fable plain"][1]))
+M("GapWriteFableX", hu(gm_["Fable plain"][1] / gm_["Fable plain"][0], 1))
+M("GapWriteOpusX", hu(gm_["Opus plain"][1] / gm_["Opus plain"][0], 1))
+M("GapNLong", sum(r[5] for r in grows))
+# F4 switch timing for the shipped arm
+sw = defaultdict(int)
+for t in TV:
+    if t["arm"] == "shipped" and t["switched_in"]:
+        sw[(t["host"], t["turn_index"])] += 1
+dat("switch-timing.dat", ["turn", "fable", "opus"], [[k, sw[("fable", k)], sw[("opus", k)]] for k in range(2, 17)])
+tot_sw = sum(sw.values())
+M("SwitchTotal", tot_sw)
+M("SwitchTurnTwoPct", pct((sw[("fable", 2)] + sw[("opus", 2)]) / tot_sw))
+shp = [x for x in SESS if x["arm"] == "shipped" and x["cost_valid"]]
+M("RebuildPerSwitchCents", hu(100 * sum(x["rebuild_usd"] for x in shp) / sum(x["model_switches"] for x in shp), 1))
+# F5 scenario-level scatter: Fable host, mean anchor cost vs mean saving of sticky
+sc = defaultdict(lambda: [[], []])
+for p_ in PAIRS:
+    if p_["host"] == "fable" and p_["arm"] == "sticky" and p_["valid"]:
+        sc[p_["scenario_id"]][0].append(p_["anchor_cost_usd"])
+        sc[p_["scenario_id"]][1].append(-p_["delta_usd"])
+spts = sorted((sid, _st.mean(v[0]), _st.mean(v[1])) for sid, v in sc.items())
+dat("scenario-scatter.dat", ["anchor", "saving"], [[f"{a:.4f}", f"{b:.4f}"] for _, a, b in spts])
+by_save = sorted(spts, key=lambda r: r[2])
+lab_ids = {by_save[0][0], by_save[1][0], by_save[2][0]}  # the three scenarios where sticky cost the most extra
+lab_pts = [(sid, sid, a, b) for sid, a, b in spts if sid in lab_ids]
+ext = [(a, b) for sid, a, b in spts if sid not in lab_ids]
+SC_X = (0, math.ceil(max(r[1] for r in spts) * 1.1))
+SC_Y = (math.floor(min(r[2] for r in spts) - 1), math.ceil(max(r[2] for r in spts) + 1))
+for k_, v_ in (("ScXMax", SC_X[1]), ("ScYMin", SC_Y[0]), ("ScYMax", SC_Y[1])):
+    M(k_, v_)
+LP.configure(OUT, DATA, 13.0, 7.0)
+M("ScAxisW", "13cm")
+M("ScAxisH", "7cm")
+LP.place_labels("scenario-scatter", lab_pts, SC_X, SC_Y, extra=ext)
+write(DATA / "labels-scenario-scatter-markers.tsv",
+      "x\ty\n" + "".join(f"{a:.4f}\t{b:.4f}\n" for _, a, b in spts))
+M("ScNegative", sum(1 for r in spts if r[2] < 0))
+M("ScN", len(spts))
+# F6 A/A histogram of log ratios
+aa_ = [(p_["host"], p_["log_cost_ratio"]) for p_ in PAIRS if p_["arm"] == "aa" and p_["valid"]]
+edges = [round(-0.3 + 0.05 * i, 2) for i in range(13)]
+hrows = []
+for lo_e, hi_e in zip(edges[:-1], edges[1:]):
+    hrows.append([f"{(lo_e + hi_e) / 2:.3f}", sum(1 for h, y in aa_ if h == "fable" and lo_e <= y < hi_e),
+                  sum(1 for h, y in aa_ if h == "opus" and lo_e <= y < hi_e)])
+assert sum(r[1] + r[2] for r in hrows) == len(aa_), "A/A values outside histogram range"
+dat("aa-hist.dat", ["mid", "fable", "opus"], hrows)
+# F7 quality per arm and family
+famof_ = {sid: f for f, ids in fam.items() for sid in ids}
+qrows = []
+for f in fam:
+    cells_ = []
+    for h, _, _ in HOSTS:
+        for a_ in ("sticky", "shipped", "sonnet"):
+            ps_ = [p_ for p_ in PAIRS if p_["host"] == h and p_["arm"] == a_ and famof_[p_["scenario_id"]] == f
+                   and p_["delta_turn_pass"] is not None]
+            cells_.append(hu(_st.mean(p_["delta_turn_pass"] for p_ in ps_), 3))
+    qrows.append(f"{f} & {len(fam[f])} & " + " & ".join(cells_) + r" \\")
+write(TABLES / "quality-family.tex", table("l r r r r r r r", [
+    r" & & \multicolumn{3}{c}{Fable host} & \multicolumn{3}{c}{Opus host} \\",
+    r"\cmidrule(lr){3-5}\cmidrule(l){6-8}",
+    r"Family & scenarios & sticky & shipped & sonnet & sticky & shipped & sonnet \\"], qrows))
+# F8 requests per session (box-plot quantiles)
+def q_(v, p):
+    v = sorted(v)
+    k = (len(v) - 1) * p
+    f_ = math.floor(k)
+    return v[f_] + (v[min(f_ + 1, len(v) - 1)] - v[f_]) * (k - f_)
+brow = []
+blabels = []
+for i, (a_, h, lab) in enumerate(reversed(BARS)):
+    v = [x["n_req"] for x in SESS if x["arm"] == a_ and x["host"] == h and x["cost_valid"]]
+    brow.append(f"\\addplot+[boxplot prepared={{lower whisker={q_(v, .05):.1f}, lower quartile={q_(v, .25):.1f}, "
+                f"median={q_(v, .5):.1f}, upper quartile={q_(v, .75):.1f}, upper whisker={q_(v, .95):.1f}}}, "
+                f"color={'okblue' if 'Fable' in lab else ('okorange' if 'Opus' in lab else 'okgreen')}] coordinates {{}};")
+    blabels.append("{" + lab + "}")
+write(TABLES / "requests-box.tex", "\n".join(brow) + "\n")
+M("ReqBoxLabels", ",".join(blabels))
+M("ReqBoxN", len(brow))
+# F9 ratio by turn band (all splits)
+trows = []
+for i, (h, a_) in enumerate((("fable", "sticky"), ("fable", "shipped"), ("opus", "sticky"), ("opus", "shipped"))):
+    for j, band in enumerate(("<=8", "9-12", ">=13")):
+        g = G[(a_, h, "turn_band", band)]
+        trows.append([f"{j + 1 + (i % 2) * 0.12 - 0.06:.2f}", h, a_, f"{g['gm_cost_ratio']:.4f}",
+                      f"{g['gm_cost_ratio'] - g['gm_cost_ratio_ci95'][0]:.4f}", f"{g['gm_cost_ratio_ci95'][1] - g['gm_cost_ratio']:.4f}"])
+for h in ("fable", "opus"):
+    for a_ in ("sticky", "shipped"):
+        dat(f"band-{h}-{a_}.dat", ["x", "r", "m", "p"], [[r[0], r[3], r[4], r[5]] for r in trows if r[1] == h and r[2] == a_])
+
+
+# ================================================================ G: Cloudflare Clef judges (optional)
+# Read only if the evidence directory exists (override with CLEF_EVIDENCE=<dir>); otherwise render nothing.
+import os as _os
+CLEF = Path(_os.environ.get("CLEF_EVIDENCE", str(HERE.parents[3] / "fd-judge-realistic" / "docs" / "evidence" / "2026-10-04-clef-judges")))
+clef_tex = ""
+rows_, splits_ = [], []
+if CLEF.is_dir():
+    rows_, splits_ = [], []
+    for sp in ("dev", "holdout"):
+        f = CLEF / sp / "summary.json"
+        if not f.exists():
+            continue
+        js = json.loads(f.read_text())
+        pol = js.get("primary_policy", "bundle-read-shortcut")
+        for arm, v in sorted(js["arms"].items()):
+            mv = v["policies"][pol]["across_reps"]["majority_vote"]
+            n = js["n_cases"]
+            rows_.append(f"{sp} & {tex_escape(arm)} & {mv['correct']}/{n} & {mv['automatic_errors']} & {mv['automatic']} \\\\")
+        splits_.append(sp)
+    if not rows_:
+        print(f"build_assets.py: note: {CLEF} has no dev/ or holdout/ summary.json yet; Clef subsection omitted")
+if CLEF.is_dir() and rows_:
+    write(TABLES / "clef.tex", table("l l r r r", [r"Split & Judge & correct & wrong automatic & automatic \\"], rows_))
+    clef_tex = (r"\subsection{Cloudflare Clef judges}\label{sec:clef}" "\n"
+                f"The same judge-benchmark splits ({', '.join(splits_)}) were later run with Cloudflare Clef judges, "
+                r"scored under the bundle's gate (majority over repetitions). Evidence: \path{" + tex_escape(CLEF.name) + "}.\n"
+                r"\begin{table}[htbp]\centering\small\caption{Cloudflare Clef judges on the judge-benchmark splits.}"
+                r"\label{tab:clef}\input{generated/tables/clef.tex}\end{table}" "\n")
+write(OUT / "clef-section.tex", clef_tex)
 
 # ------------------------------------------------------------ numbers.tex
 header = ("% Generated by build_assets.py from docs/evidence/2026-10-02-paired-campaign/ and the files listed there. "

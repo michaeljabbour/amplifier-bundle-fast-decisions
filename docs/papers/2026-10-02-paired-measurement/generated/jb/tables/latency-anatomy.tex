@@ -1,0 +1,18 @@
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}l r r r r r@{}}
+\toprule
+Cloud call (keep-alive, medians, ms) & wall & server & network & client + rest & $n$ \\
+\midrule
+Jev 1.13 & 150 & 52 & 98 & 0 & 30 \\
+GPT-6 Luna & 1{,}135 & 986 & 108 & 41 & 30 \\
+GPT-6 Luna, priority tier & 768 & 614 & 118 & 37 & 20 \\
+GPT-6.1 Sol & 2{,}488 & 2{,}354 & 91 & 44 & 30 \\
+\midrule
+Local call via Ollama (medians, ms) & wall & load & prefill & decode + rest & $n$ \\
+\midrule
+Qwen3 0.6B & 29 & 7 & 13 & 9 & 30 \\
+tev1 0.8B & 47 & 8 & 24 & 15 & 30 \\
+Qwen3 8B & 131 & 10 & 108 & 14 & 30 \\
+tev1 4B & 165 & 12 & 110 & 43 & 30 \\
+nimble 9B & 272 & 10 & 235 & 27 & 30 \\
+\bottomrule
+\end{tabular*}

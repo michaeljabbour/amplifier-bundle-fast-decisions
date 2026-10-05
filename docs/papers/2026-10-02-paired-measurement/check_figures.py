@@ -25,9 +25,33 @@ LEGENDS = {  # caption start -> (first legend entry words, topmost words of the 
     "Mean cost per session, split by": (["uncached", "input"], ["Fable:", "plain", "host"]),
     "Dollars saved per 1,000 sessions": (["sticky", "(choose", "once)"], ["Fable", "host"]),
     "Cost ratio of each routed arm": (["sticky", "(choose", "once)"], ["Fable", "host"]),
+    "The earlier caching survey: the": (["single-turn", "sessions"], ["Same", "configuration,"]),
+    "The probe requests of": (["written", "to", "cache"], ["What", "each", "probe"]),
+    "Projected 95 % interval half-width": (["Fable,", "1-turn"], ["Precision", "is", "bought"]),
+    "The second screening pilot": (["full", "campaign,"], ["Pilot", "screen"]),
+    "Campaign progress reconstructed from": (["accepted", "sessions"], ["Sessions", "completed"]),
+    "Mean cost of each turn by": (["plain", "host"], ["Fable", "host"]),
+    "What each turn of a plain-host": (["uncached", "input"], ["Fable", "host,", "plain"]),
+    "Cache-write tokens on the first": (["after", "a"], ["A", "pause", "longer"]),
+    "Shipped arm: number of model": (["Fable", "host"], ["Shipped", "arm:"]),
+    "Scenario by scenario: the mean": (["no", "saving"], ["One", "point", "per"]),
+    "Distribution of the log cost": (["Fable", "host"], ["Two", "identical", "sessions"]),
+    "Cost ratio by scripted session": (["sticky"], ["Fable", "host"]),
 }
-SCATTER = ("The savings model on the test", [-50, 0, 50, 100, 150], [-50, 0, 50, 100, 150], (-70, 150), (-70, 150),
-           "model-check")
+NUM = dict(re.findall(r"\\newcommand\{\\(\w+)\}\{([^}]*)\}", (HERE / "generated/numbers.tex").read_text()))
+SC = (int(NUM["ScXMax"]), int(NUM["ScYMin"]), int(NUM["ScYMax"]))
+SCATTERS = [  # caption start, x ticks, y ticks, x range, y range, label panel, data dir, log x, extra markers file
+    ("The savings model on the test", [-50, 0, 50, 100, 150], [-50, 0, 50, 100, 150], (-70, 150), (-70, 150),
+     "model-check", "generated/data", False, None),
+    ("Scenario by scenario: the mean", list(range(0, SC[0] + 1, 2)), [y for y in range(SC[1], SC[2] + 1) if y % 2 == 0],
+     (0, SC[0]), (SC[1], SC[2]), "scenario-scatter", "generated/data", False, "labels-scenario-scatter-markers.tsv"),
+    ("Wrong-automatic rate against coverage on", [20, 40, 60, 80, 100], [0, 10, 20, 30, 40], (15, 100), (0, 40),
+     "wacov-holdout", "generated/jb/data", False, None),
+    ("Accuracy against p95 latency (log", [30, 100, 300, 1000, 3000], [30, 40, 50, 60, 70, 80, 90, 100], (25, 9000),
+     (25, 102), "acclat-holdout", "generated/jb/data", True, None),
+    ("Real decisions: correct automatic reads", [0, 2, 4, 6, 8, 10, 12], [0, 5, 10, 15, 20], (-1, 14), (-1.5, 22),
+     "reads-holdout", "generated/jb/data", False, None),
+]
 
 
 def npages():
@@ -78,11 +102,12 @@ def check_overlaps():
     return fails
 
 
-def fit(pairs):
-    xs, ys = [v for v, _ in pairs], [c for _, c in pairs]
+def fit(pairs, log=False):
+    xs = [math.log10(v) if log else v for v, _ in pairs]
+    ys = [c for _, c in pairs]
     mx, my = sum(xs) / len(xs), sum(ys) / len(ys)
     b = sum((x - mx) * (y - my) for x, y in zip(xs, ys)) / sum((x - mx) ** 2 for x in xs)
-    return lambda v: my + b * (v - mx)
+    return lambda v: my + b * ((math.log10(v) if log else v) - mx)
 
 
 def dist(px, py, b):
@@ -96,22 +121,29 @@ def num(t):
         return None
 
 
-def check_scatter():
-    prefix, xt, yt, xr, yr, name = SCATTER
+def check_scatter(spec):
+    prefix, xt, yt, xr, yr, name, ddir, xlog, extra = spec
     page, w, cap_y, fig = find_caption(prefix)
     region = [x for x in w if cap_y - 330 < x[1] < cap_y]
     ycand = [x for x in region if num(x[4]) in yt]
-    col = min(round(x[2]) for x in ycand)
+    from collections import Counter as _C
+    col = _C(round(x[2]) for x in ycand).most_common(1)[0][0]  # the right-aligned tick column
     yticks = {num(x[4]): (x[1] + x[3]) / 2 for x in ycand if abs(x[2] - col) < 2}
     xcand = [x for x in region if num(x[4]) in xt and abs(x[2] - col) >= 2]
-    row = max(round(x[1]) for x in xcand)
+    row = _C(round(x[1]) for x in xcand).most_common(1)[0][0]  # the tick-label row
     xticks = {num(x[4]): (x[0] + x[2]) / 2 for x in xcand if abs(x[1] - row) < 2}
     if len(xticks) < 3 or len(yticks) < 3:
         return [f"{name}: could not read ticks ({xticks}, {yticks})"]
-    fx, fy = fit(sorted(xticks.items())), fit(sorted(yticks.items()))
+    fx, fy = fit(sorted(xticks.items()), xlog), fit(sorted(yticks.items()))
     ax = (fx(xr[0]), fy(yr[1]), fx(xr[1]), fy(yr[0]))
-    rows = [ln.split("\t") for ln in (HERE / "generated/data" / f"labels-{name}.tsv").read_text().splitlines()[1:]]
+    rows = [ln.split("\t") for ln in (HERE / ddir / f"labels-{name}.tsv").read_text().splitlines()[1:]]
     marks = {r[0]: (fx(float(r[2])), fy(float(r[3]))) for r in rows}
+    if extra:
+        lab = {(round(float(r[2]), 3), round(float(r[3]), 3)) for r in rows}
+        for i, ln in enumerate((HERE / ddir / extra).read_text().splitlines()[1:]):
+            x_, y_ = map(float, ln.split("\t"))
+            if (round(x_, 3), round(y_, 3)) not in lab:
+                marks[f"_m{i}"] = (fx(x_), fy(y_))
     inside = [x for x in w if ax[0] - 1 < x[0] and x[2] < ax[2] + 1 and ax[1] - 1 < x[1] and x[3] < ax[3] + 1]
     fails, boxes = [], {}
     for key, text, *_ in rows:
@@ -142,9 +174,13 @@ def check_legends():
         if not tops:
             fails.append(f"Figure {fig}: plot text {top} not found")
             continue
-        anchor = min(tops, key=lambda b: b[1])  # the topmost occurrence: top tick label or first panel title
-        legs = [b for b in seqs(w, legend) if b[3] <= anchor[1] + 40 and anchor[1] - b[3] < 60]
-        if not legs:
+        anchor, legs = None, []
+        for cand in sorted(tops, key=lambda b: b[1]):
+            legs = [b for b in seqs(w, legend) if b[3] <= cand[1] + 40 and cand[1] - b[3] < 60]
+            if legs:
+                anchor = cand
+                break
+        if anchor is None:
             fails.append(f"Figure {fig}: legend {legend} not found just above the plot")
             continue
         leg = max(legs, key=lambda b: b[3])
@@ -157,7 +193,7 @@ def check_legends():
 
 
 if __name__ == "__main__":
-    failures = check_overlaps() + check_scatter() + check_legends()
+    failures = check_overlaps() + [f for sp in SCATTERS for f in check_scatter(sp)] + check_legends()
     for f in failures:
         print("FAIL:", f)
     print("OK" if not failures else f"{len(failures)} failure(s)")

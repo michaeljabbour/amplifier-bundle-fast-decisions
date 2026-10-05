@@ -15,3 +15,5 @@
 # page previews made during review
 *.png
 __pycache__/
+# extracted from origin/eval/judge-realistic at build time (jb_import.py)
+generated/src/

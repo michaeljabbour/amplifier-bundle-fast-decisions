@@ -1,5 +1,24 @@
 \section{Design of the experiment}\label{sec:design}
 
+\subsection{How the design evolved}\label{sec:evolution}
+
+The first design (v1, \path{docs/design/parallel-measurement-mode-v1.md}) wanted to measure the path not taken
+\emph{inside} a live session: at a decision point, fork the session, run the other path on the same state, record
+its cost, and throw the result away. It proposed single-call forks for prepared actions, turn forks for routing,
+and a deferred launch with a ``tail correction'' to undo cache effects. A pre-flight review rejected three parts
+of it, and the second design (v2, \path{docs/design/parallel-measurement-mode.md}) is what ran:
+\begin{itemize}
+  \item \textbf{Single-call forks are not a savings unit.} The probe showed that when a call is skipped, the cache
+    write it would have made simply moves to the next call (\cref{sec:caching}); a one-call fork only re-derives
+    the estimate it was meant to check.
+  \item \textbf{Turn forks measure the wrong thing.} A fork that switches model in the middle of someone else's
+    history measures a switch from a foreign history, not what the policy costs in its own world.
+  \item \textbf{Power is counted in scenarios.} Cost ratios vary far more between scenarios than within one, so
+    the unit of replication had to be the scenario (\cref{sec:power}).
+\end{itemize}
+v2 replaced forks with whole paired sessions, isolated by a per-session nonce rather than by timing, and treats
+cache state as an outcome to be measured, not a nuisance to be corrected.
+
 \subsection{Paired sessions from one frozen snapshot}
 
 The unit of comparison is a \term{pair}: one session of a routed arm and one session of the plain host
@@ -142,7 +161,7 @@ resample whole scenarios (then repetitions) with replacement thousands of times,
 time, and take the middle 95\,\%. Resampling scenarios rather than single sessions keeps the interval
 honest about how much the conclusions depend on which tasks were chosen.
 
-\subsection{How big the experiment had to be}
+\subsection{How big the experiment had to be}\label{sec:power}
 
 Earlier data gave the spread of log cost ratios between scenarios and within a scenario. Because the
 between-scenario spread dominates, precision is bought with more \emph{scenarios}, not more repetitions.
@@ -158,6 +177,23 @@ intervals are wider than these.}
 \input{generated/tables/power.tex}
 \end{table}
 
+Behind that table is a variance analysis of \PowerPairs\ earlier pairs (\path{step0_variance.json}). For the
+shipped router on the Fable host in \CaTurns-turn sessions, the between-scenario standard deviation of the log
+ratio was \PowFableFourSB\ against \PowFableFourSW\ within a scenario; on Opus it was \PowOpusFourSB\ against
+\PowOpusFourSW. \Cref{fig:power} turns these into the interval one should expect for a given number of scenarios.
+
+\begin{figure}[htbp]
+\centering
+\pgfplotslegendfromname{powerlegend}\par\smallskip
+\input{figures/fig-power.tex}
+\caption{Projected 95\,\% interval half-width of the cost ratio against the number of scenarios (two repetitions
+each), from the earlier data's between- and within-scenario variance.}
+\label{fig:power}
+\howtoread{Lower is more precise. Each line is one earlier configuration (host, session length). The curves fall
+quickly at first and then flatten: going from \NTest\ to \NScenarios\ scenarios roughly halves the uncertainty.
+The Fable single-turn line is high because those ratios varied a lot between tasks.}
+\end{figure}
+
 \subsection{The pilot}
 
 Two small screening pilots preceded the preregistration; the second ran \PilotSessions\ sessions on
@@ -165,3 +201,16 @@ Two small screening pilots preceded the preregistration; the second ran \PilotSe
 measured the A/A noise: a standard deviation of the log ratio of \PilotSDFable\ on Fable and \PilotSDOpus\
 on Opus. Their cost ratios became the hypotheses above, not findings; they are compared with the final
 numbers in \cref{sec:interim}.
+
+\begin{figure}[htbp]
+\centering
+\pgfplotslegendfromname{pilotlegend}\par\smallskip
+\input{figures/fig-pilot.tex}
+\caption{The second screening pilot (\PilotPairs\ pairs on \PilotScenariosN\ scenarios) against the full campaign
+(all scenarios, 95\,\% intervals), for each arm and host. The first pilot was a smoke test of the harness
+(\$\SpendPilotOne) whose rows were not packaged.}
+\label{fig:pilot}
+\howtoread{Diamonds are the pilot, dots and whiskers the final result. On Fable the diamonds sit inside or near
+the whiskers; on Opus the pilot overstated the extra cost. A five-scenario pilot was good for finding the
+direction, not the size.}
+\end{figure}

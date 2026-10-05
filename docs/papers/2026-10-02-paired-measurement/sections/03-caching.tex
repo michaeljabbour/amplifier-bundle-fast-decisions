@@ -76,6 +76,17 @@ prompt of about \ProbeFullTokens\ tokens; ``Y'' a further \ProbeYTokens-token ex
 \input{generated/tables/probe.tex}
 \end{table}
 
+\begin{figure}[htbp]
+\centering
+\pgfplotslegendfromname{probelegend}\par\smallskip
+\input{figures/fig-probe.tex}
+\caption{The probe requests of \cref{tab:probe}, drawn: tokens written and read by each.}
+\label{fig:probe}
+\howtoread{A tall hatched bar means the request paid to write its prompt into the cache; a tall blue bar means
+it found the prompt already cached. Requests that ``should'' have hit but show only a write (other key, other
+model, other effort level, an expired entry) are the rules the experiment had to respect. Key: \input{generated/tables/probe-key.tex}}
+\end{figure}
+
 \begin{keyidea}
 Six facts from the probe shaped the experiment:
 \begin{enumerate}[leftmargin=1.4em]

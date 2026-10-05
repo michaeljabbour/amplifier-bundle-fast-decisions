@@ -1,0 +1,21 @@
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}l r r r r r r c c c c@{}}
+\toprule
+ & \multicolumn{3}{c}{Accuracy $-$ Jev (points)} & \multicolumn{3}{c}{Wrong auto $-$ Jev (points)} & \multicolumn{4}{c}{Gates} \\
+\cmidrule(lr){2-4}\cmidrule(lr){5-7}\cmidrule(l){8-11}
+Candidate & diff & 95\,\% CI & Holm $p$ & diff & 95\,\% CI & Holm $p$ & a & b & c & d \\
+\midrule
+GPT-6.1 Sol & \SolHoldRAccDiff & \SolHoldRAccDiffCI & \SolHoldRAccPHolm & \SolHoldRWaDiff & \SolHoldRWaDiffCI & \SolHoldRWaPHolm & \ok & \no & \no & \no \\
+GPT-6 Luna + I1 & \LunaClHoldRAccDiff & \LunaClHoldRAccDiffCI & \LunaClHoldRAccPHolm & \LunaClHoldRWaDiff & \LunaClHoldRWaDiffCI & \LunaClHoldRWaPHolm & \no & \no & \no & \no \\
+GPT-6 Luna & \LunaHoldRAccDiff & \LunaHoldRAccDiffCI & \LunaHoldRAccPHolm & \LunaHoldRWaDiff & \LunaHoldRWaDiffCI & \LunaHoldRWaPHolm & \no & \no & \no & \no \\
+Jev 1.13 + I1 & \JevClHoldRAccDiff & \JevClHoldRAccDiffCI & \JevClHoldRAccPHolm & \JevClHoldRWaDiff & \JevClHoldRWaDiffCI & \JevClHoldRWaPHolm & \ok & \no & \ok & \ok \\
+nimble 9B & \NimbleHoldRAccDiff & \NimbleHoldRAccDiffCI & \NimbleHoldRAccPHolm & \NimbleHoldRWaDiff & \NimbleHoldRWaDiffCI & \NimbleHoldRWaPHolm & \no & \no & \ok & \ok \\
+tev1 4B & \TevFourHoldRAccDiff & \TevFourHoldRAccDiffCI & \TevFourHoldRAccPHolm & \TevFourHoldRWaDiff & \TevFourHoldRWaDiffCI & \textbf{\TevFourHoldRWaPHolm} & \no & \no & \ok & \ok \\
+Qwen3 8B & \QwenEightHoldRAccDiff & \QwenEightHoldRAccDiffCI & \textbf{\QwenEightHoldRAccPHolm} & \QwenEightHoldRWaDiff & \QwenEightHoldRWaDiffCI & \textbf{\QwenEightHoldRWaPHolm} & \no & \no & \ok & \ok \\
+Qwen3 8B + I1 & \QwenEightClHoldRAccDiff & \QwenEightClHoldRAccDiffCI & \textbf{\QwenEightClHoldRAccPHolm} & \QwenEightClHoldRWaDiff & \QwenEightClHoldRWaDiffCI & \textbf{\QwenEightClHoldRWaPHolm} & \no & \no & \ok & \ok \\
+Qwen3 4B & \QwenFourHoldRAccDiff & \QwenFourHoldRAccDiffCI & \textbf{\QwenFourHoldRAccPHolm} & \QwenFourHoldRWaDiff & \QwenFourHoldRWaDiffCI & \textbf{\QwenFourHoldRWaPHolm} & \no & \no & \ok & \ok \\
+tev1 0.8B & \TevPtEightHoldRAccDiff & \TevPtEightHoldRAccDiffCI & \textbf{\TevPtEightHoldRAccPHolm} & \TevPtEightHoldRWaDiff & \TevPtEightHoldRWaDiffCI & \textbf{\TevPtEightHoldRWaPHolm} & \no & \no & \ok & \ok \\
+tev1 0.8B + I1 & \TevPtEightClHoldRAccDiff & \TevPtEightClHoldRAccDiffCI & \textbf{\TevPtEightClHoldRAccPHolm} & \TevPtEightClHoldRWaDiff & \TevPtEightClHoldRWaDiffCI & \textbf{\TevPtEightClHoldRWaPHolm} & \no & \no & \ok & \ok \\
+Laya base & \LayaHoldRAccDiff & \LayaHoldRAccDiffCI & \textbf{\LayaHoldRAccPHolm} & \LayaHoldRWaDiff & \LayaHoldRWaDiffCI & \textbf{\LayaHoldRWaPHolm} & \no & \no & \ok & \ok \\
+Qwen3 0.6B & \QwenPtSixHoldRAccDiff & \QwenPtSixHoldRAccDiffCI & \textbf{\QwenPtSixHoldRAccPHolm} & \QwenPtSixHoldRWaDiff & \QwenPtSixHoldRWaDiffCI & \textbf{\QwenPtSixHoldRWaPHolm} & \no & \no & \ok & \ok \\
+\bottomrule
+\end{tabular*}

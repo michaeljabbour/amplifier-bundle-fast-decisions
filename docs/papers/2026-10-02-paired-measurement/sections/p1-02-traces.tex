@@ -1,0 +1,67 @@
+\section{Fast judges on real decisions}\label{sec:traces}
+
+Constructed cases can be easier, or harder, than real ones. A second, preregistered study rebuilt \TrN\ real
+read-shortcut decisions (``read this file, or think?'') from earlier agent sessions, exactly as the in-session
+judge had seen them, and asked every judge again. Two blind reviewers labelled each case
+($\kappa = \TrKappaAB$ with each other, but only \TrKappaOutcome\ with what the host actually did next).
+
+\begin{table}[htbp]
+\centering\scriptsize
+\caption{Real decisions, holdout \prereg: \TrN\ cases. ``Correct reads'' counts correct automatic reads among
+the \TrReadCases\ cases whose label is a read.}
+\label{tab:jbtrace}
+\input{generated/jb/tables/trace-holdout.tex}
+\end{table}
+
+\paragraph{No judge paid off.} The preregistered usefulness rule asked for at least \TrUsefulMinReads\ correct
+automatic reads with a wrong-read upper bound below \TrUsefulMaxUpperPct\,\%; \TrNUseful\ of \NumBase\ judges met
+it. Jev took the most sufficient reads (\TrJevReads\ of \TrReadCases) but made \TrJevWaK\ wrong automatic reads;
+Jev, Luna and Sol were within noise (Holm $p = \TrJevLunaAccPHolm$ for Jev against Luna).
+
+\begin{figure}[htbp]
+\centering
+\input{generated/jb/figures/fig-reads.tex}
+\caption{Real decisions: correct automatic reads against wrong automatic reads, holdout \prereg, with 95\,\% Wilson
+intervals. The shaded strip is where the preregistered rule would call a judge useful.}
+\label{fig:jbreads}
+\howtoread{Right is more savings; up is more misfires. No judge reaches the shaded strip: every judge with enough
+correct reads also misfired.}
+\end{figure}
+
+\begin{caution}[title={Read this before generalizing}]
+\begin{itemize}[leftmargin=1.1em]
+  \item \textbf{Selection.} Every case is one an in-session judge had already declined. Jev made \TrJevOwnWa\
+    wrong reads on the \TrJevOwnN\ cases from its own sessions and \TrJevOtherWa\ on the \TrJevOtherN\ others.
+  \item \textbf{Label overrides.} Reviewers overrode the host-derived label in \TrOverridden\ cases, leaning strict.
+  \item \textbf{Task clipping.} The judge saw a \TrStateBudget-character state; in SWE-bench cases the task text
+    ended after about \TrTaskSeen\ characters, before the issue.
+  \item \textbf{An artifact.} Qwen3 4B never answered (\TrQwenFourAbstained\ answers turned into a fallback).
+\end{itemize}
+\end{caution}
+
+\subsection{Four bundle defects, and how they were fixed}\label{sec:since}
+
+Building the real cases exposed four defects. Commit \code{\PRFixSha} (\PRFixDate; \PRFixFiles\ files, with
+\PRFixTests\ new test files), revised after review in \code{\PRFixReviewSha} and merged as PR~\#\PRFixNumber,
+fixed all four. Earlier, PR~\#\SincePR\ (commit \code{\SinceCommit}) had tightened the computer-use gate and added
+the side-effect guard to the computer-use judge. Results in this report were measured as stated in each chapter.
+
+\begin{table}[htbp]
+\centering\small
+\caption{The four defects found by the real-decision study and their fixes (PR~\#\PRFixNumber).}
+\label{tab:prfixes}
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}>{\raggedright\arraybackslash}p{0.27\textwidth} >{\raggedright\arraybackslash}p{0.33\textwidth} >{\raggedright\arraybackslash}p{0.32\textwidth}@{}}
+\toprule
+Defect & Effect & Fix \\
+\midrule
+State budget clipped the task & The judge saw the operating rules but not the SWE-bench issue & Over-budget task text keeps head and tail
+  within a \PRFixTaskBudget-character budget and drops leading system-reminder blocks \\
+Escalation and phase judges read the wrong text & Their ``task'' was the injected system-reminder block & The judge
+  state takes the current turn's task, clipped the same way \\
+Ollama rejected object criteria & HTTP 400 on read-shortcut questions & A criteria-format option, with a one-time
+  fallback to string criteria \\
+Qwen3 4B never answered on the candidate path & First token was prose, so every answer became a fallback & Retry with an
+  ``Answer:'' prefill; raise an error instead of a fake confident abstain \\
+\bottomrule
+\end{tabular*}
+\end{table}

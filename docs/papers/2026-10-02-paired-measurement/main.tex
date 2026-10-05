@@ -45,7 +45,7 @@
 \usepackage{pgfplots}
 \usepackage{pgfplotstable}
 \pgfplotsset{compat=1.18}
-\usepgfplotslibrary{groupplots}
+\usepgfplotslibrary{groupplots,statistics}
 \usetikzlibrary{patterns,plotmarks,calc,arrows.meta,positioning,decorations.pathreplacing}
 \tikzset{
   scatterlabel/.style={font=\scriptsize, inner sep=2pt, outer sep=0pt, fill=white, fill opacity=0.85, text opacity=1},
@@ -93,6 +93,7 @@
 
 % ---------------------------------------------------------------- numbers
 \input{generated/numbers.tex}
+\input{generated/jb/numbers.tex}
 \newcommand{\X}{\ensuremath{\times}}
 
 % ---------------------------------------------------------------- links & metadata
@@ -141,12 +142,25 @@
 \clearpage
 
 \input{sections/01-summary}
+
+\part{Fast judges: constructed and real}\label{part:judges}
+\input{sections/p1-01-judges}
+\input{generated/clef-section.tex}
+\input{sections/p1-02-traces}
+
+\part{What caching does to savings}\label{part:caching}
 \input{sections/02-why}
+\input{sections/p2-survey}
 \input{sections/03-caching}
+
+\part{Measuring savings}\label{part:measuring}
 \input{sections/04-design}
 \input{sections/05-running}
 \input{sections/06-confirmatory}
 \input{sections/07-exploratory}
+\input{sections/07b-more}
+
+\part{Implications}\label{part:implications}
 \input{sections/08-recommendations}
 \input{sections/09-limitations}
 \input{sections/10-reproducibility}
@@ -154,5 +168,7 @@
 \appendix
 \input{sections/appendix-a-glossary}
 \input{sections/appendix-b-tables}
+
+{\small\input{generated/jb/tables/changes.tex}}
 
 \end{document}
