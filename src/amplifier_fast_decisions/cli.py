@@ -293,6 +293,20 @@ def doctor(require_amplifier: bool = False) -> int:
                 "note": "Not required for the offline demo",
             }
         )
+    from . import price_gate as _price_gate
+
+    gate_host = os.getenv("AFAST_HOST_MODEL")
+    for host in ([gate_host] if gate_host else ["claude-opus-5-5", "claude-fable-5-1"]):
+        gate = _price_gate.evaluate(host, "claude-sonnet-5", {})
+        ratio = "n/a" if gate.predicted_ratio is None else f"{gate.predicted_ratio:.3f}"
+        checks.append(
+            {
+                "check": f"price_gate[{host}]",
+                "ok": True,
+                "value": "route" if gate.route else "host",
+                "note": f"{gate.reason}, predicted cost ratio {ratio} (set AFAST_HOST_MODEL to check your default model)",
+            }
+        )
     checks.append(
         {
             "check": "TYPESAFE_API_KEY_present",

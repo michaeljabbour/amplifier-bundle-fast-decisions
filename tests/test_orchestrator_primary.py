@@ -771,5 +771,267 @@ class EasyTurnShapingTests(_DifficultyHarness):
                               "easy_turn_hide_tools": ["todo"]})
 
 
+class _SessionHarness(_DifficultyHarness):
+    """Multi-turn fixtures for the session-scope / price-gate tests."""
+
+    class QJudge:
+        """Answers task_difficulty (p_complex) and, when asked, task_type; counts backend round trips."""
+        name = "fake-judge"
+        external = False
+
+        def __init__(self, p_complex=0.1, task_type=None):
+            self.p_complex, self.task_type, self.calls = p_complex, task_type, 0
+
+        def _answers(self, request):
+            from amplifier_fast_decisions.contracts import Answer
+            out = {}
+            for q in request.questions:
+                if q.name == "task_difficulty":
+                    out[q.name] = Answer(probabilities={"simple": 1 - self.p_complex, "complex": self.p_complex})
+                elif q.name == "task_type" and self.task_type is not None:
+                    out[q.name] = Answer(probabilities={self.task_type: 0.9})
+            return out
+
+        async def ask(self, request):
+            from amplifier_fast_decisions.contracts import Decision, DecisionResult, SLOW
+            self.calls += 1
+            return DecisionResult(action=Decision(choice=SLOW, probabilities={SLOW: 1.0}), answers=self._answers(request))
+
+        async def ask_many(self, request):
+            return await self.ask(request)
+
+        async def close(self):
+            pass
+
+    def _build(self, routing, host, judge, effort=None, tmp=None, session_id="s1"):
+        events = []
+        coordinator = DemoCoordinator()
+        emitter = Emitter(coordinator.session_id, callback=events.append)
+        policy = Policy(mode="off", model_routing=routing, effort_routing=effort, read_shortcut=False)
+        service = DecisionService(policy, judge, emitter, coordinator, [])
+        service.turn = TurnState("t1")
+        runtime = Runtime(service, events_dir=tmp, session_id=session_id if tmp else None)
+        provider = DemoProvider(delay_ms=0)
+        provider.default_model = host
+        facade = RoutedProvider(provider, runtime, {}, demo_response, "anthropic-primary")
+        return NS(service=service, facade=facade, events=events, provider=provider, coordinator=coordinator)
+
+    async def _turn(self, b, turn_id, requests=2, prompt="typo"):
+        b.service.turn = TurnState(turn_id)
+        out = []
+        for _ in range(requests):
+            req = NS(messages=[{"role": "user", "content": prompt}], tools=[], tool_choice="auto")
+            await b.facade.complete(req)
+            out.append(req)
+        return out
+
+    @staticmethod
+    def _ev(b, name):
+        return [e["data"] for e in b.events if e["event"].endswith(name)]
+
+    SESSION = {"start_model": "claude-sonnet-5", "provider_match": "anthropic", "start_policy": "judge",
+               "decision_scope": "session", "max_requests_before_escalation": None,
+               "escalate_on_provider_error": True}
+    SHIPPED_EFFORT = {"orient": "medium", "explore": "low", "implement": "high",
+                      "by_tier": {"cheap": "medium", "strong": None}}
+
+
+class SessionScopeTests(_SessionHarness):
+    async def test_session_scope_judges_once(self):
+        judge = self.QJudge(0.1)
+        b = self._build(self.SESSION, "claude-fable-5-1", judge)
+        reqs = [r for i in range(3) for r in await self._turn(b, f"t{i}")]
+        self.assertEqual(judge.calls, 1)
+        self.assertEqual({r.model for r in reqs}, {"claude-sonnet-5"})
+        self.assertEqual([j["reason_code"] for j in self._ev(b, "difficulty_judged")],
+                         ["judge_cheap", "session_cheap", "session_cheap"])
+        routed = self._ev(b, "session_routed")
+        self.assertEqual(len(routed), 1)
+        self.assertEqual(routed[0]["source"], "decided")
+
+    async def test_turn_scope_is_legacy(self):
+        judge = self.QJudge(0.1)
+        b = self._build(dict(self.SESSION, decision_scope="turn"), "claude-fable-5-1", judge)
+        for i in range(3):
+            await self._turn(b, f"t{i}")
+        self.assertEqual(judge.calls, 3)
+        reasons = [j["reason_code"] for j in self._ev(b, "difficulty_judged")]
+        self.assertFalse([r for r in reasons if r.startswith("session_")])
+
+    async def test_session_scope_strong_stays_strong(self):
+        b = self._build(self.SESSION, "claude-fable-5-1", self.QJudge(0.9), effort=self.SHIPPED_EFFORT)
+        reqs = [r for i in range(3) for r in await self._turn(b, f"t{i}")]
+        self.assertTrue(all(getattr(r, "model", None) is None for r in reqs))
+        self.assertTrue(all(getattr(r, "reasoning_effort", None) is None for r in reqs))
+
+    async def test_session_route_persists_across_runtime(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            b1 = self._build(self.SESSION, "claude-fable-5-1", self.QJudge(0.1), tmp=tmp)
+            await self._turn(b1, "t1")
+            judge2 = self.QJudge(0.9)
+            b2 = self._build(self.SESSION, "claude-fable-5-1", judge2, tmp=tmp)
+            reqs = await self._turn(b2, "t2")
+            self.assertEqual(judge2.calls, 0)
+            self.assertEqual(reqs[0].model, "claude-sonnet-5")
+            self.assertEqual(self._ev(b2, "session_routed")[0]["source"], "restored")
+
+    async def test_restore_rejected_on_host_change(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            routing = dict(self.SESSION, price_gate={})
+            await self._turn(self._build(routing, "claude-fable-5-1", self.QJudge(0.1), tmp=tmp), "t1")
+            judge2 = self.QJudge(0.1)
+            b2 = self._build(routing, "claude-opus-5-5", judge2, tmp=tmp)
+            await self._turn(b2, "t2")
+            self.assertEqual(self._ev(b2, "difficulty_judged")[0]["reason_code"], "price_gate_strong")
+
+    async def test_restore_rejected_on_config_change(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            await self._turn(self._build(self.SESSION, "claude-fable-5-1", self.QJudge(0.1), tmp=tmp), "t1")
+            judge2 = self.QJudge(0.1)
+            b2 = self._build(dict(self.SESSION, cheap_max_workspace_files=100000), "claude-fable-5-1", judge2, tmp=tmp)
+            await self._turn(b2, "t2")
+            self.assertEqual(judge2.calls, 1)
+
+    async def test_user_model_overrides_session_but_not_stored(self):
+        judge = self.QJudge(0.1)
+        b = self._build(self.SESSION, "claude-fable-5-1", judge)
+        await self._turn(b, "t1")
+        b.coordinator.session_state = {"ui.model_override": {"provider": "anthropic", "model": "claude-opus-5-5"}}
+        reqs = await self._turn(b, "t2")
+        self.assertIsNone(getattr(reqs[0], "model", None))
+        b.coordinator.session_state = {}
+        await self._turn(b, "t3")
+        self.assertEqual([j["reason_code"] for j in self._ev(b, "difficulty_judged")],
+                         ["judge_cheap", "user_model_strong", "session_cheap"])
+        self.assertEqual(judge.calls, 1)
+
+    async def test_provider_error_escalates_turn_only(self):
+        b = self._build(dict(self.SESSION), "claude-fable-5-1", self.QJudge(0.1))
+        real = b.provider.complete
+        state = {"fail": True}
+
+        async def flaky(request, **kw):
+            if state["fail"] and getattr(request, "model", None) == "claude-sonnet-5":
+                state["fail"] = False
+                raise RuntimeError("boom")
+            return await real(request, **kw)
+        b.provider.complete = flaky
+        req = NS(messages=[{"role": "user", "content": "typo"}], tools=[], tool_choice="auto")
+        b.service.turn = TurnState("t1")
+        with self.assertRaises(RuntimeError):
+            await b.facade.complete(req)
+        retry = NS(messages=[{"role": "user", "content": "typo"}], tools=[], tool_choice="auto")
+        await b.facade.complete(retry)
+        self.assertIsNone(getattr(retry, "model", None))          # escalated turn runs on the host
+        nxt = await self._turn(b, "t2")
+        self.assertEqual(nxt[0].model, "claude-sonnet-5")          # next turn returns to the session tier
+
+    def test_validation_new_keys(self):
+        base = {"start_model": "m"}
+        for bad in (dict(base, decision_scope="forever"),
+                    dict(base, keep_on_host={"task_types": ["review"]}, start_policy="rules"),
+                    dict(base, keep_on_host={"task_types": ["poetry"]}, start_policy="judge"),
+                    dict(base, keep_on_host={"task_types": []}, start_policy="judge"),
+                    dict(base, decision_scope="session", planner={"enabled": True})):
+            with self.assertRaises(ValueError, msg=str(bad)):
+                Policy(model_routing=bad)
+        Policy(model_routing=dict(base, decision_scope="session", price_gate={}, start_policy="judge",
+                                  keep_on_host={"task_types": ["review"]}))
+
+
+class PriceGateRoutingTests(_SessionHarness):
+    GATE = dict(_SessionHarness.SESSION, price_gate={})
+
+    async def test_opus_host_price_gate_keeps_host_without_judge(self):
+        judge = self.QJudge(0.1)
+        b = self._build(self.GATE, "claude-opus-5-5", judge, effort=self.SHIPPED_EFFORT)
+        reqs = await self._turn(b, "t1")
+        self.assertEqual(judge.calls, 0)
+        for r in reqs:
+            self.assertIsNone(getattr(r, "model", None))
+            self.assertIsNone(getattr(r, "reasoning_effort", None))   # guards the host-kept effort penalty
+        judged = self._ev(b, "difficulty_judged")[0]
+        self.assertEqual(judged["reason_code"], "price_gate_strong")
+        routed = self._ev(b, "session_routed")[0]
+        self.assertAlmostEqual(routed["gate"]["predicted_cost_ratio"], 1.366, delta=0.005)
+        self.assertEqual(routed["decision"], "strong")
+
+    async def test_fable_host_price_gate_routes_at_medium(self):
+        b = self._build(self.GATE, "claude-fable-5-1", self.QJudge(0.1), effort=self.SHIPPED_EFFORT)
+        reqs = await self._turn(b, "t1")
+        self.assertEqual({r.model for r in reqs}, {"claude-sonnet-5"})
+        self.assertEqual({r.reasoning_effort for r in reqs}, {"medium"})
+
+    async def test_start_policy_cheap_respects_gate(self):
+        b = self._build(dict(self.GATE, start_policy="cheap"), "claude-opus-5-5", self.QJudge(0.1))
+        reqs = await self._turn(b, "t1")
+        self.assertIsNone(getattr(reqs[0], "model", None))
+
+    async def test_gate_absent_is_legacy(self):
+        b = self._build(dict(self.SESSION), "claude-opus-5-5", self.QJudge(0.1))
+        reqs = await self._turn(b, "t1")
+        self.assertEqual(reqs[0].model, "claude-sonnet-5")
+        self.assertEqual(self._ev(b, "session_routed")[0]["gate"], {"enabled": False})
+
+    async def test_frugal_haiku_tier_rechecked(self):
+        from amplifier_fast_decisions import routing_levers
+        routing = routing_levers.apply_profile({"profile": "frugal", "model_routing": dict(self.GATE)})["model_routing"]
+        b = self._build(routing, "claude-fable-5-1", self.QJudge(0.1))
+        reqs = await self._turn(b, "t1", requests=1)
+        self.assertEqual(reqs[0].model, "claude-haiku-4-5")
+        costly = dict(routing, price_gate={"rates": {"claude-haiku-4-5": [100, 500, 10, 125]}})
+        b2 = self._build(costly, "claude-fable-5-1", self.QJudge(0.1))
+        reqs2 = await self._turn(b2, "t1", requests=1)
+        self.assertIsNone(getattr(reqs2[0], "model", None))
+        self.assertEqual(self._ev(b2, "difficulty_judged")[0]["reason_code"], "price_gate_tier_strong")
+
+    async def test_keep_on_host_review_goes_host(self):
+        judge = self.QJudge(0.1, task_type="review")
+        b = self._build(dict(self.GATE, keep_on_host={"task_types": ["review"]}), "claude-fable-5-1", judge)
+        reqs = await self._turn(b, "t1", requests=1)
+        self.assertIsNone(getattr(reqs[0], "model", None))
+        self.assertEqual(self._ev(b, "difficulty_judged")[0]["reason_code"], "task_type_strong")
+        self.assertEqual(judge.calls, 1)                               # batched: one round trip
+        self.assertEqual(self._ev(b, "session_routed")[0]["keep_on_host"]["matched"], True)
+
+    async def test_keep_on_host_bugfix_routes(self):
+        b = self._build(dict(self.GATE, keep_on_host={"task_types": ["review"]}), "claude-fable-5-1",
+                        self.QJudge(0.1, task_type="bugfix"))
+        reqs = await self._turn(b, "t1", requests=1)
+        self.assertEqual(reqs[0].model, "claude-sonnet-5")
+
+    async def test_keep_on_host_no_answer_fails_closed(self):
+        b = self._build(dict(self.GATE, keep_on_host={"task_types": ["review"]}), "claude-fable-5-1",
+                        self.QJudge(0.1, task_type=None))
+        reqs = await self._turn(b, "t1", requests=1)
+        self.assertIsNone(getattr(reqs[0], "model", None))
+        self.assertEqual(self._ev(b, "difficulty_judged")[0]["reason_code"], "task_type_unknown_strong")
+
+    async def test_host_effort_opt_in(self):
+        effort = dict(self.SHIPPED_EFFORT, by_tier={"cheap": "medium", "strong": "medium"})
+        b = self._build(self.GATE, "claude-fable-5-1", self.QJudge(0.9), effort=effort)
+        reqs = await self._turn(b, "t1")
+        self.assertEqual({r.reasoning_effort for r in reqs}, {"medium"})
+        # a user-picked model runs at its own effort
+        b2 = self._build(self.GATE, "claude-fable-5-1", self.QJudge(0.9), effort=effort)
+        b2.coordinator.session_state = {"ui.model_override": {"provider": "anthropic", "model": "claude-opus-5-5"}}
+        reqs2 = await self._turn(b2, "t1")
+        self.assertTrue(all(getattr(r, "reasoning_effort", None) is None for r in reqs2))
+        self.assertEqual(self._ev(b2, "effort_routed")[0]["reason_code"], "user_model")
+
+    async def test_escalated_turn_uses_host_effort(self):
+        effort = dict(self.SHIPPED_EFFORT, by_tier={"cheap": "medium", "strong": "high"})
+        b = self._build(self.GATE, "claude-fable-5-1", self.QJudge(0.1), effort=effort)
+        first = NS(messages=[{"role": "user", "content": "typo"}], tools=[], tool_choice="auto")
+        b.service.turn = TurnState("t1")
+        await b.facade.complete(first)
+        self.assertEqual(first.reasoning_effort, "medium")
+        b.service.turn.escalated, b.service.turn.escalation_reason = True, "provider_error"
+        second = NS(messages=[{"role": "user", "content": "typo"}], tools=[], tool_choice="auto")
+        await b.facade.complete(second)
+        self.assertEqual(second.reasoning_effort, "high")
+        self.assertEqual(self._ev(b, "effort_routed")[-1]["reason_code"], "tier_strong")
+
+
 if __name__ == "__main__":
     unittest.main()

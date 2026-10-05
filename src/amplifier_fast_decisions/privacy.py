@@ -311,6 +311,21 @@ SAFE_FIELDS = {
     "move",
     "guard",
     "capability_conflict",
+    # Session routing receipt (session_routed) and the price-gate / session /
+    # task-type fields of difficulty_judged: scope, source, ids, model names,
+    # numbers and fixed labels only -- never prompt text.
+    "scope",
+    "source",
+    "session_reason",
+    "gate_reason",
+    "predicted_cost_ratio",
+    "request_multiplier",
+    "task_type",
+    "judge",
+    "scope_gate",
+    "keep_on_host",
+    "decided_turn_id",
+    "config_sha",
 }
 
 

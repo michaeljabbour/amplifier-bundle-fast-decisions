@@ -38,11 +38,11 @@
   // turn follows it, so rows for later calls can show why they ran where.
   const turnJudgments = new Map();
   const noteTurn = e => { if (e && kind(e) === 'difficulty_judged' && e.turn_id) turnJudgments.set(e.turn_id, e); };
-  const JUDGE_REASON = { scope_strong: 'Large project · kept on your usual model', user_model_strong: 'Your model pick', judge_cheap: 'Judged easy', judge_strong: 'Judged hard', rules_cheap: 'Short request (built-in rule)', rules_strong: 'Long request (built-in rule)', scope_judge_cheap: 'Large project · judged safe for a faster model', scope_judge_strong: 'Large project · judged to need your usual model', scope_fallback_strong: 'Large project · no judge answer, kept on your usual model' };
+  const JUDGE_REASON = { scope_strong: 'Large project · kept on your usual model', user_model_strong: 'Your model pick', judge_cheap: 'Judged easy', judge_strong: 'Judged hard', rules_cheap: 'Short request (built-in rule)', rules_strong: 'Long request (built-in rule)', scope_judge_cheap: 'Large project · judged safe for a faster model', scope_judge_strong: 'Large project · judged to need your usual model', scope_fallback_strong: 'Large project · no judge answer, kept on your usual model', price_gate_strong: 'Faster model would cost more on this host · kept on your usual model', price_gate_tier_strong: 'Chosen tier would cost more on this host · kept on your usual model', session_cheap: 'Decided at session start · faster model', session_strong: 'Decided at session start · usual model', task_type_strong: 'Task type kept on your usual model', task_type_unknown_strong: 'Task type unknown · kept on your usual model' };
   function judgmentView(j, backendLabel) {
     if (!j) return null;
     const d = j.data, pc = d.probabilities && typeof d.probabilities.complex === 'number' ? d.probabilities.complex : null;
-    const who = String(d.reason_code || '').startsWith('judge_') ? backendName(d.backend, backendLabel) : String(d.reason_code || '').startsWith('rules_') ? 'Built-in rule' : d.reason_code === 'scope_strong' ? 'Large-project rule' : d.reason_code === 'user_model_strong' ? 'You' : backendName(d.backend, backendLabel);
+    const who = String(d.reason_code || '').startsWith('judge_') ? backendName(d.backend, backendLabel) : String(d.reason_code || '').startsWith('rules_') ? 'Built-in rule' : d.reason_code === 'scope_strong' ? 'Large-project rule' : d.reason_code === 'user_model_strong' ? 'You' : String(d.reason_code || '').startsWith('price_gate_') ? 'Price rule' : String(d.reason_code || '').startsWith('session_') ? 'Session decision' : backendName(d.backend, backendLabel);
     return { title: d.choice === 'cheap' ? 'Easy → faster model' : 'Hard → usual model', detail: (JUDGE_REASON[d.reason_code] || pretty(d.reason_code)) + ' · ' + who + (pc !== null ? ' · ' + Math.round(pc * 100) + '% hard' : '') + (d.reason_code === 'scope_strong' && Number.isFinite(d.candidate_count) ? ' · ' + d.candidate_count + ' files' : ''), choice: d.choice, probability: pc === null ? NaN : (d.choice === 'cheap' ? 1 - pc : pc) };
   }
   // Which model a provider call ran on, from its receipts.
@@ -64,7 +64,7 @@
   const hostLabel = r => { const hs = Object.keys(r.cheap_turn_hosts || {}); return hs.length > 1 ? 'each session\'s usual model (' + hs.slice(0, 3).map(shortModel).join(', ') + ')' : hs.length === 1 ? hs[0] : (r.host_model || 'the host model'); };
   function projectRows(r) {
     return (r.by_project || []).slice(0, 6).map(p => ({ name: p.project, turns: p.cheap_turns + ' of ' + (p.cheap_turns + p.strong_turns) + ' on the faster model',
-      saved: money(p.saved_usd || 0), why: (p.by_reason && p.by_reason.scope_strong) ? p.by_reason.scope_strong + ' kept by the large-project rule' : '' }));
+      saved: money(p.saved_usd || 0), why: [(p.by_reason && p.by_reason.scope_strong) ? p.by_reason.scope_strong + ' kept by the large-project rule' : '', (p.by_reason && p.by_reason.price_gate_strong) ? p.by_reason.price_gate_strong + ' kept because the faster model costs more on this host' : ''].filter(Boolean).join('; ') }));
   }
   const signedMoney = v => (v > 0 ? '' : '') + money(v);
   const signedTime = v => (v < 0 ? '−' + minutes(-v) + ' (slower)' : minutes(v));

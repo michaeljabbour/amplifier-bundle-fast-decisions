@@ -7,10 +7,12 @@ It never patches a class, a global provider dictionary or amplifier-core.
 from __future__ import annotations
 import asyncio
 import copy
+import hashlib
 import os
 from pathlib import Path
 import re
 import time
+from datetime import datetime, timezone
 from typing import Any
 from uuid import uuid4
 
@@ -38,10 +40,11 @@ from . import planner as turn_planner
 
 from . import routing_levers
 from . import step_actions
+from . import price_gate
 from .savings import DEFAULT_RATES
 from .backends import ask_many as backend_ask_many
 from .state import automatic_tools, clip_head_tail, tool_names
-from .runtime import Runtime, get_runtime
+from .runtime import Runtime, get_runtime, load_session_route, save_session_route
 from .savings import DEFAULT_RATES
 from . import provenance
 
@@ -556,6 +559,19 @@ DIFFICULTY_CRITERIA = {
 }
 _DIFFICULTY_STATE_CHARS = 2500
 
+# model_routing.keep_on_host: one extra typed question, asked in the same
+# batched call as task_difficulty (no extra round trip).
+TASK_TYPE_QUESTION = "task_type"
+TASK_TYPE_INSTRUCTIONS = "Classify the user's request by the kind of work it asks for."
+TASK_TYPE_CRITERIA = {
+    "bugfix": "Fix incorrect behavior or a failing test in existing code.",
+    "feature": "Add new behavior or a new capability to code.",
+    "docs": "Write or update documentation, comments or README text.",
+    "explain": "Explain how code or a concept works; no change requested.",
+    "review": "Review code or a change and report problems; no change requested.",
+    "other": "Anything else, or a mix of several kinds.",
+}
+
 
 _SCOPE_SKIP_DIRS = frozenset({".git", "node_modules", ".venv", "venv", "__pycache__", ".tox",
                               ".mypy_cache", ".pytest_cache", "dist", "build", ".amplifier", ".swe"})
@@ -607,7 +623,8 @@ def session_working_dir(service: Any) -> str:
 
 
 async def decide_start_tier(service: Any, request: Any, model_routing: dict[str, Any],
-                            decision_id: str | None, user_model: str | None = None) -> str:
+                            decision_id: str | None, user_model: str | None = None,
+                            gate: price_gate.GateResult | None = None) -> str:
     """``"cheap"`` or ``"strong"`` for this turn (called once, at its first
     slow request). ``start_policy: cheap`` (default) keeps the pre-router
     behavior and emits nothing. ``rules`` uses prompt length. ``judge`` asks
@@ -624,10 +641,25 @@ async def decide_start_tier(service: Any, request: Any, model_routing: dict[str,
         }, decision_id)
         _note_start(service, "user:model_pick", 0.0)
         return "strong"
+    turn = getattr(service, "turn", None)
+    scope = model_routing.get("decision_scope", "turn")
+    if gate is not None and gate.reason != "gate_disabled" and not gate.route:
+        # The price gate: the start model is predicted to cost more than the
+        # host for this session -- keep the host, and skip the judge call.
+        await service.emit("difficulty_judged", {
+            "backend": service.backend.name, "choice": "strong", "probabilities": None,
+            "duration_ms": 0.0, "reason_code": "price_gate_strong", "gate_reason": gate.reason,
+            "predicted_cost_ratio": None if gate.predicted_ratio is None else round(gate.predicted_ratio, 4),
+            "request_multiplier": gate.request_multiplier, "host_model": gate.host_model,
+            "mode": service.policy.mode, "scope": scope, **_profile_field(service),
+        }, decision_id)
+        _note_start(service, "rule:price_gate", 0.0)
+        if turn is not None and hasattr(turn, "start_reason"):
+            turn.start_reason = "price_gate_strong"
+        return "strong"
     if policy == "cheap":
         return "cheap"
     task = _turn_user_text(request)
-    turn = getattr(service, "turn", None)
     scope_limit = model_routing.get("cheap_max_workspace_files")
     scope_files = None
     if scope_limit is not None:
@@ -641,24 +673,45 @@ async def decide_start_tier(service: Any, request: Any, model_routing: dict[str,
                     **_profile_field(service),
                 }, decision_id)
                 _note_start(service, "rule:scope_gate", 0.0)
+                if turn is not None and hasattr(turn, "start_reason"):
+                    turn.start_reason, turn.start_scope_files = "scope_strong", files
                 return "strong"
             scope_files = files  # large_repo lever: ask the judge anyway
     min_chars = model_routing.get("complex_min_prompt_chars", 2000)
     tier = "strong" if len(task) >= min_chars else "cheap"
     decided_by, p_complex, p_edit, duration_ms = "rules", None, None, 0.0
+    task_type = None
+    keep_on_host = model_routing.get("keep_on_host")
     if policy == "judge" and task:
         state = {"task": task[:_DIFFICULTY_STATE_CHARS]}
-        if scope_files is not None and routing_levers.large_repo_wants_edit_question(model_routing):
-            # One batched call: difficulty + "does this change code?"
-            questions = [Question(name="task_difficulty", type="choice", instructions=DIFFICULTY_INSTRUCTIONS,
-                                  criteria=DIFFICULTY_CRITERIA), routing_levers.edit_question()]
+        questions = [Question(name="task_difficulty", type="choice", instructions=DIFFICULTY_INSTRUCTIONS,
+                              criteria=DIFFICULTY_CRITERIA)]
+        wants_edit = scope_files is not None and routing_levers.large_repo_wants_edit_question(model_routing)
+        if wants_edit:
+            questions.append(routing_levers.edit_question())
+        if keep_on_host:
+            questions.append(Question(name=TASK_TYPE_QUESTION, type="choice", instructions=TASK_TYPE_INSTRUCTIONS,
+                                      criteria=TASK_TYPE_CRITERIA))
+        if len(questions) > 1:
+            # One batched call: difficulty (+ "does this change code?") (+ task type)
             batch_start = time.perf_counter()
-            answers = await _ask_judges_many(service, questions=questions, state=state) or {}
+            answers = await _ask_judges_many(service, questions=questions, state=state)
             duration_ms = (time.perf_counter() - batch_start) * 1000
+            if answers is None and not wants_edit:
+                # Backend failure: fall back to the single difficulty ask; task type stays unknown.
+                answers = {}
+                choice, probability, duration_ms = await _ask_judge_choice(
+                    service, question_name="task_difficulty", instructions=DIFFICULTY_INSTRUCTIONS,
+                    criteria=DIFFICULTY_CRITERIA, state=state,
+                )
+                answers["task_difficulty"] = (choice, probability)
+            answers = answers or {}
             choice, probability = answers.get("task_difficulty", (None, None))
             edit_choice, edit_probability = answers.get(routing_levers.EDIT_QUESTION_NAME, (None, None))
             if edit_choice is not None and edit_probability is not None:
                 p_edit = edit_probability if edit_choice == "edits" else 1.0 - edit_probability
+            answered_type = answers.get(TASK_TYPE_QUESTION, (None, None))[0]
+            task_type = answered_type if answered_type in TASK_TYPE_CRITERIA else None
         else:
             choice, probability, duration_ms = await _ask_judge_choice(
                 service, question_name="task_difficulty", instructions=DIFFICULTY_INSTRUCTIONS,
@@ -690,6 +743,20 @@ async def decide_start_tier(service: Any, request: Any, model_routing: dict[str,
         reason = f"judge_{tier}"
     else:
         reason = f"rules_{tier}"
+    if keep_on_host and tier == "cheap":
+        # Opt-in task-type opt-out; fails closed when the type is unknown.
+        if task_type is None:
+            tier, reason = "strong", "task_type_unknown_strong"
+        elif task_type in keep_on_host["task_types"]:
+            tier, reason = "strong", "task_type_strong"
+        if tier == "strong":
+            label, tier_model, tier_effort = None, None, None
+    if tier == "cheap" and tier_model and gate is not None and gate.reason != "gate_disabled":
+        # A tier lever chose a different model: re-check its price on this host.
+        tier_gate = price_gate.evaluate(gate.host_model, tier_model, model_routing.get("price_gate"))
+        if not tier_gate.route:
+            tier, reason = "strong", "price_gate_tier_strong"
+            label, tier_model, tier_effort = None, None, None
     if tier == "strong":
         tier_effort = routing_levers.strong_effort(model_routing, p_complex)
         label = "strong_effort" if tier_effort else None
@@ -701,8 +768,13 @@ async def decide_start_tier(service: Any, request: Any, model_routing: dict[str,
     data = {
         "backend": service.backend.name, "choice": tier, "probabilities": probabilities,
         "duration_ms": duration_ms, "reason_code": reason,
-        "state_chars": len(task), "mode": service.policy.mode, **_profile_field(service),
+        "state_chars": len(task), "mode": service.policy.mode, "scope": scope, **_profile_field(service),
     }
+    if task_type is not None:
+        data["task_type"] = task_type
+    if turn is not None and hasattr(turn, "start_reason"):
+        turn.start_reason, turn.start_probabilities, turn.task_type = reason, probabilities, task_type
+        turn.start_scope_files = scope_files
     if scope_files is not None:
         data["candidate_count"] = scope_files
     if label is not None:
@@ -1133,6 +1205,131 @@ docs/UPSTREAM_CONTRACT.md.
                 or not field_value(request, "tools", None)
                 or "model" in kwargs)
 
+    def _host_model(self) -> str | None:
+        """The wrapped provider's configured default model (the host), or None."""
+        host = getattr(self._provider, "default_model", None)
+        return host if isinstance(host, str) and host else None
+
+    @staticmethod
+    def _route_config_sha(model_routing: dict[str, Any]) -> str:
+        keys = ("start_model", "start_policy", "decision_scope", "price_gate", "keep_on_host",
+                "cheap_max_workspace_files", "complex_min_probability", "complex_min_prompt_chars",
+                "tiers", "large_repo")
+        return hashlib.sha256(canonical({k: model_routing.get(k) for k in keys}).encode("utf-8")).hexdigest()[:16]
+
+    def _session_route(self, service: Any, model_routing: dict[str, Any]) -> dict[str, Any] | None:
+        """This session's stored once-per-session decision: memory first, then
+        disk (a resumed process). Discarded when the host model or the
+        routing-relevant config changed since it was made."""
+        session = self._session(service)
+        route = session.get("route")
+        if route is None:
+            route = load_session_route(self._runtime.events_dir, self._runtime.session_id)
+            if route is not None:
+                route = {**route, "source": "restored", "announced": False}
+        if route is None:
+            return None
+        if route.get("host_model") != self._host_model() or route.get("config_sha") != self._route_config_sha(model_routing):
+            session.pop("route", None)
+            return None
+        session["route"] = route
+        return route
+
+    async def _emit_session_routed(self, service: Any, model_routing: dict[str, Any], *, source: str,
+                                   scope: str, tier: str | None, reason: str | None, gate: Any,
+                                   turn: Any, decision_id: str | None, config_sha: str,
+                                   decided_turn_id: str | None, state_chars: int | None) -> None:
+        keep = model_routing.get("keep_on_host")
+        scope_limit = model_routing.get("cheap_max_workspace_files")
+        judge = None
+        if turn is not None and (turn.start_probabilities is not None or turn.task_type is not None):
+            judge = {"backend": service.backend.name,
+                     "p_complex": (turn.start_probabilities or {}).get("complex"),
+                     "task_type": turn.task_type,
+                     "duration_ms": round(float(turn.judge_seconds or 0.0) * 1000, 1)}
+        data = {
+            "scope": scope, "source": source, "decision": tier, "reason_code": reason,
+            "host_model": self._host_model(), "cheap_model": model_routing["start_model"],
+            "gate": gate.receipt() if gate is not None else {"enabled": False},
+            "judge": judge,
+            "scope_gate": ({"limit": scope_limit, "files": turn.start_scope_files}
+                           if turn is not None and reason == "scope_strong" else None),
+            "keep_on_host": ({"task_types": list(keep["task_types"]),
+                              "matched": (None if turn is None or turn.task_type is None
+                                          else turn.task_type in keep["task_types"])} if keep else None),
+            "state_chars": state_chars, "decided_turn_id": decided_turn_id, "config_sha": config_sha,
+            "mode": service.policy.mode, "policy_version": service.policy.version,
+        }
+        await service.emit("session_routed", data, decision_id)
+
+    async def _start_tier(self, service: Any, request: Any, model_routing: dict[str, Any],
+                          decision_id: str | None) -> str:
+        """The single entry point for the start-tier decision. With
+        ``decision_scope: session`` it decides once (persisted for resumes)
+        and reuses the answer; a model the user picked always wins and never
+        overwrites the stored decision."""
+        user_model = self._user_selected_model(service)
+        scope = model_routing.get("decision_scope", "turn")
+        turn = getattr(service, "turn", None)
+        session = self._session(service)
+        host = self._host_model()
+        session_scoped = scope == "session" and not user_model and model_routing.get("start_policy", "cheap") != "cheap"
+        if session_scoped:
+            route = self._session_route(service, model_routing)
+            if route is not None:
+                tier = route["tier"]
+                await service.emit("difficulty_judged", {
+                    "backend": service.backend.name, "choice": tier, "probabilities": None, "duration_ms": 0.0,
+                    "reason_code": f"session_{tier}", "scope": "session", "session_reason": route.get("reason_code"),
+                    "host_model": host, "mode": service.policy.mode, **_profile_field(service),
+                }, decision_id)
+                _note_start(service, "session:" + str(route.get("mechanism") or "decided"), 0.0)
+                if turn is not None:
+                    turn.tier_label, turn.tier_model, turn.tier_effort = (
+                        route.get("tier_label"), route.get("tier_model"), route.get("tier_effort"))
+                if route.get("source") == "restored" and not route.get("announced"):
+                    route["announced"] = True
+                    restored_gate = (price_gate.evaluate(host, model_routing["start_model"], model_routing["price_gate"])
+                                     if model_routing.get("price_gate") is not None else None)
+                    await self._emit_session_routed(
+                        service, model_routing, source="restored", scope="session", tier=tier,
+                        reason=route.get("reason_code"), gate=restored_gate, turn=None,
+                        decision_id=decision_id, config_sha=route["config_sha"],
+                        decided_turn_id=route.get("decided_turn_id"), state_chars=None)
+                return tier
+        gate = None
+        if model_routing.get("price_gate") is not None and not user_model:
+            gate = price_gate.evaluate(host, model_routing["start_model"], model_routing["price_gate"])
+        tier = await decide_start_tier(service, request, model_routing, decision_id, user_model=user_model, gate=gate)
+        if user_model:
+            return tier
+        reason = getattr(turn, "start_reason", None)
+        config_sha = self._route_config_sha(model_routing)
+        decided_turn_id = getattr(turn, "id", None)
+        state_chars = len(_turn_user_text(request))
+        if session_scoped:
+            route = {
+                "schema": "fd-session-route/1", "tier": tier, "reason_code": reason or f"rules_{tier}",
+                "mechanism": str(getattr(turn, "start_mechanism", None) or "decided"),
+                "host_model": host, "cheap_model": model_routing["start_model"], "config_sha": config_sha,
+                "decided_at": datetime.now(timezone.utc).isoformat(), "decided_turn_id": decided_turn_id,
+                "tier_label": getattr(turn, "tier_label", None), "tier_model": getattr(turn, "tier_model", None),
+                "tier_effort": getattr(turn, "tier_effort", None),
+            }
+            session["route"] = {**route, "source": "decided", "announced": True}
+            save_session_route(self._runtime.events_dir, self._runtime.session_id, route)
+            await self._emit_session_routed(
+                service, model_routing, source="decided", scope="session", tier=tier, reason=reason, gate=gate,
+                turn=turn, decision_id=decision_id, config_sha=config_sha, decided_turn_id=decided_turn_id,
+                state_chars=state_chars)
+        elif gate is not None and not session.get("gate_announced"):
+            session["gate_announced"] = True
+            await self._emit_session_routed(
+                service, model_routing, source="decided", scope=scope, tier=None, reason=None, gate=gate,
+                turn=None, decision_id=decision_id, config_sha=config_sha, decided_turn_id=decided_turn_id,
+                state_chars=state_chars)
+        return tier
+
     def _user_selected_model(self, service: Any) -> str | None:
         """The model the user explicitly chose for this session, or None.
 
@@ -1276,9 +1473,10 @@ docs/UPSTREAM_CONTRACT.md.
         planner_chose_host_this_request = False
         # Turn-start difficulty router: decided once, before effort and model
         # routing, so both can follow the same per-turn tier.
-        if model_routing and turn.start_tier is None and model_routing.get("start_policy", "cheap") != "cheap":
-            turn.start_tier = await decide_start_tier(service, request, model_routing, decision_id,
-                                                         user_model=self._user_selected_model(service))
+        if (model_routing and turn.start_tier is None
+                and (model_routing.get("start_policy", "cheap") != "cheap"
+                     or price_gate.enabled(model_routing.get("price_gate")))):
+            turn.start_tier = await self._start_tier(service, request, model_routing, decision_id)
         if effort_routing:
             phase = effort.classify_phase(request)
 
@@ -1366,10 +1564,17 @@ docs/UPSTREAM_CONTRACT.md.
                 # Routing levers: the chosen tier's own effort, for the whole turn.
                 applied_effort = turn.tier_effort
                 reason_code = f"tier_{turn.tier_label}"
-            elif (by_tier is not None and turn.start_tier in by_tier and by_tier[turn.start_tier] != "phase"
-                    and not host_pinned):
-                applied_effort = by_tier[turn.start_tier]
-                reason_code = f"tier_{turn.start_tier}"
+            elif by_tier is not None and turn.start_mechanism == "user:model_pick" and not host_pinned:
+                # A model the user picked runs at its own effort.
+                applied_effort, reason_code = None, "user_model"
+            elif (by_tier is not None and not host_pinned
+                    and ("strong" if turn.escalated else turn.start_tier) in by_tier
+                    and by_tier["strong" if turn.escalated else turn.start_tier] != "phase"):
+                # by_tier.strong is the effort of every host-model request,
+                # including a cheap turn escalated to the host.
+                effective_tier = "strong" if turn.escalated else turn.start_tier
+                applied_effort = by_tier[effective_tier]
+                reason_code = f"tier_{effective_tier}"
             elif effort_routing.get("monotonic") and applied_effort is not None:
                 applied_effort, held = effort.hold_monotonic(applied_effort, turn.max_effort_applied)
                 if held:
@@ -1400,8 +1605,7 @@ docs/UPSTREAM_CONTRACT.md.
             turn.slow_requests_seen += 1
             routing_phase = phase if phase is not None else effort.classify_phase(request)
             if turn.start_tier is None:
-                turn.start_tier = await decide_start_tier(service, request, model_routing, decision_id,
-                                                         user_model=self._user_selected_model(service))
+                turn.start_tier = await self._start_tier(service, request, model_routing, decision_id)
             # A turn judged complex starts on the host model and stays there:
             # no start_model override, no mid-turn escalation.
             strong_turn = turn.start_tier == "strong"
