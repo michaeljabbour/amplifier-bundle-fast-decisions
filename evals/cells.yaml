@@ -853,6 +853,90 @@ cells:
     requires_cells: [plain-sonnet]
     mechanism_gate: { max_scored: 0, model_routed_model: claude-sonnet-5, min_model_routed: 1 }
 
+  # --- holdout-v3 (S1) cells (evals/paired/holdout-v3.yaml; docs/design/v3/PLAN.md section S1) ---------------------------
+  # All fd cells are `composed`: the bundle root at the frozen candidate commit supplies the shipped orchestrator config
+  # (behaviors/fast-decisions.yaml after PR #64: Jev decide-once, price gate on, scope gate 300, by_tier cheap: medium /
+  # strong: null, keep-alive and waste guards on) and ONLY the listed `overrides` differ. The phase map is gone from the
+  # shipped YAML, so none of these cells declares an effort_profile (that would re-introduce it). Each cell differs from
+  # its comparator in exactly one setting; evals/v3/s1_render_cells.py renders the effective config and proves it.
+  #   ShF  v3-shipped            : no override                                  (comparator of the others on Fable)
+  #   PhF  v3-pin-host           : model_routing.start_policy rules + complex_min_prompt_chars 1 (every prompt is "complex"
+  #                                 -> the host, decided once, no judge call)      vs ShF: the decider only
+  #   PhF-m v3-pin-host-medium   : PhF + effort_routing.by_tier.strong medium      vs PhF: strong effort only
+  #   Pc   v3-pin-cheap          : model_routing.start_policy rules + complex_min_prompt_chars 1e9 (always "easy" -> Sonnet at
+  #                                 the cheap-tier effort, medium) + price gate and scope gate off (a pinned potential outcome)
+  #   ShO  v3-shipped-opus       : no override, Opus host (the price gate keeps the host, no judge call)
+  #   ShO-m v3-shipped-opus-medium: ShO + effort_routing.by_tier.strong medium     vs ShO: strong effort only
+  plain-opus-medium:
+    label_suffix: "plain [model=claude-opus-5-5; reasoning effort medium]"
+    harnesses: [amplifier-plain]
+    amplifier_model: claude-opus-5-5
+    amplifier_effort: medium           # provider reasoning_effort; EXACTLY plain-opus otherwise (holdout-v3 A0O-m)
+    fd: null
+    role: "effort control: plain Opus 5.5 at medium reasoning effort"
+    purpose: "the 'just set medium' competitor on the Opus host (unmeasured before S1)"
+    mechanism_gate: { no_fd_receipts: true }
+
+  v3-shipped:
+    harnesses: [amplifier-fd]
+    fd: { composition: composed }
+    role: "ShF: the shipped defaults, live, on the Fable host (Jev decide-once, price gate, scope gate, cheap: medium)"
+    purpose: "holdout-v3 arm ShF; H6 (live = predicted by PhF/Pc and the decider)"
+    anchor_cell: plain
+    requires_cells: [plain-sonnet]
+    mechanism_gate: { max_scored: 0 }
+
+  v3-pin-host:
+    harnesses: [amplifier-fd]
+    fd: { composition: composed,
+          overrides: { model_routing: { start_policy: rules, complex_min_prompt_chars: 1 } } }
+    role: "PhF: the bundle with the host pinned (decided once to keep the host; no judge call), strong effort = provider default"
+    purpose: "holdout-v3 arm PhF: bundle overhead on Fable (H3) and the potential 'host' outcome of a decide-once session"
+    anchor_cell: plain
+    mechanism_gate: { max_scored: 0 }
+
+  v3-pin-host-medium:
+    harnesses: [amplifier-fd]
+    fd: { composition: composed,
+          overrides: { model_routing: { start_policy: rules, complex_min_prompt_chars: 1 },
+                       effort_routing: { by_tier: { strong: medium } } } }
+    role: "PhF-m: PhF with strong (host-model) effort medium"
+    purpose: "holdout-v3 arm PhF-m: candidate C*_F's host outcome; H1, H7"
+    anchor_cell: plain
+    mechanism_gate: { max_scored: 0 }
+
+  v3-pin-cheap:
+    harnesses: [amplifier-fd]
+    fd: { composition: composed,
+          overrides: { model_routing: { start_policy: rules, complex_min_prompt_chars: 1000000000,
+                                        cheap_max_workspace_files: null, price_gate: { enabled: false } } } }
+    role: "Pc: the bundle pinned to Sonnet 5 at the cheap-tier effort (medium) for the whole session, any workspace size"
+    purpose: "holdout-v3 arm Pc (host-independent): the potential 'cheap' outcome of a decide-once session; H5, H7"
+    anchor_cell: plain
+    requires_cells: [plain-sonnet]
+    mechanism_gate: { max_scored: 0, model_routed_model: claude-sonnet-5, min_model_routed: 1 }
+
+  v3-shipped-opus:
+    harnesses: [amplifier-fd]
+    amplifier_model: claude-opus-5-5
+    fd: { composition: composed }
+    role: "ShO: the shipped defaults, live, on the Opus host (the price gate keeps the host; no judge call)"
+    purpose: "holdout-v3 arm ShO: H3 (overhead of the unrouted bundle on Opus, RQ3)"
+    anchor_cell: plain-opus
+    requires_cells: [plain-opus]
+    mechanism_gate: { max_scored: 0 }
+
+  v3-shipped-opus-medium:
+    harnesses: [amplifier-fd]
+    amplifier_model: claude-opus-5-5
+    fd: { composition: composed,
+          overrides: { effort_routing: { by_tier: { strong: medium } } } }
+    role: "ShO-m: ShO plus strong (host-model) effort medium (candidate C*_O)"
+    purpose: "holdout-v3 arm ShO-m: H4"
+    anchor_cell: plain-opus
+    requires_cells: [plain-opus]
+    mechanism_gate: { max_scored: 0 }
+
   externals:
     harnesses: [claude, codex, opencode, amplifier-plain, amplifier-fd]
     fd: { backend: ollama, model: qwen3:0.6b, effort_profile: all_phase }   # = champion

@@ -221,13 +221,16 @@ def expand_sessions(design: dict, specs: list, *, reps: int, hosts: list, arms: 
                         shost, cell = "any", a["cells"]["any"]
                         model = None
                     else:
+                        if host not in a["cells"]:
+                            continue                  # a host-specific arm (e.g. the Opus-only ShO-m of holdout-v3)
                         shost, cell = host, a["cells"][host]
                         model = design["hosts"][host]
                     if a["kind"] == "sticky":
                         cell = None
                     sessions.append(Session(key=f"{spec.id}-r{rep}-{shost}-{arm}", wave_id=wave_id, scenario=spec.id,
                                             rep=rep, host=shost, arm=arm, kind=a["kind"], cell=cell,
-                                            model=model or "", gate=dict(a.get("gate") or {})))
+                                            model=model or "",
+                                            gate={**(a.get("gate") or {}), **((a.get("gate_by_host") or {}).get(shost) or {})}))
     return sessions
 
 
@@ -242,6 +245,23 @@ def seeded_wave_order(wave_ids: list, seed: int) -> list:
     ids = sorted(wave_ids)
     random.Random(seed).shuffle(ids)
     return ids
+
+
+def adjacent_wave_order(waves: dict, hosts: list, seed: int) -> list:
+    """Admission order with the waves of one scenario-rep adjacent (design ``wave_order: scenario_rep_adjacent``): the
+    (scenario, rep) groups are shuffled with the seed, and inside a group the host waves follow the design's host order
+    (the host-independent control's own wave, when it was split off, comes last). FIFO admission then starts a
+    scenario-rep's host waves back to back, so they run in the same hour on the same snapshot and provider load."""
+    groups = {}
+    for wid, sess in waves.items():
+        groups.setdefault((sess[0].scenario, sess[0].rep), []).append(wid)
+    host_rank = {h: i for i, h in enumerate(list(hosts) + ["any"])}
+    out = []
+    for key in seeded_wave_order([f"{sc}|{rep}" for sc, rep in groups], seed):
+        sc, rep = key.rsplit("|", 1)
+        members = groups[(sc, int(rep))]
+        out += sorted(members, key=lambda w: host_rank.get(w.rsplit("-", 1)[1], 99))      # wave ids end in -<host>
+    return out
 
 
 # ----------------------------------------------------------------------------------------- cost model
@@ -264,7 +284,7 @@ def estimate_session_usd(design: dict, spec, arm: str, host: str, cell_hint: str
     if a["kind"] == "sticky":
         anchor_cell = design["arms"]["anchor"]["cells"][host]
         base = unit[anchor_cell]["usd"] * cm["sticky_over_anchor"][host]
-    elif a["kind"] == "control":
+    elif a["kind"] == "control" or a.get("host_independent"):
         base = unit[a["cells"]["any"]]["usd"]
     else:
         base = unit[a["cells"][host]]["usd"]
@@ -324,6 +344,10 @@ def build_plan(design: dict, specs: list, *, reps: int, hosts: list, arms: list,
             s.nonce = make_nonce(plan_id, s.key, s.attempt)
     waves = waves_of(sessions)
     split = False
+    if design.get("no_control_wave_split") and any(len(v) > parallel for v in waves.values()):
+        raise PairedError(EXIT_PRECONDITION, f"--parallel {parallel} is smaller than the largest wave "
+                                             f"({max(len(v) for v in waves.values())}); this design keeps the host-independent "
+                                             "arm inside its host wave (no_control_wave_split), so raise --parallel")
     if any(len(v) > parallel for v in waves.values()):
         # the host-independent control does not need to co-start with a host stratum: give it its own wave rather than
         # forcing a larger --parallel (memory safety: default parallel is 4)
@@ -335,7 +359,8 @@ def build_plan(design: dict, specs: list, *, reps: int, hosts: list, arms: list,
     if too_big:
         raise PairedError(EXIT_PRECONDITION, f"--parallel {parallel} is smaller than a wave (all arms of a wave must "
                                              f"co-start): {too_big}")
-    order = seeded_wave_order(list(waves), seed)
+    order = (adjacent_wave_order(waves, hosts, seed) if design.get("wave_order") == "scenario_rep_adjacent"
+             else seeded_wave_order(list(waves), seed))
     wall_h = simulate_wall_hours(design, waves, order, by_id, parallel)
     total = round(sum(s.est_usd for s in sessions), 2)
     reserve = round(total * design["cost_model"]["infra_retry_reserve_fraction"], 2)
@@ -485,7 +510,7 @@ def parse_events(session_dir) -> dict:
     """Per-request records and fast_decisions receipt counts from one session's events.jsonl.
     Requests are paired by request_id (llm:request <-> llm:response); message bodies are never kept."""
     path = Path(session_dir) / "events.jsonl"
-    out = {"requests": [], "fd_counts": {}, "efficiency": [], "error": None}
+    out = {"requests": [], "fd_counts": {}, "efficiency": [], "session_routed": [], "error": None}
     if not path.exists():
         out["error"] = "no events.jsonl"
         return out
@@ -531,7 +556,16 @@ def parse_events(session_dir) -> dict:
                 out["fd_counts"][short] = out["fd_counts"].get(short, 0) + 1
                 if short == "efficiency":
                     out["efficiency"].append(_num(d.get("usd_saved")))
+                elif short == "session_routed":
+                    out["session_routed"].append(_session_routed_summary(d))
     return out
+
+
+def _session_routed_summary(d: dict) -> dict:
+    """The few fields of a fast_decisions:session_routed receipt the mechanism gates read."""
+    gate = d.get("gate") if isinstance(d.get("gate"), dict) else {}
+    return {"source": d.get("source"), "decision": d.get("decision"), "reason_code": d.get("reason_code"),
+            "scope": d.get("scope"), "gate_route": gate.get("route"), "gate_reason": gate.get("reason")}
 
 
 def merge_run_receipts(parsed: dict, run_events_dir) -> dict:
@@ -541,7 +575,7 @@ def merge_run_receipts(parsed: dict, run_events_dir) -> dict:
     d = Path(run_events_dir)
     if not d.is_dir():
         return parsed
-    seen, counts, eff = set(), {}, []
+    seen, counts, eff, routed = set(), {}, [], []
     for f in sorted(d.glob("*.jsonl")):
         with f.open(encoding="utf-8", errors="replace") as fh:
             for line in fh:
@@ -562,6 +596,10 @@ def merge_run_receipts(parsed: dict, run_events_dir) -> dict:
                 counts[short] = counts.get(short, 0) + 1
                 if short == "efficiency":
                     eff.append(_num((ev.get("data") or {}).get("usd_saved")))
+                elif short == "session_routed":
+                    routed.append(_session_routed_summary(ev.get("data") or {}))
+    if len(routed) > len(parsed.get("session_routed", [])):
+        parsed["session_routed"] = routed
     for short, n in counts.items():
         parsed["fd_counts"][short] = max(parsed["fd_counts"].get(short, 0), n)
     if len(eff) > len(parsed["efficiency"]):
@@ -685,7 +723,8 @@ def assert_covariates(columns) -> None:
         raise ValueError(f"not allowed as covariates (post-treatment outcomes?): {bad}")
 
 
-def mechanism_gate(session: dict, counts: dict, switches: int, main_models: list, main_efforts: list | None = None) -> dict:
+def mechanism_gate(session: dict, counts: dict, switches: int, main_models: list, main_efforts: list | None = None,
+                   session_routed: list | None = None, main_requests: list | None = None) -> dict:
     """STUDY-DESIGN R4 per arm kind. fd arms must show routing receipts; plain arms none; sticky must never
     switch, judge at most once, and keep every main request on the decided model."""
     kind = session["kind"]
@@ -723,7 +762,62 @@ def mechanism_gate(session: dict, counts: dict, switches: int, main_models: list
         if bad:
             ok = False
             why.append(f"reasoning effort {bad} on main requests; expected {'absent (provider default)' if want is None else want}")
+    ok, why = _v3_gate_checks(g, ok, why, counts=counts, switches=switches, main_models=main_models,
+                              main_efforts=main_efforts, session_routed=session_routed, main_requests=main_requests)
     return {"mechanism_engaged": ok, "mechanism_reasons": why, "fd_receipts": receipts}
+
+
+def _v3_gate_checks(g: dict, ok: bool, why: list, *, counts: dict, switches: int, main_models: list,
+                    main_efforts: list | None, session_routed: list | None, main_requests: list | None) -> tuple:
+    """The holdout-v3 gate keys (all optional, all per arm in the design):
+
+    ``effort_by_model: {<model prefix>: <effort|absent>}``  every main request carries the effort listed for the model
+        that served it (ShF: Sonnet at medium when it routed, Fable at the provider default when it kept the host);
+    ``effort_constant: true``     one effort value for the whole session (a change rewrites the prompt cache);
+    ``single_model: true``        every main request on one model, so no switch of any kind;
+    ``decided_once: true``        exactly one fresh start-tier decision (a `session_routed` receipt with source
+                                  `decided`; later turns may only restore it) and zero model switches;
+    ``no_routing: true``          no `model_routed` receipt and no switch: the session ran on the host model;
+    ``gate_closed: true``         the one fresh decision was the price gate keeping the host (ShO on Opus);
+    ``min_model_routed: n``       at least n `model_routed` receipts (a pinned cheap session really routed)."""
+    reqs = main_requests or []
+    routed = session_routed or []
+    if g.get("effort_by_model") and reqs:
+        want_by = {k: (None if v in (None, "absent", "default") else v) for k, v in g["effort_by_model"].items()}
+        bad = sorted({f"{r['model']}@{r['effort']}" for r in reqs
+                      if not any(str(r["model"]).startswith(k) and r["effort"] == w for k, w in want_by.items())})
+        if bad:
+            ok = False
+            why.append(f"model@effort {bad} on main requests; expected {g['effort_by_model']}")
+    if g.get("effort_constant") and main_efforts is not None and len({str(e) for e in main_efforts}) > 1:
+        ok = False
+        why.append(f"effort changed within the session: {sorted({str(e) for e in main_efforts})}")
+    if g.get("single_model") and len(set(main_models)) > 1:
+        ok = False
+        why.append(f"main requests on {sorted(set(main_models))}: a session on one model was required")
+    fresh = [r for r in routed if r.get("source") == "decided"]
+    if g.get("decided_once"):
+        if len(fresh) != 1:
+            ok = False
+            why.append(f"{len(fresh)} fresh start-tier decisions (session_routed source=decided); exactly 1 required")
+        if switches:
+            ok = False
+            why.append(f"decided-once session switched models {switches}x")
+    if g.get("no_routing"):
+        if counts.get("model_routed", 0):
+            ok = False
+            why.append(f"{counts['model_routed']} model_routed receipts in a session that must not route")
+        if switches:
+            ok = False
+            why.append(f"{switches} model switches in a session that must not route")
+    if g.get("gate_closed") and not any(r.get("decision") == "strong" and r.get("reason_code") == "price_gate_strong"
+                                         for r in fresh):
+        ok = False
+        why.append("no fresh decision with reason price_gate_strong (the price gate should have kept the host)")
+    if g.get("min_model_routed") and counts.get("model_routed", 0) < g["min_model_routed"]:
+        ok = False
+        why.append(f"{counts.get('model_routed', 0)} model_routed receipts, {g['min_model_routed']} required")
+    return ok, why
 
 
 def count_llm_requests(session_dir) -> int:
@@ -780,7 +874,8 @@ def session_row(meta: dict, result: dict, parsed: dict, spec, snap_stats: dict, 
                 or any("evaluate_error" in l for l in labels))
     status = "infra_fail" if result.get("infrastructure_failure") else ("ok" if result.get("outcome_passed") else "agent_fail")
     gate = mechanism_gate({**meta, "expected_main_model": meta.get("expected_main_model")}, parsed["fd_counts"],
-                          sw["model_switches"], [r["model"] for r in main], [r["effort"] for r in main])
+                          sw["model_switches"], [r["model"] for r in main], [r["effort"] for r in main],
+                          parsed.get("session_routed"), main)
     served = sorted({r["model"] for r in main if r["model"]})
     model_ids_ok = (not meta.get("model")) or all(m == meta["model"] or str(m).startswith(meta["model"]) or
                                                    meta["kind"] in ("fd", "sticky") for m in served)
@@ -2038,8 +2133,10 @@ def preflight_targets(ctx: Ctx) -> list:
                     continue
                 seen.add(ident)
                 expected = {"pin-cheap": {cheap}, "fd": {model, cheap}}.get(kind, {model})
+                if (s.get("gate") or {}).get("served_model_prefix"):    # a stricter, per-arm expectation (e.g. Pc: Sonnet only)
+                    expected = {m for m in expected if m.startswith(s["gate"]["served_model_prefix"])} or {s["gate"]["served_model_prefix"]}
                 out.append({"cell": cell, "model": model, "key_env": key_env, "kind": "fd" if kind in ("fd", "pin-host", "pin-cheap") else kind,
-                            "variant": kind, "expected_models": sorted(expected), "arm": s["arm"], "host": s["host"]})
+                            "variant": kind, "expected_models": sorted(expected), "arm": s["arm"], "host": s["host"], "gate": dict(s.get("gate") or {})})
     return out
 
 
@@ -2089,17 +2186,23 @@ def run_preflight(ctx: Ctx, backend, ledger: Ledger, *, parallel: int, log=print
         for s, t in zip(sessions, targets):
             res = backend.result(root, s["key"])
             entry = {"cell": t["cell"], "model": t["model"], "key_env": t["key_env"], "variant": t["variant"], "outcome": outcomes[s["key"]]}
-            models, cost, raw_flags = [], 0.0, []
+            models, cost, raw_flags, efforts, gate_problems = [], 0.0, [], [], []
             if res and res.get("session_id") and not res.get("infrastructure_failure"):
                 sdir = sessions_dir_for_workspace(backend.workspace(root, s["key"])) / res["session_id"]
                 parsed = parse_events(sdir)
                 models = sorted({r["model"] for r in parsed["requests"] if r["main"] and r["model"]})
                 raw_flags = [r["has_raw"] for r in parsed["requests"] if r["main"]]
+                main_reqs = [r for r in parsed["requests"] if r["main"]]
+                efforts = sorted({str(r["effort"]) for r in main_reqs})           # "None" = the provider default
+                gate_problems = mechanism_gate({"kind": "preflight", "gate": t.get("gate") or {}}, parsed["fd_counts"], 0,
+                                               [r["model"] for r in main_reqs], [r["effort"] for r in main_reqs],
+                                               parsed.get("session_routed"), main_reqs)["mechanism_reasons"]
                 cost = sum(c for c in (recompute_cost(r["model"], r["uncached"], r["read"], r["write"], r["output"])
                                        for r in parsed["requests"]) if c is not None)
             raw_ok = bool(raw_flags) and all(raw_flags)
-            entry.update(models_seen=models, cost_usd=round(cost, 6), raw_events=raw_ok,
-                         passed=bool(models) and set(models) <= set(t["expected_models"]) and raw_ok)
+            entry.update(models_seen=models, efforts_seen=efforts, gate=t.get("gate") or {}, gate_problems=gate_problems,
+                         cost_usd=round(cost, 6), raw_events=raw_ok,
+                         passed=bool(models) and set(models) <= set(t["expected_models"]) and raw_ok and not gate_problems)
             if not entry["passed"]:
                 diag = backend.diagnose(root, s["key"], res)
                 entry["error_tail"] = diag["error_tail"] or ("session produced no response from "
@@ -2109,7 +2212,10 @@ def run_preflight(ctx: Ctx, backend, ledger: Ledger, *, parallel: int, log=print
                                            "(background calls cannot be told from main-loop calls without it)")
                     entry["failure_kind"] = "raw_events_missing"
                 else:
-                    entry["failure_kind"] = classify_failure(res, diag) if (res is None or res.get("infrastructure_failure")) else "unexpected_model"
+                    entry["failure_kind"] = classify_failure(res, diag) if (res is None or res.get("infrastructure_failure")) else (
+                        "gate_mismatch" if gate_problems and set(models) <= set(t["expected_models"]) else "unexpected_model")
+                    if gate_problems:
+                        entry["error_tail"] = "gate: " + "; ".join(gate_problems)
             total += cost
             report["sessions"].append(entry)
         report["total_cost_usd"] = round(total, 6)
@@ -2122,8 +2228,8 @@ def run_preflight(ctx: Ctx, backend, ledger: Ledger, *, parallel: int, log=print
     report["campaign_provider"]["config_keys"] = sorted((ctx.design.get("campaign_provider") or {}).get("config", {}))
     _write_json(ctx.out / "preflight.json", report)
     for e in report["sessions"]:
-        log(f"preflight {'PASS' if e['passed'] else 'FAIL'}  {e['cell']:22} {e['model']:20} key={e['key_env'] or 'default'}  "
-            f"models={','.join(e['models_seen']) or '-'}  ${e['cost_usd']:.4f}")
+        log(f"preflight {'PASS' if e['passed'] else 'FAIL'}  {e['cell']:30} {e['model']:20} key={e['key_env'] or 'default'}  "
+            f"models={','.join(e['models_seen']) or '-'}  effort={','.join(e.get('efforts_seen') or []) or '-'}  ${e['cost_usd']:.4f}")
         if not e["passed"]:
             log("    " + "\n    ".join(e["error_tail"].splitlines()))
     log(f"preflight {'PASSED' if report['ok'] else 'FAILED'}: {len(report['sessions'])} sessions, ${report['total_cost_usd']:.4f}")
