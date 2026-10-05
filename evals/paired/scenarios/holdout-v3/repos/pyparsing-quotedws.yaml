@@ -1,0 +1,147 @@
+# holdout-v3 repos: pyparsing-quotedws -- 10 turns, short gaps.
+id: pyparsing-quotedws
+task_type: bugfix
+language: python
+split: holdout
+default_gap_s: 10
+source:
+  desc: >-
+    pyparsing/pyparsing, QuotedString stripped whitespace that was part of a multi-character
+    delimiter (#492), fixed upstream in 59b167db; workspace is its parent
+  repo: https://github.com/pyparsing/pyparsing.git
+  sha: d3388aaf5c60d1069b7294a743ccd0e7c87a1d1d
+  fix_sha: 59b167db1ba364422e1505e8e112f8447764cd22
+workspace:
+  kind: git
+  repo: https://github.com/pyparsing/pyparsing.git
+  sha: d3388aaf5c60d1069b7294a743ccd0e7c87a1d1d
+  local_hint: ~/dev/afast-v3-src/pyparsing
+hidden_files:
+  tests/test_unit.py:
+    from_git:
+      repo: https://github.com/pyparsing/pyparsing.git
+      sha: 59b167db1ba364422e1505e8e112f8447764cd22
+      path: tests/test_unit.py
+      local_hint: ~/dev/afast-v3-src/pyparsing
+  tests/test_quoted_default_ws_hidden.py: |
+    from unittest import TestCase
+
+    import pyparsing as pp
+
+
+    class TestQuotedStringDefaultWhitespace(TestCase):
+        def test_leading_newline_delimiter_matches_by_default(self):
+            q = pp.QuotedString("\n;", multiline=True)
+            self.assertEqual(q.parse_string("\n;Hi \n mum!\n;").as_list(), ["Hi \n mum!"])
+
+        def test_leading_space_delimiter(self):
+            q = pp.QuotedString(" '", end_quote_char="' ")
+            self.assertEqual(q.parse_string(" 'abc' ").as_list(), ["abc"])
+
+        def test_search_string_with_newline_delimiter(self):
+            q = pp.QuotedString("\n;", multiline=True)
+            self.assertEqual(q.search_string("lsjdf \n;Hi\n; sldjf").as_list(), [["Hi"]])
+
+        def test_ordinary_quotes_still_skip_leading_whitespace(self):
+            self.assertEqual(pp.QuotedString('"').parse_string('   "x"').as_list(), ["x"])
+            self.assertEqual(pp.QuotedString("<<", end_quote_char=">>").parse_string("\n <<x>>").as_list(), ["x"])
+
+        def test_context_independent_of_global_whitespace_setting(self):
+            q = pp.QuotedString("\n;", multiline=True)
+            self.assertEqual(q.parse_string("\n;a\n;").as_list(), ["a"])
+            self.assertEqual((pp.Literal("k") + q).parse_string("k\n;a\n;").as_list(), ["k", "a"])
+  tests/test_quoted_messages_hidden.py: |
+    from unittest import TestCase
+
+    import pyparsing as pp
+
+
+    class TestQuotedStringValidationMessages(TestCase):
+        def test_empty_and_blank_quote_chars_are_rejected_with_a_clear_message(self):
+            for bad in ("", "   ", "\n"):
+                with self.assertRaisesRegex(ValueError, "quote_char cannot be empty or all whitespace"):
+                    pp.QuotedString(bad)
+
+        def test_end_quote_char_message_names_the_argument(self):
+            for bad in ("", "   ", "\n"):
+                with self.assertRaisesRegex(ValueError, "end_quote_char cannot be empty or all whitespace"):
+                    pp.QuotedString('"', end_quote_char=bad)
+
+        def test_valid_delimiters_with_whitespace_are_accepted(self):
+            pp.QuotedString("\n;", multiline=True)
+            pp.QuotedString("<<", end_quote_char=" >>")
+turns:
+  - prompt: >-
+      pyparsing's `QuotedString` silently drops whitespace that is part of a multi-character
+      delimiter. `QuotedString("\n;", multiline=True)` is meant to match text between a
+      newline-semicolon pair, but its quote_char ends up as just `";"`, so the newline is ignored and
+      matching starts and ends at the wrong positions (issue #492). Delimiters that are empty or
+      entirely whitespace must still raise ValueError, and the same goes for `end_quote_char`. Find
+      the cause in the pyparsing package and fix it. Run the tests from this directory with `python3
+      -m pytest -q -k QuotedString tests/test_unit.py`.
+    checks:
+      - {kind: tests, runner: python, files: [-k, QuotedString, tests/test_unit.py], hidden: [tests/test_unit.py]}
+  - prompt: >-
+      In three to five sentences explain the root cause: which constructor step changed the delimiter,
+      why that was harmless for single-character quotes, and what the validation was really for. Do
+      not change any files.
+    checks:
+      - {kind: keyed_facts, all: [strip, quote_char, end_quote_char], any: [empty, whitespace, validat]}
+  - prompt: >-
+      Add a test file `tests/test_quoted_ws_extra.py` (unittest style, like the others) with at least
+      four tests: a leading newline delimiter is kept (use
+      `pp.ParserElement.set_default_whitespace_chars("")` inside `ppt.reset_pyparsing_context()`), a
+      trailing space in the end delimiter is kept and the same text without the space no longer
+      matches, `end_quote_char` is stored unstripped, and blank delimiters are still rejected. Run it.
+    checks:
+      - {kind: file_regex, path: tests/test_quoted_ws_extra.py, pattern: ^    def test_, min_count: 4}
+      - {kind: tests, runner: python, files: [tests/test_quoted_ws_extra.py]}
+  - prompt: >-
+      There is still a catch: the newline delimiter only works when the global default whitespace is
+      cleared, because the element skips leading whitespace before matching, so
+      `pp.QuotedString("\n;", multiline=True).parse_string("\n;Hi \n mum!\n;")` fails by default
+      (`Expected string enclosed in '\n;', found ';'`). A QuotedString whose opening delimiter starts
+      with a whitespace character must not skip leading whitespace by itself, so that this works with
+      the default settings (also for `search_string`, and inside `Literal("k") + q`). Ordinary quotes
+      such as `"` must keep skipping leading whitespace.
+    checks:
+      - {kind: tests, runner: python, files: [-k, QuotedString, tests/test_quoted_default_ws_hidden.py, tests/test_unit.py], hidden: [tests/test_quoted_default_ws_hidden.py, tests/test_unit.py]}
+  - prompt: >-
+      Add an entry to the top section of the CHANGES file ("Version 3.3.3 - in development") for both
+      changes: `QuotedString` keeps whitespace that is part of a multi-character delimiter, and a
+      delimiter that starts with whitespace is matched without skipping leading whitespace. Match the
+      style of the entries above and below it.
+    checks:
+      - {kind: file_regex, path: CHANGES, pattern: '^Version 3\.3\.3 - in development\n-+\n(?:(?!Version ).*\n)*?- .*QuotedString(?:.*\n)*?.*(?i:whitespace)'}
+  - prompt: >-
+      Question only: how does `QuotedString` turn its arguments into a regular expression? Name the
+      attributes that hold the pattern and the compiled match function, the role of `re.escape`, and
+      which method does the first-character shortcut check before the regex runs. Do not change any
+      files.
+    checks:
+      - {kind: keyed_facts, all: [core\.py, re\.escape, pattern, parseImpl, first_quote_char]}
+  - prompt: >-
+      The ValueError text `quote_char cannot be the empty string` is misleading for a delimiter made
+      only of spaces or newlines. Change both messages (for quote_char and end_quote_char) to
+      `quote_char cannot be empty or all whitespace` and `end_quote_char cannot be empty or all
+      whitespace`. Valid delimiters that contain whitespace must still be accepted.
+    checks:
+      - {kind: tests, runner: python, files: [-k, QuotedString, tests/test_quoted_messages_hidden.py, tests/test_unit.py, tests/test_quoted_default_ws_hidden.py], hidden: [tests/test_quoted_messages_hidden.py, tests/test_unit.py, tests/test_quoted_default_ws_hidden.py]}
+  - prompt: >-
+      Add a short `.. note::` to the `QuotedString` class docstring explaining that whitespace inside
+      a multi-character `quote_char` / `end_quote_char` is significant, that blank delimiters raise
+      ValueError, and that a delimiter starting with whitespace is matched without skipping leading
+      whitespace. Docstring only.
+    checks:
+      - {kind: file_regex, path: pyparsing/core.py, pattern: '(?s)class QuotedString\(Token\):.{0,4500}?\.\. note::(?:(?!\n    Example:).)*?(?i:whitespace)'}
+      - {kind: tests, runner: python, files: [-k, QuotedString, tests/test_unit.py], hidden: [tests/test_unit.py]}
+  - prompt: >-
+      Run the QuotedString tests from tests/test_unit.py together with your new test file and report
+      the totals (passed / failed). Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [QuotedString, test_quoted_ws_extra, \d+ passed]}
+  - prompt: >-
+      Review the changes you made in this session as a code reviewer would: list each file you changed
+      or added, what changed, and any remaining edge case you did not cover. Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [core\.py, CHANGES, test], any: [edge, risk, not cover, remaining]}

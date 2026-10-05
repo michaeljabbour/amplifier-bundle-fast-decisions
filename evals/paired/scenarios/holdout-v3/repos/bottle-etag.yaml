@@ -1,0 +1,174 @@
+# holdout-v3 repos: bottle-etag -- 10 turns, short gaps.
+id: bottle-etag
+task_type: bugfix
+language: python
+split: holdout
+default_gap_s: 10
+source:
+  desc: >-
+    bottlepy/bottle, static_file() honoured If-Modified-Since even when a non-matching If-None-Match
+    was sent (#1132), fixed upstream in b73bd1db; workspace is its parent
+  repo: https://github.com/bottlepy/bottle.git
+  sha: 2a743a302a71460bfe4c0b8b7cb99a306b0328c6
+  fix_sha: b73bd1db5b7a915cf6a78656955c4059f58195ae
+workspace:
+  kind: git
+  repo: https://github.com/bottlepy/bottle.git
+  sha: 2a743a302a71460bfe4c0b8b7cb99a306b0328c6
+  local_hint: ~/dev/afast-v3-src/bottle
+hidden_files:
+  test/test_sendfile.py:
+    from_git:
+      repo: https://github.com/bottlepy/bottle.git
+      sha: b73bd1db5b7a915cf6a78656955c4059f58195ae
+      path: test/test_sendfile.py
+      local_hint: ~/dev/afast-v3-src/bottle
+  test/test_sendfile_inm_forms_hidden.py: |
+    import os
+    import time
+    import unittest
+
+    import bottle
+    from bottle import request, static_file
+
+    basename = os.path.basename(__file__)
+    root = os.path.dirname(__file__)
+
+
+    class TestIfNoneMatchForms(unittest.TestCase):
+        def setUp(self):
+            request.bind({})
+            self.etag = static_file(basename, root=root).headers["ETag"]
+
+        def _status(self, header, **kw):
+            request.environ["HTTP_IF_NONE_MATCH"] = header
+            return static_file(basename, root=root, **kw).status_code
+
+        def test_list_containing_the_etag(self):
+            self.assertEqual(304, self._status('"other", %s, "third"' % self.etag))
+
+        def test_list_without_the_etag(self):
+            self.assertEqual(200, self._status('"nope", "nada"'))
+
+        def test_star_matches_any_existing_file(self):
+            self.assertEqual(304, self._status("*"))
+
+        def test_weak_validator_matches(self):
+            self.assertEqual(304, self._status("W/%s" % self.etag))
+
+        def test_custom_quoted_etag(self):
+            self.assertEqual(304, self._status('"abc"', etag='"abc"'))
+            self.assertEqual(304, self._status('W/"abc"', etag='"abc"'))
+            self.assertEqual(200, self._status('"abd"', etag='"abc"'))
+
+        def test_exact_single_match_still_works(self):
+            self.assertEqual(304, self._status(self.etag))
+
+        def test_if_modified_since_still_ignored_when_inm_present(self):
+            request.environ["HTTP_IF_MODIFIED_SINCE"] = bottle.http_date(time.time())
+            self.assertEqual(200, self._status('"nope"'))
+  test/test_sendfile_quoted_etag_hidden.py: |
+    import os
+    import time
+    import unittest
+
+    import bottle
+    from bottle import request, static_file
+
+    basename = os.path.basename(__file__)
+    root = os.path.dirname(__file__)
+    import re
+
+
+    class TestQuotedEtag(unittest.TestCase):
+        def setUp(self):
+            request.bind({})
+
+        def test_generated_etag_is_a_quoted_string(self):
+            etag = static_file(basename, root=root).headers["ETag"]
+            self.assertTrue(re.fullmatch(r'"[0-9a-f]{40}"', etag), etag)
+
+        def test_quoted_etag_round_trips(self):
+            etag = static_file(basename, root=root).headers["ETag"]
+            request.environ["HTTP_IF_NONE_MATCH"] = etag
+            self.assertEqual(304, static_file(basename, root=root).status_code)
+
+        def test_legacy_unquoted_value_still_matches(self):
+            etag = static_file(basename, root=root).headers["ETag"]
+            request.environ["HTTP_IF_NONE_MATCH"] = etag.strip('"')
+            self.assertEqual(304, static_file(basename, root=root).status_code)
+
+        def test_custom_etag_is_left_alone(self):
+            self.assertEqual("abc", static_file(basename, root=root, etag="abc").headers["ETag"])
+
+        def test_disabled_etag_has_no_header(self):
+            self.assertNotIn("ETag", static_file(basename, root=root, etag=False).headers)
+turns:
+  - prompt: >-
+      bottle's `static_file()` answers a request with `304 Not Modified` even when the client sent an
+      `If-None-Match` ETag that does not match, as long as a fresh `If-Modified-Since` is also
+      present. RFC 7232 section 3.3 says `If-Modified-Since` must be ignored whenever `If-None-Match`
+      is present. Please find the conditional handling in bottle.py and fix it. Run the tests from
+      this directory with `python3 -m pytest -q test/test_sendfile.py`.
+    checks:
+      - {kind: tests, runner: python, files: [test/test_sendfile.py], hidden: [test/test_sendfile.py]}
+  - prompt: >-
+      In three to five sentences explain the root cause: which two request headers `static_file` looks
+      at, in what order, and why a non-matching ETag fell through to the date check. Do not change any
+      files.
+    checks:
+      - {kind: keyed_facts, all: [If-None-Match|HTTP_IF_NONE_MATCH, If-Modified-Since|HTTP_IF_MODIFIED_SINCE, static_file], any: [fell|fall|fallthrough|ignored|precedence]}
+  - prompt: >-
+      Add a test file `test/test_sendfile_conditional.py` (unittest style, like test_sendfile.py: bind
+      `request` with `request.bind({})` in setUp) with at least four tests: a matching ETag gives 304,
+      a non-matching ETag wins over a fresh If-Modified-Since (200), If-Modified-Since alone still
+      gives 304, and no conditional headers give 200. Run it.
+    checks:
+      - {kind: file_regex, path: test/test_sendfile_conditional.py, pattern: ^    def test_, min_count: 4}
+      - {kind: tests, runner: python, files: [test/test_sendfile_conditional.py]}
+  - prompt: >-
+      `If-None-Match` handling only understands a single exactly equal value. Clients also send a
+      comma separated list (`"a", "b"`), the wildcard `*`, and weak validators (`W/"a"`). Support them
+      in static_file: any listed tag that equals the ETag under weak comparison (ignore a `W/` prefix
+      and the surrounding double quotes) gives 304, `*` gives 304 for any existing file, and a list
+      without the tag gives 200 (a stale If-Modified-Since must still be ignored). A custom `etag=`
+      argument has to work the same way.
+    checks:
+      - {kind: tests, runner: python, files: [test/test_sendfile_inm_forms_hidden.py, test/test_sendfile.py], hidden: [test/test_sendfile_inm_forms_hidden.py, test/test_sendfile.py]}
+  - prompt: >-
+      Add a bullet to the "Release 0.14 (in development)" section of docs/changelog.rst under a new
+      `.. rubric:: Bugfixes` heading at the top of that section: static_file now ignores
+      If-Modified-Since when If-None-Match is present and understands lists, `*` and weak validators
+      in If-None-Match.
+    checks:
+      - {kind: file_regex, path: docs/changelog.rst, pattern: '^Release 0\.14 \(in development\)\n=+\n(?:(?!Release 0\.13).*\n)*?\* .*(?i:If-None-Match)'}
+  - prompt: >-
+      Question only: which request headers does `static_file` read, which response headers does it set
+      for caching and for range requests, and what does it return for a HEAD request? Name the
+      headers. Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [If-None-Match|HTTP_IF_NONE_MATCH, If-Modified-Since|HTTP_IF_MODIFIED_SINCE, Range, Last-Modified, ETag, HEAD]}
+  - prompt: >-
+      The automatically generated ETag is a bare hex digest, but an entity tag must be a quoted string
+      (RFC 7232 section 2.3). Make the auto-generated ETag header look like `"<sha1 hex>"` (double
+      quotes included). A custom `etag=` value must be used exactly as given, `etag=False` must still
+      send no ETag, and an If-None-Match that carries the old unquoted digest must still match.
+    checks:
+      - {kind: tests, runner: python, files: [test/test_sendfile_quoted_etag_hidden.py, test/test_sendfile_inm_forms_hidden.py, test/test_sendfile.py], hidden: [test/test_sendfile_quoted_etag_hidden.py, test/test_sendfile_inm_forms_hidden.py, test/test_sendfile.py]}
+  - prompt: >-
+      Update the `static_file` docstring: say that `If-None-Match` takes precedence over
+      `If-Modified-Since`, that it accepts lists, `*` and weak validators, and that the auto-generated
+      ETag is a quoted string. Docstring only.
+    checks:
+      - {kind: file_regex, path: bottle.py, pattern: '(?s)def static_file\(.*?If-None-Match.{0,600}?(?i:precedence|takes priority|ignored)'}
+      - {kind: tests, runner: python, files: [test/test_sendfile.py], hidden: [test/test_sendfile.py]}
+  - prompt: >-
+      Run the sendfile tests together with your new test file and report the totals (passed / failed).
+      Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [test_sendfile, \d+ passed]}
+  - prompt: >-
+      Review the changes you made in this session as a code reviewer would: list each file you changed
+      or added, what changed, and any remaining edge case you did not cover. Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [bottle\.py, changelog, test], any: [edge, risk, not cover, remaining]}
