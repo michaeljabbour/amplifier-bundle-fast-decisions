@@ -1,0 +1,2627 @@
+{
+  "settings_sha256": "n1:1409766246330cc8",
+  "waves": {
+    "js-phone-r2-any": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<campaign>/w000-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "js-phone-r2-any-fable",
+              "wave_id": "js-phone-r2-any",
+              "scenario": "js-phone",
+              "rep": 2,
+              "host": "any",
+              "arm": "fable",
+              "kind": "control",
+              "cell": "plain",
+              "model": "claude-fable-5-1",
+              "nonce": "84f8fe57-85c1-42ee-89ad-69d05bb46ef7",
+              "attempt": 1,
+              "est_usd": 3.99,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-fable-5-1",
+                "effort": "absent"
+              }
+            },
+            {
+              "key": "js-phone-r2-any-fable_medium",
+              "wave_id": "js-phone-r2-any",
+              "scenario": "js-phone",
+              "rep": 2,
+              "host": "any",
+              "arm": "fable_medium",
+              "kind": "control",
+              "cell": "plain-medium",
+              "model": "claude-fable-5-1",
+              "nonce": "e2c7769f-9fcf-4c21-8bd9-0bc1ac6f90d1",
+              "attempt": 1,
+              "est_usd": 3.39,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-fable-5-1",
+                "effort": "medium"
+              }
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "js-phone-r2-any-fable": "done",
+            "js-phone-r2-any-fable_medium": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "readme-rewrite-r2-any": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<campaign>/w001-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "readme-rewrite-r2-any-fable",
+              "wave_id": "readme-rewrite-r2-any",
+              "scenario": "readme-rewrite",
+              "rep": 2,
+              "host": "any",
+              "arm": "fable",
+              "kind": "control",
+              "cell": "plain",
+              "model": "claude-fable-5-1",
+              "nonce": "d3a601b4-b1a2-499b-9573-3eb7c1217c94",
+              "attempt": 1,
+              "est_usd": 3.192,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-fable-5-1",
+                "effort": "absent"
+              }
+            },
+            {
+              "key": "readme-rewrite-r2-any-fable_medium",
+              "wave_id": "readme-rewrite-r2-any",
+              "scenario": "readme-rewrite",
+              "rep": 2,
+              "host": "any",
+              "arm": "fable_medium",
+              "kind": "control",
+              "cell": "plain-medium",
+              "model": "claude-fable-5-1",
+              "nonce": "7264831b-662e-4f64-bb8f-01307f995cb9",
+              "attempt": 1,
+              "est_usd": 2.712,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-fable-5-1",
+                "effort": "medium"
+              }
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "readme-rewrite-r2-any-fable": "done",
+            "readme-rewrite-r2-any-fable_medium": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "go-linkedlist-r2-any": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<campaign>/w002-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "go-linkedlist-r2-any-fable",
+              "wave_id": "go-linkedlist-r2-any",
+              "scenario": "go-linkedlist",
+              "rep": 2,
+              "host": "any",
+              "arm": "fable",
+              "kind": "control",
+              "cell": "plain",
+              "model": "claude-fable-5-1",
+              "nonce": "5b3edb36-3847-4190-94a2-77523053bd08",
+              "attempt": 1,
+              "est_usd": 9.0397,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-fable-5-1",
+                "effort": "absent"
+              }
+            },
+            {
+              "key": "go-linkedlist-r2-any-fable_medium",
+              "wave_id": "go-linkedlist-r2-any",
+              "scenario": "go-linkedlist",
+              "rep": 2,
+              "host": "any",
+              "arm": "fable_medium",
+              "kind": "control",
+              "cell": "plain-medium",
+              "model": "claude-fable-5-1",
+              "nonce": "2579b0a1-e7ce-4ed9-9684-d7485a05ca9e",
+              "attempt": 1,
+              "est_usd": 7.6804,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-fable-5-1",
+                "effort": "medium"
+              }
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "go-linkedlist-r2-any-fable": "done",
+            "go-linkedlist-r2-any-fable_medium": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "filelock-explain-r2-any": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<campaign>/w003-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "filelock-explain-r2-any-fable",
+              "wave_id": "filelock-explain-r2-any",
+              "scenario": "filelock-explain",
+              "rep": 2,
+              "host": "any",
+              "arm": "fable",
+              "kind": "control",
+              "cell": "plain",
+              "model": "claude-fable-5-1",
+              "nonce": "3c6d489a-79bb-4a5f-909e-d71982021da6",
+              "attempt": 1,
+              "est_usd": 3.1122,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-fable-5-1",
+                "effort": "absent"
+              }
+            },
+            {
+              "key": "filelock-explain-r2-any-fable_medium",
+              "wave_id": "filelock-explain-r2-any",
+              "scenario": "filelock-explain",
+              "rep": 2,
+              "host": "any",
+              "arm": "fable_medium",
+              "kind": "control",
+              "cell": "plain-medium",
+              "model": "claude-fable-5-1",
+              "nonce": "df81c98b-a98e-4881-8d51-f3edfb5c09d3",
+              "attempt": 1,
+              "est_usd": 2.6442,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-fable-5-1",
+                "effort": "medium"
+              }
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "filelock-explain-r2-any-fable": "done",
+            "filelock-explain-r2-any-fable_medium": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "go-protein-r2-any": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<campaign>/w004-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "go-protein-r2-any-fable",
+              "wave_id": "go-protein-r2-any",
+              "scenario": "go-protein",
+              "rep": 2,
+              "host": "any",
+              "arm": "fable",
+              "kind": "control",
+              "cell": "plain",
+              "model": "claude-fable-5-1",
+              "nonce": "7dd6ce0a-04a0-4772-9286-f3096bcc60fc",
+              "attempt": 1,
+              "est_usd": 3.192,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-fable-5-1",
+                "effort": "absent"
+              }
+            },
+            {
+              "key": "go-protein-r2-any-fable_medium",
+              "wave_id": "go-protein-r2-any",
+              "scenario": "go-protein",
+              "rep": 2,
+              "host": "any",
+              "arm": "fable_medium",
+              "kind": "control",
+              "cell": "plain-medium",
+              "model": "claude-fable-5-1",
+              "nonce": "c2564e9e-d427-4ef3-89e5-085c8a89f423",
+              "attempt": 1,
+              "est_usd": 2.712,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-fable-5-1",
+                "effort": "medium"
+              }
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "go-protein-r2-any-fable": "done",
+            "go-protein-r2-any-fable_medium": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "fastrand-explain-r1-any": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<campaign>/w005-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "fastrand-explain-r1-any-fable",
+              "wave_id": "fastrand-explain-r1-any",
+              "scenario": "fastrand-explain",
+              "rep": 1,
+              "host": "any",
+              "arm": "fable",
+              "kind": "control",
+              "cell": "plain",
+              "model": "claude-fable-5-1",
+              "nonce": "1f16012d-7091-4f16-b4c4-89d08e95fcc8",
+              "attempt": 1,
+              "est_usd": 3.1122,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-fable-5-1",
+                "effort": "absent"
+              }
+            },
+            {
+              "key": "fastrand-explain-r1-any-fable_medium",
+              "wave_id": "fastrand-explain-r1-any",
+              "scenario": "fastrand-explain",
+              "rep": 1,
+              "host": "any",
+              "arm": "fable_medium",
+              "kind": "control",
+              "cell": "plain-medium",
+              "model": "claude-fable-5-1",
+              "nonce": "f8cdef67-00df-4a14-8469-8ac03a20adae",
+              "attempt": 1,
+              "est_usd": 2.6442,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-fable-5-1",
+                "effort": "medium"
+              }
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "fastrand-explain-r1-any-fable": "done",
+            "fastrand-explain-r1-any-fable_medium": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "js-listops-r2-any": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<campaign>/w006-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "js-listops-r2-any-fable",
+              "wave_id": "js-listops-r2-any",
+              "scenario": "js-listops",
+              "rep": 2,
+              "host": "any",
+              "arm": "fable",
+              "kind": "control",
+              "cell": "plain",
+              "model": "claude-fable-5-1",
+              "nonce": "1b13c1f2-a57e-4342-8eeb-b0487806c425",
+              "attempt": 1,
+              "est_usd": 3.192,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-fable-5-1",
+                "effort": "absent"
+              }
+            },
+            {
+              "key": "js-listops-r2-any-fable_medium",
+              "wave_id": "js-listops-r2-any",
+              "scenario": "js-listops",
+              "rep": 2,
+              "host": "any",
+              "arm": "fable_medium",
+              "kind": "control",
+              "cell": "plain-medium",
+              "model": "claude-fable-5-1",
+              "nonce": "b8982872-1690-4b94-ae0c-92f093e5b2fd",
+              "attempt": 1,
+              "est_usd": 2.712,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-fable-5-1",
+                "effort": "medium"
+              }
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "js-listops-r2-any-fable": "done",
+            "js-listops-r2-any-fable_medium": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "semver-review-r1-any": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<campaign>/w007-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "semver-review-r1-any-fable",
+              "wave_id": "semver-review-r1-any",
+              "scenario": "semver-review",
+              "rep": 1,
+              "host": "any",
+              "arm": "fable",
+              "kind": "control",
+              "cell": "plain",
+              "model": "claude-fable-5-1",
+              "nonce": "9c284f1a-a708-4a1b-8649-139d9c8d7620",
+              "attempt": 1,
+              "est_usd": 3.5644,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-fable-5-1",
+                "effort": "absent"
+              }
+            },
+            {
+              "key": "semver-review-r1-any-fable_medium",
+              "wave_id": "semver-review-r1-any",
+              "scenario": "semver-review",
+              "rep": 1,
+              "host": "any",
+              "arm": "fable_medium",
+              "kind": "control",
+              "cell": "plain-medium",
+              "model": "claude-fable-5-1",
+              "nonce": "83ac3326-12b6-4c07-856e-678054d0fd21",
+              "attempt": 1,
+              "est_usd": 3.0284,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-fable-5-1",
+                "effort": "medium"
+              }
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "semver-review-r1-any-fable": "done",
+            "semver-review-r1-any-fable_medium": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "js-listops-r1-any": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<campaign>/w008-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "js-listops-r1-any-fable",
+              "wave_id": "js-listops-r1-any",
+              "scenario": "js-listops",
+              "rep": 1,
+              "host": "any",
+              "arm": "fable",
+              "kind": "control",
+              "cell": "plain",
+              "model": "claude-fable-5-1",
+              "nonce": "0acf3c2e-0675-44a7-8da3-ab1b34ead521",
+              "attempt": 1,
+              "est_usd": 3.192,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-fable-5-1",
+                "effort": "absent"
+              }
+            },
+            {
+              "key": "js-listops-r1-any-fable_medium",
+              "wave_id": "js-listops-r1-any",
+              "scenario": "js-listops",
+              "rep": 1,
+              "host": "any",
+              "arm": "fable_medium",
+              "kind": "control",
+              "cell": "plain-medium",
+              "model": "claude-fable-5-1",
+              "nonce": "085f7d78-7426-46fd-86a3-f7db9fbd2b70",
+              "attempt": 1,
+              "est_usd": 2.712,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-fable-5-1",
+                "effort": "medium"
+              }
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "js-listops-r1-any-fable": "done",
+            "js-listops-r1-any-fable_medium": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "toolz-interpose-r1-any": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<campaign>/w009-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "toolz-interpose-r1-any-fable",
+              "wave_id": "toolz-interpose-r1-any",
+              "scenario": "toolz-interpose",
+              "rep": 1,
+              "host": "any",
+              "arm": "fable",
+              "kind": "control",
+              "cell": "plain",
+              "model": "claude-fable-5-1",
+              "nonce": "6e6a914d-5e8b-47d8-9a93-dce49e14754d",
+              "attempt": 1,
+              "est_usd": 4.788,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-fable-5-1",
+                "effort": "absent"
+              }
+            },
+            {
+              "key": "toolz-interpose-r1-any-fable_medium",
+              "wave_id": "toolz-interpose-r1-any",
+              "scenario": "toolz-interpose",
+              "rep": 1,
+              "host": "any",
+              "arm": "fable_medium",
+              "kind": "control",
+              "cell": "plain-medium",
+              "model": "claude-fable-5-1",
+              "nonce": "0dcade98-beea-4979-b489-d0a0fbed6ab4",
+              "attempt": 1,
+              "est_usd": 4.068,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-fable-5-1",
+                "effort": "medium"
+              }
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "toolz-interpose-r1-any-fable": "done",
+            "toolz-interpose-r1-any-fable_medium": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "docstring-audit-r2-any": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<campaign>/w010-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "docstring-audit-r2-any-fable",
+              "wave_id": "docstring-audit-r2-any",
+              "scenario": "docstring-audit",
+              "rep": 2,
+              "host": "any",
+              "arm": "fable",
+              "kind": "control",
+              "cell": "plain",
+              "model": "claude-fable-5-1",
+              "nonce": "01567157-996f-4f65-a82e-8978843b9acb",
+              "attempt": 1,
+              "est_usd": 5.3626,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-fable-5-1",
+                "effort": "absent"
+              }
+            },
+            {
+              "key": "docstring-audit-r2-any-fable_medium",
+              "wave_id": "docstring-audit-r2-any",
+              "scenario": "docstring-audit",
+              "rep": 2,
+              "host": "any",
+              "arm": "fable_medium",
+              "kind": "control",
+              "cell": "plain-medium",
+              "model": "claude-fable-5-1",
+              "nonce": "304cfaa8-dfde-4bda-918f-8ef51e52e9d5",
+              "attempt": 1,
+              "est_usd": 4.5562,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-fable-5-1",
+                "effort": "medium"
+              }
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "docstring-audit-r2-any-fable": "done",
+            "docstring-audit-r2-any-fable_medium": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "sales-orders-r2-any": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<campaign>/w011-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "sales-orders-r2-any-fable",
+              "wave_id": "sales-orders-r2-any",
+              "scenario": "sales-orders",
+              "rep": 2,
+              "host": "any",
+              "arm": "fable",
+              "kind": "control",
+              "cell": "plain",
+              "model": "claude-fable-5-1",
+              "nonce": "ddcf9f66-6c77-4399-9996-5d79e5477979",
+              "attempt": 1,
+              "est_usd": 7.5331,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-fable-5-1",
+                "effort": "absent"
+              }
+            },
+            {
+              "key": "sales-orders-r2-any-fable_medium",
+              "wave_id": "sales-orders-r2-any",
+              "scenario": "sales-orders",
+              "rep": 2,
+              "host": "any",
+              "arm": "fable_medium",
+              "kind": "control",
+              "cell": "plain-medium",
+              "model": "claude-fable-5-1",
+              "nonce": "c44693b8-d1c0-40a6-8884-465e77d5136c",
+              "attempt": 1,
+              "est_usd": 6.4003,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-fable-5-1",
+                "effort": "medium"
+              }
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "sales-orders-r2-any-fable": "done",
+            "sales-orders-r2-any-fable_medium": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "lark-template-r1-any": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<campaign>/w012-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "lark-template-r1-any-fable",
+              "wave_id": "lark-template-r1-any",
+              "scenario": "lark-template",
+              "rep": 1,
+              "host": "any",
+              "arm": "fable",
+              "kind": "control",
+              "cell": "plain",
+              "model": "claude-fable-5-1",
+              "nonce": "4c34fd36-6af4-455c-991b-20b1021d599c",
+              "attempt": 1,
+              "est_usd": 4.788,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-fable-5-1",
+                "effort": "absent"
+              }
+            },
+            {
+              "key": "lark-template-r1-any-fable_medium",
+              "wave_id": "lark-template-r1-any",
+              "scenario": "lark-template",
+              "rep": 1,
+              "host": "any",
+              "arm": "fable_medium",
+              "kind": "control",
+              "cell": "plain-medium",
+              "model": "claude-fable-5-1",
+              "nonce": "f49716cc-2d12-421c-a834-3e61f7a60ccd",
+              "attempt": 1,
+              "est_usd": 4.068,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-fable-5-1",
+                "effort": "medium"
+              }
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "lark-template-r1-any-fable": "done",
+            "lark-template-r1-any-fable_medium": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "mistune-escape-r2-any": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<campaign>/w013-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "mistune-escape-r2-any-fable",
+              "wave_id": "mistune-escape-r2-any",
+              "scenario": "mistune-escape",
+              "rep": 2,
+              "host": "any",
+              "arm": "fable",
+              "kind": "control",
+              "cell": "plain",
+              "model": "claude-fable-5-1",
+              "nonce": "301efe31-883e-41bb-917a-a38179502f94",
+              "attempt": 1,
+              "est_usd": 3.99,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-fable-5-1",
+                "effort": "absent"
+              }
+            },
+            {
+              "key": "mistune-escape-r2-any-fable_medium",
+              "wave_id": "mistune-escape-r2-any",
+              "scenario": "mistune-escape",
+              "rep": 2,
+              "host": "any",
+              "arm": "fable_medium",
+              "kind": "control",
+              "cell": "plain-medium",
+              "model": "claude-fable-5-1",
+              "nonce": "1b734771-933f-455f-83b0-cd403f18704f",
+              "attempt": 1,
+              "est_usd": 3.39,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-fable-5-1",
+                "effort": "medium"
+              }
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "mistune-escape-r2-any-fable": "done",
+            "mistune-escape-r2-any-fable_medium": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "go-protein-r1-any": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<campaign>/w014-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "go-protein-r1-any-fable",
+              "wave_id": "go-protein-r1-any",
+              "scenario": "go-protein",
+              "rep": 1,
+              "host": "any",
+              "arm": "fable",
+              "kind": "control",
+              "cell": "plain",
+              "model": "claude-fable-5-1",
+              "nonce": "cb154839-fc81-4702-8c0d-393810b54c18",
+              "attempt": 1,
+              "est_usd": 3.192,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-fable-5-1",
+                "effort": "absent"
+              }
+            },
+            {
+              "key": "go-protein-r1-any-fable_medium",
+              "wave_id": "go-protein-r1-any",
+              "scenario": "go-protein",
+              "rep": 1,
+              "host": "any",
+              "arm": "fable_medium",
+              "kind": "control",
+              "cell": "plain-medium",
+              "model": "claude-fable-5-1",
+              "nonce": "2cd425ef-9986-40dc-86a0-dee09729ee6d",
+              "attempt": 1,
+              "est_usd": 2.712,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-fable-5-1",
+                "effort": "medium"
+              }
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "go-protein-r1-any-fable": "done",
+            "go-protein-r1-any-fable_medium": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "api-docs-r2-any": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<campaign>/w015-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "api-docs-r2-any-fable",
+              "wave_id": "api-docs-r2-any",
+              "scenario": "api-docs",
+              "rep": 2,
+              "host": "any",
+              "arm": "fable",
+              "kind": "control",
+              "cell": "plain",
+              "model": "claude-fable-5-1",
+              "nonce": "a3967813-2eed-425d-9e81-2cb32a64fe71",
+              "attempt": 1,
+              "est_usd": 9.0397,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-fable-5-1",
+                "effort": "absent"
+              }
+            },
+            {
+              "key": "api-docs-r2-any-fable_medium",
+              "wave_id": "api-docs-r2-any",
+              "scenario": "api-docs",
+              "rep": 2,
+              "host": "any",
+              "arm": "fable_medium",
+              "kind": "control",
+              "cell": "plain-medium",
+              "model": "claude-fable-5-1",
+              "nonce": "e0df00b6-e582-492f-9b62-af2ed117abd3",
+              "attempt": 1,
+              "est_usd": 7.6804,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-fable-5-1",
+                "effort": "medium"
+              }
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "api-docs-r2-any-fable": "done",
+            "api-docs-r2-any-fable_medium": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "survey-analysis-r1-any": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<campaign>/w016-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "survey-analysis-r1-any-fable",
+              "wave_id": "survey-analysis-r1-any",
+              "scenario": "survey-analysis",
+              "rep": 1,
+              "host": "any",
+              "arm": "fable",
+              "kind": "control",
+              "cell": "plain",
+              "model": "claude-fable-5-1",
+              "nonce": "abdc2fe0-a024-4fd2-a52b-144961bac734",
+              "attempt": 1,
+              "est_usd": 7.5331,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-fable-5-1",
+                "effort": "absent"
+              }
+            },
+            {
+              "key": "survey-analysis-r1-any-fable_medium",
+              "wave_id": "survey-analysis-r1-any",
+              "scenario": "survey-analysis",
+              "rep": 1,
+              "host": "any",
+              "arm": "fable_medium",
+              "kind": "control",
+              "cell": "plain-medium",
+              "model": "claude-fable-5-1",
+              "nonce": "4ba125e1-0374-4340-8d95-2da3234cc6a9",
+              "attempt": 1,
+              "est_usd": 6.4003,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-fable-5-1",
+                "effort": "medium"
+              }
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "survey-analysis-r1-any-fable": "done",
+            "survey-analysis-r1-any-fable_medium": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "xmltodict-none-r2-any": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<campaign>/w017-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "xmltodict-none-r2-any-fable",
+              "wave_id": "xmltodict-none-r2-any",
+              "scenario": "xmltodict-none",
+              "rep": 2,
+              "host": "any",
+              "arm": "fable",
+              "kind": "control",
+              "cell": "plain",
+              "model": "claude-fable-5-1",
+              "nonce": "06464a9c-f196-410f-a15b-d514e1403fb2",
+              "attempt": 1,
+              "est_usd": 3.99,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-fable-5-1",
+                "effort": "absent"
+              }
+            },
+            {
+              "key": "xmltodict-none-r2-any-fable_medium",
+              "wave_id": "xmltodict-none-r2-any",
+              "scenario": "xmltodict-none",
+              "rep": 2,
+              "host": "any",
+              "arm": "fable_medium",
+              "kind": "control",
+              "cell": "plain-medium",
+              "model": "claude-fable-5-1",
+              "nonce": "138443cf-dc3d-4211-9d6f-a781a83cac6a",
+              "attempt": 1,
+              "est_usd": 3.39,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-fable-5-1",
+                "effort": "medium"
+              }
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "xmltodict-none-r2-any-fable": "done",
+            "xmltodict-none-r2-any-fable_medium": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "discrepancy-docs-r1-any": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<campaign>/w018-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "discrepancy-docs-r1-any-fable",
+              "wave_id": "discrepancy-docs-r1-any",
+              "scenario": "discrepancy-docs",
+              "rep": 1,
+              "host": "any",
+              "arm": "fable",
+              "kind": "control",
+              "cell": "plain",
+              "model": "claude-fable-5-1",
+              "nonce": "09efb007-1ff1-41e1-9d94-1617f7a584d4",
+              "attempt": 1,
+              "est_usd": 9.0397,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-fable-5-1",
+                "effort": "absent"
+              }
+            },
+            {
+              "key": "discrepancy-docs-r1-any-fable_medium",
+              "wave_id": "discrepancy-docs-r1-any",
+              "scenario": "discrepancy-docs",
+              "rep": 1,
+              "host": "any",
+              "arm": "fable_medium",
+              "kind": "control",
+              "cell": "plain-medium",
+              "model": "claude-fable-5-1",
+              "nonce": "8c11e9fd-7aed-4529-b6f1-bc902a7f242b",
+              "attempt": 1,
+              "est_usd": 7.6804,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-fable-5-1",
+                "effort": "medium"
+              }
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "discrepancy-docs-r1-any-fable": "done",
+            "discrepancy-docs-r1-any-fable_medium": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "semver-review-r2-any": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<campaign>/w019-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "semver-review-r2-any-fable",
+              "wave_id": "semver-review-r2-any",
+              "scenario": "semver-review",
+              "rep": 2,
+              "host": "any",
+              "arm": "fable",
+              "kind": "control",
+              "cell": "plain",
+              "model": "claude-fable-5-1",
+              "nonce": "9d003297-1114-4788-939c-fefee983b091",
+              "attempt": 1,
+              "est_usd": 3.5644,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-fable-5-1",
+                "effort": "absent"
+              }
+            },
+            {
+              "key": "semver-review-r2-any-fable_medium",
+              "wave_id": "semver-review-r2-any",
+              "scenario": "semver-review",
+              "rep": 2,
+              "host": "any",
+              "arm": "fable_medium",
+              "kind": "control",
+              "cell": "plain-medium",
+              "model": "claude-fable-5-1",
+              "nonce": "7c8d6a7a-2378-4973-a373-7477330a2f4a",
+              "attempt": 1,
+              "est_usd": 3.0284,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-fable-5-1",
+                "effort": "medium"
+              }
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "semver-review-r2-any-fable": "done",
+            "semver-review-r2-any-fable_medium": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "py-go-counting-r2-any": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<campaign>/w020-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "py-go-counting-r2-any-fable",
+              "wave_id": "py-go-counting-r2-any",
+              "scenario": "py-go-counting",
+              "rep": 2,
+              "host": "any",
+              "arm": "fable",
+              "kind": "control",
+              "cell": "plain",
+              "model": "claude-fable-5-1",
+              "nonce": "dba9ad58-afc0-4d17-b58c-aa58761b598f",
+              "attempt": 1,
+              "est_usd": 7.7374,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-fable-5-1",
+                "effort": "absent"
+              }
+            },
+            {
+              "key": "py-go-counting-r2-any-fable_medium",
+              "wave_id": "py-go-counting-r2-any",
+              "scenario": "py-go-counting",
+              "rep": 2,
+              "host": "any",
+              "arm": "fable_medium",
+              "kind": "control",
+              "cell": "plain-medium",
+              "model": "claude-fable-5-1",
+              "nonce": "e3187365-0214-4a01-aa13-634b3bf5d7b9",
+              "attempt": 1,
+              "est_usd": 6.5739,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-fable-5-1",
+                "effort": "medium"
+              }
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "py-go-counting-r2-any-fable": "done",
+            "py-go-counting-r2-any-fable_medium": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "readme-rewrite-r1-any": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<campaign>/w021-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "readme-rewrite-r1-any-fable",
+              "wave_id": "readme-rewrite-r1-any",
+              "scenario": "readme-rewrite",
+              "rep": 1,
+              "host": "any",
+              "arm": "fable",
+              "kind": "control",
+              "cell": "plain",
+              "model": "claude-fable-5-1",
+              "nonce": "7597472f-b97a-418d-8d58-6e1d7e4ef13d",
+              "attempt": 1,
+              "est_usd": 3.192,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-fable-5-1",
+                "effort": "absent"
+              }
+            },
+            {
+              "key": "readme-rewrite-r1-any-fable_medium",
+              "wave_id": "readme-rewrite-r1-any",
+              "scenario": "readme-rewrite",
+              "rep": 1,
+              "host": "any",
+              "arm": "fable_medium",
+              "kind": "control",
+              "cell": "plain-medium",
+              "model": "claude-fable-5-1",
+              "nonce": "ed93e32e-f7fb-4531-b1b9-296da700111c",
+              "attempt": 1,
+              "est_usd": 2.712,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-fable-5-1",
+                "effort": "medium"
+              }
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "readme-rewrite-r1-any-fable": "done",
+            "readme-rewrite-r1-any-fable_medium": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "debug-triage-r2-any": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<campaign>/w022-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "debug-triage-r2-any-fable",
+              "wave_id": "debug-triage-r2-any",
+              "scenario": "debug-triage",
+              "rep": 2,
+              "host": "any",
+              "arm": "fable",
+              "kind": "control",
+              "cell": "plain",
+              "model": "claude-fable-5-1",
+              "nonce": "dd784dbe-0e28-4873-996a-1757d7647a7f",
+              "attempt": 1,
+              "est_usd": 4.8199,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-fable-5-1",
+                "effort": "absent"
+              }
+            },
+            {
+              "key": "debug-triage-r2-any-fable_medium",
+              "wave_id": "debug-triage-r2-any",
+              "scenario": "debug-triage",
+              "rep": 2,
+              "host": "any",
+              "arm": "fable_medium",
+              "kind": "control",
+              "cell": "plain-medium",
+              "model": "claude-fable-5-1",
+              "nonce": "eda8201b-97ca-472b-aa7b-7ec80e00f237",
+              "attempt": 1,
+              "est_usd": 4.0951,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-fable-5-1",
+                "effort": "medium"
+              }
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "debug-triage-r2-any-fable": "done",
+            "debug-triage-r2-any-fable_medium": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "sales-orders-r1-any": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<campaign>/w023-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "sales-orders-r1-any-fable",
+              "wave_id": "sales-orders-r1-any",
+              "scenario": "sales-orders",
+              "rep": 1,
+              "host": "any",
+              "arm": "fable",
+              "kind": "control",
+              "cell": "plain",
+              "model": "claude-fable-5-1",
+              "nonce": "2ae09969-e773-44bf-abfa-633b4244b524",
+              "attempt": 1,
+              "est_usd": 7.5331,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-fable-5-1",
+                "effort": "absent"
+              }
+            },
+            {
+              "key": "sales-orders-r1-any-fable_medium",
+              "wave_id": "sales-orders-r1-any",
+              "scenario": "sales-orders",
+              "rep": 1,
+              "host": "any",
+              "arm": "fable_medium",
+              "kind": "control",
+              "cell": "plain-medium",
+              "model": "claude-fable-5-1",
+              "nonce": "423ff54c-27b6-4a03-85b3-a29b8e89a843",
+              "attempt": 1,
+              "est_usd": 6.4003,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-fable-5-1",
+                "effort": "medium"
+              }
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "sales-orders-r1-any-fable": "done",
+            "sales-orders-r1-any-fable_medium": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "mistune-escape-r1-any": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<campaign>/w024-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "mistune-escape-r1-any-fable",
+              "wave_id": "mistune-escape-r1-any",
+              "scenario": "mistune-escape",
+              "rep": 1,
+              "host": "any",
+              "arm": "fable",
+              "kind": "control",
+              "cell": "plain",
+              "model": "claude-fable-5-1",
+              "nonce": "b9cdf376-1b53-4b8f-abac-fef950a4cc08",
+              "attempt": 1,
+              "est_usd": 3.99,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-fable-5-1",
+                "effort": "absent"
+              }
+            },
+            {
+              "key": "mistune-escape-r1-any-fable_medium",
+              "wave_id": "mistune-escape-r1-any",
+              "scenario": "mistune-escape",
+              "rep": 1,
+              "host": "any",
+              "arm": "fable_medium",
+              "kind": "control",
+              "cell": "plain-medium",
+              "model": "claude-fable-5-1",
+              "nonce": "8d0f55d1-9cb1-4547-aa6b-c339005f2725",
+              "attempt": 1,
+              "est_usd": 3.39,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-fable-5-1",
+                "effort": "medium"
+              }
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "mistune-escape-r1-any-fable": "done",
+            "mistune-escape-r1-any-fable_medium": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "debug-triage-r1-any": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<campaign>/w025-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "debug-triage-r1-any-fable",
+              "wave_id": "debug-triage-r1-any",
+              "scenario": "debug-triage",
+              "rep": 1,
+              "host": "any",
+              "arm": "fable",
+              "kind": "control",
+              "cell": "plain",
+              "model": "claude-fable-5-1",
+              "nonce": "f970074b-8f3c-409d-a288-56e5de18bfa3",
+              "attempt": 1,
+              "est_usd": 4.8199,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-fable-5-1",
+                "effort": "absent"
+              }
+            },
+            {
+              "key": "debug-triage-r1-any-fable_medium",
+              "wave_id": "debug-triage-r1-any",
+              "scenario": "debug-triage",
+              "rep": 1,
+              "host": "any",
+              "arm": "fable_medium",
+              "kind": "control",
+              "cell": "plain-medium",
+              "model": "claude-fable-5-1",
+              "nonce": "cc0e9fa2-53be-4f0c-8a7a-4b013b99dfd3",
+              "attempt": 1,
+              "est_usd": 4.0951,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-fable-5-1",
+                "effort": "medium"
+              }
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "debug-triage-r1-any-fable": "done",
+            "debug-triage-r1-any-fable_medium": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "humanize-review-r1-any": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<campaign>/w026-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "humanize-review-r1-any-fable",
+              "wave_id": "humanize-review-r1-any",
+              "scenario": "humanize-review",
+              "rep": 1,
+              "host": "any",
+              "arm": "fable",
+              "kind": "control",
+              "cell": "plain",
+              "model": "claude-fable-5-1",
+              "nonce": "0851f33e-296f-427c-8bb0-3ec8a9c7c0ae",
+              "attempt": 1,
+              "est_usd": 5.3626,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-fable-5-1",
+                "effort": "absent"
+              }
+            },
+            {
+              "key": "humanize-review-r1-any-fable_medium",
+              "wave_id": "humanize-review-r1-any",
+              "scenario": "humanize-review",
+              "rep": 1,
+              "host": "any",
+              "arm": "fable_medium",
+              "kind": "control",
+              "cell": "plain-medium",
+              "model": "claude-fable-5-1",
+              "nonce": "a9f35fc7-ba72-466e-b55b-32d58cb7031b",
+              "attempt": 1,
+              "est_usd": 4.5562,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-fable-5-1",
+                "effort": "medium"
+              }
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "humanize-review-r1-any-fable": "done",
+            "humanize-review-r1-any-fable_medium": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "go-linkedlist-r1-any": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<campaign>/w027-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "go-linkedlist-r1-any-fable",
+              "wave_id": "go-linkedlist-r1-any",
+              "scenario": "go-linkedlist",
+              "rep": 1,
+              "host": "any",
+              "arm": "fable",
+              "kind": "control",
+              "cell": "plain",
+              "model": "claude-fable-5-1",
+              "nonce": "98338b47-4bd4-4831-a081-3d9d02a03335",
+              "attempt": 1,
+              "est_usd": 9.0397,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-fable-5-1",
+                "effort": "absent"
+              }
+            },
+            {
+              "key": "go-linkedlist-r1-any-fable_medium",
+              "wave_id": "go-linkedlist-r1-any",
+              "scenario": "go-linkedlist",
+              "rep": 1,
+              "host": "any",
+              "arm": "fable_medium",
+              "kind": "control",
+              "cell": "plain-medium",
+              "model": "claude-fable-5-1",
+              "nonce": "6bbe29c4-8833-41dc-88b7-a2ba884dea3a",
+              "attempt": 1,
+              "est_usd": 7.6804,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-fable-5-1",
+                "effort": "medium"
+              }
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "go-linkedlist-r1-any-fable": "done",
+            "go-linkedlist-r1-any-fable_medium": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "xmltodict-none-r1-any": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<campaign>/w028-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "xmltodict-none-r1-any-fable",
+              "wave_id": "xmltodict-none-r1-any",
+              "scenario": "xmltodict-none",
+              "rep": 1,
+              "host": "any",
+              "arm": "fable",
+              "kind": "control",
+              "cell": "plain",
+              "model": "claude-fable-5-1",
+              "nonce": "013b128d-f44f-4dde-895a-72b084634c29",
+              "attempt": 1,
+              "est_usd": 3.99,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-fable-5-1",
+                "effort": "absent"
+              }
+            },
+            {
+              "key": "xmltodict-none-r1-any-fable_medium",
+              "wave_id": "xmltodict-none-r1-any",
+              "scenario": "xmltodict-none",
+              "rep": 1,
+              "host": "any",
+              "arm": "fable_medium",
+              "kind": "control",
+              "cell": "plain-medium",
+              "model": "claude-fable-5-1",
+              "nonce": "56fe3343-57ae-4394-98d5-a8b3772b521f",
+              "attempt": 1,
+              "est_usd": 3.39,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-fable-5-1",
+                "effort": "medium"
+              }
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "xmltodict-none-r1-any-fable": "done",
+            "xmltodict-none-r1-any-fable_medium": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "docstring-audit-r1-any": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<campaign>/w029-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "docstring-audit-r1-any-fable",
+              "wave_id": "docstring-audit-r1-any",
+              "scenario": "docstring-audit",
+              "rep": 1,
+              "host": "any",
+              "arm": "fable",
+              "kind": "control",
+              "cell": "plain",
+              "model": "claude-fable-5-1",
+              "nonce": "25309c7c-0c26-4575-a9b1-aa0cb3803ccf",
+              "attempt": 1,
+              "est_usd": 5.3626,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-fable-5-1",
+                "effort": "absent"
+              }
+            },
+            {
+              "key": "docstring-audit-r1-any-fable_medium",
+              "wave_id": "docstring-audit-r1-any",
+              "scenario": "docstring-audit",
+              "rep": 1,
+              "host": "any",
+              "arm": "fable_medium",
+              "kind": "control",
+              "cell": "plain-medium",
+              "model": "claude-fable-5-1",
+              "nonce": "a9923828-ec3f-4e92-8f21-d9c742df5863",
+              "attempt": 1,
+              "est_usd": 4.5562,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-fable-5-1",
+                "effort": "medium"
+              }
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "docstring-audit-r1-any-fable": "done",
+            "docstring-audit-r1-any-fable_medium": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "survey-analysis-r2-any": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<campaign>/w030-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "survey-analysis-r2-any-fable",
+              "wave_id": "survey-analysis-r2-any",
+              "scenario": "survey-analysis",
+              "rep": 2,
+              "host": "any",
+              "arm": "fable",
+              "kind": "control",
+              "cell": "plain",
+              "model": "claude-fable-5-1",
+              "nonce": "86e5e5b5-7958-45aa-b514-6fe951a32f48",
+              "attempt": 1,
+              "est_usd": 7.5331,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-fable-5-1",
+                "effort": "absent"
+              }
+            },
+            {
+              "key": "survey-analysis-r2-any-fable_medium",
+              "wave_id": "survey-analysis-r2-any",
+              "scenario": "survey-analysis",
+              "rep": 2,
+              "host": "any",
+              "arm": "fable_medium",
+              "kind": "control",
+              "cell": "plain-medium",
+              "model": "claude-fable-5-1",
+              "nonce": "f903e34d-601a-40c6-b6b3-8991fd2ebe8d",
+              "attempt": 1,
+              "est_usd": 6.4003,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-fable-5-1",
+                "effort": "medium"
+              }
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "survey-analysis-r2-any-fable": "done",
+            "survey-analysis-r2-any-fable_medium": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "py-go-counting-r1-any": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<campaign>/w031-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "py-go-counting-r1-any-fable",
+              "wave_id": "py-go-counting-r1-any",
+              "scenario": "py-go-counting",
+              "rep": 1,
+              "host": "any",
+              "arm": "fable",
+              "kind": "control",
+              "cell": "plain",
+              "model": "claude-fable-5-1",
+              "nonce": "89da5528-e5ec-4a46-82c8-e36c4cf73edc",
+              "attempt": 1,
+              "est_usd": 7.7374,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-fable-5-1",
+                "effort": "absent"
+              }
+            },
+            {
+              "key": "py-go-counting-r1-any-fable_medium",
+              "wave_id": "py-go-counting-r1-any",
+              "scenario": "py-go-counting",
+              "rep": 1,
+              "host": "any",
+              "arm": "fable_medium",
+              "kind": "control",
+              "cell": "plain-medium",
+              "model": "claude-fable-5-1",
+              "nonce": "1c38fa00-e405-475f-81cc-14d5470234ba",
+              "attempt": 1,
+              "est_usd": 6.5739,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-fable-5-1",
+                "effort": "medium"
+              }
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "py-go-counting-r1-any-fable": "done",
+            "py-go-counting-r1-any-fable_medium": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "api-docs-r1-any": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<campaign>/w032-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "api-docs-r1-any-fable",
+              "wave_id": "api-docs-r1-any",
+              "scenario": "api-docs",
+              "rep": 1,
+              "host": "any",
+              "arm": "fable",
+              "kind": "control",
+              "cell": "plain",
+              "model": "claude-fable-5-1",
+              "nonce": "04542c25-7352-4f76-bcc2-0e11846e8e84",
+              "attempt": 1,
+              "est_usd": 9.0397,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-fable-5-1",
+                "effort": "absent"
+              }
+            },
+            {
+              "key": "api-docs-r1-any-fable_medium",
+              "wave_id": "api-docs-r1-any",
+              "scenario": "api-docs",
+              "rep": 1,
+              "host": "any",
+              "arm": "fable_medium",
+              "kind": "control",
+              "cell": "plain-medium",
+              "model": "claude-fable-5-1",
+              "nonce": "087b00d0-9051-40df-8e54-57a3cdd0b1f7",
+              "attempt": 1,
+              "est_usd": 7.6804,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-fable-5-1",
+                "effort": "medium"
+              }
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "api-docs-r1-any-fable": "done",
+            "api-docs-r1-any-fable_medium": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "rust-ocr-r2-any": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<campaign>/w033-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "rust-ocr-r2-any-fable",
+              "wave_id": "rust-ocr-r2-any",
+              "scenario": "rust-ocr",
+              "rep": 2,
+              "host": "any",
+              "arm": "fable",
+              "kind": "control",
+              "cell": "plain",
+              "model": "claude-fable-5-1",
+              "nonce": "ef9981c3-65fa-4577-ae69-8435536a9ad8",
+              "attempt": 1,
+              "est_usd": 9.0397,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-fable-5-1",
+                "effort": "absent"
+              }
+            },
+            {
+              "key": "rust-ocr-r2-any-fable_medium",
+              "wave_id": "rust-ocr-r2-any",
+              "scenario": "rust-ocr",
+              "rep": 2,
+              "host": "any",
+              "arm": "fable_medium",
+              "kind": "control",
+              "cell": "plain-medium",
+              "model": "claude-fable-5-1",
+              "nonce": "171194fd-5376-4e2e-9f36-688009013048",
+              "attempt": 1,
+              "est_usd": 7.6804,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-fable-5-1",
+                "effort": "medium"
+              }
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "rust-ocr-r2-any-fable": "done",
+            "rust-ocr-r2-any-fable_medium": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "py-rest-api-r1-any": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<campaign>/w034-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "py-rest-api-r1-any-fable",
+              "wave_id": "py-rest-api-r1-any",
+              "scenario": "py-rest-api",
+              "rep": 1,
+              "host": "any",
+              "arm": "fable",
+              "kind": "control",
+              "cell": "plain",
+              "model": "claude-fable-5-1",
+              "nonce": "c52ce322-f55b-4021-9a9f-3bb3df9b4f9e",
+              "attempt": 1,
+              "est_usd": 3.7346,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-fable-5-1",
+                "effort": "absent"
+              }
+            },
+            {
+              "key": "py-rest-api-r1-any-fable_medium",
+              "wave_id": "py-rest-api-r1-any",
+              "scenario": "py-rest-api",
+              "rep": 1,
+              "host": "any",
+              "arm": "fable_medium",
+              "kind": "control",
+              "cell": "plain-medium",
+              "model": "claude-fable-5-1",
+              "nonce": "be747176-5b1f-4afd-b474-728f3b9f545b",
+              "attempt": 1,
+              "est_usd": 3.173,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-fable-5-1",
+                "effort": "medium"
+              }
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "py-rest-api-r1-any-fable": "done",
+            "py-rest-api-r1-any-fable_medium": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "humanize-review-r2-any": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<campaign>/w035-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "humanize-review-r2-any-fable",
+              "wave_id": "humanize-review-r2-any",
+              "scenario": "humanize-review",
+              "rep": 2,
+              "host": "any",
+              "arm": "fable",
+              "kind": "control",
+              "cell": "plain",
+              "model": "claude-fable-5-1",
+              "nonce": "10583314-1410-4b66-82ae-362e7e20c807",
+              "attempt": 1,
+              "est_usd": 5.3626,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-fable-5-1",
+                "effort": "absent"
+              }
+            },
+            {
+              "key": "humanize-review-r2-any-fable_medium",
+              "wave_id": "humanize-review-r2-any",
+              "scenario": "humanize-review",
+              "rep": 2,
+              "host": "any",
+              "arm": "fable_medium",
+              "kind": "control",
+              "cell": "plain-medium",
+              "model": "claude-fable-5-1",
+              "nonce": "ba1eaba8-fcfc-4645-b958-372395785198",
+              "attempt": 1,
+              "est_usd": 4.5562,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-fable-5-1",
+                "effort": "medium"
+              }
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "humanize-review-r2-any-fable": "done",
+            "humanize-review-r2-any-fable_medium": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "js-phone-r1-any": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<campaign>/w036-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "js-phone-r1-any-fable",
+              "wave_id": "js-phone-r1-any",
+              "scenario": "js-phone",
+              "rep": 1,
+              "host": "any",
+              "arm": "fable",
+              "kind": "control",
+              "cell": "plain",
+              "model": "claude-fable-5-1",
+              "nonce": "b7c15948-49f7-48aa-a1a8-51c2b00e87ed",
+              "attempt": 1,
+              "est_usd": 3.99,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-fable-5-1",
+                "effort": "absent"
+              }
+            },
+            {
+              "key": "js-phone-r1-any-fable_medium",
+              "wave_id": "js-phone-r1-any",
+              "scenario": "js-phone",
+              "rep": 1,
+              "host": "any",
+              "arm": "fable_medium",
+              "kind": "control",
+              "cell": "plain-medium",
+              "model": "claude-fable-5-1",
+              "nonce": "44d7a2da-90da-4dea-b0b6-6b2f8289cd5a",
+              "attempt": 1,
+              "est_usd": 3.39,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-fable-5-1",
+                "effort": "medium"
+              }
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "js-phone-r1-any-fable": "done",
+            "js-phone-r1-any-fable_medium": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "py-rest-api-r2-any": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<campaign>/w037-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "py-rest-api-r2-any-fable",
+              "wave_id": "py-rest-api-r2-any",
+              "scenario": "py-rest-api",
+              "rep": 2,
+              "host": "any",
+              "arm": "fable",
+              "kind": "control",
+              "cell": "plain",
+              "model": "claude-fable-5-1",
+              "nonce": "cf000caa-7bd8-4a83-b3ae-d56200d9a4c9",
+              "attempt": 1,
+              "est_usd": 3.7346,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-fable-5-1",
+                "effort": "absent"
+              }
+            },
+            {
+              "key": "py-rest-api-r2-any-fable_medium",
+              "wave_id": "py-rest-api-r2-any",
+              "scenario": "py-rest-api",
+              "rep": 2,
+              "host": "any",
+              "arm": "fable_medium",
+              "kind": "control",
+              "cell": "plain-medium",
+              "model": "claude-fable-5-1",
+              "nonce": "64530dce-d653-4913-96a3-539250e628f3",
+              "attempt": 1,
+              "est_usd": 3.173,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-fable-5-1",
+                "effort": "medium"
+              }
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "py-rest-api-r2-any-fable": "done",
+            "py-rest-api-r2-any-fable_medium": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "discrepancy-docs-r2-any": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<campaign>/w038-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "discrepancy-docs-r2-any-fable",
+              "wave_id": "discrepancy-docs-r2-any",
+              "scenario": "discrepancy-docs",
+              "rep": 2,
+              "host": "any",
+              "arm": "fable",
+              "kind": "control",
+              "cell": "plain",
+              "model": "claude-fable-5-1",
+              "nonce": "18be9dee-693b-42f5-97a9-3b2f062fd1ef",
+              "attempt": 1,
+              "est_usd": 9.0397,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-fable-5-1",
+                "effort": "absent"
+              }
+            },
+            {
+              "key": "discrepancy-docs-r2-any-fable_medium",
+              "wave_id": "discrepancy-docs-r2-any",
+              "scenario": "discrepancy-docs",
+              "rep": 2,
+              "host": "any",
+              "arm": "fable_medium",
+              "kind": "control",
+              "cell": "plain-medium",
+              "model": "claude-fable-5-1",
+              "nonce": "0cf92f85-2662-4811-8a75-b2e0ea0ab3b4",
+              "attempt": 1,
+              "est_usd": 7.6804,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-fable-5-1",
+                "effort": "medium"
+              }
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "discrepancy-docs-r2-any-fable": "done",
+            "discrepancy-docs-r2-any-fable_medium": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "lark-discard-r1-any": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<campaign>/w039-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "lark-discard-r1-any-fable",
+              "wave_id": "lark-discard-r1-any",
+              "scenario": "lark-discard",
+              "rep": 1,
+              "host": "any",
+              "arm": "fable",
+              "kind": "control",
+              "cell": "plain",
+              "model": "claude-fable-5-1",
+              "nonce": "82ec7949-979f-4b6f-abb3-c1e211a9e699",
+              "attempt": 1,
+              "est_usd": 6.7032,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-fable-5-1",
+                "effort": "absent"
+              }
+            },
+            {
+              "key": "lark-discard-r1-any-fable_medium",
+              "wave_id": "lark-discard-r1-any",
+              "scenario": "lark-discard",
+              "rep": 1,
+              "host": "any",
+              "arm": "fable_medium",
+              "kind": "control",
+              "cell": "plain-medium",
+              "model": "claude-fable-5-1",
+              "nonce": "940eda66-2ab0-4b82-9655-650beb8dc089",
+              "attempt": 1,
+              "est_usd": 5.6952,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-fable-5-1",
+                "effort": "medium"
+              }
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "lark-discard-r1-any-fable": "done",
+            "lark-discard-r1-any-fable_medium": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "lark-template-r2-any": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<campaign>/w040-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "lark-template-r2-any-fable",
+              "wave_id": "lark-template-r2-any",
+              "scenario": "lark-template",
+              "rep": 2,
+              "host": "any",
+              "arm": "fable",
+              "kind": "control",
+              "cell": "plain",
+              "model": "claude-fable-5-1",
+              "nonce": "b9e1593f-b4c4-4d56-847b-0e9cbcf08f88",
+              "attempt": 1,
+              "est_usd": 4.788,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-fable-5-1",
+                "effort": "absent"
+              }
+            },
+            {
+              "key": "lark-template-r2-any-fable_medium",
+              "wave_id": "lark-template-r2-any",
+              "scenario": "lark-template",
+              "rep": 2,
+              "host": "any",
+              "arm": "fable_medium",
+              "kind": "control",
+              "cell": "plain-medium",
+              "model": "claude-fable-5-1",
+              "nonce": "d50bb060-0df5-41dd-ac6e-410c3c065a9d",
+              "attempt": 1,
+              "est_usd": 4.068,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-fable-5-1",
+                "effort": "medium"
+              }
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "lark-template-r2-any-fable": "done",
+            "lark-template-r2-any-fable_medium": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "lark-discard-r2-any": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<campaign>/w041-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "lark-discard-r2-any-fable",
+              "wave_id": "lark-discard-r2-any",
+              "scenario": "lark-discard",
+              "rep": 2,
+              "host": "any",
+              "arm": "fable",
+              "kind": "control",
+              "cell": "plain",
+              "model": "claude-fable-5-1",
+              "nonce": "cf80d959-5ad3-40e8-8bf7-35562a25719c",
+              "attempt": 1,
+              "est_usd": 6.7032,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-fable-5-1",
+                "effort": "absent"
+              }
+            },
+            {
+              "key": "lark-discard-r2-any-fable_medium",
+              "wave_id": "lark-discard-r2-any",
+              "scenario": "lark-discard",
+              "rep": 2,
+              "host": "any",
+              "arm": "fable_medium",
+              "kind": "control",
+              "cell": "plain-medium",
+              "model": "claude-fable-5-1",
+              "nonce": "7024f48e-8dfb-4aa7-919d-8aa53f953d74",
+              "attempt": 1,
+              "est_usd": 5.6952,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-fable-5-1",
+                "effort": "medium"
+              }
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "lark-discard-r2-any-fable": "done",
+            "lark-discard-r2-any-fable_medium": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "rust-ocr-r1-any": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<campaign>/w042-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "rust-ocr-r1-any-fable",
+              "wave_id": "rust-ocr-r1-any",
+              "scenario": "rust-ocr",
+              "rep": 1,
+              "host": "any",
+              "arm": "fable",
+              "kind": "control",
+              "cell": "plain",
+              "model": "claude-fable-5-1",
+              "nonce": "87502e1a-5ce6-4969-a754-d675b29725fd",
+              "attempt": 1,
+              "est_usd": 9.0397,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-fable-5-1",
+                "effort": "absent"
+              }
+            },
+            {
+              "key": "rust-ocr-r1-any-fable_medium",
+              "wave_id": "rust-ocr-r1-any",
+              "scenario": "rust-ocr",
+              "rep": 1,
+              "host": "any",
+              "arm": "fable_medium",
+              "kind": "control",
+              "cell": "plain-medium",
+              "model": "claude-fable-5-1",
+              "nonce": "515d2f9e-ee2f-4070-b925-f1fe67c08d74",
+              "attempt": 1,
+              "est_usd": 7.6804,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-fable-5-1",
+                "effort": "medium"
+              }
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "rust-ocr-r1-any-fable": "done",
+            "rust-ocr-r1-any-fable_medium": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "fastrand-explain-r2-any": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<campaign>/w043-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "fastrand-explain-r2-any-fable",
+              "wave_id": "fastrand-explain-r2-any",
+              "scenario": "fastrand-explain",
+              "rep": 2,
+              "host": "any",
+              "arm": "fable",
+              "kind": "control",
+              "cell": "plain",
+              "model": "claude-fable-5-1",
+              "nonce": "c0847e2d-4fbc-44ef-929e-514ce1bad7c4",
+              "attempt": 1,
+              "est_usd": 3.1122,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-fable-5-1",
+                "effort": "absent"
+              }
+            },
+            {
+              "key": "fastrand-explain-r2-any-fable_medium",
+              "wave_id": "fastrand-explain-r2-any",
+              "scenario": "fastrand-explain",
+              "rep": 2,
+              "host": "any",
+              "arm": "fable_medium",
+              "kind": "control",
+              "cell": "plain-medium",
+              "model": "claude-fable-5-1",
+              "nonce": "1a8f35bb-ef10-4beb-850e-8cbb8aaa3afe",
+              "attempt": 1,
+              "est_usd": 2.6442,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-fable-5-1",
+                "effort": "medium"
+              }
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "fastrand-explain-r2-any-fable": "done",
+            "fastrand-explain-r2-any-fable_medium": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "toolz-interpose-r2-any": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<campaign>/w044-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "toolz-interpose-r2-any-fable",
+              "wave_id": "toolz-interpose-r2-any",
+              "scenario": "toolz-interpose",
+              "rep": 2,
+              "host": "any",
+              "arm": "fable",
+              "kind": "control",
+              "cell": "plain",
+              "model": "claude-fable-5-1",
+              "nonce": "c5aff5a2-a810-453c-b6af-0c617d9b37f1",
+              "attempt": 1,
+              "est_usd": 4.788,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-fable-5-1",
+                "effort": "absent"
+              }
+            },
+            {
+              "key": "toolz-interpose-r2-any-fable_medium",
+              "wave_id": "toolz-interpose-r2-any",
+              "scenario": "toolz-interpose",
+              "rep": 2,
+              "host": "any",
+              "arm": "fable_medium",
+              "kind": "control",
+              "cell": "plain-medium",
+              "model": "claude-fable-5-1",
+              "nonce": "916bbea8-55d1-4c53-8f7f-59ee4020e709",
+              "attempt": 1,
+              "est_usd": 4.068,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-fable-5-1",
+                "effort": "medium"
+              }
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "toolz-interpose-r2-any-fable": "done",
+            "toolz-interpose-r2-any-fable_medium": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "filelock-explain-r1-any": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<campaign>/w045-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "filelock-explain-r1-any-fable",
+              "wave_id": "filelock-explain-r1-any",
+              "scenario": "filelock-explain",
+              "rep": 1,
+              "host": "any",
+              "arm": "fable",
+              "kind": "control",
+              "cell": "plain",
+              "model": "claude-fable-5-1",
+              "nonce": "d4f46816-11e5-4708-8687-6e3d505f6129",
+              "attempt": 1,
+              "est_usd": 3.1122,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-fable-5-1",
+                "effort": "absent"
+              }
+            },
+            {
+              "key": "filelock-explain-r1-any-fable_medium",
+              "wave_id": "filelock-explain-r1-any",
+              "scenario": "filelock-explain",
+              "rep": 1,
+              "host": "any",
+              "arm": "fable_medium",
+              "kind": "control",
+              "cell": "plain-medium",
+              "model": "claude-fable-5-1",
+              "nonce": "40ffdc2c-1ae1-4bf7-8e5c-440273dd23fc",
+              "attempt": 1,
+              "est_usd": 2.6442,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-fable-5-1",
+                "effort": "medium"
+              }
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "filelock-explain-r1-any-fable": "done",
+            "filelock-explain-r1-any-fable_medium": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    }
+  }
+}

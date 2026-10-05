@@ -101,6 +101,16 @@ cells:
     role: "reference series / drift check / shared batch anchor"
     mechanism_gate: { no_fd_receipts: true }
 
+  plain-medium:
+    label_suffix: "plain [model=claude-fable-5-1; reasoning effort medium]"
+    harnesses: [amplifier-plain]
+    amplifier_model: claude-fable-5-1
+    amplifier_effort: medium           # provider reasoning_effort; EXACTLY `plain` otherwise (effort-control-fable-v1)
+    fd: null
+    role: "effort control: plain Fable 5.1 at medium reasoning effort"
+    purpose: "isolate the effort effect on the Fable host (round-2 peer review): `plain` runs at the provider default"
+    mechanism_gate: { no_fd_receipts: true }
+
   plain-sonnet:
     label_suffix: "plain [model=claude-sonnet-5]"
     harnesses: [amplifier-plain]

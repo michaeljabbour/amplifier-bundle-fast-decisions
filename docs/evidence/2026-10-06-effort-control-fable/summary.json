@@ -1,0 +1,50 @@
+{
+  "description": "effort-control-fable-v1 (preregistered, 2026-10-05): plain Fable 5.1 at reasoning effort medium vs the provider default; cost = geometric-mean ratio of tools-normalized session cost per scenario, 95% percentile CI from 10,000 scenario-cluster bootstrap resamples (seed 20261006). Row 1 is the confirmatory test-split endpoint (23 scenarios x 2 reps = 46 pairs, 45 cost-valid); rows 2-3 are exploratory and non-concurrent (n_pairs counts scenarios). Ratios below 1.0 mean the first arm is cheaper. Strict sensitivity (flagged-anchor pair excluded): 0.854; see FLAGS.md.",
+  "rows": [
+    {
+      "label": "fable_medium / fable (HF, test split, confirmatory)",
+      "n_pairs": 46,
+      "gm_ratio": 0.8596025461732419,
+      "ci95": [
+        0.8332355240832271,
+        0.8852608472184094
+      ]
+    },
+    {
+      "label": "fable_medium / main-v1 sticky, Fable host (exploratory, non-concurrent)",
+      "n_pairs": 23,
+      "gm_ratio": 1.545739010264103,
+      "ci95": [
+        1.343098700729545,
+        1.7593353726775949
+      ]
+    },
+    {
+      "label": "fable_medium / main-v1 anchor, Fable host (exploratory, non-concurrent)",
+      "n_pairs": 23,
+      "gm_ratio": 0.8286325959605997,
+      "ci95": [
+        0.7901118702480083,
+        0.8659546240370143
+      ]
+    }
+  ],
+  "quality": {
+    "label": "turn-pass delta, fable_medium minus fable (HF quality endpoint, unfiltered)",
+    "n_pairs": 46,
+    "mean_delta_turn_pass": 0.03341739130434782,
+    "ci95": [
+      -0.001754347826086957,
+      0.07960652173913044
+    ],
+    "non_inferiority_margin": -0.05,
+    "non_inferior": true,
+    "final_pass_mcnemar": {
+      "both_pass": 45,
+      "only_medium_passes": 1,
+      "only_default_passes": 0,
+      "exact_p_two_sided": 1.0
+    }
+  },
+  "HF_supported": true
+}
