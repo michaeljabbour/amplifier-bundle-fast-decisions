@@ -5,13 +5,16 @@ conversation is hard to estimate, because providers cache the conversation separ
 a switch throws that cache away. We stopped estimating and measured. For each of \NScenarios\ scripted
 \MinTurns--\MaxTurns-turn sessions, the plain host model, the shipped router (which re-chooses its model at
 the start of each turn), a ``sticky'' router that chooses a model once and never switches, and plain Sonnet
-(plus, on a \AAPct\,\% subsample, a second plain copy) were launched within seconds of each other from one
+(plus, on a \AAPct\,\% subsample, a second plain copy) were launched within seconds of each other (the host-independent Sonnet control ran once, alongside the
+Opus sessions) from one
 frozen workspace, each with its own cache key, twice on each of two host models: \NSessions\ sessions in
 all. Hypotheses, thresholds, split and decision rule were preregistered; the estimator was written after the
 data were collected. On the \NTest\ held-out scenarios, with Fable~5.1 as host at our price table, sticky
-routing cost \CfFableStickyPairTwo\X\ as much as the plain host (95\,\% confidence interval
-\CfFableStickyPairCITwo), with turn-pass fraction inside the preregistered margin; plain Sonnet cost about
-the same (\CfFableSonnetPairTwo\X). With Opus~5.5 as host, every routing arm cost more
+routing cost \CfFableStickyPairTwo\X\ as much as the plain host (geometric mean of per-pair ratios; 95\,\%
+confidence interval \CfFableStickyPairCITwo; a \RvSpendCutTest\,\% cut in actual spend, \RvSpendCutAll\,\% over all
+\NScenarios\ scenarios), with turn-pass fraction inside the preregistered margin on the test scenarios only; plain
+Sonnet cost \CfFableSonnetPairTwo\X. Part of the routed saving comes from an effort setting: routed Sonnet ran at
+medium reasoning effort and cost \RvEffFableAll\X\ the default-effort Sonnet control. With Opus~5.5 as host, every routing arm cost more
 (\CfOpusStickyPairTwo\X--\CfOpusSonnetPairTwo\X; \CfOpusStickyArmTwo\X--\CfOpusSonnetArmTwo\X\ without the
 quality filter); that result depends on Opus's cheap cache reads and would reverse if they cost about
 \BEStickyPair\ instead of \PriceOpusRead\ dollars per million tokens. The sticky policy cost less than the

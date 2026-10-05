@@ -1,0 +1,19 @@
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}l r r r r r r@{}}
+\toprule
+ & & \multicolumn{2}{c}{cold first request} & \multicolumn{2}{c}{warm first request} & \\
+\cmidrule(lr){3-4}\cmidrule(lr){5-6}
+Host and arm & sessions & requests & \$ moved & requests & \$ moved & total \\
+\midrule
+Fable anchor & 140 & 16 & \$6.29 & 124 & \$0.11 & \$6.40 \\
+Fable aa & 28 & 1 & \$0.39 & 27 & \$0.02 & \$0.42 \\
+Fable shipped & 140 & 7 & \$1.62 & 213 & \$0.10 & \$1.72 \\
+Fable sticky & 140 & 2 & \$0.22 & 138 & \$0.04 & \$0.26 \\
+Opus anchor & 140 & 22 & \$3.39 & 118 & \$0.04 & \$3.43 \\
+Opus aa & 28 & 1 & \$0.15 & 27 & \$0.01 & \$0.16 \\
+Opus shipped & 140 & 3 & \$0.38 & 216 & \$0.06 & \$0.43 \\
+Opus sticky & 140 & 3 & \$0.38 & 137 & \$0.03 & \$0.41 \\
+Sonnet control & 140 & 19 & \$2.10 & 121 & \$0.03 & \$2.13 \\
+\midrule
+Total & 1036 & 74 & \$14.93 & 1121 & \$0.44 & \$15.37 \\
+\bottomrule
+\end{tabular*}

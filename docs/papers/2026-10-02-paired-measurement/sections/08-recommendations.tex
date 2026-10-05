@@ -2,7 +2,9 @@
 
 \begin{keyidea}
 \textbf{Fable~5.1 at the \cref{tab:prices} prices: move the session to Sonnet, and decide once.} On Fable 5.1
-at the Table~\ref{tab:prices} prices, sticky routing saved about \CfFableStickySaving\,\%, with turn-pass
+at the Table~\ref{tab:prices} prices, sticky routing saved about \CfFableStickySaving\,\% (typical per-session saving: geometric mean of
+per-pair cost ratios; actual spend fell \RvSpendCutAll\,\% over all \NScenarios\ scenarios, from \$\RvSpendAnchor\ to
+\$\RvSpendSticky\ per session, and \RvSpendCutTest\,\% on the test split), with turn-pass
 fraction inside the preregistered \NIMarginPts-point margin on the \NTest\ test scenarios. Across all
 \QAllScen\ scenarios that margin was not shown for sticky (\QAllFableSticky, CI \QAllFableStickyCI), and
 routed Fable arms passed the final hidden tests \FinalGapLow--\FinalGapHigh\ points less often
@@ -10,16 +12,19 @@ routed Fable arms passed the final hidden tests \FinalGapLow--\FinalGapHigh\ poi
 Opus); the preregistered test was only that sticky costs no more than shipped.
 \end{keyidea}
 
-\paragraph{The data support ``use Sonnet'' as much as ``use the router''.} \NStickySonnetOnly\ of
-\NStickySessions\ sticky sessions ran on Sonnet only, so the sticky arm is mostly plain Sonnet. Plain Sonnet
-for the whole session cost about the same on Fable (\CfFableSonnetPair\X\ against \CfFableStickyPair\X\ for
-sticky, test split) and saved more per 1,000 sessions over all scenarios (\$\SavFableSonnet\ against
-\$\SavFableSticky). What the router adds is the option to keep the host for the sessions it judges hard; this
-campaign does not show that option paying for itself. The judge's own calls are not in the session costs
-(\cref{sec:design}); by an estimate from another study they would add about \JudgeShippedCents\ cents per
-shipped session, which does not change these conclusions. A fair reading of the evidence: on Fable~5.1 at
-these prices, running the session on Sonnet saves about as much whether a judge decides or not, with the
-quality caveats above.
+\paragraph{How much of the saving is the router, and how much the effort setting.} An earlier draft read the data
+as supporting ``use Sonnet'' as much as ``use the router''. That reading is withdrawn. When the sticky router chose
+Sonnet it ran every main request at medium reasoning effort, while the plain-Sonnet control used the provider
+default; those sticky sessions cost \RvEffFableAll\X\ (Fable) and \RvEffOpusAll\X\ (Opus) the control on the same
+scenarios, with no detectable quality difference (\cref{sec:effort}). So part of the routing saving is the effort
+setting, which a ``just use Sonnet'' deployment would also get if it set the same effort. On Fable the near-equality
+of sticky (\CfFableStickyPair\X) and plain Sonnet (\CfFableSonnetPair\X) is two effects cancelling: medium-effort
+Sonnet is cheaper than the control, while the \RvStickyHostNFable\ sticky sessions that kept the host cost
+\RvStickyHostFable\X\ the plain host. The per-1,000 figures (\$\SavFableSticky\ for sticky, \$\SavFableSonnet\ for
+Sonnet) are mean-difference (spend) measures. The judge's own calls are not in the session costs
+(\cref{sec:design}); by an estimate from another study they would add about \JudgeShippedCents\ cents per shipped
+session, which does not change these conclusions. What remains open is whether a Sonnet session at medium effort,
+without the router, saves as much as the routed one; the next campaign should include that control.
 
 \begin{keyidea}
 \textbf{Opus~5.5 at the \cref{tab:prices} prices: do not route to Sonnet.} Opus's cache reads are cheaper than

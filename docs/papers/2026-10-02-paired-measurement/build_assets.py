@@ -1538,6 +1538,312 @@ dat("ph-reads-jev.dat", ["reads", "readsminus", "readsplus", "wa", "waminus", "w
 zone = (int(MACROS.get("TrUsefulMinReads", "4")) - 0.5, -1.5, 14.0, 0.5)
 LP.place_labels("reads-holdout-ph", pts, (-1.0, 14.0), (-1.5, 22.0), obstacles=[zone])
 
+# ================================================================ Review revisions (external peer review, 2026-10-05)
+# Every number below is recomputed from the committed rows with the report's own estimator (paired_model).
+from datetime import datetime as _dtr
+import numpy as _np
+SI = {(s["scenario_id"], s["rep"], s["host"], s["arm"]): s for s in SESS}
+
+
+def Cn(s):
+    return s["cost_usd_tools_normalized"]
+
+
+def gm_ci(vals, cl, key, B=10000, seed=None):
+    e, lo, hi, n = PM.cluster_boot_mean(vals, cl, PM.rng_for(CONF["seed"] if seed is None else seed, *key), B)
+    return math.exp(e), math.exp(lo), math.exp(hi), n
+
+
+def rci(t, d=3):
+    return f"{hu(t[0], d)} [{hu(t[1], d)}, {hu(t[2], d)}]"
+
+
+# (1) the four hypotheses if quality had to hold for every routed cell
+qv = {(h, a): CC["quality"][h][a]["verdict"] for h, _, _ in HOSTS for a, _, _ in ARMS}
+M("RvNHypAllQuality", 3 + (1 if all(v == "confirmed" for v in qv.values()) else 0))
+M("RvNQualCells", sum(1 for v in qv.values() if v == "confirmed"))
+M("RvNRoutedCells", len(qv))
+
+# (2) spend reduction (ratio of mean dollars) next to the geometric-mean saving
+def spend_cut(host, arm, split=None):
+    ps = [p for p in PAIRS if p["host"] == host and p["arm"] == arm and p["valid"]
+          and (split is None or SPLIT["split"][p["scenario_id"]] == split)]
+    a = sum(p["anchor_cost_usd"] for p in ps)
+    return 1 - sum(p["anchor_cost_usd"] + p["delta_usd"] for p in ps) / a, a / len(ps), (a + sum(p["delta_usd"] for p in ps)) / len(ps)
+
+
+cut_all, an_all, st_all = spend_cut("fable", "sticky")
+cut_test, _, _ = spend_cut("fable", "sticky", "test")
+M("RvSpendCutAll", pct(cut_all, 1))
+M("RvSpendCutTest", pct(cut_test, 1))
+M("RvSpendAnchor", money(an_all))
+M("RvSpendSticky", money(st_all))
+gm_all = math.exp(_st.mean(r["y"] for r in PM._cost_rows(DS["pairs"]) if r["host"] == "fable" and r["arm"] == "sticky"))
+M("RvGMAllFableSticky", hu(gm_all, 3))
+M("RvGMSavingAll", pct(1 - gm_all))
+assert abs(1000 * (an_all - st_all) - emp[("fable", "all", "sticky")]["saving_per_1000_usd"]) < 0.5
+
+# (3) task type x split coverage
+tsplit = defaultdict(lambda: [0, 0])
+for s in SESS:
+    if s["arm"] == "anchor" and s["host"] == "fable" and s["rep"] == 1:
+        tsplit[s["task_type"]][0 if s["split"] == "train" else 1] += 1
+for t in TASKS:
+    M(f"Rv{t.capitalize()}Train", tsplit[t][0])
+    M(f"Rv{t.capitalize()}Test", tsplit[t][1])
+write(TABLES / "task-split.tex", table("l r r r", [r"Task type & training & test & total \\"],
+      [f"{t} & {tsplit[t][0]} & {tsplit[t][1]} & {sum(tsplit[t])} \\\\" for t in TASKS]))
+best = max(TASKS, key=lambda t: emp[("fable", t, "sticky")]["saving_per_1000_usd"])
+M("RvBestTaskFableSticky", best)
+M("RvSavReviewFableSticky", money(emp[("fable", "review", "sticky")]["saving_per_1000_usd"], 0))
+M("RvSavDocsFableSticky", money(emp[("fable", "docs", "sticky")]["saving_per_1000_usd"], 0))
+
+# (4) quality beyond the test split, and Monte-Carlo noise of the test bound
+rs_tr = [r for r in Q if r["host"] == "fable" and r["arm"] == "sticky" and r["split"] == "train"]
+e, lo, hi, _ = PC.boot_interval([r["dtp"] for r in rs_tr], [r["scenario"] for r in rs_tr], PC.SEED, ("quality", "fable", "sticky"), PC.BOOT)
+M("RvQTrainFableSticky", hu(e, 3))
+M("RvQTrainFableStickyCI", f"{hu(lo, 3)} to {hu(hi, 3)}")
+rs_te = [r for r in Q if r["host"] == "fable" and r["arm"] == "sticky" and r["split"] == "test"]
+_, lo2, _, _ = PC.boot_interval([r["dtp"] for r in rs_te], [r["scenario"] for r in rs_te], PC.SEED, ("quality-rv", "fable", "sticky"), PC.BOOT)
+M("RvQAltLow", hu(lo2, 4))
+M("RvQNoise", hu(abs(lo2 - CC["quality"]["fable"]["sticky"]["ci95"][0]), 4))
+
+# (5) joint savings x quality, by family and by task type
+def joint(dimf, values):
+    rows_ = []
+    for v in values:
+        cells_ = []
+        for h, _, _ in HOSTS:
+            for a, _, _ in ARMS:
+                ps = [p for p in PAIRS if p["host"] == h and p["arm"] == a and dimf(p) == v]
+                sav = -1000 * _st.mean(p["delta_usd"] for p in ps if p["valid"])
+                dtp = _st.mean(p["delta_turn_pass"] for p in ps if p["delta_turn_pass"] is not None)
+                flag = r"\textsuperscript{$\dagger$}" if dtp < CONF["ni_margin"] else ""
+                cells_.append(f"{money(sav, 0)} / {hu(dtp, 3)}{flag}")
+        rows_.append(f"{v} & " + " & ".join(cells_) + r" \\")
+    return rows_
+
+
+jhead = [r" & \multicolumn{3}{c}{Fable host} & \multicolumn{3}{c}{Opus host} \\", r"\cmidrule(lr){2-4}\cmidrule(l){5-7}",
+         r" & sticky & shipped & sonnet & sticky & shipped & sonnet \\"]
+write(TABLES / "joint-family.tex", table("l r r r r r r", [r"Family" + jhead[2][1:]] if False else jhead[:2] + [r"Family" + jhead[2]],
+      joint(lambda p: famof[p["scenario_id"]], list(fam))))
+write(TABLES / "joint-task.tex", table("l r r r r r r", jhead[:2] + [r"Task type" + jhead[2]],
+      joint(lambda p: p["task_type"], TASKS)))
+kn = [r for r in Q if r["host"] == "fable" and r["arm"] == "sticky" and famof[r["scenario"]] == "knowledge"]
+e, lo, hi, _ = PC.boot_interval([r["dtp"] for r in kn], [r["scenario"] for r in kn], PC.SEED, ("quality-knowledge", "fable", "sticky"), PC.BOOT)
+M("RvKnowFableSticky", hu(e, 3))
+M("RvKnowFableStickyCI", f"{hu(lo, 3)} to {hu(hi, 3)}")
+sc_ = defaultdict(lambda: [[], []])
+for p in PAIRS:
+    if p["host"] == "fable" and p["arm"] == "sticky" and p["valid"] and p["delta_turn_pass"] is not None:
+        sc_[p["scenario_id"]][0].append(-p["delta_usd"])
+        sc_[p["scenario_id"]][1].append(p["delta_turn_pass"])
+
+
+def ranks(v):
+    o = sorted(range(len(v)), key=lambda i: v[i])
+    r = [0.0] * len(v)
+    i = 0
+    while i < len(o):
+        j = i
+        while j + 1 < len(o) and v[o[j + 1]] == v[o[i]]:
+            j += 1
+        for k in range(i, j + 1):
+            r[o[k]] = (i + j) / 2
+        i = j + 1
+    return r
+
+
+xs_ = [_st.mean(v[0]) for v in sc_.values()]
+ys_ = [_st.mean(v[1]) for v in sc_.values()]
+rx, ry = ranks(xs_), ranks(ys_)
+M("RvSpearman", hu(_np.corrcoef(rx, ry)[0, 1], 2))
+
+# (6) tools normalization: cold vs warm first requests, by host and arm
+tn = defaultdict(lambda: [0, 0.0, 0, 0.0])
+warm_reads = defaultdict(lambda: defaultdict(int))
+for r in REQS:
+    if not r.get("tools_repriced_tokens"):
+        continue
+    k = (r["host"], r["arm"])
+    cold = r["tokens"]["cache_read"] < 20000
+    d = -r["tools_normalized_delta_usd"]
+    if cold:
+        tn[k][0] += 1
+        tn[k][1] += d
+    else:
+        tn[k][2] += 1
+        tn[k][3] += d
+        warm_reads[r["model"]][int(r["tokens"]["cache_read"])] += 1
+tnrows = []
+order_tn = [("fable", "anchor"), ("fable", "aa"), ("fable", "shipped"), ("fable", "sticky"), ("opus", "anchor"),
+            ("opus", "aa"), ("opus", "shipped"), ("opus", "sticky"), ("any", "sonnet")]
+for h, a in order_tn:
+    v = tn[(h, a)]
+    ns = sum(1 for s in SESS if s["host"] == h and s["arm"] == a)
+    tnrows.append(f"{'Sonnet control' if a == 'sonnet' else h.capitalize() + ' ' + a} & {ns} & {v[0]} & \\${money(v[1])} & {v[2]} & \\${money(v[3])} & \\${money(v[1] + v[3])} \\\\")
+    if a in ("anchor", "sticky", "sonnet"):
+        M(f"RvCold{h.capitalize() if h != 'any' else 'Sonnet'}{a.capitalize() if a != 'sonnet' else ''}", v[0])
+tot = [sum(v[i] for v in tn.values()) for i in range(4)]
+tnrows.append(r"\midrule")
+tnrows.append(f"Total & {len(SESS)} & {tot[0]} & \\${money(tot[1])} & {tot[2]} & \\${money(tot[3])} & \\${money(tot[1] + tot[3])} \\\\")
+assert abs(tot[1] + tot[3] - DSUM["tools_normalized_delta_usd_total"] * -1) < 0.01 or abs(tot[1] + tot[3] - abs(DSUM["tools_normalized_delta_usd_total"])) < 0.01
+write(TABLES / "tools-norm.tex", table("l r r r r r r", [
+    r" & & \multicolumn{2}{c}{cold first request} & \multicolumn{2}{c}{warm first request} & \\",
+    r"\cmidrule(lr){3-4}\cmidrule(lr){5-6}",
+    r"Host and arm & sessions & requests & \$ moved & requests & \$ moved & total \\"], tnrows))
+M("RvColdTotal", tot[0])
+M("RvWarmTotal", thousands(tot[2]))
+M("RvColdUSD", money(tot[1]))
+M("RvWarmUSD", money(tot[3]))
+for mdl, K in (("claude-fable-5-1", "Fable"), ("claude-sonnet-5", "Sonnet")):
+    M(f"RvWarmRead{K}", thousands(max(warm_reads[mdl], key=warm_reads[mdl].get)))
+    M(f"RvAllowGap{K}", int(MACROS["ToolsAllowance"].replace("{,}", "")) - max(warm_reads[mdl], key=warm_reads[mdl].get))
+DSR = PM.load_dataset(EV / "data", basis="raw")
+rawrows = []
+for h, H, hn in HOSTS:
+    for a, A, an in ARMS:
+        ys = [r["y"] for r in PM._cost_rows(DSR["pairs"]) if r["host"] == h and r["arm"] == a and r["split"] == "test"
+              and PC.pair_noninferior(r)]
+        raw = math.exp(_st.mean(ys))
+        rawrows.append(f"{hn} & {an} & {hu(raw, 3)} & {hu(pe('pair', h, a)['gm_ratio'], 3)} \\\\")
+write(TABLES / "tools-ratios.tex", table("l l r r", [r"Host & Arm & raw ratio & tools-normalized ratio \\"], rawrows,
+                                         width=r"0.7\textwidth"))
+
+# (7) composition weighting vs actual sticky requests
+for h, H in (("fable", "Fable"), ("opus", "Opus")):
+    sts = [s for s in SESS if s["arm"] == "sticky" and s["host"] == h]
+    p_ = sum(s["sticky_decision"] == "cheap" for s in sts) / len(sts)
+    mean_ = lambda h_, a_: _st.mean(s["n_req"] for s in SESS if s["host"] == h_ and s["arm"] == a_ and s["cost_valid"])
+    pred = p_ * mean_("any", "sonnet") + (1 - p_) * mean_(h, "anchor")
+    act = mean_(h, "sticky")
+    M(f"RvReqPred{H}", hu(pred, 1))
+    M(f"RvReqAct{H}", hu(act, 1))
+    M(f"RvReqGap{H}", pct(1 - act / pred, 1))
+
+# (8) turn rows: 11,588 vs the 11,576 used in Part III's explorations
+kill_key = [s["session_key"] for s in SESS if s["killed_memory"]][0]
+M("RvKilledTurns", sum(1 for t in TURNS if t["session_key"] == kill_key))
+skips = sorted((t["session_key"], t["turn_index"]) for t in TURNS if t["skipped"] and t["session_key"] in valid)
+assert len(TURNS) - int(MACROS["RvKilledTurns"]) - len(skips) == int(MACROS["PerTurnN"])
+M("RvNSkips", len(skips))
+M("RvSkipList", "; ".join(f"\\code{{{tex_escape(k)}}} turn {i}" for k, i in skips))
+M("PerTurnNFmt", thousands(int(MACROS["PerTurnN"])))
+
+# (10) A/A against launch offset (OLS slope per second, scenario-cluster bootstrap)
+wave_t0 = {}
+for s in SESS:
+    t = _dtr.fromisoformat(s["actual_start"]).timestamp()
+    wave_t0[s["wave_id"]] = min(wave_t0.get(s["wave_id"], t), t)
+offs = {s["session_key"]: _dtr.fromisoformat(s["actual_start"]).timestamp() - wave_t0[s["wave_id"]] for s in SESS}
+for h, H in (("fable", "Fable"), ("opus", "Opus")):
+    aa = [r for r in PM._cost_rows(DS["pairs"]) if r["host"] == h and r["arm"] == "aa"]
+    dx = [offs[SI[(r["scenario"], r["rep"], h, "aa")]["session_key"]] - offs[SI[(r["scenario"], r["rep"], h, "anchor")]["session_key"]] for r in aa]
+    y = [r["y"] for r in aa]
+
+    def fit(ix):
+        X = _np.column_stack([[dx[i] for i in ix], _np.ones(len(ix))])
+        return _np.linalg.lstsq(X, _np.array([y[i] for i in ix]), rcond=None)[0]
+
+    b = fit(list(range(len(aa))))
+    g_ = defaultdict(list)
+    for i, r in enumerate(aa):
+        g_[r["scenario"]].append(i)
+    keys_ = list(g_)
+    rng = _np.random.default_rng(7)
+    sl = []
+    for _ in range(4000):
+        pick = rng.integers(0, len(keys_), len(keys_))
+        ix = [i for k in pick for i in g_[keys_[k]]]
+        try:
+            sl.append(fit(ix)[0])
+        except Exception:
+            pass
+    lo, hi = _np.percentile(sl, [2.5, 97.5])
+    M(f"RvAASlope{H}", hu(b[0], 4))
+    M(f"RvAASlope{H}CI", f"{hu(lo, 4)} to {hu(hi, 4)}")
+    M(f"RvAAIntercept{H}", hu(math.exp(b[1]), 3))
+    nr = [math.log(SI[(r["scenario"], r["rep"], h, "aa")]["n_req"] / SI[(r["scenario"], r["rep"], h, "anchor")]["n_req"]) for r in aa]
+    M(f"RvAAReqCorr{H}", hu(_np.corrcoef(y, nr)[0, 1], 2))
+    M(f"RvAAFirst{H}", pct(sum(1 for v in dx if v < 0) / len(dx)))
+
+# (11) the effort confound: sticky that chose Sonnet against the plain-Sonnet control
+bg = defaultdict(float)
+eff = defaultdict(lambda: defaultdict(int))
+for r in REQS:
+    if not r["main"]:
+        bg[r["session_key"]] += r["cost_usd_tools_normalized"] or 0.0
+    else:
+        eff[(r["arm"], SI[(r["scenario_id"], r["rep"], r["host"], r["arm"])].get("sticky_decision"))][r["effort"]] += 1
+M("RvEffMediumSticky", thousands(eff[("sticky", "cheap")]["medium"]))
+M("RvEffStickyTotal", thousands(sum(eff[("sticky", "cheap")].values())))
+M("RvEffNoneControl", thousands(eff[("sonnet", None)][None]))
+M("RvEffControlTotal", thousands(sum(eff[("sonnet", None)].values())))
+for h, H in (("fable", "Fable"), ("opus", "Opus")):
+    for sp, SP in (("all", "All"), ("test", "Test")):
+        rows_ = []
+        for s in SESS:
+            if s["arm"] != "sticky" or s["host"] != h or s["sticky_decision"] != "cheap" or not s["cost_valid"]:
+                continue
+            if sp == "test" and s["split"] != "test":
+                continue
+            c = SI[(s["scenario_id"], s["rep"], "any", "sonnet")]
+            if not c["cost_valid"]:
+                continue
+            a = SI[(s["scenario_id"], s["rep"], h, "anchor")]
+            out_s = sum(v["output"] for v in s["tokens"].values())
+            out_c = sum(v["output"] for v in c["tokens"].values())
+            rows_.append(dict(sc=s["scenario_id"], y=math.log(Cn(s) / Cn(c)), n=math.log(s["n_req"] / c["n_req"]),
+                              ex=math.log(s["exec_ms"] / c["exec_ms"]), d=s["turn_pass_frac"] - c["turn_pass_frac"],
+                              os=out_s, oc=out_c, ya=math.log(Cn(s) / Cn(a)), yc=math.log(Cn(c) / Cn(a))))
+        cl = [r["sc"] for r in rows_]
+        b_ = lambda f, k: PM.cluster_boot_mean([r[f] for r in rows_], cl, PM.rng_for(CONF["seed"], "c11", h, sp, k), 10000)
+        e, lo, hi, nsc = b_("y", "y")
+        M(f"RvEff{H}{SP}", hu(math.exp(e), 3))
+        M(f"RvEff{H}{SP}CI", f"{hu(math.exp(lo), 3)}--{hu(math.exp(hi), 3)}")
+        M(f"RvEff{H}{SP}N", len(rows_))
+        if sp == "all":
+            e, lo, hi, _ = b_("n", "n")
+            M(f"RvEffReq{H}", pct(1 - math.exp(e)))
+            M(f"RvEffOut{H}", pct(1 - _st.mean(r["os"] for r in rows_) / _st.mean(r["oc"] for r in rows_)))
+            e, _, _, _ = b_("ex", "ex")
+            M(f"RvEffTime{H}", pct(1 - math.exp(e)))
+            e, lo, hi, _ = b_("d", "d")
+            M(f"RvEffDtp{H}", hu(e, 3))
+            M(f"RvEffDtp{H}CI", f"{hu(lo, 3)} to {hu(hi, 3)}")
+            M(f"RvEffVsAnchor{H}", hu(math.exp(_st.mean(r["ya"] for r in rows_)), 3))
+            M(f"RvCtlVsAnchor{H}", hu(math.exp(_st.mean(r["yc"] for r in rows_)), 3))
+    hs = [math.log(Cn(s) / Cn(SI[(s["scenario_id"], s["rep"], h, "anchor")])) for s in SESS
+          if s["arm"] == "sticky" and s["host"] == h and s["sticky_decision"] == "host" and s["cost_valid"]]
+    M(f"RvStickyHost{H}", hu(math.exp(_st.mean(hs)), 3))
+    M(f"RvStickyHostN{H}", len(hs))
+gaps_h = []
+for s in SESS:
+    if s["arm"] == "anchor" and s["host"] == "fable":
+        c = SI[(s["scenario_id"], s["rep"], "any", "sonnet")]
+        gaps_h.append(abs(_dtr.fromisoformat(c["actual_start"]).timestamp() - _dtr.fromisoformat(s["actual_start"]).timestamp()) / 3600)
+M("RvSonnetWaveMedianH", hu(_st.median(gaps_h), 1))
+M("RvSonnetWaveMaxH", hu(max(gaps_h), 1))
+assert all(SI[(s["scenario_id"], s["rep"], "any", "sonnet")]["wave_id"].endswith("-opus") for s in SESS if s["arm"] == "anchor")
+
+# optional follow-up evidence: plain Sonnet at medium vs default effort (rendered only if committed)
+EFF = REPO / "docs" / "evidence" / "2026-10-05-effort-control"
+eff_tex = ""
+if (EFF / "summary.json").exists():
+    ej = json.loads((EFF / "summary.json").read_text())
+    try:
+        erows = [f"{tex_escape(r['label'])} & {r['n_pairs']} & {hu(r['gm_ratio'], 3)} & {hu(r['ci95'][0], 3)}--{hu(r['ci95'][1], 3)} \\\\"
+                 for r in ej["rows"]]
+    except (KeyError, TypeError) as exc:
+        raise SystemExit(f"build_assets.py: {EFF}/summary.json lacks rows[label, n_pairs, gm_ratio, ci95]: {exc}")
+    write(TABLES / "effort-control.tex", table("l r r r", [r"Comparison & pairs & cost ratio & 95\,\% CI \\"], erows))
+    eff_tex = (r"\subsection{Follow-up: Sonnet at medium versus default effort}\label{sec:effortfollow}" "\n"
+               + tex_escape(ej.get("description", "")) + "\n"
+               r"\begin{table}[htbp]\centering\small\caption{Follow-up effort control (evidence: \path{docs/evidence/2026-10-05-effort-control/}).}"
+               r"\label{tab:effortfollow}\input{generated/tables/effort-control.tex}\end{table}" "\n")
+write(OUT / "effort-followup.tex", eff_tex)
+
 # ------------------------------------------------------------ numbers.tex
 header = ("% Generated by build_assets.py from docs/evidence/2026-10-02-paired-campaign/ and the files listed there. "
           f"Do not edit.\n% {len(MACROS)} macros.\n")

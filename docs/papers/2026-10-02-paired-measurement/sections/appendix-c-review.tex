@@ -1,0 +1,45 @@
+\section{Response to review}\label{app:review}
+
+An external reviewer read the 48-page draft of this report and raised the points below. Each was checked against
+the committed evidence before the text changed; where the reviewer's premise did not hold, the response says so.
+We thank the reviewer.
+
+\begin{enumerate}[leftmargin=1.6em]
+  \item \textbf{``Preregistered'' overstates what was fixed in advance.} Agreed in part. The preregistration fixed the
+    hypotheses, thresholds, split and decision rule, and it already required quality for each savings claim; the
+    estimator, the pair filter and the definition of a savings claim were fixed after the data. The confirmatory
+    section is no longer labelled preregistered, the summary and abstract say what was fixed when, and the text
+    gives the count if quality were required of every routed cell (\RvNHypAllQuality\ of 4; \cref{sec:confirm}).
+  \item \textbf{The \CfFableStickySaving\,\% saving is a geometric mean; the spend reduction is smaller.} Agreed. The
+    figure is now labelled as a typical per-session (geometric-mean) saving, and the actual spend reduction
+    (\RvSpendCutAll\,\% over all scenarios, \RvSpendCutTest\,\% on the test split) is printed next to it; the per-1,000
+    figures are identified as mean-difference measures (\cref{sec:summary,sec:recs,sec:slices}).
+  \item \textbf{The test split has no docs scenario.} Agreed (\cref{tab:tasksplit}); docs and the Opus docs exception
+    rest on training data only. One premise did not hold: docs is not the largest Fable saving by task type,
+    \RvBestTaskFableSticky\ is (\$\RvSavReviewFableSticky\ against \$\RvSavDocsFableSticky\ per 1,000 for sticky).
+  \item \textbf{The pair filter conditions on an outcome; the quality margin is thin.} Agreed. The unfiltered (arm)
+    reading is now co-primary; the text states that quality passed on the test split only, gives the all-scenario
+    and training values, notes that the \QFableStickyMarginGap\ margin comes from the unfiltered quality test and is
+    close to bootstrap noise (\cref{sec:confirm}).
+  \item \textbf{The largest savings sit with the largest quality losses.} Agreed at the family level: knowledge on
+    Fable sticky misses the margin (\RvKnowFableSticky; \cref{sec:joint}). It is a family effect, not a general
+    trade-off (scenario-level rank correlation \RvSpearman). Joint savings-and-quality tables now cross-reference the
+    savings and quality tables (\cref{tab:jointfamily,tab:jointtask}).
+  \item \textbf{The tools normalization should be about ten times larger and is asymmetric.} The size premise did not
+    hold: it assumed every session wrote the whole tool prefix, while \RvWarmTotal\ first requests found it cached and
+    only \RvColdTotal\ were cold. The asymmetry is real but lowers the anchors' cost more than the routed arms', so it
+    raises the routed ratios slightly. The cold/warm counts, dollars and raw-versus-normalized ratios are now
+    published (\cref{tab:toolsnorm,tab:toolsratios}).
+  \item \textbf{The sticky arm is not ``mostly plain Sonnet''.} Agreed: it made \RvReqGapFable\,\% (Fable) and
+    \RvReqGapOpus\,\% (Opus) fewer requests than a plain-Sonnet and plain-host mix would. The claim is corrected
+    (\cref{sec:design}).
+  \item \textbf{Two different turn counts.} Agreed; the difference is now explained (\cref{sec:more}).
+  \item \textbf{Empty subsection headings.} Fixed: each subsection of \cref{sec:more} now has text, and figures stay
+    with their sections.
+  \item \textbf{The Opus A/A bias is attributed to launch order without evidence.} Agreed. A regression on start offset
+    shows no association, so the bias is now called unexplained (\cref{sec:aa}).
+  \item \textbf{Sticky on Sonnet was never compared with plain Sonnet.} Agreed, and the comparison changed a
+    conclusion: routed Sonnet ran at medium effort and cost \RvEffFableAll\X\ (Fable) and \RvEffOpusAll\X\ (Opus) the
+    default-effort control. The claim that the router adds little beyond ``use Sonnet'' is withdrawn
+    (\cref{sec:effort,sec:recs}).
+\end{enumerate}

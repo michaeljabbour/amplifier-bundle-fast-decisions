@@ -11,13 +11,16 @@ This report answers one question with measurements rather than estimates: \emph{
 to a cheaper model actually cost, in money and in quality, over realistic multi-turn sessions?}
 
 \begin{keyidea}
-\textbf{What we found} (test split, preregistered hypotheses; prices of \cref{tab:prices};
+\textbf{What we found} (test split; hypotheses and thresholds preregistered, estimator fixed after the data;
+prices of \cref{tab:prices};
 \cref{sec:confirm}):
 \begin{itemize}[leftmargin=1.2em]
   \item \textbf{Fable 5.1 host: Sonnet is cheaper.} Choosing the model once at the start of the session
     (\term{sticky}) cost \CfFableStickyPairTwo\X\ the plain host (95\,\% CI \CfFableStickyPairCITwo), a
-    saving of about \CfFableStickySaving\,\%, with turn-pass fraction inside the preregistered margin on
-    the test scenarios. The shipped router, which re-chooses its model at the start of each turn, cost
+    typical per-session saving of about \CfFableStickySaving\,\% (geometric mean of per-pair cost ratios). In
+    spend, the plain Fable sessions cost \$\RvSpendAnchor\ on average and sticky ones \$\RvSpendSticky, a
+    reduction of \RvSpendCutAll\,\% over all \NScenarios\ scenarios (\RvSpendCutTest\,\% on the test split).
+    Turn-pass fraction was inside the preregistered margin on the test scenarios only. The shipped router, which re-chooses its model at the start of each turn, cost
     \CfFableShippedPairTwo\X; plain Sonnet for the whole session cost \CfFableSonnetPairTwo\X.
   \item \textbf{Opus 5.5 host: routing to Sonnet cost more.} Sticky \CfOpusStickyPairTwo\X, shipped
     \CfOpusShippedPairTwo\X, plain Sonnet \CfOpusSonnetPairTwo\X\ (pair reading); without the quality filter
@@ -38,15 +41,22 @@ to a cheaper model actually cost, in money and in quality, over realistic multi-
 \end{itemize}
 \end{keyidea}
 
-All \NHypConfirmed\ preregistered hypotheses were confirmed, under both readings of ``non-inferior''
-quality that the preregistration allows (\cref{sec:confirm}). Three cautions travel with the result.
+The preregistration fixed the four hypotheses, their thresholds, the split and the decision rule; the
+estimator, the quality filter and which cells count as savings claims were fixed after the data were collected
+(\cref{sec:design}). Under that estimator all \NHypConfirmed\ hypotheses were confirmed, under both readings of
+``non-inferior'' quality (\cref{sec:confirm}). Quality was tested only for cells whose cost interval shows a
+saving; Opus sticky, which saves nothing, did not show non-inferior quality (\QOpusSticky, 95\,\% CI
+\QOpusStickyCI). If every routed cell had to pass the quality test, \RvNHypAllQuality\ of 4 hypotheses would be
+confirmed. Four cautions travel with the result.
 \begin{itemize}
   \item \textbf{Quality is close to the line.} Sticky on Fable passed the 5-point turn-pass margin on the test
     scenarios by \QFableStickyMarginGap; across all \QAllScen\ scenarios the margin was not shown
     (\QAllFableSticky, 95\,\% CI \QAllFableStickyCI), and routed Fable arms passed the final hidden tests
     \FinalGapLow--\FinalGapHigh\ points less often (exploratory; \cref{sec:finalpass}).
-  \item \textbf{The router adds little beyond ``use Sonnet''.} \NStickySonnetOnly\ of \NStickySessions\ sticky
-    sessions ran Sonnet only, and plain Sonnet cost about the same on Fable (\cref{sec:recs}).
+  \item \textbf{Part of the routing saving is an effort setting.} When the sticky router chose Sonnet it ran it at
+    medium reasoning effort, while the plain-Sonnet control used the provider default. Those sticky sessions cost
+    \RvEffFableAll\X\ (Fable) and \RvEffOpusAll\X\ (Opus) the control on the same scenarios (\cref{sec:effort}).
+    An earlier draft's claim that the router adds little beyond ``use Sonnet'' is withdrawn.
   \item \textbf{Scope.} Sessions are scripted, at most \MaxTurns\ turns long, on one provider and one price
     table (\cref{sec:limits}).
 \end{itemize}

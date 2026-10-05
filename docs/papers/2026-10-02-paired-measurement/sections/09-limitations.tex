@@ -31,10 +31,17 @@
     summaries over all scenarios existed. The analysis also resolved \NDeviations\ ambiguities or mismatches
     in the preregistration (\cref{sec:deviations}); only the two non-inferiority readings and the bootstrap
     seed were varied in sensitivity checks.
-  \item \textbf{The Opus A/A ratio is not centred on 1, and launch order was fixed.} Two identical Opus
-    sessions differed by about \AAOpusPct\,\% on average (\AAOpus, \AAOpusCI). Arms were launched in a fixed
-    order a few seconds apart (\cref{sec:design}). Removing a bias of that size would put the Opus ratios at
-    about \OpusAdjLow--\OpusAdjHigh; the verdicts hold.
+  \item \textbf{The Opus A/A ratio is not centred on 1, for reasons we cannot explain.} Two identical Opus
+    sessions differed by about \AAOpusPct\,\% on average (\AAOpus, \AAOpusCI). The bias is not associated with
+    start offset (\cref{sec:aa}). Removing a bias of that size would put the Opus ratios at about
+    \OpusAdjLow--\OpusAdjHigh; the verdicts hold.
+  \item \textbf{Reasoning effort differs between the routed arms and the Sonnet control.} Routed Sonnet ran at
+    medium effort and the plain-Sonnet control at the provider default, so part of the routing saving is the
+    effort setting (\cref{sec:effort}). The control also ran only in the Opus waves, hours away from the Fable
+    sessions it is compared with.
+  \item \textbf{No held-out docs scenario.} All \RvDocsTrain\ docs scenarios are in the training split; the test
+    split has \RvDocsTest\ docs, \RvExplainTest\ explain and \RvReviewTest\ review scenarios (\cref{tab:tasksplit}).
+    Docs results, including the Opus docs exception, rest on training data only.
   \item \textbf{Inferred failure causes.} For \NFailedInferred\ of the \NFailed\ failed attempts the cause
     was inferred from timing, not recorded. Failed attempts were rerun as whole waves, so they cannot bias
     the accepted data, but the failure accounting for them is probable, not proven.
