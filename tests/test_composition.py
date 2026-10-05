@@ -378,7 +378,9 @@ class BundleLoadTests(unittest.TestCase):
         config = bundle.to_mount_plan()["session"]["orchestrator"]["config"]
         self.assertEqual(config["backend"], "jev")
         self.assertEqual(config["timeout_ms"], 3000)
-        self.assertEqual(config["effort_routing"], {"by_tier": {"cheap": "medium", "strong": None}})
+        # The mount plan deep-merges the pinned include's config, so keys from that older commit can appear
+        # alongside ours; the bundle's own block (held by test_config_parity) is what this release ships.
+        self.assertEqual(config["effort_routing"]["by_tier"], {"cheap": "medium", "strong": None})
         self.assertEqual(config["model_routing"]["decision_scope"], "session")
         self.assertEqual(config["model_routing"]["price_gate"], {"enabled": True})
 
