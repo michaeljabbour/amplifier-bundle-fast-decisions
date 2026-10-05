@@ -1,0 +1,2627 @@
+{
+  "settings_sha256": "n1:1409766246330cc8",
+  "waves": {
+    "js-phone-r2-any": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<campaign>/w000-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "js-phone-r2-any-sonnet",
+              "wave_id": "js-phone-r2-any",
+              "scenario": "js-phone",
+              "rep": 2,
+              "host": "any",
+              "arm": "sonnet",
+              "kind": "control",
+              "cell": "plain-sonnet",
+              "model": "claude-sonnet-5",
+              "nonce": "22047dea-65dc-4a81-abb9-657bfdbe1908",
+              "attempt": 1,
+              "est_usd": 2.3925,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-sonnet-5",
+                "effort": "absent"
+              }
+            },
+            {
+              "key": "js-phone-r2-any-sonnet_medium",
+              "wave_id": "js-phone-r2-any",
+              "scenario": "js-phone",
+              "rep": 2,
+              "host": "any",
+              "arm": "sonnet_medium",
+              "kind": "control",
+              "cell": "plain-sonnet-medium",
+              "model": "claude-sonnet-5",
+              "nonce": "453eab7c-0dd1-4d67-9199-d3ae8004c344",
+              "attempt": 1,
+              "est_usd": 2.0325,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-sonnet-5",
+                "effort": "medium"
+              }
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "js-phone-r2-any-sonnet": "done",
+            "js-phone-r2-any-sonnet_medium": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "readme-rewrite-r2-any": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<campaign>/w001-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "readme-rewrite-r2-any-sonnet",
+              "wave_id": "readme-rewrite-r2-any",
+              "scenario": "readme-rewrite",
+              "rep": 2,
+              "host": "any",
+              "arm": "sonnet",
+              "kind": "control",
+              "cell": "plain-sonnet",
+              "model": "claude-sonnet-5",
+              "nonce": "d3360d35-7e57-41f0-be63-4904cd22619f",
+              "attempt": 1,
+              "est_usd": 1.914,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-sonnet-5",
+                "effort": "absent"
+              }
+            },
+            {
+              "key": "readme-rewrite-r2-any-sonnet_medium",
+              "wave_id": "readme-rewrite-r2-any",
+              "scenario": "readme-rewrite",
+              "rep": 2,
+              "host": "any",
+              "arm": "sonnet_medium",
+              "kind": "control",
+              "cell": "plain-sonnet-medium",
+              "model": "claude-sonnet-5",
+              "nonce": "13bef763-23ce-4817-865c-c2a11b9ad54d",
+              "attempt": 1,
+              "est_usd": 1.626,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-sonnet-5",
+                "effort": "medium"
+              }
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "readme-rewrite-r2-any-sonnet": "done",
+            "readme-rewrite-r2-any-sonnet_medium": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "go-linkedlist-r2-any": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<campaign>/w002-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "go-linkedlist-r2-any-sonnet",
+              "wave_id": "go-linkedlist-r2-any",
+              "scenario": "go-linkedlist",
+              "rep": 2,
+              "host": "any",
+              "arm": "sonnet",
+              "kind": "control",
+              "cell": "plain-sonnet",
+              "model": "claude-sonnet-5",
+              "nonce": "e911f1bd-fa33-4d19-b370-d63d8cae37db",
+              "attempt": 1,
+              "est_usd": 5.4204,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-sonnet-5",
+                "effort": "absent"
+              }
+            },
+            {
+              "key": "go-linkedlist-r2-any-sonnet_medium",
+              "wave_id": "go-linkedlist-r2-any",
+              "scenario": "go-linkedlist",
+              "rep": 2,
+              "host": "any",
+              "arm": "sonnet_medium",
+              "kind": "control",
+              "cell": "plain-sonnet-medium",
+              "model": "claude-sonnet-5",
+              "nonce": "5f3981f8-74ca-4b2a-8242-61d45f34566c",
+              "attempt": 1,
+              "est_usd": 4.6048,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-sonnet-5",
+                "effort": "medium"
+              }
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "go-linkedlist-r2-any-sonnet": "done",
+            "go-linkedlist-r2-any-sonnet_medium": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "filelock-explain-r2-any": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<campaign>/w003-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "filelock-explain-r2-any-sonnet",
+              "wave_id": "filelock-explain-r2-any",
+              "scenario": "filelock-explain",
+              "rep": 2,
+              "host": "any",
+              "arm": "sonnet",
+              "kind": "control",
+              "cell": "plain-sonnet",
+              "model": "claude-sonnet-5",
+              "nonce": "7fb7b321-b74e-4310-864c-bf6374f75a58",
+              "attempt": 1,
+              "est_usd": 1.8661,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-sonnet-5",
+                "effort": "absent"
+              }
+            },
+            {
+              "key": "filelock-explain-r2-any-sonnet_medium",
+              "wave_id": "filelock-explain-r2-any",
+              "scenario": "filelock-explain",
+              "rep": 2,
+              "host": "any",
+              "arm": "sonnet_medium",
+              "kind": "control",
+              "cell": "plain-sonnet-medium",
+              "model": "claude-sonnet-5",
+              "nonce": "f61c2cf1-3238-44e3-9396-c6cac173a7c9",
+              "attempt": 1,
+              "est_usd": 1.5854,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-sonnet-5",
+                "effort": "medium"
+              }
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "filelock-explain-r2-any-sonnet": "done",
+            "filelock-explain-r2-any-sonnet_medium": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "go-protein-r2-any": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<campaign>/w004-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "go-protein-r2-any-sonnet",
+              "wave_id": "go-protein-r2-any",
+              "scenario": "go-protein",
+              "rep": 2,
+              "host": "any",
+              "arm": "sonnet",
+              "kind": "control",
+              "cell": "plain-sonnet",
+              "model": "claude-sonnet-5",
+              "nonce": "d4aab15d-6eef-4450-b529-9062d0d8ac05",
+              "attempt": 1,
+              "est_usd": 1.914,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-sonnet-5",
+                "effort": "absent"
+              }
+            },
+            {
+              "key": "go-protein-r2-any-sonnet_medium",
+              "wave_id": "go-protein-r2-any",
+              "scenario": "go-protein",
+              "rep": 2,
+              "host": "any",
+              "arm": "sonnet_medium",
+              "kind": "control",
+              "cell": "plain-sonnet-medium",
+              "model": "claude-sonnet-5",
+              "nonce": "0669fbd4-61b3-4cfc-8c60-734559a73e60",
+              "attempt": 1,
+              "est_usd": 1.626,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-sonnet-5",
+                "effort": "medium"
+              }
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "go-protein-r2-any-sonnet": "done",
+            "go-protein-r2-any-sonnet_medium": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "fastrand-explain-r1-any": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<campaign>/w005-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "fastrand-explain-r1-any-sonnet",
+              "wave_id": "fastrand-explain-r1-any",
+              "scenario": "fastrand-explain",
+              "rep": 1,
+              "host": "any",
+              "arm": "sonnet",
+              "kind": "control",
+              "cell": "plain-sonnet",
+              "model": "claude-sonnet-5",
+              "nonce": "761b6a2a-dbfb-49d8-8f65-1f9c99274026",
+              "attempt": 1,
+              "est_usd": 1.8661,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-sonnet-5",
+                "effort": "absent"
+              }
+            },
+            {
+              "key": "fastrand-explain-r1-any-sonnet_medium",
+              "wave_id": "fastrand-explain-r1-any",
+              "scenario": "fastrand-explain",
+              "rep": 1,
+              "host": "any",
+              "arm": "sonnet_medium",
+              "kind": "control",
+              "cell": "plain-sonnet-medium",
+              "model": "claude-sonnet-5",
+              "nonce": "9941e660-f35e-46ef-8770-cf9e11be3e25",
+              "attempt": 1,
+              "est_usd": 1.5854,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-sonnet-5",
+                "effort": "medium"
+              }
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "fastrand-explain-r1-any-sonnet": "done",
+            "fastrand-explain-r1-any-sonnet_medium": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "js-listops-r2-any": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<campaign>/w006-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "js-listops-r2-any-sonnet",
+              "wave_id": "js-listops-r2-any",
+              "scenario": "js-listops",
+              "rep": 2,
+              "host": "any",
+              "arm": "sonnet",
+              "kind": "control",
+              "cell": "plain-sonnet",
+              "model": "claude-sonnet-5",
+              "nonce": "3bb8b1f8-5105-4717-9989-d1ee89be62a3",
+              "attempt": 1,
+              "est_usd": 1.914,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-sonnet-5",
+                "effort": "absent"
+              }
+            },
+            {
+              "key": "js-listops-r2-any-sonnet_medium",
+              "wave_id": "js-listops-r2-any",
+              "scenario": "js-listops",
+              "rep": 2,
+              "host": "any",
+              "arm": "sonnet_medium",
+              "kind": "control",
+              "cell": "plain-sonnet-medium",
+              "model": "claude-sonnet-5",
+              "nonce": "f11b47c7-b711-46ea-a3eb-0b5aa7aff6bc",
+              "attempt": 1,
+              "est_usd": 1.626,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-sonnet-5",
+                "effort": "medium"
+              }
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "js-listops-r2-any-sonnet": "done",
+            "js-listops-r2-any-sonnet_medium": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "semver-review-r1-any": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<campaign>/w007-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "semver-review-r1-any-sonnet",
+              "wave_id": "semver-review-r1-any",
+              "scenario": "semver-review",
+              "rep": 1,
+              "host": "any",
+              "arm": "sonnet",
+              "kind": "control",
+              "cell": "plain-sonnet",
+              "model": "claude-sonnet-5",
+              "nonce": "0475d56c-ed53-45b6-b367-2490b53e1cd4",
+              "attempt": 1,
+              "est_usd": 2.1373,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-sonnet-5",
+                "effort": "absent"
+              }
+            },
+            {
+              "key": "semver-review-r1-any-sonnet_medium",
+              "wave_id": "semver-review-r1-any",
+              "scenario": "semver-review",
+              "rep": 1,
+              "host": "any",
+              "arm": "sonnet_medium",
+              "kind": "control",
+              "cell": "plain-sonnet-medium",
+              "model": "claude-sonnet-5",
+              "nonce": "f26152c3-14cf-44cb-a467-4eba9849cf10",
+              "attempt": 1,
+              "est_usd": 1.8157,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-sonnet-5",
+                "effort": "medium"
+              }
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "semver-review-r1-any-sonnet": "done",
+            "semver-review-r1-any-sonnet_medium": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "js-listops-r1-any": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<campaign>/w008-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "js-listops-r1-any-sonnet",
+              "wave_id": "js-listops-r1-any",
+              "scenario": "js-listops",
+              "rep": 1,
+              "host": "any",
+              "arm": "sonnet",
+              "kind": "control",
+              "cell": "plain-sonnet",
+              "model": "claude-sonnet-5",
+              "nonce": "46c6c2cd-8a06-4586-861c-c4dd8de45057",
+              "attempt": 1,
+              "est_usd": 1.914,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-sonnet-5",
+                "effort": "absent"
+              }
+            },
+            {
+              "key": "js-listops-r1-any-sonnet_medium",
+              "wave_id": "js-listops-r1-any",
+              "scenario": "js-listops",
+              "rep": 1,
+              "host": "any",
+              "arm": "sonnet_medium",
+              "kind": "control",
+              "cell": "plain-sonnet-medium",
+              "model": "claude-sonnet-5",
+              "nonce": "7de01ae7-161d-4f9a-8d57-e18d219d4418",
+              "attempt": 1,
+              "est_usd": 1.626,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-sonnet-5",
+                "effort": "medium"
+              }
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "js-listops-r1-any-sonnet": "done",
+            "js-listops-r1-any-sonnet_medium": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "toolz-interpose-r1-any": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<campaign>/w009-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "toolz-interpose-r1-any-sonnet",
+              "wave_id": "toolz-interpose-r1-any",
+              "scenario": "toolz-interpose",
+              "rep": 1,
+              "host": "any",
+              "arm": "sonnet",
+              "kind": "control",
+              "cell": "plain-sonnet",
+              "model": "claude-sonnet-5",
+              "nonce": "462b1793-bafc-41f9-8f89-6e9a6952a0a6",
+              "attempt": 1,
+              "est_usd": 2.871,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-sonnet-5",
+                "effort": "absent"
+              }
+            },
+            {
+              "key": "toolz-interpose-r1-any-sonnet_medium",
+              "wave_id": "toolz-interpose-r1-any",
+              "scenario": "toolz-interpose",
+              "rep": 1,
+              "host": "any",
+              "arm": "sonnet_medium",
+              "kind": "control",
+              "cell": "plain-sonnet-medium",
+              "model": "claude-sonnet-5",
+              "nonce": "1f2ba4d8-5e03-4263-a5a3-bb5acce48d56",
+              "attempt": 1,
+              "est_usd": 2.439,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-sonnet-5",
+                "effort": "medium"
+              }
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "toolz-interpose-r1-any-sonnet": "done",
+            "toolz-interpose-r1-any-sonnet_medium": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "docstring-audit-r2-any": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<campaign>/w010-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "docstring-audit-r2-any-sonnet",
+              "wave_id": "docstring-audit-r2-any",
+              "scenario": "docstring-audit",
+              "rep": 2,
+              "host": "any",
+              "arm": "sonnet",
+              "kind": "control",
+              "cell": "plain-sonnet",
+              "model": "claude-sonnet-5",
+              "nonce": "cbd3c65b-4caa-4fdd-a309-782d570bc9eb",
+              "attempt": 1,
+              "est_usd": 3.2155,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-sonnet-5",
+                "effort": "absent"
+              }
+            },
+            {
+              "key": "docstring-audit-r2-any-sonnet_medium",
+              "wave_id": "docstring-audit-r2-any",
+              "scenario": "docstring-audit",
+              "rep": 2,
+              "host": "any",
+              "arm": "sonnet_medium",
+              "kind": "control",
+              "cell": "plain-sonnet-medium",
+              "model": "claude-sonnet-5",
+              "nonce": "5f122f15-c1b6-46b6-8a91-8e612f5c6371",
+              "attempt": 1,
+              "est_usd": 2.7317,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-sonnet-5",
+                "effort": "medium"
+              }
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "docstring-audit-r2-any-sonnet": "done",
+            "docstring-audit-r2-any-sonnet_medium": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "sales-orders-r2-any": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<campaign>/w011-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "sales-orders-r2-any-sonnet",
+              "wave_id": "sales-orders-r2-any",
+              "scenario": "sales-orders",
+              "rep": 2,
+              "host": "any",
+              "arm": "sonnet",
+              "kind": "control",
+              "cell": "plain-sonnet",
+              "model": "claude-sonnet-5",
+              "nonce": "9e99e0a5-04bb-421d-8489-ee2c2f2d1e05",
+              "attempt": 1,
+              "est_usd": 4.517,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-sonnet-5",
+                "effort": "absent"
+              }
+            },
+            {
+              "key": "sales-orders-r2-any-sonnet_medium",
+              "wave_id": "sales-orders-r2-any",
+              "scenario": "sales-orders",
+              "rep": 2,
+              "host": "any",
+              "arm": "sonnet_medium",
+              "kind": "control",
+              "cell": "plain-sonnet-medium",
+              "model": "claude-sonnet-5",
+              "nonce": "f114f8eb-0edf-42ba-9930-62c7b5729f58",
+              "attempt": 1,
+              "est_usd": 3.8374,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-sonnet-5",
+                "effort": "medium"
+              }
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "sales-orders-r2-any-sonnet": "done",
+            "sales-orders-r2-any-sonnet_medium": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "lark-template-r1-any": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<campaign>/w012-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "lark-template-r1-any-sonnet",
+              "wave_id": "lark-template-r1-any",
+              "scenario": "lark-template",
+              "rep": 1,
+              "host": "any",
+              "arm": "sonnet",
+              "kind": "control",
+              "cell": "plain-sonnet",
+              "model": "claude-sonnet-5",
+              "nonce": "e11e4769-8dc9-4e1a-8053-ac636567258c",
+              "attempt": 1,
+              "est_usd": 2.871,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-sonnet-5",
+                "effort": "absent"
+              }
+            },
+            {
+              "key": "lark-template-r1-any-sonnet_medium",
+              "wave_id": "lark-template-r1-any",
+              "scenario": "lark-template",
+              "rep": 1,
+              "host": "any",
+              "arm": "sonnet_medium",
+              "kind": "control",
+              "cell": "plain-sonnet-medium",
+              "model": "claude-sonnet-5",
+              "nonce": "0049ae4f-2d40-45ed-a93e-2fb54ff3fc54",
+              "attempt": 1,
+              "est_usd": 2.439,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-sonnet-5",
+                "effort": "medium"
+              }
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "lark-template-r1-any-sonnet": "done",
+            "lark-template-r1-any-sonnet_medium": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "mistune-escape-r2-any": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<campaign>/w013-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "mistune-escape-r2-any-sonnet",
+              "wave_id": "mistune-escape-r2-any",
+              "scenario": "mistune-escape",
+              "rep": 2,
+              "host": "any",
+              "arm": "sonnet",
+              "kind": "control",
+              "cell": "plain-sonnet",
+              "model": "claude-sonnet-5",
+              "nonce": "3074c54f-3dd6-43db-87cb-b3a5367a53b1",
+              "attempt": 1,
+              "est_usd": 2.3925,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-sonnet-5",
+                "effort": "absent"
+              }
+            },
+            {
+              "key": "mistune-escape-r2-any-sonnet_medium",
+              "wave_id": "mistune-escape-r2-any",
+              "scenario": "mistune-escape",
+              "rep": 2,
+              "host": "any",
+              "arm": "sonnet_medium",
+              "kind": "control",
+              "cell": "plain-sonnet-medium",
+              "model": "claude-sonnet-5",
+              "nonce": "096bc3f7-f81b-4050-a7ac-6d753b9ebbee",
+              "attempt": 1,
+              "est_usd": 2.0325,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-sonnet-5",
+                "effort": "medium"
+              }
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "mistune-escape-r2-any-sonnet": "done",
+            "mistune-escape-r2-any-sonnet_medium": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "go-protein-r1-any": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<campaign>/w014-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "go-protein-r1-any-sonnet",
+              "wave_id": "go-protein-r1-any",
+              "scenario": "go-protein",
+              "rep": 1,
+              "host": "any",
+              "arm": "sonnet",
+              "kind": "control",
+              "cell": "plain-sonnet",
+              "model": "claude-sonnet-5",
+              "nonce": "6ca77809-36f6-4c5c-8098-cb7e08a6c4d0",
+              "attempt": 1,
+              "est_usd": 1.914,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-sonnet-5",
+                "effort": "absent"
+              }
+            },
+            {
+              "key": "go-protein-r1-any-sonnet_medium",
+              "wave_id": "go-protein-r1-any",
+              "scenario": "go-protein",
+              "rep": 1,
+              "host": "any",
+              "arm": "sonnet_medium",
+              "kind": "control",
+              "cell": "plain-sonnet-medium",
+              "model": "claude-sonnet-5",
+              "nonce": "6a3f2ed3-4cd6-4c55-b7ac-11276f0bce34",
+              "attempt": 1,
+              "est_usd": 1.626,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-sonnet-5",
+                "effort": "medium"
+              }
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "go-protein-r1-any-sonnet": "done",
+            "go-protein-r1-any-sonnet_medium": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "api-docs-r2-any": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<campaign>/w015-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "api-docs-r2-any-sonnet",
+              "wave_id": "api-docs-r2-any",
+              "scenario": "api-docs",
+              "rep": 2,
+              "host": "any",
+              "arm": "sonnet",
+              "kind": "control",
+              "cell": "plain-sonnet",
+              "model": "claude-sonnet-5",
+              "nonce": "c90ac57c-4e2b-4d63-8090-3b8738ea262c",
+              "attempt": 1,
+              "est_usd": 5.4204,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-sonnet-5",
+                "effort": "absent"
+              }
+            },
+            {
+              "key": "api-docs-r2-any-sonnet_medium",
+              "wave_id": "api-docs-r2-any",
+              "scenario": "api-docs",
+              "rep": 2,
+              "host": "any",
+              "arm": "sonnet_medium",
+              "kind": "control",
+              "cell": "plain-sonnet-medium",
+              "model": "claude-sonnet-5",
+              "nonce": "84eaa65a-7648-4f84-9b71-7743cc402bfe",
+              "attempt": 1,
+              "est_usd": 4.6048,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-sonnet-5",
+                "effort": "medium"
+              }
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "api-docs-r2-any-sonnet": "done",
+            "api-docs-r2-any-sonnet_medium": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "survey-analysis-r1-any": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<campaign>/w016-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "survey-analysis-r1-any-sonnet",
+              "wave_id": "survey-analysis-r1-any",
+              "scenario": "survey-analysis",
+              "rep": 1,
+              "host": "any",
+              "arm": "sonnet",
+              "kind": "control",
+              "cell": "plain-sonnet",
+              "model": "claude-sonnet-5",
+              "nonce": "eccf3923-cdff-468b-9883-6e74b8dab4c6",
+              "attempt": 1,
+              "est_usd": 4.517,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-sonnet-5",
+                "effort": "absent"
+              }
+            },
+            {
+              "key": "survey-analysis-r1-any-sonnet_medium",
+              "wave_id": "survey-analysis-r1-any",
+              "scenario": "survey-analysis",
+              "rep": 1,
+              "host": "any",
+              "arm": "sonnet_medium",
+              "kind": "control",
+              "cell": "plain-sonnet-medium",
+              "model": "claude-sonnet-5",
+              "nonce": "5854ca0b-2680-4176-adcb-5ed042b9d244",
+              "attempt": 1,
+              "est_usd": 3.8374,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-sonnet-5",
+                "effort": "medium"
+              }
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "survey-analysis-r1-any-sonnet": "done",
+            "survey-analysis-r1-any-sonnet_medium": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "xmltodict-none-r2-any": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<campaign>/w017-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "xmltodict-none-r2-any-sonnet",
+              "wave_id": "xmltodict-none-r2-any",
+              "scenario": "xmltodict-none",
+              "rep": 2,
+              "host": "any",
+              "arm": "sonnet",
+              "kind": "control",
+              "cell": "plain-sonnet",
+              "model": "claude-sonnet-5",
+              "nonce": "9645156c-862d-47e1-83e5-49440e83618d",
+              "attempt": 1,
+              "est_usd": 2.3925,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-sonnet-5",
+                "effort": "absent"
+              }
+            },
+            {
+              "key": "xmltodict-none-r2-any-sonnet_medium",
+              "wave_id": "xmltodict-none-r2-any",
+              "scenario": "xmltodict-none",
+              "rep": 2,
+              "host": "any",
+              "arm": "sonnet_medium",
+              "kind": "control",
+              "cell": "plain-sonnet-medium",
+              "model": "claude-sonnet-5",
+              "nonce": "359b6ef0-4ac6-46c9-b635-eb10d24d3b58",
+              "attempt": 1,
+              "est_usd": 2.0325,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-sonnet-5",
+                "effort": "medium"
+              }
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "xmltodict-none-r2-any-sonnet": "done",
+            "xmltodict-none-r2-any-sonnet_medium": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "discrepancy-docs-r1-any": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<campaign>/w018-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "discrepancy-docs-r1-any-sonnet",
+              "wave_id": "discrepancy-docs-r1-any",
+              "scenario": "discrepancy-docs",
+              "rep": 1,
+              "host": "any",
+              "arm": "sonnet",
+              "kind": "control",
+              "cell": "plain-sonnet",
+              "model": "claude-sonnet-5",
+              "nonce": "e30b6333-a229-415b-85dd-904641b35b6a",
+              "attempt": 1,
+              "est_usd": 5.4204,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-sonnet-5",
+                "effort": "absent"
+              }
+            },
+            {
+              "key": "discrepancy-docs-r1-any-sonnet_medium",
+              "wave_id": "discrepancy-docs-r1-any",
+              "scenario": "discrepancy-docs",
+              "rep": 1,
+              "host": "any",
+              "arm": "sonnet_medium",
+              "kind": "control",
+              "cell": "plain-sonnet-medium",
+              "model": "claude-sonnet-5",
+              "nonce": "554fac59-7876-49f2-96cb-fef3ef4f6bb0",
+              "attempt": 1,
+              "est_usd": 4.6048,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-sonnet-5",
+                "effort": "medium"
+              }
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "discrepancy-docs-r1-any-sonnet": "done",
+            "discrepancy-docs-r1-any-sonnet_medium": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "semver-review-r2-any": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<campaign>/w019-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "semver-review-r2-any-sonnet",
+              "wave_id": "semver-review-r2-any",
+              "scenario": "semver-review",
+              "rep": 2,
+              "host": "any",
+              "arm": "sonnet",
+              "kind": "control",
+              "cell": "plain-sonnet",
+              "model": "claude-sonnet-5",
+              "nonce": "187aa00c-e5d5-4bf5-896b-225f78b818d4",
+              "attempt": 1,
+              "est_usd": 2.1373,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-sonnet-5",
+                "effort": "absent"
+              }
+            },
+            {
+              "key": "semver-review-r2-any-sonnet_medium",
+              "wave_id": "semver-review-r2-any",
+              "scenario": "semver-review",
+              "rep": 2,
+              "host": "any",
+              "arm": "sonnet_medium",
+              "kind": "control",
+              "cell": "plain-sonnet-medium",
+              "model": "claude-sonnet-5",
+              "nonce": "1945649d-9cf9-4004-b560-6cfa3f7ffc57",
+              "attempt": 1,
+              "est_usd": 1.8157,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-sonnet-5",
+                "effort": "medium"
+              }
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "semver-review-r2-any-sonnet": "done",
+            "semver-review-r2-any-sonnet_medium": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "py-go-counting-r2-any": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<campaign>/w020-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "py-go-counting-r2-any-sonnet",
+              "wave_id": "py-go-counting-r2-any",
+              "scenario": "py-go-counting",
+              "rep": 2,
+              "host": "any",
+              "arm": "sonnet",
+              "kind": "control",
+              "cell": "plain-sonnet",
+              "model": "claude-sonnet-5",
+              "nonce": "aedc5329-0216-4d2a-9a88-267ab422f828",
+              "attempt": 1,
+              "est_usd": 4.6395,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-sonnet-5",
+                "effort": "absent"
+              }
+            },
+            {
+              "key": "py-go-counting-r2-any-sonnet_medium",
+              "wave_id": "py-go-counting-r2-any",
+              "scenario": "py-go-counting",
+              "rep": 2,
+              "host": "any",
+              "arm": "sonnet_medium",
+              "kind": "control",
+              "cell": "plain-sonnet-medium",
+              "model": "claude-sonnet-5",
+              "nonce": "5d55857e-ea22-4aaa-ab0a-91b60fd7ade6",
+              "attempt": 1,
+              "est_usd": 3.9414,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-sonnet-5",
+                "effort": "medium"
+              }
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "py-go-counting-r2-any-sonnet": "done",
+            "py-go-counting-r2-any-sonnet_medium": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "readme-rewrite-r1-any": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<campaign>/w021-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "readme-rewrite-r1-any-sonnet",
+              "wave_id": "readme-rewrite-r1-any",
+              "scenario": "readme-rewrite",
+              "rep": 1,
+              "host": "any",
+              "arm": "sonnet",
+              "kind": "control",
+              "cell": "plain-sonnet",
+              "model": "claude-sonnet-5",
+              "nonce": "c4873d06-bf36-4512-979e-90d16d2135ce",
+              "attempt": 1,
+              "est_usd": 1.914,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-sonnet-5",
+                "effort": "absent"
+              }
+            },
+            {
+              "key": "readme-rewrite-r1-any-sonnet_medium",
+              "wave_id": "readme-rewrite-r1-any",
+              "scenario": "readme-rewrite",
+              "rep": 1,
+              "host": "any",
+              "arm": "sonnet_medium",
+              "kind": "control",
+              "cell": "plain-sonnet-medium",
+              "model": "claude-sonnet-5",
+              "nonce": "d3f1c3ff-f666-4520-9b54-b06912cd6974",
+              "attempt": 1,
+              "est_usd": 1.626,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-sonnet-5",
+                "effort": "medium"
+              }
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "readme-rewrite-r1-any-sonnet": "done",
+            "readme-rewrite-r1-any-sonnet_medium": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "debug-triage-r2-any": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<campaign>/w022-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "debug-triage-r2-any-sonnet",
+              "wave_id": "debug-triage-r2-any",
+              "scenario": "debug-triage",
+              "rep": 2,
+              "host": "any",
+              "arm": "sonnet",
+              "kind": "control",
+              "cell": "plain-sonnet",
+              "model": "claude-sonnet-5",
+              "nonce": "c856586c-3476-487a-9b10-7a6b11025873",
+              "attempt": 1,
+              "est_usd": 2.8901,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-sonnet-5",
+                "effort": "absent"
+              }
+            },
+            {
+              "key": "debug-triage-r2-any-sonnet_medium",
+              "wave_id": "debug-triage-r2-any",
+              "scenario": "debug-triage",
+              "rep": 2,
+              "host": "any",
+              "arm": "sonnet_medium",
+              "kind": "control",
+              "cell": "plain-sonnet-medium",
+              "model": "claude-sonnet-5",
+              "nonce": "34424899-ed7e-4265-adbb-9b93de3caf4c",
+              "attempt": 1,
+              "est_usd": 2.4553,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-sonnet-5",
+                "effort": "medium"
+              }
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "debug-triage-r2-any-sonnet": "done",
+            "debug-triage-r2-any-sonnet_medium": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "sales-orders-r1-any": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<campaign>/w023-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "sales-orders-r1-any-sonnet",
+              "wave_id": "sales-orders-r1-any",
+              "scenario": "sales-orders",
+              "rep": 1,
+              "host": "any",
+              "arm": "sonnet",
+              "kind": "control",
+              "cell": "plain-sonnet",
+              "model": "claude-sonnet-5",
+              "nonce": "34afb944-b80e-4b14-b243-e0f867a73897",
+              "attempt": 1,
+              "est_usd": 4.517,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-sonnet-5",
+                "effort": "absent"
+              }
+            },
+            {
+              "key": "sales-orders-r1-any-sonnet_medium",
+              "wave_id": "sales-orders-r1-any",
+              "scenario": "sales-orders",
+              "rep": 1,
+              "host": "any",
+              "arm": "sonnet_medium",
+              "kind": "control",
+              "cell": "plain-sonnet-medium",
+              "model": "claude-sonnet-5",
+              "nonce": "7bbef04f-5d39-4f2a-9d8b-f121a9823cb8",
+              "attempt": 1,
+              "est_usd": 3.8374,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-sonnet-5",
+                "effort": "medium"
+              }
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "sales-orders-r1-any-sonnet": "done",
+            "sales-orders-r1-any-sonnet_medium": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "mistune-escape-r1-any": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<campaign>/w024-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "mistune-escape-r1-any-sonnet",
+              "wave_id": "mistune-escape-r1-any",
+              "scenario": "mistune-escape",
+              "rep": 1,
+              "host": "any",
+              "arm": "sonnet",
+              "kind": "control",
+              "cell": "plain-sonnet",
+              "model": "claude-sonnet-5",
+              "nonce": "4309f74d-ca68-4f6e-b243-6b454c4acfdc",
+              "attempt": 1,
+              "est_usd": 2.3925,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-sonnet-5",
+                "effort": "absent"
+              }
+            },
+            {
+              "key": "mistune-escape-r1-any-sonnet_medium",
+              "wave_id": "mistune-escape-r1-any",
+              "scenario": "mistune-escape",
+              "rep": 1,
+              "host": "any",
+              "arm": "sonnet_medium",
+              "kind": "control",
+              "cell": "plain-sonnet-medium",
+              "model": "claude-sonnet-5",
+              "nonce": "9a9dfed9-f21c-4a91-9752-dd0e77c00888",
+              "attempt": 1,
+              "est_usd": 2.0325,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-sonnet-5",
+                "effort": "medium"
+              }
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "mistune-escape-r1-any-sonnet": "done",
+            "mistune-escape-r1-any-sonnet_medium": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "debug-triage-r1-any": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<campaign>/w025-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "debug-triage-r1-any-sonnet",
+              "wave_id": "debug-triage-r1-any",
+              "scenario": "debug-triage",
+              "rep": 1,
+              "host": "any",
+              "arm": "sonnet",
+              "kind": "control",
+              "cell": "plain-sonnet",
+              "model": "claude-sonnet-5",
+              "nonce": "2fa7e745-06c0-4ec7-99db-cd9b28a39cf9",
+              "attempt": 1,
+              "est_usd": 2.8901,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-sonnet-5",
+                "effort": "absent"
+              }
+            },
+            {
+              "key": "debug-triage-r1-any-sonnet_medium",
+              "wave_id": "debug-triage-r1-any",
+              "scenario": "debug-triage",
+              "rep": 1,
+              "host": "any",
+              "arm": "sonnet_medium",
+              "kind": "control",
+              "cell": "plain-sonnet-medium",
+              "model": "claude-sonnet-5",
+              "nonce": "3fd3054f-b4b9-460c-891a-68f5d2cab88f",
+              "attempt": 1,
+              "est_usd": 2.4553,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-sonnet-5",
+                "effort": "medium"
+              }
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "debug-triage-r1-any-sonnet": "done",
+            "debug-triage-r1-any-sonnet_medium": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "humanize-review-r1-any": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<campaign>/w026-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "humanize-review-r1-any-sonnet",
+              "wave_id": "humanize-review-r1-any",
+              "scenario": "humanize-review",
+              "rep": 1,
+              "host": "any",
+              "arm": "sonnet",
+              "kind": "control",
+              "cell": "plain-sonnet",
+              "model": "claude-sonnet-5",
+              "nonce": "8b9f2686-7441-477b-8c45-c2bc73dead47",
+              "attempt": 1,
+              "est_usd": 3.2155,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-sonnet-5",
+                "effort": "absent"
+              }
+            },
+            {
+              "key": "humanize-review-r1-any-sonnet_medium",
+              "wave_id": "humanize-review-r1-any",
+              "scenario": "humanize-review",
+              "rep": 1,
+              "host": "any",
+              "arm": "sonnet_medium",
+              "kind": "control",
+              "cell": "plain-sonnet-medium",
+              "model": "claude-sonnet-5",
+              "nonce": "f2a40ed0-9ad3-4b7c-ae92-33337b48598b",
+              "attempt": 1,
+              "est_usd": 2.7317,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-sonnet-5",
+                "effort": "medium"
+              }
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "humanize-review-r1-any-sonnet": "done",
+            "humanize-review-r1-any-sonnet_medium": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "go-linkedlist-r1-any": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<campaign>/w027-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "go-linkedlist-r1-any-sonnet",
+              "wave_id": "go-linkedlist-r1-any",
+              "scenario": "go-linkedlist",
+              "rep": 1,
+              "host": "any",
+              "arm": "sonnet",
+              "kind": "control",
+              "cell": "plain-sonnet",
+              "model": "claude-sonnet-5",
+              "nonce": "10e5a96d-6707-416b-9b56-022bdc449834",
+              "attempt": 1,
+              "est_usd": 5.4204,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-sonnet-5",
+                "effort": "absent"
+              }
+            },
+            {
+              "key": "go-linkedlist-r1-any-sonnet_medium",
+              "wave_id": "go-linkedlist-r1-any",
+              "scenario": "go-linkedlist",
+              "rep": 1,
+              "host": "any",
+              "arm": "sonnet_medium",
+              "kind": "control",
+              "cell": "plain-sonnet-medium",
+              "model": "claude-sonnet-5",
+              "nonce": "55b10612-f41e-454a-99d4-b38becd20529",
+              "attempt": 1,
+              "est_usd": 4.6048,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-sonnet-5",
+                "effort": "medium"
+              }
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "go-linkedlist-r1-any-sonnet": "done",
+            "go-linkedlist-r1-any-sonnet_medium": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "xmltodict-none-r1-any": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<campaign>/w028-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "xmltodict-none-r1-any-sonnet",
+              "wave_id": "xmltodict-none-r1-any",
+              "scenario": "xmltodict-none",
+              "rep": 1,
+              "host": "any",
+              "arm": "sonnet",
+              "kind": "control",
+              "cell": "plain-sonnet",
+              "model": "claude-sonnet-5",
+              "nonce": "9bdc57dc-1391-433c-a867-3488a3cb9912",
+              "attempt": 1,
+              "est_usd": 2.3925,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-sonnet-5",
+                "effort": "absent"
+              }
+            },
+            {
+              "key": "xmltodict-none-r1-any-sonnet_medium",
+              "wave_id": "xmltodict-none-r1-any",
+              "scenario": "xmltodict-none",
+              "rep": 1,
+              "host": "any",
+              "arm": "sonnet_medium",
+              "kind": "control",
+              "cell": "plain-sonnet-medium",
+              "model": "claude-sonnet-5",
+              "nonce": "763efa07-3daa-4077-97e1-7b3a93c0cc0b",
+              "attempt": 1,
+              "est_usd": 2.0325,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-sonnet-5",
+                "effort": "medium"
+              }
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "xmltodict-none-r1-any-sonnet": "done",
+            "xmltodict-none-r1-any-sonnet_medium": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "docstring-audit-r1-any": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<campaign>/w029-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "docstring-audit-r1-any-sonnet",
+              "wave_id": "docstring-audit-r1-any",
+              "scenario": "docstring-audit",
+              "rep": 1,
+              "host": "any",
+              "arm": "sonnet",
+              "kind": "control",
+              "cell": "plain-sonnet",
+              "model": "claude-sonnet-5",
+              "nonce": "bc69933c-4ccb-4f52-9cea-aa22a893e2df",
+              "attempt": 1,
+              "est_usd": 3.2155,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-sonnet-5",
+                "effort": "absent"
+              }
+            },
+            {
+              "key": "docstring-audit-r1-any-sonnet_medium",
+              "wave_id": "docstring-audit-r1-any",
+              "scenario": "docstring-audit",
+              "rep": 1,
+              "host": "any",
+              "arm": "sonnet_medium",
+              "kind": "control",
+              "cell": "plain-sonnet-medium",
+              "model": "claude-sonnet-5",
+              "nonce": "9d39ef80-3a34-4458-af6c-317407beeeb3",
+              "attempt": 1,
+              "est_usd": 2.7317,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-sonnet-5",
+                "effort": "medium"
+              }
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "docstring-audit-r1-any-sonnet": "done",
+            "docstring-audit-r1-any-sonnet_medium": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "survey-analysis-r2-any": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<campaign>/w030-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "survey-analysis-r2-any-sonnet",
+              "wave_id": "survey-analysis-r2-any",
+              "scenario": "survey-analysis",
+              "rep": 2,
+              "host": "any",
+              "arm": "sonnet",
+              "kind": "control",
+              "cell": "plain-sonnet",
+              "model": "claude-sonnet-5",
+              "nonce": "e77eae32-642d-4d63-bd5d-a67ab79ef110",
+              "attempt": 1,
+              "est_usd": 4.517,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-sonnet-5",
+                "effort": "absent"
+              }
+            },
+            {
+              "key": "survey-analysis-r2-any-sonnet_medium",
+              "wave_id": "survey-analysis-r2-any",
+              "scenario": "survey-analysis",
+              "rep": 2,
+              "host": "any",
+              "arm": "sonnet_medium",
+              "kind": "control",
+              "cell": "plain-sonnet-medium",
+              "model": "claude-sonnet-5",
+              "nonce": "7489a3e7-00ad-4939-90fc-f0546c9a0654",
+              "attempt": 1,
+              "est_usd": 3.8374,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-sonnet-5",
+                "effort": "medium"
+              }
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "survey-analysis-r2-any-sonnet": "done",
+            "survey-analysis-r2-any-sonnet_medium": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "py-go-counting-r1-any": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<campaign>/w031-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "py-go-counting-r1-any-sonnet",
+              "wave_id": "py-go-counting-r1-any",
+              "scenario": "py-go-counting",
+              "rep": 1,
+              "host": "any",
+              "arm": "sonnet",
+              "kind": "control",
+              "cell": "plain-sonnet",
+              "model": "claude-sonnet-5",
+              "nonce": "c6e6c565-8f24-43a6-92e1-424712365d11",
+              "attempt": 1,
+              "est_usd": 4.6395,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-sonnet-5",
+                "effort": "absent"
+              }
+            },
+            {
+              "key": "py-go-counting-r1-any-sonnet_medium",
+              "wave_id": "py-go-counting-r1-any",
+              "scenario": "py-go-counting",
+              "rep": 1,
+              "host": "any",
+              "arm": "sonnet_medium",
+              "kind": "control",
+              "cell": "plain-sonnet-medium",
+              "model": "claude-sonnet-5",
+              "nonce": "c92f7619-b1a7-4406-af1d-1c4be91978b1",
+              "attempt": 1,
+              "est_usd": 3.9414,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-sonnet-5",
+                "effort": "medium"
+              }
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "py-go-counting-r1-any-sonnet": "done",
+            "py-go-counting-r1-any-sonnet_medium": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "api-docs-r1-any": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<campaign>/w032-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "api-docs-r1-any-sonnet",
+              "wave_id": "api-docs-r1-any",
+              "scenario": "api-docs",
+              "rep": 1,
+              "host": "any",
+              "arm": "sonnet",
+              "kind": "control",
+              "cell": "plain-sonnet",
+              "model": "claude-sonnet-5",
+              "nonce": "d74b99ee-d1af-4e41-9010-816e83a29b1e",
+              "attempt": 1,
+              "est_usd": 5.4204,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-sonnet-5",
+                "effort": "absent"
+              }
+            },
+            {
+              "key": "api-docs-r1-any-sonnet_medium",
+              "wave_id": "api-docs-r1-any",
+              "scenario": "api-docs",
+              "rep": 1,
+              "host": "any",
+              "arm": "sonnet_medium",
+              "kind": "control",
+              "cell": "plain-sonnet-medium",
+              "model": "claude-sonnet-5",
+              "nonce": "40f743a9-f8dc-491b-9fc6-f605ef197ff1",
+              "attempt": 1,
+              "est_usd": 4.6048,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-sonnet-5",
+                "effort": "medium"
+              }
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "api-docs-r1-any-sonnet": "done",
+            "api-docs-r1-any-sonnet_medium": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "rust-ocr-r2-any": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<campaign>/w033-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "rust-ocr-r2-any-sonnet",
+              "wave_id": "rust-ocr-r2-any",
+              "scenario": "rust-ocr",
+              "rep": 2,
+              "host": "any",
+              "arm": "sonnet",
+              "kind": "control",
+              "cell": "plain-sonnet",
+              "model": "claude-sonnet-5",
+              "nonce": "38d1a327-f54a-437e-bf77-bd0a1932464b",
+              "attempt": 1,
+              "est_usd": 5.4204,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-sonnet-5",
+                "effort": "absent"
+              }
+            },
+            {
+              "key": "rust-ocr-r2-any-sonnet_medium",
+              "wave_id": "rust-ocr-r2-any",
+              "scenario": "rust-ocr",
+              "rep": 2,
+              "host": "any",
+              "arm": "sonnet_medium",
+              "kind": "control",
+              "cell": "plain-sonnet-medium",
+              "model": "claude-sonnet-5",
+              "nonce": "42b19b34-7405-48c3-a461-fa864fcd7bbc",
+              "attempt": 1,
+              "est_usd": 4.6048,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-sonnet-5",
+                "effort": "medium"
+              }
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "rust-ocr-r2-any-sonnet": "done",
+            "rust-ocr-r2-any-sonnet_medium": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "py-rest-api-r1-any": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<campaign>/w034-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "py-rest-api-r1-any-sonnet",
+              "wave_id": "py-rest-api-r1-any",
+              "scenario": "py-rest-api",
+              "rep": 1,
+              "host": "any",
+              "arm": "sonnet",
+              "kind": "control",
+              "cell": "plain-sonnet",
+              "model": "claude-sonnet-5",
+              "nonce": "70033f69-5df9-49e4-8e91-6de73c40a0fc",
+              "attempt": 1,
+              "est_usd": 2.2394,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-sonnet-5",
+                "effort": "absent"
+              }
+            },
+            {
+              "key": "py-rest-api-r1-any-sonnet_medium",
+              "wave_id": "py-rest-api-r1-any",
+              "scenario": "py-rest-api",
+              "rep": 1,
+              "host": "any",
+              "arm": "sonnet_medium",
+              "kind": "control",
+              "cell": "plain-sonnet-medium",
+              "model": "claude-sonnet-5",
+              "nonce": "de95fa3e-cb4c-42e4-86d9-d761915b770e",
+              "attempt": 1,
+              "est_usd": 1.9024,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-sonnet-5",
+                "effort": "medium"
+              }
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "py-rest-api-r1-any-sonnet": "done",
+            "py-rest-api-r1-any-sonnet_medium": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "humanize-review-r2-any": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<campaign>/w035-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "humanize-review-r2-any-sonnet",
+              "wave_id": "humanize-review-r2-any",
+              "scenario": "humanize-review",
+              "rep": 2,
+              "host": "any",
+              "arm": "sonnet",
+              "kind": "control",
+              "cell": "plain-sonnet",
+              "model": "claude-sonnet-5",
+              "nonce": "18e32f8c-a268-42c4-b274-1f7707530aa5",
+              "attempt": 1,
+              "est_usd": 3.2155,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-sonnet-5",
+                "effort": "absent"
+              }
+            },
+            {
+              "key": "humanize-review-r2-any-sonnet_medium",
+              "wave_id": "humanize-review-r2-any",
+              "scenario": "humanize-review",
+              "rep": 2,
+              "host": "any",
+              "arm": "sonnet_medium",
+              "kind": "control",
+              "cell": "plain-sonnet-medium",
+              "model": "claude-sonnet-5",
+              "nonce": "399bf6b6-b2f2-460c-a801-d217712c35da",
+              "attempt": 1,
+              "est_usd": 2.7317,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-sonnet-5",
+                "effort": "medium"
+              }
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "humanize-review-r2-any-sonnet": "done",
+            "humanize-review-r2-any-sonnet_medium": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "js-phone-r1-any": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<campaign>/w036-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "js-phone-r1-any-sonnet",
+              "wave_id": "js-phone-r1-any",
+              "scenario": "js-phone",
+              "rep": 1,
+              "host": "any",
+              "arm": "sonnet",
+              "kind": "control",
+              "cell": "plain-sonnet",
+              "model": "claude-sonnet-5",
+              "nonce": "2c27ba2e-3924-4250-907d-68e63b0517f5",
+              "attempt": 1,
+              "est_usd": 2.3925,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-sonnet-5",
+                "effort": "absent"
+              }
+            },
+            {
+              "key": "js-phone-r1-any-sonnet_medium",
+              "wave_id": "js-phone-r1-any",
+              "scenario": "js-phone",
+              "rep": 1,
+              "host": "any",
+              "arm": "sonnet_medium",
+              "kind": "control",
+              "cell": "plain-sonnet-medium",
+              "model": "claude-sonnet-5",
+              "nonce": "7eb9a204-2a64-455d-b052-0518e6f2da88",
+              "attempt": 1,
+              "est_usd": 2.0325,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-sonnet-5",
+                "effort": "medium"
+              }
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "js-phone-r1-any-sonnet": "done",
+            "js-phone-r1-any-sonnet_medium": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "py-rest-api-r2-any": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<campaign>/w037-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "py-rest-api-r2-any-sonnet",
+              "wave_id": "py-rest-api-r2-any",
+              "scenario": "py-rest-api",
+              "rep": 2,
+              "host": "any",
+              "arm": "sonnet",
+              "kind": "control",
+              "cell": "plain-sonnet",
+              "model": "claude-sonnet-5",
+              "nonce": "994da314-b9b3-4f6d-a442-bb833c5a414d",
+              "attempt": 1,
+              "est_usd": 2.2394,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-sonnet-5",
+                "effort": "absent"
+              }
+            },
+            {
+              "key": "py-rest-api-r2-any-sonnet_medium",
+              "wave_id": "py-rest-api-r2-any",
+              "scenario": "py-rest-api",
+              "rep": 2,
+              "host": "any",
+              "arm": "sonnet_medium",
+              "kind": "control",
+              "cell": "plain-sonnet-medium",
+              "model": "claude-sonnet-5",
+              "nonce": "ee69599b-2243-44c7-bf1c-ad087a92bd0d",
+              "attempt": 1,
+              "est_usd": 1.9024,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-sonnet-5",
+                "effort": "medium"
+              }
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "py-rest-api-r2-any-sonnet": "done",
+            "py-rest-api-r2-any-sonnet_medium": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "discrepancy-docs-r2-any": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<campaign>/w038-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "discrepancy-docs-r2-any-sonnet",
+              "wave_id": "discrepancy-docs-r2-any",
+              "scenario": "discrepancy-docs",
+              "rep": 2,
+              "host": "any",
+              "arm": "sonnet",
+              "kind": "control",
+              "cell": "plain-sonnet",
+              "model": "claude-sonnet-5",
+              "nonce": "de1b573a-809f-4f10-9576-e1eb5821aeb0",
+              "attempt": 1,
+              "est_usd": 5.4204,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-sonnet-5",
+                "effort": "absent"
+              }
+            },
+            {
+              "key": "discrepancy-docs-r2-any-sonnet_medium",
+              "wave_id": "discrepancy-docs-r2-any",
+              "scenario": "discrepancy-docs",
+              "rep": 2,
+              "host": "any",
+              "arm": "sonnet_medium",
+              "kind": "control",
+              "cell": "plain-sonnet-medium",
+              "model": "claude-sonnet-5",
+              "nonce": "f324d512-3512-42e8-9c70-20c07d786f4b",
+              "attempt": 1,
+              "est_usd": 4.6048,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-sonnet-5",
+                "effort": "medium"
+              }
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "discrepancy-docs-r2-any-sonnet": "done",
+            "discrepancy-docs-r2-any-sonnet_medium": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "lark-discard-r1-any": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<campaign>/w039-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "lark-discard-r1-any-sonnet",
+              "wave_id": "lark-discard-r1-any",
+              "scenario": "lark-discard",
+              "rep": 1,
+              "host": "any",
+              "arm": "sonnet",
+              "kind": "control",
+              "cell": "plain-sonnet",
+              "model": "claude-sonnet-5",
+              "nonce": "3119d1ea-4db4-4444-a3a6-bd672c4b9866",
+              "attempt": 1,
+              "est_usd": 4.0194,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-sonnet-5",
+                "effort": "absent"
+              }
+            },
+            {
+              "key": "lark-discard-r1-any-sonnet_medium",
+              "wave_id": "lark-discard-r1-any",
+              "scenario": "lark-discard",
+              "rep": 1,
+              "host": "any",
+              "arm": "sonnet_medium",
+              "kind": "control",
+              "cell": "plain-sonnet-medium",
+              "model": "claude-sonnet-5",
+              "nonce": "ef65b7ae-ace7-4abf-b615-ec8fdd54a20a",
+              "attempt": 1,
+              "est_usd": 3.4146,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-sonnet-5",
+                "effort": "medium"
+              }
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "lark-discard-r1-any-sonnet": "done",
+            "lark-discard-r1-any-sonnet_medium": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "lark-template-r2-any": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<campaign>/w040-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "lark-template-r2-any-sonnet",
+              "wave_id": "lark-template-r2-any",
+              "scenario": "lark-template",
+              "rep": 2,
+              "host": "any",
+              "arm": "sonnet",
+              "kind": "control",
+              "cell": "plain-sonnet",
+              "model": "claude-sonnet-5",
+              "nonce": "d83c5fdb-0186-4515-876f-db7ec61dbda5",
+              "attempt": 1,
+              "est_usd": 2.871,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-sonnet-5",
+                "effort": "absent"
+              }
+            },
+            {
+              "key": "lark-template-r2-any-sonnet_medium",
+              "wave_id": "lark-template-r2-any",
+              "scenario": "lark-template",
+              "rep": 2,
+              "host": "any",
+              "arm": "sonnet_medium",
+              "kind": "control",
+              "cell": "plain-sonnet-medium",
+              "model": "claude-sonnet-5",
+              "nonce": "c41d234c-0992-42cd-893b-3bf822b36638",
+              "attempt": 1,
+              "est_usd": 2.439,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-sonnet-5",
+                "effort": "medium"
+              }
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "lark-template-r2-any-sonnet": "done",
+            "lark-template-r2-any-sonnet_medium": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "lark-discard-r2-any": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<campaign>/w041-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "lark-discard-r2-any-sonnet",
+              "wave_id": "lark-discard-r2-any",
+              "scenario": "lark-discard",
+              "rep": 2,
+              "host": "any",
+              "arm": "sonnet",
+              "kind": "control",
+              "cell": "plain-sonnet",
+              "model": "claude-sonnet-5",
+              "nonce": "984e5fe6-ec36-4410-b1e9-23fb124f9d4f",
+              "attempt": 1,
+              "est_usd": 4.0194,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-sonnet-5",
+                "effort": "absent"
+              }
+            },
+            {
+              "key": "lark-discard-r2-any-sonnet_medium",
+              "wave_id": "lark-discard-r2-any",
+              "scenario": "lark-discard",
+              "rep": 2,
+              "host": "any",
+              "arm": "sonnet_medium",
+              "kind": "control",
+              "cell": "plain-sonnet-medium",
+              "model": "claude-sonnet-5",
+              "nonce": "67debc12-a154-47d6-9155-3b0328d77620",
+              "attempt": 1,
+              "est_usd": 3.4146,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-sonnet-5",
+                "effort": "medium"
+              }
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "lark-discard-r2-any-sonnet": "done",
+            "lark-discard-r2-any-sonnet_medium": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "rust-ocr-r1-any": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<campaign>/w042-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "rust-ocr-r1-any-sonnet",
+              "wave_id": "rust-ocr-r1-any",
+              "scenario": "rust-ocr",
+              "rep": 1,
+              "host": "any",
+              "arm": "sonnet",
+              "kind": "control",
+              "cell": "plain-sonnet",
+              "model": "claude-sonnet-5",
+              "nonce": "8e26c773-0370-44c0-87bc-a1b32d19bafe",
+              "attempt": 1,
+              "est_usd": 5.4204,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-sonnet-5",
+                "effort": "absent"
+              }
+            },
+            {
+              "key": "rust-ocr-r1-any-sonnet_medium",
+              "wave_id": "rust-ocr-r1-any",
+              "scenario": "rust-ocr",
+              "rep": 1,
+              "host": "any",
+              "arm": "sonnet_medium",
+              "kind": "control",
+              "cell": "plain-sonnet-medium",
+              "model": "claude-sonnet-5",
+              "nonce": "eeebbe0c-57a7-4594-8a66-11c880e42799",
+              "attempt": 1,
+              "est_usd": 4.6048,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-sonnet-5",
+                "effort": "medium"
+              }
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "rust-ocr-r1-any-sonnet": "done",
+            "rust-ocr-r1-any-sonnet_medium": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "fastrand-explain-r2-any": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<campaign>/w043-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "fastrand-explain-r2-any-sonnet",
+              "wave_id": "fastrand-explain-r2-any",
+              "scenario": "fastrand-explain",
+              "rep": 2,
+              "host": "any",
+              "arm": "sonnet",
+              "kind": "control",
+              "cell": "plain-sonnet",
+              "model": "claude-sonnet-5",
+              "nonce": "81c14ec8-4b7a-4ee7-b59e-ff068151e6b8",
+              "attempt": 1,
+              "est_usd": 1.8661,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-sonnet-5",
+                "effort": "absent"
+              }
+            },
+            {
+              "key": "fastrand-explain-r2-any-sonnet_medium",
+              "wave_id": "fastrand-explain-r2-any",
+              "scenario": "fastrand-explain",
+              "rep": 2,
+              "host": "any",
+              "arm": "sonnet_medium",
+              "kind": "control",
+              "cell": "plain-sonnet-medium",
+              "model": "claude-sonnet-5",
+              "nonce": "6b7aaf57-c9bb-4a3a-b7f2-b0b1dc6f635d",
+              "attempt": 1,
+              "est_usd": 1.5854,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-sonnet-5",
+                "effort": "medium"
+              }
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "fastrand-explain-r2-any-sonnet": "done",
+            "fastrand-explain-r2-any-sonnet_medium": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "toolz-interpose-r2-any": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<campaign>/w044-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "toolz-interpose-r2-any-sonnet",
+              "wave_id": "toolz-interpose-r2-any",
+              "scenario": "toolz-interpose",
+              "rep": 2,
+              "host": "any",
+              "arm": "sonnet",
+              "kind": "control",
+              "cell": "plain-sonnet",
+              "model": "claude-sonnet-5",
+              "nonce": "18c1896c-cbee-4098-9f1d-d962dd237bfe",
+              "attempt": 1,
+              "est_usd": 2.871,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-sonnet-5",
+                "effort": "absent"
+              }
+            },
+            {
+              "key": "toolz-interpose-r2-any-sonnet_medium",
+              "wave_id": "toolz-interpose-r2-any",
+              "scenario": "toolz-interpose",
+              "rep": 2,
+              "host": "any",
+              "arm": "sonnet_medium",
+              "kind": "control",
+              "cell": "plain-sonnet-medium",
+              "model": "claude-sonnet-5",
+              "nonce": "e10e31fa-131a-40cc-b38e-80b345816245",
+              "attempt": 1,
+              "est_usd": 2.439,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-sonnet-5",
+                "effort": "medium"
+              }
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "toolz-interpose-r2-any-sonnet": "done",
+            "toolz-interpose-r2-any-sonnet_medium": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    },
+    "filelock-explain-r1-any": {
+      "status": "done",
+      "attempts": [
+        {
+          "attempt": 1,
+          "root": "<campaign>/w045-a1",
+          "status": "done",
+          "sessions": [
+            {
+              "key": "filelock-explain-r1-any-sonnet",
+              "wave_id": "filelock-explain-r1-any",
+              "scenario": "filelock-explain",
+              "rep": 1,
+              "host": "any",
+              "arm": "sonnet",
+              "kind": "control",
+              "cell": "plain-sonnet",
+              "model": "claude-sonnet-5",
+              "nonce": "e202f256-c7da-449a-b7f0-112b107248c9",
+              "attempt": 1,
+              "est_usd": 1.8661,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-sonnet-5",
+                "effort": "absent"
+              }
+            },
+            {
+              "key": "filelock-explain-r1-any-sonnet_medium",
+              "wave_id": "filelock-explain-r1-any",
+              "scenario": "filelock-explain",
+              "rep": 1,
+              "host": "any",
+              "arm": "sonnet_medium",
+              "kind": "control",
+              "cell": "plain-sonnet-medium",
+              "model": "claude-sonnet-5",
+              "nonce": "13f189c3-30db-4a70-afc8-3e61a8145fa6",
+              "attempt": 1,
+              "est_usd": 1.5854,
+              "sticky_decision": null,
+              "gate": {
+                "served_model_prefix": "claude-sonnet-5",
+                "effort": "medium"
+              }
+            }
+          ],
+          "launch_spread_s": 0.0,
+          "wave_valid": true,
+          "outcomes": {
+            "filelock-explain-r1-any-sonnet": "done",
+            "filelock-explain-r1-any-sonnet_medium": "done"
+          }
+        }
+      ],
+      "accepted_attempt": 1
+    }
+  }
+}

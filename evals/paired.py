@@ -142,7 +142,12 @@ def scenario_dirs(design: dict):
 
 
 def load_specs(design: dict) -> list:
-    return ps.load_dir(scenario_dirs(design))
+    specs = ps.load_dir(scenario_dirs(design))
+    flt = design.get("scenario_filter") or {}
+    if flt.get("split"):                          # e.g. {split: test}: the preregistered confirmatory half only
+        keep = set(flt["split"] if isinstance(flt["split"], list) else [flt["split"]])
+        specs = [s for s in specs if s.split in keep]
+    return specs
 
 
 # ----------------------------------------------------------------------------------------- sessions
@@ -162,6 +167,7 @@ class Session:
     attempt: int = 1
     est_usd: float = 0.0
     sticky_decision: str | None = None
+    gate: dict = field(default_factory=dict)      # per-arm mechanism expectations from the design (served model, effort)
 
 
 def _short(n: int, s: str) -> str:
@@ -221,7 +227,7 @@ def expand_sessions(design: dict, specs: list, *, reps: int, hosts: list, arms: 
                         cell = None
                     sessions.append(Session(key=f"{spec.id}-r{rep}-{shost}-{arm}", wave_id=wave_id, scenario=spec.id,
                                             rep=rep, host=shost, arm=arm, kind=a["kind"], cell=cell,
-                                            model=model or "", ))
+                                            model=model or "", gate=dict(a.get("gate") or {})))
     return sessions
 
 
@@ -338,6 +344,7 @@ def build_plan(design: dict, specs: list, *, reps: int, hosts: list, arms: list,
     plan = {
         "schema": SCHEMA, "plan_id": plan_id, "design": design["id"], "seed": seed, "reps": reps, "hosts": hosts,
         "arms": arms, "parallel": parallel, "nonce_mode": nonce_mode, "control_waves_split": split,
+        "anchor_arm": design.get("anchor_arm", "anchor"),
         "scenarios": {sid: {"scenario_hash": ps.scenario_hash(by_id[sid]), "prompt_sha256": prompt_hashes[sid],
                             "turns": len(by_id[sid].turns), "gap_schedule": by_id[sid].gap_schedule,
                             "n_long_gaps": by_id[sid].n_long_gaps, "task_type": by_id[sid].task_type,
@@ -678,7 +685,7 @@ def assert_covariates(columns) -> None:
         raise ValueError(f"not allowed as covariates (post-treatment outcomes?): {bad}")
 
 
-def mechanism_gate(session: dict, counts: dict, switches: int, main_models: list) -> dict:
+def mechanism_gate(session: dict, counts: dict, switches: int, main_models: list, main_efforts: list | None = None) -> dict:
     """STUDY-DESIGN R4 per arm kind. fd arms must show routing receipts; plain arms none; sticky must never
     switch, judge at most once, and keep every main request on the decided model."""
     kind = session["kind"]
@@ -704,6 +711,18 @@ def mechanism_gate(session: dict, counts: dict, switches: int, main_models: list
         if want and any(m != want for m in main_models):
             ok = False
             why.append(f"requested model {want} not on every main request (saw {sorted(set(main_models))})")
+    g = session.get("gate") or {}
+    if g.get("served_model_prefix") and main_models:
+        bad = sorted({m for m in main_models if not str(m).startswith(g["served_model_prefix"])})
+        if bad:
+            ok = False
+            why.append(f"served model(s) {bad} do not start with {g['served_model_prefix']}")
+    if "effort" in g and main_efforts is not None:
+        want = None if g["effort"] in (None, "absent", "default") else g["effort"]
+        bad = sorted({str(e) for e in main_efforts if e != want})
+        if bad:
+            ok = False
+            why.append(f"reasoning effort {bad} on main requests; expected {'absent (provider default)' if want is None else want}")
     return {"mechanism_engaged": ok, "mechanism_reasons": why, "fd_receipts": receipts}
 
 
@@ -761,7 +780,7 @@ def session_row(meta: dict, result: dict, parsed: dict, spec, snap_stats: dict, 
                 or any("evaluate_error" in l for l in labels))
     status = "infra_fail" if result.get("infrastructure_failure") else ("ok" if result.get("outcome_passed") else "agent_fail")
     gate = mechanism_gate({**meta, "expected_main_model": meta.get("expected_main_model")}, parsed["fd_counts"],
-                          sw["model_switches"], [r["model"] for r in main])
+                          sw["model_switches"], [r["model"] for r in main], [r["effort"] for r in main])
     served = sorted({r["model"] for r in main if r["model"]})
     model_ids_ok = (not meta.get("model")) or all(m == meta["model"] or str(m).startswith(meta["model"]) or
                                                    meta["kind"] in ("fd", "sticky") for m in served)
@@ -846,10 +865,10 @@ def session_row(meta: dict, result: dict, parsed: dict, spec, snap_stats: dict, 
     return row, trows
 
 
-def build_pairs(rows: list, turn_rows: list) -> list:
+def build_pairs(rows: list, turn_rows: list, anchor_arm: str = "anchor") -> list:
     """(scenario, rep, host, arm) vs the anchor (A0) of the same scenario/rep/host; the host-independent
     control is paired against each host's anchor. Also attaches anchor_* proxies to the session rows."""
-    anchors = {(r["scenario_id"], r["rep"], r["host"]): r for r in rows if r["arm"] == "anchor"}
+    anchors = {(r["scenario_id"], r["rep"], r["host"]): r for r in rows if r["arm"] == anchor_arm}
     anchor_turns = {}
     for t in turn_rows:
         anchor_turns.setdefault((t["scenario_id"], t["rep"], t["host"]), {}).setdefault(t["arm"], []).append(t)
@@ -865,7 +884,7 @@ def build_pairs(rows: list, turn_rows: list) -> list:
             if r["host"] != "any":
                 r["anchor_cost_usd"], r["anchor_cost_usd_raw"] = ac, ac_raw
                 r["anchor_n_req"] = a["n_req"]
-                r["anchor_turn_costs"] = [norm(t) for t in anchor_turns[(r["scenario_id"], r["rep"], host)]["anchor"]]
+                r["anchor_turn_costs"] = [norm(t) for t in anchor_turns[(r["scenario_id"], r["rep"], host)][anchor_arm]]
             rc, rc_raw = norm(r), r["cost_usd_recomputed"]
             ratio = lambda x, y: round(__import__("math").log(x / y), 6) if x > 0 and y > 0 else None
             pairs.append({
@@ -956,7 +975,10 @@ def cell_to_side(cell_id: str, cells_doc: dict, suites_doc: dict, *, baseline_so
     model = cell.get("amplifier_model") or cells_doc.get("defaults", {}).get("amplifier_model")
     bundle = cell.get("amplifier_bundle") or "foundation"
     if "amplifier-fd" not in cell["harnesses"]:
-        return {"source_root": str(baseline_source), "mode": "off"}, model, bundle
+        side = {"source_root": str(baseline_source), "mode": "off"}
+        if cell.get("amplifier_effort"):               # plain cell with a pinned provider reasoning effort
+            side["amplifier_effort"] = cell["amplifier_effort"]
+        return side, model, bundle
     argv = evals_run.cell_to_argv(cell_id, cells_doc, suites_doc, "s1m", "m-dev", 1, out_root="/unused", base_seed=0,
                                   baseline_source=baseline_source, candidate_source=candidate_source,
                                   candidate_sha=candidate_sha)
@@ -1640,7 +1662,7 @@ def extract_rows(out: Path, backend=None, *, specs=None, snap_stats=None, tools_
         rows.append(row)
         trows.extend(tr)
     reqrows = [q for r in rows for q in r.pop("_request_rows")]
-    pairs = build_pairs(rows, trows)
+    pairs = build_pairs(rows, trows, plan.get("anchor_arm", "anchor"))
     d = out / "rows"
     d.mkdir(exist_ok=True)
     for name, data in (("sessions", rows), ("turns", trows), ("requests", reqrows), ("pairs", pairs)):

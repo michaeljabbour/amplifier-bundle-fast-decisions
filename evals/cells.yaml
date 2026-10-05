@@ -109,6 +109,16 @@ cells:
     role: "mandatory control for judge-local+effort+route; batch anchor for the routing pair"
     mechanism_gate: { no_fd_receipts: true }
 
+  plain-sonnet-medium:
+    label_suffix: "plain [model=claude-sonnet-5; reasoning effort medium]"
+    harnesses: [amplifier-plain]
+    amplifier_model: claude-sonnet-5
+    amplifier_effort: medium           # provider reasoning_effort; EXACTLY plain-sonnet otherwise (effort-control-v1)
+    fd: null
+    role: "effort control: plain Sonnet at the effort the routed/sticky Sonnet requests used (medium)"
+    purpose: "isolate the effort effect: main-v1 routed Sonnet ran at medium, plain-sonnet at the provider default"
+    mechanism_gate: { no_fd_receipts: true }
+
   judge-local:
     harnesses: [amplifier-fd]
     fd: { backend: ollama, model: qwen3:0.6b }
