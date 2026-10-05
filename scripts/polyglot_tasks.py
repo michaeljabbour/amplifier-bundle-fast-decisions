@@ -44,6 +44,7 @@ from typing import Callable
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import battery_tasks as bt  # noqa: E402  (Task dataclass + PROMPT_SUFFIX contract)
+import memguard  # noqa: E402  (every exercise runner executes untrusted code under a memory cap)
 
 TIMEOUT = 120
 
@@ -109,6 +110,29 @@ def strip_rust_ignore(source: str) -> str:
     """
     lines = source.splitlines(keepends=True)
     return "".join(line for line in lines if line.strip() != "#[ignore]")
+
+
+def _run(cmd, **kw):
+    """subprocess.run for exercise code, under memguard (4 GB cap, whole-tree RSS, system floor; PAIRED_GRADER_CAP_GB /
+    PAIRED_GRADER_TIMEOUT_S override). Raises subprocess.TimeoutExpired like subprocess.run, and memguard.ResourceLimit
+    on a memory kill, which the runner wrappers below turn into a failed `resource_limit` check."""
+    if memguard.ENV_TIMEOUT in os.environ:       # campaign policy (300 s per grader run) raises the S2 default of 120 s
+        kw["timeout"] = max(float(kw.get("timeout") or 0), float(os.environ[memguard.ENV_TIMEOUT]))
+    return memguard.run(cmd, **kw)
+
+
+def _resource_limit_result() -> dict:
+    return {"checks": 1, "passed": 0, "failed": 1, "failure_labels": ["resource_limit"]}
+
+
+def _resource_limited(fn):
+    @functools.wraps(fn)
+    def wrapper(*a, **k):
+        try:
+            return fn(*a, **k)
+        except memguard.ResourceLimit:
+            return _resource_limit_result()
+    return wrapper
 
 
 def _toolchain_missing(tool: str) -> dict:
@@ -190,7 +214,7 @@ def _python_run(exercise_root: Path, test_files: list[str]) -> dict:
     if interp is None:
         return _toolchain_missing("pytest")
     try:
-        proc = subprocess.run(
+        proc = _run(
             [interp, "-m", "pytest", "-q", "-p", "no:cacheprovider", *test_files],
             cwd=str(exercise_root),
             capture_output=True,
@@ -225,7 +249,7 @@ def _rust_run(exercise_root: Path, test_files: list[str]) -> dict:
             continue
         path.write_text(strip_rust_ignore(src), encoding="utf-8")
     try:
-        proc = subprocess.run(
+        proc = _run(
             ["cargo", "test", "--offline", "--quiet"],
             cwd=str(exercise_root),
             capture_output=True,
@@ -241,6 +265,8 @@ def _rust_run(exercise_root: Path, test_files: list[str]) -> dict:
 
 def _parse_go_json_output(stdout: str) -> dict:
     names_actions: dict[str, str] = {}
+    started: set[str] = set()
+    package_failed = False
     for line in stdout.splitlines():
         line = line.strip()
         if not line:
@@ -249,8 +275,17 @@ def _parse_go_json_output(stdout: str) -> dict:
             event = json.loads(line)
         except ValueError:
             continue
-        if event.get("Action") in ("pass", "fail") and event.get("Test"):
-            names_actions[event["Test"]] = event["Action"]
+        action, test = event.get("Action"), event.get("Test")
+        if action == "run" and test:
+            started.add(test)
+        if action in ("pass", "fail") and test:
+            names_actions[test] = action
+        elif action == "fail" and not test:
+            package_failed = True
+    # A test that started but never reported pass/fail did not pass: the binary exited or crashed under it (os.Exit, a
+    # runaway-memory tripwire, a kill). Counting only reported results would let that scenario "pass" with failed == 0.
+    for name in started - set(names_actions):
+        names_actions[name] = "fail"
     all_names = set(names_actions)
     # Keep only leaf tests: a name that is a strict subtest prefix of another
     # recorded name is an aggregate roll-up, not an independent check.
@@ -261,12 +296,15 @@ def _parse_go_json_output(stdout: str) -> dict:
     if checks == 0:
         return {"checks": 1, "passed": 0, "failed": 1, "failure_labels": ["build_failed"]}
     labels = [] if failed == 0 else ["go_test_failures"]
+    if package_failed and failed == 0:
+        # the package failed although every reported test passed (exit during/after tests): never a pass
+        return {"checks": checks + 1, "passed": passed, "failed": 1, "failure_labels": ["go_package_failed"]}
     return {"checks": checks, "passed": passed, "failed": failed, "failure_labels": labels}
 
 
 def _go_run(exercise_root: Path, test_files: list[str]) -> dict:
     try:
-        proc = subprocess.run(
+        proc = _run(
             ["go", "test", "-json", "./..."],
             cwd=str(exercise_root),
             capture_output=True,
@@ -302,7 +340,7 @@ def _cpp_run(exercise_root: Path, test_files: list[str]) -> dict:
         return {"checks": 1, "passed": 0, "failed": 1, "failure_labels": ["unsupported:no_cmakelists"]}
     build_dir = exercise_root / "build"
     try:
-        cfg = subprocess.run(
+        cfg = _run(
             ["cmake", "-S", str(exercise_root), "-B", str(build_dir), "-DEXERCISM_RUN_ALL_TESTS=1"],
             capture_output=True,
             text=True,
@@ -315,7 +353,7 @@ def _cpp_run(exercise_root: Path, test_files: list[str]) -> dict:
     if cfg.returncode != 0:
         return {"checks": 1, "passed": 0, "failed": 1, "failure_labels": ["cmake_configure_error"]}
     try:
-        build = subprocess.run(
+        build = _run(
             ["cmake", "--build", str(build_dir)],
             capture_output=True,
             text=True,
@@ -379,7 +417,7 @@ def _js_run(exercise_root: Path, test_files: list[str]) -> dict:
 
     if _js_uses_jest(exercise_root):
         try:
-            proc = subprocess.run(
+            proc = _run(
                 ["npx", "--no-install", "jest", "--ci", "--json", *test_files],
                 cwd=str(exercise_root),
                 capture_output=True,
@@ -393,7 +431,7 @@ def _js_run(exercise_root: Path, test_files: list[str]) -> dict:
         return _parse_jest_json(proc.stdout, proc.stderr)
 
     try:
-        proc = subprocess.run(
+        proc = _run(
             ["node", "--test", *test_files],
             cwd=str(exercise_root),
             capture_output=True,
@@ -406,6 +444,12 @@ def _js_run(exercise_root: Path, test_files: list[str]) -> dict:
         return _timeout_result()
     return _parse_node_test_output(proc.stdout + "\n" + proc.stderr)
 
+
+_python_run = _resource_limited(_python_run)
+_rust_run = _resource_limited(_rust_run)
+_go_run = _resource_limited(_go_run)
+_cpp_run = _resource_limited(_cpp_run)
+_js_run = _resource_limited(_js_run)
 
 _RUNNERS: dict[str, Callable[[Path, list[str]], dict]] = {
     "python": _python_run,

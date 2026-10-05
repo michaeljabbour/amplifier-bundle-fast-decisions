@@ -1,0 +1,48 @@
+\section{What an earlier caching survey showed}\label{sec:survey}
+
+Before any new sessions ran, an earlier study re-read \CaRuns\ existing benchmark runs and formed \CaPairs\
+matched pairs (\CaRoutedPairs\ of them routed): a routed run and a plain run of the same task, campaign and
+repetition on the same host. It made no model calls. Its question was the reviewer's: does the routing saving
+survive longer sessions?
+
+\begin{figure}[htbp]
+\centering
+\pgfplotslegendfromname{surveylegend}\par\smallskip
+\input{figures/fig-survey.tex}
+\caption{The earlier caching survey: the same configuration in single-turn and \CaTurns-turn sessions, with 95\,\%
+bootstrap intervals. The top row never switches models: it just runs Sonnet instead of Opus.}
+\label{fig:survey}
+\howtoread{Compare the circle and the square in each row. On the Opus host, routing went from a small saving
+(\CaOpusRoutedOne\X) to a loss (\CaOpusRoutedFour\X); the row that never switches moved almost the same way
+(\CaControlOne\X\ to \CaControlFour\X). So most of the loss was not the switch itself.}
+\end{figure}
+
+\paragraph{Price and volume, about half each.} Re-pricing the control's identical tokens at Sonnet's prices gives
+\CaPriceOne\X\ Opus in single-turn sessions but \CaPriceFour\X\ in \CaTurns-turn ones, because long sessions are
+mostly cache reads and Sonnet reads cost \CaReadPriceX\X\ Opus's while its other token classes cost
+\CaOtherPriceX\X. Sonnet also used more requests (volume factor \CaVolumeOne\X\ to \CaVolumeFour\X). Of the rise,
+about \CaPriceShare\,\% was the price edge eroding and \CaVolumeShare\,\% extra volume.
+
+\begin{table}[htbp]
+\centering\small
+\caption{Earlier survey: share of the routed runs' cost spent re-writing caches after a model switch.}
+\label{tab:surveyrebuild}
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}l r r r@{}}
+\toprule
+Kind of session & pairs & sessions with a switch & rebuild share \\
+\midrule
+Single-turn routing & \CaRbOnePairs & \CaRbOneSwitch & \CaRbOneShare\,\% \\
+\CaTurns-turn, Opus host & \CaRbFourOpusPairs & \CaRbFourOpusSwitch & \CaRbFourOpusShare\,\% \\
+\CaTurns-turn, Fable host & \CaRbFourFablePairs & \CaRbFourFableSwitch & \CaRbFourFableShare\,\% \\
+SWE-bench, mid-turn escalation & \CaRbPrimaryPairs & \CaRbPrimarySwitch & \CaRbPrimaryShare\,\% \\
+SWE-bench, turn-start routers & \CaRbRoutersPairs & \CaRbRoutersSwitch & \CaRbRoutersShare\,\% \\
+\bottomrule
+\end{tabular*}
+\end{table}
+
+\begin{caution}[title={Why a new experiment was needed}]
+The survey's sessions had at most \CaTurns\ turns, only \CaPropScenarios\ synthetic scenarios, turns seconds apart
+(so caches never expired), and no arm that ``decides once and never switches''. \CaReceipts\ of the
+\CaRoutedPairs\ routed pairs carried efficiency receipts. It proposed a direct, preregistered experiment; Part III
+is that experiment, larger than proposed.
+\end{caution}

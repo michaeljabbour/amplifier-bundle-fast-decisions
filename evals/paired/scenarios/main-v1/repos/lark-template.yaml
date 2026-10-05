@@ -1,0 +1,156 @@
+# main-v1 real-repo scenario (8 turns): lark-parser/lark, Template.search() dropped matches of templates without variables so translate() did nothing (#1630), fixed upstream in 7398ba00; workspace is its parent
+# Workspace = parent of the upstream fix commit; hidden tests = the fix commit's tests (+ scenario-authored edge tests).
+id: lark-template
+task_type: bugfix
+language: python
+split: test
+source:
+  desc: >-
+    lark-parser/lark, Template.search() dropped matches of templates without variables so translate()
+    did nothing (#1630), fixed upstream in 7398ba00; workspace is its parent
+  repo: https://github.com/lark-parser/lark.git
+  sha: 240d4bcd3e207c7ed1cebd9908be41150c3ea1ab
+  fix_sha: 7398ba0087f3147e025155f226a9bbf408abf6dc
+workspace:
+  kind: git
+  repo: https://github.com/lark-parser/lark.git
+  sha: 240d4bcd3e207c7ed1cebd9908be41150c3ea1ab
+  local_hint: ~/dev/afast-paired-src/lark
+  add_files:
+    pytest.ini: '[pytest]
+  
+      testpaths = tests
+  
+      '
+hidden_files:
+  tests/test_tree_templates.py:
+    from_git:
+      repo: https://github.com/lark-parser/lark.git
+      sha: 7398ba0087f3147e025155f226a9bbf408abf6dc
+      path: tests/test_tree_templates.py
+      local_hint: ~/dev/afast-paired-src/lark
+  tests/test_template_repeated_var_hidden.py: |
+    import unittest
+
+    from lark import Tree
+    from lark.tree_templates import Template, translate
+
+
+    def var(name):
+        return Tree('var', ['$' + name])
+
+
+    class RepeatedVariableTests(unittest.TestCase):
+        def setUp(self):
+            self.template = Template(Tree('add', [var('x'), var('x')]))
+
+        def test_equal_subtrees_match(self):
+            tree = Tree('add', [Tree('a', []), Tree('a', [])])
+            self.assertEqual(self.template.match(tree), {'x': Tree('a', [])})
+
+        def test_different_subtrees_do_not_match(self):
+            self.assertIsNone(self.template.match(Tree('add', [Tree('a', []), Tree('b', [])])))
+
+        def test_nested_equal_subtrees(self):
+            sub = Tree('mul', [Tree('c', []), Tree('d', [])])
+            self.assertEqual(self.template.match(Tree('add', [sub, Tree('mul', [Tree('c', []), Tree('d', [])])])), {'x': sub})
+
+        def test_distinct_variables_still_match_anything(self):
+            t = Template(Tree('add', [var('x'), var('y')]))
+            self.assertEqual(t.match(Tree('add', [Tree('a', []), Tree('b', [])])), {'x': Tree('a', []), 'y': Tree('b', [])})
+
+        def test_search_and_translate_respect_it(self):
+            tree = Tree('r', [Tree('add', [Tree('a', []), Tree('a', [])]), Tree('add', [Tree('a', []), Tree('b', [])])])
+            self.assertEqual(len(list(self.template.search(tree))), 1)
+            out = translate(self.template, Template(Tree('double', [var('x')])), tree)
+            self.assertEqual(out, Tree('r', [Tree('double', [Tree('a', [])]), Tree('add', [Tree('a', []), Tree('b', [])])]))
+  tests/test_template_count_hidden.py: |
+    import unittest
+
+    from lark import Tree
+    from lark.tree_templates import Template
+
+
+    class CountTests(unittest.TestCase):
+        def test_count_variable_free(self):
+            tree = Tree('r', [Tree('a', []), Tree('b', [Tree('a', [])])])
+            self.assertEqual(Template(Tree('a', [])).count(tree), 2)
+
+        def test_count_with_variables(self):
+            tree = Tree('r', [Tree('f', [Tree('a', [])]), Tree('g', [Tree('f', [Tree('b', [])])])])
+            self.assertEqual(Template(Tree('f', [Tree('var', ['$x'])])).count(tree), 2)
+
+        def test_count_zero_is_int(self):
+            n = Template(Tree('nope', [])).count(Tree('r', []))
+            self.assertEqual(n, 0)
+            self.assertIsInstance(n, int)
+
+        def test_count_matches_search(self):
+            tree = Tree('r', [Tree('a', []), Tree('a', [])])
+            t = Template(Tree('a', []))
+            self.assertEqual(t.count(tree), len(list(t.search(tree))))
+turns:
+  - prompt: >-
+      `lark.tree_templates.translate()` never replaces anything when the source template has no variables,
+      e.g. translating the template `Tree('a', [])` into `Tree('z', [])` over a tree that contains `a`
+      nodes leaves the tree untouched. `Template.match()` on such a subtree works (it returns an empty
+      dict, and None when there is no match), but `Template.search()` yields nothing for it. Please find
+      the cause in lark/tree_templates.py and fix it. Run the tests from this directory with `python3 -m
+      pytest -q tests/test_tree_templates.py tests/test_trees.py` (test_nearley and test_typing need
+      extras that are not installed). (Note: tree_templates.py uses CRLF line endings, keep them.)
+    checks:
+      - {kind: tests, runner: python, files: [tests/test_cache.py, tests/test_grammar.py, tests/test_lexer.py, tests/test_logger.py, tests/test_parser.py, tests/test_pattern_matching.py, tests/test_python_grammar.py, tests/test_reconstructor.py, tests/test_scan.py, tests/test_tools.py, tests/test_tree_forest_transformer.py, tests/test_tree_templates.py, tests/test_trees.py], restore: [tests/test_cache.py, tests/test_grammar.py, tests/test_lexer.py, tests/test_logger.py, tests/test_parser.py, tests/test_pattern_matching.py, tests/test_python_grammar.py, tests/test_reconstructor.py, tests/test_scan.py, tests/test_tools.py, tests/test_tree_forest_transformer.py, tests/test_tree_templates.py, tests/test_trees.py], hidden: [tests/test_tree_templates.py]}
+  - prompt: >-
+      In three to five sentences explain the root cause: what `match()` returns for a variable-free
+      template that matches, what check `search()` applied to that result, and why `translate()` is
+      affected. Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [search, match, '\{\}|empty dict'], any: [falsy|truth|if res|bool, translate]}
+  - prompt: >-
+      Add a regression test file `tests/test_template_search_novars.py` (unittest style) with at least
+      three test functions: search finds a variable-free template, search finds it at every depth (two
+      occurrences), and translate() with variable-free templates rewrites the tree. Run it.
+    checks:
+      - {kind: file_regex, path: tests/test_template_search_novars.py, pattern: ^\s*def test_, min_count: 3}
+      - {kind: tests, runner: python, files: [tests/test_template_search_novars.py]}
+  - prompt: >-
+      Another thing with templates: when the same variable occurs twice in a template, e.g. `add($x, $x)`,
+      `match()` currently accepts `add(a, b)` and silently binds x to the last one. A repeated variable
+      should only match when all of its occurrences are equal trees: `add(a, a)` matches with `{'x':
+      Tree('a', [])}`, `add(a, b)` gives None, and distinct variables (`add($x, $y)`) keep matching
+      anything. This must also hold through `search()`/`translate()`. Fix it and add a test to
+      tests/test_template_search_novars.py.
+    gap_before_s: 420
+    checks:
+      - {kind: tests, runner: python, files: [tests/test_template_repeated_var_hidden.py], restore: [tests/test_cache.py, tests/test_grammar.py, tests/test_lexer.py, tests/test_logger.py, tests/test_parser.py, tests/test_pattern_matching.py, tests/test_python_grammar.py, tests/test_reconstructor.py, tests/test_scan.py, tests/test_tools.py, tests/test_tree_forest_transformer.py, tests/test_tree_templates.py, tests/test_trees.py], hidden: [tests/test_template_repeated_var_hidden.py]}
+      - {kind: tests, runner: python, files: [tests/test_cache.py, tests/test_grammar.py, tests/test_lexer.py, tests/test_logger.py, tests/test_parser.py, tests/test_pattern_matching.py, tests/test_python_grammar.py, tests/test_reconstructor.py, tests/test_scan.py, tests/test_tools.py, tests/test_tree_forest_transformer.py, tests/test_tree_templates.py, tests/test_trees.py, tests/test_template_repeated_var_hidden.py], restore: [tests/test_cache.py, tests/test_grammar.py, tests/test_lexer.py, tests/test_logger.py, tests/test_parser.py, tests/test_pattern_matching.py, tests/test_python_grammar.py, tests/test_reconstructor.py, tests/test_scan.py, tests/test_tools.py, tests/test_tree_forest_transformer.py, tests/test_tree_templates.py, tests/test_trees.py], hidden: [tests/test_tree_templates.py, tests/test_template_repeated_var_hidden.py]}
+      - {kind: file_regex, path: tests/test_template_search_novars.py, pattern: \$x}
+  - prompt: >-
+      The repo has a CHANGELOG.md. Add a new section at the very top headed `## Unreleased` with two
+      bullets: the `Template.search()` fix for templates without variables, and repeated template
+      variables now requiring equal subtrees.
+    checks:
+      - {kind: doc_sections, path: CHANGELOG.md, headings: [Unreleased]}
+      - {kind: file_regex, path: CHANGELOG.md, pattern: 'Unreleased\n(?:.*\n)+?.*search'}
+      - {kind: file_regex, path: CHANGELOG.md, pattern: repeated}
+  - prompt: >-
+      Small feature: add `Template.count(tree)` returning the number of occurrences of the template in
+      `tree` (the number of matches `search()` yields, as an int; `tree` may be a Tree or code accepted by
+      the conf). Put it right after `search()`. Add tests for it to tests/test_template_search_novars.py.
+      (The docstring comes in the next step.)
+    checks:
+      - {kind: tests, runner: python, files: [tests/test_template_count_hidden.py], restore: [tests/test_cache.py, tests/test_grammar.py, tests/test_lexer.py, tests/test_logger.py, tests/test_parser.py, tests/test_pattern_matching.py, tests/test_python_grammar.py, tests/test_reconstructor.py, tests/test_scan.py, tests/test_tools.py, tests/test_tree_forest_transformer.py, tests/test_tree_templates.py, tests/test_trees.py], hidden: [tests/test_template_count_hidden.py]}
+      - {kind: tests, runner: python, files: [tests/test_cache.py, tests/test_grammar.py, tests/test_lexer.py, tests/test_logger.py, tests/test_parser.py, tests/test_pattern_matching.py, tests/test_python_grammar.py, tests/test_reconstructor.py, tests/test_scan.py, tests/test_tools.py, tests/test_tree_forest_transformer.py, tests/test_tree_templates.py, tests/test_trees.py, tests/test_template_repeated_var_hidden.py, tests/test_template_count_hidden.py], restore: [tests/test_cache.py, tests/test_grammar.py, tests/test_lexer.py, tests/test_logger.py, tests/test_parser.py, tests/test_pattern_matching.py, tests/test_python_grammar.py, tests/test_reconstructor.py, tests/test_scan.py, tests/test_tools.py, tests/test_tree_forest_transformer.py, tests/test_tree_templates.py, tests/test_trees.py], hidden: [tests/test_tree_templates.py, tests/test_template_repeated_var_hidden.py, tests/test_template_count_hidden.py]}
+      - {kind: file_regex, path: lark/tree_templates.py, pattern: def count\(}
+  - prompt: >-
+      Add a docstring to `Template.count()` in the same style as `search()` and `match()`: a summary line,
+      a Parameters section for ``tree``, and a Returns section naming the type (int).
+    gap_before_s: 420
+    checks:
+      - {kind: file_regex, path: lark/tree_templates.py, pattern: 'def count\(self, tree: TreeOrCode\) -> int:\n\s+"""'}
+      - {kind: tests, runner: python, files: [tests/test_cache.py, tests/test_grammar.py, tests/test_lexer.py, tests/test_logger.py, tests/test_parser.py, tests/test_pattern_matching.py, tests/test_python_grammar.py, tests/test_reconstructor.py, tests/test_scan.py, tests/test_tools.py, tests/test_tree_forest_transformer.py, tests/test_tree_templates.py, tests/test_trees.py, tests/test_template_repeated_var_hidden.py, tests/test_template_count_hidden.py], restore: [tests/test_cache.py, tests/test_grammar.py, tests/test_lexer.py, tests/test_logger.py, tests/test_parser.py, tests/test_pattern_matching.py, tests/test_python_grammar.py, tests/test_reconstructor.py, tests/test_scan.py, tests/test_tools.py, tests/test_tree_forest_transformer.py, tests/test_tree_templates.py, tests/test_trees.py], hidden: [tests/test_tree_templates.py, tests/test_template_repeated_var_hidden.py, tests/test_template_count_hidden.py]}
+  - prompt: >-
+      Review the changes you made in this session as a code reviewer would: list each file you changed or
+      added, what changed, and any remaining edge case you did not cover. Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [tree_templates\.py, test, count|repeated], any: [edge, risk, not cover, remaining]}

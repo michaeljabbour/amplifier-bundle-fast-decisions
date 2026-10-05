@@ -1,0 +1,147 @@
+\section{Fast judges on constructed cases}\label{sec:judges}
+
+Routing an agent starts with a small decision: is this step easy enough for a cheaper or faster path? The
+fast-decisions bundle hands such questions to a \term{decision judge}, a fast model that answers one
+multiple-choice question with a probability for each option. If the top option is clear enough, the agent
+acts on it \emph{automatically}; otherwise it falls back to slow reasoning by the host model. This part
+summarizes the two studies of those judges that preceded the cost measurement. Their full reports are on the
+\code{eval/judge-realistic} branch (commit \code{\JRSha}); every number here is regenerated from that branch's
+committed evidence.
+
+\begin{keyidea}
+A judge is useful when it is \emph{right when it acts} and \emph{acts often enough to matter}. The two numbers
+that capture this are the \term{wrong-automatic rate} (share of all cases where the judge acted and was wrong)
+and \term{coverage} (share of cases where it acted at all). A judge that never acts has zero wrong automatic
+decisions and is useless; a judge that always acts is fast and dangerous.
+\end{keyidea}
+
+\subsection{The benchmark}
+
+\NumBase\ judges (a hosted Jev model, two cloud LLMs, GPT-6 Luna and GPT-6.1 Sol, and several local models)
+answered \DevN\ development cases (a screen) and \HoldN\ fresh holdout cases whose analysis was preregistered,
+\HoldReps\ times each. The cases are deliberately adversarial: file-reading, search, selection and computer-use
+questions, including \HoldNSideOrInjection\ holdout cases with a side effect (such as \emph{Buy now}) or a
+prompt injection. Every answer was scored under the gate the bundle ships: act only when the top probability is
+at least \MinP\ and leads the runner-up by at least \MinMargin, within \TimeoutS\,s. Labels were checked by two
+blind reviewers; their agreement with the final labels was perfect on both splits (Cohen's
+$\kappa = \KappaHoldAB$; \cref{tab:jblabel}).
+
+\begin{table}[htbp]
+\centering\small
+\caption{Blind label audit of the judge benchmark: agreement between the two reviewers and the final labels.}
+\label{tab:jblabel}
+\input{generated/jb/tables/label-audit.tex}
+\end{table}
+
+\subsection{Preregistered holdout result \texorpdfstring{\prereg}{[preregistered]}}
+
+\begin{table}[htbp]
+\centering\scriptsize
+\caption{Judge benchmark holdout (\HoldN\ cases, \HoldReps\ repetitions, the bundle's gate): accuracy, wrong
+automatic decisions, coverage, latency and cost per million decisions. Preregistered run only; the post-hoc
+Cloudflare Clef arms and their in-run Jev reference are in \cref{tab:clefresults}.}
+\label{tab:jbheadline}
+\input{generated/jb/tables/headline-holdout.tex}
+\end{table}
+
+The default judge, Jev~1.13, was right on \JevHoldAccK\ of \HoldN\ holdout cases (95\,\% CI \JevHoldAccCI) and
+made \JevHoldWaK\ wrong automatic decision, at a p95 latency of \JevHoldPninetyfive\,ms and \$\JevHoldCost\ per
+million decisions. GPT-6 Luna (\LunaHoldAccK/\HoldN) and GPT-6.1 Sol (\SolHoldAccK/\HoldN) were more accurate,
+but neither difference survives the preregistered Holm correction (adjusted $p = \LunaHoldRAccPHolm$ and
+\SolHoldRAccPHolm), and both fail the latency and cost rules (p95 \LunaHoldPninetyfive\ and
+\SolHoldPninetyfive\,ms; \$\LunaHoldCost\ and \$\SolHoldCost\ per million). Jev stays the default. No local model
+qualified as an offline tier. The OpenAI Decisions API returned HTTP \HoldProbeStatus, so nothing is claimed
+for it.
+
+\paragraph{Post-hoc arms in the figures.} Two Cloudflare models, Clef and Clef-Flash (\cref{sec:clef}), were run on
+the same frozen cases with the same scorer \emph{after} the preregistered results were known. \term{Post-hoc} means
+exactly that: they were not in the preregistration, so no preregistered verdict applies to them and their results
+are exploratory. They were run together with a fresh Jev~1.13 reference (``in-run Jev''), and every direct Clef-vs-Jev
+comparison below uses that in-run Jev. The preregistered Jev numbers above come from an earlier run. In the figures
+the post-hoc points are black pentagons (in-run Jev: an open orange square), labelled ``(post-hoc)''.
+
+\begin{figure}[htbp]
+\centering
+\pgfplotslegendfromname{phacclegend}\par\smallskip
+\input{figures/fig-ph-accuracy.tex}
+\caption{Holdout accuracy with 95\,\% Wilson intervals: the preregistered run, then (below the gap) the post-hoc run
+of Clef, Clef-Flash and the in-run Jev reference.}
+\label{fig:jbaccuracy}
+\howtoread{Each row is a judge; dots are accuracy, whiskers the 95\,\% interval. Overlapping whiskers among the
+top judges are why their differences are called ``within noise''. Compare the post-hoc rows with each other first:
+Clef (\ClHoldClefAcc/\HoldN) and the in-run Jev (\ClHoldJevAcc/\HoldN) overlap; Clef-Flash (\ClHoldFlashAcc/\HoldN)
+sits lower. The in-run Jev differs from the preregistered Jev (\JevHoldAccK/\HoldN) by run-to-run noise.}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\input{figures/fig-ph-wacov.tex}
+\phwacovpanel{holdout}{Holdout}
+\caption{Wrong-automatic rate against coverage on the holdout: the safety--usefulness trade-off of each judge,
+with the post-hoc Clef arms.}
+\label{fig:jbwacov}
+\howtoread{Right means the judge acts more often; up means it is more often wrong when it does. Good judges sit
+low and to the right. The cloud judges and Jev sit on the floor; the local models are higher. Clef and Clef-Flash
+act about as often as Luna but are wrong more often (\ClHoldClefWa\ and \ClHoldFlashWa\ wrong automatic cases of
+\HoldN). The in-run Jev landed on the same point as the preregistered Jev.}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\input{figures/fig-ph-acclat.tex}
+\phacclatpanel{holdout}{Holdout}
+\caption{Accuracy against p95 latency (log scale) on the holdout, with the post-hoc Clef arms. Latencies are client
+wall time measured from this Mac, network included.}
+\label{fig:jbacclat}
+\howtoread{Up is more accurate; left is faster. Jev is the only judge that is both fast and among the most
+accurate; the cloud LLMs buy a few points of accuracy with seconds of latency. Clef sits between: Jev-level
+accuracy at about three times Jev's p95.}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\pgfplotslegendfromname{phcostlegend}\par\smallskip
+\input{figures/fig-ph-costacc.tex}
+\caption{Cost per million decisions (log scale) against holdout accuracy, for the judges that have a price.
+Blue: preregistered run; black pentagons: post-hoc run (Clef, Clef-Flash and the in-run Jev reference).}
+\label{fig:jbcost}
+\howtoread{Left is cheaper; up is more accurate. Jev is the cheapest point near the top. Clef matches Jev's accuracy
+at \ClHoldClefCost\ rather than \ClHoldJevCost\ dollars per million decisions; Sol buys its extra accuracy at
+\$\SolHoldCost.}
+\end{figure}
+
+\subsection{Where the time goes, and the side-effect guard}
+
+A judge call is mostly waiting. For Jev, about \LatJevNetwork\,ms of a \LatJevWall\,ms call was network and
+\LatJevServer\,ms server time; for Luna about \LatLunaServerShare\,\% was server time
+(\cref{fig:jblatency}). The post-hoc Clef arms were timed differently: Workers AI returns no server timing, so their
+p50 and p95 are client wall times from this Mac, network included (Clef p95 \ClClefPninetyfiveLow--\ClClefPninetyfiveHigh\,ms
+across the four splits, Clef-Flash \ClFlashPninetyfiveLow--\ClFlashPninetyfiveHigh\,ms). Cloudflare's own published
+median latencies for these models are not reproduced here. Clef-Flash also exceeded the \ClTimeoutS\,s timeout on
+\ClFlashSlow\ of \ClFlashRequests\ requests (slowest \ClSlowest\,s), which the bundle's gate scores as fallbacks.
+
+\begin{figure}[htbp]
+\centering
+\input{generated/jb/figures/fig-latency-anatomy.tex}
+\caption{Where the time goes in one judge call: cloud judges (top) and local judges (bottom).}
+\label{fig:jblatency}
+\howtoread{Each bar is one judge's median call, split into its parts. Long bars are slow judges; the colour of
+the longest segment tells you why.}
+\end{figure}
+
+The most dangerous mistakes were confident clicks on side-effect options. A deterministic host guard that
+refuses to act automatically on an option whose label names an irreversible or external change (intervention
+I2) removed all \ITwoHoldBefore\ such wrong automatic decisions on the holdout, across the
+\ITwoHoldNApplicable\ judges it applied to, with no change in accuracy (\cref{fig:jbi2}).
+
+\begin{figure}[htbp]
+\centering
+\input{generated/jb/figures/fig-i2.tex}
+\caption{The side-effect guard (I2) on the holdout: targeted wrong automatic decisions before and after.}
+\label{fig:jbi2}
+\howtoread{Each judge has a ``before'' and an ``after'' bar; every ``after'' bar is zero.}
+\end{figure}
+
+\paragraph{Validating an earlier first pass.} The benchmark re-examined an earlier, faster comparison: of its
+\ChangesN\ claims, \ChangesConfirmed\ were confirmed, \ChangesRefuted\ refuted, \ChangesRevised\ revised and
+\ChangesNew\ was new. The claim-by-claim history is in \cref{tab:changes} (appendix).

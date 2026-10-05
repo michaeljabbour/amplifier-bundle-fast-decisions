@@ -1,0 +1,23 @@
+% Cost ratios as the evidence accumulated: pilot, interim dashboard, final train, final test, confirmatory.
+\begin{tikzpicture}
+\begin{groupplot}[benchmark,
+  group style={group size=2 by 1, horizontal sep=1.8cm},
+  width=0.47\linewidth, height=6cm, xmin=-0.3, xmax=4.3,
+  xtick={0,1,2,3,4}, xticklabels={Pilot, Interim, Final train, Final test, Confirm.},
+  xticklabel style={rotate=35, anchor=north east, font=\small},
+  ymajorgrids, title style={font=\small\bfseries},
+  cycle list={{okblue, mark=*, solid}, {okorange, mark=square*, dashed}, {okgreen, mark=triangle*, densely dotted}},
+  every axis plot/.append style={line width=1pt, mark size=2.4pt}]
+\nextgroupplot[title={Fable host}, ylabel={Cost ratio vs plain host}, ymin=0.45, ymax=0.8,
+  legend to name=interimlegend, legend columns=3, legend cell align=left,
+  legend style={/tikz/every even column/.append style={column sep=10pt}}]
+\addplot+ table[x=stage, y=Sticky]{generated/data/interim-fable.dat}; \addlegendentry{sticky (choose once)}
+\addplot+ table[x=stage, y=Shipped]{generated/data/interim-fable.dat}; \addlegendentry{shipped (re-chooses each turn)}
+\addplot+ table[x=stage, y=Sonnet]{generated/data/interim-fable.dat}; \addlegendentry{Sonnet only}
+\nextgroupplot[title={Opus host}, ymin=0.95, ymax=1.75]
+\draw[black!60, line width=0.6pt] (axis cs:-0.3,1) -- (axis cs:4.3,1);
+\addplot+ table[x=stage, y=Sticky]{generated/data/interim-opus.dat};
+\addplot+ table[x=stage, y=Shipped]{generated/data/interim-opus.dat};
+\addplot+ table[x=stage, y=Sonnet]{generated/data/interim-opus.dat};
+\end{groupplot}
+\end{tikzpicture}

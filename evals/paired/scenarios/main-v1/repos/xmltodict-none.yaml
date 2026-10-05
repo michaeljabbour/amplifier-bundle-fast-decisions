@@ -1,0 +1,132 @@
+# main-v1 real-repo scenario (8 turns): martinblech/xmltodict, unparse() wrote the text "None" for None text/attribute values, fixed upstream in aa165113 (#401); workspace is its parent
+# Workspace = parent of the upstream fix commit; hidden tests = the fix commit's tests (+ scenario-authored edge tests).
+id: xmltodict-none
+task_type: bugfix
+language: python
+split: test
+source:
+  desc: >-
+    martinblech/xmltodict, unparse() wrote the text "None" for None text/attribute values, fixed
+    upstream in aa165113 (#401); workspace is its parent
+  repo: https://github.com/martinblech/xmltodict.git
+  sha: f7d76c96fc0141238947abcc5fa925d3ffd9eb78
+  fix_sha: aa165113bef2b3a1a822209863343b9dc9ffe43a
+workspace:
+  kind: git
+  repo: https://github.com/martinblech/xmltodict.git
+  sha: f7d76c96fc0141238947abcc5fa925d3ffd9eb78
+  local_hint: ~/dev/afast-paired-src/xmltodict
+  remove:
+  - AGENTS.md
+hidden_files:
+  tests/test_dicttoxml.py:
+    from_git:
+      repo: https://github.com/martinblech/xmltodict.git
+      sha: aa165113bef2b3a1a822209863343b9dc9ffe43a
+      path: tests/test_dicttoxml.py
+      local_hint: ~/dev/afast-paired-src/xmltodict
+  tests/test_attr_values_hidden.py: |
+    from xmltodict import unparse
+
+
+    def test_bool_attributes_are_lowercase():
+        assert unparse({"a": {"@p": True, "@q": False}}, full_document=False) == '<a p="true" q="false"></a>'
+
+
+    def test_numeric_attributes_unchanged():
+        assert unparse({"a": {"@n": 3, "@f": 1.5}}, full_document=False) == '<a n="3" f="1.5"></a>'
+
+
+    def test_bool_xmlns_value():
+        assert unparse({"a": {"@xmlns": {"": "urn:x"}, "@p": True}}, full_document=False) == '<a xmlns="urn:x" p="true"></a>'
+
+
+    def test_text_and_attr_agree():
+        assert unparse({"a": {"@p": True, "#text": True}}, full_document=False) == '<a p="true">true</a>'
+  tests/test_skip_none_hidden.py: |
+    from xmltodict import unparse
+
+
+    def test_skip_none_drops_none_attributes():
+        assert unparse({"a": {"@x": None, "@y": "1"}}, full_document=False, skip_none=True) == '<a y="1"></a>'
+
+
+    def test_skip_none_drops_none_elements():
+        assert unparse({"r": {"a": None, "b": "x"}}, full_document=False, skip_none=True) == "<r><b>x</b></r>"
+
+
+    def test_skip_none_drops_none_list_items():
+        assert unparse({"r": {"a": [None, "x"]}}, full_document=False, skip_none=True) == "<r><a>x</a></r>"
+
+
+    def test_skip_none_works_in_pretty_mode():
+        out = unparse({"r": {"a": None, "b": "x"}}, full_document=False, skip_none=True, pretty=True, indent="  ")
+        assert "<a" not in out and "<b>x</b>" in out
+
+
+    def test_default_unchanged():
+        assert unparse({"r": {"a": None, "b": "x"}}, full_document=False) == "<r><a></a><b>x</b></r>"
+        assert unparse({"a": {"@x": None}}, full_document=False, skip_none=False) == '<a x=""></a>'
+turns:
+  - prompt: >-
+      unparse() has a None problem. `xmltodict.unparse({'a': {'@param': 'test', '#text': None}},
+      full_document=False)` gives `<a param="test">None</a>`, and `unparse({'x': {'@pro': None}},
+      full_document=False)` gives `<x pro="None"></x>`. A plain `{'a': None}` already comes out as an
+      empty element, so None text and None attributes should be treated the same way: no text, and an
+      empty attribute value. It must also work with short_empty_elements=True (`{'x': {'#text': None,
+      '@pro': None}, 'y': None}` should be `<x pro=""/><y/>`). Please find the cause in xmltodict.py and
+      fix it. Run the tests from this directory with `python3 -m pytest -q tests`.
+    checks:
+      - {kind: tests, runner: python, files: [tests, tests/test_dicttoxml.py], restore: [tests/test_dicttoxml.py, tests/test_xmltodict.py], hidden: [tests/test_dicttoxml.py]}
+  - prompt: >-
+      In three to five sentences explain the root cause of that bug: which function produced the literal
+      'None', through which helper or expression, and why the plain `{'a': None}` case was not affected.
+      Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [_emit, _convert_value_to_string|str\(, None], any: [cdata|#text|text, attribute|attr]}
+  - prompt: >-
+      Add a regression test file `tests/test_none_values.py` with at least three test functions that
+      reproduce this through the public `unparse()` call (None text, None attribute, and the
+      short_empty_elements case), and run it.
+    checks:
+      - {kind: file_regex, path: tests/test_none_values.py, pattern: ^\s*def test_, min_count: 3}
+      - {kind: tests, runner: python, files: [tests/test_none_values.py]}
+  - prompt: >-
+      Related inconsistency: attribute values that are bool/int/float are formatted with plain str(), so
+      `{'a': {'@p': True}}` gives `p="True"` while the same True as text gives `true`. Make attribute
+      values use the same conversion as text content (True -> "true", False -> "false", numbers
+      unchanged), including the values of an `@xmlns` dict, and add a test for it to
+      tests/test_none_values.py.
+    checks:
+      - {kind: tests, runner: python, files: [tests/test_attr_values_hidden.py], restore: [tests/test_dicttoxml.py, tests/test_xmltodict.py], hidden: [tests/test_attr_values_hidden.py]}
+      - {kind: tests, runner: python, files: [tests, tests/test_dicttoxml.py, tests/test_attr_values_hidden.py], restore: [tests/test_dicttoxml.py, tests/test_xmltodict.py], hidden: [tests/test_dicttoxml.py, tests/test_attr_values_hidden.py]}
+      - {kind: file_regex, path: tests/test_none_values.py, pattern: ^\s*def test_, min_count: 4}
+  - prompt: >-
+      Add a short section to README.md under a new heading `## Serializing None values` that explains what
+      unparse() produces for None as an element value, as `#text`, and as an attribute value (use a small
+      code example).
+    checks:
+      - {kind: doc_sections, path: README.md, headings: [Serializing None values]}
+      - {kind: file_regex, path: README.md, pattern: 'unparse\(.*None|None.*unparse\(|"@\w+": None|\''@\w+\'': None'}
+  - prompt: >-
+      Small feature: add a keyword argument `skip_none=False` to unparse(). When True, None is dropped
+      instead of written as empty: an attribute whose value is None is omitted (`{'a': {'@x': None, '@y':
+      '1'}}` -> `<a y="1"></a>`), and an element whose value is None (or a None item in a list) is not
+      emitted (`{'r': {'a': None, 'b': 'x'}}` -> `<r><b>x</b></r>`, `{'r': {'a': [None, 'x']}}` ->
+      `<r><a>x</a></r>`). Default behaviour must not change. Add tests to tests/test_none_values.py.
+    checks:
+      - {kind: tests, runner: python, files: [tests/test_skip_none_hidden.py], restore: [tests/test_dicttoxml.py, tests/test_xmltodict.py], hidden: [tests/test_skip_none_hidden.py]}
+      - {kind: tests, runner: python, files: [tests, tests/test_dicttoxml.py, tests/test_attr_values_hidden.py, tests/test_skip_none_hidden.py], restore: [tests/test_dicttoxml.py, tests/test_xmltodict.py], hidden: [tests/test_dicttoxml.py, tests/test_attr_values_hidden.py, tests/test_skip_none_hidden.py]}
+      - {kind: file_regex, path: xmltodict.py, pattern: skip_none, min_count: 4}
+  - prompt: >-
+      Document `skip_none` in unparse()'s docstring: add a paragraph that starts with the literal text
+      ``skip_none`` (double backticks) and says what is omitted when it is True and that the default is
+      False.
+    checks:
+      - {kind: file_regex, path: xmltodict.py, pattern: ^\s*``skip_none``}
+      - {kind: tests, runner: python, files: [tests, tests/test_dicttoxml.py, tests/test_attr_values_hidden.py, tests/test_skip_none_hidden.py], restore: [tests/test_dicttoxml.py, tests/test_xmltodict.py], hidden: [tests/test_dicttoxml.py, tests/test_attr_values_hidden.py, tests/test_skip_none_hidden.py]}
+  - prompt: >-
+      Review the changes you made in this session as a code reviewer would: list each file you changed or
+      added, what changed, and any remaining edge case you did not cover. Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [xmltodict\.py, test, skip_none], any: [edge, risk, not cover, remaining]}

@@ -1,0 +1,13 @@
+% When the shipped arm switched models: switches into each turn, by host.
+\begin{tikzpicture}
+\begin{axis}[benchmark, ybar, bar width=5pt, scale only axis, width=11cm, height=4.4cm, xmin=1.3, xmax=16.7,
+  xtick={2,...,16}, ymin=0, xlabel={Turn the switch led into}, ylabel={Switches}, ymajorgrids,
+  title={Shipped arm: model switches by turn}, title style={font=\small\bfseries},
+  legend to name=switchlegend, legend columns=2, legend cell align=left,
+  legend style={/tikz/every even column/.append style={column sep=10pt}}]
+\addplot[fill=okblue!60, draw=black!60] table[x=turn, y=fable]{generated/data/switch-timing.dat};
+\addlegendentry{Fable host}
+\addplot[fill=okorange!80, draw=black!60, postaction={pattern=north east lines, pattern color=white}] table[x=turn, y=opus]{generated/data/switch-timing.dat};
+\addlegendentry{Opus host}
+\end{axis}
+\end{tikzpicture}

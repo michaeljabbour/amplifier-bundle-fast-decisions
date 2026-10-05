@@ -1,0 +1,196 @@
+# main-v1 scenario: Python-Markdown/markdown, toc_class option for the TOC extension, added upstream in 93d17b9c (#1224); workspace is its parent
+# Workspace = parent of the upstream fix commit; hidden tests = the fix commit's tests (+ scenario-authored edge tests).
+id: markdown-tocclass
+task_type: feature
+language: python
+split: train
+source:
+  desc: >-
+    Python-Markdown/markdown, toc_class option for the TOC extension, added upstream in 93d17b9c (#1224);
+    workspace is its parent
+  repo: https://github.com/Python-Markdown/markdown.git
+  sha: efec51ac92059fc5b72f08832b481919a3ded6f3
+  fix_sha: 93d17b9cc4a3f53dc2059e44a691a28797422d21
+workspace:
+  kind: git
+  repo: https://github.com/Python-Markdown/markdown.git
+  sha: efec51ac92059fc5b72f08832b481919a3ded6f3
+  local_hint: ~/dev/afast-paired-src/markdown
+hidden_files:
+  tests/test_syntax/extensions/test_toc.py:
+    from_git:
+      repo: https://github.com/Python-Markdown/markdown.git
+      sha: 93d17b9cc4a3f53dc2059e44a691a28797422d21
+      path: tests/test_syntax/extensions/test_toc.py
+      local_hint: ~/dev/afast-paired-src/markdown
+  tests/test_syntax/extensions/test_toc_hidden_edge.py: |
+    from markdown.test_tools import TestCase
+    from markdown.extensions.toc import TocExtension
+
+
+    class TestTocClassEdge(TestCase):
+
+        def test_empty_toc_class_omits_the_attribute(self):
+            self.assertMarkdownRenders(
+                '[TOC]\n# Header',
+                '<div>\n<ul>\n<li><a href="#header">Header</a></li>\n</ul>\n</div>\n<h1 id="header">Header</h1>',
+                extensions=[TocExtension(toc_class='')]
+            )
+
+        def test_default_class_is_unchanged(self):
+            self.assertMarkdownRenders(
+                '[TOC]\n# Header',
+                '<div class="toc">\n<ul>\n<li><a href="#header">Header</a></li>\n</ul>\n</div>\n<h1 id="header">Header</h1>',
+                extensions=[TocExtension()]
+            )
+turns:
+- prompt: >-
+    The Table of Contents extension (`markdown/extensions/toc.py`) always wraps the generated table in
+    `<div class="toc">`. Add a configuration option `toc_class` (default `toc`) so users can choose the
+    CSS class(es) of that div, for example `TocExtension(toc_class='custom1 custom2')` renders `<div class="custom1
+    custom2">`. Run tests from this directory with `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python3 -m pytest
+    -q tests/test_syntax/extensions/test_toc.py` (the full tests/ tree has an unrelated collection error
+    on this Python version).
+  checks:
+  - kind: tests
+    runner: python
+    files:
+    - tests/test_syntax/extensions/test_toc.py
+    hidden:
+    - tests/test_syntax/extensions/test_toc.py
+- prompt: >-
+    In three to five sentences explain how the new option travels from the user to the rendered HTML:
+    which class declares the default, where the value is read and stored, and which method uses it. Do
+    not change any files.
+  checks:
+  - kind: keyed_facts
+    all:
+    - toc_class
+    - TocExtension
+    - TocTreeprocessor|Treeprocessor
+    - build_toc_div
+    any:
+    - config
+    - setConfig
+    - getConfig
+    - __init__
+    min_any: 1
+- prompt: >-
+    Add a regression test file `tests/test_syntax/extensions/test_toc_class.py` with at least three test
+    methods (use `markdown.test_tools.TestCase` like test_toc.py does) covering a single class, several
+    classes and the default, and run it.
+  checks:
+  - kind: file_regex
+    path: tests/test_syntax/extensions/test_toc_class.py
+    pattern: ^\s*def test_
+    min_count: 3
+  - kind: tests
+    runner: python
+    files:
+    - tests/test_syntax/extensions/test_toc_class.py
+- prompt: >-
+    Edge case: `TocExtension(toc_class='')` currently renders `<div class="">`. An empty value should
+    omit the `class` attribute entirely (`<div>`), while the default stays `toc`. Fix it and add a test
+    for it to tests/test_syntax/extensions/test_toc_class.py.
+  checks:
+  - kind: file_regex
+    path: tests/test_syntax/extensions/test_toc_class.py
+    pattern: toc_class=''|toc_class=\"\"
+  - kind: tests
+    runner: python
+    files:
+    - tests/test_syntax/extensions/test_toc.py
+    - tests/test_syntax/extensions/test_attr_list.py
+    - tests/test_syntax/extensions/test_tables.py
+    hidden:
+    - tests/test_syntax/extensions/test_toc.py
+    - tests/test_syntax/extensions/test_toc_hidden_edge.py
+- prompt: >-
+    Document the new option in docs/extensions/toc.md, in the list of options right after `title`. Say
+    that it sets the CSS class(es) of the container `<div>`, that it defaults to `toc`, and that an empty
+    string removes the class attribute.
+  checks:
+  - kind: file_regex
+    path: docs/extensions/toc.md
+    pattern: \*\*`toc_class`\*\*
+  - kind: file_regex
+    path: docs/extensions/toc.md
+    pattern: (?i)toc_class[\s\S]{0,400}(empty|omit)
+  gap_before_s: 420
+- prompt: >-
+    Refactor `TocTreeprocessor.build_toc_div`: the nested helper `build_etree_ul` does not need to be
+    a closure. Move it to a module-level function named `_build_etree_ul(toc_list, parent)` in markdown/extensions/toc.py
+    (keeping its recursion) and call it from `build_toc_div`. Behaviour must not change.
+  checks:
+  - kind: file_regex
+    path: markdown/extensions/toc.py
+    pattern: '^def _build_etree_ul\(toc_list, parent\):'
+  - kind: file_regex
+    path: markdown/extensions/toc.py
+    pattern: ^\s+def build_etree_ul
+    absent: true
+  - kind: tests
+    runner: python
+    files:
+    - tests/test_syntax/extensions/test_toc.py
+    - tests/test_syntax/extensions/test_attr_list.py
+    - tests/test_syntax/extensions/test_tables.py
+    hidden:
+    - tests/test_syntax/extensions/test_toc.py
+    - tests/test_syntax/extensions/test_toc_hidden_edge.py
+- prompt: >-
+    Expand the one-line docstring of `build_toc_div` into a proper one: what it returns, how the container
+    class is chosen (`toc_class`, and what an empty value does), and when the title span is added.
+  checks:
+  - kind: file_regex
+    path: markdown/extensions/toc.py
+    pattern: def build_toc_div\(self, toc_list\):\s+"""(?:(?!""")[\s\S])*?toc_class
+  - kind: file_regex
+    path: markdown/extensions/toc.py
+    pattern: def build_toc_div\(self, toc_list\):\s+"""(?:(?!""")[\s\S])*?title
+  - kind: tests
+    runner: python
+    files:
+    - tests/test_syntax/extensions/test_toc.py
+    - tests/test_syntax/extensions/test_attr_list.py
+    - tests/test_syntax/extensions/test_tables.py
+    hidden:
+    - tests/test_syntax/extensions/test_toc.py
+    - tests/test_syntax/extensions/test_toc_hidden_edge.py
+- prompt: >-
+    Add a release note for the new option in docs/change_log/release-3.4.md, in the new-features list
+    (before the `## Bug fixes` heading), mentioning `toc_class`.
+  checks:
+  - kind: file_regex
+    path: docs/change_log/release-3.4.md
+    pattern: toc_class
+  gap_before_s: 420
+- prompt: >-
+    Run the three test modules tests/test_syntax/extensions/test_toc.py, test_attr_list.py and test_tables.py
+    once, and tell me in your final message how many tests passed and whether anything failed. Do not
+    change any files.
+  checks:
+  - kind: keyed_facts
+    all:
+    - \d+ (tests? )?pass(ed)?|pass(ed)?[^.]{0,20}\d+
+    any:
+    - no fail
+    - 0 fail
+    - nothing fail
+    - all pass
+    - none fail
+    min_any: 1
+- prompt: >-
+    Review the changes you made in this session as a code reviewer would: list each file you changed,
+    what changed, and any remaining risk or edge case you did not cover. Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all:
+    - toc\.py
+    - test
+    any:
+    - risk
+    - edge
+    - remaining
+    - not cover
+    min_any: 1

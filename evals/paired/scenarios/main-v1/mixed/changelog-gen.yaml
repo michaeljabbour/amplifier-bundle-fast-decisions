@@ -1,0 +1,337 @@
+# Fake git log + tags: answer release questions, write CHANGELOG sections, finish a small changelog tool (parse, CLI, edge cases), docs.
+id: changelog-gen
+task_type: mixed
+language: python
+split: train
+source:
+  desc: 'Fake git log + tags: answer release questions, write CHANGELOG sections, finish a small changelog tool (parse, CLI, edge cases), docs.'
+  kind: self-authored deterministic workspace
+  adapted_from: [~/dev/amplifier-agent/.amplifier/evaluation/tasks/benchmark/git-changelog-generator/task.yaml (categorized changelog between
+      two refs; handles invalid refs and empty ranges). Network clone and LLM summarisation removed; ground truth is a local commit log.]
+workspace:
+  kind: inline
+  files:
+    README.md: |
+      # release-tools
+
+      `tools/changelog.py` turns `commits.log` and `tags.txt` into release notes.
+
+      Log format: `hash|date|author|subject`, newest first. Subjects follow `type(scope)!: description`.
+      Categories: `feat` -> Features, `fix` -> Bug Fixes, everything else -> Other. A trailing `!` (or the words BREAKING CHANGE) marks a breaking change.
+      Entry format: `- <description> (<hash>)`.
+    commits.log: |
+      ea417ba|2025-04-07|Rhea Park|fix(cli): handle empty input again
+      25e6c85|2025-04-05|Tomas Vale|fix: fix flaky ordering again
+      9401d6c|2025-04-02|Tomas Vale|fix(cli): validate port range again
+      dc438b5|2025-03-31|Rhea Park|fix: fix crash on missing key again
+      55885b8|2025-03-29|Tomas Vale|feat(cli): add health endpoint v2
+      22eb0f4|2025-03-28|Tomas Vale|feat(cli): add retry policy v2
+      beb57a5|2025-03-25|Imani Cole|fix(api): correct timezone offset again
+      fa81122|2025-03-24|Tomas Vale|feat(api): support YAML config v2
+      d1dec2f|2025-03-22|Wei Zhang|fix(core): fix race in cache again
+      a855802|2025-03-20|Tomas Vale|fix(ui)!: close file handles again
+      16beafd|2025-03-18|Rhea Park|fix(api): fix unicode paths again
+      9547e6c|2025-03-16|Imani Cole|feat(api): add --verbose flag v2
+      bbd135e|2025-03-13|Rhea Park|chore: update CI matrix
+      7f945ac|2025-03-12|Tomas Vale|feat(api): add bulk delete endpoint v2
+      4a031fd|2025-03-10|Tomas Vale|chore(ui): bump dependencies
+      f56c83d|2025-03-07|Tomas Vale|refactor(docs): simplify loader
+      d38741b|2025-03-06|Wei Zhang|fix(cli): retry on timeout again
+      9ca7464|2025-03-03|Tomas Vale|feat(cli)!: support dark theme v2
+      65a912e|2025-03-01|Imani Cole|feat: add CSV export v2
+      cef0ca5|2025-02-27|Tomas Vale|fix(api): fix off-by-one in pager again
+      c086152|2025-02-25|Wei Zhang|feat: add audit log
+      ddaca86|2025-02-24|Tomas Vale|feat(core): add pagination cursor
+      d35f1a9|2025-02-21|Wei Zhang|fix(api): handle empty input again
+      df275fa|2025-02-19|Rhea Park|fix(ui): fix flaky ordering
+      4497b07|2025-02-18|Tomas Vale|fix(api): validate port range
+      5ed833a|2025-02-16|Tomas Vale|fix(ui): fix crash on missing key
+      97fc263|2025-02-13|Rhea Park|feat(cli): support custom headers
+      1595aa6|2025-02-12|Rhea Park|fix(cli): correct timezone offset
+      e46f1c2|2025-02-09|Wei Zhang|feat(core): add health endpoint
+      6b4e763|2025-02-07|Wei Zhang|refactor(cli): split router module
+      f1454d6|2025-02-05|Tomas Vale|perf(core): cache parsed schemas
+      06e0fd5|2025-02-03|Imani Cole|feat(docs): add retry policy
+      68c8eea|2025-02-02|Tomas Vale|perf(core): speed up index build
+      b221f23|2025-01-31|Rhea Park|fix(api): fix race in cache
+      8355b48|2025-01-29|Rhea Park|docs: clarify config table
+      26d893c|2025-01-27|Rhea Park|fix(core): close file handles
+      6abb408|2025-01-24|Tomas Vale|fix(core): fix unicode paths
+      981c1e0|2025-01-23|Imani Cole|feat(core): support YAML config
+      f51d91d|2025-01-21|Rhea Park|feat(docs): add --verbose flag
+      32692d5|2025-01-18|Rhea Park|feat(cli): add bulk delete endpoint
+      873e9b5|2025-01-17|Wei Zhang|feat(core): support dark theme
+      7e91ca1|2025-01-15|Tomas Vale|fix(api): retry on timeout
+      ebd0f22|2025-01-13|Imani Cole|fix(ui): fix off-by-one in pager
+      c537219|2025-01-10|Rhea Park|docs(core): update install guide
+      9a50cf6|2025-01-09|Tomas Vale|fix(api): handle empty input
+      3cc0933|2025-01-06|Imani Cole|feat(core): add CSV export
+    tags.txt: |
+      v1.0.0 6abb408
+      v1.1.0 ddaca86
+      v1.2.0 55885b8
+    tools/changelog.py: |
+      """Changelog generator: reads commits.log (newest first, `hash|date|author|subject`) and tags.txt (`tag hash`)."""
+      import sys
+
+      LOG, TAGS = "commits.log", "tags.txt"
+
+
+      def load_tags(path=TAGS):
+          out = {}
+          for ln in open(path, encoding="utf-8"):
+              if ln.strip():
+                  tag, h = ln.split()
+                  out[tag] = h
+          return out
+
+
+      def load_log(path=LOG):
+          """Raw log lines, newest first."""
+          return [ln.rstrip("\n") for ln in open(path, encoding="utf-8") if ln.strip()]
+
+
+      def parse_commit(line):
+          """Return {hash, date, author, type, scope, breaking, description} for one log line.
+
+          Subject format: `type(scope)!: description`; scope and `!` are optional (scope -> "" when absent).
+          A subject containing "BREAKING CHANGE" is also breaking.
+          """
+          raise NotImplementedError
+
+
+      def commits_between(old, new):
+          """Parsed commits after tag `old` up to and including tag `new`, newest first."""
+          raise NotImplementedError
+
+
+      def render(commits, name):
+          """Markdown for one release section (see README.md)."""
+          raise NotImplementedError
+
+
+      def main(argv):
+          raise NotImplementedError
+
+
+      if __name__ == "__main__":
+          sys.exit(main(sys.argv[1:]))
+protected: [commits.log, tags.txt]
+hidden_files:
+  _grade.py: |
+    import csv, json, os, re, subprocess, sys
+    from pathlib import Path
+
+    W = Path(".")
+
+
+    def fail(msg):
+        print("FAIL:", msg)
+        sys.exit(1)
+
+
+    def need(cond, msg):
+        if not cond:
+            fail(msg)
+
+
+    def load_json(rel):
+        p = W / rel
+        need(p.exists(), f"missing {rel}")
+        try:
+            return json.loads(p.read_text(encoding="utf-8"))
+        except Exception as e:  # noqa: BLE001
+            fail(f"{rel} is not valid JSON: {e}")
+
+
+    def read(rel):
+        p = W / rel
+        need(p.exists(), f"missing {rel}")
+        return p.read_text(encoding="utf-8")
+
+
+    def close(a, b, tol=0.011):
+        try:
+            return abs(float(a) - float(b)) <= tol
+        except (TypeError, ValueError):
+            return False
+
+
+    def md_rows(rel, under=None):
+        """Table rows (lists of cells) of a markdown file; with `under`, only rows inside the first heading matching it."""
+        lines = read(rel).splitlines()
+        if under:
+            out, on, lvl = [], False, 0
+            for ln in lines:
+                m = re.match(r"^(#+)\s+(.*)", ln)
+                if m:
+                    if on and len(m.group(1)) <= lvl:
+                        break
+                    if not on and re.search(under, m.group(2), re.I):
+                        on, lvl = True, len(m.group(1))
+                    continue
+                if on:
+                    out.append(ln)
+            lines = out
+        rows = []
+        for ln in lines:
+            if ln.strip().startswith("|") and not re.match(r"^\s*\|[\s:|-]+\|\s*$", ln):
+                rows.append([c.strip() for c in ln.strip().strip("|").split("|")])
+        return rows
+
+
+    def num(s):
+        m = re.search(r"-?\d[\d,]*\.?\d*", str(s))
+        return float(m.group(0).replace(",", "")) if m else None
+
+
+    def run(cmd, timeout=60):
+        p = subprocess.run(cmd, shell=True, cwd=W, capture_output=True, text=True, timeout=timeout)
+        return p.returncode, p.stdout, p.stderr
+
+    EXP = {'rng': ['c086152', 'cef0ca5', '65a912e', '9ca7464', 'd38741b', 'f56c83d', '4a031fd', '7f945ac', 'bbd135e', '9547e6c', '16beafd', 'a855802', 'd1dec2f', 'fa81122', 'beb57a5', '22eb0f4', '55885b8'], 'cat': {'Features': ['c086152', '65a912e', '9ca7464', '7f945ac', '9547e6c', 'fa81122', '22eb0f4', '55885b8'], 'Bug Fixes': ['cef0ca5', 'd38741b', '16beafd', 'a855802', 'd1dec2f', 'beb57a5'], 'Other': ['f56c83d', '4a031fd', 'bbd135e']}, 'brk': ['9ca7464', 'a855802'], 'sample': ['ea417ba|2025-04-07|Rhea Park|fix(cli): handle empty input again'], 'top': '55885b8'}
+
+    def _sections(txt):
+        out, cur = {}, None
+        for ln in txt.splitlines():
+            m = re.match(r"^#{2,4}\s+(.*?)\s*$", ln)
+            if m: cur = m.group(1); out[cur] = []; continue
+            if cur: out[cur].append(ln)
+        return {k: "\n".join(v) for k, v in out.items()}
+    def _hash_sections(txt, cats):
+        sec = _sections(txt)
+        for k, hs in cats.items():
+            need(k in sec, "missing section " + k); body = sec[k]
+            for h in hs: need(h in body, f"{h} missing under {k}")
+            for k2, hs2 in cats.items():
+                if k2 != k:
+                    for h in hs2: need(h not in body, f"{h} wrongly under {k}")
+    def t3():
+        txt = read("CHANGELOG.md"); need(re.search(r"^##\s+v1\.2\.0", txt, re.M), "need a '## v1.2.0' heading")
+        _hash_sections(txt, EXP["cat"])
+    def t5():
+        txt = read("CHANGELOG.md"); sec = _sections(txt); need("Breaking Changes" in sec, "missing Breaking Changes")
+        for h in EXP["brk"]: need(h in sec["Breaking Changes"], h + " missing under Breaking Changes")
+        need(txt.index("Breaking Changes") < txt.index("Features"), "Breaking Changes must come before Features")
+        cats = {k: v for k, v in EXP["cat"].items()}
+        for k, hs in cats.items():
+            for h in hs: need(h in sec[k], h + " must stay under " + k)
+    def t6():
+        import importlib; sys.path.insert(0, str(W / "tools"))
+        m = importlib.import_module("changelog")
+        c = m.parse_commit("abc1234|2025-02-03|Ann Lee|feat(api)!: drop v1 routes")
+        need(c.get("hash") == "abc1234" and c.get("author") == "Ann Lee" and c.get("type") == "feat" and c.get("scope") == "api" and c.get("breaking") is True and c.get("description") == "drop v1 routes", f"parse_commit wrong: {c}")
+        c = m.parse_commit("def5678|2025-02-04|Bo|fix: handle empty input")
+        need(c.get("scope") == "" and c.get("breaking") is False and c.get("type") == "fix", f"parse_commit plain wrong: {c}")
+        c = m.parse_commit("0011223|2025-02-05|Cy|chore: tidy BREAKING CHANGE notes")
+        need(c.get("breaking") is True, "BREAKING CHANGE in subject must be breaking")
+        got = [x["hash"] for x in m.commits_between("v1.1.0", "v1.2.0")]
+        need(got == list(reversed(EXP["rng"])), f"commits_between wrong ({len(got)} commits)")
+    def t7():
+        need((W / "tools/changelog.py").exists(), "missing tools/changelog.py")
+        rc, out, err = run("python3 tools/changelog.py v1.1.0 v1.2.0"); need(rc == 0, "cli failed: " + err[-200:])
+        need(re.search(r"^##\s+v1\.2\.0", out, re.M), "output needs a '## v1.2.0' heading")
+        cats = {k: list(v) for k, v in EXP["cat"].items()}; cats["Breaking Changes"] = EXP["brk"]
+        sec = _sections(out)
+        for k, hs in EXP["cat"].items():
+            need(k in sec, "missing section " + k)
+            for h in hs: need(h in sec[k], f"{h} missing under {k}")
+        need("Breaking Changes" in sec and all(h in sec["Breaking Changes"] for h in EXP["brk"]), "Breaking Changes section wrong")
+    def t8():
+        rc, out, err = run("python3 tools/changelog.py v9.9.9 v1.2.0"); need(rc == 2, f"unknown ref must exit 2, got {rc}")
+        need(re.search(r"unknown", err, re.I) and "v9.9.9" in err, "stderr must say unknown ref and name it")
+    def t9():
+        rc, out, err = run("python3 tools/changelog.py v1.2.0 v1.2.0"); need(rc == 0, "empty range must exit 0")
+        need(re.search(r"No changes\.", out), "stdout must say 'No changes.'")
+    def t12():
+        txt = read("RELEASE_NOTES.md"); need(re.search(r"^#+\s*Highlights", txt, re.M | re.I), "missing Highlights")
+        nf, nb = len(EXP["cat"]["Features"]), len(EXP["cat"]["Bug Fixes"])
+        need(re.search(r"(?<!\d)%d(?!\d)\s+(new\s+)?features?" % nf, txt, re.I), f"must state {nf} features")
+        need(re.search(r"(?<!\d)%d(?!\d)\s+(bug\s*)?fix" % nb, txt, re.I), f"must state {nb} bug fixes")
+
+
+    if __name__ == "__main__":
+        fn = globals().get(sys.argv[1]) if len(sys.argv) > 1 else None
+        need(callable(fn), "unknown check " + str(sys.argv[1:]))
+        fn()
+        print("OK")
+turns:
+- prompt: How many commits are in the release range after tag v1.1.0 up to and including tag v1.2.0? Use commits.log and tags.txt (newest commits
+    come first in the log). Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: ['(?<!\d)17(?!\d)']
+- prompt: Which author has the most commits in that same v1.1.0 to v1.2.0 range, and how many? Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: [Tomas Vale, '(?<!\d)9(?!\d)']
+- prompt: Write CHANGELOG.md with a `## v1.2.0` heading and three `###` sections (Features, Bug Fixes, Other) for that range, following the categories
+    and the entry format `- <description> (<hash>)` from README.md.
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t3
+    hidden: [_grade.py]
+    timeout: 60
+- prompt: Which commits in the v1.1.0 to v1.2.0 range are breaking changes? Give their hashes. Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: [9ca7464, a855802]
+- prompt: Add a `### Breaking Changes` section to the v1.2.0 entry of CHANGELOG.md, placed before Features, listing those commits in the same
+    entry format. Keep them in their normal category sections as well.
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t5
+    hidden: [_grade.py]
+    timeout: 60
+- prompt: Implement `parse_commit` and `commits_between` in tools/changelog.py exactly as their docstrings describe (the file already has the
+    helpers). Do not touch the other functions yet.
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t6
+    hidden: [_grade.py]
+    timeout: 60
+- prompt: Implement `render` and `main` so `python3 tools/changelog.py v1.1.0 v1.2.0` prints the release section (Breaking Changes when present,
+    then Features, Bug Fixes, Other) to stdout. Run it for the range.
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t7
+    hidden: [_grade.py]
+    timeout: 60
+- prompt: 'Make the CLI fail cleanly on an unknown ref: print `unknown ref: <name>` to stderr and exit with status 2 (no traceback).'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t8
+    hidden: [_grade.py]
+    timeout: 60
+- prompt: 'Handle an empty range: when the two refs are the same tag, print `No changes.` to stdout and exit 0.'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t9
+    hidden: [_grade.py]
+    timeout: 60
+- prompt: What percentage of the commits in the v1.1.0 to v1.2.0 range are fixes (type fix), to one decimal? Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: ['(?<![\d.,])35\.30?(?!\d)']
+- prompt: Add a Usage section to README.md showing the exact command `python3 tools/changelog.py v1.1.0 v1.2.0`, and mentioning the exit status
+    for unknown refs and the empty-range message.
+  checks:
+  - kind: doc_sections
+    path: README.md
+    headings: [Usage]
+  - {kind: file_regex, path: README.md, pattern: python3 tools/changelog\.py v1\.1\.0 v1\.2\.0}
+  - {kind: file_regex, path: README.md, pattern: No changes\.}
+- prompt: Write RELEASE_NOTES.md with a `## Highlights` section stating how many features and how many bug fixes v1.2.0 contains, in the form
+    "N features" and "M bug fixes".
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t12
+    hidden: [_grade.py]
+    timeout: 60

@@ -1,0 +1,14 @@
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}l l c c r r c@{}}
+\toprule
+Split & Judge & accuracy NI & wrong-auto NI & p95 ms & cost vs Jev & would replace Jev \\
+\midrule
+dev & Clef & \no & \ok & 725 & 3.2\X & \no \\
+dev & Clef-Flash & \no & \no & 825 & 1.2\X & \no \\
+holdout & Clef & \ok & \no & 722 & 3.5\X & \no \\
+holdout & Clef-Flash & \no & \no & 665 & 1.3\X & \no \\
+trace-dev & Clef & \ok & \ok & 663 & 4.4\X & \no \\
+trace-dev & Clef-Flash & \no & \ok & 527 & 1.6\X & \no \\
+trace-holdout & Clef & \no & \ok & 738 & 4.4\X & \no \\
+trace-holdout & Clef-Flash & \no & \ok & 600 & 1.7\X & \no \\
+\bottomrule
+\end{tabular*}

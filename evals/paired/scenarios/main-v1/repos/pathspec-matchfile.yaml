@@ -1,0 +1,150 @@
+# main-v1 real-repo scenario (8 turns): cpburnz/python-pathspec, PathSpec.match_file() returned None instead of False since 0.12.0 (issue #84), fixed upstream in 81368ade; workspace is its parent
+# Workspace = parent of the upstream fix commit; hidden tests = the fix commit's tests (+ scenario-authored edge tests).
+id: pathspec-matchfile
+task_type: bugfix
+language: python
+split: train
+source:
+  desc: >-
+    cpburnz/python-pathspec, PathSpec.match_file() returned None instead of False since 0.12.0 (issue
+    #84), fixed upstream in 81368ade; workspace is its parent
+  repo: https://github.com/cpburnz/python-pathspec.git
+  sha: 37e289515fbae7e92077a2438996046e79cae5bf
+  fix_sha: 81368adefcf18b97457958cb50bb04785e63cc6e
+workspace:
+  kind: git
+  repo: https://github.com/cpburnz/python-pathspec.git
+  sha: 37e289515fbae7e92077a2438996046e79cae5bf
+  local_hint: ~/dev/afast-paired-src/python-pathspec
+hidden_files:
+  tests/test_01_util.py:
+    from_git:
+      repo: https://github.com/cpburnz/python-pathspec.git
+      sha: 81368adefcf18b97457958cb50bb04785e63cc6e
+      path: tests/test_01_util.py
+      local_hint: ~/dev/afast-paired-src/python-pathspec
+  tests/test_03_pathspec.py:
+    from_git:
+      repo: https://github.com/cpburnz/python-pathspec.git
+      sha: 81368adefcf18b97457958cb50bb04785e63cc6e
+      path: tests/test_03_pathspec.py
+      local_hint: ~/dev/afast-paired-src/python-pathspec
+  tests/test_bytes_paths_hidden.py: |
+    import os
+    import pathlib
+    import unittest
+
+    from pathspec import PathSpec
+
+
+    class BytesPathsTest(unittest.TestCase):
+    	def setUp(self):
+    		self.spec = PathSpec.from_lines('gitwildmatch', ['*.txt'])
+
+    	def test_match_file_bytes(self):
+    		self.assertIs(self.spec.match_file(b'a.txt'), True)
+    		self.assertIs(self.spec.match_file(b'src/a.py'), False)
+
+    	def test_match_file_bytes_nested_and_leading_slash(self):
+    		self.assertIs(self.spec.match_file(b'/dir/b.txt'), True)
+
+    	def test_match_files_yields_originals(self):
+    		files = [b'a.txt', b'b.py', 'c.txt', pathlib.PurePosixPath('d.txt')]
+    		self.assertEqual(list(self.spec.match_files(files)), [b'a.txt', 'c.txt', pathlib.PurePosixPath('d.txt')])
+
+    	def test_non_path_still_type_error(self):
+    		for bad in (None, 3):
+    			with self.assertRaises(TypeError):
+    				self.spec.match_file(bad)
+
+    	def test_fsencoded_roundtrip(self):
+    		self.assertIs(self.spec.match_file(os.fsencode('sub/x.txt')), True)
+  tests/test_partition_hidden.py: |
+    import pathlib
+    import unittest
+
+    from pathspec import PathSpec
+
+
+    class PartitionTest(unittest.TestCase):
+    	def test_partition_keeps_order(self):
+    		spec = PathSpec.from_lines('gitwildmatch', ['*.txt', '!keep.txt'])
+    		matched, unmatched = spec.partition(['b.txt', 'a.py', 'keep.txt', 'c.txt', 'd.md'])
+    		self.assertEqual(matched, ['b.txt', 'c.txt'])
+    		self.assertEqual(unmatched, ['a.py', 'keep.txt', 'd.md'])
+
+    	def test_partition_returns_lists_and_originals(self):
+    		spec = PathSpec.from_lines('gitwildmatch', ['*.txt'])
+    		p = pathlib.PurePosixPath('x.txt')
+    		matched, unmatched = spec.partition(iter([p, b'y.py']))
+    		self.assertIsInstance(matched, list)
+    		self.assertIsInstance(unmatched, list)
+    		self.assertEqual(matched, [p])
+    		self.assertEqual(unmatched, [b'y.py'])
+
+    	def test_partition_empty(self):
+    		self.assertEqual(PathSpec([]).partition([]), ([], []))
+    		self.assertEqual(PathSpec([]).partition(['a']), ([], ['a']))
+turns:
+  - prompt: >-
+      After upgrading to 0.12.0, `PathSpec.match_file()` no longer always returns a bool: for a file that
+      none of the patterns match it returns `None` (e.g. `PathSpec.from_lines('gitwildmatch',
+      ['*.txt']).match_file('a.py') is None`). The docs and the `-> bool` annotation promise True/False,
+      and callers doing `match_file(x) is False` or `== False` broke. Please find the cause in
+      pathspec/pathspec.py and fix it. Run the tests from this directory with `python3 -m pytest -q
+      tests`.
+    checks:
+      - {kind: tests, runner: python, files: [tests, tests/test_01_util.py, tests/test_03_pathspec.py], restore: [tests/__init__.py, tests/test_01_util.py, tests/test_02_gitwildmatch.py, tests/test_03_pathspec.py, tests/test_04_gitignore.py, tests/util.py], hidden: [tests/test_01_util.py, tests/test_03_pathspec.py]}
+  - prompt: >-
+      In three to five sentences explain the root cause: which method returned the None, where that value
+      originates, and why 0.12.0 introduced it. Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [match_file, _match_file, None], any: [include|index|tuple, bool]}
+  - prompt: >-
+      Add a regression test file `tests/test_match_file_bool.py` (unittest or pytest style) with at least
+      three test functions that check `PathSpec.match_file()` returns a real bool (`is True` / `is False`)
+      for a matching file, a non-matching file, and a file excluded by a `!` negation pattern, and run it.
+    checks:
+      - {kind: file_regex, path: tests/test_match_file_bool.py, pattern: ^\s*def test_, min_count: 3}
+      - {kind: tests, runner: python, files: [tests/test_match_file_bool.py]}
+  - prompt: >-
+      Next, bytes paths. `spec.match_file(b'a.txt')` raises a confusing `TypeError: startswith first arg
+      must be bytes...`. Paths from os.fsencode()/os.listdir(bytes) are legitimate, so make file
+      normalization accept bytes by decoding them with the filesystem encoding: `match_file(b'a.txt')`
+      should be True for a `*.txt` spec and `match_file(b'src/a.py')` False; `match_files()` must still
+      yield the original (bytes) objects. Things that are not str/bytes/PathLike (None, ints) must keep
+      raising TypeError. Add tests to tests/test_match_file_bool.py.
+    checks:
+      - {kind: tests, runner: python, files: [tests/test_bytes_paths_hidden.py], restore: [tests/__init__.py, tests/test_01_util.py, tests/test_02_gitwildmatch.py, tests/test_03_pathspec.py, tests/test_04_gitignore.py, tests/util.py], hidden: [tests/test_bytes_paths_hidden.py]}
+      - {kind: tests, runner: python, files: [tests, tests/test_01_util.py, tests/test_03_pathspec.py, tests/test_bytes_paths_hidden.py], restore: [tests/__init__.py, tests/test_01_util.py, tests/test_02_gitwildmatch.py, tests/test_03_pathspec.py, tests/test_04_gitignore.py, tests/util.py], hidden: [tests/test_01_util.py, tests/test_03_pathspec.py, tests/test_bytes_paths_hidden.py]}
+      - {kind: file_regex, path: tests/test_match_file_bool.py, pattern: 'b[\''"]a\.txt|bytes'}
+  - prompt: >-
+      Add an entry for these fixes to CHANGES.rst: a new top section titled `0.12.1 (TBD)` above the
+      0.12.0 one, with a bullet list of "Bug fixes" mentioning `PathSpec.match_file()` returning a bool
+      again and bytes paths being accepted.
+    checks:
+      - {kind: file_regex, path: CHANGES.rst, pattern: ^0\.12\.1 \(TBD\)}
+      - {kind: file_regex, path: CHANGES.rst, pattern: '^0\.12\.1 \(TBD\)\n-+\n(?:(?!\d+\.\d+\.\d+ \().*\n)*?.*match_file'}
+      - {kind: file_regex, path: CHANGES.rst, pattern: bytes}
+  - prompt: >-
+      Small feature: add `PathSpec.partition(files, separators=None)` which splits an iterable of paths
+      into two lists and returns `(matched, unmatched)`, keeping the original objects and their original
+      order, using the same matching rules as `match_file()`. Put it right after `match_files()`. Add
+      tests for it to tests/test_match_file_bool.py. (Leave the docstring for the next step.)
+    checks:
+      - {kind: tests, runner: python, files: [tests/test_partition_hidden.py], restore: [tests/__init__.py, tests/test_01_util.py, tests/test_02_gitwildmatch.py, tests/test_03_pathspec.py, tests/test_04_gitignore.py, tests/util.py], hidden: [tests/test_partition_hidden.py]}
+      - {kind: tests, runner: python, files: [tests, tests/test_01_util.py, tests/test_03_pathspec.py, tests/test_bytes_paths_hidden.py, tests/test_partition_hidden.py], restore: [tests/__init__.py, tests/test_01_util.py, tests/test_02_gitwildmatch.py, tests/test_03_pathspec.py, tests/test_04_gitignore.py, tests/util.py], hidden: [tests/test_01_util.py, tests/test_03_pathspec.py, tests/test_bytes_paths_hidden.py, tests/test_partition_hidden.py]}
+      - {kind: file_regex, path: pathspec/pathspec.py, pattern: def partition\(}
+  - prompt: >-
+      Now write the docstring for `PathSpec.partition()` in the same reST style as `match_files()`: one
+      summary line, the *files* and *separators* parameters, and a "Returns" sentence that says it is a
+      tuple of two lists (matched, unmatched).
+    checks:
+      - {kind: file_regex, path: pathspec/pathspec.py, pattern: 'def partition\([^)]*\)[^\n]*:\n\s+"""'}
+      - {kind: file_regex, path: pathspec/pathspec.py, pattern: 'def partition\([^)]*\)[^\n]*:\n\s+"""(?:(?!""")[\s\S])*?\*separators\*'}
+      - {kind: tests, runner: python, files: [tests, tests/test_01_util.py, tests/test_03_pathspec.py, tests/test_bytes_paths_hidden.py, tests/test_partition_hidden.py], restore: [tests/__init__.py, tests/test_01_util.py, tests/test_02_gitwildmatch.py, tests/test_03_pathspec.py, tests/test_04_gitignore.py, tests/util.py], hidden: [tests/test_01_util.py, tests/test_03_pathspec.py, tests/test_bytes_paths_hidden.py, tests/test_partition_hidden.py]}
+  - prompt: >-
+      Review the changes you made in this session as a code reviewer would: list each file you changed or
+      added, what changed, and any remaining edge case you did not cover. Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [pathspec\.py, util\.py, test], any: [edge, risk, not cover, remaining]}

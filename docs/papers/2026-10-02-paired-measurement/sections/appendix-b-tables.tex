@@ -1,0 +1,64 @@
+\section{Additional tables}\label{app:tables}
+
+\begin{table}[htbp]
+\centering\small
+\caption{Savings-model check by arm and host, test split: prediction-interval coverage and the observed total
+saving against its predicted 90\,\% interval.}
+\label{tab:modelcheck}
+\input{generated/tables/model-check.tex}
+\end{table}
+
+\begin{table}[htbp]
+\centering\small
+\caption{A/A noise floor: second plain-host session against the first. ``SD'' is the standard deviation of
+the log ratio per pair and per single session.}
+\label{tab:aa}
+\input{generated/tables/aa.tex}
+\end{table}
+
+\begin{table}[htbp]
+\centering\small
+\caption{Interim and final cost ratios behind \cref{fig:interim}.}
+\label{tab:interim}
+\input{generated/tables/interim.tex}
+\end{table}
+
+\begin{table}[htbp]
+\centering\small
+\caption{Cost ratio by pause pattern, all splits (95\,\% CI). Exploratory.}
+\label{tab:slicegap}
+\input{generated/tables/slice-gap.tex}
+\end{table}
+
+\begin{table}[htbp]
+\centering\small
+\caption{Cost ratio by scripted session length, all splits (95\,\% CI). Exploratory.}
+\label{tab:sliceturns}
+\input{generated/tables/slice-turns.tex}
+\end{table}
+
+\subsection*{Raw cost basis}\label{sec:rawbasis}
+Without the tools normalization the confirmatory ratios barely move: Fable sticky \RawFableSticky\ (against
+\CfFableStickyPair) and Opus sticky \RawOpusSticky\ (against \CfOpusStickyPair).
+
+\subsection*{Deviations from the preregistration}\label{sec:deviations}
+Verbatim from \path{confirm/confirm.json}:
+{\small\input{generated/tables/deviations.tex}}
+
+Three further points, not listed in \path{confirm.json}:
+\begin{enumerate}[leftmargin=1.4em,resume]
+  \item \textbf{The estimator was written after the data.} \code{evals/paired\_confirm.py} (commit
+    \code{\ConfirmSha}) was committed about \ConfirmAfterMin\ minutes after the campaign finished, when the
+    exploratory all-scenario summaries in \path{model/} already existed. It fixed the bootstrap (\Boot\
+    resamples, seed \BootSeed), the pair-level filter and the verdict rule, including ``contradicted''.
+  \item \textbf{What counts as a savings claim.} Only arm and host cells whose own cost interval shows a saving
+    (upper end below 1) are treated as savings claims and tested for quality; on this data those are the three
+    Fable cells.
+  \item \textbf{The design document's stricter model check also passes.} The design document asked for
+    coverage between \DesignCovLow\ and \DesignCovHigh\ and a calibration slope between \DesignSlopeLow\ and
+    \DesignSlopeHigh; the model reached \MCCovLog\ (log ratio), \MCCovUSD\ (dollars) and slope \MCSlope.
+\end{enumerate}
+
+{\small\input{generated/tables/per1000-full.tex}}
+
+{\small\input{generated/tables/scenarios.tex}}

@@ -1,0 +1,52 @@
+# tox-dev/filelock at 9ed62ac (large modern version, src/filelock) plus a generated version.py
+id: filelock-explain
+task_type: explain
+language: python
+split: test
+source:
+  desc: tox-dev/filelock at 9ed62ac (large modern version, src/filelock) plus a generated version.py
+  repo: https://github.com/tox-dev/filelock.git
+  sha: 9ed62ac3b3ca254d1537694d1364067f477f38a8
+workspace:
+  kind: git
+  repo: https://github.com/tox-dev/filelock.git
+  sha: 9ed62ac3b3ca254d1537694d1364067f477f38a8
+  local_hint: ~/dev/afast-paired-src/py-filelock
+  add_files:
+    src/filelock/version.py: |
+      version = "0+snapshot"
+turns:
+- prompt: Which concrete lock class does `filelock.FileLock` resolve to on Windows, on Unix with fcntl, and on a platform without fcntl, and what happens at import time in the last case? Answer from src/filelock/__init__.py. Do not change any files.
+  checks:
+  - {kind: keyed_facts, all: [WindowsFileLock, UnixFileLock, SoftFileLock, only soft file lock]}
+- prompt: What are the default values of the `BaseFileLock.__init__` parameters timeout, poll_interval, thread_local, blocking, is_singleton and context_error_policy? Do not change any files.
+  checks:
+  - {kind: keyed_facts, all: ['-1', 0\.05, thread_local, \"chain\"|'chain'|chain], any: ['blocking.{0,12}True', 'is_singleton.{0,12}False']}
+- prompt: 'Look at src/filelock/_error.py: list the exception classes, their base classes, and what `Timeout` carries and prints. Do not change any files.'
+  checks:
+  - {kind: keyed_facts, all: [_error\.py|_error, TimeoutError, OSError, SoftFileLockProtocolError, could not be acquired]}
+- prompt: 'Explain how `UnixFileLock` acquires the lock in src/filelock/_unix.py: the open flags, why truncation is deferred, and what happens when the filesystem does not implement flock. Do not change any files.'
+  checks:
+  - {kind: keyed_facts, all: [flock, LOCK_NB, ENOSYS, O_NOFOLLOW, truncat], any: [soft, fallback]}
+- prompt: What does `UnixFileLock` do in a sticky-bit directory like /tmp when O_CREAT fails because the file belongs to another user? Do not change any files.
+  checks:
+  - {kind: keyed_facts, all: [sticky, 317|without O_CREAT|existing file]}
+- prompt: Explain what `thread_local=True` means for the lock's configuration values, and which constructor argument gives you shared, reentrant behaviour across threads. Do not change any files.
+  checks:
+  - {kind: keyed_facts, all: ['per-thread|thread[- ]local', thread_local=False|thread_local\s*=\s*False, mode]}
+- prompt: Count exactly how many names are in `filelock.__all__` (run it) and tell me how many of them are classes whose name starts with `Async`.
+  checks:
+  - {kind: keyed_facts, all: [\b37\b, \b11\b]}
+- prompt: Write ARCHITECTURE.md with level-2 sections Overview, Lock types and Error types. Mention which source file implements each lock flavour (unix, windows, soft, strict, read/write, lease) and the async counterpart module.
+  checks:
+  - {kind: doc_sections, path: ARCHITECTURE.md, headings: [Overview, Lock types, Error types]}
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: _unix\.py}
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: _windows\.py}
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: _strict\.py}
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: _read_write\.py}
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: _lease\.py}
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: asyncio\.py}
+- prompt: 'Add examples/timeout_demo.py: a runnable script that holds a FileLock in one object and shows a second FileLock object on the same path raising `Timeout` after 0.1 s, printing the exception text. Run it from the repository root with PYTHONPATH=src.'
+  checks:
+  - {kind: file_regex, path: examples/timeout_demo.py, pattern: Timeout}
+  - {kind: tests, runner: cmd, cmd: PYTHONPATH=src python3 examples/timeout_demo.py, expect_regex: could not be acquired}

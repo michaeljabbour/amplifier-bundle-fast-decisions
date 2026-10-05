@@ -1,0 +1,22 @@
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}l r r r r r r r r@{}}
+\toprule
+ & \multicolumn{2}{c}{Accuracy} & \multicolumn{2}{c}{Wrong automatic} & Coverage & \multicolumn{2}{c}{Latency (ms)} & \\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}\cmidrule(lr){7-8}
+Judge & correct & 95\,\% CI & count & 95\,\% CI & automatic & p50 & p95 & \$/1M \\
+\midrule
+GPT-6.1 Sol & \SolHoldAccK/\HoldN & \SolHoldAccCI & \SolHoldWaK & \SolHoldWaCI & \SolHoldCovK & \SolHoldPfifty & \SolHoldPninetyfive & \SolHoldCost \\
+GPT-6 Luna + I1 & \LunaClHoldAccK/\HoldN & \LunaClHoldAccCI & \LunaClHoldWaK & \LunaClHoldWaCI & \LunaClHoldCovK & \LunaClHoldPfifty & \LunaClHoldPninetyfive & \LunaClHoldCost \\
+GPT-6 Luna & \LunaHoldAccK/\HoldN & \LunaHoldAccCI & \LunaHoldWaK & \LunaHoldWaCI & \LunaHoldCovK & \LunaHoldPfifty & \LunaHoldPninetyfive & \LunaHoldCost \\
+Jev 1.13 + I1 & \JevClHoldAccK/\HoldN & \JevClHoldAccCI & \JevClHoldWaK & \JevClHoldWaCI & \JevClHoldCovK & \JevClHoldPfifty & \JevClHoldPninetyfive & \JevClHoldCost \\
+\textbf{Jev 1.13} & \JevHoldAccK/\HoldN & \JevHoldAccCI & \JevHoldWaK & \JevHoldWaCI & \JevHoldCovK & \JevHoldPfifty & \JevHoldPninetyfive & \JevHoldCost \\
+nimble 9B & \NimbleHoldAccK/\HoldN & \NimbleHoldAccCI & \NimbleHoldWaK & \NimbleHoldWaCI & \NimbleHoldCovK & \NimbleHoldPfifty & \NimbleHoldPninetyfive & \NimbleHoldCost \\
+tev1 4B & \TevFourHoldAccK/\HoldN & \TevFourHoldAccCI & \TevFourHoldWaK & \TevFourHoldWaCI & \TevFourHoldCovK & \TevFourHoldPfifty & \TevFourHoldPninetyfive & \TevFourHoldCost \\
+Qwen3 8B & \QwenEightHoldAccK/\HoldN & \QwenEightHoldAccCI & \QwenEightHoldWaK & \QwenEightHoldWaCI & \QwenEightHoldCovK & \QwenEightHoldPfifty & \QwenEightHoldPninetyfive & \QwenEightHoldCost \\
+Qwen3 8B + I1 & \QwenEightClHoldAccK/\HoldN & \QwenEightClHoldAccCI & \QwenEightClHoldWaK & \QwenEightClHoldWaCI & \QwenEightClHoldCovK & \QwenEightClHoldPfifty & \QwenEightClHoldPninetyfive & \QwenEightClHoldCost \\
+Qwen3 4B & \QwenFourHoldAccK/\HoldN & \QwenFourHoldAccCI & \QwenFourHoldWaK & \QwenFourHoldWaCI & \QwenFourHoldCovK & \QwenFourHoldPfifty & \QwenFourHoldPninetyfive & \QwenFourHoldCost \\
+tev1 0.8B & \TevPtEightHoldAccK/\HoldN & \TevPtEightHoldAccCI & \TevPtEightHoldWaK & \TevPtEightHoldWaCI & \TevPtEightHoldCovK & \TevPtEightHoldPfifty & \TevPtEightHoldPninetyfive & \TevPtEightHoldCost \\
+tev1 0.8B + I1 & \TevPtEightClHoldAccK/\HoldN & \TevPtEightClHoldAccCI & \TevPtEightClHoldWaK & \TevPtEightClHoldWaCI & \TevPtEightClHoldCovK & \TevPtEightClHoldPfifty & \TevPtEightClHoldPninetyfive & \TevPtEightClHoldCost \\
+Laya base & \LayaHoldAccK/\HoldN & \LayaHoldAccCI & \LayaHoldWaK & \LayaHoldWaCI & \LayaHoldCovK & \LayaHoldPfifty & \LayaHoldPninetyfive & \LayaHoldCost \\
+Qwen3 0.6B & \QwenPtSixHoldAccK/\HoldN & \QwenPtSixHoldAccCI & \QwenPtSixHoldWaK & \QwenPtSixHoldWaCI & \QwenPtSixHoldCovK & \QwenPtSixHoldPfifty & \QwenPtSixHoldPninetyfive & \QwenPtSixHoldCost \\
+\bottomrule
+\end{tabular*}

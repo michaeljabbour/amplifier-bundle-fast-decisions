@@ -60,6 +60,9 @@ class Task:
     # registered in TASKS). None for every ordinary single-turn task -- this
     # field is additive and every existing Task(...) call site is unaffected.
     subtasks: tuple[str, ...] | None = None
+    # Spec-based paired scenarios only (scripts/paired_scenarios.py): (ScenarioSpec, snapshot_dir).
+    # None for every other task, so every existing Task(...) call site is unaffected.
+    spec: Any = None
 
 
 # ---------------------------------------------------------------------------

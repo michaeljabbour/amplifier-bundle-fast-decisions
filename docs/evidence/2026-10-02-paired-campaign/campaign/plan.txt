@@ -1,0 +1,375 @@
+plan 4f1a9b5bb7ec  design=main-v1  seed=20261002  reps=2  hosts=opus,fable  parallel=8  nonce=per_session
+arms: anchor, aa, shipped, sticky, sonnet
+1036 sessions in 280 waves
+
+scenario         type     lang    turns gaps>=5m
+api-docs         mixed    python     16        2
+arch-explain     mixed    python     16        0
+boltons-tableutils bugfix   python      8        0
+cachetools-params feature  python     10        2
+changelog-gen    mixed    python     12        0
+commander-docs   docs     javascript    13        2
+config-matrix    mixed    python     12        0
+debug-triage     mixed    javascript    11        0
+deps-audit       mixed    python      8        0
+discrepancy-docs mixed    python     16        2
+docstring-audit  mixed    python     12        0
+expense-anomaly  mixed    python     12        2
+fastrand-explain explain  rust        9        0
+fatihcolor-docs  docs     go          8        0
+fd-cli-docs      docs     rust       16        2
+filelock-explain explain  python      9        0
+go-dominoes      bugfix   go         13        2
+go-linkedlist    mixed    go         16        2
+go-protein       feature  go          8        0
+go-say           feature  go         11        0
+go-vlq           feature  go         12        0
+gohumanize-review review   go         12        0
+hr-salary-qa     mixed    python     16        0
+humanize-review  review   python     12        2
+jmespath-strcmp  bugfix   python      9        0
+js-listops       feature  javascript     8        0
+js-phone         bugfix   javascript     8        0
+js-rationals     feature  javascript    12        2
+js-tournament    mixed    javascript    16        0
+kac-docs         docs     ruby       14        0
+lark-discard     bugfix   python     12        0
+lark-template    bugfix   python      8        2
+log-incident     mixed    python      8        2
+markdown-tocclass feature  python     10        2
+meeting-notes    mixed    python      8        2
+migration-plan   mixed    python     12        2
+mistune-escape   bugfix   python      8        0
+moreit-chunked   bugfix   python      8        0
+ms-review        review   javascript     8        0
+nanoid-explain   explain  javascript    10        0
+okr-status       mixed    python     12        0
+pathspec-matchfile bugfix   python      8        0
+pflag-mixed      mixed    go         15        0
+pr-review-cart   mixed    python     12        2
+pr-review-retry  mixed    python      8        0
+py-book-store    bugfix   python      8        0
+py-forth         bugfix   python     10        2
+py-go-counting   mixed    python     14        2
+py-poker         feature  python     12        0
+py-rest-api      feature  python      9        0
+py-sgf-parsing   mixed    python     15        0
+readme-rewrite   mixed    python      8        0
+rust-gradeschool feature  rust       12        2
+rust-luhn        feature  rust        8        0
+rust-ocr         mixed    rust       16        2
+rust-twobucket   feature  rust       12        0
+rust-wordy       feature  rust       16        0
+sales-orders     mixed    python     16        0
+schema-wrongkey  bugfix   python     12        0
+semver-review    review   rust       10        0
+sortedc-update   bugfix   python     12        0
+sqlparse-realname bugfix   python      8        0
+support-workload mixed    python      8        0
+survey-analysis  mixed    python     16        0
+tabulate-github  bugfix   python     12        0
+timesheet-invoice mixed    python      8        0
+toolz-interpose  bugfix   python      8        2
+voluptuous-number bugfix   python     12        2
+xmltodict-none   bugfix   python      8        0
+yamllint-mixed   mixed    python     14        2
+
+wave (seeded order)                sessions    est $
+go-linkedlist-r2-opus                     4    20.75
+api-docs-r1-opus                          4    20.75
+semver-review-r2-opus                     4     8.18
+yamllint-mixed-r2-fable                   3    21.76
+arch-explain-r1-fable                     4    30.69
+mistune-escape-r1-opus                    4     9.16
+py-forth-r2-opus                          5    17.86
+pflag-mixed-r2-opus                       4    16.05
+go-say-r2-fable                           3    13.55
+rust-gradeschool-r2-fable                 3    18.09
+mistune-escape-r1-fable                   3    11.22
+go-say-r1-opus                            4    11.07
+jmespath-strcmp-r1-fable                  4    19.02
+rust-ocr-r1-fable                         3    25.42
+go-linkedlist-r2-fable                    3    25.42
+pr-review-cart-r2-fable                   3    18.09
+gohumanize-review-r2-opus                 5    12.44
+markdown-tocclass-r1-opus                 5    14.29
+yamllint-mixed-r2-opus                    4    17.76
+humanize-review-r1-fable                  3    15.08
+js-phone-r1-opus                          5    11.11
+fd-cli-docs-r2-opus                       4    17.29
+hr-salary-qa-r2-fable                     3    21.18
+markdown-tocclass-r1-fable                4    20.91
+ms-review-r1-fable                        3     7.48
+js-tournament-r2-opus                     4    17.29
+rust-luhn-r2-opus                         5     8.89
+go-dominoes-r2-opus                       5    24.66
+py-forth-r1-opus                          4    14.73
+sales-orders-r1-fable                     3    21.18
+semver-review-r1-opus                     4     8.18
+toolz-interpose-r2-fable                  3    13.46
+config-matrix-r1-fable                    3    15.08
+config-matrix-r1-opus                     4    12.31
+kac-docs-r2-fable                         3    15.11
+py-go-counting-r1-fable                   3    21.76
+commander-docs-r2-fable                   3    16.60
+ms-review-r2-fable                        3     7.48
+sales-orders-r1-opus                      4    17.29
+py-go-counting-r2-fable                   4    31.52
+pr-review-cart-r1-opus                    4    14.77
+debug-triage-r2-fable                     3    13.55
+voluptuous-number-r2-fable                3    22.62
+pathspec-matchfile-r2-fable               3    11.22
+voluptuous-number-r1-fable                3    22.62
+sortedc-update-r1-opus                    4    15.39
+py-sgf-parsing-r1-opus                    4    16.05
+rust-luhn-r1-fable                        3     8.98
+humanize-review-r2-opus                   4    12.31
+go-say-r1-fable                           3    13.55
+commander-docs-r1-fable                   3    16.60
+rust-gradeschool-r1-opus                  4    14.77
+config-matrix-r2-opus                     4    12.31
+migration-plan-r1-fable                   3    18.09
+mistune-escape-r2-opus                    5    11.11
+readme-rewrite-r1-fable                   3     8.98
+py-forth-r1-fable                         3    18.04
+rust-ocr-r1-opus                          4    20.75
+go-protein-r2-fable                       3     8.98
+py-forth-r2-fable                         4    26.14
+hr-salary-qa-r2-opus                      4    17.29
+lark-discard-r1-fable                     3    18.85
+ms-review-r1-opus                         4     6.11
+rust-ocr-r2-opus                          4    20.75
+rust-wordy-r1-fable                       3    21.18
+moreit-chunked-r1-opus                    4     9.16
+debug-triage-r2-opus                      4    11.07
+py-rest-api-r1-fable                      3    10.50
+rust-twobucket-r2-fable                   3    15.08
+cachetools-params-r1-fable                3    14.43
+toolz-interpose-r2-opus                   4    10.99
+api-docs-r2-opus                          5    25.16
+sortedc-update-r1-fable                   3    18.85
+pr-review-retry-r2-opus                   5     8.89
+discrepancy-docs-r2-opus                  4    20.75
+go-dominoes-r1-fable                      3    24.91
+changelog-gen-r2-fable                    3    15.08
+rust-gradeschool-r2-opus                  4    14.77
+fatihcolor-docs-r2-fable                  3     7.48
+log-incident-r2-opus                      4     8.79
+deps-audit-r1-opus                        4     7.33
+py-sgf-parsing-r1-fable                   3    19.66
+rust-twobucket-r1-fable                   4    21.85
+rust-wordy-r2-opus                        4    17.29
+py-poker-r2-opus                          5    14.93
+rust-wordy-r2-fable                       3    21.18
+commander-docs-r2-opus                    4    13.56
+go-protein-r1-opus                        4     7.33
+filelock-explain-r2-fable                 3     8.75
+fastrand-explain-r2-opus                  5     8.66
+lark-template-r1-fable                    3    13.46
+tabulate-github-r1-fable                  3    18.85
+expense-anomaly-r1-opus                   4    14.77
+docstring-audit-r1-fable                  3    15.08
+changelog-gen-r1-opus                     4    12.31
+gohumanize-review-r1-fable                3    12.57
+timesheet-invoice-r2-fable                4    13.00
+py-rest-api-r2-fable                      3    10.50
+xmltodict-none-r2-fable                   3    11.22
+okr-status-r1-fable                       3    15.08
+boltons-tableutils-r2-fable               3    11.22
+rust-luhn-r1-opus                         4     7.33
+gohumanize-review-r1-opus                 4    10.26
+tabulate-github-r2-fable                  4    27.31
+fastrand-explain-r1-fable                 4    12.68
+js-rationals-r2-opus                      4    14.77
+toolz-interpose-r1-opus                   5    13.33
+expense-anomaly-r2-fable                  3    18.09
+log-incident-r1-opus                      5    10.66
+go-vlq-r1-fable                           3    15.08
+schema-wrongkey-r1-fable                  4    27.31
+fatihcolor-docs-r1-fable                  3     7.48
+go-vlq-r1-opus                            4    12.31
+markdown-tocclass-r2-fable                3    14.43
+humanize-review-r2-fable                  3    15.08
+semver-review-r1-fable                    3    10.02
+docstring-audit-r1-opus                   4    12.31
+lark-discard-r2-fable                     3    18.85
+fatihcolor-docs-r1-opus                   4     6.11
+py-poker-r1-fable                         3    15.08
+moreit-chunked-r1-fable                   3    11.22
+rust-wordy-r1-opus                        4    17.29
+pr-review-retry-r1-opus                   5     8.89
+js-phone-r2-opus                          4     9.16
+deps-audit-r2-opus                        4     7.33
+nanoid-explain-r1-opus                    5     9.92
+js-tournament-r1-opus                     4    17.29
+timesheet-invoice-r2-opus                 5     8.89
+humanize-review-r1-opus                   4    12.31
+go-say-r2-opus                            4    11.07
+pathspec-matchfile-r1-opus                4     9.16
+lark-template-r2-fable                    3    13.46
+sqlparse-realname-r2-opus                 4     9.16
+rust-twobucket-r1-opus                    5    14.93
+xmltodict-none-r1-fable                   3    11.22
+nanoid-explain-r2-fable                   3    10.02
+api-docs-r1-fable                         3    25.42
+js-rationals-r2-fable                     3    18.09
+debug-triage-r1-opus                      4    11.07
+migration-plan-r2-opus                    4    14.77
+support-workload-r1-opus                  4     7.33
+debug-triage-r1-fable                     3    13.55
+fatihcolor-docs-r2-opus                   4     6.11
+nanoid-explain-r1-fable                   4    14.52
+fd-cli-docs-r1-opus                       5    20.97
+go-linkedlist-r1-opus                     4    20.75
+arch-explain-r2-opus                      4    17.29
+kac-docs-r1-opus                          4    12.34
+semver-review-r2-fable                    3    10.02
+ms-review-r2-opus                         4     6.11
+pflag-mixed-r1-fable                      3    19.66
+markdown-tocclass-r2-opus                 4    11.78
+arch-explain-r1-opus                      5    20.97
+readme-rewrite-r1-opus                    4     7.33
+rust-luhn-r2-fable                        4    13.00
+log-incident-r1-fable                     4    15.61
+voluptuous-number-r1-opus                 4    18.47
+sortedc-update-r2-fable                   4    27.31
+tabulate-github-r2-opus                   5    18.66
+okr-status-r1-opus                        4    12.31
+jmespath-strcmp-r1-opus                   5    12.99
+sqlparse-realname-r1-opus                 4     9.16
+support-workload-r2-opus                  4     7.33
+pflag-mixed-r2-fable                      3    19.66
+expense-anomaly-r1-fable                  3    18.09
+migration-plan-r1-opus                    4    14.77
+pathspec-matchfile-r2-opus                4     9.16
+support-workload-r1-fable                 3     8.98
+docstring-audit-r2-opus                   4    12.31
+js-tournament-r1-fable                    3    21.18
+jmespath-strcmp-r2-opus                   4    10.72
+yamllint-mixed-r1-fable                   3    21.76
+py-sgf-parsing-r2-opus                    4    16.05
+kac-docs-r2-opus                          4    12.34
+schema-wrongkey-r2-fable                  3    18.85
+sortedc-update-r2-opus                    5    18.66
+config-matrix-r2-fable                    3    15.08
+js-listops-r2-opus                        5     8.89
+rust-ocr-r2-fable                         3    25.42
+lark-template-r2-opus                     4    10.99
+py-go-counting-r2-opus                    5    21.54
+log-incident-r2-fable                     3    10.77
+cachetools-params-r2-fable                3    14.43
+filelock-explain-r2-opus                  4     7.15
+deps-audit-r1-fable                       3     8.98
+cachetools-params-r2-opus                 4    11.78
+py-book-store-r2-opus                     4     9.16
+meeting-notes-r1-opus                     5    10.66
+survey-analysis-r1-opus                   4    17.29
+boltons-tableutils-r1-opus                4     9.16
+support-workload-r2-fable                 3     8.98
+commander-docs-r1-opus                    4    13.56
+changelog-gen-r2-opus                     4    12.31
+voluptuous-number-r2-opus                 4    18.47
+deps-audit-r2-fable                       3     8.98
+changelog-gen-r1-fable                    3    15.08
+sales-orders-r2-opus                      4    17.29
+sqlparse-realname-r2-fable                3    11.22
+pathspec-matchfile-r1-fable               3    11.22
+schema-wrongkey-r1-opus                   5    18.66
+py-book-store-r1-opus                     4     9.16
+js-tournament-r2-fable                    3    21.18
+js-phone-r1-fable                         4    16.26
+go-protein-r2-opus                        4     7.33
+py-rest-api-r2-opus                       4     8.57
+okr-status-r2-opus                        4    12.31
+migration-plan-r2-fable                   3    18.09
+gohumanize-review-r2-fable                4    18.21
+go-linkedlist-r1-fable                    3    25.42
+filelock-explain-r1-fable                 3     8.75
+timesheet-invoice-r1-fable                3     8.98
+fastrand-explain-r2-fable                 4    12.68
+meeting-notes-r2-fable                    3    10.77
+toolz-interpose-r1-fable                  4    19.51
+hr-salary-qa-r1-fable                     3    21.18
+boltons-tableutils-r2-opus                4     9.16
+js-listops-r2-fable                       4    13.00
+py-book-store-r2-fable                    3    11.22
+discrepancy-docs-r1-opus                  4    20.75
+tabulate-github-r1-opus                   4    15.39
+pflag-mixed-r1-opus                       4    16.05
+api-docs-r2-fable                         4    36.83
+hr-salary-qa-r1-opus                      4    17.29
+lark-discard-r1-opus                      4    15.39
+timesheet-invoice-r1-opus                 4     7.33
+xmltodict-none-r2-opus                    4     9.16
+moreit-chunked-r2-fable                   3    11.22
+readme-rewrite-r2-fable                   4    13.00
+survey-analysis-r1-fable                  3    21.18
+fastrand-explain-r1-opus                  5     8.66
+pr-review-cart-r2-opus                    4    14.77
+rust-twobucket-r2-opus                    4    12.31
+jmespath-strcmp-r2-fable                  3    13.13
+xmltodict-none-r1-opus                    4     9.16
+js-listops-r1-opus                        4     7.33
+js-listops-r1-fable                       3     8.98
+pr-review-retry-r1-fable                  4    13.00
+rust-gradeschool-r1-fable                 3    18.09
+lark-template-r1-opus                     4    10.99
+filelock-explain-r1-opus                  4     7.15
+py-rest-api-r1-opus                       4     8.57
+moreit-chunked-r2-opus                    4     9.16
+lark-discard-r2-opus                      4    15.39
+go-vlq-r2-opus                            4    12.31
+py-sgf-parsing-r2-fable                   3    19.66
+go-dominoes-r2-fable                      4    36.09
+js-rationals-r1-fable                     3    18.09
+kac-docs-r1-fable                         3    15.11
+nanoid-explain-r2-opus                    4     8.18
+discrepancy-docs-r1-fable                 3    25.42
+py-poker-r2-fable                         4    21.85
+schema-wrongkey-r2-opus                   4    15.39
+cachetools-params-r1-opus                 4    11.78
+pr-review-retry-r2-fable                  4    13.00
+survey-analysis-r2-fable                  3    21.18
+discrepancy-docs-r2-fable                 3    25.42
+pr-review-cart-r1-fable                   3    18.09
+go-dominoes-r1-opus                       4    20.34
+fd-cli-docs-r1-fable                      4    30.69
+js-rationals-r1-opus                      4    14.77
+boltons-tableutils-r1-fable               3    11.22
+fd-cli-docs-r2-fable                      3    21.18
+docstring-audit-r2-fable                  3    15.08
+py-poker-r1-opus                          4    12.31
+mistune-escape-r2-fable                   4    16.26
+js-phone-r2-fable                         3    11.22
+sales-orders-r2-fable                     3    21.18
+arch-explain-r2-fable                     3    21.18
+meeting-notes-r1-fable                    4    15.61
+sqlparse-realname-r1-fable                3    11.22
+meeting-notes-r2-opus                     4     8.79
+okr-status-r2-fable                       3    15.08
+survey-analysis-r2-opus                   4    17.29
+expense-anomaly-r2-opus                   4    14.77
+py-book-store-r1-fable                    3    11.22
+readme-rewrite-r2-opus                    5     8.89
+py-go-counting-r1-opus                    4    17.76
+yamllint-mixed-r1-opus                    4    17.76
+go-protein-r1-fable                       3     8.98
+go-vlq-r2-fable                           3    15.08
+
+arm        host     n     est $
+aa         fable   28    178.72
+aa         opus    28     69.07
+anchor     fable  140    961.74
+anchor     opus   140    371.67
+shipped    fable  140    606.55
+shipped    opus   140    488.39
+sonnet     any    140    502.71
+sticky     fable  140    574.16
+sticky     opus   140    386.53
+
+estimate (sessions)      $4139.55
+infra retry reserve      $331.16
+estimate incl. reserve   $4470.71   budget $6500.00
+estimated wall time    62.0 h at --parallel 8 (FIFO waves; wall_model assumptions)
+cost basis: sessions.csv (S1-multi, 4 turns), spec section 3; 16-turn point extrapolated (4-turn unit means, scaled to scenario turns/type; an estimate)
+long-session block: TODO - NOT scheduled (40 turns, hosts ['opus'], 6 candidate scenarios, ~$202 if authored)

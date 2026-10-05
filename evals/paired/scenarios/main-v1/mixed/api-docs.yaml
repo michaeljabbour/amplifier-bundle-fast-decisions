@@ -1,0 +1,374 @@
+# Small route-table web API: explain the request flow, generate API.md and OpenAPI from the code, remove dead code, add a route, normalise errors.
+id: api-docs
+task_type: mixed
+language: python
+split: test
+source:
+  desc: 'Small route-table web API: explain the request flow, generate API.md and OpenAPI from the code, remove dead code, add a route, normalise
+    errors.'
+  kind: self-authored deterministic workspace
+  adapted_from: [~/dev/amplifier-agent/.amplifier/evaluation/tasks/benchmark/github-docs-extractor/task.yaml (extract API docs from code) and
+      code-discrepancy-docs-knack (docs must match behaviour); app authored fresh]
+workspace:
+  kind: inline
+  files:
+    README.md: |
+      # bookapi
+
+      A tiny in-memory book catalogue. Code lives in `bookapi/` (`router.py` has the route table, `handlers.py` the handlers).
+    bookapi/__init__.py: ''
+    bookapi/handlers.py: |
+      """Request handlers: each takes (params, body) and returns (status, payload)."""
+
+      BOOKS = {
+          1: {"id": 1, "title": "Dune", "author": "Frank Herbert", "year": 1965},
+          2: {"id": 2, "title": "Emma", "author": "Jane Austen", "year": 1815},
+          3: {"id": 3, "title": "Persuasion", "author": "Jane Austen", "year": 1817},
+      }
+      _state = {"next_id": 4}
+
+
+      def health(params, body):
+          """Liveness probe."""
+          return 200, {"status": "ok"}
+
+
+      def list_books(params, body):
+          """List books, optionally filtered by author."""
+          items = sorted(BOOKS.values(), key=lambda b: b["id"])
+          author = params.get("author")
+          if author:
+              items = [b for b in items if b["author"].lower() == author.lower()]
+          return 200, items
+
+
+      def create_book(params, body):
+          """Create a book."""
+          if not body or "title" not in body or "author" not in body:
+              return 400, {"message": "title and author required"}
+          book = {"id": _state["next_id"], "title": body["title"], "author": body["author"], "year": body.get("year")}
+          BOOKS[book["id"]] = book
+          _state["next_id"] += 1
+          return 201, book
+
+
+      def search_books(params, body):
+          """Search books by title."""
+          q = params.get("q", "").lower()
+          if not q:
+              return 400, "q is required"
+          return 200, [b for b in sorted(BOOKS.values(), key=lambda b: b["id"]) if q in b["title"].lower()]
+
+
+      def get_book(params, body):
+          """Fetch one book by id."""
+          book = BOOKS.get(int(params["id"]))
+          if not book:
+              return 404, "not found"
+          return 200, book
+
+
+      def delete_book(params, body):
+          """Delete a book by id."""
+          if int(params["id"]) not in BOOKS:
+              return 404, "not found"
+          del BOOKS[int(params["id"])]
+          return 204, None
+
+
+      def legacy_export(params, body):
+          """Old pipe-separated export (unused)."""
+          return 200, "|".join(b["title"] for b in BOOKS.values())
+    bookapi/router.py: |
+      """Route table and dispatcher."""
+      import re
+      from collections import namedtuple
+
+      from . import handlers
+
+      Route = namedtuple("Route", "method path handler query body ok")
+
+      ROUTES = [
+          Route("GET", "/books", handlers.list_books, ("author",), (), 200),
+          Route("POST", "/books", handlers.create_book, (), ("title", "author"), 201),
+          Route("GET", "/books/search", handlers.search_books, ("q",), (), 200),
+          Route("GET", "/books/{id}", handlers.get_book, (), (), 200),
+          Route("DELETE", "/books/{id}", handlers.delete_book, (), (), 204),
+          Route("GET", "/health", handlers.health, (), (), 200),
+      ]
+
+
+      def _regex(path):
+          return re.compile("^" + re.sub(r"\{(\w+)\}", r"(?P<\1>[^/]+)", path) + "$")
+
+
+      def dispatch(method, path, query=None, body=None):
+          """Find the route for (method, path) and call its handler; returns (status, payload)."""
+          params = dict(query or {})
+          path_matched = False
+          for r in ROUTES:
+              m = _regex(r.path).match(path)
+              if not m:
+                  continue
+              if r.method == method:
+                  params.update(m.groupdict())
+                  return r.handler(params, body)
+              path_matched = True
+          return (405, "method not allowed") if path_matched else (404, "no such route")
+    tests/__init__.py: ''
+protected: [bookapi/__init__.py]
+hidden_files:
+  _grade.py: |
+    import csv, json, os, re, subprocess, sys
+    from pathlib import Path
+
+    W = Path(".")
+
+
+    def fail(msg):
+        print("FAIL:", msg)
+        sys.exit(1)
+
+
+    def need(cond, msg):
+        if not cond:
+            fail(msg)
+
+
+    def load_json(rel):
+        p = W / rel
+        need(p.exists(), f"missing {rel}")
+        try:
+            return json.loads(p.read_text(encoding="utf-8"))
+        except Exception as e:  # noqa: BLE001
+            fail(f"{rel} is not valid JSON: {e}")
+
+
+    def read(rel):
+        p = W / rel
+        need(p.exists(), f"missing {rel}")
+        return p.read_text(encoding="utf-8")
+
+
+    def close(a, b, tol=0.011):
+        try:
+            return abs(float(a) - float(b)) <= tol
+        except (TypeError, ValueError):
+            return False
+
+
+    def md_rows(rel, under=None):
+        """Table rows (lists of cells) of a markdown file; with `under`, only rows inside the first heading matching it."""
+        lines = read(rel).splitlines()
+        if under:
+            out, on, lvl = [], False, 0
+            for ln in lines:
+                m = re.match(r"^(#+)\s+(.*)", ln)
+                if m:
+                    if on and len(m.group(1)) <= lvl:
+                        break
+                    if not on and re.search(under, m.group(2), re.I):
+                        on, lvl = True, len(m.group(1))
+                    continue
+                if on:
+                    out.append(ln)
+            lines = out
+        rows = []
+        for ln in lines:
+            if ln.strip().startswith("|") and not re.match(r"^\s*\|[\s:|-]+\|\s*$", ln):
+                rows.append([c.strip() for c in ln.strip().strip("|").split("|")])
+        return rows
+
+
+    def num(s):
+        m = re.search(r"-?\d[\d,]*\.?\d*", str(s))
+        return float(m.group(0).replace(",", "")) if m else None
+
+
+    def run(cmd, timeout=60):
+        p = subprocess.run(cmd, shell=True, cwd=W, capture_output=True, text=True, timeout=timeout)
+        return p.returncode, p.stdout, p.stderr
+
+    EXP = {'r6': [{'method': 'GET', 'path': '/books', 'params': ['author'], 'ok': 200}, {'method': 'POST', 'path': '/books', 'params': ['title', 'author'], 'ok': 201}, {'method': 'GET', 'path': '/books/search', 'params': ['q'], 'ok': 200}, {'method': 'GET', 'path': '/books/{id}', 'params': ['id'], 'ok': 200}, {'method': 'DELETE', 'path': '/books/{id}', 'params': ['id'], 'ok': 204}, {'method': 'GET', 'path': '/health', 'params': [], 'ok': 200}], 'r7': [{'method': 'GET', 'path': '/books', 'params': ['author'], 'ok': 200}, {'method': 'POST', 'path': '/books', 'params': ['title', 'author'], 'ok': 201}, {'method': 'GET', 'path': '/books/search', 'params': ['q'], 'ok': 200}, {'method': 'GET', 'path': '/books/{id}', 'params': ['id'], 'ok': 200}, {'method': 'DELETE', 'path': '/books/{id}', 'params': ['id'], 'ok': 204}, {'method': 'PUT', 'path': '/books/{id}', 'params': ['id', 'title', 'author', 'year'], 'ok': 200}, {'method': 'GET', 'path': '/health', 'params': [], 'ok': 200}]}
+    import importlib, copy
+    def _heads(rel):
+        txt = read(rel); return txt, re.findall(r"^##\s+(GET|POST|PUT|DELETE|PATCH)\s+(\S+)\s*$", txt, re.M)
+    def _sections(txt):
+        parts = re.split(r"^##\s+", txt, flags=re.M)[1:]; return {p.split("\n", 1)[0].strip(): p for p in parts}
+    def _docs(key, params=False):
+        txt, heads = _heads("docs/API.md"); exp = {(r["method"], r["path"]) for r in EXP[key]}
+        need(sorted(heads) == sorted(exp) and len(heads) == len(exp), f"route headings differ: {sorted(heads)}")
+        if params:
+            sec = _sections(txt)
+            for r in EXP[key]:
+                body = sec[f"{r['method']} {r['path']}"]
+                for p in r["params"]: need(re.search(r"\b%s\b" % re.escape(p), body), f"{r['method']} {r['path']}: parameter {p} missing")
+    def t3(): _docs("r6")
+    def t4(): _docs("r6", True)
+    def _oapi(d, key):
+        need(str(d.get("openapi", "")).startswith("3."), "openapi must be 3.x"); need(isinstance(d.get("info"), dict) and d["info"].get("title"), "info.title required")
+        exp = {}
+        for r in EXP[key]: exp.setdefault(r["path"], {})[r["method"].lower()] = r
+        need(set(d.get("paths", {})) == set(exp), f"paths differ: {sorted(d.get('paths', {}))}")
+        for p, ms in exp.items():
+            need(set(d["paths"][p]) == set(ms), f"{p}: methods {sorted(d['paths'][p])} != {sorted(ms)}")
+            for m, r in ms.items():
+                op = d["paths"][p][m]; need(isinstance(op.get("summary"), str) and op["summary"].strip(), f"{m} {p}: summary")
+                pn = set(re.findall(r"\{(\w+)\}", p)); names = {x["name"]: x.get("in") for x in op.get("parameters", [])}
+                body_fields = [x for x in r["params"] if x not in pn and m in ("post", "put")]; q = [x for x in r["params"] if x not in pn and m not in ("post", "put")]
+                need(set(names) == pn | set(q), f"{m} {p}: parameters {sorted(names)}")
+                need(all(names[n] == "path" for n in pn) and all(names[n] == "query" for n in q), f"{m} {p}: parameter locations")
+                need(str(r["ok"]) in op.get("responses", {}), f"{m} {p}: response {r['ok']} missing")
+                if body_fields:
+                    props = op.get("requestBody", {}).get("content", {}).get("application/json", {}).get("schema", {}).get("properties", {}); need(set(props) == set(body_fields), f"{m} {p}: requestBody properties {sorted(props)}")
+                else: need("requestBody" not in op, f"{m} {p}: unexpected requestBody")
+    def t6(): _oapi(load_json("out/openapi.json"), "r6")
+    def t7():
+        need((W / "scripts/gen_openapi.py").exists(), "missing scripts/gen_openapi.py")
+        rc, out, err = run("python3 scripts/gen_openapi.py"); need(rc == 0, "script failed: " + err[-300:]); _oapi(json.loads(out), "r6")
+        r = W / "bookapi/router.py"; good = r.read_text(encoding="utf-8")
+        r.write_text(good + '\nROUTES.append(Route("GET", "/ping", lambda p, b: (200, "pong"), ("verbose",), (), 200))\n', encoding="utf-8")
+        try: rc, out, err = run("python3 scripts/gen_openapi.py")
+        finally: r.write_text(good, encoding="utf-8")
+        need(rc == 0, "script must not crash on a route without a docstring: " + err[-300:]); d = json.loads(out)
+        need("/ping" in d["paths"] and [x["name"] for x in d["paths"]["/ping"]["get"]["parameters"]] == ["verbose"], "script must be generated from ROUTES, not hard-coded")
+    def _mods():
+        sys.path.insert(0, str(W)); import bookapi.handlers as h, bookapi.router as r; importlib.reload(h); importlib.reload(r); return h, r
+    def t9():
+        h, r = _mods(); need(not hasattr(h, "legacy_export"), "legacy_export still present"); need(len(r.ROUTES) == 6 and r.dispatch("GET", "/books")[0] == 200, "routes must be unchanged")
+    def t10():
+        h, r = _mods(); d = r.dispatch
+        need(len(r.ROUTES) == 7, f"expected 7 routes, got {len(r.ROUTES)}")
+        s, p = d("PUT", "/books/1", body={"title": "Dune Messiah", "year": 1969}); need(s == 200 and p["title"] == "Dune Messiah" and p["year"] == 1969 and p["author"] == "Frank Herbert", f"PUT update wrong: {s} {p}")
+        need(d("GET", "/books/1")[1]["title"] == "Dune Messiah", "update must persist")
+        need(d("PUT", "/books/999", body={"title": "x"})[0] == 404, "unknown id must be 404"); need(d("PUT", "/books/1", body={})[0] == 400, "empty body must be 400")
+        need(d("PUT", "/books/1", body={"title": 5})[0] == 400, "wrong type must be 400"); need(d("PUT", "/books/1", body={"bogus": 1})[0] == 400, "no valid fields must be 400")
+    def t11(): _docs("r7", True); _oapi(load_json("out/openapi.json"), "r7")
+    def t12():
+        p = W / "tests/test_api.py"; need(p.exists(), "missing tests/test_api.py"); txt = p.read_text(encoding="utf-8")
+        need(len(re.findall(r"def test_", txt)) >= 6 and re.search(r"\b404\b", txt) and re.search(r"\b400\b", txt) and "PUT" in txt, "need >= 6 tests covering PUT, 404 and 400")
+        rc, out, err = run("python3 -m unittest discover -s tests -p 'test_api.py' 2>&1"); need(rc == 0, "tests fail: " + out[-300:])
+    def t14():
+        h, r = _mods(); d = r.dispatch
+        for m, p, kw in (("GET", "/books/999", {}), ("DELETE", "/books/999", {}), ("GET", "/nope", {}), ("PATCH", "/books", {}), ("GET", "/books/search", {}), ("POST", "/books", {"body": {}}),
+                         ("PUT", "/books/999", {"body": {"title": "x"}}), ("PUT", "/books/1", {"body": {"title": 5}}), ("GET", "/books/abc", {}), ("DELETE", "/books/abc", {})):
+            s, pl = d(m, p, **kw); need(s >= 400, f"{m} {p}: expected an error status, got {s}")
+            need(isinstance(pl, dict) and set(pl) == {"error"} and isinstance(pl["error"], str) and pl["error"].strip(), f"{m} {p}: error body must be exactly {{'error': <message>}}, got {pl!r}")
+        need(d("GET", "/books/abc")[0] == 400, "non-integer id must be 400"); need(d("GET", "/books/999")[0] == 404 and d("PATCH", "/books")[0] == 405, "status codes must be kept")
+        need(d("GET", "/books/1")[0] == 200 and d("DELETE", "/books/3")[0] == 204, "success paths must still work")
+
+
+    if __name__ == "__main__":
+        fn = globals().get(sys.argv[1]) if len(sys.argv) > 1 else None
+        need(callable(fn), "unknown check " + str(sys.argv[1:]))
+        fn()
+        print("OK")
+turns:
+- prompt: 'Explain how a request flows through bookapi: what does `router.dispatch` do and what does a handler return? Do not change any files.'
+  checks:
+  - kind: keyed_facts
+    all: [dispatch, ROUTES|route table, status, payload|body|tuple]
+- prompt: How many routes are registered in bookapi/router.py, and what are they (method and path)? Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: ['(?<!\d)6(?!\d)|six', /books/search, /health]
+- prompt: Create docs/API.md with a title and one level-2 section per route whose heading is exactly `## <METHOD> <path>` (for example `## GET
+    /books`), each with a one-line description.
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t3
+    hidden: [_grade.py]
+    timeout: 60
+- prompt: Under every route section in docs/API.md add a `Parameters:` list naming each path parameter, query parameter and body field the route
+    reads, and the success status code.
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t4
+    hidden: [_grade.py]
+    timeout: 60
+- prompt: Which routes can answer 404 because a book does not exist (not counting unknown paths)? Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: ['get_book|GET\s+/books/\{id\}', delete_book|DELETE]
+- prompt: 'Write out/openapi.json: an OpenAPI 3.0 document (openapi, info.title, paths) with one operation per route: a summary, parameters (path
+    or query, with `in`), a requestBody for routes that read a body, and the success status code under responses.'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t6
+    hidden: [_grade.py]
+    timeout: 60
+  gap_before_s: 420
+- prompt: Create scripts/gen_openapi.py that builds the same document from `bookapi.router.ROUTES` (so docs follow the code) and prints it as
+    JSON to stdout; it must run as `python3 scripts/gen_openapi.py` from the repository root and tolerate routes whose handler has no docstring.
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t7
+    hidden: [_grade.py]
+    timeout: 60
+- prompt: Which functions in bookapi/handlers.py are not referenced by any entry in the route table? Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: [legacy_export]
+- prompt: Remove that dead handler. Nothing else should change.
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t9
+    hidden: [_grade.py]
+    timeout: 60
+- prompt: 'Add `PUT /books/{id}`: it updates any of title (string), author (string) and year (integer) of an existing book and returns 200 with
+    the updated book; unknown ids give 404; a body with no valid field, or a field of the wrong type, gives 400. Register it in ROUTES with its
+    body fields and success status, and implement the handler with a one-line docstring.'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t10
+    hidden: [_grade.py]
+    timeout: 60
+- prompt: 'Bring the docs in line with the new route: add its section (with Parameters) to docs/API.md and regenerate out/openapi.json from scripts/gen_openapi.py.'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t11
+    hidden: [_grade.py]
+    timeout: 60
+- prompt: 'Add tests/test_api.py (unittest) with at least six tests using `dispatch`: list/filter, 404, 400, the new PUT (success, 404, 400),
+    405 and delete. Run them.'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t12
+    hidden: [_grade.py]
+    timeout: 60
+  gap_before_s: 420
+- prompt: How many routes does the API have now, and which HTTP verbs do they use? Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: ['(?<!\d)7(?!\d)|seven', GET, POST, PUT, DELETE]
+- prompt: 'Make every error response consistent: status 4xx with the body `{"error": "<message>"}` and nothing else, for handler errors and for
+    the router''s 404 and 405 too. Also make a non-integer id (for example GET /books/abc) a 400 instead of a crash. Keep status codes and success
+    responses unchanged.'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t14
+    hidden: [_grade.py]
+    timeout: 60
+- prompt: Document the error format in a `## Errors` section of docs/API.md, mentioning the `error` key.
+  checks:
+  - kind: doc_sections
+    path: docs/API.md
+    headings: [Errors]
+  - {kind: file_regex, path: docs/API.md, pattern: '\"?error\"?'}
+- prompt: Add an `## API` section to README.md that states the number of routes (as `7 routes`) and points to docs/API.md and out/openapi.json.
+  checks:
+  - kind: doc_sections
+    path: README.md
+    headings: [API]
+  - {kind: file_regex, path: README.md, pattern: '(?<!\d)7 routes'}
+  - {kind: file_regex, path: README.md, pattern: docs/API\.md}
+  - {kind: file_regex, path: README.md, pattern: openapi\.json}

@@ -1,0 +1,243 @@
+# main-v1 polyglot 18/20: javascript/rational-numbers, 12 turns, two 7-minute gaps (before turns 4, 9).
+id: js-rationals
+task_type: feature
+language: javascript
+split: train
+default_gap_s: 10
+source:
+  desc: "Aider polyglot-benchmark javascript/rational-numbers (Exercism), outside the S2 slice"
+  repo: https://github.com/Aider-AI/polyglot-benchmark
+  sha: 7e0611e77b54e2dea774cdc0aa00cf9f7ed6144f
+workspace:
+  kind: git
+  repo: https://github.com/Aider-AI/polyglot-benchmark
+  sha: 7e0611e77b54e2dea774cdc0aa00cf9f7ed6144f
+  subdir: javascript/exercises/practice/rational-numbers
+  local_hint: ~/dev/afast-campaign-corrected-polyglot-20260919/polyglot/polyglot-benchmark
+  remove: [.meta]
+protected: [rational-numbers.spec.js]
+hidden_files:
+  jest_shim.mjs: |
+    import { describe as d, test as t } from 'node:test';
+    import assert from 'node:assert/strict';
+
+    const ctx = globalThis;
+    ctx.describe = (name, fn) => d(name, fn);
+    ctx.test = (name, fn) => t(name, fn);
+    ctx.xtest = ctx.test;
+    ctx.it = ctx.test;
+
+    const matchErr = (e) => (err) => {
+      if (e === undefined) return true;
+      if (e instanceof Error) return err.message === e.message;
+      if (typeof e === 'string') return String(err.message).includes(e);
+      if (e instanceof RegExp) return e.test(err.message);
+      if (typeof e === 'function') return err instanceof e;
+      return true;
+    };
+
+    ctx.expect = (actual) => ({
+      toEqual: (e) => assert.deepEqual(actual, e),
+      toBe: (e) => assert.strictEqual(actual, e),
+      toBeCloseTo: (e, digits = 2) => assert.ok(Math.abs(actual - e) < 10 ** -digits / 2, `${actual} is not close to ${e}`),
+      toBeTruthy: () => assert.ok(actual),
+      toBeFalsy: () => assert.ok(!actual),
+      toThrow: (e) => assert.throws(actual, matchErr(e)),
+      not: { toEqual: (e) => assert.notDeepEqual(actual, e), toBe: (e) => assert.notStrictEqual(actual, e) },
+    });
+  hidden_zero.test.mjs: |
+    import { test } from 'node:test';
+    import assert from 'node:assert/strict';
+    import { Rational } from './rational-numbers.js';
+
+    test('a zero denominator is a RangeError', () => {
+      assert.throws(() => new Rational(1, 0), RangeError);
+      assert.throws(() => new Rational(0, 0), RangeError);
+    });
+
+    test('dividing by a zero rational is a RangeError', () => {
+      assert.throws(() => new Rational(1, 2).div(new Rational(0, 1)), RangeError);
+    });
+
+    test('the message mentions zero', () => {
+      assert.throws(() => new Rational(3, 0), /zero/i);
+    });
+
+    test('valid values still construct', () => {
+      assert.equal(new Rational(0, 5).numerator, 0);
+    });
+  hidden_string.test.mjs: |
+    import { test } from 'node:test';
+    import assert from 'node:assert/strict';
+    import { Rational } from './rational-numbers.js';
+
+    test('toString prints reduced fractions', () => {
+      assert.equal(`${new Rational(1, 2)}`, '1/2');
+      assert.equal(new Rational(2, 4).toString(), '1/2');
+      assert.equal(new Rational(-3, 6).toString(), '-1/2');
+      assert.equal(new Rational(3, -6).toString(), '-1/2');
+    });
+
+    test('whole numbers print without a denominator', () => {
+      assert.equal(new Rational(6, 3).toString(), '2');
+      assert.equal(new Rational(5, 1).toString(), '5');
+      assert.equal(new Rational(0, 5).toString(), '0');
+      assert.equal(new Rational(-4, 2).toString(), '-2');
+    });
+
+    test('results of arithmetic print reduced', () => {
+      assert.equal(new Rational(1, 2).add(new Rational(1, 3)).toString(), '5/6');
+      assert.equal(new Rational(1, 2).mul(new Rational(2, 1)).toString(), '1');
+    });
+  hidden_fromstring.test.mjs: |
+    import { test } from 'node:test';
+    import assert from 'node:assert/strict';
+    import { Rational } from './rational-numbers.js';
+
+    test('fromString parses fractions and integers', () => {
+      assert.equal(Rational.fromString('1/2').toString(), '1/2');
+      assert.equal(Rational.fromString(' -3 / 6 ').toString(), '-1/2');
+      assert.equal(Rational.fromString('4').toString(), '4');
+      assert.equal(Rational.fromString('-0').toString(), '0');
+      assert.equal(Rational.fromString('10/5').toString(), '2');
+    });
+
+    test('invalid text is a TypeError', () => {
+      for (const bad of ['', '1/', '/2', 'abc', '1/2/3', '1.5', '- 1/2']) {
+        assert.throws(() => Rational.fromString(bad), TypeError, JSON.stringify(bad));
+      }
+    });
+
+    test('a zero denominator is a RangeError', () => {
+      assert.throws(() => Rational.fromString('1/0'), RangeError);
+    });
+  hidden_compare.test.mjs: |
+    import { test } from 'node:test';
+    import assert from 'node:assert/strict';
+    import { Rational } from './rational-numbers.js';
+
+    test('compareTo orders by value', () => {
+      assert.equal(new Rational(1, 2).compareTo(new Rational(2, 3)), -1);
+      assert.equal(new Rational(2, 3).compareTo(new Rational(1, 2)), 1);
+      assert.equal(new Rational(1, 2).compareTo(new Rational(2, 4)), 0);
+      assert.equal(new Rational(-1, 2).compareTo(new Rational(1, 3)), -1);
+      assert.equal(new Rational(1, -2).compareTo(new Rational(-1, 3)), -1);
+    });
+
+    test('equals compares by value and rejects other types', () => {
+      assert.equal(new Rational(1, 2).equals(new Rational(2, 4)), true);
+      assert.equal(new Rational(1, 2).equals(new Rational(1, 3)), false);
+      assert.equal(new Rational(1, 2).equals(0.5), false);
+      assert.equal(new Rational(0, 3).equals(new Rational(0, 7)), true);
+    });
+
+    test('sorting with compareTo', () => {
+      const list = [new Rational(1, 2), new Rational(-1, 3), new Rational(3, 4)];
+      list.sort((a, b) => a.compareTo(b));
+      assert.deepEqual(list.map(String), ['-1/3', '1/2', '3/4']);
+    });
+  hidden_fromnumber.test.mjs: |
+    import { test } from 'node:test';
+    import assert from 'node:assert/strict';
+    import { Rational } from './rational-numbers.js';
+
+    test('fromNumber converts integers and short decimals exactly', () => {
+      assert.equal(Rational.fromNumber(3).toString(), '3');
+      assert.equal(Rational.fromNumber(0.75).toString(), '3/4');
+      assert.equal(Rational.fromNumber(0.125).toString(), '1/8');
+      assert.equal(Rational.fromNumber(-2.5).toString(), '-5/2');
+      assert.equal(Rational.fromNumber(0.1).toString(), '1/10');
+      assert.equal(Rational.fromNumber(12.5).toString(), '25/2');
+    });
+
+    test('fromNumber rounds to six decimal places', () => {
+      assert.equal(Rational.fromNumber(1 / 3).toString(), '333333/1000000');
+      assert.equal(Rational.fromNumber(1e-7).toString(), '0');
+    });
+
+    test('fromNumber rejects non-finite values', () => {
+      for (const bad of [NaN, Infinity, -Infinity]) {
+        assert.throws(() => Rational.fromNumber(bad), TypeError);
+      }
+    });
+turns:
+  - prompt: >-
+      Read .docs/instructions.md and implement the `Rational` class in rational-numbers.js so that the
+      specs in rational-numbers.spec.js pass (jest is not installed here, so check them with plain
+      node by reasoning or a small script). Do not edit the provided spec file.
+    checks:
+      - {kind: tests, runner: cmd, cmd: 'sed "s#from ''./rational-numbers''#from ''./rational-numbers.js''#" rational-numbers.spec.js > spec_run.test.mjs && node --import ./jest_shim.mjs --test --test-reporter=tap spec_run.test.mjs ', expect_regex: '# fail 0', restore: [rational-numbers.spec.js], hidden: [jest_shim.mjs], timeout: 120}
+  - prompt: >-
+      In three to five sentences, explain how your operations keep results in lowest terms and how the
+      sign of a negative fraction is represented. Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [gcd|greatest common, denominator, negative|sign]}
+  - prompt: >-
+      Fix an edge case: a zero denominator must throw a `RangeError` (message mentioning that the
+      denominator cannot be zero), both in the constructor and when a division would produce one
+      (dividing by a rational whose numerator is 0).
+    checks:
+      - {kind: tests, runner: cmd, cmd: sed "s#from './rational-numbers'#from './rational-numbers.js'#" rational-numbers.spec.js > spec_run.test.mjs && node --import ./jest_shim.mjs --test --test-reporter=tap spec_run.test.mjs hidden_zero.test.mjs, expect_regex: '# fail 0', restore: [rational-numbers.spec.js], hidden: [jest_shim.mjs, hidden_zero.test.mjs], timeout: 120}
+  - prompt: >-
+      Add a `toString()` method that prints the reduced fraction as `n/d` ("1/2", "-3/4"); when the
+      reduced denominator is 1 it prints just the integer ("2", "0"), and the sign is always on the
+      numerator.
+    gap_before_s: 420
+    checks:
+      - {kind: tests, runner: cmd, cmd: sed "s#from './rational-numbers'#from './rational-numbers.js'#" rational-numbers.spec.js > spec_run.test.mjs && node --import ./jest_shim.mjs --test --test-reporter=tap spec_run.test.mjs hidden_zero.test.mjs hidden_string.test.mjs, expect_regex: '# fail 0', restore: [rational-numbers.spec.js], hidden: [jest_shim.mjs, hidden_zero.test.mjs, hidden_string.test.mjs], timeout: 120}
+  - prompt: >-
+      Add a static `Rational.fromString(text)`: it accepts an optionally negative integer numerator,
+      an optional `/` and a non-negative denominator, with whitespace allowed around the parts (" -3 /
+      6 "), and returns the reduced rational. Anything else is a `TypeError`; a zero denominator is a
+      `RangeError`.
+    checks:
+      - {kind: tests, runner: cmd, cmd: sed "s#from './rational-numbers'#from './rational-numbers.js'#" rational-numbers.spec.js > spec_run.test.mjs && node --import ./jest_shim.mjs --test --test-reporter=tap spec_run.test.mjs hidden_zero.test.mjs hidden_string.test.mjs hidden_fromstring.test.mjs, expect_regex: '# fail 0', restore: [rational-numbers.spec.js], hidden: [jest_shim.mjs, hidden_zero.test.mjs, hidden_string.test.mjs, hidden_fromstring.test.mjs], timeout: 120}
+  - prompt: >-
+      Add your own tests in a new file `extra.test.mjs` using `node:test` and `node:assert/strict`
+      (importing from ./rational-numbers.js): at least five `test(` cases. Run it with `node --test
+      extra.test.mjs`.
+    checks:
+      - {kind: file_regex, path: extra.test.mjs, pattern: \btest\(, min_count: 5}
+      - {kind: tests, runner: cmd, cmd: node --test --test-reporter=tap extra.test.mjs, expect_regex: '# pass [1-9]', restore: [], hidden: [], timeout: 120}
+      - {kind: tests, runner: cmd, cmd: sed "s#from './rational-numbers'#from './rational-numbers.js'#" rational-numbers.spec.js > spec_run.test.mjs && node --import ./jest_shim.mjs --test --test-reporter=tap spec_run.test.mjs hidden_zero.test.mjs hidden_string.test.mjs hidden_fromstring.test.mjs, expect_regex: '# fail 0', restore: [rational-numbers.spec.js], hidden: [jest_shim.mjs, hidden_zero.test.mjs, hidden_string.test.mjs, hidden_fromstring.test.mjs], timeout: 120}
+  - prompt: >-
+      Refactor rational-numbers.js: move the greatest-common-divisor logic and the sign/reduction
+      handling out of the class into module-level helpers named `gcd` and `normalize`. No behaviour
+      change; keep all tests passing.
+    checks:
+      - {kind: file_regex, path: rational-numbers.js, pattern: ^(function|const)\s+(gcd|normalize)\b, min_count: 2}
+      - {kind: tests, runner: cmd, cmd: sed "s#from './rational-numbers'#from './rational-numbers.js'#" rational-numbers.spec.js > spec_run.test.mjs && node --import ./jest_shim.mjs --test --test-reporter=tap spec_run.test.mjs hidden_zero.test.mjs hidden_string.test.mjs hidden_fromstring.test.mjs, expect_regex: '# fail 0', restore: [rational-numbers.spec.js], hidden: [jest_shim.mjs, hidden_zero.test.mjs, hidden_string.test.mjs, hidden_fromstring.test.mjs], timeout: 120}
+  - prompt: >-
+      Add `compareTo(other)` returning -1, 0 or 1 by value (so `new Rational(1, 2).compareTo(new
+      Rational(2, 4))` is 0), and `equals(other)` which is true only for a `Rational` with the same
+      value.
+    checks:
+      - {kind: tests, runner: cmd, cmd: sed "s#from './rational-numbers'#from './rational-numbers.js'#" rational-numbers.spec.js > spec_run.test.mjs && node --import ./jest_shim.mjs --test --test-reporter=tap spec_run.test.mjs hidden_zero.test.mjs hidden_string.test.mjs hidden_fromstring.test.mjs hidden_compare.test.mjs, expect_regex: '# fail 0', restore: [rational-numbers.spec.js], hidden: [jest_shim.mjs, hidden_zero.test.mjs, hidden_string.test.mjs, hidden_fromstring.test.mjs, hidden_compare.test.mjs], timeout: 120}
+  - prompt: >-
+      Add a static `Rational.fromNumber(value)` that converts a finite number to a reduced rational
+      after rounding it to six decimal places (0.75 is 3/4, 1/3 gives 333333/1000000); NaN and the
+      infinities are a `TypeError`.
+    gap_before_s: 420
+    checks:
+      - {kind: tests, runner: cmd, cmd: sed "s#from './rational-numbers'#from './rational-numbers.js'#" rational-numbers.spec.js > spec_run.test.mjs && node --import ./jest_shim.mjs --test --test-reporter=tap spec_run.test.mjs hidden_zero.test.mjs hidden_string.test.mjs hidden_fromstring.test.mjs hidden_compare.test.mjs hidden_fromnumber.test.mjs, expect_regex: '# fail 0', restore: [rational-numbers.spec.js], hidden: [jest_shim.mjs, hidden_zero.test.mjs, hidden_string.test.mjs, hidden_fromstring.test.mjs, hidden_compare.test.mjs, hidden_fromnumber.test.mjs], timeout: 120}
+  - prompt: >-
+      Add JSDoc comments to the class and to `constructor`, `add`, `sub`, `mul`, `div` and
+      `compareTo`, using `@param` and `@returns` tags where they apply.
+    checks:
+      - {kind: file_regex, path: rational-numbers.js, pattern: /\*\*, min_count: 6}
+      - {kind: file_regex, path: rational-numbers.js, pattern: '@param', min_count: 6}
+      - {kind: file_regex, path: rational-numbers.js, pattern: '@returns', min_count: 4}
+      - {kind: tests, runner: cmd, cmd: sed "s#from './rational-numbers'#from './rational-numbers.js'#" rational-numbers.spec.js > spec_run.test.mjs && node --import ./jest_shim.mjs --test --test-reporter=tap spec_run.test.mjs hidden_zero.test.mjs hidden_string.test.mjs hidden_fromstring.test.mjs hidden_compare.test.mjs hidden_fromnumber.test.mjs, expect_regex: '# fail 0', restore: [rational-numbers.spec.js], hidden: [jest_shim.mjs, hidden_zero.test.mjs, hidden_string.test.mjs, hidden_fromstring.test.mjs, hidden_compare.test.mjs, hidden_fromnumber.test.mjs], timeout: 120}
+  - prompt: >-
+      Create README.md with a `## Usage` section and a `## Methods` section describing the operations,
+      the parsing helpers and the errors.
+    checks:
+      - {kind: doc_sections, path: README.md, headings: [usage, methods]}
+      - {kind: file_regex, path: README.md, pattern: RangeError}
+      - {kind: tests, runner: cmd, cmd: sed "s#from './rational-numbers'#from './rational-numbers.js'#" rational-numbers.spec.js > spec_run.test.mjs && node --import ./jest_shim.mjs --test --test-reporter=tap spec_run.test.mjs hidden_zero.test.mjs hidden_string.test.mjs hidden_fromstring.test.mjs hidden_compare.test.mjs hidden_fromnumber.test.mjs, expect_regex: '# fail 0', restore: [rational-numbers.spec.js], hidden: [jest_shim.mjs, hidden_zero.test.mjs, hidden_string.test.mjs, hidden_fromstring.test.mjs, hidden_compare.test.mjs, hidden_fromnumber.test.mjs], timeout: 120}
+  - prompt: >-
+      Finish with a short summary for a reviewer, in four to six sentences: the public API of
+      `Rational`, how results are normalised, and which inputs throw which error. Do not change any
+      files.
+    checks:
+      - {kind: keyed_facts, all: [RangeError, TypeError, fromString, fromNumber, reduce|lowest terms]}

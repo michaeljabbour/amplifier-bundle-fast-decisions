@@ -1,0 +1,263 @@
+# main-v1 polyglot 10/20: go/variable-length-quantity, 12 turns, short gaps.
+id: go-vlq
+task_type: feature
+language: go
+split: train
+default_gap_s: 10
+source:
+  desc: "Aider polyglot-benchmark go/variable-length-quantity (Exercism), outside the S2 slice"
+  repo: https://github.com/Aider-AI/polyglot-benchmark
+  sha: 7e0611e77b54e2dea774cdc0aa00cf9f7ed6144f
+workspace:
+  kind: git
+  repo: https://github.com/Aider-AI/polyglot-benchmark
+  sha: 7e0611e77b54e2dea774cdc0aa00cf9f7ed6144f
+  subdir: go/exercises/practice/variable-length-quantity
+  local_hint: ~/dev/afast-campaign-corrected-polyglot-20260919/polyglot/polyglot-benchmark
+  remove: [.meta]
+protected: [variable_length_quantity_test.go, cases_test.go]
+hidden_files:
+  hidden_overflow_test.go: |
+    package variablelengthquantity
+
+    import (
+    	"reflect"
+    	"testing"
+    )
+
+    func TestHOverflowRejected(t *testing.T) {
+    	bad := [][]byte{
+    		{0x90, 0x80, 0x80, 0x80, 0x00},
+    		{0x81, 0x80, 0x80, 0x80, 0x80, 0x00},
+    		{0xff, 0xff, 0xff, 0xff, 0x7f},
+    		{0x01, 0x90, 0x80, 0x80, 0x80, 0x00},
+    	}
+    	for _, in := range bad {
+    		if got, err := DecodeVarint(in); err == nil {
+    			t.Errorf("DecodeVarint(%x) = %v, want an error", in, got)
+    		}
+    	}
+    }
+
+    func TestHMaxUint32StillDecodes(t *testing.T) {
+    	got, err := DecodeVarint([]byte{0x8f, 0xff, 0xff, 0xff, 0x7f})
+    	if err != nil || !reflect.DeepEqual(got, []uint32{0xffffffff}) {
+    		t.Fatalf("got %v, %v", got, err)
+    	}
+    }
+  hidden_64_test.go: |
+    package variablelengthquantity
+
+    import (
+    	"bytes"
+    	"reflect"
+    	"testing"
+    )
+
+    func TestHEncode64(t *testing.T) {
+    	cases := []struct {
+    		in   uint64
+    		want []byte
+    	}{
+    		{0, []byte{0x00}},
+    		{0x7f, []byte{0x7f}},
+    		{0x80, []byte{0x81, 0x00}},
+    		{1 << 32, []byte{0x90, 0x80, 0x80, 0x80, 0x00}},
+    		{^uint64(0), []byte{0x81, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x7f}},
+    	}
+    	for _, tc := range cases {
+    		if got := EncodeVarint64([]uint64{tc.in}); !bytes.Equal(got, tc.want) {
+    			t.Errorf("EncodeVarint64(%d) = %x, want %x", tc.in, got, tc.want)
+    		}
+    	}
+    }
+
+    func TestHDecode64(t *testing.T) {
+    	got, err := DecodeVarint64([]byte{0x90, 0x80, 0x80, 0x80, 0x00, 0x7f})
+    	if err != nil || !reflect.DeepEqual(got, []uint64{1 << 32, 0x7f}) {
+    		t.Fatalf("got %v, %v", got, err)
+    	}
+    	got, err = DecodeVarint64([]byte{0x81, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x7f})
+    	if err != nil || !reflect.DeepEqual(got, []uint64{^uint64(0)}) {
+    		t.Fatalf("max: got %v, %v", got, err)
+    	}
+    }
+
+    func TestHDecode64Overflow(t *testing.T) {
+    	if _, err := DecodeVarint64([]byte{0x82, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x00}); err == nil {
+    		t.Fatal("expected overflow error")
+    	}
+    }
+
+    func TestHDecode64Incomplete(t *testing.T) {
+    	if _, err := DecodeVarint64([]byte{0xff}); err == nil {
+    		t.Fatal("expected incomplete error")
+    	}
+    }
+
+    func TestHStill32Bit(t *testing.T) {
+    	if got := EncodeVarint([]uint32{0, 0x4000}); !bytes.Equal(got, []byte{0x00, 0x81, 0x80, 0x00}) {
+    		t.Fatalf("got %x", got)
+    	}
+    }
+  hidden_len_test.go: |
+    package variablelengthquantity
+
+    import "testing"
+
+    func TestHEncodedLen(t *testing.T) {
+    	cases := map[uint64]int{0: 1, 1: 1, 127: 1, 128: 2, 16383: 2, 16384: 3, 1<<21 - 1: 3, 1 << 21: 4, 1 << 32: 5, ^uint64(0): 10}
+    	for v, want := range cases {
+    		if got := EncodedLen(v); got != want {
+    			t.Errorf("EncodedLen(%d) = %d, want %d", v, got, want)
+    		}
+    	}
+    }
+
+    func TestHEncodedLenMatchesEncoding(t *testing.T) {
+    	for _, v := range []uint64{0, 5, 200, 70000, 1 << 40, 1<<63 + 1} {
+    		if got, want := EncodedLen(v), len(EncodeVarint64([]uint64{v})); got != want {
+    			t.Errorf("EncodedLen(%d) = %d, len(encoded) = %d", v, got, want)
+    		}
+    	}
+    }
+  hidden_append_test.go: |
+    package variablelengthquantity
+
+    import (
+    	"bytes"
+    	"testing"
+    )
+
+    func TestHAppendKeepsPrefix(t *testing.T) {
+    	got := AppendVarint([]byte{0xAA}, 0x80)
+    	if !bytes.Equal(got, []byte{0xAA, 0x81, 0x00}) {
+    		t.Fatalf("got %x", got)
+    	}
+    }
+
+    func TestHAppendMatchesEncode(t *testing.T) {
+    	for _, v := range []uint64{0, 127, 128, 1 << 35, ^uint64(0)} {
+    		if got, want := AppendVarint(nil, v), EncodeVarint64([]uint64{v}); !bytes.Equal(got, want) {
+    			t.Errorf("v=%d got %x want %x", v, got, want)
+    		}
+    	}
+    }
+
+    func TestHAppendDoesNotAllocateWithCapacity(t *testing.T) {
+    	buf := make([]byte, 0, 16)
+    	allocs := testing.AllocsPerRun(100, func() {
+    		buf = AppendVarint(buf[:0], 1<<40)
+    	})
+    	if allocs != 0 {
+    		t.Fatalf("AppendVarint allocated %v times with spare capacity", allocs)
+    	}
+    }
+  hidden_errors_test.go: |
+    package variablelengthquantity
+
+    import (
+    	"errors"
+    	"testing"
+    )
+
+    func TestHErrorsAreDistinct(t *testing.T) {
+    	if ErrIncomplete == nil || ErrOverflow == nil || errors.Is(ErrIncomplete, ErrOverflow) {
+    		t.Fatal("ErrIncomplete and ErrOverflow must be distinct non-nil errors")
+    	}
+    }
+
+    func TestHDecodeErrorKinds(t *testing.T) {
+    	if _, err := DecodeVarint([]byte{0x81}); !errors.Is(err, ErrIncomplete) {
+    		t.Errorf("incomplete: %v", err)
+    	}
+    	if _, err := DecodeVarint([]byte{0x90, 0x80, 0x80, 0x80, 0x00}); !errors.Is(err, ErrOverflow) {
+    		t.Errorf("overflow32: %v", err)
+    	}
+    	if _, err := DecodeVarint64([]byte{0xff}); !errors.Is(err, ErrIncomplete) {
+    		t.Errorf("incomplete64: %v", err)
+    	}
+    	if _, err := DecodeVarint64([]byte{0x82, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x00}); !errors.Is(err, ErrOverflow) {
+    		t.Errorf("overflow64: %v", err)
+    	}
+    }
+turns:
+  - prompt: >-
+      Read .docs/instructions.md and implement `EncodeVarint` and `DecodeVarint` in
+      variable_length_quantity.go so that `go test ./...` passes. Do not edit the provided test files.
+    checks:
+      - {kind: tests, runner: go, restore: [variable_length_quantity_test.go, cases_test.go]}
+  - prompt: >-
+      In three to five sentences, explain how the continuation bit and the 7-bit groups work in your
+      decoder and when it reports an incomplete sequence. Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [continuation|high bit|0x80, '7', incomplete]}
+  - prompt: >-
+      Fix an edge case: `DecodeVarint` must return an error when a decoded value does not fit in a
+      uint32 (for example the bytes 0x90 0x80 0x80 0x80 0x00 encode 2^32) instead of silently wrapping
+      around. 0xffffffff, encoded as 0x8f 0xff 0xff 0xff 0x7f, must still decode.
+    checks:
+      - {kind: tests, runner: go, restore: [variable_length_quantity_test.go, cases_test.go], hidden: [hidden_overflow_test.go]}
+  - prompt: >-
+      Add 64-bit support: `func EncodeVarint64(input []uint64) []byte` and `func DecodeVarint64(input
+      []byte) ([]uint64, error)`, with the same format. The decoder returns an error for incomplete
+      input and for values that need more than 64 bits.
+    checks:
+      - {kind: tests, runner: go, restore: [variable_length_quantity_test.go, cases_test.go], hidden: [hidden_overflow_test.go, hidden_64_test.go]}
+  - prompt: >-
+      Add your own tests in a new file `extra_test.go` (package variablelengthquantity): at least five
+      test functions covering round trips for both widths, a known byte sequence, incomplete input and
+      overflow. Run `go test ./...`.
+    checks:
+      - {kind: file_regex, path: extra_test.go, pattern: ^func Test, min_count: 5}
+      - {kind: tests, runner: go, restore: [variable_length_quantity_test.go, cases_test.go], hidden: [hidden_overflow_test.go, hidden_64_test.go]}
+  - prompt: >-
+      Refactor to remove the duplicated bit handling: make `EncodeVarint` and `DecodeVarint` thin
+      wrappers over `EncodeVarint64` and `DecodeVarint64` (the 32-bit decoder still rejects values
+      above 0xffffffff). No behaviour change; keep all tests passing.
+    checks:
+      - {kind: file_regex, path: variable_length_quantity.go, pattern: EncodeVarint64\(, min_count: 2}
+      - {kind: file_regex, path: variable_length_quantity.go, pattern: DecodeVarint64\(, min_count: 2}
+      - {kind: tests, runner: go, restore: [variable_length_quantity_test.go, cases_test.go], hidden: [hidden_overflow_test.go, hidden_64_test.go]}
+  - prompt: >-
+      Add `func EncodedLen(v uint64) int` returning the number of bytes the varint encoding of v
+      occupies (1 for 0 to 127, 2 for 128 to 16383, and so on up to 10).
+    checks:
+      - {kind: tests, runner: go, restore: [variable_length_quantity_test.go, cases_test.go], hidden: [hidden_overflow_test.go, hidden_64_test.go, hidden_len_test.go]}
+  - prompt: >-
+      Performance change: add `func AppendVarint(dst []byte, v uint64) []byte` that appends the
+      encoding of one value to dst without any allocation when dst has enough spare capacity, and make
+      `EncodeVarint64` use it.
+    checks:
+      - {kind: tests, runner: go, restore: [variable_length_quantity_test.go, cases_test.go], hidden: [hidden_overflow_test.go, hidden_64_test.go, hidden_len_test.go, hidden_append_test.go]}
+  - prompt: >-
+      Add a benchmark `BenchmarkEncodeVarint64` in a new file `bench_test.go` that encodes a slice of
+      1000 values, and run it once with `go test -run xxx -bench Encode -benchtime 1x ./...`.
+    checks:
+      - {kind: file_regex, path: bench_test.go, pattern: func BenchmarkEncodeVarint64}
+      - {kind: tests, runner: cmd, cmd: go test -run xxx -bench Encode -benchtime 1x ./..., expect_regex: BenchmarkEncodeVarint64, restore: [variable_length_quantity_test.go, cases_test.go], hidden: [hidden_overflow_test.go, hidden_64_test.go, hidden_len_test.go, hidden_append_test.go]}
+  - prompt: >-
+      Improve error handling: export two sentinel errors `ErrIncomplete` (input ends inside a varint)
+      and `ErrOverflow` (value does not fit the target type) and return them from the decoders so
+      callers can use `errors.Is`.
+    checks:
+      - {kind: tests, runner: go, restore: [variable_length_quantity_test.go, cases_test.go], hidden: [hidden_overflow_test.go, hidden_64_test.go, hidden_len_test.go, hidden_append_test.go, hidden_errors_test.go]}
+  - prompt: >-
+      Document the package: add Go doc comments (starting with the identifier name) to `EncodeVarint`,
+      `DecodeVarint`, `EncodeVarint64`, `DecodeVarint64`, `EncodedLen` and `AppendVarint`, and create
+      README.md with a `## Format` section and a `## Errors` section.
+    checks:
+      - {kind: file_regex, path: variable_length_quantity.go, pattern: '^// EncodeVarint ', min_count: 1}
+      - {kind: file_regex, path: variable_length_quantity.go, pattern: '^// DecodeVarint ', min_count: 1}
+      - {kind: file_regex, path: variable_length_quantity.go, pattern: '^// EncodeVarint64 ', min_count: 1}
+      - {kind: file_regex, path: variable_length_quantity.go, pattern: '^// DecodeVarint64 ', min_count: 1}
+      - {kind: file_regex, path: variable_length_quantity.go, pattern: '^// EncodedLen ', min_count: 1}
+      - {kind: file_regex, path: variable_length_quantity.go, pattern: '^// AppendVarint ', min_count: 1}
+      - {kind: doc_sections, path: README.md, headings: [format, errors]}
+      - {kind: tests, runner: go, restore: [variable_length_quantity_test.go, cases_test.go], hidden: [hidden_overflow_test.go, hidden_64_test.go, hidden_len_test.go, hidden_append_test.go, hidden_errors_test.go]}
+  - prompt: >-
+      In three or four sentences, explain when `AppendVarint` allocates and when it does not, and why
+      `EncodeVarint64` is cheaper that way than building a fresh slice per value. Do not change any
+      files.
+    checks:
+      - {kind: keyed_facts, all: [append, alloc, capacity]}

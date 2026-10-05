@@ -1,0 +1,421 @@
+# Small multi-module CLI task tracker: explain architecture, write ARCHITECTURE.md with a verified dependency table, then three small code changes with docs.
+id: arch-explain
+task_type: mixed
+language: python
+split: train
+source:
+  desc: 'Small multi-module CLI task tracker: explain architecture, write ARCHITECTURE.md with a verified dependency table, then three small code
+    changes with docs.'
+  kind: self-authored deterministic workspace
+  adapted_from: ['~/dev/amplifier-agent/.amplifier/evaluation/tasks/benchmark/github-docs-extractor/task.yaml + code-discrepancy-tutorials-grasp/task.yaml
+      (explain a codebase and produce developer docs); scenario authored on a fresh mini-app, not copied']
+workspace:
+  kind: inline
+  files:
+    README.md: |
+      # taskr
+
+      A tiny task tracker. See docs/ARCHITECTURE.md.
+    CHANGELOG.md: |
+      # Changelog
+    data/sample_store.json: |
+      [
+        {
+          "id": 1,
+          "title": "Write spec",
+          "done": true
+        },
+        {
+          "id": 2,
+          "title": "Review budget",
+          "done": false
+        },
+        {
+          "id": 3,
+          "title": "Book venue",
+          "done": true
+        },
+        {
+          "id": 4,
+          "title": "Send invites",
+          "done": false
+        },
+        {
+          "id": 5,
+          "title": "Order catering",
+          "done": false
+        },
+        {
+          "id": 6,
+          "title": "Print badges",
+          "done": true
+        },
+        {
+          "id": 7,
+          "title": "Test projector",
+          "done": false
+        }
+      ]
+    taskr/__init__.py: |
+      """taskr: a tiny task tracker."""
+    taskr/__main__.py: |
+      """python3 -m taskr"""
+      from .cli import main
+
+      raise SystemExit(main())
+    taskr/storage.py: |
+      """JSON file persistence."""
+      import json
+      import os
+
+      from .models import Task
+
+
+      class StorageError(Exception):
+          """The store file exists but cannot be parsed."""
+
+
+      def path():
+          return os.environ.get("TASKR_FILE") or os.path.expanduser("~/.taskr.json")
+
+
+      def load():
+          p = path()
+          if not os.path.exists(p):
+              return []
+          try:
+              with open(p, encoding="utf-8") as fh:
+                  raw = json.load(fh)
+          except json.JSONDecodeError as exc:
+              raise StorageError(f"corrupt store: {p}") from exc
+          return [Task.from_dict(d) for d in raw]
+
+
+      def save(tasks):
+          with open(path(), "w", encoding="utf-8") as fh:
+              json.dump([t.to_dict() for t in tasks], fh, indent=2)
+    taskr/models.py: |
+      """Task model."""
+      from dataclasses import asdict, dataclass
+
+
+      @dataclass
+      class Task:
+          id: int
+          title: str
+          done: bool = False
+
+          def to_dict(self):
+              return asdict(self)
+
+          @classmethod
+          def from_dict(cls, d):
+              return cls(id=d["id"], title=d["title"], done=d.get("done", False))
+    taskr/render.py: |
+      """Plain-text rendering."""
+
+
+      def table(tasks):
+          lines = [f"{'ID':>3}  {'DONE':<4}  TITLE"]
+          for t in tasks:
+              lines.append(f"{t.id:>3}  {'yes' if t.done else 'no':<4}  {t.title}")
+          return "\n".join(lines)
+    taskr/commands.py: |
+      """Command implementations."""
+
+      from . import storage
+      from .models import Task
+      from .render import table
+
+
+      def add(title):
+          tasks = storage.load()
+          nid = max([t.id for t in tasks], default=0) + 1
+          tasks.append(Task(nid, title))
+          storage.save(tasks)
+          return nid
+
+
+      def list_tasks():
+          return table(storage.load())
+
+
+      def done(task_id):
+          tasks = storage.load()
+          for t in tasks:
+              if t.id == task_id:
+                  t.done = True
+                  storage.save(tasks)
+                  return
+          raise LookupError(f"no such task: {task_id}")
+
+
+      def stats():
+          tasks = storage.load()
+          n = len(tasks)
+          d = sum(1 for t in tasks if t.done)
+          pct = round(100 * d / n, 1) if n else 0.0
+          return f"done {d}/{n} ({pct}%)"
+    taskr/cli.py: |
+      """Argument parsing and dispatch."""
+      import argparse
+      import sys
+
+      from . import commands
+      from .storage import StorageError
+
+
+      def main(argv=None):
+          p = argparse.ArgumentParser(prog="taskr")
+          sub = p.add_subparsers(dest="cmd", required=True)
+          a = sub.add_parser("add")
+          a.add_argument("title")
+          l = sub.add_parser("list")
+          d = sub.add_parser("done")
+          d.add_argument("id", type=int)
+          sub.add_parser("stats")
+          args = p.parse_args(argv)
+          try:
+              if args.cmd == "add":
+                  print(f"added {commands.add(args.title)}")
+              elif args.cmd == "list":
+                  print(commands.list_tasks())
+              elif args.cmd == "done":
+                  commands.done(args.id)
+                  print(f"done {args.id}")
+              else:
+                  print(commands.stats())
+          except StorageError as exc:
+              print(f"error: {exc}", file=sys.stderr)
+              return 3
+          except LookupError as exc:
+              print(f"error: {exc}", file=sys.stderr)
+              return 2
+          return 0
+protected: [data/sample_store.json]
+hidden_files:
+  _grade.py: |
+    import csv, json, os, re, subprocess, sys
+    from pathlib import Path
+
+    W = Path(".")
+
+
+    def fail(msg):
+        print("FAIL:", msg)
+        sys.exit(1)
+
+
+    def need(cond, msg):
+        if not cond:
+            fail(msg)
+
+
+    def load_json(rel):
+        p = W / rel
+        need(p.exists(), f"missing {rel}")
+        try:
+            return json.loads(p.read_text(encoding="utf-8"))
+        except Exception as e:  # noqa: BLE001
+            fail(f"{rel} is not valid JSON: {e}")
+
+
+    def read(rel):
+        p = W / rel
+        need(p.exists(), f"missing {rel}")
+        return p.read_text(encoding="utf-8")
+
+
+    def close(a, b, tol=0.011):
+        try:
+            return abs(float(a) - float(b)) <= tol
+        except (TypeError, ValueError):
+            return False
+
+
+    def md_rows(rel, under=None):
+        """Table rows (lists of cells) of a markdown file; with `under`, only rows inside the first heading matching it."""
+        lines = read(rel).splitlines()
+        if under:
+            out, on, lvl = [], False, 0
+            for ln in lines:
+                m = re.match(r"^(#+)\s+(.*)", ln)
+                if m:
+                    if on and len(m.group(1)) <= lvl:
+                        break
+                    if not on and re.search(under, m.group(2), re.I):
+                        on, lvl = True, len(m.group(1))
+                    continue
+                if on:
+                    out.append(ln)
+            lines = out
+        rows = []
+        for ln in lines:
+            if ln.strip().startswith("|") and not re.match(r"^\s*\|[\s:|-]+\|\s*$", ln):
+                rows.append([c.strip() for c in ln.strip().strip("|").split("|")])
+        return rows
+
+
+    def num(s):
+        m = re.search(r"-?\d[\d,]*\.?\d*", str(s))
+        return float(m.group(0).replace(",", "")) if m else None
+
+
+    def run(cmd, timeout=60):
+        p = subprocess.run(cmd, shell=True, cwd=W, capture_output=True, text=True, timeout=timeout)
+        return p.returncode, p.stdout, p.stderr
+
+    EXP = {'deps': {'models': [], 'storage': ['models'], 'render': [], 'commands': ['models', 'render', 'storage'], 'cli': ['commands', 'storage']}, 'mods': ['models', 'storage', 'render', 'commands', 'cli']}
+    import shutil, tempfile
+    def _t(*args, store="data/sample_store.json", cwd=None):
+        env = dict(os.environ, TASKR_FILE=store); p = subprocess.run([sys.executable, "-m", "taskr", *args], cwd=W, env=env, capture_output=True, text=True, timeout=30); return p.returncode, p.stdout, p.stderr
+    def _tmpstore():
+        shutil.copy(W / "data/sample_store.json", W / "tmp_store.json"); return "tmp_store.json"
+    def t4():
+        txt = read("docs/ARCHITECTURE.md")
+        for m in EXP["mods"]: need(re.search(r"\b%s(\.py)?\b" % m, txt), m + " not described")
+    def t5():
+        rows = md_rows("docs/ARCHITECTURE.md", "modules"); need(len(rows) >= 5, "need a module table under Modules")
+        for m in EXP["mods"]:
+            r = [r for r in rows if r and re.search(r"\b%s(\.py)?\b" % m, r[0])]; need(r, "no row for " + m); cells = r[0]; need(len(cells) >= 3, "table needs >=3 columns")
+            got = {x for x in EXP["mods"] if x != m and re.search(r"\b%s(\.py)?\b" % x, cells[-1])}; need(got == set(EXP["deps"][m]), f"{m}: depends-on {sorted(got)} != {EXP['deps'][m]}")
+    def t7():
+        rc, out, err = _t("list", "--json"); need(rc == 0, "list --json failed: " + err[-200:])
+        d = json.loads(out); need(isinstance(d, list) and len(d) == 7 and [x["id"] for x in d] == list(range(1, 8)) and d[0]["title"] == "Write spec" and d[0]["done"] is True, "list --json output wrong")
+        rc, out, err = _t("list"); need(rc == 0 and "Review budget" in out, "plain list must still work")
+    def t8():
+        need(re.search(r"--json", read("README.md")) or re.search(r"--json", read("docs/ARCHITECTURE.md")), "document --json in README.md or docs/ARCHITECTURE.md")
+    def t10():
+        s = _tmpstore()
+        try:
+            rc, out, err = _t("remove", "2", store=s); need(rc == 0, "remove failed: " + err[-200:])
+            rc, out, err = _t("list", "--json", store=s); ids = [x["id"] for x in json.loads(out)]; need(ids == [1, 3, 4, 5, 6, 7], f"ids after remove: {ids}")
+            rc, out, err = _t("remove", "99", store=s); need(rc == 2 and re.search(r"no such task", err), f"unknown id must exit 2 with 'no such task' (rc={rc})")
+        finally: os.remove(W / s)
+    def t11():
+        p = W / "tests/test_remove.py"; need(p.exists(), "missing tests/test_remove.py"); need(len(re.findall(r"def test_", p.read_text(encoding="utf-8"))) >= 3, "need >= 3 tests")
+        rc, out, err = run("python3 -m unittest discover -s tests -p 'test_remove.py' 2>&1"); need(rc == 0, "tests fail: " + out[-300:])
+    def t12():
+        txt = read("docs/ARCHITECTURE.md"); need(re.search(r"remove", txt), "ARCHITECTURE.md must mention remove")
+        m = re.search(r"^#+\s*Error handling\s*\n(.*?)(?=^#|\Z)", txt, re.M | re.S | re.I); need(m and re.search(r"remove|no such task", m.group(1), re.I), "Error handling must cover remove / unknown ids")
+    def t14():
+        s = _tmpstore()
+        try:
+            rc, out, err = _t("add", "Pay rent", "--due", "2025-05-01", store=s); need(rc == 0, "add --due failed: " + err[-200:])
+            rc, out, err = _t("list", "--json", store=s); d = json.loads(out); need(d[-1]["title"] == "Pay rent" and d[-1].get("due") == "2025-05-01", "due missing in JSON")
+            need(all(x.get("due") is None for x in d[:-1]), "old tasks must load with due == null")
+            rc, out, err = _t("list", store=s); need(rc == 0 and "2025-05-01" in out and re.search(r"\bDUE\b", out), "text list must show a DUE column")
+        finally: os.remove(W / s)
+        rc, out, err = _t("list", "--json"); need(rc == 0 and len(json.loads(out)) == 7, "sample store must still load")
+
+
+    if __name__ == "__main__":
+        fn = globals().get(sys.argv[1]) if len(sys.argv) > 1 else None
+        need(callable(fn), "unknown check " + str(sys.argv[1:]))
+        fn()
+        print("OK")
+turns:
+- prompt: 'Give me a tour of the taskr package: what does each module under taskr/ do and how do they call each other? Do not change any files.'
+  checks:
+  - kind: keyed_facts
+    all: [cli, commands, storage, render, models]
+- prompt: Where does taskr decide which file to store tasks in, and how can a user override it? Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: [TASKR_FILE, \.taskr\.json]
+- prompt: What happens when the store file exists but contains invalid JSON? Trace it from storage to the process exit status. Do not change any
+    files.
+  checks:
+  - kind: keyed_facts
+    all: [StorageError, \b3\b]
+- prompt: Write docs/ARCHITECTURE.md with level-2 sections Overview, Modules, Data flow, Storage format and Error handling. Name every module
+    of the package.
+  checks:
+  - kind: doc_sections
+    path: docs/ARCHITECTURE.md
+    headings: [Overview, Modules, Data flow, Storage format, Error handling]
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t4
+    hidden: [_grade.py]
+    timeout: 60
+- prompt: 'Under Modules in docs/ARCHITECTURE.md add a markdown table with the columns Module, Responsibility and Depends on: one row per module,
+    and Depends on lists only the other taskr modules it imports from (or `none`). Derive it from the imports.'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t5
+    hidden: [_grade.py]
+    timeout: 60
+- prompt: Which exit codes can the taskr command return and for what situations? Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: [\b2\b, \b3\b, corrupt|StorageError, no such task|unknown|LookupError|usage]
+- prompt: 'Add a `--json` flag to the `list` command: with it, print the tasks as a JSON array of objects (id, title, done) instead of the text
+    table. Try it with TASKR_FILE=data/sample_store.json.'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t7
+    hidden: [_grade.py]
+    timeout: 60
+- prompt: Mention the new flag in README.md or docs/ARCHITECTURE.md.
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t8
+    hidden: [_grade.py]
+    timeout: 60
+- prompt: What does `taskr stats` print for data/sample_store.json? Run it with TASKR_FILE pointing at that file. Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: [3/7, 42\.9]
+- prompt: 'Implement a `remove <id>` command: it deletes the task; an unknown id prints `error: no such task: <id>` to stderr and exits with status
+    2. Test on a copy of the sample store, not on data/sample_store.json itself.'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t10
+    hidden: [_grade.py]
+    timeout: 60
+- prompt: Add tests/test_remove.py (unittest, subprocess-based, using a temporary TASKR_FILE) with at least three tests for remove, including
+    the unknown-id exit status. Run them.
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t11
+    hidden: [_grade.py]
+    timeout: 60
+- prompt: 'Update docs/ARCHITECTURE.md: mention `remove` among the commands and describe the unknown-id behaviour under Error handling.'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t12
+    hidden: [_grade.py]
+    timeout: 60
+- prompt: If we wanted to add an optional due date to every task, which modules would need to change and why? List them. Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: [models, render, cli|commands]
+- prompt: 'Implement it: `taskr add "title" --due YYYY-MM-DD` stores an optional `due` field; `list --json` includes `due` (null when unset, also
+    for tasks in older store files); the text table gets a DUE column.'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t14
+    hidden: [_grade.py]
+    timeout: 60
+- prompt: Add a Usage section to README.md that shows add (with --due), list (with --json), done, remove and stats.
+  checks:
+  - kind: doc_sections
+    path: README.md
+    headings: [Usage]
+  - {kind: file_regex, path: README.md, pattern: --due}
+  - {kind: file_regex, path: README.md, pattern: --json}
+  - {kind: file_regex, path: README.md, pattern: remove}
+- prompt: Add an `## Unreleased` section with an `### Added` list to CHANGELOG.md naming list --json, remove and add --due.
+  checks:
+  - {kind: file_regex, path: CHANGELOG.md, pattern: ^##\s+Unreleased}
+  - {kind: file_regex, path: CHANGELOG.md, pattern: --json}
+  - {kind: file_regex, path: CHANGELOG.md, pattern: remove}
+  - {kind: file_regex, path: CHANGELOG.md, pattern: --due}

@@ -1,0 +1,14 @@
+{
+  "sessions": 1036,
+  "turns": 11588,
+  "requests": 52437,
+  "pairs": 896,
+  "tools_normalized_delta_usd_total": -15.371928,
+  "skipped_no_result": [],
+  "cache_audit_flagged_sessions": [],
+  "mechanism_failed": [],
+  "killed_memory": [
+    "py-forth-r2-opus-aa"
+  ],
+  "cost_mismatch": []
+}

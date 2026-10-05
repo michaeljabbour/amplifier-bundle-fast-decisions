@@ -1,0 +1,242 @@
+# main-v1 polyglot 1/20: python/poker, 12 turns, short gaps. Outside S2 slice (seed 20260919), S1 tasks and pilot exercises.
+id: py-poker
+task_type: feature
+language: python
+split: train
+default_gap_s: 10
+source:
+  desc: "Aider polyglot-benchmark python/poker (Exercism), outside the S2 slice"
+  repo: https://github.com/Aider-AI/polyglot-benchmark
+  sha: 7e0611e77b54e2dea774cdc0aa00cf9f7ed6144f
+workspace:
+  kind: git
+  repo: https://github.com/Aider-AI/polyglot-benchmark
+  sha: 7e0611e77b54e2dea774cdc0aa00cf9f7ed6144f
+  subdir: python/exercises/practice/poker
+  local_hint: ~/dev/afast-campaign-corrected-polyglot-20260919/polyglot/polyglot-benchmark
+  remove: [.meta]
+protected: [poker_test.py]
+hidden_files:
+  hidden_names_test.py: |
+    import unittest
+    from poker import hand_name
+
+
+    class HandNameTest(unittest.TestCase):
+        def test_each_category(self):
+            cases = {
+                "4S 5S 7H 8D JC": "high card",
+                "2S 2H 5D 9C KD": "pair",
+                "2S 2H 5D 5C KD": "two pair",
+                "4S 4H 4D 9C KD": "three of a kind",
+                "4S 5H 6C 7D 8S": "straight",
+                "2S 5S 7S 9S KS": "flush",
+                "3S 3H 3D 9C 9D": "full house",
+                "7S 7H 7D 7C KD": "four of a kind",
+                "4H 5H 6H 7H 8H": "straight flush",
+            }
+            for hand, name in cases.items():
+                with self.subTest(hand=hand):
+                    self.assertEqual(hand_name(hand), name)
+
+        def test_ace_low_straight(self):
+            self.assertEqual(hand_name("AS 2H 3D 4C 5S"), "straight")
+
+        def test_royal_flush_is_a_straight_flush(self):
+            self.assertEqual(hand_name("10H JH QH KH AH"), "straight flush")
+
+        def test_ten_is_written_as_two_characters(self):
+            self.assertEqual(hand_name("10S 10H 2D 3C 4D"), "pair")
+  hidden_validation_test.py: |
+    import unittest
+    from poker import best_hands
+
+
+    class ValidationTest(unittest.TestCase):
+        def test_too_few_cards(self):
+            with self.assertRaises(ValueError):
+                best_hands(["4S 5S 7H 8D"])
+
+        def test_too_many_cards(self):
+            with self.assertRaises(ValueError):
+                best_hands(["4S 5S 7H 8D JC QC"])
+
+        def test_bad_rank(self):
+            with self.assertRaises(ValueError):
+                best_hands(["4S 5S 7H 8D 1C"])
+
+        def test_bad_suit(self):
+            with self.assertRaises(ValueError):
+                best_hands(["4S 5S 7H 8D JX"])
+
+        def test_duplicate_card_in_hand(self):
+            with self.assertRaises(ValueError):
+                best_hands(["4S 4S 7H 8D JC"])
+
+        def test_one_bad_hand_rejects_the_call(self):
+            with self.assertRaises(ValueError):
+                best_hands(["4S 5S 7H 8D JC", "2H 3H"])
+
+        def test_valid_input_still_works(self):
+            self.assertEqual(best_hands(["4S 5S 7H 8D JC", "2H 2D 7C 9S KD"]), ["2H 2D 7C 9S KD"])
+  hidden_ranked_test.py: |
+    import unittest
+    from poker import ranked
+
+
+    class RankedTest(unittest.TestCase):
+        def test_best_first(self):
+            hands = ["4S 5S 7H 8D JC", "2S 2H 5D 9C KD", "4S 4H 4D 9C KD"]
+            self.assertEqual(ranked(hands), ["4S 4H 4D 9C KD", "2S 2H 5D 9C KD", "4S 5S 7H 8D JC"])
+
+        def test_ties_keep_input_order(self):
+            a, b = "2S 4H 6C 8D 10H", "2H 4D 6S 8C 10D"
+            self.assertEqual(ranked([a, b]), [a, b])
+            self.assertEqual(ranked([b, a]), [b, a])
+
+        def test_empty(self):
+            self.assertEqual(ranked([]), [])
+
+        def test_does_not_mutate_input(self):
+            hands = ["4S 5S 7H 8D JC", "4S 4H 4D 9C KD"]
+            ranked(hands)
+            self.assertEqual(hands, ["4S 5S 7H 8D JC", "4S 4H 4D 9C KD"])
+
+        def test_validates(self):
+            with self.assertRaises(ValueError):
+                ranked(["4S 5S"])
+  hidden_perf_test.py: |
+    import random
+    import time
+    import unittest
+    from poker import best_hands
+
+    RANKS = "2 3 4 5 6 7 8 9 10 J Q K A".split()
+    DECK = [r + s for r in RANKS for s in "SHDC"]
+
+
+    class PerfTest(unittest.TestCase):
+        def test_many_hands_quickly(self):
+            rng = random.Random(7)
+            hands = [" ".join(rng.sample(DECK, 5)) for _ in range(30000)]
+            start = time.perf_counter()
+            winners = best_hands(hands)
+            elapsed = time.perf_counter() - start
+            self.assertGreaterEqual(len(winners), 1)
+            self.assertLess(elapsed, 3.0)
+
+        def test_repeated_calls_with_same_hands(self):
+            rng = random.Random(11)
+            hands = [" ".join(rng.sample(DECK, 5)) for _ in range(2000)]
+            first = best_hands(hands)
+            best = None
+            for _ in range(3):
+                start = time.perf_counter()
+                for _ in range(150):
+                    self.assertEqual(best_hands(hands), first)
+                elapsed = time.perf_counter() - start
+                best = elapsed if best is None else min(best, elapsed)
+            self.assertLess(best, 0.4)
+  hidden_compare_test.py: |
+    import unittest
+    from poker import compare
+
+
+    class CompareTest(unittest.TestCase):
+        def test_first_wins(self):
+            self.assertEqual(compare("4S 4H 4D 9C KD", "2S 2H 5D 9C KD"), 1)
+
+        def test_second_wins(self):
+            self.assertEqual(compare("4S 5S 7H 8D JC", "2S 2H 5D 9C KD"), -1)
+
+        def test_tie(self):
+            self.assertEqual(compare("2S 4H 6C 8D 10H", "2H 4D 6S 8C 10D"), 0)
+
+        def test_kicker_decides(self):
+            self.assertEqual(compare("3S 3H 5D 9C KD", "3D 3C 5H 9S QD"), 1)
+
+        def test_ace_low_straight_loses_to_six_high(self):
+            self.assertEqual(compare("AS 2H 3D 4C 5S", "2S 3H 4D 5C 6S"), -1)
+
+        def test_invalid_hand_raises(self):
+            with self.assertRaises(ValueError):
+                compare("4S 5S", "2S 2H 5D 9C KD")
+turns:
+  - prompt: >-
+      Read .docs/instructions.md and implement `best_hands(hands)` in poker.py so that every test in
+      poker_test.py passes. Run the tests with `python3 -m pytest -q poker_test.py`.
+    checks:
+      - {kind: tests, runner: python, files: [], restore: []}
+  - prompt: >-
+      Add a function `hand_name(hand)` to poker.py that returns the category of a single hand as a
+      lowercase string: one of 'high card', 'pair', 'two pair', 'three of a kind', 'straight',
+      'flush', 'full house', 'four of a kind' or 'straight flush'. An ace-low straight (A 2 3 4 5)
+      is a plain 'straight', and a royal flush is a 'straight flush'. Use the same card notation as
+      `best_hands`.
+    checks:
+      - {kind: tests, runner: python, files: [poker_test.py, hidden_names_test.py], restore: [poker_test.py], hidden: [hidden_names_test.py]}
+  - prompt: >-
+      Right now `best_hands` quietly accepts garbage. Make it raise `ValueError` for any malformed
+      input: a hand without exactly five cards, an unknown rank (valid ranks are 2-10, J, Q, K, A),
+      an unknown suit (S, H, D, C), or the same card twice in one hand. One bad hand must reject the
+      whole call. Valid input must keep working exactly as before.
+    checks:
+      - {kind: tests, runner: python, files: [poker_test.py, hidden_names_test.py, hidden_validation_test.py], restore: [poker_test.py], hidden: [hidden_names_test.py, hidden_validation_test.py]}
+  - prompt: >-
+      Without changing any files: in four to six sentences, explain how your solution decides
+      between two hands of the same category (tie-breaking) and how it treats the ace-low straight.
+      Name the function(s) responsible.
+    checks:
+      - {kind: keyed_facts, all: ['tie|break|kicker', ace, 'straight|wheel', rank]}
+  - prompt: >-
+      Add `ranked(hands)` to poker.py: it returns all the hands sorted from best to worst. Hands
+      that tie keep their original input order, an empty list gives [], the argument must not be
+      mutated, and malformed hands raise ValueError just like `best_hands`.
+    checks:
+      - {kind: tests, runner: python, files: [poker_test.py, hidden_names_test.py, hidden_validation_test.py, hidden_ranked_test.py], restore: [poker_test.py], hidden: [hidden_names_test.py, hidden_validation_test.py, hidden_ranked_test.py]}
+  - prompt: >-
+      Refactor poker.py for readability without changing behaviour: split it into small private
+      helpers (names starting with an underscore) for parsing a hand, validating it, and computing
+      its score. Keep the public functions `best_hands`, `hand_name`, `ranked` and `hand_rank`. Run
+      all the tests again.
+    checks:
+      - {kind: file_regex, path: poker.py, pattern: '^\s*def _[a-z]', min_count: 4}
+      - {kind: tests, runner: python, files: [poker_test.py, hidden_names_test.py, hidden_validation_test.py, hidden_ranked_test.py], restore: [poker_test.py], hidden: [hidden_names_test.py, hidden_validation_test.py, hidden_ranked_test.py]}
+  - prompt: >-
+      Write your own tests in a new file `test_extra.py`: at least six test functions (plain `def
+      test_...` or unittest methods) covering `hand_name`, `ranked` and the ValueError cases of
+      `best_hands`. Run them with pytest.
+    checks:
+      - {kind: file_regex, path: test_extra.py, pattern: '^\s*def test_', min_count: 6}
+      - {kind: tests, runner: python, files: [poker_test.py, test_extra.py], restore: [poker_test.py]}
+  - prompt: >-
+      A caller feeds `best_hands` about 30,000 hands at a time and calls it again and again with the
+      same lists, and it feels slow. Speed it up (for example by not recomputing the score of the
+      same hand text) without changing results. Keep every test passing; it should handle 30,000
+      random hands in well under three seconds.
+    checks:
+      - {kind: tests, runner: python, files: [poker_test.py, hidden_names_test.py, hidden_validation_test.py, hidden_ranked_test.py, hidden_perf_test.py], restore: [poker_test.py], hidden: [hidden_names_test.py, hidden_validation_test.py, hidden_ranked_test.py, hidden_perf_test.py]}
+  - prompt: >-
+      Create `README_POKER.md` documenting the module with these level-2 sections: Usage, API,
+      Validation, Examples. Include a short runnable example in the Examples section.
+    checks:
+      - {kind: doc_sections, path: README_POKER.md, headings: [Usage, API, Validation, Example]}
+      - {kind: file_regex, path: README_POKER.md, pattern: '```', min_count: 2}
+  - prompt: >-
+      Review your own changes to poker.py from this session. List up to three concrete weaknesses or
+      risks (for example memory use of the cache, validation gaps, or ambiguous input like lowercase
+      cards) and say which one you would fix first. Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: ['cache|memory|lowercase|valid|duplicate|edge'], any: ['fix first|first|priority', 'risk|weakness|gap'], min_any: 1}
+  - prompt: >-
+      Add `compare(a, b)` to poker.py returning 1 if hand `a` beats hand `b`, -1 if it loses and 0
+      for a tie. A ValueError must be raised for a malformed hand, the same way `best_hands` does.
+    checks:
+      - {kind: tests, runner: python, files: [poker_test.py, hidden_names_test.py, hidden_validation_test.py, hidden_ranked_test.py, hidden_perf_test.py, hidden_compare_test.py], restore: [poker_test.py], hidden: [hidden_names_test.py, hidden_validation_test.py, hidden_ranked_test.py, hidden_perf_test.py, hidden_compare_test.py]}
+  - prompt: >-
+      Finish up: add a docstring to each of the public functions in poker.py (`best_hands`,
+      `hand_name`, `ranked`, `compare`), one or two lines each, describing arguments, return value
+      and the ValueError behaviour. Then run the whole test suite including test_extra.py.
+    checks:
+      - {kind: file_regex, path: poker.py, pattern: '^def (best_hands|hand_name|ranked|compare)\(.*\):\n\s+"""', min_count: 4}
+      - {kind: tests, runner: python, files: [poker_test.py, hidden_names_test.py, hidden_validation_test.py, hidden_ranked_test.py, hidden_perf_test.py, hidden_compare_test.py, test_extra.py], restore: [poker_test.py], hidden: [hidden_names_test.py, hidden_validation_test.py, hidden_ranked_test.py, hidden_perf_test.py, hidden_compare_test.py]}

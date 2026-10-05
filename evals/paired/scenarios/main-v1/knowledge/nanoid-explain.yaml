@@ -1,0 +1,53 @@
+# ai/nanoid 6.0.1 at bb68abc: explain the ID generator internals, document them, verify the distribution empirically
+id: nanoid-explain
+task_type: explain
+language: javascript
+split: train
+source:
+  desc: 'ai/nanoid 6.0.1 at bb68abc: explain the ID generator internals, document them, verify the distribution empirically'
+  repo: https://github.com/ai/nanoid.git
+  sha: bb68abcd59ebb86a849d634320726add6be54d47
+workspace:
+  kind: git
+  repo: https://github.com/ai/nanoid.git
+  sha: bb68abcd59ebb86a849d634320726add6be54d47
+  local_hint: ~/dev/afast-paired-src/nanoid
+turns:
+- prompt: Why does index.js define a constant for 65536 and what does `fillRandom` do with it? Name the constant. Do not change any files.
+  checks:
+  - {kind: keyed_facts, all: [GET_RANDOM_LIMIT, '65536', getRandomValues, chunk]}
+- prompt: 'Explain the `safeByteCutoff` logic in `customRandom`: the formula, and for an alphabet with 17 symbols which byte values are rejected and why. Do not change any files.'
+  checks:
+  - {kind: keyed_facts, all: ['256 - \(?256 % alphabet\.length|256 - \(256 %|256 % ', '255', bias|uneven|more likely]}
+- prompt: How do power-of-two alphabets like the default 64-symbol urlAlphabet avoid rejection and the modulo operator in `customRandom` and in `customAlphabet`? Do not change any files.
+  checks:
+  - {kind: keyed_facts, all: [mask, '64', power, '&']}
+- prompt: 'Describe the string-pool optimisation in `customAlphabet`: when the fast path is used, how the pool grows, and the numeric limit (name the constant and its value). Do not change any files.'
+  checks:
+  - {kind: keyed_facts, all: [POOL_MAX, '32768', \b16\b, latin1, '256']}
+- prompt: Quote the exact `urlAlphabet` string from url-alphabet/index.js and explain why its symbols are ordered the way they are. Do not change any files.
+  checks:
+  - {kind: keyed_facts, all: [useandom-26T198340PX75pxJACKVERYMINDBUSHWOLF_GQZbfghjklqvwyzrict, gzip|brotli]}
+- prompt: Write docs/INTERNALS.md with level-2 sections Overview, Random bytes, Modulo bias and String pool, naming the real constants and numbers from index.js.
+  checks:
+  - {kind: doc_sections, path: docs/INTERNALS.md, headings: [Overview, Random bytes, Modulo bias, String pool]}
+  - {kind: file_regex, path: docs/INTERNALS.md, pattern: '65536'}
+  - {kind: file_regex, path: docs/INTERNALS.md, pattern: safeByteCutoff}
+  - {kind: file_regex, path: docs/INTERNALS.md, pattern: POOL_MAX}
+- prompt: 'Write scripts/bias_check.mjs (imports from ''../index.js''): generate 200000 IDs of size 10 with `customAlphabet(''abcdefghijklmnopq'', 10)`, count every symbol, exit with code 1 if any character outside the alphabet appears or any symbol deviates more than 3% from its expected count, otherwise print the maximum deviation. Run it.'
+  checks:
+  - {kind: file_regex, path: scripts/bias_check.mjs, pattern: customAlphabet}
+  - {kind: tests, runner: cmd, cmd: node scripts/bias_check.mjs && perl -pi -e 's/index < alphabetLen/true/' index.js && ! node scripts/bias_check.mjs, expect_regex: max deviation}
+- prompt: 'Read bin/nanoid.js: list its options, the exact error messages it prints and how an unknown argument is handled. Do not change any files.'
+  checks:
+  - {kind: keyed_facts, all: [--size|-s, --alphabet|-a, Size must be positive integer, Unknown argument, exit|code 1|status 1]}
+- prompt: How does non-secure/index.js generate IDs compared with the main index.js, and what happens for a negative size? Do not change any files.
+  checks:
+  - {kind: keyed_facts, all: [Math\.random, secure|crypto, size \| 0|\| 0|negative, loop|while]}
+- prompt: Write API.md listing every export of index.js (urlAlphabet, random, customRandom, customAlphabet, nanoid), one bullet each with its signature and a one-line description.
+  checks:
+  - {kind: file_regex, path: API.md, pattern: urlAlphabet}
+  - {kind: file_regex, path: API.md, pattern: \brandom\(}
+  - {kind: file_regex, path: API.md, pattern: customRandom}
+  - {kind: file_regex, path: API.md, pattern: customAlphabet}
+  - {kind: file_regex, path: API.md, pattern: nanoid\(}

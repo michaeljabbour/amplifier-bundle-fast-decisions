@@ -1,0 +1,34 @@
+\section{Reproducibility}\label{sec:repro}
+
+\paragraph{Evidence.} Everything is in \path{docs/evidence/2026-10-02-paired-campaign/}:
+\begin{itemize}
+  \item \path{data/} and its \path{DATA-DICTIONARY.md}, which documents every field: \NSessions\ session
+    rows, \NTurns\ turn rows, \NRequests\ request rows and \NPairs\ pair rows;
+  \item \path{confirm/}: the preregistered confirmatory analysis (\path{confirm.json}, \path{CONFIRM.md});
+  \item \path{model/}: the savings model, its summaries and its test-split predictions;
+  \item \path{campaign/}: schedule, state, ledger, sticky decisions and \path{FAILURES.md};
+  \item \path{prereg/}: the preregistration, the split and \path{PROVENANCE.md};
+  \item \path{pilot/} and \path{reproduce/} (commands, versions, price table, spend).
+\end{itemize}
+The agent under test was frozen at commit \code{\BuildSha} (the preregistration commit) in every session.
+
+\paragraph{Re-running the analysis.} No model call is needed. From the published rows, the savings model
+re-fits byte for byte:
+\begin{lstlisting}
+E=docs/evidence/2026-10-02-paired-campaign
+S=$(mktemp -d); mkdir "$S/rows"
+ln -s "$PWD/$E/data/sessions.jsonl" "$PWD/$E/data/pairs.jsonl" "$S/rows/"
+nice -n 10 python3 evals/paired_model.py all "$S" --engine fallback
+nice -n 10 python3 evals/paired_confirm.py "$S"
+\end{lstlisting}
+Re-extracting the rows themselves needs the raw campaign tree and per-session event files, which are not
+published; on the machine that ran the campaign, \code{evals/paired.py rows} reproduces them byte for byte.
+
+\paragraph{This document.} The source is in \path{docs/papers/2026-10-02-paired-measurement/}. Running
+\code{make} there runs \code{build\_assets.py}, which reads only the committed files listed at its top
+(including the earlier caching survey from the \code{eval/judge-realistic} branch) and writes every number
+(\path{generated/numbers.tex}), table, plotted datum and label position, then builds the PDF. No number in
+the text is typed by hand. The script recovers the price table from the request rows themselves and checks
+that it prices every request to within \PriceResidual\ dollars. \code{make check} re-checks the figures'
+geometry on the built PDF: every scatter label nearest its own marker, every legend above its plot, and no
+overlapping text anywhere.

@@ -1,0 +1,87 @@
+# Pilot scenario 4/5: review / explain / docs on a pinned small public Python repo (no code-fix grader needed).
+id: slugify-review
+task_type: review
+language: python
+split: pilot
+source:
+  desc: "un33k/python-slugify at c442cd4 plus a planted review diff (proposed_change.diff)"
+  repo: https://github.com/un33k/python-slugify.git
+  sha: c442cd4cb61763c85b078d6ea83b5959c3ff364a
+workspace:
+  kind: git
+  repo: https://github.com/un33k/python-slugify.git
+  sha: c442cd4cb61763c85b078d6ea83b5959c3ff364a
+  local_hint: ~/dev/afast-paired-src/python-slugify
+  remove: [docs/release-9/historical-evidence.json, docs/release-9/recent-evidence.json]
+  pip_vendor: ["text-unidecode==1.3"]
+  add_files:
+    proposed_change.diff: |
+      --- a/slugify/special.py
+      +++ b/slugify/special.py
+      @@ -4,17 +4,11 @@
+       def add_uppercase_char(char_list: list[tuple[str, str]]) -> list[tuple[str, str]]:
+           """ Given a replacement char list, this adds uppercase chars to the list """
+
+      -    # Collect additions to avoid modifying input during iteration
+      -    # and ensure atomicity on error
+      -    insertions = []
+      -    for item in char_list:
+      +    for item in char_list:
+               char, xlate = item
+               upper_dict = char.upper(), xlate.capitalize()
+      -        if upper_dict not in char_list and char != upper_dict[0]:
+      -            insertions.append(upper_dict)
+      -
+      -    # Apply all insertions to original list (maintains documented in-place modification)
+      -    for upper_dict in insertions:
+      -        char_list.insert(0, upper_dict)
+      +        if upper_dict not in char_list and char != upper_dict[0]:
+      +            char_list.insert(0, upper_dict)
+
+           return char_list
+turns:
+  - prompt: >-
+      Explain at a high level what slugify/slugify.py does: how the legacy and the modern algorithm
+      differ in the public `slugify()` entry point, and which function performs the length
+      truncation in modern mode. Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: ['legacy', 'modern', 'truncat', '_modern_truncate|_modern_slugify']}
+  - prompt: >-
+      What does slugify/special.py do, and what does `add_uppercase_char` guarantee about its
+      argument if something fails halfway? Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: ['uppercase|capital', 'list'], any: ['atomic', 'unchanged', 'in-place', 'insert'], min_any: 1}
+  - prompt: >-
+      The file proposed_change.diff is a proposed patch to slugify/special.py. Review it
+      critically: what is the defect it introduces, how would it show up for a caller, and what
+      would you ask the author to change? Do not apply it.
+    checks:
+      - {kind: keyed_facts, all: ['iterat|mutat|while looping|during', 'atomic|unchanged|partial|half|error|fail']}
+  - prompt: >-
+      Write `docs/truncation.md`, a developer page on how max_length truncation works in modern
+      mode, with level-2 sections: Overview, Parameters, Examples, Edge cases. Base the examples on
+      running the code.
+    checks:
+      - {kind: doc_sections, path: docs/truncation.md, headings: ['Overview', 'Parameters', 'Example', 'Edge']}
+  - prompt: >-
+      In docs/truncation.md add a markdown table under Examples with at least four rows showing
+      input text, max_length, word_boundary and the actual output, each verified by running the code.
+    checks:
+      - {kind: file_regex, path: docs/truncation.md, pattern: '^\|.*\|.*\|', min_count: 6}
+  - prompt: >-
+      How are the tests organised (which files cover which behaviour), and how would you run only
+      the legacy-behaviour tests? Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: ['tests/', 'legacy', 'pytest|unittest']}
+  - prompt: >-
+      List three risks or edge cases in the current `_modern_truncate` implementation (for example
+      empty tokens, multi-character separators, max_length smaller than the first word) and say how
+      you would test each. Do not change any files.
+    checks:
+      - {kind: keyed_facts, any: ['empty', 'separator', 'max_length', 'delimiter', 'word_boundary'], min_any: 3}
+  - prompt: >-
+      Add a short `## Truncation` section to README.md that explains the modern max_length
+      behaviour in two or three sentences and links to docs/truncation.md.
+    checks:
+      - {kind: doc_sections, path: README.md, headings: ['Truncation']}
+      - {kind: file_regex, path: README.md, pattern: 'docs/truncation\.md'}

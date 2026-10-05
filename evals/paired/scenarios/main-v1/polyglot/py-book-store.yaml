@@ -1,0 +1,165 @@
+# main-v1 polyglot 5/20: python/book-store, 8 turns, short gaps.
+id: py-book-store
+task_type: bugfix
+language: python
+split: train
+default_gap_s: 10
+source:
+  desc: "Aider polyglot-benchmark python/book-store (Exercism), outside the S2 slice"
+  repo: https://github.com/Aider-AI/polyglot-benchmark
+  sha: 7e0611e77b54e2dea774cdc0aa00cf9f7ed6144f
+workspace:
+  kind: git
+  repo: https://github.com/Aider-AI/polyglot-benchmark
+  sha: 7e0611e77b54e2dea774cdc0aa00cf9f7ed6144f
+  subdir: python/exercises/practice/book-store
+  local_hint: ~/dev/afast-campaign-corrected-polyglot-20260919/polyglot/polyglot-benchmark
+  remove: [.meta]
+protected: [book_store_test.py]
+hidden_files:
+  hidden_validation_test.py: |
+    import unittest
+    from book_store import total
+
+
+    class ValidationTest(unittest.TestCase):
+        def test_unknown_title_number(self):
+            for bad in (0, 6, -1, 99):
+                with self.subTest(bad=bad):
+                    with self.assertRaises(ValueError):
+                        total([1, bad])
+
+        def test_non_integer_titles(self):
+            for bad in ("1", 1.5, None, True):
+                with self.subTest(bad=bad):
+                    with self.assertRaises(ValueError):
+                        total([2, bad])
+
+        def test_tuple_basket_is_fine(self):
+            self.assertEqual(total((1, 2)), 1520)
+
+        def test_generator_basket_is_fine(self):
+            self.assertEqual(total(x for x in (1, 2, 3)), 2160)
+
+        def test_basket_is_not_modified(self):
+            basket = [3, 1, 2, 1]
+            total(basket)
+            self.assertEqual(basket, [3, 1, 2, 1])
+
+        def test_valid_baskets_unchanged(self):
+            self.assertEqual(total([]), 0)
+            self.assertEqual(total([1, 1, 2, 2, 3, 3, 4, 5]), 5120)
+  hidden_cents_test.py: |
+    import unittest
+    from book_store import total
+
+
+    class CentsTest(unittest.TestCase):
+        def test_returns_int(self):
+            for basket in ([], [1], [1, 2], [1, 2, 3], [1, 2, 3, 4], [1, 2, 3, 4, 5], [1, 1, 2, 3, 4, 5]):
+                with self.subTest(basket=basket):
+                    self.assertIsInstance(total(basket), int)
+
+        def test_exact_prices(self):
+            self.assertEqual(total([1, 2]), 1520)
+            self.assertEqual(total([1, 2, 3]), 2160)
+            self.assertEqual(total([1, 2, 3, 4]), 2560)
+            self.assertEqual(total([1, 2, 3, 4, 5]), 3000)
+            self.assertEqual(total([1, 1, 2, 3, 4, 5]), 3800)
+
+        def test_no_float_dust_on_larger_baskets(self):
+            self.assertEqual(total([1, 2, 3, 4, 5] * 3), 9000)
+            self.assertEqual(total([1, 2, 3] * 7), 7 * 2160)
+  hidden_perf_test.py: |
+    import signal
+
+
+    class Slow(Exception):
+        pass
+
+
+    def within(seconds, fn):
+        """Run fn() but fail with Slow after `seconds` (POSIX only), so a hang cannot stall the grader."""
+        def alarm(*_):
+            raise Slow("took longer than %s seconds" % seconds)
+        old = signal.signal(signal.SIGALRM, alarm)
+        signal.setitimer(signal.ITIMER_REAL, seconds)
+        try:
+            return fn()
+        finally:
+            signal.setitimer(signal.ITIMER_REAL, 0)
+            signal.signal(signal.SIGALRM, old)
+    import unittest
+    from book_store import total
+
+
+    class LargeBasketTest(unittest.TestCase):
+        def test_hundred_books(self):
+            basket = [1] * 20 + [2] * 20 + [3] * 20 + [4] * 20 + [5] * 20
+            self.assertEqual(within(5, lambda: total(basket)), 20 * 3000)
+
+        def test_uneven_hundred_books(self):
+            basket = [1] * 30 + [2] * 25 + [3] * 20 + [4] * 15 + [5] * 10
+            self.assertEqual(within(5, lambda: total(basket)), 65000)  # optimal (cross-checked against an all-subsets brute force on small baskets)
+
+        def test_discount_trap_scales(self):
+            basket = [1, 1, 2, 2, 3, 3, 4, 5] * 6
+            self.assertEqual(within(5, lambda: total(basket)), 6 * 5120)
+
+        def test_many_calls(self):
+            for _ in range(300):
+                self.assertEqual(total([1, 1, 2, 2, 3, 3, 4, 5]), 5120)
+turns:
+  - prompt: >-
+      Read .docs/instructions.md and implement `total(basket)` in book_store.py so that every test
+      in book_store_test.py passes. Run the tests with `python3 -m pytest -q book_store_test.py`.
+    checks:
+      - {kind: tests, runner: python, files: [], restore: []}
+  - prompt: >-
+      `total` should reject bad input instead of crashing with a KeyError or returning nonsense:
+      raise `ValueError` for any title that is not an int from 1 to 5 (booleans, strings, floats and
+      None are not valid titles). Tuples and generators must be accepted as baskets, the caller's
+      list must not be modified, and valid baskets must price exactly as before.
+    checks:
+      - {kind: tests, runner: python, files: [book_store_test.py, hidden_validation_test.py], restore: [book_store_test.py], hidden: [hidden_validation_test.py]}
+  - prompt: >-
+      Bug report: prices come back as floats (`1520.0`) and some baskets pick up float dust. Prices
+      are in cents, so `total` must always return an exact `int`. Keep every existing test passing.
+    checks:
+      - {kind: tests, runner: python, files: [book_store_test.py, hidden_validation_test.py, hidden_cents_test.py], restore: [book_store_test.py], hidden: [hidden_validation_test.py, hidden_cents_test.py]}
+  - prompt: >-
+      `total` never comes back for a large basket (a hundred books, 20 of each title, hangs). Make
+      it fast and exact for baskets of a few hundred books, for example by caching sub-results or
+      working on counts instead of individual books. It must still find the cheapest grouping, e.g.
+      two groups of four beat a group of five plus a group of three.
+    checks:
+      - {kind: tests, runner: python, files: [book_store_test.py, hidden_validation_test.py, hidden_cents_test.py, hidden_perf_test.py], restore: [book_store_test.py], hidden: [hidden_validation_test.py, hidden_cents_test.py, hidden_perf_test.py]}
+  - prompt: >-
+      Without changing any files: in four to six sentences, explain why taking the biggest possible
+      group of different titles each time is not always the cheapest way to price a basket, using
+      the eight-book example, and describe the strategy your `total` uses instead.
+    checks:
+      - {kind: keyed_facts, all: ['greedy|biggest|largest|maximal', group, '(2|two).*(4|four)|four|5120', 'cache|memo|dynamic|recurs']}
+  - prompt: >-
+      Refactor book_store.py for readability without changing behaviour: split it into small private
+      helpers (names starting with an underscore) for validating the basket, counting copies, and
+      taking one group, next to the cached `_cheapest`. Keep the public `total` and all prices
+      identical; run all tests.
+    checks:
+      - {kind: file_regex, path: book_store.py, pattern: '^\s*def _[a-z]', min_count: 4}
+      - {kind: tests, runner: python, files: [book_store_test.py, hidden_validation_test.py, hidden_cents_test.py, hidden_perf_test.py], restore: [book_store_test.py], hidden: [hidden_validation_test.py, hidden_cents_test.py, hidden_perf_test.py]}
+  - prompt: >-
+      Write your own tests in a new file `test_extra.py`: at least six test functions covering the
+      empty basket, the two-groups-of-four trap, a large basket, invalid titles and the int return
+      type. Run them with pytest.
+    checks:
+      - {kind: file_regex, path: test_extra.py, pattern: '^\s*def test_', min_count: 6}
+      - {kind: tests, runner: python, files: [book_store_test.py, test_extra.py], restore: [book_store_test.py]}
+  - prompt: >-
+      Create `README_BOOKS.md` documenting the module with these level-2 sections: Usage, Pricing
+      rules, Validation, Examples. Explain that prices are in cents, include a short runnable
+      example in the Examples section, and then run the complete test suite including test_extra.py.
+    checks:
+      - {kind: doc_sections, path: README_BOOKS.md, headings: [Usage, Pricing, Validation, Example]}
+      - {kind: file_regex, path: README_BOOKS.md, pattern: cents}
+      - {kind: tests, runner: python, files: [book_store_test.py, hidden_validation_test.py, hidden_cents_test.py, hidden_perf_test.py, test_extra.py], restore: [book_store_test.py], hidden: [hidden_validation_test.py, hidden_cents_test.py, hidden_perf_test.py]}

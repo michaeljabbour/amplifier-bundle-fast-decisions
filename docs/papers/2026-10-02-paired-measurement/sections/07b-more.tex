@@ -1,0 +1,123 @@
+\section{More explorations of the campaign data \texorpdfstring{\screen}{[screen]}}\label{sec:more}
+
+Everything in this section is exploratory: it uses all \NScenarios\ scenarios, was not preregistered, and is
+meant to show \emph{how} the costs arise. It uses the \PerTurnN\ turn rows of cost-valid sessions.
+
+\subsection{How cost accumulates over a session}
+
+\begin{figure}[htbp]
+\centering
+\pgfplotslegendfromname{perturnlegend}\par\smallskip
+\input{figures/fig-perturn.tex}
+\caption{Mean cost of each turn by turn index, per arm and host. Later turns are averaged over fewer scenarios,
+because scenarios have \MinTurns\ to \MaxTurns\ turns.}
+\label{fig:perturn}
+\howtoread{Each line is one arm. Turn 1 is expensive for everyone (a cold cache); later turns are cheaper but
+grow as the history grows. On Fable the routed lines stay well below the plain host at every turn; on Opus they
+sit above it.}
+\end{figure}
+
+On the Fable host the first turn alone was \TurnOneShareFable\,\% of a plain session's cost on average.
+\Cref{fig:turncomp} shows what each turn of a plain-host session paid for.
+
+\begin{figure}[htbp]
+\centering
+\pgfplotslegendfromname{turncomplegend}\par\smallskip
+\input{figures/fig-turncomp.tex}
+\caption{What each turn of a plain-host session paid for, by turn index (mean dollars per token class).}
+\label{fig:turncomp}
+\howtoread{Turn 1 is mostly cache writes (hatched): the whole prompt is new. Later turns are dominated by cache
+reads (blue) as the history is re-read each time, and the writes shrink to the new part of the conversation.
+Fable's writes and output are expensive; Opus's reads are cheap.}
+\end{figure}
+
+\subsection{Long pauses and the cache}
+
+A pause longer than the cache lifetime should force the next request to write the whole history again.
+\Cref{fig:gapwrites} confirms it: after a \LongGapMin-minute pause, a plain Fable session's first request wrote
+\GapWriteFableLong\ tokens on average, against \GapWriteFableShort\ after a \ShortGapS-second pause
+(\GapWriteFableX\X; \GapWriteOpusX\X\ on Opus).
+
+\begin{figure}[htbp]
+\centering
+\pgfplotslegendfromname{gaplegend}\par\smallskip
+\input{figures/fig-gapwrites.tex}
+\caption{Cache-write tokens on the first request of a turn, after a short pause and after a long pause (turns 2
+onwards), per arm and host.}
+\label{fig:gapwrites}
+\howtoread{Each row has two bars. The hatched bar (after a long pause) is several times longer in every row:
+the expired history is written again, on any model.}
+\end{figure}
+
+\subsection{When the shipped arm switched}
+
+The shipped arm re-chooses its model at the start of each turn. Its \SwitchTotal\ switches were all at turn
+boundaries; \SwitchTurnTwoPct\,\% of them led into turn 2 (\cref{fig:switch}). Each switch cost about
+\RebuildPerSwitchCents\ cents of rebuild on average.
+
+\begin{figure}[htbp]
+\centering
+\pgfplotslegendfromname{switchlegend}\par\smallskip
+\input{figures/fig-switch.tex}
+\caption{Shipped arm: number of model switches leading into each turn, by host.}
+\label{fig:switch}
+\howtoread{Each pair of bars is one turn. Switches are spread over the whole session rather than concentrated
+at the start; every one of them re-writes the history to the other model's cache.}
+\end{figure}
+
+\subsection{Scenario by scenario}
+
+\begin{figure}[htbp]
+\centering
+\pgfplotslegendfromname{scenariolegend}\par\smallskip
+\input{figures/fig-scenario.tex}
+\caption{Scenario by scenario: the mean plain Fable cost against the mean saving of the sticky arm (Fable host). The three
+scenarios where sticky cost the most extra are labelled.}
+\label{fig:scenario}
+\howtoread{Points above the dashed line saved money. Most scenarios did, and expensive scenarios tended to save
+more. \ScNegative\ of \ScN\ scenarios cost more on average; the labelled ones are the worst three.}
+\end{figure}
+
+\subsection{The noise floor in detail}
+
+\begin{figure}[htbp]
+\centering
+\pgfplotslegendfromname{aalegend}\par\smallskip
+\input{figures/fig-aahist.tex}
+\caption{Distribution of the log cost ratio between two identical plain-host sessions (A/A), by host.}
+\label{fig:aahist}
+\howtoread{A perfectly repeatable system would put every bar at zero. The spread is the noise floor; the Opus
+bars lean slightly to the right, the small bias discussed in \cref{sec:aa}.}
+\end{figure}
+
+\subsection{Quality by scenario family}
+
+\begin{table}[htbp]
+\centering\small
+\caption{Mean difference in turn-pass fraction (arm minus plain host) by scenario family, all splits. Negative
+means the arm passed fewer scripted turns.}
+\label{tab:qualityfamily}
+\input{generated/tables/quality-family.tex}
+\end{table}
+
+\subsection{Requests per session and session length}
+
+\begin{figure}[htbp]
+\centering
+\input{figures/fig-requests.tex}
+\caption{Main-loop requests per session by kind of session: box from the 25th to the 75th percentile, line at
+the median, whiskers from the 5th to the 95th percentile.}
+\label{fig:requests}
+\howtoread{Boxes further right made more requests for the same scripted work. Sonnet-heavy sessions sit to the
+right of the plain Opus sessions, which is part of why routing cost more on Opus.}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\pgfplotslegendfromname{bandlegend}\par\smallskip
+\input{figures/fig-band.tex}
+\caption{Cost ratio by scripted session length, all splits, with 95\,\% intervals.}
+\label{fig:band}
+\howtoread{Flat rows mean the ratio does not depend on session length within 8--16 turns. Longer sessions moved
+the Opus ratios slightly toward 1; on Fable the saving held at every length.}
+\end{figure}

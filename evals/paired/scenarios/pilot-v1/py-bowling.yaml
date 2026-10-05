@@ -1,0 +1,147 @@
+# Pilot scenario 1/5: polyglot-style feature work (Python). Exercise is OUTSIDE the S2 40-exercise slice
+# (seed 20260919) and not in any S1 dev/holdout task.
+id: py-bowling
+task_type: feature
+language: python
+split: pilot
+source:
+  desc: "Aider polyglot-benchmark python/bowling (Exercism), outside the S2 slice"
+  repo: https://github.com/Aider-AI/polyglot-benchmark
+  sha: 7e0611e77b54e2dea774cdc0aa00cf9f7ed6144f
+workspace:
+  kind: git
+  repo: https://github.com/Aider-AI/polyglot-benchmark
+  sha: 7e0611e77b54e2dea774cdc0aa00cf9f7ed6144f
+  subdir: python/exercises/practice/bowling
+  local_hint: ~/dev/afast-campaign-corrected-polyglot-20260919/polyglot/polyglot-benchmark
+  remove: [.meta]
+protected: [bowling_test.py]
+hidden_files:
+  hidden_frames_test.py: |
+    import unittest
+    from bowling import BowlingGame
+
+    def play(rolls):
+        g = BowlingGame()
+        for r in rolls:
+            g.roll(r)
+        return g
+
+    class FramesTest(unittest.TestCase):
+        def test_empty(self):
+            self.assertEqual(play([]).frames(), [])
+        def test_open_frames(self):
+            self.assertEqual(play([3, 4, 5, 2]).frames(), [[3, 4], [5, 2]])
+        def test_strike_is_single_roll_frame(self):
+            self.assertEqual(play([10, 3, 4]).frames(), [[10], [3, 4]])
+        def test_partial_frame(self):
+            self.assertEqual(play([3]).frames(), [[3]])
+        def test_perfect_game(self):
+            self.assertEqual(play([10] * 12).frames(), [[10]] * 9 + [[10, 10, 10]])
+        def test_tenth_frame_spare(self):
+            self.assertEqual(play([0] * 18 + [5, 5, 7]).frames(), [[0, 0]] * 9 + [[5, 5, 7]])
+        def test_returns_copies(self):
+            g = play([3, 4])
+            g.frames()[0].append(9)
+            self.assertEqual(g.frames(), [[3, 4]])
+  hidden_scores_test.py: |
+    import unittest
+    from bowling import BowlingGame
+
+    def play(rolls):
+        g = BowlingGame()
+        for r in rolls:
+            g.roll(r)
+        return g
+
+    class FrameScoresTest(unittest.TestCase):
+        def test_empty(self):
+            self.assertEqual(play([]).frame_scores(), [])
+        def test_open(self):
+            self.assertEqual(play([3, 4, 5, 2]).frame_scores(), [7, 14])
+        def test_strike_needs_two_more_rolls(self):
+            self.assertEqual(play([10]).frame_scores(), [])
+            self.assertEqual(play([10, 3]).frame_scores(), [])
+            self.assertEqual(play([10, 3, 4]).frame_scores(), [17, 24])
+        def test_spare_needs_one_more_roll(self):
+            self.assertEqual(play([5, 5]).frame_scores(), [])
+            self.assertEqual(play([5, 5, 3]).frame_scores(), [13])
+        def test_consecutive_strikes(self):
+            self.assertEqual(play([10, 10]).frame_scores(), [])
+            self.assertEqual(play([10, 10, 10]).frame_scores(), [30])
+        def test_perfect_game(self):
+            self.assertEqual(play([10] * 12).frame_scores(), list(range(30, 301, 30)))
+        def test_last_equals_score_when_complete(self):
+            g = play([10] * 12)
+            self.assertEqual(g.frame_scores()[-1], g.score())
+  hidden_types_test.py: |
+    import unittest
+    from bowling import BowlingGame
+
+    class TypeValidationTest(unittest.TestCase):
+        def test_non_int_raises_type_error(self):
+            for bad in ("x", 3.5, None, True, [1]):
+                with self.subTest(bad=bad):
+                    with self.assertRaises(TypeError):
+                        BowlingGame().roll(bad)
+        def test_negative_still_value_error(self):
+            with self.assertRaises(ValueError):
+                BowlingGame().roll(-1)
+        def test_bad_roll_does_not_corrupt_state(self):
+            g = BowlingGame()
+            g.roll(3)
+            with self.assertRaises(TypeError):
+                g.roll("x")
+            g.roll(4)
+            for _ in range(18):
+                g.roll(0)
+            self.assertEqual(g.score(), 7)
+turns:
+  - prompt: >-
+      Read .docs/instructions.md and implement BowlingGame in bowling.py so that every test in
+      bowling_test.py passes. Run the tests with `python3 -m pytest -q bowling_test.py`.
+    checks:
+      - {kind: tests, runner: python, files: [bowling_test.py], restore: [bowling_test.py]}
+  - prompt: >-
+      Add a method `frames()` to BowlingGame that returns the rolls so far grouped by frame as a list
+      of lists of ints: one list per frame that has been started, a strike is a one-roll frame in
+      frames 1-9, and the 10th frame may hold up to three rolls. It must return copies, so mutating
+      the result never changes the game. An empty game returns [].
+    checks:
+      - {kind: tests, runner: python, files: [bowling_test.py, hidden_frames_test.py], restore: [bowling_test.py], hidden: [hidden_frames_test.py]}
+  - prompt: >-
+      Add a method `frame_scores()` returning the cumulative score after each frame whose score is
+      already determined (a strike needs the next two rolls, a spare needs the next one; open frames
+      are determined immediately). For a finished game its last element equals `score()`.
+    checks:
+      - {kind: tests, runner: python, files: [bowling_test.py, hidden_frames_test.py, hidden_scores_test.py], restore: [bowling_test.py], hidden: [hidden_frames_test.py, hidden_scores_test.py]}
+  - prompt: >-
+      Refactor bowling.py for readability: split the logic into a few small private helper
+      functions or methods (names starting with an underscore) without changing any behaviour. All
+      existing tests must still pass.
+    checks:
+      - {kind: file_regex, path: bowling.py, pattern: '^\s*def _[a-z]', min_count: 2}
+      - {kind: tests, runner: python, files: [bowling_test.py, hidden_frames_test.py, hidden_scores_test.py], restore: [bowling_test.py], hidden: [hidden_frames_test.py, hidden_scores_test.py]}
+  - prompt: >-
+      Write your own tests in a new file `test_extra.py`: at least six test functions covering
+      `frames()` and `frame_scores()`, including a perfect game and a game ending in a spare. Run them.
+    checks:
+      - {kind: file_regex, path: test_extra.py, pattern: '^\s*def test_', min_count: 6}
+      - {kind: tests, runner: python, files: [test_extra.py], restore: [bowling_test.py]}
+  - prompt: >-
+      In four to six sentences, explain how your implementation handles the bonus rolls of the
+      10th frame, and which of your methods deal with strikes versus spares. Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: ['10th|tenth', 'strike', 'spare', 'bonus|fill|extra']}
+  - prompt: >-
+      Create `README_BOWLING.md` documenting the module with these level-2 sections: Usage, API,
+      Scoring rules, Examples. Include a short runnable example in the Examples section.
+    checks:
+      - {kind: doc_sections, path: README_BOWLING.md, headings: ['Usage', 'API', 'Scoring', 'Example']}
+  - prompt: >-
+      One last edge case: `roll()` must raise TypeError for any non-int pin count (strings, floats,
+      None, lists and also bool), while a negative int must still raise ValueError, and a rejected
+      roll must leave the game state untouched. Add tests for this to test_extra.py and make
+      everything pass.
+    checks:
+      - {kind: tests, runner: python, files: [bowling_test.py, hidden_frames_test.py, hidden_scores_test.py, hidden_types_test.py, test_extra.py], restore: [bowling_test.py], hidden: [hidden_frames_test.py, hidden_scores_test.py, hidden_types_test.py]}

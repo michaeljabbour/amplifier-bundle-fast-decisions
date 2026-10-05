@@ -1,0 +1,80 @@
+# python-humanize/humanize at 392aef7 plus two planted patches (rounding step-up removal, Oxford-comma change) and a generated _version.py
+id: humanize-review
+task_type: review
+language: python
+split: test
+source:
+  desc: python-humanize/humanize at 392aef7 plus two planted patches (rounding step-up removal, Oxford-comma change) and a generated _version.py
+  repo: https://github.com/python-humanize/humanize.git
+  sha: 392aef707c0e74341ab4a51420984e9ea6b566c5
+workspace:
+  kind: git
+  repo: https://github.com/python-humanize/humanize.git
+  sha: 392aef707c0e74341ab4a51420984e9ea6b566c5
+  local_hint: ~/dev/afast-paired-src/python-humanize
+  add_files:
+    src/humanize/_version.py: |
+      __version__ = "0+snapshot"
+    patches/filesize_rounding.diff: "--- a/src/humanize/filesize.py\n+++ b/src/humanize/filesize.py\n@@ -99,12 +99,6 @@\n     from math import log\n \n     exp = int(min(log(abs_bytes, base), len(suffix)))\n-    # The suffix is chosen from the unrounded byte count, but `format` rounds the\n-    # mantissa afterward; rounding can push it up to `base` (e.g. 999999 is\n-    # 999.999 kB, which formats to \"1000.0 kB\"). When that happens and a larger\n-    # suffix is available, step up one suffix so the result reads \"1.0 MB\".\n-    if exp < len(suffix) and abs(float(format % (abs_bytes / (base**exp)))) >= base:\n-        exp += 1\n     space = \"\" if gnu else \" \"\n     ret: str = format % (bytes_ / (base**exp)) + space + _(suffix[exp - 1])\n     return ret\n"
+    patches/natural_list_oxford.diff: |
+      --- a/src/humanize/lists.py
+      +++ b/src/humanize/lists.py
+      @@ -34,7 +34,5 @@
+               return ""
+           if len(item_list) == 1:
+               return item_list[0]
+      -    elif len(item_list) == 2:
+      -        return f"{item_list[0]} and {item_list[1]}"
+           else:
+      -        return ", ".join(item_list[:-1]) + f" and {item_list[-1]}"
+      +        return ", ".join(item_list[:-1]) + f", and {item_list[-1]}"
+turns:
+- prompt: Explain how `naturalsize` in src/humanize/filesize.py decides which unit to use and which base each mode uses (default, binary, gnu). Do not change any files.
+  checks:
+  - {kind: keyed_facts, all: [\blog\b|logarithm, '1024', '1000', gnu]}
+- prompt: In naturalsize there is a special adjustment after the exponent is computed. What bug does it prevent? Give one concrete input and the exact output with it. Do not change any files.
+  checks:
+  - {kind: keyed_facts, all: ['999999|999,999|999\.999', 1\.0 MB, 1000\.0 kB, round]}
+- prompt: 'The file patches/filesize_rounding.diff is a proposed cleanup of src/humanize/filesize.py. Review it critically: what behaviour does it break, with a concrete input, and what would you ask the author to do? Do not apply it.'
+  checks:
+  - {kind: keyed_facts, all: ['step.?up|exp \+= 1|rounding carry|carry', 1000\.0 kB, '999999|999,999|999\.9']}
+- prompt: Write your review of that diff to REVIEW.md with level-2 sections Summary, Findings and Recommendation, quoting the exact wrong output it produces.
+  checks:
+  - {kind: doc_sections, path: REVIEW.md, headings: [Summary, Findings, Recommendation]}
+  - {kind: file_regex, path: REVIEW.md, pattern: 1000\.0 kB}
+  - {kind: file_regex, path: REVIEW.md, pattern: '999999|999,999'}
+- prompt: Now review patches/natural_list_oxford.diff, which changes src/humanize/lists.py. Is it safe to merge? Which existing tests would it affect and what exact output changes for a two-item list? Do not apply it.
+  checks:
+  - {kind: keyed_facts, all: ['one, and two|, and two', test_lists|tests/test_lists, oxford|serial comma]}
+  gap_before_s: 420
+- prompt: Add tests/test_filesize_boundaries.py with parametrized pytest cases that pin the rounding-boundary behaviour of naturalsize (decimal and binary, plus the singular 'Byte' case). Run them. The tests must really guard the boundary logic.
+  checks:
+  - {kind: file_regex, path: tests/test_filesize_boundaries.py, pattern: def test_}
+  - {kind: tests, runner: cmd, cmd: 'PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTHONPATH=src python3 -m pytest -q -p no:cacheprovider tests/test_filesize_boundaries.py && perl -pi -e ''s/>= base:/>= base * 10**9:/'' src/humanize/filesize.py && ! PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTHONPATH=src python3 -m pytest -q -p no:cacheprovider tests/test_filesize_boundaries.py', expect_regex: \d+ passed}
+- prompt: How does `naturaldelta` in src/humanize/time.py convert days into years and months, and what does the `months` parameter do? Do not change any files.
+  checks:
+  - {kind: keyed_facts, all: ['365', 30\.5, months]}
+- prompt: What does `naturaldelta(86400*40)` return with the default arguments, and what does it return with months=False? Verify by running it.
+  checks:
+  - {kind: keyed_facts, all: [a month, 40 days]}
+- prompt: In src/humanize/number.py, how does `metric` avoid output like '10000 ' when rounding carries into the next exponent? Give the exact result for metric(9999). Do not change any files.
+  checks:
+  - {kind: keyed_facts, all: [carry|bump, 10\.0 k]}
+  gap_before_s: 420
+- prompt: Write docs/cookbook.md with level-2 sections File sizes, Lists, Numbers and Time. Every example output must come from actually running the library.
+  checks:
+  - {kind: doc_sections, path: docs/cookbook.md, headings: [File sizes, Lists, Numbers, Time]}
+  - {kind: file_regex, path: docs/cookbook.md, pattern: 1\.0 MB}
+  - {kind: file_regex, path: docs/cookbook.md, pattern: a month}
+- prompt: Add a '## Cookbook' section to README.md that links to docs/cookbook.md in one sentence.
+  checks:
+  - {kind: doc_sections, path: README.md, headings: [Cookbook]}
+  - {kind: file_regex, path: README.md, pattern: docs/cookbook\.md}
+- prompt: 'Write ARCHITECTURE.md summarising the package: one bullet per module under src/humanize/ with its public functions, plus a note on how non-finite floats are reported (give the exact strings).'
+  checks:
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: filesize\.py}
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: lists\.py}
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: natural_list}
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: \+Inf}
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: -Inf}
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: NaN}

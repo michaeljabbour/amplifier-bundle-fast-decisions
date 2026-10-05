@@ -1,0 +1,19 @@
+% What each turn of a plain-host session paid for, by turn index (mean dollars per class).
+\begin{tikzpicture}
+\begin{groupplot}[benchmark, group style={group size=2 by 1, horizontal sep=1.6cm},
+  width=0.48\linewidth, height=5.6cm, xmin=0.3, xmax=16.7, xtick={1,4,8,12,16},
+  ymin=0, ymajorgrids, xlabel={Turn}, title style={font=\small\bfseries}]
+\nextgroupplot[ybar stacked, bar width=5pt, title={Fable host, plain}, ylabel={Mean cost of the turn (\$)},
+  legend to name=turncomplegend, legend columns=4, legend cell align=left,
+  legend style={/tikz/every even column/.append style={column sep=8pt}}]
+\addplot[fill=okgray!50, draw=black!60] table[x=turn, y=input]{generated/data/turncomp-fable.dat}; \addlegendentry{uncached input}
+\addplot[fill=okblue!45, draw=black!60] table[x=turn, y=read]{generated/data/turncomp-fable.dat}; \addlegendentry{cache read}
+\addplot[fill=okorange!80, draw=black!60, postaction={pattern=north east lines, pattern color=white}] table[x=turn, y=write]{generated/data/turncomp-fable.dat}; \addlegendentry{cache write}
+\addplot[fill=okgreen!70, draw=black!60, postaction={pattern=dots, pattern color=white}] table[x=turn, y=output]{generated/data/turncomp-fable.dat}; \addlegendentry{output}
+\nextgroupplot[ybar stacked, bar width=5pt, title={Opus host, plain}]
+\addplot[fill=okgray!50, draw=black!60] table[x=turn, y=input]{generated/data/turncomp-opus.dat};
+\addplot[fill=okblue!45, draw=black!60] table[x=turn, y=read]{generated/data/turncomp-opus.dat};
+\addplot[fill=okorange!80, draw=black!60, postaction={pattern=north east lines, pattern color=white}] table[x=turn, y=write]{generated/data/turncomp-opus.dat};
+\addplot[fill=okgreen!70, draw=black!60, postaction={pattern=dots, pattern color=white}] table[x=turn, y=output]{generated/data/turncomp-opus.dat};
+\end{groupplot}
+\end{tikzpicture}

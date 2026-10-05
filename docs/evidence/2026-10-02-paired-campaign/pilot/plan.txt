@@ -1,0 +1,38 @@
+plan 2e5229198b34  design=pilot-v1  seed=20261002  reps=1  hosts=opus,fable  parallel=5  nonce=per_session
+arms: anchor, aa, shipped, sticky, sonnet
+45 sessions in 10 waves
+
+scenario         type     lang    turns gaps>=5m
+go-wordsearch    feature  go          8        0
+py-bowling       feature  python      8        0
+rust-wordcount   mixed    rust        8        2
+slugify-bugfix   bugfix   python      8        0
+slugify-review   review   python      8        0
+
+wave (seeded order)                sessions    est $
+slugify-bugfix-r1-fable                   4    16.26
+go-wordsearch-r1-opus                     5     8.89
+rust-wordcount-r1-fable                   4    15.61
+go-wordsearch-r1-fable                    4    13.00
+slugify-review-r1-fable                   4    10.84
+slugify-bugfix-r1-opus                    5    11.11
+py-bowling-r1-opus                        5     8.89
+rust-wordcount-r1-opus                    5    10.66
+slugify-review-r1-opus                    5     7.40
+py-bowling-r1-fable                       4    13.00
+
+arm        host     n     est $
+aa         fable    5     21.29
+aa         opus     5      8.23
+anchor     fable    5     21.29
+anchor     opus     5      8.23
+shipped    fable    5     13.42
+shipped    opus     5     10.81
+sonnet     any      5     11.13
+sticky     fable    5     12.71
+sticky     opus     5      8.56
+
+estimate (sessions)      $115.65
+infra retry reserve      $9.25
+estimate incl. reserve   $124.90   budget $150.00
+cost basis: sessions.csv (S1-multi, 4 turns), spec section 3 (4-turn unit means, scaled to scenario turns/type; an estimate)

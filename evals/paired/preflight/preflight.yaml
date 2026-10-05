@@ -1,0 +1,15 @@
+# One-turn smoke scenario for `paired.py preflight`: proves a (cell, model, key) can start a session in the campaign's
+# isolated provider environment and get a model response, for cents. Not part of any campaign schedule.
+id: preflight
+preflight: true
+task_type: knowledge
+language: none
+split: pilot
+source: {desc: "synthetic one-turn preflight"}
+workspace:
+  kind: inline
+  files: {README.md: "preflight workspace\n"}
+turns:
+  - prompt: "Reply with OK."
+    checks:
+      - {kind: keyed_facts, all: ['\bOK\b']}
