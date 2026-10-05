@@ -139,10 +139,14 @@ class S1Gates(unittest.TestCase):
         return {**(a.get("gate") or {}), **((a.get("gate_by_host") or {}).get(host) or {})}
 
     def gate(self, arm, host, *, models, efforts, routed, counts=None, switches=0):
+        """`counts["model_routed"]` = number of requests that were really routed (reason start_model); the orchestrator also
+        emits model_routed with reason start_strong on every request that kept the host, which must not count as routing."""
+        n_routed = (counts or {}).get("model_routed", 0)
         counts = {"difficulty_judged": 1, **(counts or {})}
+        reasons = ["start_model"] * n_routed + ["start_strong"] * (len(models) - n_routed)
         reqs = [{"model": m, "effort": e} for m, e in zip(models, efforts)]
         session = {"kind": "fd", "gate": self.arm_gate(arm, host)}
-        return paired.mechanism_gate(session, counts, switches, models, efforts, routed, reqs)
+        return paired.mechanism_gate(session, counts, switches, models, efforts, routed, reqs, reasons)
 
     def decided(self, **kw):
         return {"source": "decided", "decision": "strong", "reason_code": "judge_strong", **kw}
@@ -182,6 +186,11 @@ class S1Gates(unittest.TestCase):
         self.assertFalse(self.gate("shipped", "opus", models=["claude-opus-5-5"], efforts=["medium"],
                                    routed=[self.decided(reason_code="price_gate_strong")])["mechanism_engaged"])  # effort set on ShO
 
+    def test_start_strong_receipts_are_not_routing(self):
+        routed = [self.decided(reason_code="price_gate_strong")]
+        g = self.gate("shipped", "opus", models=["claude-opus-5-5"] * 3, efforts=[None] * 3, routed=routed)   # 3 start_strong receipts
+        self.assertTrue(g["mechanism_engaged"], g)
+
     def test_sho_m_needs_medium_on_every_request(self):
         routed = [self.decided(reason_code="price_gate_strong")]
         self.assertTrue(self.gate("shipped_m", "opus", models=["claude-opus-5-5"] * 2, efforts=["medium"] * 2, routed=routed)["mechanism_engaged"])
@@ -207,18 +216,45 @@ class S1Gates(unittest.TestCase):
         self.assertTrue(ok["mechanism_engaged"])
         self.assertFalse(paired.mechanism_gate(s, {}, 0, ["claude-opus-5-5"], [None])["mechanism_engaged"])
 
+    def test_receipts_are_read_from_nested_session_events_and_flat_run_events(self):
+        import tempfile
+        nested = {"event": "fast_decisions:session_routed", "event_id": "1",
+                  "data": {"data": {"source": "decided", "decision": "strong", "reason_code": "price_gate_strong",
+                                    "gate": {"route": False, "reason": "price_gate_host"}}, "decision_id": "d1"}}
+        nested_mr = {"event": "fast_decisions:model_routed", "event_id": "2",
+                     "data": {"data": {"reason_code": "start_strong"}, "decision_id": "d1"}}
+        with tempfile.TemporaryDirectory() as td:
+            sess, run = Path(td) / "s", Path(td) / "run-events"
+            sess.mkdir()
+            run.mkdir()
+            (sess / "events.jsonl").write_text("\n".join(json.dumps(e) for e in (nested, nested_mr)), encoding="utf-8")
+            flat = {"event": "fast_decisions:model_routed", "event_id": "9", "data": {"reason_code": "start_strong"}}
+            (run / "e.jsonl").write_text(json.dumps(flat), encoding="utf-8")
+            parsed = paired.merge_run_receipts(paired.parse_events(sess), run)
+        self.assertEqual(parsed["session_routed"][0]["decision"], "strong")
+        self.assertEqual(parsed["session_routed"][0]["reason_code"], "price_gate_strong")
+        self.assertEqual(parsed["model_routed"], ["start_strong"])
+        g = paired.mechanism_gate({"kind": "fd", "gate": {"served_model_prefix": "claude-opus-5-5", "no_routing": True,
+                                                         "gate_closed": True, "decided_once": True}},
+                                  {"difficulty_judged": 1}, 0, ["claude-opus-5-5"], [None], parsed["session_routed"],
+                                  [{"model": "claude-opus-5-5", "effort": None}], parsed["model_routed"])
+        self.assertTrue(g["mechanism_engaged"], g)
+
     def test_session_routed_is_parsed_from_events(self):
         import tempfile
         with tempfile.TemporaryDirectory() as td:
             ev = [{"event": "fast_decisions:session_routed", "event_id": "1",
                    "data": {"source": "decided", "decision": "cheap", "reason_code": "judge_cheap", "scope": "session",
                             "gate": {"route": True, "reason": "cheaper"}}},
-                  {"event": "fast_decisions:session_routed", "event_id": "2", "data": {"source": "restored", "decision": "cheap"}}]
+                  {"event": "fast_decisions:session_routed", "event_id": "2", "data": {"source": "restored", "decision": "cheap"}},
+                  {"event": "fast_decisions:model_routed", "event_id": "3", "data": {"reason_code": "start_strong"}},
+                  {"event": "fast_decisions:model_routed", "event_id": "4", "data": {"reason_code": "start_model"}}]
             (Path(td) / "events.jsonl").write_text("\n".join(json.dumps(e) for e in ev), encoding="utf-8")
             parsed = paired.parse_events(td)
         self.assertEqual([r["source"] for r in parsed["session_routed"]], ["decided", "restored"])
         self.assertEqual(parsed["session_routed"][0]["gate_route"], True)
         self.assertEqual(parsed["fd_counts"]["session_routed"], 2)
+        self.assertEqual(parsed["model_routed"], ["start_strong", "start_model"])
 
 
 class S1Smoke(unittest.TestCase):

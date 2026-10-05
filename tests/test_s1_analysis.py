@@ -40,16 +40,16 @@ def synth(seed=7, n=60, effects=None, jev_disagrees=0.10, pc_loss_on_keep=0.08):
         for rep in (1, 2):
             nz = lambda sd=0.04: math.exp(rng.gauss(0, sd))      # noqa: E731
             tp = lambda x: max(0.0, min(1.0, x + rng.gauss(0, 0.01)))  # noqa: E731
-            F, O = "claude-fable-5-1", "claude-opus-5-5"
+            FABLE, OPUS = "claude-fable-5-1", "claude-opus-5-5"
             kw = dict(ws=ws, ttype=ttype)
             rstar_cheap = ws <= 300
             jev_cheap = rstar_cheap and rng.random() > jev_disagrees
             pc_tp = 0.95 - (pc_loss_on_keep if ttype in a.KEEP_TYPES else 0.0)
-            rows += [session(s, rep, "fable", "anchor", base * nz(), tp(0.95), models=[F], **kw),
-                     session(s, rep, "fable", "aa", base * nz(), tp(0.95), models=[F], **kw) if i % 10 == 0 else None,
-                     session(s, rep, "fable", "anchor_m", base * e["anchor_m"] * nz(), tp(0.95), models=[F], **kw),
-                     session(s, rep, "fable", "ph", base * e["ph"] * nz(), tp(0.95), models=[F], **kw),
-                     session(s, rep, "fable", "ph_m", base * e["ph_m"] * nz(), tp(0.95), models=[F], **kw),
+            rows += [session(s, rep, "fable", "anchor", base * nz(), tp(0.95), models=[FABLE], **kw),
+                     session(s, rep, "fable", "aa", base * nz(), tp(0.95), models=[FABLE], **kw) if i % 10 == 0 else None,
+                     session(s, rep, "fable", "anchor_m", base * e["anchor_m"] * nz(), tp(0.95), models=[FABLE], **kw),
+                     session(s, rep, "fable", "ph", base * e["ph"] * nz(), tp(0.95), models=[FABLE], **kw),
+                     session(s, rep, "fable", "ph_m", base * e["ph_m"] * nz(), tp(0.95), models=[FABLE], **kw),
                      session(s, rep, "any", "pc", base * e["pc"] * nz(), tp(pc_tp), models=["claude-sonnet-5"], **kw)]
             pc_row = rows[-1]
             ph_row = rows[-3]
@@ -57,10 +57,10 @@ def synth(seed=7, n=60, effects=None, jev_disagrees=0.10, pc_loss_on_keep=0.08):
             rows.append(session(s, rep, "fable", "shipped", shf["cost_usd_tools_normalized"], shf["turn_pass_frac"],
                                 models=list(shf["served_models"]), **kw))
             ob = base * 0.4
-            rows += [session(s, rep, "opus", "anchor", ob * nz(), tp(0.95), models=[O], **kw),
-                     session(s, rep, "opus", "anchor_m", ob * e["o_m"] * nz(), tp(0.95), models=[O], **kw),
-                     session(s, rep, "opus", "shipped", ob * e["sho"] * nz(), tp(0.95), models=[O], **kw),
-                     session(s, rep, "opus", "shipped_m", ob * e["sho_m"] * nz(), tp(0.95), models=[O], **kw)]
+            rows += [session(s, rep, "opus", "anchor", ob * nz(), tp(0.95), models=[OPUS], **kw),
+                     session(s, rep, "opus", "anchor_m", ob * e["o_m"] * nz(), tp(0.95), models=[OPUS], **kw),
+                     session(s, rep, "opus", "shipped", ob * e["sho"] * nz(), tp(0.95), models=[OPUS], **kw),
+                     session(s, rep, "opus", "shipped_m", ob * e["sho_m"] * nz(), tp(0.95), models=[OPUS], **kw)]
     return [r for r in rows if r is not None]
 
 

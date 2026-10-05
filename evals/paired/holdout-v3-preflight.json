@@ -1,0 +1,224 @@
+{
+  "candidate_sha": "a11c24e5217febe48428136873d2b437a15ada62",
+  "cells": [
+    {
+      "cell": "plain",
+      "cost_usd": 0.863977,
+      "efforts_seen": [
+        "None"
+      ],
+      "gate": {
+        "effort": "absent",
+        "served_model_prefix": "claude-fable-5-1"
+      },
+      "gate_problems": [],
+      "model": "claude-fable-5-1",
+      "models_seen": [
+        "claude-fable-5-1"
+      ],
+      "passed": true,
+      "raw_events": true
+    },
+    {
+      "cell": "plain-medium",
+      "cost_usd": 0.86384,
+      "efforts_seen": [
+        "medium"
+      ],
+      "gate": {
+        "effort": "medium",
+        "served_model_prefix": "claude-fable-5-1"
+      },
+      "gate_problems": [],
+      "model": "claude-fable-5-1",
+      "models_seen": [
+        "claude-fable-5-1"
+      ],
+      "passed": true,
+      "raw_events": true
+    },
+    {
+      "cell": "v3-pin-host",
+      "cost_usd": 0.863727,
+      "efforts_seen": [
+        "None"
+      ],
+      "gate": {
+        "decided_once": true,
+        "effort": "absent",
+        "effort_constant": true,
+        "no_routing": true,
+        "served_model_prefix": "claude-fable-5-1",
+        "single_model": true
+      },
+      "gate_problems": [],
+      "model": "claude-fable-5-1",
+      "models_seen": [
+        "claude-fable-5-1"
+      ],
+      "passed": true,
+      "raw_events": true
+    },
+    {
+      "cell": "v3-pin-host-medium",
+      "cost_usd": 0.86374,
+      "efforts_seen": [
+        "medium"
+      ],
+      "gate": {
+        "decided_once": true,
+        "effort": "medium",
+        "effort_constant": true,
+        "no_routing": true,
+        "served_model_prefix": "claude-fable-5-1",
+        "single_model": true
+      },
+      "gate_problems": [],
+      "model": "claude-fable-5-1",
+      "models_seen": [
+        "claude-fable-5-1"
+      ],
+      "passed": true,
+      "raw_events": true
+    },
+    {
+      "cell": "v3-shipped",
+      "cost_usd": 0.259195,
+      "efforts_seen": [
+        "medium"
+      ],
+      "gate": {
+        "decided_once": true,
+        "effort_by_model": {
+          "claude-fable-5-1": "absent",
+          "claude-sonnet-5": "medium"
+        },
+        "effort_constant": true,
+        "single_model": true
+      },
+      "gate_problems": [],
+      "model": "claude-fable-5-1",
+      "models_seen": [
+        "claude-sonnet-5"
+      ],
+      "passed": true,
+      "raw_events": true
+    },
+    {
+      "cell": "v3-pin-cheap",
+      "cost_usd": 0.148287,
+      "efforts_seen": [
+        "medium"
+      ],
+      "gate": {
+        "decided_once": true,
+        "effort": "medium",
+        "effort_constant": true,
+        "min_model_routed": 1,
+        "served_model_prefix": "claude-sonnet-5",
+        "single_model": true
+      },
+      "gate_problems": [],
+      "model": "claude-fable-5-1",
+      "models_seen": [
+        "claude-sonnet-5"
+      ],
+      "passed": true,
+      "raw_events": true
+    },
+    {
+      "cell": "plain-opus",
+      "cost_usd": 0.345076,
+      "efforts_seen": [
+        "None"
+      ],
+      "gate": {
+        "effort": "absent",
+        "served_model_prefix": "claude-opus-5-5"
+      },
+      "gate_problems": [],
+      "model": "claude-opus-5-5",
+      "models_seen": [
+        "claude-opus-5-5"
+      ],
+      "passed": true,
+      "raw_events": true
+    },
+    {
+      "cell": "plain-opus-medium",
+      "cost_usd": 0.191292,
+      "efforts_seen": [
+        "medium"
+      ],
+      "gate": {
+        "effort": "medium",
+        "served_model_prefix": "claude-opus-5-5"
+      },
+      "gate_problems": [],
+      "model": "claude-opus-5-5",
+      "models_seen": [
+        "claude-opus-5-5"
+      ],
+      "passed": true,
+      "raw_events": true
+    },
+    {
+      "cell": "v3-shipped-opus",
+      "cost_usd": 0.191402,
+      "efforts_seen": [
+        "None"
+      ],
+      "gate": {
+        "decided_once": true,
+        "effort": "absent",
+        "effort_constant": true,
+        "gate_closed": true,
+        "no_routing": true,
+        "served_model_prefix": "claude-opus-5-5",
+        "single_model": true
+      },
+      "gate_problems": [],
+      "model": "claude-opus-5-5",
+      "models_seen": [
+        "claude-opus-5-5"
+      ],
+      "passed": true,
+      "raw_events": true
+    },
+    {
+      "cell": "v3-shipped-opus-medium",
+      "cost_usd": 0.191387,
+      "efforts_seen": [
+        "medium"
+      ],
+      "gate": {
+        "decided_once": true,
+        "effort": "medium",
+        "effort_constant": true,
+        "gate_closed": true,
+        "no_routing": true,
+        "served_model_prefix": "claude-opus-5-5",
+        "single_model": true
+      },
+      "gate_problems": [],
+      "model": "claude-opus-5-5",
+      "models_seen": [
+        "claude-opus-5-5"
+      ],
+      "passed": true,
+      "raw_events": true
+    }
+  ],
+  "design": "holdout-v3",
+  "history": "First run (10 sessions, $4.78) reported 6 gate failures that were bugs in the preflight's receipt reading, not in the sessions: session events.jsonl nest a receipt's payload one level down (data.data) while the per-run events dir keeps it flat, and the orchestrator emits model_routed (reason start_strong) on every request that keeps the host. After the fix `paired.py preflight --reevaluate` re-read the SAME sessions offline (no new session, no spend); the table below is that re-evaluation.",
+  "ok": true,
+  "provider_module": {
+    "git_sha": "9e2f20c9342253666d0bdb3dcf593a58456e72f9",
+    "version": "1.0.0"
+  },
+  "reevaluated_at": "2026-10-05T22:35:55.558983+00:00",
+  "run_at": "2026-10-05T22:32:40.826167+00:00",
+  "schema": "fast-decisions-v3-preflight/v1",
+  "scratch_plan_scenario": "gradebook (1 scenario, 1 rep; scratch out dir, not a campaign dir)",
+  "total_cost_usd": 4.781923
+}

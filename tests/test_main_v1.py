@@ -27,7 +27,7 @@ class LoaderTests(unittest.TestCase):
         self.assertIn("explain", ps.TASK_TYPES)
         self.assertIn("knowledge", ps.TASK_TYPES)
         src = (REPO_ROOT / "scripts" / "paired_scenarios.py").read_text(encoding="utf-8")   # assign_split patches SPLITS in-process
-        self.assertIn('SPLITS = ("train", "test", "pilot")', src)
+        self.assertIn('SPLITS = ("train", "test", "pilot", "holdout")', src)      # holdout-v3 added "holdout"; "main" is still no split
         types = {s.task_type for s in ps.load_dir(BASE / "main-v1" / "knowledge")}
         self.assertTrue({"docs", "explain"} <= types)
 
