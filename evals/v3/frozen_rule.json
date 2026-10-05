@@ -1,0 +1,159 @@
+{
+  "R*": {
+    "classifier_source": "evals/v3/rules.py",
+    "decision": "host if any condition or scope gate; else cheap; decided once at session start",
+    "description": "always route",
+    "intent_classifier": "intent-kw-v1",
+    "spec": {
+      "host_if_any": [],
+      "scope_gate_max_workspace_files": 300
+    }
+  },
+  "candidate_configs": {
+    "C*_F": {
+      "cheap_max_workspace_files": 300,
+      "cheap_model": "claude-sonnet-5",
+      "decider": "R*",
+      "effort_by_tier": {
+        "cheap": "medium",
+        "strong": "medium"
+      },
+      "h2_comparator_decider": "jev-1.13.0",
+      "host": "claude-fable-5-1",
+      "keep_on_host": null,
+      "predicted": {
+        "config": "bundle, decide-once, decider R*, price gate on, scope gate 300, cheap: medium, strong: medium",
+        "d_turn_pass": -0.018915,
+        "d_turn_pass_ci95": [
+          -0.052319,
+          0.010335
+        ],
+        "gm_cost_ratio": 0.508271,
+        "gm_cost_ratio_ci95": [
+          0.483382,
+          0.535736
+        ],
+        "label": "estimated: main-v1 potential outcomes; host-kept sessions x 0.860 (Fable medium)",
+        "route_share": 0.985714
+      },
+      "price_gate": true,
+      "routing": "decide-once"
+    },
+    "C*_O": {
+      "decider": "R*",
+      "effort_by_tier": {
+        "cheap": "medium",
+        "strong": "medium"
+      },
+      "expected_routing": "never (gate closed on Opus 5.5)",
+      "host": "claude-opus-5-5",
+      "predicted": {
+        "config": "shipped (price gate closed: never routes), strong: medium",
+        "gm_cost_ratio_prior": [
+          0.821,
+          0.86
+        ],
+        "label": "unmeasured: Opus medium has no data; prior band from Sonnet 0.821 and Fable 0.860"
+      },
+      "price_gate": true,
+      "routing": "decide-once"
+    }
+  },
+  "constants": {
+    "fable_medium_factor": 0.86,
+    "jev_usd_per_decision": 1.8e-05,
+    "sonnet_medium_factor": 0.821
+  },
+  "d_jev_vs_R*": {
+    "fable": 0.1,
+    "opus": 0.1
+  },
+  "fit": {
+    "candidates": 181,
+    "constraint": "train mean turn-pass delta >= floor; floor chosen by 5-fold grouped CV on train from [-1.0, -0.05, -0.025, -0.01, 0.0]: chosen -1.0",
+    "cv": [
+      {
+        "chosen": true,
+        "floor": -1.0,
+        "oof_d_turn_pass": -0.028917,
+        "oof_gm_cost_ratio": 0.507585,
+        "oof_log_ratio": -0.678092
+      },
+      {
+        "chosen": false,
+        "floor": -0.05,
+        "oof_d_turn_pass": -0.028917,
+        "oof_gm_cost_ratio": 0.507585,
+        "oof_log_ratio": -0.678092
+      },
+      {
+        "chosen": false,
+        "floor": -0.025,
+        "oof_d_turn_pass": -0.031355,
+        "oof_gm_cost_ratio": 0.579767,
+        "oof_log_ratio": -0.545128
+      },
+      {
+        "chosen": false,
+        "floor": -0.01,
+        "oof_d_turn_pass": -0.031355,
+        "oof_gm_cost_ratio": 0.596152,
+        "oof_log_ratio": -0.517259
+      },
+      {
+        "chosen": false,
+        "floor": 0.0,
+        "oof_d_turn_pass": -0.025709,
+        "oof_gm_cost_ratio": 0.751545,
+        "oof_log_ratio": -0.285624
+      }
+    ],
+    "cv_any_floor_met_quality_out_of_fold": false,
+    "data": "main-v1 train split (47 scenarios x 2 reps), Fable host",
+    "first_objective": {
+      "floor": -0.025,
+      "note": "fixed a priori; reported because it was run first",
+      "rule": "host if turn1_prompt_chars > 243"
+    },
+    "floor": -1.0,
+    "objective": "min mean per-scenario log cost ratio vs always-host",
+    "occam_tolerance_log": 0.01
+  },
+  "inputs": {
+    "cost_basis": "cost_usd_tools_normalized",
+    "decisions_sha256": "a27af95e10e6d4317b3e6a583a5fa3f4cb4dc7b9e7c923d7d38014ae73ff0c74",
+    "requests_sha256": "ddf4f7882a16aada969cda0325ab63c43c11cdcce869e286f95202a0e52fcd6d",
+    "resamples": 10000,
+    "seed": 20261005,
+    "sessions_sha256": "21dd0a6449c8aa4b6cf0ee43a93bc009cdf62645df9d2e54d910294785a13397"
+  },
+  "schema": "fast-decisions-v3-frozen/v1",
+  "test_metrics_fable": {
+    "d_turn_pass": 0.001526,
+    "d_turn_pass_ci95": [
+      -0.037954,
+      0.044373
+    ],
+    "gm_cost_ratio": 0.513029,
+    "gm_cost_ratio_ci95": [
+      0.471487,
+      0.561431
+    ],
+    "regret_usd_per_1000_vs_oracle_xfit": -469.660935,
+    "route_share": 1.0
+  },
+  "train_metrics_fable": {
+    "d_turn_pass": -0.028917,
+    "d_turn_pass_ci95": [
+      -0.074353,
+      0.009316
+    ],
+    "gm_cost_ratio": 0.507585,
+    "gm_cost_ratio_ci95": [
+      0.476715,
+      0.542943
+    ],
+    "regret_usd_per_1000_vs_oracle_xfit": -558.744325,
+    "route_share": 0.978723
+  }
+}

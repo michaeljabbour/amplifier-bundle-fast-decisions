@@ -1,0 +1,1281 @@
+{
+  "R*": {
+    "complexity": 0,
+    "description": "always route",
+    "fit": {
+      "candidates": 181,
+      "constraint": "train mean turn-pass delta >= floor; floor chosen by 5-fold grouped CV on train from [-1.0, -0.05, -0.025, -0.01, 0.0]: chosen -1.0",
+      "cv": [
+        {
+          "chosen": true,
+          "floor": -1.0,
+          "oof_d_turn_pass": -0.028917,
+          "oof_gm_cost_ratio": 0.507585,
+          "oof_log_ratio": -0.678092
+        },
+        {
+          "chosen": false,
+          "floor": -0.05,
+          "oof_d_turn_pass": -0.028917,
+          "oof_gm_cost_ratio": 0.507585,
+          "oof_log_ratio": -0.678092
+        },
+        {
+          "chosen": false,
+          "floor": -0.025,
+          "oof_d_turn_pass": -0.031355,
+          "oof_gm_cost_ratio": 0.579767,
+          "oof_log_ratio": -0.545128
+        },
+        {
+          "chosen": false,
+          "floor": -0.01,
+          "oof_d_turn_pass": -0.031355,
+          "oof_gm_cost_ratio": 0.596152,
+          "oof_log_ratio": -0.517259
+        },
+        {
+          "chosen": false,
+          "floor": 0.0,
+          "oof_d_turn_pass": -0.025709,
+          "oof_gm_cost_ratio": 0.751545,
+          "oof_log_ratio": -0.285624
+        }
+      ],
+      "cv_any_floor_met_quality_out_of_fold": false,
+      "data": "main-v1 train split (47 scenarios x 2 reps), Fable host",
+      "first_objective": {
+        "floor": -0.025,
+        "note": "fixed a priori; reported because it was run first",
+        "rule": "host if turn1_prompt_chars > 243"
+      },
+      "floor": -1.0,
+      "objective": "min mean per-scenario log cost ratio vs always-host",
+      "occam_tolerance_log": 0.01
+    },
+    "spec": {
+      "host_if_any": [],
+      "scope_gate_max_workspace_files": 300
+    }
+  },
+  "disagreement": {
+    "fable": {
+      "R*_vs_oracle_xfit": {
+        "d": 0.207143,
+        "discordant_scenarios": [
+          "commander-docs",
+          "config-matrix",
+          "debug-triage",
+          "fastrand-explain",
+          "fatihcolor-docs",
+          "fd-cli-docs",
+          "filelock-explain",
+          "go-dominoes",
+          "gohumanize-review",
+          "humanize-review",
+          "js-rationals",
+          "markdown-tocclass",
+          "migration-plan",
+          "ms-review",
+          "nanoid-explain",
+          "pr-review-cart",
+          "rust-wordy",
+          "sales-orders",
+          "semver-review",
+          "sqlparse-realname"
+        ],
+        "implied_mean_cost_diff_usd": -0.529474,
+        "mean_discordant_cost_diff_usd": -2.556082,
+        "n_discordant": 29,
+        "n_units": 140
+      },
+      "jev_vs_R*": {
+        "d": 0.1,
+        "discordant_scenarios": [
+          "arch-explain",
+          "py-forth",
+          "py-go-counting",
+          "py-poker",
+          "py-sgf-parsing",
+          "rust-twobucket",
+          "sortedc-update"
+        ],
+        "implied_mean_cost_diff_usd": 0.369069,
+        "mean_discordant_cost_diff_usd": 3.690687,
+        "n_discordant": 14,
+        "n_units": 140
+      },
+      "jev_vs_always_route": {
+        "d": 0.114286,
+        "discordant_scenarios": [
+          "arch-explain",
+          "markdown-tocclass",
+          "py-forth",
+          "py-go-counting",
+          "py-poker",
+          "py-sgf-parsing",
+          "rust-twobucket",
+          "sortedc-update"
+        ],
+        "implied_mean_cost_diff_usd": 0.415702,
+        "mean_discordant_cost_diff_usd": 3.637396,
+        "n_discordant": 16,
+        "n_units": 140
+      }
+    },
+    "opus": {
+      "R*_vs_oracle_xfit": {
+        "d": 0.764286,
+        "discordant_scenarios": [
+          "api-docs",
+          "arch-explain",
+          "boltons-tableutils",
+          "cachetools-params",
+          "changelog-gen",
+          "commander-docs",
+          "config-matrix",
+          "debug-triage",
+          "deps-audit",
+          "discrepancy-docs",
+          "docstring-audit",
+          "expense-anomaly",
+          "fastrand-explain",
+          "fd-cli-docs",
+          "filelock-explain",
+          "go-dominoes",
+          "go-linkedlist",
+          "go-protein",
+          "go-say",
+          "go-vlq",
+          "gohumanize-review",
+          "humanize-review",
+          "jmespath-strcmp",
+          "js-listops",
+          "js-phone",
+          "js-rationals",
+          "js-tournament",
+          "lark-discard",
+          "lark-template",
+          "migration-plan",
+          "mistune-escape",
+          "moreit-chunked",
+          "ms-review",
+          "nanoid-explain",
+          "pathspec-matchfile",
+          "pflag-mixed",
+          "pr-review-cart",
+          "pr-review-retry",
+          "py-book-store",
+          "py-forth",
+          "py-go-counting",
+          "py-poker",
+          "py-rest-api",
+          "py-sgf-parsing",
+          "rust-gradeschool",
+          "rust-luhn",
+          "rust-ocr",
+          "rust-twobucket",
+          "rust-wordy",
+          "sales-orders",
+          "schema-wrongkey",
+          "semver-review",
+          "sortedc-update",
+          "sqlparse-realname",
+          "support-workload",
+          "tabulate-github",
+          "timesheet-invoice",
+          "toolz-interpose",
+          "voluptuous-number",
+          "xmltodict-none",
+          "yamllint-mixed"
+        ],
+        "implied_mean_cost_diff_usd": 0.492351,
+        "mean_discordant_cost_diff_usd": 0.644198,
+        "n_discordant": 107,
+        "n_units": 140
+      },
+      "jev_vs_R*": {
+        "d": 0.1,
+        "discordant_scenarios": [
+          "arch-explain",
+          "py-forth",
+          "py-go-counting",
+          "py-poker",
+          "py-sgf-parsing",
+          "rust-ocr",
+          "rust-twobucket",
+          "sortedc-update"
+        ],
+        "implied_mean_cost_diff_usd": -0.118581,
+        "mean_discordant_cost_diff_usd": -1.185814,
+        "n_discordant": 14,
+        "n_units": 140
+      },
+      "jev_vs_always_route": {
+        "d": 0.114286,
+        "discordant_scenarios": [
+          "arch-explain",
+          "markdown-tocclass",
+          "py-forth",
+          "py-go-counting",
+          "py-poker",
+          "py-sgf-parsing",
+          "rust-ocr",
+          "rust-twobucket",
+          "sortedc-update"
+        ],
+        "implied_mean_cost_diff_usd": -0.122417,
+        "mean_discordant_cost_diff_usd": -1.071148,
+        "n_discordant": 16,
+        "n_units": 140
+      }
+    }
+  },
+  "effort_cache": {
+    "baseline_write_low": {
+      "fable|turn_first_short_gap": 14432.793103,
+      "fable|within_turn": 1084.8125,
+      "opus|turn_first_short_gap": 10567.133333,
+      "opus|within_turn": 1204.659134
+    },
+    "baseline_write_unchanged": {
+      "fable|turn_first_short_gap": 974.4,
+      "fable|within_turn": 743.152941,
+      "opus|turn_first_short_gap": 786.8125,
+      "opus|within_turn": 1129.017192
+    },
+    "by_position": {
+      "anchor|unchanged|turn_first_long_gap": {
+        "mean_cache_write": 67819.5,
+        "n": 24
+      },
+      "anchor|unchanged|turn_first_short_gap": {
+        "mean_cache_write": 12467.20339,
+        "n": 354
+      },
+      "anchor|unchanged|within_turn": {
+        "mean_cache_write": 1132.625094,
+        "n": 1331
+      },
+      "sticky_host|changed|turn_first_long_gap": {
+        "mean_cache_write": 66235.041667,
+        "n": 24
+      },
+      "sticky_host|changed|turn_first_short_gap": {
+        "mean_cache_write": 17959.587859,
+        "n": 313
+      },
+      "sticky_host|changed|within_turn": {
+        "mean_cache_write": 11650.364198,
+        "n": 486
+      },
+      "sticky_host|unchanged|turn_first_short_gap": {
+        "mean_cache_write": 901.195122,
+        "n": 41
+      },
+      "sticky_host|unchanged|within_turn": {
+        "mean_cache_write": 899.924331,
+        "n": 859
+      }
+    },
+    "efforts_seen": {
+      "high": 1178,
+      "low": 167,
+      "medium": 410
+    },
+    "long_gap_s": 300,
+    "requests_after_effort_change": {
+      "mean_cache_write": 15641.639125,
+      "n": 823
+    },
+    "requests_effort_unchanged": {
+      "mean_cache_write": 899.982222,
+      "n": 900
+    },
+    "sessions": {
+      "fable": {
+        "est_rewrite_premium_share_of_cost": 0.471707,
+        "est_rewrite_premium_usd_total": 71.140956,
+        "est_rewrite_premium_usd_total_low": 59.132963,
+        "gm_cache_write_ratio": 1.667861,
+        "gm_cost_ratio": 1.255302,
+        "gm_est_cost_ratio_premium_low_removed": 0.791846,
+        "gm_est_cost_ratio_premium_removed": 0.687801,
+        "gm_req_ratio": 0.963002,
+        "mean_cache_write_ratio": 1.71594,
+        "mean_effort_changes": 26.1875,
+        "mean_req_ratio": 0.983872,
+        "n": 16,
+        "ratio_of_sums_cache_write": 1.632568,
+        "ratio_of_sums_cost": 1.262093,
+        "ratio_of_sums_requests": 0.968064
+      },
+      "opus": {
+        "est_rewrite_premium_share_of_cost": 0.378883,
+        "est_rewrite_premium_usd_total": 22.845025,
+        "est_rewrite_premium_usd_total_low": 19.041294,
+        "gm_cache_write_ratio": 1.704568,
+        "gm_cost_ratio": 1.35698,
+        "gm_est_cost_ratio_premium_low_removed": 0.953304,
+        "gm_est_cost_ratio_premium_removed": 0.865534,
+        "gm_req_ratio": 1.076347,
+        "mean_cache_write_ratio": 1.744443,
+        "mean_effort_changes": 25.25,
+        "mean_req_ratio": 1.091114,
+        "n": 16,
+        "ratio_of_sums_cache_write": 1.743335,
+        "ratio_of_sums_cost": 1.371532,
+        "ratio_of_sums_requests": 1.062246
+      }
+    },
+    "within_turn_ratio_changed_over_unchanged": 12.945938
+  },
+  "headline": {
+    "fable": {
+      "always_host": {
+        "all": {
+          "d_turn_pass": 0.0,
+          "d_turn_pass_ci95": [
+            0.0,
+            0.0
+          ],
+          "gm_cost_ratio": 1.0,
+          "gm_cost_ratio_ci95": [
+            1.0,
+            1.0
+          ],
+          "regret_usd_per_1000_vs_oracle_xfit": 2043.402705,
+          "route_share": 0.0
+        },
+        "test": {
+          "d_turn_pass": 0.0,
+          "d_turn_pass_ci95": [
+            0.0,
+            0.0
+          ],
+          "gm_cost_ratio": 1.0,
+          "gm_cost_ratio_ci95": [
+            1.0,
+            1.0
+          ],
+          "regret_usd_per_1000_vs_oracle_xfit": 2056.484721,
+          "route_share": 0.0
+        },
+        "train": {
+          "d_turn_pass": 0.0,
+          "d_turn_pass_ci95": [
+            0.0,
+            0.0
+          ],
+          "gm_cost_ratio": 1.0,
+          "gm_cost_ratio_ci95": [
+            1.0,
+            1.0
+          ],
+          "regret_usd_per_1000_vs_oracle_xfit": 2037.000867,
+          "route_share": 0.0
+        }
+      },
+      "always_route": {
+        "all": {
+          "d_turn_pass": -0.018915,
+          "d_turn_pass_ci95": [
+            -0.052319,
+            0.010335
+          ],
+          "gm_cost_ratio": 0.502479,
+          "gm_cost_ratio_ci95": [
+            0.478802,
+            0.528683
+          ],
+          "regret_usd_per_1000_vs_oracle_xfit": -576.107757,
+          "route_share": 1.0
+        },
+        "test": {
+          "d_turn_pass": 0.001526,
+          "d_turn_pass_ci95": [
+            -0.037954,
+            0.044373
+          ],
+          "gm_cost_ratio": 0.513029,
+          "gm_cost_ratio_ci95": [
+            0.471487,
+            0.561431
+          ],
+          "regret_usd_per_1000_vs_oracle_xfit": -469.660935,
+          "route_share": 1.0
+        },
+        "train": {
+          "d_turn_pass": -0.028917,
+          "d_turn_pass_ci95": [
+            -0.074353,
+            0.009316
+          ],
+          "gm_cost_ratio": 0.497396,
+          "gm_cost_ratio_ci95": [
+            0.468895,
+            0.529049
+          ],
+          "regret_usd_per_1000_vs_oracle_xfit": -628.198755,
+          "route_share": 1.0
+        }
+      },
+      "always_route_scope_gate": {
+        "all": {
+          "d_turn_pass": -0.018915,
+          "d_turn_pass_ci95": [
+            -0.052319,
+            0.010335
+          ],
+          "gm_cost_ratio": 0.509367,
+          "gm_cost_ratio_ci95": [
+            0.483842,
+            0.537637
+          ],
+          "regret_usd_per_1000_vs_oracle_xfit": -529.474068,
+          "route_share": 0.985714
+        },
+        "test": {
+          "d_turn_pass": 0.001526,
+          "d_turn_pass_ci95": [
+            -0.037954,
+            0.044373
+          ],
+          "gm_cost_ratio": 0.513029,
+          "gm_cost_ratio_ci95": [
+            0.471487,
+            0.561431
+          ],
+          "regret_usd_per_1000_vs_oracle_xfit": -469.660935,
+          "route_share": 1.0
+        },
+        "train": {
+          "d_turn_pass": -0.028917,
+          "d_turn_pass_ci95": [
+            -0.074353,
+            0.009316
+          ],
+          "gm_cost_ratio": 0.507585,
+          "gm_cost_ratio_ci95": [
+            0.476715,
+            0.542943
+          ],
+          "regret_usd_per_1000_vs_oracle_xfit": -558.744325,
+          "route_share": 0.978723
+        }
+      },
+      "jev_recorded": {
+        "all": {
+          "d_turn_pass": -0.018915,
+          "d_turn_pass_ci95": [
+            -0.052319,
+            0.010335
+          ],
+          "gm_cost_ratio": 0.545288,
+          "gm_cost_ratio_ci95": [
+            0.509968,
+            0.584515
+          ],
+          "regret_usd_per_1000_vs_oracle_xfit": -160.387388,
+          "route_share": 0.885714
+        },
+        "test": {
+          "d_turn_pass": 0.001526,
+          "d_turn_pass_ci95": [
+            -0.037954,
+            0.044373
+          ],
+          "gm_cost_ratio": 0.530038,
+          "gm_cost_ratio_ci95": [
+            0.48045,
+            0.588961
+          ],
+          "regret_usd_per_1000_vs_oracle_xfit": -254.306671,
+          "route_share": 0.956522
+        },
+        "train": {
+          "d_turn_pass": -0.028917,
+          "d_turn_pass_ci95": [
+            -0.074353,
+            0.009316
+          ],
+          "gm_cost_ratio": 0.552909,
+          "gm_cost_ratio_ci95": [
+            0.507578,
+            0.604304
+          ],
+          "regret_usd_per_1000_vs_oracle_xfit": -114.426888,
+          "route_share": 0.851064
+        }
+      },
+      "oracle_cost_only_xfit": {
+        "all": {
+          "d_turn_pass": -0.018915,
+          "d_turn_pass_ci95": [
+            -0.052319,
+            0.010335
+          ],
+          "gm_cost_ratio": 0.5041,
+          "gm_cost_ratio_ci95": [
+            0.479478,
+            0.531667
+          ],
+          "regret_usd_per_1000_vs_oracle_xfit": -567.338179,
+          "route_share": 0.992857
+        },
+        "test": {
+          "d_turn_pass": 0.001526,
+          "d_turn_pass_ci95": [
+            -0.037954,
+            0.044373
+          ],
+          "gm_cost_ratio": 0.513029,
+          "gm_cost_ratio_ci95": [
+            0.471487,
+            0.561431
+          ],
+          "regret_usd_per_1000_vs_oracle_xfit": -469.660935,
+          "route_share": 1.0
+        },
+        "train": {
+          "d_turn_pass": -0.028917,
+          "d_turn_pass_ci95": [
+            -0.074353,
+            0.009316
+          ],
+          "gm_cost_ratio": 0.499788,
+          "gm_cost_ratio_ci95": [
+            0.469952,
+            0.533686
+          ],
+          "regret_usd_per_1000_vs_oracle_xfit": -615.137681,
+          "route_share": 0.989362
+        }
+      },
+      "oracle_in_sample": {
+        "all": {
+          "d_turn_pass": 0.022411,
+          "d_turn_pass_ci95": [
+            0.009478,
+            0.038456
+          ],
+          "gm_cost_ratio": 0.583705,
+          "gm_cost_ratio_ci95": [
+            0.54481,
+            0.626889
+          ],
+          "regret_usd_per_1000_vs_oracle_xfit": -3.431436,
+          "route_share": 0.807143
+        },
+        "test": {
+          "d_turn_pass": 0.03288,
+          "d_turn_pass_ci95": [
+            0.007065,
+            0.067935
+          ],
+          "gm_cost_ratio": 0.589462,
+          "gm_cost_ratio_ci95": [
+            0.530349,
+            0.659122
+          ],
+          "regret_usd_per_1000_vs_oracle_xfit": 18.620826,
+          "route_share": 0.826087
+        },
+        "train": {
+          "d_turn_pass": 0.017288,
+          "d_turn_pass_ci95": [
+            0.004453,
+            0.036086
+          ],
+          "gm_cost_ratio": 0.580908,
+          "gm_cost_ratio_ci95": [
+            0.53246,
+            0.635147
+          ],
+          "regret_usd_per_1000_vs_oracle_xfit": -14.222968,
+          "route_share": 0.797872
+        }
+      },
+      "oracle_xfit": {
+        "all": {
+          "d_turn_pass": 0.011508,
+          "d_turn_pass_ci95": [
+            -0.004168,
+            0.029646
+          ],
+          "gm_cost_ratio": 0.583378,
+          "gm_cost_ratio_ci95": [
+            0.544494,
+            0.626627
+          ],
+          "regret_usd_per_1000_vs_oracle_xfit": 0.0,
+          "route_share": 0.807143
+        },
+        "test": {
+          "d_turn_pass": 0.014087,
+          "d_turn_pass_ci95": [
+            -0.019384,
+            0.052991
+          ],
+          "gm_cost_ratio": 0.584242,
+          "gm_cost_ratio_ci95": [
+            0.526561,
+            0.653251
+          ],
+          "regret_usd_per_1000_vs_oracle_xfit": 0.0,
+          "route_share": 0.826087
+        },
+        "train": {
+          "d_turn_pass": 0.010246,
+          "d_turn_pass_ci95": [
+            -0.00443,
+            0.030068
+          ],
+          "gm_cost_ratio": 0.582955,
+          "gm_cost_ratio_ci95": [
+            0.533508,
+            0.639223
+          ],
+          "regret_usd_per_1000_vs_oracle_xfit": 0.0,
+          "route_share": 0.797872
+        }
+      },
+      "rule_R*": {
+        "all": {
+          "d_turn_pass": -0.018915,
+          "d_turn_pass_ci95": [
+            -0.052319,
+            0.010335
+          ],
+          "gm_cost_ratio": 0.509367,
+          "gm_cost_ratio_ci95": [
+            0.483842,
+            0.537637
+          ],
+          "regret_usd_per_1000_vs_oracle_xfit": -529.474068,
+          "route_share": 0.985714
+        },
+        "test": {
+          "d_turn_pass": 0.001526,
+          "d_turn_pass_ci95": [
+            -0.037954,
+            0.044373
+          ],
+          "gm_cost_ratio": 0.513029,
+          "gm_cost_ratio_ci95": [
+            0.471487,
+            0.561431
+          ],
+          "regret_usd_per_1000_vs_oracle_xfit": -469.660935,
+          "route_share": 1.0
+        },
+        "train": {
+          "d_turn_pass": -0.028917,
+          "d_turn_pass_ci95": [
+            -0.074353,
+            0.009316
+          ],
+          "gm_cost_ratio": 0.507585,
+          "gm_cost_ratio_ci95": [
+            0.476715,
+            0.542943
+          ],
+          "regret_usd_per_1000_vs_oracle_xfit": -558.744325,
+          "route_share": 0.978723
+        }
+      },
+      "rule_first_objective": {
+        "all": {
+          "d_turn_pass": -0.014301,
+          "d_turn_pass_ci95": [
+            -0.037146,
+            0.007299
+          ],
+          "gm_cost_ratio": 0.59822,
+          "gm_cost_ratio_ci95": [
+            0.548066,
+            0.654353
+          ],
+          "regret_usd_per_1000_vs_oracle_xfit": 68.141262,
+          "route_share": 0.671429
+        },
+        "test": {
+          "d_turn_pass": -0.012061,
+          "d_turn_pass_ci95": [
+            -0.043143,
+            0.018434
+          ],
+          "gm_cost_ratio": 0.628036,
+          "gm_cost_ratio_ci95": [
+            0.537494,
+            0.737662
+          ],
+          "regret_usd_per_1000_vs_oracle_xfit": 261.408,
+          "route_share": 0.608696
+        },
+        "train": {
+          "d_turn_pass": -0.015398,
+          "d_turn_pass_ci95": [
+            -0.046249,
+            0.01275
+          ],
+          "gm_cost_ratio": 0.58415,
+          "gm_cost_ratio_ci95": [
+            0.526062,
+            0.65138
+          ],
+          "regret_usd_per_1000_vs_oracle_xfit": -26.436078,
+          "route_share": 0.702128
+        }
+      },
+      "shipped_jev_price_gate": {
+        "all": {
+          "d_turn_pass": -0.018915,
+          "d_turn_pass_ci95": [
+            -0.052319,
+            0.010335
+          ],
+          "gm_cost_ratio": 0.545288,
+          "gm_cost_ratio_ci95": [
+            0.509968,
+            0.584515
+          ],
+          "regret_usd_per_1000_vs_oracle_xfit": -160.387388,
+          "route_share": 0.885714
+        },
+        "test": {
+          "d_turn_pass": 0.001526,
+          "d_turn_pass_ci95": [
+            -0.037954,
+            0.044373
+          ],
+          "gm_cost_ratio": 0.530038,
+          "gm_cost_ratio_ci95": [
+            0.48045,
+            0.588961
+          ],
+          "regret_usd_per_1000_vs_oracle_xfit": -254.306671,
+          "route_share": 0.956522
+        },
+        "train": {
+          "d_turn_pass": -0.028917,
+          "d_turn_pass_ci95": [
+            -0.074353,
+            0.009316
+          ],
+          "gm_cost_ratio": 0.552909,
+          "gm_cost_ratio_ci95": [
+            0.507578,
+            0.604304
+          ],
+          "regret_usd_per_1000_vs_oracle_xfit": -114.426888,
+          "route_share": 0.851064
+        }
+      }
+    },
+    "opus": {
+      "always_host": {
+        "all": {
+          "d_turn_pass": 0.0,
+          "d_turn_pass_ci95": [
+            0.0,
+            0.0
+          ],
+          "gm_cost_ratio": 1.0,
+          "gm_cost_ratio_ci95": [
+            1.0,
+            1.0
+          ],
+          "regret_usd_per_1000_vs_oracle_xfit": 1.293556,
+          "route_share": 0.0
+        },
+        "test": {
+          "d_turn_pass": 0.0,
+          "d_turn_pass_ci95": [
+            0.0,
+            0.0
+          ],
+          "gm_cost_ratio": 1.0,
+          "gm_cost_ratio_ci95": [
+            1.0,
+            1.0
+          ],
+          "regret_usd_per_1000_vs_oracle_xfit": 5.193478,
+          "route_share": 0.0
+        },
+        "train": {
+          "d_turn_pass": 0.0,
+          "d_turn_pass_ci95": [
+            0.0,
+            0.0
+          ],
+          "gm_cost_ratio": 1.0,
+          "gm_cost_ratio_ci95": [
+            1.0,
+            1.0
+          ],
+          "regret_usd_per_1000_vs_oracle_xfit": -0.614917,
+          "route_share": 0.0
+        }
+      },
+      "always_route": {
+        "all": {
+          "d_turn_pass": -0.004939,
+          "d_turn_pass_ci95": [
+            -0.029501,
+            0.018741
+          ],
+          "gm_cost_ratio": 1.197004,
+          "gm_cost_ratio_ci95": [
+            1.124877,
+            1.272846
+          ],
+          "regret_usd_per_1000_vs_oracle_xfit": 496.186802,
+          "route_share": 1.0
+        },
+        "test": {
+          "d_turn_pass": -0.010203,
+          "d_turn_pass_ci95": [
+            -0.050689,
+            0.029078
+          ],
+          "gm_cost_ratio": 1.199906,
+          "gm_cost_ratio_ci95": [
+            1.086035,
+            1.323518
+          ],
+          "regret_usd_per_1000_vs_oracle_xfit": 450.728568,
+          "route_share": 1.0
+        },
+        "train": {
+          "d_turn_pass": -0.002363,
+          "d_turn_pass_ci95": [
+            -0.034807,
+            0.026958
+          ],
+          "gm_cost_ratio": 1.195587,
+          "gm_cost_ratio_ci95": [
+            1.108587,
+            1.294103
+          ],
+          "regret_usd_per_1000_vs_oracle_xfit": 518.43232,
+          "route_share": 1.0
+        }
+      },
+      "always_route_scope_gate": {
+        "all": {
+          "d_turn_pass": -0.004939,
+          "d_turn_pass_ci95": [
+            -0.029501,
+            0.018741
+          ],
+          "gm_cost_ratio": 1.194566,
+          "gm_cost_ratio_ci95": [
+            1.122461,
+            1.270756
+          ],
+          "regret_usd_per_1000_vs_oracle_xfit": 492.351262,
+          "route_share": 0.985714
+        },
+        "test": {
+          "d_turn_pass": -0.010203,
+          "d_turn_pass_ci95": [
+            -0.050689,
+            0.029078
+          ],
+          "gm_cost_ratio": 1.199906,
+          "gm_cost_ratio_ci95": [
+            1.086035,
+            1.323518
+          ],
+          "regret_usd_per_1000_vs_oracle_xfit": 450.728568,
+          "route_share": 1.0
+        },
+        "train": {
+          "d_turn_pass": -0.002363,
+          "d_turn_pass_ci95": [
+            -0.034807,
+            0.026958
+          ],
+          "gm_cost_ratio": 1.191962,
+          "gm_cost_ratio_ci95": [
+            1.104789,
+            1.290333
+          ],
+          "regret_usd_per_1000_vs_oracle_xfit": 512.719814,
+          "route_share": 0.978723
+        }
+      },
+      "jev_recorded": {
+        "all": {
+          "d_turn_pass": -0.009344,
+          "d_turn_pass_ci95": [
+            -0.032684,
+            0.013199
+          ],
+          "gm_cost_ratio": 1.159207,
+          "gm_cost_ratio_ci95": [
+            1.091791,
+            1.232321
+          ],
+          "regret_usd_per_1000_vs_oracle_xfit": 373.787856,
+          "route_share": 0.885714
+        },
+        "test": {
+          "d_turn_pass": -0.010203,
+          "d_turn_pass_ci95": [
+            -0.050689,
+            0.029078
+          ],
+          "gm_cost_ratio": 1.177081,
+          "gm_cost_ratio_ci95": [
+            1.066632,
+            1.299702
+          ],
+          "regret_usd_per_1000_vs_oracle_xfit": 382.645935,
+          "route_share": 0.934783
+        },
+        "train": {
+          "d_turn_pass": -0.008923,
+          "d_turn_pass_ci95": [
+            -0.038888,
+            0.017919
+          ],
+          "gm_cost_ratio": 1.150559,
+          "gm_cost_ratio_ci95": [
+            1.072104,
+            1.241965
+          ],
+          "regret_usd_per_1000_vs_oracle_xfit": 369.453051,
+          "route_share": 0.861702
+        }
+      },
+      "oracle_cost_only_xfit": {
+        "all": {
+          "d_turn_pass": -0.007262,
+          "d_turn_pass_ci95": [
+            -0.021578,
+            0.004941
+          ],
+          "gm_cost_ratio": 0.983812,
+          "gm_cost_ratio_ci95": [
+            0.964066,
+            1.002608
+          ],
+          "regret_usd_per_1000_vs_oracle_xfit": -14.162236,
+          "route_share": 0.307143
+        },
+        "test": {
+          "d_turn_pass": -0.016304,
+          "d_turn_pass_ci95": [
+            -0.048309,
+            0.006793
+          ],
+          "gm_cost_ratio": 0.98205,
+          "gm_cost_ratio_ci95": [
+            0.954021,
+            1.007016
+          ],
+          "regret_usd_per_1000_vs_oracle_xfit": -14.318,
+          "route_share": 0.282609
+        },
+        "train": {
+          "d_turn_pass": -0.002837,
+          "d_turn_pass_ci95": [
+            -0.018099,
+            0.009906
+          ],
+          "gm_cost_ratio": 0.984675,
+          "gm_cost_ratio_ci95": [
+            0.95925,
+            1.010042
+          ],
+          "regret_usd_per_1000_vs_oracle_xfit": -14.086011,
+          "route_share": 0.319149
+        }
+      },
+      "oracle_in_sample": {
+        "all": {
+          "d_turn_pass": 0.00905,
+          "d_turn_pass_ci95": [
+            0.00427,
+            0.01475
+          ],
+          "gm_cost_ratio": 0.972577,
+          "gm_cost_ratio_ci95": [
+            0.959563,
+            0.984016
+          ],
+          "regret_usd_per_1000_vs_oracle_xfit": -53.25967,
+          "route_share": 0.221429
+        },
+        "test": {
+          "d_turn_pass": 0.005435,
+          "d_turn_pass_ci95": [
+            0.0,
+            0.012228
+          ],
+          "gm_cost_ratio": 0.980892,
+          "gm_cost_ratio_ci95": [
+            0.963915,
+            0.994323
+          ],
+          "regret_usd_per_1000_vs_oracle_xfit": -32.988696,
+          "route_share": 0.195652
+        },
+        "train": {
+          "d_turn_pass": 0.010819,
+          "d_turn_pass_ci95": [
+            0.004296,
+            0.018612
+          ],
+          "gm_cost_ratio": 0.968535,
+          "gm_cost_ratio_ci95": [
+            0.951487,
+            0.983711
+          ],
+          "regret_usd_per_1000_vs_oracle_xfit": -63.179508,
+          "route_share": 0.234043
+        }
+      },
+      "oracle_xfit": {
+        "all": {
+          "d_turn_pass": 0.000391,
+          "d_turn_pass_ci95": [
+            -0.010526,
+            0.009205
+          ],
+          "gm_cost_ratio": 0.991436,
+          "gm_cost_ratio_ci95": [
+            0.974577,
+            1.007569
+          ],
+          "regret_usd_per_1000_vs_oracle_xfit": 0.0,
+          "route_share": 0.221429
+        },
+        "test": {
+          "d_turn_pass": -0.009058,
+          "d_turn_pass_ci95": [
+            -0.037289,
+            0.009511
+          ],
+          "gm_cost_ratio": 0.990658,
+          "gm_cost_ratio_ci95": [
+            0.968308,
+            1.010389
+          ],
+          "regret_usd_per_1000_vs_oracle_xfit": 0.0,
+          "route_share": 0.195652
+        },
+        "train": {
+          "d_turn_pass": 0.005015,
+          "d_turn_pass_ci95": [
+            -0.002482,
+            0.013564
+          ],
+          "gm_cost_ratio": 0.991816,
+          "gm_cost_ratio_ci95": [
+            0.970387,
+            1.014096
+          ],
+          "regret_usd_per_1000_vs_oracle_xfit": 0.0,
+          "route_share": 0.234043
+        }
+      },
+      "rule_R*": {
+        "all": {
+          "d_turn_pass": -0.004939,
+          "d_turn_pass_ci95": [
+            -0.029501,
+            0.018741
+          ],
+          "gm_cost_ratio": 1.194566,
+          "gm_cost_ratio_ci95": [
+            1.122461,
+            1.270756
+          ],
+          "regret_usd_per_1000_vs_oracle_xfit": 492.351262,
+          "route_share": 0.985714
+        },
+        "test": {
+          "d_turn_pass": -0.010203,
+          "d_turn_pass_ci95": [
+            -0.050689,
+            0.029078
+          ],
+          "gm_cost_ratio": 1.199906,
+          "gm_cost_ratio_ci95": [
+            1.086035,
+            1.323518
+          ],
+          "regret_usd_per_1000_vs_oracle_xfit": 450.728568,
+          "route_share": 1.0
+        },
+        "train": {
+          "d_turn_pass": -0.002363,
+          "d_turn_pass_ci95": [
+            -0.034807,
+            0.026958
+          ],
+          "gm_cost_ratio": 1.191962,
+          "gm_cost_ratio_ci95": [
+            1.104789,
+            1.290333
+          ],
+          "regret_usd_per_1000_vs_oracle_xfit": 512.719814,
+          "route_share": 0.978723
+        }
+      },
+      "rule_first_objective": {
+        "all": {
+          "d_turn_pass": 0.002303,
+          "d_turn_pass_ci95": [
+            -0.015398,
+            0.020079
+          ],
+          "gm_cost_ratio": 1.043907,
+          "gm_cost_ratio_ci95": [
+            1.004936,
+            1.085202
+          ],
+          "regret_usd_per_1000_vs_oracle_xfit": 184.157805,
+          "route_share": 0.671429
+        },
+        "test": {
+          "d_turn_pass": -0.008995,
+          "d_turn_pass_ci95": [
+            -0.032486,
+            0.013258
+          ],
+          "gm_cost_ratio": 1.035524,
+          "gm_cost_ratio_ci95": [
+            0.977857,
+            1.101014
+          ],
+          "regret_usd_per_1000_vs_oracle_xfit": 147.296758,
+          "route_share": 0.608696
+        },
+        "train": {
+          "d_turn_pass": 0.007832,
+          "d_turn_pass_ci95": [
+            -0.016558,
+            0.032296
+          ],
+          "gm_cost_ratio": 1.048034,
+          "gm_cost_ratio_ci95": [
+            0.998176,
+            1.103672
+          ],
+          "regret_usd_per_1000_vs_oracle_xfit": 202.19619,
+          "route_share": 0.702128
+        }
+      },
+      "shipped_jev_price_gate": {
+        "all": {
+          "d_turn_pass": 0.0,
+          "d_turn_pass_ci95": [
+            0.0,
+            0.0
+          ],
+          "gm_cost_ratio": 1.00001,
+          "gm_cost_ratio_ci95": [
+            1.000009,
+            1.000011
+          ],
+          "regret_usd_per_1000_vs_oracle_xfit": 1.311556,
+          "route_share": 0.0
+        },
+        "test": {
+          "d_turn_pass": 0.0,
+          "d_turn_pass_ci95": [
+            0.0,
+            0.0
+          ],
+          "gm_cost_ratio": 1.00001,
+          "gm_cost_ratio_ci95": [
+            1.000009,
+            1.000011
+          ],
+          "regret_usd_per_1000_vs_oracle_xfit": 5.211478,
+          "route_share": 0.0
+        },
+        "train": {
+          "d_turn_pass": 0.0,
+          "d_turn_pass_ci95": [
+            0.0,
+            0.0
+          ],
+          "gm_cost_ratio": 1.00001,
+          "gm_cost_ratio_ci95": [
+            1.000009,
+            1.000011
+          ],
+          "regret_usd_per_1000_vs_oracle_xfit": -0.596917,
+          "route_share": 0.0
+        }
+      }
+    }
+  },
+  "inputs": {
+    "cost_basis": "cost_usd_tools_normalized",
+    "decisions_sha256": "a27af95e10e6d4317b3e6a583a5fa3f4cb4dc7b9e7c923d7d38014ae73ff0c74",
+    "requests_sha256": "ddf4f7882a16aada969cda0325ab63c43c11cdcce869e286f95202a0e52fcd6d",
+    "resamples": 10000,
+    "seed": 20261005,
+    "sessions_sha256": "21dd0a6449c8aa4b6cf0ee43a93bc009cdf62645df9d2e54d910294785a13397"
+  },
+  "intent_vs_task_type_fable_rep1": {
+    "bugfix|fix": 14,
+    "bugfix|implement": 4,
+    "docs|question": 4,
+    "explain|implement": 1,
+    "explain|question": 2,
+    "feature|fix": 1,
+    "feature|implement": 12,
+    "mixed|implement": 5,
+    "mixed|question": 23,
+    "review|question": 4
+  },
+  "potential_outcomes": {
+    "fable": {
+      "sonnet_x0.821": 16,
+      "sticky_cheap": 124
+    },
+    "opus": {
+      "sonnet_x0.821": 16,
+      "sticky_cheap": 124
+    }
+  },
+  "s1_predictions": {
+    "C*_F": {
+      "config": "bundle, decide-once, decider R*, price gate on, scope gate 300, cheap: medium, strong: medium",
+      "d_turn_pass": -0.018915,
+      "d_turn_pass_ci95": [
+        -0.052319,
+        0.010335
+      ],
+      "gm_cost_ratio": 0.508271,
+      "gm_cost_ratio_ci95": [
+        0.483382,
+        0.535736
+      ],
+      "label": "estimated: main-v1 potential outcomes; host-kept sessions x 0.860 (Fable medium)",
+      "route_share": 0.985714
+    },
+    "C*_O": {
+      "config": "shipped (price gate closed: never routes), strong: medium",
+      "gm_cost_ratio_prior": [
+        0.821,
+        0.86
+      ],
+      "label": "unmeasured: Opus medium has no data; prior band from Sonnet 0.821 and Fable 0.860"
+    },
+    "H5_Pc_over_A0O": {
+      "gm_cost_ratio": 1.197004,
+      "gm_cost_ratio_ci95": [
+        1.124877,
+        1.272846
+      ]
+    }
+  }
+}

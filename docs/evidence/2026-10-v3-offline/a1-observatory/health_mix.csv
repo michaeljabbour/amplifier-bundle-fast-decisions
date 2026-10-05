@@ -1,0 +1,15 @@
+store,health_kind,n,share_of_store_events
+events,advisory_result,3,6e-06
+events,configuration,3286,0.007074
+events,native_hook_metadata,84048,0.180934
+events,recorder_status,4399,0.00947
+events,session_closed,3157,0.006796
+events,session_heartbeat,227610,0.489985
+events,shadow,7975,0.017168
+events,turn_start,1599,0.003442
+events-eval,configuration,226,0.028453
+events-eval,native_hook_metadata,2187,0.275337
+events-eval,recorder_status,297,0.037391
+events-eval,session_closed,216,0.027194
+events-eval,session_heartbeat,868,0.109279
+events-eval,turn_start,113,0.014226

@@ -1,0 +1,9 @@
+store,traffic,basis,sessions,events
+events,production,afast_traffic_tag,77,146564
+events,production,workspace_default,321,201809
+events,test,afast_traffic_tag,16,5756
+events,test,forge_label,860,72264
+events,test,workspace_marker,260,37485
+events,unclassified,no_config,46,211
+events,unclassified,no_name,17,435
+events-eval,test,eval_store,92,7943

@@ -1,0 +1,10 @@
+traffic,reason_code,sessions
+production,judge_cheap,35
+production,judge_strong,68
+production,rules_cheap,5
+production,rules_strong,1
+production,scope_strong,105
+test,judge_cheap,113
+test,judge_strong,4
+test,rules_cheap,1
+test,scope_strong,93
