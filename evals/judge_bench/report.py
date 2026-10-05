@@ -909,6 +909,11 @@ def build(root: Path) -> str:
     }
     for k, v in repl.items():
         body = body.replace(k, v)
+    if hold and str((_read_json(root / "holdout" / "summary.json") or {}).get("label", "")).startswith("post-hoc"):
+        banner = ("<div class=\"callout\"><b>Post-hoc holdout.</b> This holdout run was made after the preregistration, with "
+                  "arms the preregistration did not contain. The cases, labels and scorer are the frozen ones, but no "
+                  "preregistered verdict applies to the added arms.</div>")
+        body = body.replace("<main>\n", "<main>\n" + banner + "\n", 1)
     return body
 
 

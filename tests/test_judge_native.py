@@ -236,13 +236,16 @@ class ReorderAndAdaptedTests(unittest.TestCase):
 
     def test_yaml_declares_which_arms_run_native(self):
         cfg = judges.load_config()
-        env = {"TYPESAFE_API_KEY": "x", "OPENAI_API_KEY": "x"}
+        env = {"TYPESAFE_API_KEY": "x", "OPENAI_API_KEY": "x", "CLOUDFLARE_API_TOKEN": "x",
+               "CLOUDFLARE_ACCOUNT_ID": "x"}
         got = {n: arms.native_form_of(arms.build_arm(s, cfg["arms"], env)) for n, s in cfg["arms"].items()}
         self.assertEqual(got["jev-1.13"], "systemone_body")
         self.assertEqual(got["jev-1.13+sideeffect-clause"], "systemone_body")
         # Ollama /v1/systemone rejects the bundle's object-valued criteria (HTTP 400): these run adapted.
         for n in ("nimble-9b", "tev1-4b", "tev1-0.8b", "tev1-0.8b+sideeffect-clause"):
             self.assertIsNone(got[n], n)
+        for n in ("clef", "clef-flash"):  # Workers AI accepts the bundle's next_action body
+            self.assertEqual(got[n], "systemone_body", n)
         self.assertEqual(got["laya-base"], "laya_backend")
         for n in ("qwen3-0.6b", "qwen3-4b", "qwen3-8b"):
             self.assertEqual(got[n], "ollama_backend", n)

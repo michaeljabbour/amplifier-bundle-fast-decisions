@@ -79,7 +79,9 @@ def assert_same_summary(test, got, want, path="$"):
 
 class CommittedBenchmarkReplayTests(unittest.TestCase):
     def test_committed_benchmarks_replay_exactly(self):
-        found = sorted((ROOT / "docs" / "evidence").glob("*-judge-benchmark/**/requests.jsonl"))
+        evidence = ROOT / "docs" / "evidence"
+        found = sorted(list(evidence.glob("*-judge-benchmark/**/requests.jsonl"))
+                       + list(evidence.glob("*-clef-judges/**/requests.jsonl")))  # post-hoc arms, labeled in run.json
         if not found:
             self.skipTest("no committed judge-benchmark evidence yet")
         for requests in found:

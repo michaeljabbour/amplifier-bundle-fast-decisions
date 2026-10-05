@@ -49,6 +49,31 @@ def server_ms(headers, names=("x-processing-ms", "server-timing")) -> float | No
     return None
 
 
+def unwrap_envelope(data):
+    """Workers AI wraps a System One body as {"result": {...}, "success": bool, "errors": [...]}.
+    Returns the inner body; success=false or a non-empty `errors` raises with the error text.
+    A body without the envelope (Jev, Ollama) passes through unchanged."""
+    if not isinstance(data, dict) or not ("success" in data or "errors" in data):
+        return data
+    errors = data.get("errors") or []
+    if data.get("success") is False or errors:
+        text = "; ".join(f"[{e.get('code')}] {e.get('message')}" if isinstance(e, dict) else str(e) for e in errors)
+        raise ValueError("envelope error: " + (text or "success=false"))
+    return data.get("result") or {}
+
+
+def check_status(response, envelope: bool = False) -> None:
+    """raise_for_status, except that an envelope arm's HTTP error carries Cloudflare's error text."""
+    if not envelope or response.is_success:
+        return response.raise_for_status()
+    try:
+        unwrap_envelope(response.json())
+        detail = response.text[:200]
+    except Exception as exc:
+        detail = str(exc)
+    raise ArmParseError(f"HTTP {response.status_code}: {detail}", http_status=response.status_code)
+
+
 def _result(answer, model, tin, tout, timing_ms, status, **extra) -> dict:
     out = {"answer": answer, "model": model, "input_tokens": tin, "output_tokens": tout,
            "timing": {"server_ms": timing_ms}, "http_status": status}
@@ -76,8 +101,8 @@ class SystemOneArm:
 
     SENT = {"temperature_sent": None, "seed_sent": None}
 
-    def __init__(self, name, url, model, token=None, native_form=None):
-        self.native_form, self._laya = native_form, None
+    def __init__(self, name, url, model, token=None, native_form=None, envelope=False):
+        self.native_form, self._laya, self.envelope = native_form, None, envelope
         self.name, self.url, self.model, self.token = name, url, model, token
 
     @property
@@ -90,10 +115,10 @@ class SystemOneArm:
             headers["Authorization"] = "Bearer " + self.token
         body = dict(payload, model=self.model) if self.model else payload
         response = await client.post(self.url, json=body, headers=headers)
-        response.raise_for_status()
+        check_status(response, self.envelope)
         usage_pair = (None, None)
         try:
-            data = response.json()
+            data = unwrap_envelope(response.json()) if self.envelope else response.json()
             if not data.get("model"):
                 raise ValueError("Missing model identity")
             usage = data.get("usage") or {}
@@ -120,10 +145,10 @@ class SystemOneArm:
         if self.token:
             headers["Authorization"] = "Bearer " + self.token
         response = await client.post(self.url, json=nat.systemone_request_body(native, self.model), headers=headers)
-        response.raise_for_status()
+        check_status(response, self.envelope)
         usage_pair = (None, None)
         try:
-            data = response.json()
+            data = unwrap_envelope(response.json()) if self.envelope else response.json()
             if not data.get("model"):
                 raise ValueError("Missing model identity")
             usage = data.get("usage") or {}
@@ -408,7 +433,7 @@ def build_arm(spec: dict, specs: dict | None = None, env=None):
     adapter, name = spec["adapter"], spec["name"]
 
     def key(default=None):
-        var = spec.get("key_env") or default
+        var = spec.get("key_env") or spec.get("token_env") or default
         if not var:
             return None
         if not env.get(var):
@@ -416,7 +441,14 @@ def build_arm(spec: dict, specs: dict | None = None, env=None):
         return env[var]
 
     if adapter == "systemone":
-        return SystemOneArm(name, spec["url"], spec.get("model"), key(), spec.get("native_form"))
+        url = spec["url"]
+        if spec.get("account_env"):  # Workers AI: the account id is part of the URL, read from env only
+            account = env.get(spec["account_env"])
+            if not account:
+                raise ArmUnavailable(f"{spec['account_env']} is not set (needed by arm {name})")
+            url = url.replace("{account}", account)
+        return SystemOneArm(name, url, spec.get("model"), key(), spec.get("native_form"),
+                            envelope=bool(spec.get("envelope")))
     if adapter == "ollama_backend":
         return OllamaBackendArm(name, spec["model"], spec.get("keep_reason_option", True),
                                 spec.get("url", OLLAMA_ORIGIN), native_form=spec.get("native_form"))

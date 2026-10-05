@@ -43,7 +43,8 @@ TRACES_DIR = ROOT / "evals" / "judge_bench" / "traces"
 SPLITS = ("dev", "holdout", "trace-dev", "trace-holdout")
 PREREGISTERED_SPLITS = ("holdout", "trace-holdout")
 SCHEMA = "fast-decisions-evals/judges/v1"
-SECRET_ENV = ("TYPESAFE_API_KEY", "OPENAI_API_KEY")
+POSTHOC_LABEL = "post-hoc (arms added after the preregistration; cases and scorer unchanged)"
+SECRET_ENV = ("TYPESAFE_API_KEY", "OPENAI_API_KEY", "CLOUDFLARE_API_TOKEN", "CLOUDFLARE_ACCOUNT_ID")
 
 
 class GuardError(RuntimeError):
@@ -113,13 +114,19 @@ def _git(root: Path, *args: str) -> subprocess.CompletedProcess:
     return subprocess.run(["git", "-C", str(root), *args], capture_output=True, text=True)
 
 
-def check_holdout_guard(root: Path = ROOT, holdout_dir: Path | None = None, split: str = "holdout") -> str:
+def check_holdout_guard(root: Path = ROOT, holdout_dir: Path | None = None, split: str = "holdout",
+                        posthoc: bool = False) -> str:
     """Refuse unless the preregistration and the case files are committed, unmodified, and the
     preregistered cases_sha256 matches the cases on disk. Returns the sha.
 
     holdout:       <holdout dir>/PREREGISTRATION.md + cases.json
     trace-holdout: <traces dir>/PREREGISTRATION.md + pool.json + labels_final.json (the final labels are
-                   what `expected` is built from, so they are pinned like the cases)."""
+                   what `expected` is built from, so they are pinned like the cases).
+
+    posthoc=True (`--posthoc-arms`): arms added after the preregistration run on the frozen cases. The
+    preregistration, the case files and the case hash are checked exactly as above, and so is every scoring
+    module (all of evals/judge_bench/*.py except arms.py, which holds the adapters). Only arms.py, judges.py and
+    judges.yaml may differ from HEAD; `check_posthoc_config` then proves judges.yaml only added arms."""
     trace = split == "trace-holdout"
     holdout_dir = Path(holdout_dir) if holdout_dir else (TRACES_DIR if trace else HOLDOUT_DIR)
     prereg = holdout_dir / "PREREGISTRATION.md"
@@ -137,6 +144,8 @@ def check_holdout_guard(root: Path = ROOT, holdout_dir: Path | None = None, spli
             raise GuardError(f"holdout guard: {rel} differs from HEAD; commit it (or restore it) first")
     # The code that scores and drives a preregistered claim must be the committed code.
     code = [":(glob)evals/judge_bench/*.py", "evals/judges.py", "evals/judges.yaml"]
+    if posthoc:
+        code = [":(glob)evals/judge_bench/*.py", ":(exclude)evals/judge_bench/arms.py"]
     dirty = _git(root, "status", "--porcelain", "--", *code)
     if dirty.returncode != 0 or dirty.stdout.strip():
         changed = ", ".join(line[3:] for line in dirty.stdout.splitlines()) or "git status failed"
@@ -155,12 +164,39 @@ def check_holdout_guard(root: Path = ROOT, holdout_dir: Path | None = None, spli
     return actual
 
 
+def check_posthoc_config(root: Path, cfg: dict) -> list[str]:
+    """Names of the arms in `cfg` that the committed (HEAD) judges.yaml does not have. Raises GuardError
+    unless the working judges.yaml is the committed one plus new arms and contrasts: schema, defaults
+    (reps, policies, primary policy, timeout), budget, every existing arm spec and every existing contrast
+    must be unchanged."""
+    import yaml
+    done = _git(root, "show", "HEAD:evals/judges.yaml")
+    if done.returncode != 0:
+        raise GuardError("posthoc guard: cannot read evals/judges.yaml at HEAD")
+    old = yaml.safe_load(done.stdout)
+
+    def bare(spec):
+        return {k: v for k, v in spec.items() if k != "name"}
+    for key in ("schema", "defaults", "budget"):
+        if old.get(key) != cfg.get(key):
+            raise GuardError(f"posthoc guard: judges.yaml `{key}` differs from HEAD; --posthoc-arms may only add arms")
+    for name, spec in old["arms"].items():
+        if name not in cfg["arms"] or bare(cfg["arms"][name]) != bare(spec):
+            raise GuardError(f"posthoc guard: preregistered arm {name!r} differs from HEAD")
+    if any(list(pair) not in [list(c) for c in cfg["contrasts"]] for pair in old["contrasts"]):
+        raise GuardError("posthoc guard: a committed contrast was removed")
+    return [n for n in cfg["arms"] if n not in old["arms"]]
+
+
 # ----------------------------------------------------------------- summarizing
 
 def build_summary(rows, cases, tags, meta: dict) -> dict:
     policies = [resolve_policy(n) for n in meta["policies"]]
-    return summarize(rows, cases, tags, policies, specs=meta["specs"], contrasts=meta["contrasts"],
-                     primary=meta["primary_policy"], timeout_ms=meta["timeout_ms"], split=meta.get("split"))
+    summary = summarize(rows, cases, tags, policies, specs=meta["specs"], contrasts=meta["contrasts"],
+                        primary=meta["primary_policy"], timeout_ms=meta["timeout_ms"], split=meta.get("split"))
+    if meta.get("posthoc"):  # relabel only: numbers are untouched, and replay applies the same relabel
+        summary["label"] = summary["decisions"]["label"] = POSTHOC_LABEL
+    return summary
 
 
 def validate_policies(names, primary) -> None:
@@ -394,6 +430,9 @@ async def run(args, cfg, cases, tags, split, arm_names, probe_decisions, prereg_
     if cases and cases[0].get("native") is not None:
         invocation["arm_forms"] = {n: ("native" if native_form_of(a) else "adapted") for n, a in arms.items()}
     meta = _meta_from_cfg(cfg)
+    if getattr(args, "posthoc", None):
+        meta["posthoc"] = True
+        invocation["posthoc"] = args.posthoc
 
     def write_run_doc() -> None:
         kept = dict(previous.get("specs", {}))
@@ -482,6 +521,9 @@ def main(argv=None) -> int:
     parser.add_argument("--concurrency", type=int, default=1, help="in-flight requests per arm (latency tests)")
     parser.add_argument("--replay", type=Path, help="recompute summary.json from a requests.jsonl, offline")
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--posthoc-arms", action="store_true",
+                        help="run arms added after the preregistration on the frozen holdout / trace-holdout cases; "
+                             "run.json records posthoc: true and the summary is labeled post-hoc")
     args = parser.parse_args(argv)
     cfg = load_config()
     specs = cfg["arms"]
@@ -505,10 +547,21 @@ def main(argv=None) -> int:
         print(f"refusing: --limit is not allowed with --split {args.split} (the preregistered cases run whole)",
               file=sys.stderr)
         return 2
+    if args.posthoc_arms and (args.split not in PREREGISTERED_SPLITS or not args.arms):
+        print("refusing: --posthoc-arms applies to holdout / trace-holdout and needs --arms", file=sys.stderr)
+        return 2
     prereg_sha = None
+    args.posthoc = None
     try:
         if args.split in PREREGISTERED_SPLITS:
-            prereg_sha = check_holdout_guard(split=args.split)
+            prereg_sha = check_holdout_guard(split=args.split, posthoc=args.posthoc_arms)
+            if args.posthoc_arms:
+                new = check_posthoc_config(ROOT, cfg)
+                added = [a for a in args.arms if a in new]
+                if not added:
+                    raise GuardError("posthoc guard: none of --arms is new relative to the committed judges.yaml")
+                args.posthoc = {"new_arms": added, "reference_arms": [a for a in args.arms if a not in new],
+                                "unfrozen_code": ["evals/judge_bench/arms.py", "evals/judges.py", "evals/judges.yaml"]}
             cases = (case_lib.holdout_cases() if args.split == "holdout"
                      else case_lib.trace_cases(args.split))
         elif args.split == "trace-dev":
