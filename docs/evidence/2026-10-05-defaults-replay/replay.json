@@ -1,0 +1,153 @@
+{
+  "derive": {
+    "default_multiplier_ok": true,
+    "multipliers": {
+      "claude-fable-5-1": {
+        "constant": 1.11,
+        "derived": 1.1132,
+        "ok": true,
+        "pairs": 124
+      },
+      "claude-opus-5-5": {
+        "constant": 1.38,
+        "derived": 1.3789,
+        "ok": true,
+        "pairs": 124
+      }
+    },
+    "ok": true,
+    "reference_mix": {
+      "anchor_sessions": 280,
+      "constant": {
+        "cache_read": 88516,
+        "cache_write": 5376,
+        "input": 3,
+        "output": 541
+      },
+      "from_request_rows": {
+        "cache_read": 88516.07688307186,
+        "cache_write": 5376.243737540089,
+        "input": 2.674698795180723,
+        "output": 541.0954320880645
+      },
+      "from_sessions": {
+        "cache_read": 88516.07688307186,
+        "cache_write": 5376.243737540089,
+        "input": 2.674698795180723,
+        "output": 541.0954320880645
+      },
+      "main_requests": 11537,
+      "ok": true,
+      "request_rows": 11537
+    }
+  },
+  "pass": true,
+  "replay": {
+    "by_host": {
+      "fable": {
+        "cheap_requests_sonnet_medium": 140,
+        "decision_matches_recorded": 140,
+        "judged_once": 140,
+        "pass": true,
+        "recorded_cheap": 124,
+        "recorded_host": 16,
+        "turns_2_3_reuse_session": 140,
+        "waves": 140
+      },
+      "opus": {
+        "no_routing": 140,
+        "pass": true,
+        "waves": 140
+      }
+    },
+    "mismatches": [],
+    "pass": true,
+    "spend": {
+      "fable/anchor": 5.311,
+      "fable/shipped": 3.557,
+      "fable/sticky": 3.331,
+      "opus/anchor": 2.125,
+      "opus/shipped": 2.713,
+      "opus/sticky": 2.615
+    },
+    "waves": 280
+  },
+  "sweep": {
+    "gate_break_even_cache_read": 0.429,
+    "pass": true,
+    "rows": [
+      {
+        "gate": "host",
+        "gate_predicted": 1.366,
+        "measured_sticky_over_anchor": 1.203,
+        "opus_cache_read_usd_per_m": 0.2,
+        "pairs": 46,
+        "sound": true
+      },
+      {
+        "gate": "host",
+        "gate_predicted": 1.265,
+        "measured_sticky_over_anchor": 1.121,
+        "opus_cache_read_usd_per_m": 0.25,
+        "pairs": 46,
+        "sound": true
+      },
+      {
+        "gate": "host",
+        "gate_predicted": 1.178,
+        "measured_sticky_over_anchor": 1.051,
+        "opus_cache_read_usd_per_m": 0.3,
+        "pairs": 46,
+        "sound": true
+      },
+      {
+        "gate": "host",
+        "gate_predicted": 1.102,
+        "measured_sticky_over_anchor": 0.989,
+        "opus_cache_read_usd_per_m": 0.35,
+        "pairs": 46,
+        "sound": true
+      },
+      {
+        "gate": "host",
+        "gate_predicted": 1.061,
+        "measured_sticky_over_anchor": 0.956,
+        "opus_cache_read_usd_per_m": 0.38,
+        "pairs": 46,
+        "sound": true
+      },
+      {
+        "gate": "host",
+        "gate_predicted": 1.035,
+        "measured_sticky_over_anchor": 0.935,
+        "opus_cache_read_usd_per_m": 0.4,
+        "pairs": 46,
+        "sound": true
+      },
+      {
+        "gate": "route",
+        "gate_predicted": 0.999,
+        "measured_sticky_over_anchor": 0.905,
+        "opus_cache_read_usd_per_m": 0.43,
+        "pairs": 46,
+        "sound": true
+      },
+      {
+        "gate": "route",
+        "gate_predicted": 0.976,
+        "measured_sticky_over_anchor": 0.886,
+        "opus_cache_read_usd_per_m": 0.45,
+        "pairs": 46,
+        "sound": true
+      },
+      {
+        "gate": "route",
+        "gate_predicted": 0.923,
+        "measured_sticky_over_anchor": 0.842,
+        "opus_cache_read_usd_per_m": 0.5,
+        "pairs": 46,
+        "sound": true
+      }
+    ]
+  }
+}
