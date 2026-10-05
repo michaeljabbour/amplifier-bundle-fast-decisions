@@ -1,0 +1,110 @@
+# holdout-v3 repos scenario (11 turns, explain): Textualize/rich at 9d8f9a3 (553 files): explain the Text/Segment rendering model by running the checkout (spans, divide, wrap, cell width), then add Text.split_at against hidden tests, tests of your own and a changelog entry
+id: rich-text-split-explain
+task_type: explain
+language: python
+split: holdout
+source: {desc: 'Textualize/rich at 9d8f9a3 (553 files): explain the Text/Segment rendering model by running the checkout (spans, divide, wrap, cell width), then add Text.split_at against hidden tests, tests of your own and a changelog entry', repo: 'https://github.com/Textualize/rich.git', sha: 9d8f9a372cc5916fd4781fec207ced7ddac2f08f}
+workspace: {kind: git, repo: 'https://github.com/Textualize/rich.git', sha: 9d8f9a372cc5916fd4781fec207ced7ddac2f08f, local_hint: ~/dev/afast-paired-src/_v3c/rich}
+hidden_files:
+  hidden/test_split_at.py: |
+    from rich.text import Span, Text
+
+
+    def make():
+        text = Text("Hello World")
+        text.stylize("bold", 0, 5)
+        text.stylize("red", 3, 8)
+        return text
+
+
+    def test_plain_and_spans_are_rebased():
+        left, right = make().split_at(5)
+        assert (left.plain, right.plain) == ("Hello", " World")
+        assert left.spans == [Span(0, 5, "bold"), Span(3, 5, "red")]
+        assert right.spans == [Span(0, 3, "red")]
+
+
+    def test_edges():
+        text = make()
+        left, right = text.split_at(0)
+        assert (left.plain, right.plain) == ("", "Hello World")
+        left, right = text.split_at(len(text))
+        assert (left.plain, right.plain) == ("Hello World", "")
+
+
+    def test_offsets_are_clamped():
+        text = make()
+        assert text.split_at(-3)[0].plain == ""
+        assert text.split_at(-3)[1].plain == "Hello World"
+        assert text.split_at(99)[1].plain == ""
+
+
+    def test_base_style_and_justify_are_kept():
+        left, right = Text("ab", style="red", justify="center").split_at(1)
+        assert left.style == right.style == "red"
+        assert left.justify == right.justify == "center"
+
+
+    def test_original_is_unchanged():
+        text = make()
+        text.split_at(4)
+        assert text.plain == "Hello World"
+        assert text.spans == [Span(0, 5, "bold"), Span(3, 8, "red")]
+turns:
+- prompt: 'Give me a map of the rich/ package: which modules matter for turning text into terminal output (console, text, segment, style, markup, measure, cells, _wrap) and what is each one for, plus where the tests, docs and examples live. Do not change any files.'
+  checks:
+  - kind: keyed_facts
+    all: [console\.py, text\.py, segment\.py, style\.py, markup\.py, measure\.py, cells\.py, _wrap\.py, tests, docs, examples]
+- prompt: 'How does a `Text` become output? Run `list(Console(width=20, color_system=None).render(Text(''hi'', style=''bold'')))` using this checkout (put the repo root on sys.path) and explain what you see: what is a Segment, what are its fields, and what is the `__rich_console__` protocol? Do not change repository files.'
+  checks:
+  - kind: keyed_facts
+    all: [Segment\('hi', Style\(bold=True\), Segment\('\\\\n'\)|newline, 'text.{0,30}style.{0,30}control|fields', __rich_console__]
+- prompt: 'Explain spans: what does `Text.stylize(''bold'', 0, 5)` store, and what are `Text.spans` for `t = Text(''Hello World''); t.stylize(''bold'', 0, 5); t.stylize(''red'', 3, 8)`? Run it. Which style wins on the overlap? Do not change repository files.'
+  checks:
+  - kind: keyed_facts
+    all: ['Span\(0, 5, ''bold''\)', 'Span\(3, 8, ''red''\)', 'overlap|3.{0,10}5|later|last', 'start.{0,40}end.{0,40}style|half-open|exclusive']
+- prompt: What does `t.divide([5])` return for that text and how are the spans re-based? Run it and also `t.divide([4, 6])`. Which attributes of the original Text do the pieces keep? Answer from rich/text.py. Do not change repository files.
+  checks:
+  - kind: keyed_facts
+    all: [Lines, '\(''Hello''.{0,80}Span\(0, 5, ''bold''\).{0,40}Span\(3, 5, ''red''\)', ''' World''.{0,60}Span\(0, 3, ''red''\)', style, justify, overflow]
+- prompt: How does `Text.wrap` break `'one two three four'` at width 10, which function in rich/_wrap.py does the work, and how does the width of a character get measured (what is `cell_len('日本')`)? Run both. Do not change repository files.
+  checks:
+  - kind: keyed_facts
+    all: ['one two ', three four, divide_line, cell_len, \b4\b]
+  gap_before_s: 420
+- prompt: Write ARCHITECTURE.md in the repository root with level-2 sections Overview, Rendering, Text spans and Wrapping, based on what you ran (name Segment, Span, divide_line and cell_len).
+  checks:
+  - kind: doc_sections
+    path: ARCHITECTURE.md
+    headings: [Overview, Rendering, Text spans, Wrapping]
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: Segment}
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: 'Span\(0, 5, ''bold''\)'}
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: divide_line}
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: cell_len}
+- prompt: 'Implement `Text.split_at(offset)` in rich/text.py, right after `divide`: it returns a tuple (left, right) of Text objects split at the offset using divide, keeping spans re-based, clamps offsets to the range 0..len(text), and does not modify the original. Give it a Google-style docstring like its neighbours.'
+  checks:
+  - {kind: file_regex, path: rich/text.py, pattern: 'def split_at\(self, offset: int\)'}
+  - {kind: file_regex, path: rich/text.py, pattern: 'def split_at\(self[\s\S]{0,400}Args:'}
+  - kind: tests
+    runner: python
+    files: [hidden/test_split_at.py]
+    hidden: [hidden/test_split_at.py]
+- prompt: Add tests/test_text_split_at.py with at least four pytest tests for `split_at` (plain split, a span crossing the boundary, clamped offsets, base style kept) and run them.
+  checks:
+  - {kind: file_regex, path: tests/test_text_split_at.py, pattern: ^def test_, min_count: 4}
+  - kind: tests
+    runner: python
+    files: [tests/test_text_split_at.py]
+- prompt: What is `Lines` (returned by divide) in rich/containers.py, and which methods does it add on top of a list? Answer from the code. Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: [Lines, justify, __rich_console__, append|extend|__getitem__|_lines, containers\.py]
+  gap_before_s: 420
+- prompt: 'Add a changelog entry: in CHANGELOG.md insert a new `## [Unreleased]` section above `## [15.0.0]` with a `### Added` list item mentioning `Text.split_at`.'
+  checks:
+  - {kind: file_regex, path: CHANGELOG.md, pattern: '## \[Unreleased\]\n\n### Added\n\n- .*split_at'}
+  - {kind: file_regex, path: CHANGELOG.md, pattern: '## \[Unreleased\][\s\S]*?## \[15\.0\.0\]'}
+- prompt: 'Summarise the change: which files did you add or modify, what does `split_at(-3)` and `split_at(len+10)` return, and which Text attributes does the result inherit? Do not change any files.'
+  checks:
+  - kind: keyed_facts
+    all: [rich/text\.py, split_at, test_text_split_at\.py, CHANGELOG, clamp|empty, style, justify]
