@@ -2,9 +2,11 @@
 {
   "smart_tool_format": 1,
   "name": "amplifier-fast-decisions",
-  "version": "0.1.0",
-  "description": "Use Jev for bounded read/list decisions, source relevance search, and proposals on observed UI controls. The host keeps execution and approval authority; uncertain decisions abstain.",
+  "version": "0.2.0",
+  "description": "Decide once at session start which model and effort a coding session should run on (the same price-gated, scope-gated decision the Amplifier orchestrator makes), and use Jev for bounded read/list decisions, source relevance search, and proposals on observed UI controls. The host keeps execution and approval authority; uncertain decisions abstain.",
   "use_cases": [
+    "Decide, before a Claude Code, Codex, Copilot CLI or Amplifier session starts, whether to run it on a cheaper model and at which effort",
+    "Launch Claude Code, Codex or Copilot CLI on the model and effort that decision chose",
     "Choose among caller-validated workspace read targets",
     "Measure a local decision scorer independently of an agent harness",
     "Record advisory decisions alongside parent and child session metadata",
@@ -24,6 +26,12 @@
       "install": "https://github.com/michaeljabbour/amplifier-bundle-fast-decisions/blob/main/docs/MODEL-SETUP.md"
     },
     {
+      "name": "Cloudflare Workers AI (clef, clef-flash)",
+      "purpose": "Optional opt-in remote judge (--backend/--decider clef or clef-flash); CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID and external-state consent required.",
+      "optional": true,
+      "install": "https://github.com/michaeljabbour/amplifier-bundle-fast-decisions/blob/main/docs/CONFIGURATION.md#judge-backends"
+    },
+    {
       "name": "Jevgrep 0.4.0 (jg)",
       "purpose": "Default bounded source retrieval; experimental Laya retrieval separately requires ripgrep.",
       "optional": true,
@@ -40,10 +48,45 @@ portable path. The CLI and deterministic/fixture contracts are checked on
 macOS, Linux, and Windows. Real local-model latency has been exercised on
 macOS; other hardware and Ollama installations need their own measurements.
 
-Use this when the caller already has eligible read/list targets. It does not
-decide arbitrary commands, invent tool arguments, perform compaction, or
-intercept a harness's provider loop. It returns a suggestion; the caller owns
+Two jobs. `decide` answers one question at the start of a session: run it on the
+cheaper start model at medium effort, or stay on the host model unchanged. `select`
+answers a bounded read/list question for a caller that already has eligible targets.
+Neither decides arbitrary commands, invents tool arguments, performs compaction, or
+intercepts a harness's provider loop. Both return a suggestion; the caller owns
 eligibility checks, approvals, execution and evaluation of the result.
+
+## Decide once, at session start
+
+```bash
+amplifier-fast-decisions decide --host-model claude-fable-5-1 --workspace . --allow-external-state \
+  --task "Fix the off-by-one in pagination"
+# {"route": true, "model": "claude-sonnet-5", "effort": "medium", "reason": "judge_cheap", "gate": {...}, ...}
+amplifier-fast-decisions launch --harness claude --host-model claude-fable-5-1 -- -p "Fix the off-by-one in pagination"
+```
+
+`decide` is the Amplifier orchestrator's turn-1 decision, callable from any harness. It runs the same code (the
+price gate, the workspace-size scope gate, the Jev difficulty judge, the effort-by-tier rule) over the defaults in
+`behaviors/fast-decisions.yaml`; nothing here has its own thresholds. A user overlay at
+`~/.amplifier/fast-decisions/settings.yaml` (or `$AFAST_SETTINGS`) is deep-merged over those defaults, and
+`afast doctor` shows the result. The decision is made once because switching model or effort inside a session
+rewrites the provider's prompt cache. `route: false` means: run the host model unchanged. The price gate is the
+reason a session on an expensive-cache host (for example Opus 5.5) is not routed: at current prices the cheaper
+model would cost more there.
+
+The result is typed: `route`, `tier`, `model` (what to run), `effort` (set it for the whole session, or null),
+`reason`, `gate` (host and start-model rates, request multiplier, predicted cost ratio), `judge` (backend, status,
+`p_complex`, `task_type`, duration), `workspace_files`, `scope_limit`, `latency_ms`, `usd` (estimated judge cost) and
+`config_sha`. `--decider` replaces the judge for studies (`rules`, `always-host`, `always-cheap`, or any backend in
+the table below). A remote judge receives the first 2,500 characters of the task, scrubbed of secret-shaped strings;
+it needs `--allow-external-state` or `FAST_DECISIONS_ALLOW_EXTERNAL_STATE=true`. The shipped bundle's own consent
+is not inherited outside Amplifier. Without consent the answer falls back to the prompt-length rule and
+`judge.status` says `no_consent`.
+
+`launch --harness claude|codex|copilot` runs `decide` and then replaces itself with the harness, adding
+`--model`/`--effort` (Claude Code), `-c model=... -c model_reasoning_effort=...` (Codex) or `--model` (Copilot CLI,
+which has no effort control). The model flag is added only when the decision routes. Add `--dry-run` to see the
+decision and the exact command. These flags are confirmed against each CLI's `--help`; a live launch of each
+harness is not part of the offline checks.
 
 ## Installation and setup
 
@@ -58,7 +101,7 @@ amplifier-fast-decisions select --help
 ```
 
 During development use `uv tool install --editable '.[local]'` from this checkout.
-`install-skill --host codex|claude|amplifier|opencode|all` adds a minimal discovery skill
+`install-skill --host codex|claude|amplifier|opencode|copilot|all` adds a minimal discovery skill
 to the selected user catalogs, with no overwrite of modified existing files.
 Laya is experimental and requires explicit --backend laya and a separately started server. The optional
 Ollama backend requires native token log probabilities. Loopback calls need no API key;
@@ -78,8 +121,8 @@ request file. The optional SDK is not required: the stdlib transport is supporte
 amplifier-fast-decisions select --backend jev --allow-external-state --input request.json
 ```
 
-`--backend` overrides `FAST_DECISIONS_JUDGE` (`laya`, `local`/`ollama` or `jev`; default
-jev). `--allow-external-state` and `--no-allow-external-state` override
+`--backend` overrides `FAST_DECISIONS_JUDGE` (`jev`, `clef`, `clef-flash`, `ollama`/`local` or `laya`; default
+jev; the full list shared with the runtime and `afast configure` is under "Judge backends"). `--allow-external-state` and `--no-allow-external-state` override
 `FAST_DECISIONS_ALLOW_EXTERNAL_STATE` (default false). Jev sends the bounded task,
 context and candidate descriptions to TypeSafe; without consent no external
 backend is constructed. The key is used only by the backend's authorization
@@ -120,8 +163,9 @@ file permission, or symlink claim is established by this advisory tool.
 
 ## Evidence and limits
 
-The default judge is Jev 1.13.0 with explicit external-state consent. Selection uses a 500 ms scoring deadline,
-score threshold 0.90 and margin 0.20. Results preserve each backend's
+The default judge is Jev 1.13.0 with explicit external-state consent. Selection reads its scoring deadline,
+score threshold and margin from the shared `Policy` of the effective configuration (3000 ms, 0.90 and 0.20 as
+shipped; `diagnose` and `afast doctor` print them). Results preserve each backend's
 `probability_kind` and `confidence_kind`; the numbers are not calibrated
 correctness probabilities or necessarily comparable statistics across backends.
 The current workload is bounded workspace-action selection.
@@ -145,6 +189,19 @@ Laya preserves its model-reported confidence when present; Ollama reports `not_r
 its own reported confidence semantics. `option_set_hash` is an order-sensitive
 digest of the backend's presented options and ID bindings. The digest records neither actual execution nor correctness, and
 is not a hash of the complete request.
+
+## Judge backends
+
+One list, shared by the runtime (`backend:` in the orchestrator config), `select`/`decide` and
+`afast configure --backend` (`src/amplifier_fast_decisions/judge_backends.py`; a test fails if a surface drifts):
+
+| backend | external | notes |
+|---|---|---|
+| `jev` | yes | shipped default. `TYPESAFE_API_KEY` |
+| `clef`, `clef-flash` | yes | opt-in. Cloudflare Workers AI decision models, System One body in the Workers AI envelope. `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`; nothing is stored. Benchmark arms only (not a shipped default) until a study promotes them |
+| `ollama` (`local`) | no | local token-probability scorer |
+| `laya` | no (loopback) | experimental |
+| `mlx`, `hosted` (`gateway`), `anyjev`, `deterministic`, `unavailable` (`none`) | varies | runtime/configure only (`select` refuses them: no scripted substitute) |
 
 ## Operational evidence
 
