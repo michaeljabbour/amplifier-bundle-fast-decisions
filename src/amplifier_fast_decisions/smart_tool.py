@@ -37,6 +37,7 @@ CAPABILITIES = {
     'manifest': ('deterministic', 'Read the installed tool manifest as JSON.'),
     'describe': ('deterministic', 'Describe the input schema, result and calling contract.'),
     'install-skill': ('deterministic', 'Install a minimal Agent Skill for selected local harnesses.'),
+    'doctor': ('deterministic', 'First-run health check: installation, configuration, local model and viewer. No model call; alias of diagnose.'),
     'diagnose': ('deterministic', 'Inspect installation, session integration, local model and viewer health.'),
     'measure': ('deterministic', 'Count observed provider and tool executions across a session tree.'),
     'compare': ('deterministic', 'Compare matched baseline/enabled runs with explicit outcome checks.'),
@@ -52,13 +53,17 @@ SKILL_HOSTS = {'codex': '.agents', 'claude': '.claude', 'amplifier': '.amplifier
                'copilot': '.copilot'}
 
 
+INSTALL_LINE = ("uv tool install 'amplifier-fast-decisions[local] @ "
+                "git+https://github.com/michaeljabbour/amplifier-bundle-fast-decisions@main'")
+
+
 def agent_skill() -> str:
     """Generate the minimal discovery skill from canonical manifest identity."""
     info = manifest()
     return ('---\n' + f'name: {json.dumps(info["name"])}\n'
             + f'description: {json.dumps(info["description"])}\n---\n\n'
             + 'Install the CLI if needed:\n\n```bash\n'
-            + "uv tool install 'amplifier-fast-decisions[local] @ git+https://github.com/michaeljabbour/amplifier-bundle-fast-decisions@main'\n```\n\n"
+            + INSTALL_LINE + '\n```\n\n'
             + f'Run `{info["name"]} --help` and follow its guidance. Confirm capability\n'
             + f'arguments with `{info["name"]} <capability> --help` before use.\n')
 
@@ -204,7 +209,7 @@ def skill(capability: str | None = None) -> str:
         lines += [CAPABILITIES[capability][1], 'Deterministic; no arguments or provider required.',
                   f'Example: `{info["name"]} {capability}`.',
                   'Result: one JSON object on stdout. Exit 0 on success; invalid flags exit 2.']
-    elif capability in {'diagnose', 'measure', 'compare'}:
+    elif capability in {'doctor', 'diagnose', 'measure', 'compare'}:
         lines += [
             CAPABILITIES[capability][1],
             'No inference or configuration changes. Results are JSON on stdout; errors on stderr.',

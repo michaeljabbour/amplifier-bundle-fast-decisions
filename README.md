@@ -1,5 +1,24 @@
 # Fast Decisions
 
+## Install and update
+
+Pick one path. Each has one command to install and one to update.
+
+| You use | Install | Update |
+|---|---|---|
+| **Claude Code, Codex, Copilot, Amplifier or another agent harness** (the easy path) | `npx skills add michaeljabbour/amplifier-bundle-fast-decisions` | `npx skills update` |
+| **Amplifier's own routing** (every session decides on its own) | `amplifier bundle add --app "git+https://github.com/michaeljabbour/amplifier-bundle-fast-decisions@main#subdirectory=behaviors/fast-decisions.yaml"` | `amplifier bundle update` |
+
+The skill teaches your agent the tool. It tells the agent to install the command line
+(`uv tool install 'amplifier-fast-decisions[local] @ git+https://github.com/michaeljabbour/amplifier-bundle-fast-decisions@main'`),
+run `amplifier-fast-decisions doctor` first, and check `amplifier-fast-decisions --version`.
+When the CLI is older than the skill expects, the skill tells the agent to upgrade it with
+the same line plus `--force`. So `npx skills update` refreshes the instructions and the
+agent refreshes the tool: one command for you. Use the skill path to start a session on the
+right model from any harness; use the bundle path to have Amplifier itself route every
+session. They are independent and can be used together. Details of the bundle option are
+under "Install (Amplifier bundle)" below.
+
 Fast Decisions makes Amplifier faster by asking one quick question at the start of every session: *is this easy
 or hard?* Easy sessions go to a faster, cheaper model (Claude Sonnet 5), and only when that is predicted to be
 cheaper on your default model. Hard ones, and all work inside large projects, stay on your usual model. The decision
@@ -85,7 +104,7 @@ Full results: [report](docs/report/fast-decisions-report.html) (plain language) 
 [holdout2 verification](docs/evidence/2026-09-25/holdout2/VERIFICATION.md) ·
 evidence with checksums: [2026-09-24](docs/evidence/2026-09-24/), [2026-09-25](docs/evidence/2026-09-25/).
 
-## Install
+## Install (Amplifier bundle)
 
 One command. It applies to the Amplifier command line, the Amplifier terminal app and Studio, because all three
 read `~/.amplifier/settings.yaml`, and to every helper session they start:

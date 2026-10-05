@@ -9,6 +9,7 @@ import sys
 
 import os
 
+from . import __version__
 from . import smart_tool as lib
 from . import operations
 from . import decide as decide_lib
@@ -27,10 +28,10 @@ def main(argv=None) -> int:
         command.add_argument('-h', action='help', help='Show short usage')
         if name == 'install-skill':
             command.add_argument('--host', required=True, choices=[*lib.SKILL_HOSTS, 'all'])
-        if name in {'diagnose', 'measure'}:
+        if name in {'doctor', 'diagnose', 'measure'}:
             command.add_argument('--events', default=str(operations.DEFAULT_EVENTS))
             command.add_argument('--session')
-        if name == 'diagnose':
+        if name in {'doctor', 'diagnose'}:
             command.add_argument('--state-file', default=str(operations.DEFAULT_STATE))
             command.add_argument('--ollama-url', default='http://127.0.0.1:11434')
             command.add_argument('--model', default='qwen3:0.6b')
@@ -71,6 +72,8 @@ def main(argv=None) -> int:
             command.add_argument('--laya-url')
             command.add_argument('--timeout-ms', type=int, default=None)
             command.add_argument('--events')
+    if argv == ['--version']:
+        print(__version__); return 0
     if argv == ['--help']:
         print(lib.skill()); return 0
     if len(argv) == 2 and argv[0] in lib.CAPABILITIES and argv[1] == '--help':
@@ -84,9 +87,9 @@ def main(argv=None) -> int:
         print(json.dumps(lib.manifest(), indent=2)); return 0
     if args.command == 'describe':
         print(json.dumps(lib.describe(), indent=2)); return 0
-    if args.command in {'diagnose', 'measure', 'compare'}:
+    if args.command in {'doctor', 'diagnose', 'measure', 'compare'}:
         try:
-            if args.command == 'diagnose':
+            if args.command in {'doctor', 'diagnose'}:
                 result = operations.diagnose(events_dir=args.events, session_id=args.session,
                     state_file=args.state_file, ollama_url=args.ollama_url, model=args.model, probe=not args.offline)
             elif args.command == 'measure':

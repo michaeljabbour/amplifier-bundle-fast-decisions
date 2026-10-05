@@ -2,7 +2,7 @@
 {
   "smart_tool_format": 1,
   "name": "amplifier-fast-decisions",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Decide once at session start which model and effort a coding session should run on (the same price-gated, scope-gated decision the Amplifier orchestrator makes), and use Jev for bounded read/list decisions, source relevance search, and proposals on observed UI controls. The host keeps execution and approval authority; uncertain decisions abstain.",
   "use_cases": [
     "Decide, before a Claude Code, Codex, Copilot CLI or Amplifier session starts, whether to run it on a cheaper model and at which effort",
