@@ -32,11 +32,12 @@ The intended launch order was anchor, A/A, shipped, sticky, Sonnet; measured fro
 the anchor started on average \StaggerAnchor\,s later, the A/A copy \StaggerAA\,s, shipped \StaggerShipped\,s (at
 most \StaggerShippedMax\,s), sticky \StaggerSticky\,s and Sonnet \StaggerSonnet\,s. The realised order varied:
 the A/A copy started before its anchor in \RvAAFirstFable\,\% of Fable waves and \RvAAFirstOpus\,\% of Opus waves.
-Cost ratios show no association with start offset (\cref{sec:aa}). One exception to ``same wave'': the plain-Sonnet
+The A/A cost ratio shows no detectable association with start offset (\cref{sec:aa}). One exception to ``same wave'': the plain-Sonnet
 control does not depend on the host, so it ran once per scenario and repetition, in the Opus wave. Its pairs with
 the Fable anchor therefore started a median \RvSonnetWaveMedianH\ hours apart (at most \RvSonnetWaveMaxH\,h), not
 within seconds. Each session carries its own
-nonce, so no arm can read another arm's cache (\cref{sec:caching}). A per-request audit checked every
+nonce, so no arm can read another arm's cache, except the tool-definition prefix, which precedes the nonce and is
+shared (\cref{sec:caching}; the tools normalization below). A per-request audit checked every
 session for cache reads it could not have written itself; \AuditFlagged\ sessions were flagged.
 
 \begin{keyidea}
@@ -140,8 +141,9 @@ from cache (\RvWarmReadFable\ tokens on Fable and Opus, \RvWarmReadSonnet\ on So
 allowance, so each had a few dozen tokens re-priced, \$\RvWarmUSD\ in all). Only \RvColdTotal\ were cold and had the
 full allowance re-priced (\$\RvColdUSD). The cold ones fell mostly on anchors (\RvColdFableAnchor\ of \NStickyPerHost\ on Fable,
 \RvColdOpusAnchor\ on Opus) and on the Sonnet control (\RvColdSonnet), against \RvColdFableSticky\ to
-\RvColdOpusSticky\ for sticky (\cref{tab:toolsnorm}), which is consistent with the anchor usually starting first in
-its wave. The adjustment therefore lowers the anchors' cost more than the routed arms', which \emph{raises} the routed
+\RvColdOpusSticky\ for sticky (\cref{tab:toolsnorm}). The cold rate did not depend on whether the anchor started
+first in its wave (Fable \RvColdFirstFable\ against \RvColdNotFirstFable; Opus \RvColdFirstOpus\ against
+\RvColdNotFirstOpus); the cause is not established. The adjustment therefore lowers the anchors' cost more than the routed arms', which \emph{raises} the routed
 ratios slightly (\cref{tab:toolsratios}): it works against the Fable savings claims, not for them.
 
 \begin{table}[htbp]

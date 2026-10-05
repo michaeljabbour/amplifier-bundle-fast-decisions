@@ -12,11 +12,11 @@
 \addplot[only marks, mark=*, mark size=2.6pt, color=okblue,
   error bars/.cd, x dir=both, x explicit, error bar style={line width=1pt}]
   table[x=pair, y=y, x error minus=pm, x error plus=pp]{generated/data/forest.dat};
-\addlegendentry{pair reading (primary)}
+\addlegendentry{pair reading (co-primary)}
 \addplot[only marks, mark=diamond, mark size=3pt, color=okorange, mark options={line width=1pt},
   error bars/.cd, x dir=both, x explicit, error bar style={line width=0.6pt, densely dashed}]
   table[x=arm, y expr=\thisrow{y}-0.3, x error minus=am, x error plus=ap]{generated/data/forest.dat};
-\addlegendentry{arm reading (sensitivity)}
+\addlegendentry{arm reading (co-primary, unfiltered)}
 \end{axis}
 \end{tikzpicture}
 

@@ -120,12 +120,12 @@ The \term{A/A} arm runs the plain host twice on the same scenario. Its ratio sho
 says how much two identical sessions differ by chance. The standard deviation of the A/A log ratio was about
 \AAAllSD\ per pair, or \AAAllSDSession\ per session, far smaller than the effects above (\cref{tab:aa}). On
 Fable the A/A ratio was \AAFable\ (\AAFableCI). On Opus it was \AAOpus\ (\AAOpusCI): the interval excludes 1. Two identical Opus
-sessions differed by about \AAOpusPct\,\% on average, and we cannot explain why. It is not launch order: a
+sessions differed by about \AAOpusPct\,\% on average, and we cannot explain why. A linear start-offset effect does not explain it: a
 regression of the A/A log ratio on the start offset between the two copies gives a slope of
 \RvAASlopeOpus\ per second on Opus (95\,\% CI \RvAASlopeOpusCI) and \RvAASlopeFable\ on Fable (\RvAASlopeFableCI),
 and at zero offset the Opus ratio is still \RvAAInterceptOpus. The A/A log ratio does track the difference in
 request counts between the two copies (correlation \RvAAReqCorrOpus\ on Opus, \RvAAReqCorrFable\ on Fable), which
-points to run-to-run variation in how the agent works rather than to the harness. With two A/A intervals, one
+suggests run-to-run variation in how the agent works, though a harness cause is not ruled out. With two A/A intervals, one
 excluding 1 is not remarkable. If every Opus arm carried the same bias, removing it would move the Opus ratios from
 \CfOpusStickyPairTwo--\CfOpusSonnetPairTwo\ to about \OpusAdjLow--\OpusAdjHigh, with the lowest lower bound at
 \OpusAdjMinLower; the H2 verdicts would hold.

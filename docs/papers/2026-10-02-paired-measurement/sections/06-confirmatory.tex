@@ -82,8 +82,9 @@ Across all \QAllScen\ scenarios (exploratory) its mean difference is \QAllFableS
 interval of \QAllFableStickyCI: there the margin is not shown, and on the \NTrain\ training scenarios it is
 \RvQTrainFableSticky\ (\RvQTrainFableStickyCI). So quality passed on the test split only. The quality test itself
 is unfiltered: it uses every quality-valid test pair, so the \QFableStickyMarginGap\ margin does not depend on the
-pair-level cost filter. That margin is close to the Monte-Carlo noise of the bootstrap: re-drawing the resamples
-with a different random stream moves the lower bound by \RvQNoise\ (to \RvQAltLow). Opus sticky did not show
+pair-level cost filter. That margin is thin but is not an artefact of bootstrap randomness: re-drawing the
+resamples moves the lower bound by only \RvQNoise\ (to \RvQAltLow). It is small against the sampling uncertainty (the
+interval is about \RvQWidth\ wide), and the margin is not shown on the training or all-scenario data. Opus sticky did not show
 non-inferior quality (\QOpusSticky, 95\,\% CI \QOpusStickyCI; ``not shown'', which is not the same as ``worse'').
 The preregistration requires quality for each savings claim, and no savings claim is made on Opus, so the quality
 hypothesis is confirmed under that scope; if quality were required of every routed cell, \RvNQualCells\ of

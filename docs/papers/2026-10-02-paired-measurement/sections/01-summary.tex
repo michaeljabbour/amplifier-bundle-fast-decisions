@@ -47,7 +47,7 @@ estimator, the quality filter and which cells count as savings claims were fixed
 ``non-inferior'' quality (\cref{sec:confirm}). Quality was tested only for cells whose cost interval shows a
 saving; Opus sticky, which saves nothing, did not show non-inferior quality (\QOpusSticky, 95\,\% CI
 \QOpusStickyCI). If every routed cell had to pass the quality test, \RvNHypAllQuality\ of 4 hypotheses would be
-confirmed. Four cautions travel with the result.
+confirmed. Three cautions travel with the result.
 \begin{itemize}
   \item \textbf{Quality is close to the line.} Sticky on Fable passed the 5-point turn-pass margin on the test
     scenarios by \QFableStickyMarginGap; across all \QAllScen\ scenarios the margin was not shown
@@ -55,10 +55,14 @@ confirmed. Four cautions travel with the result.
     \FinalGapLow--\FinalGapHigh\ points less often (exploratory; \cref{sec:finalpass}).
   \item \textbf{Part of the routing saving is an effort setting.} When the sticky router chose Sonnet it ran it at
     medium reasoning effort, while the plain-Sonnet control used the provider default. Those sticky sessions cost
-    \RvEffFableAll\X\ (Fable) and \RvEffOpusAll\X\ (Opus) the control on the same scenarios (\cref{sec:effort}). A
-    preregistered follow-up found that medium effort alone makes plain Sonnet cost \EcRatio\X\ the default (95\,\% CI
-    \EcCI) with non-inferior turn-pass fraction: the saving on Fable comes from Sonnet at medium effort, and a router
-    adds value only through its choice of model.
+    \RvEffFableAll\X\ (Fable) and \RvEffOpusAll\X\ (Opus) the control on the same scenarios (\cref{sec:effort}). Then
+    a follow-up designed in advance (its plan was committed \EcFirstAfter\ before its first analysed session;
+\cref{sec:effortfollow}) showed that medium effort alone makes plain Sonnet cost \EcRatio\X\ the default (95\,\% CI
+    \EcCI), with no detectable turn-pass loss: the saving on Fable comes from Sonnet at medium effort. On the Sonnet sessions the router's extra machinery did not help: sticky-on-Sonnet cost about \EcSecGapPct\,\% more
+than plain Sonnet at medium effort (\EcSecRatio\ the other way round; exploratory, not concurrent), and the
+\RvStickyHostNFable\ sessions per host that kept the host cost \RvStickyHostFableTwo\X\ (Fable) and
+\RvStickyHostOpusTwo\X\ (Opus) the plain host. This campaign shows no benefit of this router beyond the decision to use
+Sonnet.
     An earlier draft's claim that the router adds little beyond ``use Sonnet'' is withdrawn.
   \item \textbf{Scope.} Sessions are scripted, at most \MaxTurns\ turns long, on one provider and one price
     table (\cref{sec:limits}).

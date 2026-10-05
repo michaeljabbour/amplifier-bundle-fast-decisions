@@ -65,8 +65,9 @@ geometric-mean ratios of tools-normalized session cost; below 1 means the first 
 was cheaper in \EcCheaperPairs\ of \EcPairs\ pairs. Turn-pass fraction moved by \EcQual\ (\EcQualCI): \EcQualVerdict\
 at the \NIMarginPts-point margin. An exploratory comparison of medium plain Sonnet with the main-campaign sticky
 sessions that ran on Sonnet (also at medium effort) gives \EcSecRatio\ (\EcSecCI, \EcSecN\ scenarios). Those
-sessions ran on different dates, so this second comparison is not concurrent and has no decision rule; the
-remaining gap of about \EcSecGapPct\,\% is within what bundle behaviour or timing could produce.
+sessions ran on different dates, so this second comparison is not concurrent and has no decision rule. Read the
+other way round, sticky-on-Sonnet cost about \EcSecGapPct\,\% more than medium plain Sonnet; that gap is within what
+bundle behaviour or timing could produce.
 
 \paragraph{Provenance caveat.} The follow-up's schedule and plan were created \EcScheduleBefore\ \emph{before} the
 preregistration was committed (\code{\EcPreregSha}), and the first analysed session started \EcFirstAfter\ after it.
@@ -77,7 +78,13 @@ analysed sessions existed before the commit. The follow-up cost \$\EcSpend\ (inc
 \begin{keyidea}
 The effort setting alone explains most of the gap between sticky-on-Sonnet and plain Sonnet: in a concurrent test,
 medium effort cost \EcRatio\X\ the default. On Fable~5.1 at the \cref{tab:prices} prices, the saving comes from
-running the session on Sonnet at medium effort; a router adds value only through its choice of model, not beyond
-Sonnet-at-medium. The finding also applies to anyone running plain Sonnet: on these \EcScen\ scenarios, medium
-effort cut cost by about \EcCutPct\,\% with no detectable turn-pass loss.
+running the session on Sonnet at medium effort. On the Sonnet sessions the router's extra machinery did not help: sticky-on-Sonnet cost about \EcSecGapPct\,\% more
+than plain Sonnet at medium effort (\EcSecRatio\ the other way round; exploratory, not concurrent), and the
+\RvStickyHostNFable\ sessions per host that kept the host cost \RvStickyHostFableTwo\X\ (Fable) and
+\RvStickyHostOpusTwo\X\ (Opus) the plain host. This campaign shows no benefit of this router beyond the decision to use
+Sonnet. The finding also applies to anyone running plain Sonnet:
+medium effort cut cost by about \EcCutPct\,\% with no detectable turn-pass loss on these \EcScen\ scenarios (\RvDocsTest\ docs, \RvExplainTest\ explain, \RvReviewTest\ review); the main campaign
+hints at a loss on docs, explain and review work (sticky-on-Sonnet at medium minus the default-effort control:
+\RvKTDtp\ [\RvKTDtpCI] on those \RvKTN\ scenarios against \RvRestDtp\ [\RvRestDtpCI] on the rest; post hoc, and
+confounded with the bundle's context) that the follow-up is too small to settle.
 \end{keyidea}

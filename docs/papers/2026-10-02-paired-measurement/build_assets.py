@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 """Generate every number, table and plot datum used by the paired-measurement report.
 
-Reads ONLY committed files:
+Reads only committed files, and committed refs and history read with `git` (`git show`, `git archive`, `git log`):
     docs/evidence/2026-10-02-paired-campaign/   (the campaign evidence package)
+    docs/evidence/2026-10-05-effort-control/    (the effort-control follow-up)
+    origin/main: judge-benchmark, trace-benchmark, caching-survey and Clef evidence (jb_import.py, `git show`)
     docs/design/parallel-measurement-mode.md    (design v2: power table)
     docs/design/pilot-20261001/                 (cache-semantics probe)
     evals/paired/                               (memory-safety README, design yaml, scenario directories)
@@ -431,7 +433,7 @@ def primary_table():
                         f"\\Cf{H}{A}Arm & \\Cf{H}{A}ArmCI \\\\")
         if h == "fable":
             rows.append(r"\addlinespace[3pt]")
-    return table("l l r r r r r", [r" & & \multicolumn{3}{c}{Pair reading (primary)} & \multicolumn{2}{c}{Arm reading (sensitivity)} \\",
+    return table("l l r r r r r", [r" & & \multicolumn{3}{c}{Pair reading (co-primary)} & \multicolumn{2}{c}{Arm reading (co-primary, unfiltered)} \\",
                                    r"\cmidrule(lr){3-5}\cmidrule(l){6-7}",
                                    r"Host & Arm & pairs kept & ratio & 95\,\% CI & ratio & 95\,\% CI \\"], rows)
 
@@ -816,7 +818,8 @@ def tt(text):
 
 
 write(TABLES / "deviations.tex", "\\begin{enumerate}[leftmargin=1.4em]\n" +
-      "\n".join(r"\item " + tt(d) for d in CONF["deviations"]) + "\n\\end{enumerate}\n")
+      "\n".join(r"\item " + tt(d) + (r" [This report treats both readings as co-primary.]" if i == 2 else "")
+                for i, d in enumerate(CONF["deviations"])) + "\n\\end{enumerate}\n")
 
 # ================================================================ review fixes (computed, not typed)
 import sys as _sys
@@ -959,7 +962,7 @@ for rate in GRID:
     brows.append(f"\\${rate:.2f}" + ("" if rate != GRID[0] else " (table)") + " & " +
                  " & ".join(hu(v, 2) for v in vals) + r" \\")
 write(TABLES / "breakeven.tex", table("l r r r r r r", [
-    r" & \multicolumn{3}{c}{Pair reading (primary)} & \multicolumn{3}{c}{Arm reading} \\",
+    r" & \multicolumn{3}{c}{Pair reading (co-primary)} & \multicolumn{3}{c}{Arm reading (co-primary, unfiltered)} \\",
     r"\cmidrule(lr){2-4}\cmidrule(l){5-7}",
     r"Opus cache-read price (per M) & sticky & shipped & sonnet & sticky & shipped & sonnet \\"], brows))
 
@@ -1813,10 +1816,14 @@ for h, H in (("fable", "Fable"), ("opus", "Opus")):
             M(f"RvEffDtp{H}", hu(e, 3))
             M(f"RvEffDtp{H}CI", f"{hu(lo, 3)} to {hu(hi, 3)}")
             M(f"RvEffVsAnchor{H}", hu(math.exp(_st.mean(r["ya"] for r in rows_)), 3))
+            e, lo, hi, _ = b_("ya", "ya")
+            M(f"RvEffVsAnchor{H}Two", hu(math.exp(e), 2))
+            M(f"RvEffVsAnchor{H}CI", f"{hu(math.exp(lo), 2)}--{hu(math.exp(hi), 2)}")
             M(f"RvCtlVsAnchor{H}", hu(math.exp(_st.mean(r["yc"] for r in rows_)), 3))
     hs = [math.log(Cn(s) / Cn(SI[(s["scenario_id"], s["rep"], h, "anchor")])) for s in SESS
           if s["arm"] == "sticky" and s["host"] == h and s["sticky_decision"] == "host" and s["cost_valid"]]
     M(f"RvStickyHost{H}", hu(math.exp(_st.mean(hs)), 3))
+    M(f"RvStickyHost{H}Two", hu(math.exp(_st.mean(hs)), 2))
     M(f"RvStickyHostN{H}", len(hs))
 gaps_h = []
 for s in SESS:
@@ -1878,6 +1885,39 @@ erows = [f"Medium / default effort, plain Sonnet (confirmatory, concurrent) & {h
          f"Turn-pass difference, medium minus default (unfiltered) & {q_['n_pairs']} pairs & {hu(q_['mean_delta_turn_pass'], 3)} & {hu(q_['ci95'][0], 3)} to {hu(q_['ci95'][1], 3)} \\\\"]
 write(TABLES / "effort-control.tex", table(r">{\raggedright\arraybackslash}p{0.5\textwidth} r r r",
                                            [r"Comparison & n & estimate & 95\,\% CI \\"], erows))
+
+
+# ================================================================ Re-review fixes (2026-10-05)
+qf = CC["quality"]["fable"]["sticky"]["ci95"]
+M("RvQWidth", hu(qf[1] - qf[0], 2))
+# B4: did the cold tools prefix depend on the anchor starting first in its wave?
+cold_keys = {r["session_key"] for r in REQS if r.get("tools_repriced_tokens") and r["tokens"]["cache_read"] < 20000}
+wv = defaultdict(list)
+for s in SESS:
+    wv[s["wave_id"]].append(s)
+for h, H in (("fable", "Fable"), ("opus", "Opus")):
+    cnt = defaultdict(int)
+    for s in SESS:
+        if s["arm"] == "anchor" and s["host"] == h:
+            first = min(wv[s["wave_id"]], key=lambda x: x["actual_start"])["session_key"] == s["session_key"]
+            cnt[(first, s["session_key"] in cold_keys)] += 1
+    M(f"RvColdFirst{H}", f"{cnt[(True, True)]} of {cnt[(True, True)] + cnt[(True, False)]}")
+    M(f"RvColdNotFirst{H}", f"{cnt[(False, True)]} of {cnt[(False, True)] + cnt[(False, False)]}")
+# R3: sticky-on-Sonnet (medium) minus default-effort control, docs/explain/review vs the rest (post hoc)
+KT = ("docs", "explain", "review")
+for grp, G_ in (("in", "KT"), ("out", "Rest")):
+    rr_ = []
+    for s in SESS:
+        if s["arm"] != "sticky" or s["sticky_decision"] != "cheap" or not s["cost_valid"]:
+            continue
+        if (s["task_type"] in KT) != (grp == "in"):
+            continue
+        c = SI[(s["scenario_id"], s["rep"], "any", "sonnet")]
+        rr_.append((s["scenario_id"], s["turn_pass_frac"] - c["turn_pass_frac"]))
+    e, lo, hi, nsc = PM.cluster_boot_mean([v for _, v in rr_], [k for k, _ in rr_], PM.rng_for(CONF["seed"], "r3", grp), 10000)
+    M(f"Rv{G_}Dtp", hu(e, 3))
+    M(f"Rv{G_}DtpCI", f"{hu(lo, 3)}, {hu(hi, 3)}")
+    M(f"Rv{G_}N", nsc)
 
 # ------------------------------------------------------------ numbers.tex
 header = ("% Generated by build_assets.py from docs/evidence/2026-10-02-paired-campaign/ and the files listed there. "

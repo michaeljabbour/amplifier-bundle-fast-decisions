@@ -20,7 +20,8 @@ We thank the reviewer.
   \item \textbf{The pair filter conditions on an outcome; the quality margin is thin.} Agreed. The unfiltered (arm)
     reading is now co-primary; the text states that quality passed on the test split only, gives the all-scenario
     and training values, notes that the \QFableStickyMarginGap\ margin comes from the unfiltered quality test and is
-    close to bootstrap noise (\cref{sec:confirm}).
+    thin, though not a bootstrap artefact (\cref{sec:confirm}). Table and figure headers now label both readings
+    co-primary.
   \item \textbf{The largest savings sit with the largest quality losses.} Agreed at the family level: knowledge on
     Fable sticky misses the margin (\RvKnowFableSticky; \cref{sec:joint}). It is a family effect, not a general
     trade-off (scenario-level rank correlation \RvSpearman). Joint savings-and-quality tables now cross-reference the
@@ -41,8 +42,19 @@ We thank the reviewer.
   \item \textbf{Sticky on Sonnet was never compared with plain Sonnet.} Agreed, and the comparison changed a
     conclusion: routed Sonnet ran at medium effort and cost \RvEffFableAll\X\ (Fable) and \RvEffOpusAll\X\ (Opus) the
     default-effort control. The claim that the router adds little beyond ``use Sonnet'' is withdrawn
-    (\cref{sec:effort,sec:recs}). \emph{Resolved with data:} a preregistered follow-up found medium effort alone makes
+    (\cref{sec:effort,sec:recs}). \emph{Resolved with data:} a follow-up designed in advance (its plan was committed \EcFirstAfter\ before its
+    first analysed session; \cref{sec:effortfollow}) found medium effort alone makes
     plain Sonnet cost \EcRatio\X\ the default (\EcCI; turn-pass \EcQual, \EcQualCI), so the effort setting explains
-    most of the gap; medium plain Sonnet against sticky-on-Sonnet was \EcSecRatio\ (exploratory, not concurrent;
-    \cref{sec:effortfollow}). The follow-up cost \$\EcSpend.
+    most of the gap; medium plain Sonnet against sticky-on-Sonnet was \EcSecRatio, that is, sticky-on-Sonnet cost
+    about \EcSecGapPct\,\% more (exploratory, not concurrent; \cref{sec:effortfollow}). The report now says this
+    campaign shows no benefit of the router beyond the decision to use Sonnet, scopes ``no detectable turn-pass
+    loss'' to the follow-up's \EcScen\ scenarios, and notes a post-hoc hint of a loss on docs, explain and review work.
+    The follow-up cost \$\EcSpend.
 \end{enumerate}
+
+\paragraph{Re-review.} A second reading of the revised report asked for text-only fixes, all applied: the 0.0035
+quality margin is described as thin but not a bootstrap artefact; both readings are labelled co-primary in every table
+and figure; the summary's caution count matches its list; the cold tools-prefix rate is reported against start order
+without a causal claim; the effort follow-up carries its provenance caveat wherever it is called designed in advance;
+the router conclusion, the scope of ``no detectable loss'', the cache-isolation exception, the A/A wording, the
+spend split, the wave definition and the Opus effort check are stated as in this version.
