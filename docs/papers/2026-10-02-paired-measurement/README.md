@@ -69,5 +69,6 @@ extracted evidence, and copies its numbers, tables, data, labels and path-rewrit
 The build therefore needs the `origin/eval/judge-realistic` ref. The four bundle fixes are read from commits `a15c439`
 and `1f3b0e4` (history of this branch).
 
-Cloudflare Clef results are read only if `CLEF_EVIDENCE` (default `../fd-judge-realistic/docs/evidence/2026-10-04-clef-judges`
-next to this repository) contains `dev/` or `holdout/summary.json` in the judge-bench schema; otherwise no Clef text is rendered.
+Cloudflare Clef and Clef-Flash (post-hoc arms) are read with `git show origin/eval/judge-realistic:docs/evidence/2026-10-04-clef-judges/...`
+(summary, run, requests and rule-2 files for dev, holdout, trace-dev and trace-holdout) plus `evals/judges.yaml` for their prices,
+so a clean clone builds without any sibling checkout.

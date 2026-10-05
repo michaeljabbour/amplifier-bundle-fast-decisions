@@ -32,11 +32,13 @@ LEGENDS = {  # caption start -> (first legend entry words, topmost words of the 
     "Campaign progress reconstructed from": (["accepted", "sessions"], ["Sessions", "completed"]),
     "Mean cost of each turn by": (["plain", "host"], ["Fable", "host"]),
     "What each turn of a plain-host": (["uncached", "input"], ["Fable", "host,", "plain"]),
-    "Cache-write tokens on the first": (["after", "a"], ["A", "pause", "longer"]),
+    "Cache-write tokens on the first": (["after", "a", "10-second", "pause"], ["A", "pause", "longer"]),
     "Shipped arm: number of model": (["Fable", "host"], ["Shipped", "arm:"]),
     "Scenario by scenario: the mean": (["no", "saving"], ["One", "point", "per"]),
     "Distribution of the log cost": (["Fable", "host"], ["Two", "identical", "sessions"]),
     "Cost ratio by scripted session": (["sticky"], ["Fable", "host"]),
+    "Holdout accuracy with 95": (["preregistered", "run"], ["Holdout", "accuracy,"]),
+    "Cost per million decisions (log": (["preregistered", "run", "(Jev,"], ["What", "a", "point"]),
 }
 NUM = dict(re.findall(r"\\newcommand\{\\(\w+)\}\{([^}]*)\}", (HERE / "generated/numbers.tex").read_text()))
 SC = (int(NUM["ScXMax"]), int(NUM["ScYMin"]), int(NUM["ScYMax"]))
@@ -46,11 +48,13 @@ SCATTERS = [  # caption start, x ticks, y ticks, x range, y range, label panel, 
     ("Scenario by scenario: the mean", list(range(0, SC[0] + 1, 2)), [y for y in range(SC[1], SC[2] + 1) if y % 2 == 0],
      (0, SC[0]), (SC[1], SC[2]), "scenario-scatter", "generated/data", False, "labels-scenario-scatter-markers.tsv"),
     ("Wrong-automatic rate against coverage on", [20, 40, 60, 80, 100], [0, 10, 20, 30, 40], (15, 100), (0, 40),
-     "wacov-holdout", "generated/jb/data", False, None),
+     "wacov-holdout-ph", "generated/data", False, None),
     ("Accuracy against p95 latency (log", [30, 100, 300, 1000, 3000], [30, 40, 50, 60, 70, 80, 90, 100], (25, 9000),
-     (25, 102), "acclat-holdout", "generated/jb/data", True, None),
+     (25, 102), "acclat-holdout-ph", "generated/data", True, None),
     ("Real decisions: correct automatic reads", [0, 2, 4, 6, 8, 10, 12], [0, 5, 10, 15, 20], (-1, 14), (-1.5, 22),
-     "reads-holdout", "generated/jb/data", False, None),
+     "reads-holdout-ph", "generated/data", False, None),
+    ("Cost per million decisions (log", [10, 30, 100, 300, 1000], [70, 80, 90, 100], (8, 2000), (70, 102),
+     "costacc-holdout", "generated/data", True, None),
 ]
 
 

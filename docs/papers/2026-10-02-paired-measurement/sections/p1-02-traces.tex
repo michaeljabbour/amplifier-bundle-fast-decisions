@@ -18,14 +18,31 @@ automatic reads with a wrong-read upper bound below \TrUsefulMaxUpperPct\,\%; \T
 it. Jev took the most sufficient reads (\TrJevReads\ of \TrReadCases) but made \TrJevWaK\ wrong automatic reads;
 Jev, Luna and Sol were within noise (Holm $p = \TrJevLunaAccPHolm$ for Jev against Luna).
 
+The post-hoc Cloudflare arms (\cref{sec:clef}) were also run on both trace splits, with a fresh Jev reference. On
+trace-holdout Clef made \ClTrHoldClefReads\ correct and \ClTrHoldClefReadWa\ wrong automatic reads, Clef-Flash
+\ClTrHoldFlashReads\ and \ClTrHoldFlashReadWa, and the in-run Jev \ClTrHoldJevReads\ and \ClTrHoldJevReadWa, the same as
+the preregistered Jev. No judge met the rule on either trace split (\cref{tab:clefrule2}); for the post-hoc arms this is
+a description, not a verdict.
+
+\begin{table}[htbp]
+\centering\small
+\caption{Rule 2 (``useful'' read shortcut) on both trace splits for the post-hoc run: correct automatic reads among
+the read-labelled cases, wrong automatic reads among all cases, and the 95\,\% Wilson upper bound of the wrong-read
+rate (the rule needs at least \TrUsefulMinReads\ correct reads and an upper bound below \TrUsefulMaxUpperPct\,\%).}
+\label{tab:clefrule2}
+\input{generated/tables/clef-rule2.tex}
+\end{table}
+
 \begin{figure}[htbp]
 \centering
-\input{generated/jb/figures/fig-reads.tex}
-\caption{Real decisions: correct automatic reads against wrong automatic reads, holdout \prereg, with 95\,\% Wilson
-intervals. The shaded strip is where the preregistered rule would call a judge useful.}
+\input{figures/fig-ph-reads.tex}
+\caption{Real decisions: correct automatic reads against wrong automatic reads on trace-holdout, with 95\,\% Wilson
+intervals: the preregistered run, plus the post-hoc Clef arms (black pentagons). The shaded strip is where the
+preregistered rule would call a judge useful.}
 \label{fig:jbreads}
 \howtoread{Right is more savings; up is more misfires. No judge reaches the shaded strip: every judge with enough
-correct reads also misfired.}
+correct reads also misfired. The post-hoc Clef arms misfire less than Jev but take few reads; the in-run Jev
+landed on the preregistered Jev's point.}
 \end{figure}
 
 \begin{caution}[title={Read this before generalizing}]

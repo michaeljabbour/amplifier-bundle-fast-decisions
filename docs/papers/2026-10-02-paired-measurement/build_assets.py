@@ -61,6 +61,8 @@ def hu(v, d=2) -> str:
     """Half-up rounding of the value as stored (0.5575 -> 0.56), with a typeset minus sign."""
     q = Decimal(1).scaleb(-d)
     s = str(Decimal(str(v)).quantize(q, rounding=ROUND_HALF_UP))
+    if s.startswith("-") and Decimal(s) == 0:
+        s = s[1:]
     return s.replace("-", "$-$")
 
 
@@ -1273,35 +1275,268 @@ for h in ("fable", "opus"):
         dat(f"band-{h}-{a_}.dat", ["x", "r", "m", "p"], [[r[0], r[3], r[4], r[5]] for r in trows if r[1] == h and r[2] == a_])
 
 
-# ================================================================ G: Cloudflare Clef judges (optional)
-# Read only if the evidence directory exists (override with CLEF_EVIDENCE=<dir>); otherwise render nothing.
-import os as _os
-CLEF = Path(_os.environ.get("CLEF_EVIDENCE", str(HERE.parents[3] / "fd-judge-realistic" / "docs" / "evidence" / "2026-10-04-clef-judges")))
-clef_tex = ""
-rows_, splits_ = [], []
-if CLEF.is_dir():
-    rows_, splits_ = [], []
-    for sp in ("dev", "holdout"):
-        f = CLEF / sp / "summary.json"
-        if not f.exists():
+# ================================================================ Cloudflare Clef and Clef-Flash (post-hoc arms)
+# Committed on origin/eval/judge-realistic; read with `git show` so a clean clone builds.
+CLEF_REF = "origin/eval/judge-realistic:docs/evidence/2026-10-04-clef-judges"
+JB_REF = "origin/eval/judge-realistic:docs/evidence/2026-09-30-judge-benchmark"
+
+
+def gshow(path):
+    try:
+        return subprocess.run(["git", "-C", str(REPO), "show", path], capture_output=True, text=True, check=True).stdout
+    except subprocess.CalledProcessError as exc:
+        raise SystemExit(f"build_assets.py: cannot read {path}: {exc.stderr}")
+
+
+def wil(k, n, z=1.96):
+    p = k / n
+    d = 1 + z * z / n
+    c = (p + z * z / (2 * n)) / d
+    h = z * math.sqrt(p * (1 - p) / n + z * z / (4 * n * n)) / d
+    return c - h, c + h
+
+
+def nr(v, q):
+    v = sorted(v)
+    return v[max(0, math.ceil(q * len(v)) - 1)]
+
+
+CSPLITS = [("dev", "Dev"), ("holdout", "Hold"), ("trace-dev", "TrDev"), ("trace-holdout", "TrHold")]
+CARMS = [("clef", "Clef", "Clef"), ("clef-flash", "Flash", "Clef-Flash"), ("jev-1.13", "Jev", "Jev 1.13 (in-run)")]
+CL = {}
+for sp, _ in CSPLITS:
+    d = {"summary": json.loads(gshow(f"{CLEF_REF}/{sp}/summary.json")),
+         "run": json.loads(gshow(f"{CLEF_REF}/{sp}/run.json")),
+         "requests": [json.loads(x) for x in gshow(f"{CLEF_REF}/{sp}/requests.jsonl").splitlines() if x.strip()]}
+    if sp.startswith("trace"):
+        d["rule2"] = json.loads(gshow(f"{CLEF_REF}/{sp}/rule2_useful.json"))
+    CL[sp] = d
+M("ClefPosthocSplits", sum(1 for sp, _ in CSPLITS if CL[sp]["run"].get("posthoc")))
+CM = {}
+tot_req = defaultdict(int)
+tot_slow = defaultdict(int)
+for sp, S_ in CSPLITS:
+    sm = CL[sp]["summary"]
+    n = sm["n_cases"]
+    M(f"Cl{S_}N", n)
+    for a, A, _ in CARMS:
+        mv_ = sm["arms"][a]["policies"][sm["primary_policy"]]["across_reps"]["majority_vote"]
+        rq = [r for r in CL[sp]["requests"] if r["arm"] == a]
+        el = [r["elapsed_ms"] for r in rq if r["valid"]]
+        cost = sm["arms"][a]["reps"]["1"]["cost"]["usd_per_1m_decisions"]
+        m_ = {"n": n, "acc": mv_["correct"], "accci": mv_["ci95"], "wa": mv_["automatic_errors"],
+              "waci": mv_["wrong_automatic_rate"]["ci95"], "cov": mv_["automatic"], "covci": mv_["coverage"]["ci95"],
+              "p50": nr(el, .5), "p95": nr(el, .95), "cost": cost, "req": len(rq), "slow": sum(1 for x in el if x > 3000),
+              "inv": sum(1 for r in rq if not r["valid"])}
+        CM[(sp, a)] = m_
+        tot_req[a] += len(rq)
+        tot_slow[a] += m_["slow"]
+        M(f"Cl{S_}{A}Acc", m_["acc"])
+        M(f"Cl{S_}{A}AccPct", hu(100 * m_["acc"] / n, 1))
+        M(f"Cl{S_}{A}AccCI", f"{hu(100 * m_['accci'][0], 0)}--{hu(100 * m_['accci'][1], 0)}\\,\\%")
+        M(f"Cl{S_}{A}Wa", m_["wa"])
+        M(f"Cl{S_}{A}Cov", m_["cov"])
+        M(f"Cl{S_}{A}Pfifty", f"{m_['p50']:.0f}")
+        M(f"Cl{S_}{A}Pninetyfive", f"{m_['p95']:.0f}")
+        M(f"Cl{S_}{A}Cost", hu(cost, 1))
+for a, A, _ in CARMS:
+    M(f"Cl{A}Requests", thousands(tot_req[a]))
+    M(f"Cl{A}Slow", tot_slow[a])
+    p95s = [CM[(sp, a)]["p95"] for sp, _ in CSPLITS]
+    M(f"Cl{A}PninetyfiveLow", f"{min(p95s):.0f}")
+    M(f"Cl{A}PninetyfiveHigh", f"{max(p95s):.0f}")
+    p50s = [CM[(sp, a)]["p50"] for sp, _ in CSPLITS]
+    M(f"Cl{A}PfiftyLow", f"{min(p50s):.0f}")
+    M(f"Cl{A}PfiftyHigh", f"{max(p50s):.0f}")
+for a, A in (("clef", "Clef"), ("clef-flash", "Flash")):
+    xs = [CM[(sp, a)]["cost"] / CM[(sp, "jev-1.13")]["cost"] for sp, _ in CSPLITS]
+    M(f"Cl{A}CostXLow", hu(min(xs), 1))
+    M(f"Cl{A}CostXHigh", hu(max(xs), 1))
+M("ClSlowest", hu(max(r["elapsed_ms"] for sp, _ in CSPLITS for r in CL[sp]["requests"]) / 1000, 1))
+M("ClInvalid", sum(m_["inv"] for m_ in CM.values()))
+spend = sum(inv["budget"]["realized_usd"] for sp, _ in CSPLITS for inv in CL[sp]["run"]["invocations"])  # incl. warm-ups
+M("ClSpend", hu(spend, 2))
+M("ClSpendFour", hu(spend, 4))
+readme = gshow(f"{CLEF_REF}/README.md")
+assert f"${hu(spend, 4)}" in readme.replace("**", ""), "Clef spend differs from the evidence README"
+yaml_ = gshow("origin/eval/judge-realistic:evals/judges.yaml")
+for a, A in (("clef", "Clef"), ("clef-flash", "Flash")):
+    blk = yaml_[yaml_.index(f"\n  {a}:"):]
+    M(f"Cl{A}Price", "%.2f" % float(re.search(r"price_in:\s*([\d.]+)", blk).group(1)))
+M("ClRuleOneMaxPninetyfive", "500")
+M("ClRuleOneCostX", "2")
+M("ClTimeoutS", f"{CL['holdout']['run']['timeout_ms'] / 1000:g}")
+
+# results table (all four splits)
+rows = []
+for sp, S_ in CSPLITS:
+    for a, A, lab in CARMS:
+        m_ = CM[(sp, a)]
+        rows.append(f"{sp if a == 'clef' else ''} & {lab} & {m_['acc']}/{m_['n']} & {m_['wa']} & {m_['cov']} & "
+                    f"{m_['p50']:.0f} & {m_['p95']:.0f} & {m_['slow']}/{m_['req']} & {hu(m_['cost'], 1)} \\\\")
+    rows.append(r"\addlinespace[2pt]")
+write(TABLES / "clef-results.tex", table("l l r r r r r r r", [
+    r"Split & Judge & correct & wrong auto & automatic & p50 ms & p95 ms & $>$\ClTimeoutS\,s & \$/1M \\"], rows[:-1]))
+
+# paired contrasts
+crow = []
+for sp, S_ in CSPLITS:
+    cons = CL[sp]["summary"]["pairwise"]["contrasts"]
+    for met, key in (("accuracy", "correct"), ("wrong auto", "automatic_error")):
+        for c in cons[key]:
+            pair = f"{c['b']} vs {c['a']}" if c["a"] == "jev-1.13" else f"{c['a']} vs {c['b']}"
+            sign = -1 if c["a"] == "jev-1.13" else 1
+            dci = sorted(sign * x for x in c["diff_ci95"])
+            ph_ = c["p_holm"]
+            fam_ = "pairwise"
+            if c["a"] == "jev-1.13":  # Holm over the rule-1 family of the two new arms (as in the evidence README)
+                r1c = CL[sp]["summary"]["decisions"]["rule1_default_judge"]["candidates"][c["b"]]
+                ph_ = r1c["accuracy" if key == "correct" else "wrong_automatic"]["p_holm"]
+                fam_ = "rule 1"
+            c = dict(c, p_holm=ph_)
+            crow.append(f"{sp} & {pair} & {met} & {hu(100 * sign * c['diff'], 1)} [{hu(100 * dci[0], 1)}, {hu(100 * dci[1], 1)}] & "
+                        f"{hu(c['p'], 3)} & {hu(ph_, 3)} ({fam_}) \\\\")
+            key_ = (sp, pair, key)
+            if key == "correct":
+                nm = {"clef vs jev-1.13": "ClefJev", "clef-flash vs jev-1.13": "FlashJev", "clef vs clef-flash": "ClefFlash"}[pair]
+                M(f"Cl{S_}{nm}Holm", hu(c["p_holm"], 3))
+    crow.append(r"\addlinespace[2pt]")
+write(TABLES / "clef-contrasts.tex", table("l l l r r r", [
+    r"Split & Contrast & metric & difference, points [95\,\% CI] & $p$ & Holm $p$ \\"], crow[:-1]))
+
+# rule-1 (descriptive) and rule-2
+r1rows = []
+for sp, S_ in CSPLITS:
+    r1 = CL[sp]["summary"]["decisions"].get("rule1_default_judge", {}).get("candidates", {})
+    for a, A, lab in CARMS[:2]:
+        if a not in r1:
             continue
-        js = json.loads(f.read_text())
-        pol = js.get("primary_policy", "bundle-read-shortcut")
-        for arm, v in sorted(js["arms"].items()):
-            mv = v["policies"][pol]["across_reps"]["majority_vote"]
-            n = js["n_cases"]
-            rows_.append(f"{sp} & {tex_escape(arm)} & {mv['correct']}/{n} & {mv['automatic_errors']} & {mv['automatic']} \\\\")
-        splits_.append(sp)
-    if not rows_:
-        print(f"build_assets.py: note: {CLEF} has no dev/ or holdout/ summary.json yet; Clef subsection omitted")
-if CLEF.is_dir() and rows_:
-    write(TABLES / "clef.tex", table("l l r r r", [r"Split & Judge & correct & wrong automatic & automatic \\"], rows_))
-    clef_tex = (r"\subsection{Cloudflare Clef judges}\label{sec:clef}" "\n"
-                f"The same judge-benchmark splits ({', '.join(splits_)}) were later run with Cloudflare Clef judges, "
-                r"scored under the bundle's gate (majority over repetitions). Evidence: \path{" + tex_escape(CLEF.name) + "}.\n"
-                r"\begin{table}[htbp]\centering\small\caption{Cloudflare Clef judges on the judge-benchmark splits.}"
-                r"\label{tab:clef}\input{generated/tables/clef.tex}\end{table}" "\n")
-write(OUT / "clef-section.tex", clef_tex)
+        c = r1[a]
+        r1rows.append(f"{sp} & {lab} & {r'\ok' if c['non_inferior_accuracy'] else r'\no'} & "
+                      f"{r'\ok' if c['non_inferior_wrong_auto'] else r'\no'} & {c['p95_ms']:.0f} & "
+                      f"{hu(c['cost_usd_per_1m'] / c['cost_usd_per_1m_jev'], 1)}\\X & {r'\ok' if c['replaces_default'] else r'\no'} \\\\")
+        assert not c["replaces_default"]
+write(TABLES / "clef-rule1.tex", table("l l c c r r c", [
+    r"Split & Judge & accuracy NI & wrong-auto NI & p95 ms & cost vs Jev & would replace Jev \\"], r1rows))
+r2rows = []
+for sp, S_ in (("trace-dev", "TrDev"), ("trace-holdout", "TrHold")):
+    r2 = CL[sp]["rule2"]
+    for a, A, lab in CARMS:
+        v = r2[a]
+        r2rows.append(f"{sp if a == 'clef' else ''} & {lab} & {v['correct_automatic_reads']}/{v['read_cases']} & "
+                      f"{v['wrong_automatic']}/{v['n']} & {hu(100 * v['wrong_automatic_upper95'], 1)}\\,\\% & "
+                      f"{r'\ok' if v['useful'] else r'\no'} \\\\")
+        M(f"Cl{S_}{A}Reads", v["correct_automatic_reads"])
+        M(f"Cl{S_}{A}ReadWa", v["wrong_automatic"])
+        assert not v["useful"]
+    M(f"Cl{S_}ReadCases", r2["clef"]["read_cases"])
+write(TABLES / "clef-rule2.tex", table("l l r r r c", [
+    r"Split & Judge & correct reads & wrong reads & upper 95\,\% & useful \\"], r2rows))
+
+# ---- figures: post-hoc points added to the reused judge-benchmark scatters (labels re-placed for all points)
+JBH = json.loads(gshow(f"{JB_REF}/holdout/summary.json"))
+M("PhAxisW", "14.5cm")
+M("PhAxisH", "8cm")
+LP.configure(OUT, DATA, 14.5, 8.0)
+
+
+def tsv_points(name):
+    rows_ = [ln.split("\t") for ln in (OUT / "jb" / "data" / f"labels-{name}.tsv").read_text().splitlines()[1:]]
+    return [(r[0], r[1].replace(", ", ",\n") if "+" in r[0] else r[1], float(r[2]), float(r[3])) for r in rows_]
+
+
+def merge(points, key, x, y, text):
+    """Add a post-hoc point unless it coincides with an existing marker; then extend that marker's label."""
+    for i, (k, t, px, py) in enumerate(points):
+        if abs(px - x) < 1e-3 and abs(py - y) < 1e-3:  # label TSVs store 4 decimals
+            points[i] = (k, t + "\n(also in-run)", px, py)
+            return False
+    points.append((key, text, x, y))
+    return True
+
+
+def ph_rows(sp, cols):
+    out_ = {}
+    for a, A, lab in CARMS:
+        m_ = CM[(sp, a)]
+        n = m_["n"]
+        cov, wa, acc = 100 * m_["cov"] / n, 100 * m_["wa"] / n, 100 * m_["acc"] / n
+        out_[a] = [cov, cov - 100 * m_["covci"][0], 100 * m_["covci"][1] - cov, wa, wa - 100 * m_["waci"][0],
+                   100 * m_["waci"][1] - wa, acc, acc - 100 * m_["accci"][0], 100 * m_["accci"][1] - acc, m_["p95"]]
+    return out_
+
+
+PHL = {"clef": "Clef (post-hoc)", "clef-flash": "Clef-Flash (post-hoc)", "jev-1.13": "Jev in-run (post-hoc)"}
+hold = ph_rows("holdout", None)
+hdr = ["cov", "covminus", "covplus", "wa", "waminus", "waplus", "acc", "accminus", "accplus", "pninetyfive"]
+dat("ph-hold-clef.dat", hdr, [[f"{v:.3f}" for v in hold[a]] for a in ("clef", "clef-flash")])
+dat("ph-hold-jev.dat", hdr, [[f"{v:.3f}" for v in hold["jev-1.13"]]])
+pts = tsv_points("wacov-holdout")
+for a in ("clef", "clef-flash", "jev-1.13"):
+    merge(pts, "ph-" + a, hold[a][0], hold[a][3], PHL[a])
+LP.place_labels("wacov-holdout-ph", pts, (15, 100), (0, 40))
+pts = tsv_points("acclat-holdout")
+for a in ("clef", "clef-flash", "jev-1.13"):
+    merge(pts, "ph-" + a, hold[a][9], hold[a][6], PHL[a])
+LP.place_labels("acclat-holdout-ph", pts, (25, 9000), (25, 102), xlog=True)
+# accuracy with CI on the holdout: preregistered rows from the judge-benchmark data, post-hoc rows after a gap
+acc_rows = [ln.split() for ln in (OUT / "jb" / "data" / "accuracy.dat").read_text().splitlines()[1:]]
+pre = []
+for r in acc_rows:
+    lab = " ".join(r[1:-6]).strip("{}")
+    pre.append((lab, float(r[-3]), float(r[-2]), float(r[-1])))
+pre.sort(key=lambda r: r[1])
+dat("ph-acc-pre.dat", ["y", "label", "acc", "minus", "plus"],
+    [[i, "{" + lab + "}", f"{a:.2f}", f"{mi:.2f}", f"{pl:.2f}"] for i, (lab, a, mi, pl) in enumerate(pre)])
+base_ = len(pre) + 1
+php = [(PHL[a], hold[a][6], hold[a][7], hold[a][8]) for a in ("jev-1.13", "clef-flash", "clef")]
+dat("ph-acc-post.dat", ["y", "label", "acc", "minus", "plus"],
+    [[base_ + i, "{" + lab + "}", f"{a:.2f}", f"{mi:.2f}", f"{pl:.2f}"] for i, (lab, a, mi, pl) in enumerate(php)])
+M("PhAccYMax", base_ + len(php) - 1)
+M("PhAccTicks", ",".join(str(i) for i in range(len(pre))) + "," + ",".join(str(base_ + i) for i in range(len(php))))
+M("PhAccLabels", ",".join("{" + lab + "}" for lab, *_ in pre) + "," + ",".join("{" + lab + "}" for lab, *_ in php))
+# cost per 1M decisions vs holdout accuracy (priced judges only)
+cpts, crows_pre, crows_post = [], [], []
+for a, lab in (("jev-1.13", "Jev 1.13"), ("gpt-6-luna", "GPT-6 Luna"), ("gpt-6.1-sol", "GPT-6.1 Sol")):
+    mv_ = JBH["arms"][a]["policies"][JBH["primary_policy"]]["across_reps"]["majority_vote"]
+    cst = JBH["arms"][a]["reps"]["1"]["cost"]["usd_per_1m_decisions"]
+    acc = 100 * mv_["correct"] / JBH["n_cases"]
+    crows_pre.append([f"{cst:.3f}", f"{acc:.3f}", f"{acc - 100 * mv_['ci95'][0]:.3f}", f"{100 * mv_['ci95'][1] - acc:.3f}"])
+    cpts.append((a, lab, cst, acc))
+for a in ("clef", "clef-flash", "jev-1.13"):
+    m_ = CM[("holdout", a)]
+    acc = 100 * m_["acc"] / m_["n"]
+    crows_post.append([f"{m_['cost']:.3f}", f"{acc:.3f}", f"{acc - 100 * m_['accci'][0]:.3f}", f"{100 * m_['accci'][1] - acc:.3f}"])
+    merge(cpts, "ph-" + a, m_["cost"], acc, PHL[a])
+dat("ph-cost-pre.dat", ["cost", "acc", "minus", "plus"], crows_pre)
+dat("ph-cost-post.dat", ["cost", "acc", "minus", "plus"], crows_post)
+LP.configure(OUT, DATA, 12.0, 6.0)
+M("CostAxisW", "12cm")
+M("CostAxisH", "6cm")
+LP.place_labels("costacc-holdout", cpts, (8, 2000), (70, 102), xlog=True)
+# trace-holdout reads: post-hoc points (taller axis: 9 cm, so every label can sit nearest its own marker)
+LP.configure(OUT, DATA, 14.5, 9.0)
+M("PhReadsH", "9cm")
+r2h = CL["trace-holdout"]["rule2"]
+rr = []
+pts = tsv_points("reads-holdout")
+for a in ("clef", "clef-flash", "jev-1.13"):
+    v = r2h[a]
+    lo_, hi_ = wil(v["correct_automatic_reads"], v["read_cases"])
+    wlo, whi = wil(v["wrong_automatic"], v["n"])
+    k, w = v["correct_automatic_reads"], v["wrong_automatic"]
+    row = [k, f"{k - lo_ * v['read_cases']:.3f}", f"{hi_ * v['read_cases'] - k:.3f}", w,
+           f"{w - wlo * v['n']:.3f}", f"{whi * v['n'] - w:.3f}"]
+    if merge(pts, "ph-" + a, k, w, PHL[a]):
+        rr.append((a, row))
+    else:
+        rr.append((a, row))
+dat("ph-reads-clef.dat", ["reads", "readsminus", "readsplus", "wa", "waminus", "waplus"],
+    [r for a, r in rr if a != "jev-1.13"])
+dat("ph-reads-jev.dat", ["reads", "readsminus", "readsplus", "wa", "waminus", "waplus"],
+    [r for a, r in rr if a == "jev-1.13"])
+zone = (int(MACROS.get("TrUsefulMinReads", "4")) - 0.5, -1.5, 14.0, 0.5)
+LP.place_labels("reads-holdout-ph", pts, (-1.0, 14.0), (-1.5, 22.0), obstacles=[zone])
 
 # ------------------------------------------------------------ numbers.tex
 header = ("% Generated by build_assets.py from docs/evidence/2026-10-02-paired-campaign/ and the files listed there. "

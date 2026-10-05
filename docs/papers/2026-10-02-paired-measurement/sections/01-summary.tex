@@ -31,6 +31,10 @@ to a cheaper model actually cost, in money and in quality, over realistic multi-
   \item \textbf{The savings model passes a pooled check.} Fitted on \NTrain\ training scenarios, it
     predicted the held-out total within its 90\,\% interval and its intervals covered the held-out pairs at
     the preregistered rate. Its per-host and per-task figures are not reliable (\cref{sec:modellimits}).
+  \item \textbf{Cloudflare Clef (post-hoc) does not replace Jev.} Added after the preregistered results, Clef matched
+    Jev's accuracy on the judge splits but cost \ClClefCostXLow--\ClClefCostXHigh\X\ as much per decision with a p95 of
+    \ClClefPninetyfiveLow--\ClClefPninetyfiveHigh\,ms from this machine; Clef-Flash was cheaper but less accurate
+    (\cref{sec:clef}).
 \end{itemize}
 \end{keyidea}
 

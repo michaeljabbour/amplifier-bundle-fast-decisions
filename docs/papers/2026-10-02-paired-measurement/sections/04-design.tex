@@ -70,7 +70,8 @@ cheap cache reads. The sticky judge chose Sonnet for
 \NStickySonnetOnly\ of \NStickySessions\ sticky sessions (\StickyCheap\ of \StickyDecisions\ per host,
 \StickyCheapPct\,\%) and the host for the rest, so in practice the sticky arm is mostly ``Sonnet for the whole
 session''. The judge's own calls are not part of any session's cost: the sticky decision was made once by the
-harness, and the shipped arm's per-turn decisions went to a separate judge service (Jev). An earlier benchmark
+harness, and the shipped arm's per-turn decisions went to a separate judge service (Jev). Both used the bundle's
+default judge, Jev; the post-hoc Cloudflare Clef judges of \cref{sec:clef} were never run in the campaign. An earlier benchmark
 measured Jev at \$\JevPerMillion\ per million decisions on comparable real states; at one decision per turn
 that adds about \JudgeShippedCents\ cents to a shipped session, \JudgeShippedShare\,\% of a plain Fable
 session's cost. That estimate comes from another study and is not measured here.

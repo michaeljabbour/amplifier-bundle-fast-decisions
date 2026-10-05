@@ -30,6 +30,11 @@ Sonnet's, and Sonnet needed more requests for the same scripted work, so every r
 million tokens, sticky routing would roughly break even (\cref{sec:breakeven}).
 \end{keyidea}
 
+\paragraph{The judge.} Keep Jev as the default judge. The post-hoc Cloudflare Clef judge matched its accuracy but
+was \ClClefCostXLow--\ClClefCostXHigh\X\ the cost per decision and about three times slower from this machine; it is
+worth re-testing if it can be hosted close to the agent or if its measured latency improves. Clef-Flash was cheaper
+but less accurate (\cref{sec:clef}). Neither was part of the paired campaign.
+
 \paragraph{Caching guidance (hypotheses).} The mechanisms in \cref{sec:caching,sec:composition} suggest the
 following for other hosts and prices. They are hypotheses drawn from two hosts on one provider, not tested
 findings:
