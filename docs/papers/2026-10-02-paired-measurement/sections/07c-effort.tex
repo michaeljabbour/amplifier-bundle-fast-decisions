@@ -42,14 +42,18 @@ data cannot separate.
     sessions per host that stayed on the host model cost \RvStickyHostFable\X\ the plain host on Fable and
     \RvStickyHostOpus\X\ on Opus. On Fable, sticky-on-Sonnet cost \RvEffVsAnchorFable\X\ the plain host where the
     control cost \RvCtlVsAnchorFable\X\ on the same scenarios; the dearer host-kept sessions offset most of that
-    difference, which is why sticky and plain Sonnet look alike overall.
+    difference, which is why sticky and plain Sonnet look alike overall. Because those host-kept sessions ran the
+    host near its default effort mix, \RvStickyHostFable\X\ and \RvStickyHostOpus\X\ are a near-effort-matched estimate
+    of the bundle's own overhead on the host, about \RgOverheadFable--\RgOverheadOpus\,\%. With \RvStickyHostNFable\
+    sessions per host and an approximate effort match, this is an indication, not a finding.
 \end{itemize}
 
-\subsection{Follow-up: plain Sonnet at medium versus default effort \texorpdfstring{\prereg}{[preregistered]}}\label{sec:effortfollow}
+\subsection{Follow-up: plain Sonnet at medium versus default effort \texorpdfstring{[preregistered, provenance-limited]}{[preregistered, provenance-limited]}}\label{sec:effortfollow}
 
-To separate the effort setting from the routing, a preregistered follow-up (effort-control-v1) ran plain Sonnet
+To separate the effort setting from the routing, a preregistered, provenance-limited follow-up (effort-control-v1) ran plain Sonnet
 twice on the \EcScen\ test scenarios, \EcReps\ repetitions each: once at the provider's default effort and once at
-medium effort, nothing else changed. Each pair started together from the same frozen workspace with separate cache
+medium effort, nothing else changed (all \RgEcMainMedium\ of \RgEcMainTotal\ main requests of the medium arm ran at
+medium; its \RgEcNonMainDefault\ default-effort requests are all background, not main-loop). Each pair started together from the same frozen workspace with separate cache
 nonces, so this comparison is concurrent. Intervals come from \EcResamples\ scenario-cluster resamples (seed
 \EcSeed). The preregistered hypothesis (medium is cheaper, with non-inferior turn-pass fraction) was \EcHE.
 
@@ -88,3 +92,5 @@ hints at a loss on docs, explain and review work (sticky-on-Sonnet at medium min
 \RvKTDtp\ [\RvKTDtpCI] on those \RvKTN\ scenarios against \RvRestDtp\ [\RvRestDtpCI] on the rest; post hoc, and
 confounded with the bundle's context) that the follow-up is too small to settle.
 \end{keyidea}
+
+\input{generated/effort-fable.tex}
