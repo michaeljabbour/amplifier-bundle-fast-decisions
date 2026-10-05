@@ -97,6 +97,42 @@ def save_planner_state(
         pass
 
 
+def _session_route_path(events_dir: str, session_id: str) -> Path:
+    safe_id = _PLANNER_STATE_ID_RE.sub("_", session_id)[:200] or "unknown"
+    return Path(events_dir).expanduser() / "session-route" / f"{safe_id}.json"
+
+
+def load_session_route(events_dir: str | None, session_id: str | None) -> dict[str, Any] | None:
+    """Best-effort load of the once-per-session routing decision
+    (``model_routing.decision_scope: session``), so a resumed session (a
+    fresh process) reuses it instead of re-deciding. Never raises; ``None``
+    when there is nothing valid on disk."""
+    if not events_dir or not session_id:
+        return None
+    try:
+        data = json.loads(_session_route_path(events_dir, session_id).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    if not isinstance(data, dict) or data.get("schema") != "fd-session-route/1" or data.get("tier") not in ("cheap", "strong"):
+        return None
+    return data
+
+
+def save_session_route(events_dir: str | None, session_id: str | None, route: dict[str, Any]) -> None:
+    """Best-effort atomic write (tmp + ``os.replace``) of the session route
+    (no prompt text). Never raises."""
+    if not events_dir or not session_id:
+        return
+    try:
+        path = _session_route_path(events_dir, session_id)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        tmp = path.with_name(f"{path.name}.tmp-{os.getpid()}")
+        tmp.write_text(json.dumps(route), encoding="utf-8")
+        os.replace(tmp, path)
+    except (OSError, TypeError, ValueError):
+        pass
+
+
 def _schedule_backend_warmup(backend: Any) -> None:
     """Best-effort, non-blocking warmup at mount time.
 

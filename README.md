@@ -1,9 +1,16 @@
 # Fast Decisions
 
-Fast Decisions makes Amplifier faster by asking one quick question at the start of every request: *is this easy
-or hard?* Easy requests go to a faster, cheaper model (Claude Sonnet 5). Hard ones, and all work inside large
-projects, stay on your usual model. The decision is made once per request, so the AI service's memory of the
-conversation is never thrown away mid-request.
+Fast Decisions makes Amplifier faster by asking one quick question at the start of every session: *is this easy
+or hard?* Easy sessions go to a faster, cheaper model (Claude Sonnet 5), and only when that is predicted to be
+cheaper on your default model. Hard ones, and all work inside large projects, stay on your usual model. The decision
+is made once per session, so the AI service's memory of the conversation is never thrown away mid-session.
+
+**Change note (research-backed defaults).** The shipped behavior now decides once per session
+(`decision_scope: session`) and only routes when a price gate predicts a saving (`price_gate: {enabled: true}`).
+At today's prices that means: Fable 5.1 default, routed (0.56x cost); Opus 5.5 default, **not routed** (every routing
+arm cost 1.25-1.43x in the paired campaign). Opt out with `model_routing: {price_gate: {enabled: false}}` or
+`{decision_scope: turn}`; `start_policy: cheap` now also respects the gate. See
+[docs/CONFIGURATION.md](docs/CONFIGURATION.md#price-gate).
 
 Experimental, MIT licensed. Not an official Microsoft or TypeSafe release, and no number here is a guarantee.
 Approvals, permissions and tool execution are unchanged: Fast Decisions wraps Amplifier's standard loop rather
@@ -31,7 +38,17 @@ and its [interactive results](docs/evidence/2026-09-29-laya-hosted/index.html).
 | Everyday coding tasks, Claude Opus 5.5 as default | **0.80×** | 0.97× | Every scored run passed (36 of 36 vs. 36 of 36) |
 | Multi-turn sessions (4 requests), Fable 5.1 default · screen | 0.45× | 0.66–0.73× | 9 of 9 vs. 9 of 9 |
 | Multi-turn sessions (4 requests), Opus 5.5 default · screen | 0.89× | **1.34–1.41×** (costs more) | 9 of 9 vs. 9 of 9 |
+| **Paired multi-turn campaign (8-16 scripted turns, 70 scenarios), Fable 5.1 default, decide once per session** | n/m | **0.558x** (95% CI 0.493-0.643) | Turn-pass non-inferior |
+| **Paired multi-turn campaign, Opus 5.5 default, every routing arm** | n/m | **1.25-1.43x** (costs more) | the bundle now keeps Opus sessions on Opus |
 | Real bug fixes in large projects (SWE-bench Verified) | 1.00× | 0.98× | 13 of 20 fixed vs. 14 of 20 (same setup as standard) |
+
+Paired-campaign rows: preregistered, confirmatory test split, tools-normalized cost, scenario-cluster bootstrap; evidence
+in [docs/evidence/2026-10-02-paired-campaign](docs/evidence/2026-10-02-paired-campaign/README.md) and the
+[paper](docs/papers/2026-10-02-paired-measurement/README.md). The shipped price gate and once-per-session decision implement
+its recommendations, and an [offline replay](docs/evidence/2026-10-05-defaults-replay/REPLAY.md) of the recorded campaign
+through the shipped code confirms Opus 5.5 hosts never route (140/140) and Fable 5.1 hosts match the recorded decisions
+(140/140). Host effort is opt-in: plain Fable 5.1 at `medium` effort cost 0.860x default effort (CI 0.833-0.885,
+turn-pass +0.033, 23 scenarios; see [CONFIGURATION.md](docs/CONFIGURATION.md#host-effort-opt-in)).
 
 Everyday rows: the historical Jev configuration (one decision per request) on a fresh split of 12 tasks never run
 before (`holdout2`, 4 of them longer multi-file tasks), 3 runs each, one request per fresh session, against standard
@@ -43,17 +60,17 @@ its tasks and ran in a fixed order. Multi-turn rows: a new suite, one session wi
 tuning tasks only, so a screen, not a confirmation; the cost range is two estimators (pipeline and per-task). Ratios
 are geometric means of per-task ratios. Bug-fix setups ran at the same time.
 
-**Who benefits.** Easy requests go to Claude Sonnet 5, so the gain depends on your default model. With an expensive
-default it is large, for single requests and multi-turn sessions alike. With Claude Opus 5.5 there is a confirmed
-speed gain of about 20% on single requests at about equal cost. In multi-turn sessions on Opus it is ~10% faster but
-costs 1.34–1.41× more: once a session's conversation is cached, Opus 5.5 reads it at $0.20 per million tokens, below
-Sonnet 5's $0.30, and each switch to Sonnet forces a fresh cache write. A cache- and price-aware turn planner for this
-is being developed on a follow-up branch. With Opus, route if single requests and helper sessions dominate your use
-(on the author's machine, 74% of provider calls in the last 14 days were first requests of helper sessions, 12% later
-requests of main sessions); turn model routing off if long main-session conversations dominate and cost matters more
-than speed. On small tasks much of the gain is the faster model itself: against standard Amplifier switched to
-Sonnet, Fast Decisions took 1.04× the time and 1.25× the cost (Fable default) and 0.87× the time at 1.01× the cost
-(Opus default). The dispatcher's job is keeping hard requests and large projects on your usual model.
+**Who benefits.** The price gate decides automatically from the default model's price and the measured extra requests a
+cheaper model makes (x1.38 against Opus 5.5, x1.11 against Fable 5.1). With an expensive default (Fable 5.1) sessions
+are routed to Sonnet 5 and cost about half. With Claude Opus 5.5 they are **not** routed at today's prices: Opus 5.5
+reads a cached conversation at $0.20 per million tokens, below Sonnet 5's $0.30, and Sonnet makes more requests, so
+routing cost 1.25-1.43x in the campaign; routing would start to pay when Opus cache reads cost about $0.43 per million
+(the gate's break-even; the paper's is $0.34-0.38). The trade-off is stated plainly: Opus users give up the ~20% speed
+gain on single requests that an older study measured at about equal cost; `price_gate: {enabled: false}` restores
+routing. On small tasks much of the gain is the faster model itself: against standard Amplifier switched to Sonnet, Fast
+Decisions took 1.04x the time and 1.25x the cost (Fable default) and 0.87x the time at 1.01x the cost (Opus default).
+The dispatcher's job is keeping hard requests and large projects on your usual model. Optionally, `keep_on_host` keeps
+review/explain/feature sessions on the host too (exploratory; see [CONFIGURATION.md](docs/CONFIGURATION.md#task-type-opt-out)).
 
 **Not recommended: easy requests on Claude Haiku 4.5.** A cost preset that sent easy requests to Haiku (with extra
 guidance and the to-do tool hidden) cost 0.45× (Opus default) and 0.30× (Fable default) on `holdout2`, but Haiku got
@@ -91,9 +108,11 @@ amplifier bundle add --app "git+https://github.com/michaeljabbour/amplifier-bund
 
 ## How it works
 
-1. **One decision per request.** Before the first model call, the decision-maker judges the request easy or hard.
-   That picks the model and thinking level for the whole request; nothing switches halfway (only a provider error
-   on the faster model moves the rest of the request to your usual model; the failed call itself is not retried).
+1. **One decision per session.** Before the first model call of the session, the decision-maker judges the work easy
+   or hard, and the price gate checks that the faster model is predicted to be cheaper on your default model. That picks
+   the model and thinking level for the whole session (reused on every later turn and across resumes); nothing switches
+   halfway (only a provider error on the faster model moves that turn to your usual model; the failed call itself is
+   not retried). `decision_scope: turn` restores one decision per turn.
 2. **Large projects always get your usual model.** When the session's folder holds more than 300 files (not counting
    .git, dependency, virtualenv and build folders), the request runs on your usual model and thinking level, whatever
    the decision-maker says. On real bug fixes, starting on the cheaper model
@@ -173,8 +192,11 @@ was cheaper on a set of all-easy tasks because it kept fewer requests on the usu
   Studio uses) and the terminal app. Studio's window itself was not driven.
 - A model set before a session starts (in settings or with `--model`) looks the same as your default, so it can
   still be routed; a model picked during the session is always respected.
-- **Single requests only are confirmed.** The confirmed everyday results come from one request per fresh session.
-  Multi-turn sessions are measured on tuning tasks only (3 scenarios); on the Opus default they cost more (see above).
+- **Scope of the multi-turn evidence.** The paired campaign covers 70 scripted scenarios of 8-16 turns, two default
+  models (Opus 5.5, Fable 5.1) and one provider; the multipliers behind the price gate come from it. The exploratory
+  final-pass check showed more final-test losses than gains for routed Fable sessions (6 vs 1, McNemar p = 0.125), and
+  the unrouted-Opus overhead under the bundle is expected near 1.0x but not yet measured. The confirmed everyday
+  results above come from one request per fresh session.
 - **Longer everyday tasks are only partly covered.** 4 of the 12 `holdout2` tasks are longer multi-file tasks; tasks
   with many more model calls per request are not in the suite.
 - **Shared cache.** Runs share the provider's prompt cache across setups, so order could bias time and cost. On

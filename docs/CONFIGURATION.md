@@ -9,6 +9,28 @@ ARE validated and DO raise `ValueError` on an unknown sub-key or an
 out-of-range value (see `contracts.validate_effort_routing`,
 `validate_model_routing`, `validate_confidence_gates`).
 
+## Library default vs shipped default
+
+Two layers of defaults exist. A key **absent** from `Policy` config takes the *library default* in the tables below
+(mostly "off", so existing configs behave as before). `behaviors/fast-decisions.yaml` and
+`behaviors/fast-decisions-registry.yaml` (the shipped behavior you get by composing the bundle) *set* several keys
+explicitly. The research-backed shipped defaults are:
+
+| Setting | Library default (key absent) | Shipped default |
+|---|---|---|
+| `model_routing.price_gate` | off (legacy: route whenever the start model's list price is lower) | `{enabled: true}` |
+| `model_routing.decision_scope` | `turn` (decide at every turn) | `session` (decide once, reuse) |
+| `effort_routing.by_tier.cheap` | unset | `medium` |
+| `effort_routing.by_tier.strong` (host effort) | unset | `null` (provider default; opt-in `medium`) |
+| `model_routing.keep_on_host` | off | off (commented example) |
+| `read_shortcut` | `True` | `false` |
+| `backend` | none | `jev` |
+
+Evidence: the paired campaign ([README](evidence/2026-10-02-paired-campaign/README.md),
+[confirmatory results](evidence/2026-10-02-paired-campaign/confirm/CONFIRM.md)), the
+[paper](papers/2026-10-02-paired-measurement/README.md), and the offline [replay of the recorded campaign through the
+shipped code](evidence/2026-10-05-defaults-replay/REPLAY.md).
+
 ## Top-level keys
 
 Backend construction is separate from `Policy`. The optional `backend: anyjev`
@@ -35,6 +57,7 @@ questions only; keep the read shortcut off. See [AnyJev setup](ANYJEV.md).
 | `shadow_max_messages` | `12` | Messages read for a shadow snapshot. |
 | `shadow_snapshot_budget_ms` | `25` | Wall-clock budget for the shadow snapshot (1..5000). |
 | `suppress_completed_reads` | `True` | HC02a: drop `fast_workspace` read/list candidates whose `(path, revision)` this turn already read. |
+| `read_shortcut` | `True` (library); `false` in the shipped behavior | Judged read shortcut: ask the backend for a prepared read before slow requests. Off in the shipped behavior: it rarely fired in the studies and would put a scoring call in front of every slow request. |
 | `effort_routing` | `None` | HC03/HC05, opt-in. See below. |
 | `model_routing` | `None` | HC04/HC05, opt-in. See below. |
 | `decision_batching` | `False` | HC08, opt-in. Combine the HC05 phase-judge and escalation-judge asks into one `ask_many()` call whenever both are due for the same request. No effect when fewer than two judge mechanisms are configured. |
@@ -50,13 +73,51 @@ questions only; keep the read shortcut off. See [AnyJev setup](ANYJEV.md).
 | `orient` / `explore` / `implement` | unset (no override for that phase) | One of `low` / `medium` / `high` / `xhigh` / `max`. |
 | `max_explore_requests` | unset | Positive int; escalates effort after this many explore-phase requests. |
 | `escalate_after_provider_errors` | unset | Positive int. |
+| `by_tier` | unset | `{cheap: <effort|null|"phase">, strong: <...>}`: one effort per start tier for the whole session/turn (requires `model_routing.start_policy`). `null` = provider default; `"phase"` = keep per-phase efforts. Shipped: `{cheap: medium, strong: null}`. `strong` is the **host-model effort** (see "Host effort" below). |
+| `monotonic` | `False` | Never lower the effort within a turn once raised. |
 | `phase_judge` | `False` | HC05: ask the configured `DecisionBackend` to classify the phase instead of trusting `effort.classify_phase` alone. A non-null, gate-passing answer overrides the deterministic phase for the rest of this request. Gated by `confidence_gates["phase"]` (HC09; default gate `0.0` -- byte-identical to pre-HC09 "any non-abstain answer applies"). |
+
+### Host effort (opt-in)
+
+`effort_routing.by_tier.strong` is the effort sent on every request that runs on the host model: sessions judged hard
+(or kept on the host by the price gate), turns escalated to the host, and nothing for a model the user picked
+(a picked model runs at its own effort). Shipped value: `null` (provider default). To opt in:
+
+```yaml
+effort_routing:
+  by_tier:
+    cheap: medium
+    strong: medium     # host-model effort, opt-in
+```
+
+Evidence, by host:
+
+- **Cheap tier (Sonnet 5):** `cheap: medium` is shipped. Plain Sonnet at medium cost 0.821x its default effort with
+  non-inferior turn-pass ([effort-control](evidence/2026-10-05-effort-control/RESULT.md)).
+- **Fable 5.1 host:** plain Fable at `medium` cost **0.860x** the default effort (95% CI 0.833-0.885), turn-pass
+  **+0.033** (non-inferior), 23 test-split scenarios, 46 pairs, preregistered
+  (`docs/evidence/2026-10-06-effort-control-fable/RESULT.md`, branch `eval/effort-control-fable`, PR #61). Medium alone
+  did not reach the routing saving: medium Fable cost 1.546x the sticky-routed sessions on the same host (descriptive).
+- **Opus 5.5 host:** unmeasured. Do not assume the Fable number transfers.
+
+Why it is off by default: the sessions it would touch are the ones the judge called *hard* (16/140 Fable sessions, but
+~32% of sticky spend), and the Fable test covered all 23 scenarios, not the judged-hard subset (it contains 2 explain,
+2 review and 0 docs scenarios; the main campaign hints at a turn-pass loss at medium on docs/explain/review work, -0.066,
+post hoc and confounded). The expected extra saving is about 4.5% of Fable session spend, next to the ~44% the
+routing decision already delivers. Promote it after a preregistered test on judged-hard sessions.
 
 ## `model_routing` (HC04/HC05, opt-in; `None` = off; an explicit `{}` is invalid -- `start_model` is required)
 
 | Key | Default | Meaning |
 |---|---|---|
 | `start_model` | required | The cheaper/faster model a turn starts pinned to. |
+| `start_policy` | `"cheap"` (library); `judge` (shipped) | `cheap` (every turn starts on `start_model`, no judge), `rules` (prompt length), or `judge` (one typed simple/complex question to the configured backend; falls back to rules on abstain/error). |
+| `complex_min_probability` | `0.5` | A judged turn with p(complex) at or above this starts on the host model. |
+| `complex_min_prompt_chars` | `2000` | The `rules` policy (and the judge fallback) starts a prompt this long on the host model. |
+| `cheap_max_workspace_files` | unset (library); `300` (shipped) | In a workspace with more files than this, the session starts on the host model whatever the judge says. |
+| `decision_scope` | `"turn"` (library); `"session"` (shipped) | `turn`: decide the start tier at the first slow request of every turn. `session`: decide once, at the first slow request of the session's first turn (its prompt is the one judged), reuse for every later turn, persist across resumes (`<events_dir>/session-route/<session>.json`, no prompt text). A model the user picks always wins and never overwrites the stored decision; provider-error escalation stays per turn; the decision is re-made if the host model or routing config changes. Conflicts with `planner`. See "Decision scope". |
+| `price_gate` | `None` (library: off); `{enabled: true}` (shipped) | Route only when the predicted session cost on `start_model` is lower than on the host. See "Price gate". |
+| `keep_on_host` | `None` (off) | Opt-in: `{task_types: [...]}` keeps those task types on the host. Requires `start_policy: judge`. See "Task-type opt-out". |
 | `start_effort` | unset | One of the `ALLOWED_EFFORTS` strings. |
 | `max_requests_before_escalation` | unset | Positive int; escalates after this many slow requests in the turn. |
 | `escalate_on_test_failure` | `False` | Escalate the first time `ObservedTool.execute` observes a failing test-tool result this turn. |
@@ -65,6 +126,78 @@ questions only; keep the read shortcut off. See [AnyJev setup](ANYJEV.md).
 | `escalation_judge` | `"rules"` | `"rules"` (deterministic triggers only), `"judge"` (HC05: ask the configured backend a single Choice question past the turn's first slow request, while not yet escalated by a deterministic trigger), or `"decomposed"` (HC10: ask five atomic yes/no signals in one batched call and combine them in code via a weighted sum -- see below). |
 | `escalate_min_probability` | `0.7` | Legacy alias for `confidence_gates["escalation"]` (HC09) -- still the default source when that key is absent. Also the gate HC10's weighted score is compared against. |
 | `escalation_weights` | `DEFAULT_ESCALATION_WEIGHTS` (see below) | HC10, opt-in. Per-signal weight override, merged over the defaults (a partial dict only overrides the signals it names). Unknown signal names or out-of-range values (`[0, 1]`) raise `ValueError`. |
+
+### Decision scope
+
+`decision_scope: session` (shipped) decides the start tier once and never switches: the provider's prompt cache is
+never thrown away by a mid-session model change. In the paired campaign this cost **0.86x (Fable) and 0.92x (Opus)** of
+deciding per turn (H3, `confirm/CONFIRM.md`); the sticky arm on Fable cost 0.558x plain Fable (CI 0.493-0.643) with
+non-inferior turn-pass. `decision_scope: turn` restores per-turn decisions (the library default). Residual risk: a
+session that starts easy and turns hard stays on the start model (the campaign's exploratory final-pass excess was 6
+vs 1 on Fable sticky); a user model pick, provider-error escalation, `keep_on_host` and `decision_scope: turn` are the
+mitigations.
+
+### Price gate
+
+Routing only saves money when the cheap model costs less *for the whole session*, and cheaper models make more requests
+(measured: Sonnet 5 at medium made **1.38x** the requests of an Opus 5.5 host and **1.11x** those of a Fable 5.1 host,
+paired). The gate predicts
+
+```
+predicted_ratio = request_multiplier(host) * usd_per_request(cheap) / usd_per_request(host)
+usd_per_request = (in*3 + out*541 + cache_read*88,516 + cache_write*5,376 tokens) priced per model   # REFERENCE_MIX
+route           = predicted_ratio < 1.0
+```
+
+and routes only when it is below 1. At the bundled prices (`savings.DEFAULT_RATES`, verified 2026-06-10):
+
+| Host | multiplier | predicted ratio | gate | measured in the campaign (sticky-on-Sonnet / anchor) |
+|---|---|---|---|---|
+| `claude-opus-5-5` | 1.38 | 1.366 | **host** | 1.18 (CI 1.11-1.27); every routing arm cost 1.25-1.43x |
+| `claude-fable-5-1` | 1.11 | 0.523 | **route** | 0.504 (CI 0.48-0.53); sticky 0.558 |
+| `claude-opus-5`, `claude-opus-4-7` | 1.38 (default) | 0.828 | route | unmeasured |
+| `claude-fable-5` | 1.38 (default) | 0.414 | route | unmeasured |
+| `claude-sonnet-5` / dated ids | n/a | n/a | host (`same_model`) | n/a |
+| `claude-haiku-4-5` | 1.38 (default) | 4.14 | host | n/a |
+| unknown / unpriced model | n/a | n/a | host (`host_unknown` / `host_unpriced`) | n/a |
+
+The gate is conservative: it over-predicts the cheap model's cost on both measured hosts (Opus 1.366 vs 1.20 measured,
+Fable 0.523 vs 0.504). Break-even under the gate: Opus cache reads at **$0.429/M** (today $0.20/M); the paper's
+break-even is $0.34-0.38. A priced-in sweep over the recorded sessions confirms the gate never routes where the data
+say routing costs more ([replay](evidence/2026-10-05-defaults-replay/REPLAY.md)). Opus users give up the older
+single-request study's ~20% speed gain at ~equal cost; `price_gate: {enabled: false}` restores routing.
+
+`price_gate` keys (all optional; `{}` means on with defaults):
+
+| Key | Default | Meaning |
+|---|---|---|
+| `enabled` | `true` | `false` turns the gate off (legacy list-price guard only). |
+| `request_multipliers` | `{}` | `{host_model: float in (0, 10]}`, merged over the built-in table (`claude-opus-5-5: 1.38`, `claude-fable-5-1: 1.11`); prefix match, so dated ids work. |
+| `default_request_multiplier` | `1.38` | For a priced host with no table entry (the larger measured value: conservative). |
+| `rates` | `{}` | `{model: [input, output, cache_read, cache_write]}` USD per million tokens, merged over `savings.DEFAULT_RATES`. Use it if a provider changes prices or for a model the table lacks. |
+
+Hosts with no `default_model` or an unpriced model stay on the host (`host_unknown` / `host_unpriced`): add the model to
+`price_gate.rates` to route. `afast doctor` prints the gate result for the configured host. The `session_routed`
+event records every input and the predicted ratio ([EVENTS.md](EVENTS.md)). A tier chosen by a `profile` (e.g.
+`frugal`'s Haiku) is re-checked against the gate. Evidence:
+[campaign](evidence/2026-10-02-paired-campaign/README.md),
+[CONFIRM.md](evidence/2026-10-02-paired-campaign/confirm/CONFIRM.md),
+[paper](papers/2026-10-02-paired-measurement/README.md).
+
+### Task-type opt-out
+
+```yaml
+model_routing:
+  keep_on_host:
+    task_types: [review, explain, feature]   # any of bugfix, feature, docs, explain, review, other
+```
+
+Adds one typed question (`task_type`) to the same batched judge call as `task_difficulty`, so there is no extra round
+trip. A session the judge classifies as one of these starts on the host; **no answer fails closed to the host**
+(`task_type_unknown_strong`). Requires `start_policy: judge`. **Exploratory:** on Fable the sticky-routed sessions lost
+turn-pass on review (-0.155), explain (-0.143) and feature (-0.071) work (post hoc, 3-13 scenarios per type, no docs
+scenario in the test split). The cost of using it: on the campaign mix it forfeits about **$676 of the $1,980 per 1,000
+Fable sessions** that sticky routing saves. Off by default.
 
 ## `delegation_routing` (per-delegation model routing, opt-in; `None` or `{}` = off)
 

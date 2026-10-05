@@ -33,17 +33,21 @@ convention that behaviors do not choose the orchestrator
 for exactly this swap. The observer-only behavior remains for anyone who wants
 the convention.
 
-## Default policy: the turn-start difficulty router
+## Default policy: the session-start difficulty router
 
-Before a turn's first provider call, one typed question ("simple or complex?") decides the model
-**and** the effort for the entire turn:
+Before the first provider call of a session, one typed question ("simple or complex?") decides the model
+**and** the effort for the whole session (`model_routing.decision_scope: session`, reused on every later turn and
+persisted across resumes; `turn` restores per-turn decisions). A price gate (`model_routing.price_gate`) first checks
+that the start model is predicted to be cheaper on the host: at today's prices a Fable 5.1 host routes and an Opus 5.5
+host does not (no judge call is made). See [CONFIGURATION.md](CONFIGURATION.md#price-gate) and the
+[paired campaign](evidence/2026-10-02-paired-campaign/README.md). The tiers:
 
 | Tier | Model | Effort | Mid-turn switches |
 |---|---|---|---|
 | simple ("cheap") | `model_routing.start_model` (claude-sonnet-5), Anthropic providers only (`provider_match`) | `effort_routing.by_tier.cheap` (medium) | only on a provider error (later calls in the turn move to the host model) |
 | complex ("strong") | the host model: exactly plain Amplifier | provider default | none |
 
-Why per turn, not per request: Anthropic invalidates the cached conversation when the model or the
+Why one decision, never a switch: Anthropic invalidates the cached conversation when the model or the
 thinking/effort parameters change. The previous cheap-first policy re-wrote the ~37k-token conversation cache (up to 235k cache-write tokens over one
 SWE-bench run) on
 every escalation and every effort flip. On SWE-bench that made it 1.2x plain's time and 1.4x plain's

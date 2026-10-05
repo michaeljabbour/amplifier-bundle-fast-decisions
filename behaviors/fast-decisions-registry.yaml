@@ -21,11 +21,12 @@ hooks:
     source: git+https://github.com/michaeljabbour/amplifier-bundle-fast-decisions@main#subdirectory=modules/hooks-fast-decisions-router
     config:
       mode: active
-      # Turn-start difficulty router (evals/STUDY-DESIGN.md 18.7): one typed
-      # simple/complex question per turn picks model AND effort for the whole
-      # turn -- simple: cheap start model at one effort; complex: the host
-      # model at provider-default effort, exactly plain Amplifier. No
-      # mid-turn switches, so the prompt cache is never re-written.
+      # Start-tier router (evals/STUDY-DESIGN.md 18.7): one typed simple/complex
+      # question, asked once per session (decision_scope below), picks the model
+      # AND effort for the session -- simple: cheap start model at medium
+      # effort, only when the price gate says it is cheaper on this host;
+      # complex: the host model at provider-default effort, exactly plain
+      # Amplifier. No switches, so the prompt cache is never re-written.
       # Jev is the default judge after the local/hosted Laya quality screen.
       # Missing/uncertain/failed decisions retain the normal routing fallback;
       # native approvals and confidence gates remain unchanged. AnyJev is opt-in
@@ -41,6 +42,12 @@ hooks:
         orient: medium
         explore: low
         implement: high
+        # One effort per tier for the whole session/turn. cheap: medium cut plain
+        # Sonnet's cost to 0.821x its default effort with non-inferior turn-pass
+        # (docs/evidence/2026-10-05-effort-control/RESULT.md). strong is the
+        # host-model effort: null = provider default. Opt-in `strong: medium` cut
+        # plain Fable 5.1 to 0.860x on 23 scenarios (see docs/CONFIGURATION.md
+        # "Host effort"); unmeasured on Opus 5.5.
         by_tier:
           cheap: medium
           strong: null
@@ -65,6 +72,26 @@ hooks:
         # Only ever send the Anthropic start model to Anthropic providers.
         provider_match: anthropic
         start_policy: judge
+        # Decide once per session (the turn-1 request), never switch: in the
+        # paired campaign this cost 0.86x (Fable) and 0.92x (Opus) of deciding
+        # per turn (docs/evidence/2026-10-02-paired-campaign/confirm/CONFIRM.md, H3).
+        # `turn` restores per-turn decisions.
+        decision_scope: session
+        # Route to start_model only when the predicted session cost is lower
+        # than staying on the host, from the price table and the measured extra
+        # requests the cheaper model makes (x1.38 vs Opus 5.5, x1.11 vs Fable 5.1).
+        # At today's prices: Opus 5.5 host -> no routing (every routing arm cost
+        # 1.25-1.43x); Fable 5.1 host -> routing (sticky 0.56x). Break-even:
+        # Opus cache reads ~$0.43/M under this gate vs $0.20/M today. See the
+        # paper, docs/papers/2026-10-02-paired-measurement (section "What it means").
+        # Turn off with price_gate: {enabled: false}.
+        price_gate:
+          enabled: true
+        # Opt-in, exploratory: keep these task types on the host model (one extra
+        # question in the same judge call; no answer -> host). On Fable the routed
+        # session lost turn-pass on review/explain/feature work (post hoc).
+        # keep_on_host:
+        #   task_types: [review, explain, feature]
         # Quality-safe scope gate (STUDY-DESIGN.md 18.8): in a workspace with
         # more files than this, the turn starts on the host model whatever the
         # judge says. On SWE-bench repositories cheap-first lost quality

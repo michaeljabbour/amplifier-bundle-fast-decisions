@@ -61,6 +61,9 @@ EVENT_NAMES = tuple(
         # Turn-start difficulty router (model_routing.start_policy): which
         # tier the turn starts on, who decided, with what probability.
         "difficulty_judged",
+        # Once-per-session routing receipt: scope, decision, price-gate inputs
+        # and predicted ratio, judge answer. See price_gate.py, docs/EVENTS.md.
+        "session_routed",
         "judge_usage",
         # Efficiency receipts (docs/GOAL.md): one per optimization decision,
         # with the baseline and the savings fixed at decision time.
@@ -166,6 +169,9 @@ def validate_effort_routing(effort_routing: Any) -> None:
 # HC04 ("opt-in model routing with escalation"): the effort strings a host
 # provider accepts on Policy.model_routing["start_effort"]. Reuses
 # ALLOWED_EFFORTS above -- same vocabulary as effort_routing.
+DECISION_SCOPES = frozenset({"turn", "session"})
+TASK_TYPES = ("bugfix", "feature", "docs", "explain", "review", "other")
+KEEP_ON_HOST_KEYS = frozenset({"task_types"})
 MODEL_ROUTING_KEYS = frozenset(
     {
         "start_model",
@@ -201,6 +207,13 @@ MODEL_ROUTING_KEYS = frozenset(
         # no start_model override and no mid-turn escalation (a mid-turn
         # model switch re-writes the whole prompt cache).
         "start_policy",
+        # When the start tier is decided: "turn" (library default, legacy) or
+        # "session" (once, persisted; shipped default). See docs/CONFIGURATION.md.
+        "decision_scope",
+        # Route only when the cheap model is predicted cheaper on this host
+        # (price_gate.py); None = off. Opt-in task-type opt-out (keep_on_host).
+        "price_gate",
+        "keep_on_host",
         "complex_min_probability",
         "complex_min_prompt_chars",
         # Scope gate: a workspace with more files than this is a repository-
@@ -486,6 +499,26 @@ def validate_model_routing(model_routing: Any) -> None:
     start_policy = model_routing.get("start_policy")
     if start_policy is not None and start_policy not in ("cheap", "rules", "judge"):
         raise ValueError("model_routing.start_policy must be cheap, rules or judge")
+    scope = model_routing.get("decision_scope")
+    if scope is not None and scope not in DECISION_SCOPES:
+        raise ValueError("model_routing.decision_scope must be turn or session")
+    if scope == "session" and effective_planner_config(model_routing) is not None:
+        raise ValueError("model_routing.decision_scope: session conflicts with planner "
+                         "(the turn planner chooses per turn; use decision_scope: turn)")
+    if model_routing.get("price_gate") is not None:
+        from . import price_gate as _price_gate  # lazy, as validate_levers is
+
+        _price_gate.validate(model_routing["price_gate"])
+    keep_on_host = model_routing.get("keep_on_host")
+    if keep_on_host is not None:
+        if not isinstance(keep_on_host, dict) or set(keep_on_host) - KEEP_ON_HOST_KEYS:
+            raise ValueError("model_routing.keep_on_host must be a dict with only task_types")
+        task_types = keep_on_host.get("task_types")
+        if (not isinstance(task_types, (list, tuple)) or not task_types
+                or any(t not in TASK_TYPES for t in task_types) or len(set(task_types)) != len(task_types)):
+            raise ValueError(f"model_routing.keep_on_host.task_types must be a non-empty list of unique values from {list(TASK_TYPES)}")
+        if start_policy != "judge":
+            raise ValueError("model_routing.keep_on_host requires start_policy: judge")
     cmp_ = model_routing.get("complex_min_probability")
     if cmp_ is not None and (isinstance(cmp_, bool) or not isinstance(cmp_, (int, float)) or not 0 < cmp_ < 1):
         raise ValueError("model_routing.complex_min_probability must be in (0, 1)")
@@ -1199,6 +1232,11 @@ class TurnState:
     # Turn-start difficulty router: "cheap" | "strong", decided once at the
     # turn's first slow request (None until then / when routing is off).
     start_tier: str | None = None
+    # Why/how the start tier was decided (read by the session_routed receipt).
+    start_reason: str | None = None
+    start_probabilities: dict | None = None
+    task_type: str | None = None
+    start_scope_files: int | None = None
     # Who decided the start tier (e.g. "jev:task_difficulty", "rule:scope_gate")
     # and how long the judge took, for efficiency receipts.
     start_mechanism: str | None = None
