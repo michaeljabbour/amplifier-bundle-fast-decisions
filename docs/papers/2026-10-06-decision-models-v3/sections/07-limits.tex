@@ -1,0 +1,21 @@
+\section{What we did not finish}\label{sec:limits}
+
+The plan for this program (\path{docs/design/v3/PLAN.md}) has five sessions studies; only the first is in this
+report. Each of the others has a written design there:
+\begin{itemize}
+  \item \textbf{S2, long sessions:} does decide-once still hold when a session runs far beyond \MaxTurns\ turns?
+  \item \textbf{S3, delegation in situ:} routing the sub-tasks an agent delegates, inside real sessions.
+  \item \textbf{S4, other harnesses:} the measured saving of \code{decide} and \code{launch} in Claude Code, Codex
+    and Copilot CLI.
+  \item \textbf{S5, SWE-bench at full scale:} two arms on the full benchmark.
+  \item \textbf{Replicating the Fable freeze choice in S2} (it was selected on holdout), and anything on hosts other
+    than Fable, Opus and Sonnet.
+\end{itemize}
+
+\paragraph{Honest limits.} Everything here ran on one provider, at one price table: costs are list prices applied
+to measured tokens, not invoices, and the Opus conclusion depends on its cache-read price. The sessions are scripted,
+at most \MaxTurns\ turns, on public code; the counterfactual reuses main-v1's sessions and its cheap outcomes for a
+few scenario-reps are estimates. The telemetry is one owner's workload. Decision quality on real reads remains
+unidentified beyond the \TrN\ labelled cases. The judge's own cost is small but was estimated, not billed. S1 had
+operational deviations (\cref{sec:plateau}): a raised budget cap, a stop rule not followed to the letter, and many
+infrastructure reruns.

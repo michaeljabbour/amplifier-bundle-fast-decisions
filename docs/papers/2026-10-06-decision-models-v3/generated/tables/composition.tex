@@ -1,0 +1,15 @@
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}l r r r r r r r r@{}}
+\toprule
+ & & & \multicolumn{4}{c}{of which (\$ per session)} & & \\
+\cmidrule(lr){4-7}
+Session kind & sessions & \$/session & cache read & cache write & rebuild & output & requests & tokens read \\
+\midrule
+Fable: plain host & 140 & 5.31 & 1.06 & 2.82 & 0.00 & 1.27 & 46.0 & 4.22\,M \\
+Fable: shipped & 140 & 3.56 & 1.37 & 0.97 & 0.61 & 0.49 & 50.6 & 4.68\,M \\
+Fable: sticky & 140 & 3.33 & 1.34 & 1.40 & 0.00 & 0.45 & 50.2 & 4.58\,M \\
+Sonnet only (control) & 140 & 3.22 & 1.77 & 0.96 & 0.00 & 0.44 & 57.4 & 5.90\,M \\
+Opus: plain host & 140 & 2.13 & 0.62 & 1.04 & 0.00 & 0.40 & 36.4 & 3.07\,M \\
+Opus: shipped & 140 & 2.71 & 1.28 & 0.77 & 0.29 & 0.32 & 48.9 & 4.43\,M \\
+Opus: sticky & 140 & 2.61 & 1.28 & 0.95 & 0.00 & 0.33 & 48.5 & 4.43\,M \\
+\bottomrule
+\end{tabular*}

@@ -1,0 +1,30 @@
+\section{The question}\label{sec:intro}
+
+Coding agents spend money in one place: calls to a large \term{host model}. Every turn re-sends the conversation, and
+a session of a dozen turns can cost several dollars. Between those calls sit many small choices. Should this session
+run on the expensive model or a cheaper one? May the agent read a file without asking the model first? How much
+should the model ``think''? A \term{decision model} (``system~1'') answers such questions: it takes a short state
+and a typed question and returns a probability for each allowed answer, in tens to hundreds of milliseconds. Jev,
+by Typesafe, is one; GPT-6 Luna and Sol, Cloudflare's Clef and Clef-Flash, and small local models (Qwen3, Laya) can
+play the same role.
+
+Our question was simple, and we followed it where it went: \emph{what does a decision model buy an agent harness in
+quality, cost and speed?}
+
+\begin{keyidea}
+A decision model is only worth what its decisions change. It pays off when a cheap, typed decision changes an
+expensive action, and it adds nothing when a fixed rule makes the same choice. Most of this report is about telling
+those two cases apart with measurements rather than estimates.
+\end{keyidea}
+
+\paragraph{How the story goes.} We first looked at a week of live telemetry (\cref{sec:observatory}). We then built
+tools to grade decision models against labelled cases and real traces (\cref{sec:judges}), raised the difficulty to
+full paired agent sessions (\cref{sec:paired}), and reached a plateau where the question became how to configure the
+model rather than which one to pick (\cref{sec:plateau}). \Cref{sec:recommend} says what to set, per host model and
+per harness; \cref{sec:limits} says what we did not finish.
+
+\paragraph{How to read the evidence labels.} Results marked \prereg\ test hypotheses fixed before the data;
+\screen\ marks exploratory results. Cost ratios are \term{geometric means} of per-pair ratios unless labelled
+otherwise, and a 95\,\% interval is given wherever one exists. Every number is generated from committed evidence
+files. The full detail of each study, with its own figures and its peer review, is in the companion technical
+report v2 (\path{docs/papers/2026-10-02-paired-measurement/}), cited here as ``the companion report''.

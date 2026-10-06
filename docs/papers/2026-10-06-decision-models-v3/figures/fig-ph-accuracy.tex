@@ -1,0 +1,17 @@
+% Holdout accuracy with 95% Wilson whiskers: preregistered judges, then the post-hoc arms (Clef, Clef-Flash and
+% the in-run Jev reference) below a gap.
+\begin{tikzpicture}
+\begin{axis}[benchmark, scale only axis, width=10cm, height=10cm, xmin=20, xmax=101,
+  ymin=-0.7, ymax=\PhAccYMax.7, ytick={\PhAccTicks}, yticklabels/.expanded={\PhAccLabels},
+  y tick label style={font=\footnotesize}, xlabel={Holdout accuracy (\%, \HoldN\ cases)}, xmajorgrids,
+  title={Holdout accuracy, preregistered and post-hoc}, title style={font=\small\bfseries},
+  legend to name=phacclegend, legend columns=2, legend cell align=left,
+  legend style={/tikz/every even column/.append style={column sep=10pt}}]
+\addplot[only marks, mark=*, mark size=2.6pt, color=okblue, error bars/.cd, x dir=both, x explicit,
+  error bar style={line width=0.9pt}] table[x=acc, y=y, x error minus=minus, x error plus=plus]{generated/data/ph-acc-pre.dat};
+\addlegendentry{preregistered run}
+\addplot[only marks, mark=pentagon*, mark size=3.2pt, color=black!75, error bars/.cd, x dir=both, x explicit,
+  error bar style={black!55, line width=0.9pt, densely dashed}] table[x=acc, y=y, x error minus=minus, x error plus=plus]{generated/data/ph-acc-post.dat};
+\addlegendentry{post-hoc run (Clef, Clef-Flash, in-run Jev)}
+\end{axis}
+\end{tikzpicture}

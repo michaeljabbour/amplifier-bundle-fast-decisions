@@ -1,0 +1,39 @@
+% Confirmatory cost ratios (test split) with 95% scenario-cluster bootstrap CIs. Log x axis.
+\begin{tikzpicture}
+\begin{axis}[benchmark, xmode=log, log ticks with fixed point,
+  xtick={0.5,0.6,0.7,0.8,0.9,1,1.2,1.4,1.6}, xmin=0.45, xmax=1.75,
+  scale only axis, width=10.5cm, xmajorgrids, y tick label style={font=\small}, height=5.2cm, ymin=-0.7, ymax=6.7,
+  ytick={0,1,2,4,5,6}, yticklabels from table={generated/data/forest.dat}{label},
+  xlabel={Cost ratio, routed arm / plain host (log scale; below 1 saves money)},
+  legend to name=forestlegend, legend columns=2, legend cell align=left,
+  legend style={/tikz/every even column/.append style={column sep=10pt}}]
+\draw[black!70, line width=0.8pt] (axis cs:1,-0.7) -- (axis cs:1,6.7);
+\draw[okgray, dashed, line width=0.8pt] (axis cs:\HTwoLower,-0.7) -- (axis cs:\HTwoLower,2.6);
+\addplot[only marks, mark=*, mark size=2.6pt, color=okblue,
+  error bars/.cd, x dir=both, x explicit, error bar style={line width=1pt}]
+  table[x=pair, y=y, x error minus=pm, x error plus=pp]{generated/data/forest.dat};
+\addlegendentry{pair reading (co-primary)}
+\addplot[only marks, mark=diamond, mark size=3pt, color=okorange, mark options={line width=1pt},
+  error bars/.cd, x dir=both, x explicit, error bar style={line width=0.6pt, densely dashed}]
+  table[x=arm, y expr=\thisrow{y}-0.3, x error minus=am, x error plus=ap]{generated/data/forest.dat};
+\addlegendentry{arm reading (co-primary, unfiltered)}
+\end{axis}
+\end{tikzpicture}
+
+\smallskip
+\begin{tikzpicture}
+\begin{axis}[benchmark, xmode=log, log ticks with fixed point,
+  xtick={0.5,0.6,0.7,0.8,0.9,1,1.2,1.4,1.6}, xmin=0.45, xmax=1.75,
+  scale only axis, width=10.5cm, xmajorgrids, y tick label style={font=\small}, height=1.6cm, ymin=-0.7, ymax=1.7,
+  ytick={0,1}, yticklabels from table={generated/data/forest-h3.dat}{label},
+  xlabel={Cost ratio, sticky / shipped on the same scenario (H3; log scale)}]
+\draw[black!70, line width=0.8pt] (axis cs:1,-0.7) -- (axis cs:1,1.7);
+\draw[okgray, dashed, line width=0.8pt] (axis cs:\HThreeUpper,-0.7) -- (axis cs:\HThreeUpper,1.7);
+\addplot[only marks, mark=*, mark size=2.6pt, color=okblue,
+  error bars/.cd, x dir=both, x explicit, error bar style={line width=1pt}]
+  table[x=pair, y=y, x error minus=pm, x error plus=pp]{generated/data/forest-h3.dat};
+\addplot[only marks, mark=diamond, mark size=3pt, color=okorange, mark options={line width=1pt},
+  error bars/.cd, x dir=both, x explicit, error bar style={line width=0.6pt, densely dashed}]
+  table[x=arm, y expr=\thisrow{y}-0.3, x error minus=am, x error plus=ap]{generated/data/forest-h3.dat};
+\end{axis}
+\end{tikzpicture}

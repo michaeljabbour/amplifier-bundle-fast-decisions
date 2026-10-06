@@ -1,0 +1,45 @@
+% Where the time goes in one call: stacked medians from the latency study.
+\begin{tikzpicture}
+\begin{axis}[benchmark,
+  xbar stacked, bar width=11pt,
+  width=0.9\linewidth, height=5.2cm,
+  xmin=0, ymin=-0.6, ymax=3.6,
+  ytick=data, yticklabels from table={generated/jb/data/latency-cloud.dat}{label},
+  xlabel={Median milliseconds per call (cloud, connection reused)},
+  xmajorgrids,
+  legend style={at={(0.5,1)}, anchor=south, yshift=5pt, legend columns=3, /tikz/every even column/.append style={column sep=8pt}},
+  legend cell align=left,
+]
+\addplot[fill=okgray!55, draw=black!70] table[x=network, y=idx]{generated/jb/data/latency-cloud.dat};
+\addlegendentry{network}
+\addplot[fill=okblue, draw=black!70, postaction={pattern=north east lines, pattern color=white}]
+  table[x=server, y=idx]{generated/jb/data/latency-cloud.dat};
+\addlegendentry{provider server time}
+\addplot[fill=okorange!80, draw=black!70, postaction={pattern=dots, pattern color=white}]
+  table[x=other, y=idx]{generated/jb/data/latency-cloud.dat};
+\addlegendentry{client and rest}
+\end{axis}
+\end{tikzpicture}
+
+\vspace{4pt}
+\begin{tikzpicture}
+\begin{axis}[benchmark,
+  xbar stacked, bar width=11pt,
+  width=0.9\linewidth, height=5.8cm,
+  xmin=0, ymin=-0.6, ymax=4.6,
+  ytick=data, yticklabels from table={generated/jb/data/latency-local.dat}{label},
+  xlabel={Median milliseconds per call (local, Ollama, model already loaded)},
+  xmajorgrids,
+  legend style={at={(0.5,1)}, anchor=south, yshift=5pt, legend columns=3, /tikz/every even column/.append style={column sep=8pt}},
+  legend cell align=left,
+]
+\addplot[fill=okgray!55, draw=black!70] table[x=load, y=idx]{generated/jb/data/latency-local.dat};
+\addlegendentry{model load/check}
+\addplot[fill=okgreen, draw=black!70, postaction={pattern=north east lines, pattern color=white}]
+  table[x=prefill, y=idx]{generated/jb/data/latency-local.dat};
+\addlegendentry{prompt prefill}
+\addplot[fill=okorange!80, draw=black!70, postaction={pattern=dots, pattern color=white}]
+  table[x=other, y=idx]{generated/jb/data/latency-local.dat};
+\addlegendentry{decode and rest}
+\end{axis}
+\end{tikzpicture}

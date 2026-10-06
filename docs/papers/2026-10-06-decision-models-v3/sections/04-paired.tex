@@ -1,0 +1,47 @@
+\section{Raising the difficulty: whole sessions}\label{sec:paired}
+
+The decision that moves money is the session's starting model. To measure it we ran whole multi-turn sessions, in
+pairs: the same scripted task, started together from the same frozen workspace, once on the plain host and once under
+a routing policy, each with its own cache key. The main campaign (main-v1) ran \NSessions\ sessions on \NScenarios\
+scenarios of \MinTurns\ to \MaxTurns\ turns, with Fable~5.1 and Opus~5.5 as hosts. Hypotheses, thresholds and the
+split were preregistered; the estimator was written after the data, which the companion report states plainly.
+
+\paragraph{Why caching made this necessary.} One of us (DK) asked whether routing still saves money in longer chats.
+Prompt caching makes re-sending a conversation cheap on the model that cached it, and switching models throws that
+cache away. An earlier survey had found the shipped router's Opus-host ratio going from \CaOpusRoutedOne\X\ in
+single-turn sessions to \CaOpusRoutedFour\X\ in \CaTurns-turn ones. Estimates from receipts could not settle it.
+
+\begin{figure}[htbp]
+\centering
+\pgfplotslegendfromname{forestlegend}\par\smallskip
+\input{figures/fig-forest.tex}
+\caption{Confirmatory cost ratios on the main-v1 test split. Top: each routed arm against the plain host. Bottom: the
+sticky arm against the shipped arm on the same scenarios. Whiskers are 95\,\% intervals; the dashed lines mark
+preregistered thresholds.}
+\label{fig:forest}
+\howtoread{The dot is the geometric-mean cost ratio, the whisker its 95\,\% interval, on a log axis. Rows left of 1
+saved money. All Fable rows are well left of 1; all Opus rows are right of it.}
+\end{figure}
+
+\paragraph{What it found.} With Fable as host, choosing Sonnet once at the start of the session (\term{sticky})
+cost \CfFableStickyPairTwo\X\ the plain host (95\,\% CI \CfFableStickyPairCITwo; a typical per-session saving of
+\CfFableStickySaving\,\% as a geometric mean, and an actual spend cut of \RvSpendCutAll\,\% over all scenarios). Quality
+stayed inside the preregistered margin on the test split only; over all scenarios the margin was not shown
+(\QAllFableSticky, CI \QAllFableStickyCI), and \RgNTaskFail\ task types lost more (\RgTaskFailList). With Opus as host,
+every routing arm cost more (\CfOpusStickyPairTwo--\CfOpusSonnetPairTwo\X): Opus's cache reads are cheap enough that
+leaving them costs more than Sonnet saves. That conclusion depends on the price table; Opus routing would break
+even if its cache reads cost about \$\BEStickyPair\ per million tokens instead of \$\PriceOpusRead.
+
+\paragraph{The effort confound.} An external peer reviewer noticed that routed Sonnet ran at medium reasoning effort
+while the plain-Sonnet control ran at the provider default. Two follow-ups measured effort directly. Plain Sonnet at
+medium cost \EcRatio\X\ its default (\EcCI; designed in advance, provenance-limited), and plain Fable at medium cost
+\EfRatio\X\ its default (\EfCI; preregistered), both with no detectable turn-pass loss on their \EfScen\ scenarios. So
+about \EfShare\,\% of the Fable routing saving is the host's own effort effect, and routing to Sonnet remains much the
+larger lever: sticky-on-Sonnet cost about \EfStickyVsMedium\X\ what Fable at medium did (exploratory, not concurrent).
+The two review rounds and their responses are recorded with the companion report.
+
+\begin{keyidea}
+Measured, not estimated: on Fable, deciding once to run the session on Sonnet saved about half the cost, with a
+quality caveat on some task types. On Opus it cost more. Lowering reasoning effort is a second, smaller lever that
+works on both Sonnet and Fable.
+\end{keyidea}

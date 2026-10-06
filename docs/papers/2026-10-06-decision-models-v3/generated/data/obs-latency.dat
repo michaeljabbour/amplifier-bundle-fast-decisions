@@ -1,0 +1,4 @@
+y label p50 p95
+0 {local Qwen3 0.6B, read proposal} 48.1 93.2
+1 {Jev, start-tier judgement} 159.3 311.0
+2 {host model call} 4828.2 26920.1

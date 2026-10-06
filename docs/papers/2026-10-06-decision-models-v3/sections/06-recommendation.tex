@@ -1,0 +1,70 @@
+\section{What to configure}\label{sec:recommend}
+
+\begin{keyidea}
+What gets the most out of a decision model: decide once per session; let price arithmetic gate routing (Opus: never
+route; Fable: route to Sonnet at medium); use a deterministic rule where it matches the model, as it did for the
+session-start choice; set effort to medium where it helps (Sonnet, Fable, not Opus); keep review and explain work on the
+host. Where a decision model may still pay is in decisions whose right answer changes within a session; that is a
+hypothesis for S2--S4, not a finding.
+\end{keyidea}
+
+\Cref{tab:config} gives the settings we recommend, per host model, after S1.
+
+\begin{table}[htbp]
+\centering\small
+\caption{Recommended settings per host model at the companion report's prices, after S1.}
+\label{tab:config}
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}l >{\raggedright\arraybackslash}p{0.3\textwidth} >{\raggedright\arraybackslash}p{0.24\textwidth} >{\raggedright\arraybackslash}p{0.2\textwidth}@{}}
+\toprule
+Host model & Session model & Reasoning effort & Evidence \\
+\midrule
+Fable 5.1 & Route to Sonnet, decided once by rule R* (scope gate at \AoScopeFiles\ files); review- and explain-like
+  first prompts kept on the host via a keyword proxy & Sonnet at medium; Fable at medium when kept (\EfRatio\X) &
+  expected about \KpProxyTwo\X, turn-pass about 0 (replay, exploratory); R* alone \SHOneRatio\X\ (S1 H1) \\
+Opus 5.5 & Keep the host: the price gate never routes (routing \SHFiveRatio\X) & Default (medium \SHFourRatio\X, no
+  saving) & S1 H3, H4, H5 \\
+Sonnet 5 & Already the cheap model: no routing & Medium (\EcRatio\X\ its default) & Sonnet follow-up \\
+\bottomrule
+\end{tabular*}
+\end{table}
+
+\paragraph{What a user should set.}
+\begin{itemize}
+  \item \textbf{Price gate on.} The gate compares the host's and Sonnet's prices with the request mix measured in
+    main-v1 (request multipliers \RpMultFable\ for Fable and \RpMultOpus\ for Opus, re-derived by a replay of the
+    shipped code, which \RpPass) and keeps the host when routing cannot pay.
+  \item \textbf{Decide once.} One model and one effort per session; switching either rewrites the prompt cache.
+  \item \textbf{Effort medium on Sonnet and Fable}, default on Opus.
+  \item \textbf{Decider: the rule R*.} It matched Jev on the session-start choice (H2) and needs no external call. Jev
+    stays available as an opt-in decider; it sends the session's starting state to an external service and should run
+    only with the user's consent (\code{allow\_external\_state}).
+  \item \textbf{\code{keep\_on\_host: [review, explain]}} on Fable, per H7: a deliberate quality-first choice. Without a
+    judge there is no task-type label, so the shipped bundle uses a frozen keyword classifier (\code{\KpClassifier}) as a
+    proxy: it keeps sessions whose first prompt reads as a question on the host. On the \KpPrompts\ scenario prompts of
+    all three panels it catches \KpCaught\ of the \KpRexN\ review and explain sessions, but also \KpOthers\ other
+    read-only questions (precision \KpPrecision\,\%); it was not tuned on the holdout. Replayed on the S1 sessions
+    (exploratory, not preregistered), against plain Fable:
+    \begin{itemize}
+      \item R* alone: \SHOneRatio\X, turn-pass \SHOneDtp\ (the preregistered H1 result);
+      \item R* with review and explain kept on the host by their true labels: \KpOracleRatio\X\ (\KpOracleCI), turn-pass
+        \KpOracleDtp;
+      \item R* with the shipped keyword proxy: \KpProxyRatio\X\ (\KpProxyCI), turn-pass \KpProxyDtp.
+    \end{itemize}
+    The proxy gives up part of the saving (about \KpProxyTwo\X\ instead of about \KpRstarTwo\X) to avoid the review and
+    explain quality risk. Users who accept that risk can remove \code{keep\_on\_host} to get about \KpRstarTwo\X. A
+    better classifier is S2 work.
+\end{itemize}
+
+\paragraph{Per harness.} In Amplifier, the fast-decisions bundle makes the decision inside every session; install it
+with \code{amplifier bundle add} as in the repository README and keep it current with \code{amplifier bundle update}.
+In Claude Code, Codex or Copilot CLI, the smart tool makes the same decision before the harness starts. Its
+\code{decide} command returns the model and effort for a task; \code{launch} decides and then starts the harness with
+them:
+\begin{center}\small
+\code{amplifier-fast-decisions decide}\qquad \code{amplifier-fast-decisions launch}
+\end{center}
+Install and update the skill with:
+\begin{center}\small
+\code{npx skills add michaeljabbour/amplifier-bundle-fast-decisions}\\
+\code{npx skills update}
+\end{center}

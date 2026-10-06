@@ -1,0 +1,20 @@
+\section{Companion material}\label{app:companion}
+
+\paragraph{Companion technical report.} The full studies behind \cref{sec:judges,sec:paired} (design, power,
+running safely, every confirmatory and exploratory result, the effort follow-ups, three rounds of review, data
+dictionary and reproduction) are in \path{docs/papers/2026-10-02-paired-measurement/}. The external reviews and
+their verification are in \path{docs/reviews/2026-10-paired-measurement/}.
+
+\paragraph{Evidence used here.}\begingroup\raggedright
+\begin{itemize}
+  \item Observatory and counterfactual: \path{docs/evidence/2026-10-v3-offline/} (A1, A0, A3 inputs).
+  \item Judge benchmark, real traces, Clef:\\ \path{docs/evidence/2026-09-30-judge-benchmark/}\\
+    \path{docs/evidence/2026-10-01-trace-judge-benchmark/}\\ \path{docs/evidence/2026-10-04-clef-judges/}
+  \item Paired campaign and follow-ups:\\ \path{docs/evidence/2026-10-02-paired-campaign/}\\
+    \path{docs/evidence/2026-10-05-effort-control/}\\ \path{docs/evidence/2026-10-06-effort-control-fable/}\\
+    \path{docs/evidence/2026-10-05-defaults-replay/}
+  \item S1:\\ \path{docs/evidence/2026-10-06-holdout-v3/}\\ preregistration: \path{evals/paired/PREREGISTRATION-holdout-v3.md}
+\end{itemize}\endgroup
+
+\paragraph{Reproducing this document.} \code{make} rebuilds every number from the evidence and the PDF;
+\code{make check} checks figure geometry; \code{make FINAL=1} additionally requires the S1 result and fails without it.
