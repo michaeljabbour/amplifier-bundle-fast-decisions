@@ -1,0 +1,52 @@
+\section{Grading the decisions}\label{sec:judges}
+
+To know whether a decision is right we need labelled cases. We built two benchmarks and graded every decision model
+under the gate the bundle ships: act only when the top probability is at least \MinP\ and leads the runner-up by at
+least \MinMargin, within \TimeoutS\,s; otherwise fall back to the host.
+
+\paragraph{Constructed cases.} \NumBase\ judges answered \DevN\ development cases (a screen) and \HoldN\ fresh holdout
+cases whose analysis was preregistered, \HoldReps\ times each: file reads, searches, selections and computer-use
+questions, including cases with side effects or prompt injections. Two blind reviewers checked the labels (Cohen's
+$\kappa = \KappaHoldAB$ with the final labels). On the holdout, Jev was right on \JevHoldAccK\ of \HoldN\ cases at
+\$\JevHoldCost\ per million decisions and a p95 of \JevHoldPninetyfive\,ms. GPT-6 Luna (\LunaHoldAccK) and GPT-6.1 Sol
+(\SolHoldAccK) were slightly more accurate, but neither difference survived the preregistered Holm correction
+(adjusted $p = \LunaHoldRAccPHolm$ and \SolHoldRAccPHolm), and both were slower and dearer (p95
+\LunaHoldPninetyfive\ and \SolHoldPninetyfive\,ms). Cloudflare's Clef, tested later and labelled post hoc, matched
+Jev's accuracy (\ClHoldClefAcc\ against an in-run Jev \ClHoldJevAcc) at \ClClefCostXLow--\ClClefCostXHigh\X\ the cost
+per decision and a p95 of \ClClefPninetyfiveLow--\ClClefPninetyfiveHigh\,ms from our machine.
+
+\begin{figure}[htbp]
+\centering
+\pgfplotslegendfromname{phacclegend}\par\smallskip
+\input{figures/fig-ph-accuracy.tex}
+\caption{Holdout accuracy with 95\,\% Wilson intervals: the preregistered run, then (below the gap) the post-hoc run
+of Clef, Clef-Flash and the in-run Jev reference.}
+\label{fig:accuracy}
+\howtoread{Each row is a judge; the dot is its accuracy and the whisker its 95\,\% interval. The top judges'
+whiskers overlap, which is why their differences are called ``within noise''. Jev sits among them at a fraction of
+the cost and latency of the cloud models (companion report, Part I).}
+\end{figure}
+
+\paragraph{Real decisions.} Constructed cases can be easier or harder than real ones. A second preregistered study
+rebuilt \TrN\ real read-shortcut decisions from earlier sessions, exactly as the in-session judge had seen them.
+Reviewers agreed with each other ($\kappa = \TrKappaAB$) much more than with what the host actually did next
+($\kappa = \TrKappaOutcome$). The preregistered usefulness rule asked for at least \TrUsefulMinReads\ correct
+automatic reads with few misfires. \TrNUseful\ of \NumBase\ judges met it (\cref{fig:reads}). Jev took the most
+correct reads (\TrJevReads\ of \TrReadCases) but also made \TrJevWaK\ wrong automatic reads.
+
+\begin{figure}[htbp]
+\centering
+\input{figures/fig-ph-reads.tex}
+\caption{Real decisions: correct automatic reads against wrong automatic reads on trace-holdout, with 95\,\% Wilson
+intervals: the preregistered run, plus the post-hoc Clef arms (black pentagons). The shaded strip is where the
+preregistered rule would call a judge useful.}
+\label{fig:reads}
+\howtoread{Right is more saved host calls; up is more misfires. No judge reaches the shaded strip: every judge with
+enough correct reads also misfired.}
+\end{figure}
+
+\begin{keyidea}
+Jev is the best value among the decision models we tested: as accurate as the expensive ones within noise, and much
+cheaper and faster. But on real read decisions no model was safe enough to act on its own, so the read shortcut stays
+off. The money, if any, had to come from a bigger decision: which model runs the session.
+\end{keyidea}

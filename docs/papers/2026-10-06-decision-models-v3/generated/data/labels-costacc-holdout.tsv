@@ -1,0 +1,7 @@
+key	text	x	y	px	py	x0	y0	x1	y1	own_dist	nearest_other	nearest_other_dist	leader
+jev-1.13	Jev 1.13	18.4093	87.3016	51.54	92.30	37.01	76.98	66.06	87.60	4.70	ph-jev-1.13	13.17	no
+gpt-6-luna	GPT-6 Luna	40.4603	95.2381	100.23	134.64	104.93	129.97	148.40	139.31	4.70	ph-clef	20.74	no
+gpt-6.1-sol	GPT-6.1 Sol	894.3651	98.4127	291.67	151.58	244.45	146.73	286.97	156.43	4.70	ph-clef	120.66	no
+ph-clef	Clef (post-hoc)	65.2343	90.4762	129.77	109.24	134.47	103.49	186.87	114.99	4.70	gpt-6-luna	39.48	no
+ph-clef-flash	Clef-Flash (post-hoc)	24.4629	79.3651	69.12	49.96	73.82	44.21	145.99	55.71	4.70	jev-1.13	42.84	no
+ph-jev-1.13	Jev in-run (post-hoc)	18.4093	88.8889	51.54	100.77	15.56	105.47	87.52	116.97	4.70	jev-1.13	13.17	no

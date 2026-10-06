@@ -133,6 +133,18 @@ class DashboardTest(unittest.TestCase):
         for needle in ("Progress by arm and host", "Anchor-paired comparisons", "% turns done", "ETA (uses turns/hour)"):
             self.assertIn(needle, html)
 
+    def test_holdout_split_is_blinded_like_test(self):
+        """holdout-v3 scenarios all carry split `holdout`: the dashboard must show spend and health, never per-arm results."""
+        fx = Fixture(self.tmp_path)
+        sched = json.loads((fx.out / "schedule.json").read_text(encoding="utf-8"))
+        for v in sched["scenarios"].values():
+            v["split"] = "holdout"
+        (fx.out / "schedule.json").write_text(json.dumps(sched), encoding="utf-8")
+        m = self.collect(fx)
+        self.assertEqual(m["interim"], [])
+        self.assertIn("holdout", D.render(m))
+        self.assertTrue(self.collect(fx, show_test=True)["interim"])
+
     def test_html_hides_test_split_and_is_self_contained(self):
         fx = Fixture(self.tmp_path)
         html = D.render(self.collect(fx))

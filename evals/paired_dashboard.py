@@ -33,6 +33,7 @@ import paired as P  # noqa: E402  (parse_events, recompute_cost, tools_normalize
 SLUG = re.compile(r"[^A-Za-z0-9._-]")          # mirrors scripts/forge_e2e._slug
 STALE_S = 180
 LOG_ERR = re.compile(r"error|traceback|exception|fail|exit\s*\d|killed|exclu|breaker|abort|budget", re.I)
+BLINDED_SPLITS = ("test", "holdout")      # confirmatory splits: no interim per-arm cost or quality unless --show-test
 ARM_ORDER = ["aa", "shipped", "sticky", "sonnet"]
 ARM_LABEL = {"aa": "aa (noise floor: same config as anchor)", "shipped": "shipped", "sticky": "sticky",
              "sonnet": "sonnet (host-independent control)"}
@@ -352,7 +353,7 @@ def progress_detail(sched, swave, status, scen, famap, timing, now, first_start)
             b["total"] += 1
             b["complete"] += ok
             b["arm_done"] += r["state"] == "done"
-            if r["split"] != "test":
+            if r["split"] not in BLINDED_SPLITS:
                 b["train_total"] += 1
                 b["train_complete"] += ok
     pair_rows = [{"host": h, "arm": a, **v} for (h, a), v in sorted(pairs.items(), key=lambda kv: (kv[0][0], ARMS.index(kv[0][1]) if kv[0][1] in ARMS else 9))]
@@ -563,7 +564,7 @@ def collect(out, cache_path=None, parse_budget_s=None, show_test=False, now=None
     pair_rows = {}
     for x in costed:
         s = x["s"]
-        if s["arm"] == "anchor" or (not show_test and (scen.get(s["scenario"]) or {}).get("split") == "test"):
+        if s["arm"] == "anchor" or (not show_test and (scen.get(s["scenario"]) or {}).get("split") in BLINDED_SPLITS):
             continue
         for host in ([s["host"]] if s["host"] != "any" else sorted({h for (_, _, h) in anchors})):
             a = anchors.get((s["scenario"], s["rep"], host))
@@ -740,7 +741,7 @@ def render(m: dict) -> str:
     age_state = f'state.json changed {dur(now - m["state_mtime"])} before this update' if m["state_mtime"] else "state.json not found"
     warns = "".join(f'<p class="warn">{esc(w)}</p>' for w in m["warnings"])
     test_note = ("Test split shown (--show-test): this breaks the preregistered blinding for interim reading."
-                 if m["show_test"] else "Test split is hidden on purpose (preregistration): only TRAIN (non-test) waves appear here.")
+                 if m["show_test"] else "Test and holdout splits are hidden on purpose (preregistration): only non-confirmatory waves appear here.")
     par = m["parallel"] if m["parallel"] is not None else "n/a"
     par_sub = f"scheduled {m['sched_parallel']}" if m["sched_parallel"] not in (None, m["parallel"]) else ""
     return f"""<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">

@@ -1,0 +1,418 @@
+# holdout-v3 batch B (docs, 10 turns): Document a small argparse CLI (taskq): command inventory, exact option/default tables, exit codes, runnable console examples whose output is executed, TOC anchors, a roff man page, and a code+docs change.
+id: cli-manual
+task_type: docs
+language: python
+split: holdout
+default_gap_s: 10
+source:
+  desc: 'Document a small argparse CLI (taskq): command inventory, exact option/default tables, exit codes, runnable console
+    examples whose output is executed, TOC anchors, a roff man page, and a code+docs change.'
+  kind: self-authored deterministic workspace
+  adapted_from:
+  - new self-authored CLI; docs-from-code theme (cf. amplifier-agent docs tasks)
+workspace:
+  kind: inline
+  files:
+    taskq/__init__.py: |
+      """taskq: a tiny task queue."""
+    taskq/__main__.py: |
+      import sys
+      from .cli import main
+
+      sys.exit(main())
+    taskq/cli.py: |
+      """taskq command line."""
+      import argparse, json, os, sys
+
+
+      def path():
+          return os.path.join(os.environ.get("TASKQ_HOME", os.path.expanduser("~/.taskq")), "tasks.json")
+
+
+      def load():
+          return json.load(open(path(), encoding='utf-8')) if os.path.exists(path()) else []
+
+
+      def save(items):
+          os.makedirs(os.path.dirname(path()), exist_ok=True)
+          json.dump(items, open(path(), 'w', encoding='utf-8'))
+
+
+      def build():
+          p = argparse.ArgumentParser(prog="taskq", description="Tiny task queue")
+          sub = p.add_subparsers(dest="cmd", required=True)
+          s = sub.add_parser("add", help="Add a task")
+          s.add_argument("title", help="Task title")
+          s.add_argument("--priority", type=int, default=3, choices=[1, 2, 3, 4, 5], help="Priority from 1 (high) to 5")
+          s.add_argument("--due", help="Due date as YYYY-MM-DD")
+          s.add_argument("--tag", action='append', help="Tag to attach (repeatable)")
+          s = sub.add_parser("list", help="List tasks")
+          s.add_argument("--status", default='open', choices=['open', 'done', 'all'], help="Which tasks to show")
+          s.add_argument("--tag", help="Only tasks with this tag")
+          s.add_argument("--limit", type=int, default=20, help="Maximum rows to print")
+          s = sub.add_parser("done", help="Mark a task done")
+          s.add_argument("id", type=int, help="Task id")
+          s = sub.add_parser("export", help="Export tasks")
+          s.add_argument("--format", default='json', choices=['json', 'csv'], help="Output format")
+          s.add_argument("--output", default='-', help="File to write, - for stdout")
+          s = sub.add_parser("purge", help="Delete finished tasks")
+          s.add_argument("--dry-run", action="store_true", help="Only report what would be deleted")
+          s = sub.add_parser("stats", help="Show task counts")
+          return p
+
+
+      def main(argv=None):
+          a = build().parse_args(argv)
+          items = load()
+          if a.cmd == "add":
+              n = max([t["id"] for t in items] + [0]) + 1
+              items.append({"id": n, "title": a.title, "priority": a.priority, "due": a.due, "tags": a.tag or [], "done": False})
+              save(items)
+              print(f"added #{n}")
+          elif a.cmd == "list":
+              rows = [t for t in items if (a.status == "all" or t["done"] == (a.status == "done")) and (not a.tag or a.tag in t["tags"])]
+              for t in sorted(rows, key=lambda t: (t["priority"], t["id"]))[: a.limit]:
+                  print(f"#{t['id']} [P{t['priority']}] {t['title']}" + (f" (due {t['due']})" if t["due"] else ""))
+          elif a.cmd == "done":
+              for t in items:
+                  if t["id"] == a.id:
+                      t["done"] = True
+                      save(items)
+                      print(f"done #{a.id}")
+                      return 0
+              print(f"error: no task with id {a.id}", file=sys.stderr)
+              return 3
+          elif a.cmd == "export":
+              out = json.dumps(items) if a.format == "json" else "\n".join(f"{t['id']},{t['title']}" for t in items)
+              if a.output == "-":
+                  print(out)
+              else:
+                  open(a.output, 'w', encoding='utf-8').write(out)
+          elif a.cmd == "purge":
+              gone = [t for t in items if t["done"]]
+              if a.dry_run:
+                  print(f"would purge {len(gone)} tasks")
+              else:
+                  save([t for t in items if not t["done"]])
+                  print(f"purged {len(gone)} tasks")
+          elif a.cmd == "stats":
+              print(f"open: {sum(1 for t in items if not t['done'])}")
+              print(f"done: {sum(1 for t in items if t['done'])}")
+          return 0
+
+
+      if __name__ == "__main__":
+          sys.exit(main())
+    README.md: |
+      # taskq
+
+      A tiny task queue. Run it with `python3 -m taskq <command>`; data lives in `$TASKQ_HOME/tasks.json` (default `~/.taskq`).
+protected:
+- taskq/__init__.py
+- taskq/__main__.py
+hidden_files:
+  _grade.py: |
+    import csv, json, os, re, subprocess, sys
+    from pathlib import Path
+
+    W = Path(".")
+
+
+    def fail(msg):
+        print("FAIL:", msg)
+        sys.exit(1)
+
+
+    def need(cond, msg):
+        if not cond:
+            fail(msg)
+
+
+    def read(rel):
+        p = W / rel
+        need(p.exists(), f"missing {rel}")
+        return p.read_text(encoding="utf-8")
+
+
+    def load_json(rel):
+        try:
+            return json.loads(read(rel))
+        except ValueError as e:
+            fail(f"{rel} is not valid JSON: {e}")
+
+
+    def close(a, b, tol=0.011):
+        try:
+            return abs(float(a) - float(b)) <= tol
+        except (TypeError, ValueError):
+            return False
+
+
+    def num(s):
+        m = re.search(r"-?\d[\d,]*\.?\d*", str(s))
+        return float(m.group(0).replace(",", "")) if m else None
+
+
+    def run(cmd, timeout=60, stdin=None):
+        p = subprocess.run(cmd, shell=True, cwd=W, capture_output=True, text=True, timeout=timeout, input=stdin)
+        return p.returncode, p.stdout, p.stderr
+
+
+    def md_lines(rel, under=None):
+        lines = read(rel).splitlines()
+        if not under:
+            return lines
+        out, on, lvl = [], False, 0
+        for ln in lines:
+            m = re.match(r"^(#+)\s+(.*)", ln)
+            if m:
+                if on and len(m.group(1)) <= lvl:
+                    break
+                if not on and re.search(under, m.group(2), re.I):
+                    on, lvl = True, len(m.group(1))
+                continue
+            if on:
+                out.append(ln)
+        need(on, f"no heading matching {under!r} in {rel}")
+        return out
+
+
+    def md_rows(rel, under=None):
+        rows = []
+        for ln in md_lines(rel, under):
+            if ln.strip().startswith("|") and not re.match(r"^\s*\|[\s:|-]+\|\s*$", ln):
+                rows.append([c.strip() for c in ln.strip().strip("|").split("|")])
+        return rows
+
+
+    def cmp(got, want, tol, path):
+        if isinstance(want, dict):
+            need(isinstance(got, dict), f"{path}: expected an object, got {type(got).__name__}")
+            for k, v in want.items():
+                need(k in got, f"{path}.{k}: missing")
+                cmp(got[k], v, tol, f"{path}.{k}")
+        elif isinstance(want, list):
+            need(isinstance(got, list) and len(got) == len(want), f"{path}: expected list of {len(want)}, got {got!r}")
+            for i, (g, w) in enumerate(zip(got, want)):
+                cmp(g, w, tol, f"{path}[{i}]")
+        elif isinstance(want, bool) or want is None or isinstance(want, str):
+            need(got == want, f"{path}: {got!r} != {want!r}")
+        else:
+            need(not isinstance(got, bool) and close(got, want, tol), f"{path}: {got!r} != {want!r}")
+
+
+    def chk_json(rel, exp, tol=0.051):
+        cmp(load_json(rel), exp, tol, rel)
+
+
+    def chk_table(rel, under, exp, col=1, tol=0.051):
+        rows = md_rows(rel, under)
+        need(rows, f"no table under {under!r} in {rel}")
+        got = {r[0].strip("* `"): num(r[col]) for r in rows if len(r) > col and num(r[col]) is not None}
+        for k, v in exp.items():
+            need(k in got and close(got[k], v, tol), f"{k}: {got.get(k)} != {v}")
+
+
+    def chk_cmd_json(cmd, exp, tol=0.051, stdin=None):
+        rc, out, err = run(cmd, stdin=stdin)
+        need(rc == 0, f"`{cmd}` exited {rc}: {err[-200:]}")
+        try:
+            d = json.loads(out)
+        except ValueError as e:
+            fail(f"`{cmd}` stdout is not JSON: {e}")
+        cmp(d, exp, tol, cmd)
+
+
+    def chk_cmd_out(cmd, lines, stdin=None, expect_rc=0):
+        rc, out, err = run(cmd, stdin=stdin)
+        need(rc == expect_rc, f"`{cmd}` exited {rc} (want {expect_rc}): {err[-200:]}")
+        got = [ln.rstrip() for ln in out.strip().splitlines()]
+        need(got == list(lines), f"`{cmd}` output {got[:8]} != {list(lines)[:8]}")
+
+
+    def t2():
+        heads = [re.sub(r'^#+\s*', '', l).strip() for l in read('docs/cli.md').splitlines() if l.startswith('### ')]
+        need(heads == ['add', 'list', 'done', 'export', 'purge', 'stats'], 'command headings: ' + str(heads))
+        for c, h in {'add': 'Add a task', 'list': 'List tasks', 'done': 'Mark a task done', 'export': 'Export tasks', 'purge': 'Delete finished tasks', 'stats': 'Show task counts'}.items():
+            need(h in ' '.join(md_lines('docs/cli.md', '^' + c + '$')), 'description missing under ' + c)
+        need(any(l.startswith('## Commands') for l in read('docs/cli.md').splitlines()), 'missing ## Commands')
+
+
+    def t3():
+        ok = lambda g, w: g == w or (w in ('-', 'off') and g == '`' + w + '`')
+        for c, opts in {'add': {'--priority': '`3`', '--due': '-', '--tag': '-'}, 'list': {'--status': '`open`', '--tag': '-', '--limit': '`20`'}, 'export': {'--format': '`json`', '--output': '`-`'}, 'purge': {'--dry-run': 'off'}}.items():
+            rows = md_rows('docs/cli.md', '^' + c + '$')
+            need(rows, 'no option table under ' + c)
+            got = {r[0].strip('` '): r[1].strip() for r in rows[1:] if len(r) >= 3}
+            need(got.keys() == opts.keys() and all(ok(got[k], opts[k]) for k in opts), f'{c} options {got} != {opts}')
+        for c, d in {'add': ['Priority from 1 (high) to 5', 'Due date as YYYY-MM-DD', 'Tag to attach (repeatable)'], 'list': ['Which tasks to show', 'Only tasks with this tag', 'Maximum rows to print'], 'export': ['Output format', 'File to write, - for stdout'], 'purge': ['Only report what would be deleted']}.items():
+            body = ' '.join(md_lines('docs/cli.md', '^' + c + '$'))
+            for h in d:
+                need(h in body, 'description missing: ' + h)
+
+
+    def t5():
+        rows = md_rows('docs/cli.md', 'exit codes')
+        got = {r[0].strip('` '): r[1].lower() for r in rows[1:] if len(r) >= 2}
+        need(set(got) == {'0', '2', '3'}, 'exit codes listed: ' + str(sorted(got)))
+        need('success' in got['0'] or 'ok' in got['0'], 'code 0 meaning')
+        need('usage' in got['2'] or 'argument' in got['2'], 'code 2 meaning')
+        need('not found' in got['3'] or 'no task' in got['3'] or 'unknown' in got['3'], 'code 3 meaning')
+
+
+    def t6():
+        import tempfile, os
+        body = '\n'.join(md_lines('docs/cli.md', 'examples'))
+        m = re.search(r'```(?:console|shell|sh|bash)?\n(.*?)```', body, re.S)
+        need(m, 'no fenced example block under Examples')
+        steps, cur = [], None
+        for ln in m.group(1).splitlines():
+            if ln.startswith('$ '):
+                cur = [ln[2:], []]
+                steps.append(cur)
+            elif cur is not None and ln.strip():
+                cur[1].append(ln.rstrip())
+        need([c for c, _ in steps] == ['taskq add "Write docs" --priority 2 --due 2025-05-01', 'taskq add "Fix bug"', 'taskq list', 'taskq done 1', 'taskq stats', 'taskq purge --dry-run'], 'example commands: ' + str([c for c, _ in steps]))
+        home = tempfile.mkdtemp()
+        env = dict(os.environ, TASKQ_HOME=home)
+        import shlex
+        for c, want in steps:
+            argv = ['python3', '-m', 'taskq'] + shlex.split(c)[1:]
+            p = subprocess.run(argv, cwd=W, capture_output=True, text=True, env=env, timeout=30)
+            need(p.returncode == 0, c + ' failed: ' + p.stderr[-200:])
+            need([l.rstrip() for l in p.stdout.splitlines()] == want, f'{c}: documented output {want} != real {p.stdout.splitlines()}')
+
+
+    def t8():
+        txt = read('docs/cli.md')
+        m = re.search(r'^##\s+Contents\s*\n(.*?)(?=^#)', txt, re.M | re.S)
+        need(m, 'no ## Contents section before the first other heading')
+        links = re.findall(r'\[([^\]]+)\]\(#([^)]+)\)', m.group(1))
+        need([l[0] for l in links] == ['add', 'list', 'done', 'export', 'purge', 'stats'] and all(a == t for t, a in links), 'toc entries: ' + str(links))
+        need(txt.index('## Contents') < txt.index('## Commands'), 'Contents must precede Commands')
+
+
+    def t9():
+        t = read('docs/taskq.1').replace('\\-', '-')
+        need(re.search(r'^\.TH\s+TASKQ\s+1', t, re.M), 'missing .TH TASKQ 1')
+        for sh in ['NAME', 'SYNOPSIS', 'COMMANDS', 'OPTIONS', 'EXIT STATUS']:
+            need(re.search(r'^\.SH\s+' + sh + r'\s*$', t, re.M), 'missing .SH ' + sh)
+        for c in ['add', 'list', 'done', 'export', 'purge', 'stats']:
+            need(re.search(r'^\.B\s+' + c + r'\s*$', t, re.M), 'command not listed: ' + c)
+        for o in ['--dry-run', '--due', '--format', '--limit', '--output', '--priority', '--status', '--tag']:
+            need(re.search(r'^\.B\s+' + re.escape(o) + r'\s*$', t, re.M), 'option not listed: ' + o)
+
+
+    if __name__ == "__main__":
+        fn = globals().get(sys.argv[1]) if len(sys.argv) > 1 else None
+        need(callable(fn) and sys.argv[1] in ['t2', 't3', 't5', 't6', 't8', 't9'], "unknown check " + str(sys.argv[1:]))
+        fn()
+        print("OK")
+turns:
+- prompt: Read taskq/cli.py. List the subcommands, and say which subcommand takes the most arguments and options in total
+    (positional arguments plus options) and how many. Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all:
+    - \badd\b
+    - \blist\b
+    - \bdone\b
+    - \bexport\b
+    - \bpurge\b
+    - \bstats\b
+    - \badd\b
+    - (?<![\d.,])4(?:\.0+)?(?!\d|[.,]\d)
+- prompt: Create docs/cli.md with a `# taskq CLI` title, a `## Commands` section and one `### <command>` heading per subcommand
+    (in the order they are defined in taskq/cli.py). Under each heading write the command's help string from the code, verbatim,
+    as the first line.
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t2
+    hidden:
+    - _grade.py
+    timeout: 60
+- prompt: 'Under each command that has options, add a table with columns option, default and description: one row per option
+    written as in the code (e.g. `--priority`), the default value in backticks (`-` when there is none, `off` for flags that
+    default to false), and the option''s help text verbatim. Positional arguments go in a line starting `Arguments:` instead.'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t3
+    hidden:
+    - _grade.py
+    timeout: 60
+- prompt: Which options restrict their value to a fixed set of choices, and what are the allowed values? Do not change any
+    files.
+  checks:
+  - kind: keyed_facts
+    all:
+    - --priority
+    - --status
+    - --format
+    - \b5\b
+    - \bdone\b
+    - \bcsv\b
+    - \bopen\b
+  gap_before_s: 420
+- prompt: 'Add a `## Exit codes` section to docs/cli.md: a table with columns code and meaning covering every exit status
+    the program can return (0, 2 from argparse usage errors, and the one `main` returns for an unknown task id).'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t5
+    hidden:
+    - _grade.py
+    timeout: 60
+- prompt: 'Add a `## Examples` section with one fenced console block that shows this exact session, each command on a line
+    starting `$ ` followed by the output the program really prints: add "Write docs" with --priority 2 and --due 2025-05-01,
+    add "Fix bug", list, done 1, stats, purge --dry-run. Use `taskq` as the command name.'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t6
+    hidden:
+    - _grade.py
+    timeout: 60
+- prompt: What does `done` print on stderr and return when the id does not exist, e.g. `done 99`? Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all:
+    - 'error: no task with id 99'
+    - (?<!\d)3(?!\d)
+- prompt: 'Add a `## Contents` section above `## Commands` in docs/cli.md: a bullet list with one markdown link per command,
+    `[<command>](#<anchor>)`, where the anchor is the heading''s GitHub-style slug, in command order.'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t8
+    hidden:
+    - _grade.py
+    timeout: 60
+  gap_before_s: 420
+- prompt: 'Write a roff man page docs/taskq.1: `.TH TASKQ 1`, sections NAME, SYNOPSIS, COMMANDS, OPTIONS and EXIT STATUS (each
+    as `.SH <NAME>`); under COMMANDS and OPTIONS use a `.TP` block per entry with the command or option name on a `.B` line
+    and the description on the next line.'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t9
+    hidden:
+    - _grade.py
+    timeout: 60
+- prompt: Add a '## Documentation' section to README.md that links docs/cli.md and docs/taskq.1 and says the CLI reference
+    was written from taskq/cli.py.
+  checks:
+  - kind: doc_sections
+    path: README.md
+    headings:
+    - Documentation
+  - kind: file_regex
+    path: README.md
+    pattern: docs/cli\.md
+  - kind: file_regex
+    path: README.md
+    pattern: docs/taskq\.1
+  - kind: file_regex
+    path: README.md
+    pattern: taskq/cli\.py

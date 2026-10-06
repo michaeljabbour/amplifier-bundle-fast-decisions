@@ -1,0 +1,57 @@
+# holdout-v3 knowledge scenario (10 turns, explain): marshmallow-code/marshmallow at 1c63bda: explain the load/dump pipeline, hook order, unknown-field handling, error structure and field features; verified by running the checkout and a mutation-checked hook-order demo
+id: marsh-load-explain
+task_type: explain
+language: python
+split: holdout
+source: {desc: 'marshmallow-code/marshmallow at 1c63bda: explain the load/dump pipeline, hook order, unknown-field handling, error structure and field features; verified by running the checkout and a mutation-checked hook-order demo', repo: 'https://github.com/marshmallow-code/marshmallow.git', sha: 1c63bdaf7fba217b8736e6eca8a1fcf377e41161}
+workspace: {kind: git, repo: 'https://github.com/marshmallow-code/marshmallow.git', sha: 1c63bdaf7fba217b8736e6eca8a1fcf377e41161, local_hint: ~/dev/afast-paired-src/marshmallow}
+turns:
+- prompt: Give me a one-line role for each module under src/marshmallow/. Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: [schema\.py, fields\.py, validate\.py, decorators\.py, exceptions\.py, class_registry\.py, error_store\.py, constants\.py, utils\.py]
+- prompt: 'In what order do the load hooks and validators run? Build a Schema with a required `name` field, a pre_load hook, a `@validates(''name'')` method, a `@validates_schema` method and a post_load hook that each record their name, call `load({''name'': ''x''})` using this checkout (src/ on sys.path) and print the order as comma-joined labels with no spaces (pre_load, validates:name, validates_schema, post_load). Do not change repository files.'
+  checks:
+  - kind: keyed_facts
+    all: ['pre_load,validates:name,validates_schema,post_load']
+- prompt: 'Explain `_do_load` in src/marshmallow/schema.py in your own words: what happens when pre_load raises ValidationError, when are schema validators skipped, and when does post_load not run? Do not change any files.'
+  checks:
+  - kind: keyed_facts
+    all: [_do_load, pre_load, 'skip_on_field_errors|field errors?', post_load, no errors|not errors|only (if|when)|errors, ValidationError, valid_data]
+- prompt: 'What does the `unknown` option do, which values exist, what is the default, and where can it be set? Show the three behaviours on `{''name'': ''a'', ''x'': 1}` by running real code. Do not change repository files.'
+  checks:
+  - kind: keyed_facts
+    all: [RAISE, EXCLUDE, INCLUDE, Unknown field, Meta|constructor|load\(, '''x'': 1|x.{0,6}1']
+- prompt: 'Run `load({''age'': -1})` for a schema with a required `name` and `age = fields.Int(validate=validate.Range(min=0))` and show `e.messages` and `e.valid_data`. What are the attributes of ValidationError? Do not change repository files.'
+  checks:
+  - kind: keyed_facts
+    all: [Missing data for required field, Must be greater than or equal to 0, valid_data, messages, \bdata\b]
+- prompt: 'How do `dump` and `load` differ: is dump validating, what happens to keys that are not declared, and what do `load_only`, `dump_only` and `dump_default`/`load_default` do? Verify the key behaviours by running. Do not change repository files.'
+  checks:
+  - kind: keyed_facts
+    all: ['dump.{0,80}(not|no|does not|doesn''t).{0,30}validat|validat.{0,40}dump', load_only, dump_only, load_default, dump_default, Unknown field|ignored|not included|dropped]
+- prompt: Write ARCHITECTURE.md in the repository root with level-2 sections Overview, Load pipeline, Unknown fields and Errors, using real names from the code.
+  checks:
+  - kind: doc_sections
+    path: ARCHITECTURE.md
+    headings: [Overview, Load pipeline, Unknown fields, Errors]
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: _do_load}
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: RAISE}
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: valid_data}
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: post_load}
+- prompt: 'Create tools/hook_order.py: a standalone script (this checkout''s src/ on sys.path) defining a Schema with pre_load, @validates(''name''), @validates_schema and post_load hooks that append their names to a list; load a valid payload and print the names joined by commas. Run it and show the output.'
+  checks:
+  - {kind: file_regex, path: tools/hook_order.py, pattern: validates_schema}
+  - {kind: tests, runner: cmd, cmd: 'python3 tools/hook_order.py 2>/dev/null | grep -qx ''pre_load,validates:name,validates_schema,post_load'' && perl -pi -e ''s/if not errors and postprocess and self\._hooks\[POST_LOAD\]:/if False:/'' src/marshmallow/schema.py && python3 tools/hook_order.py 2>/dev/null | grep -qx ''pre_load,validates:name,validates_schema''', timeout: 240}
+- prompt: Which Field subclasses does src/marshmallow/fields.py define, which names are aliases, and what is the contract of `_serialize` and `_deserialize` for a custom field? Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: [Nested, List, DateTime, Enum, 'Str(ing)?', alias, _serialize, _deserialize, ValidationError|raise]
+- prompt: Add a level-2 `## Field types` section to ARCHITECTURE.md naming at least four field classes, the aliases Str/Int and the `_serialize`/`_deserialize` contract.
+  checks:
+  - kind: doc_sections
+    path: ARCHITECTURE.md
+    headings: [Field types]
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: '`_serialize`'}
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: alias}
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: 'Str\b.{0,40}Int\b'}

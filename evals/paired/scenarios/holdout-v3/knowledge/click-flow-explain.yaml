@@ -1,0 +1,57 @@
+# holdout-v3 knowledge scenario (10 turns, explain): pallets/click at 06b2a67 (8.3.x, 178 files): explain how a parameter value is resolved (command line, environment, default_map, default, prompt), callback ordering, errors and exit codes, types, and the context stack; verified by running the checkout and a mutation-checked example script
+id: click-flow-explain
+task_type: explain
+language: python
+split: holdout
+source: {desc: 'pallets/click at 06b2a67 (8.3.x, 178 files): explain how a parameter value is resolved (command line, environment, default_map, default, prompt), callback ordering, errors and exit codes, types, and the context stack; verified by running the checkout and a mutation-checked example script', repo: 'https://github.com/pallets/click.git', sha: 06b2a678741131fd577ce170e23e5ca0aeba0309}
+workspace: {kind: git, repo: 'https://github.com/pallets/click.git', sha: 06b2a678741131fd577ce170e23e5ca0aeba0309, local_hint: ~/dev/afast-paired-src/click}
+turns:
+- prompt: Give me a one-line role for each module under src/click/. Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: [core\.py, decorators\.py, parser\.py, types\.py, exceptions\.py, formatting\.py, termui\.py, shell_completion\.py, testing\.py, globals\.py]
+- prompt: When an option has a command-line value, an environment variable, a context default_map entry and a declared default, which wins? Give the full precedence order and the members of `ParameterSource` (in src/click/core.py) with their integer values. Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: [COMMANDLINE, ENVIRONMENT, DEFAULT_MAP, DEFAULT\b, PROMPT, IntEnum, consume_value]
+- prompt: 'Prove it by running real code from this checkout (src/ on sys.path, use click.testing.CliRunner): a command with `--port` (type int, default 5000, envvar APP_PORT) and context_settings default_map {''port'': 7000}, printing the value and `ctx.get_parameter_source(''port'').name`. Show the results for (a) no arguments, (b) APP_PORT=6000, (c) `--port 8000` together with APP_PORT=6000. Do not change repository files.'
+  checks:
+  - kind: keyed_facts
+    all: ['7000.{0,60}DEFAULT_MAP', '6000.{0,60}ENVIRONMENT', '8000.{0,60}COMMANDLINE']
+- prompt: In what order are parameter callbacks called? Explain `iter_params_for_processing` in src/click/core.py and predict the callback order for options --a (normal), --b (is_eager=True), --c (normal) when invoked as `--a 1 --c 3 --b 2`. Verify by running it. Do not change repository files.
+  checks:
+  - kind: keyed_facts
+    all: [is_eager|eager, invocation, declaration, inf|not (given|invoked|provided), 'cb b.{0,20}cb a.{0,20}cb c|b.{0,10}a.{0,10}c']
+- prompt: What exit statuses and messages do UsageError/BadParameter, a plain ClickException and Abort produce when a command is run normally, and what does `standalone_mode=False` change in `Command.main`? Run small examples with CliRunner to confirm. Do not change repository files.
+  checks:
+  - kind: keyed_facts
+    all: [\b2\b, \b1\b, Aborted!, 'Error: boom|Error:', standalone_mode, raise|propagate|return]
+- prompt: Write ARCHITECTURE.md in the repository root with level-2 sections Overview, Value sources, Callbacks and Errors. Use the real class/function names and the precedence order you verified.
+  checks:
+  - kind: doc_sections
+    path: ARCHITECTURE.md
+    headings: [Overview, Value sources, Callbacks, Errors]
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: ParameterSource}
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: iter_params_for_processing}
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: '(?s)COMMANDLINE.{0,500}ENVIRONMENT.{0,500}DEFAULT_MAP'}
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: Aborted!}
+- prompt: 'Create examples/precedence.py: a runnable click command (standalone script, put this checkout''s src/ on sys.path) with `--port` (int, default 5000, envvar APP_PORT) that prints exactly `port=<value> source=<ParameterSource name>`. Run it three ways (no args, APP_PORT=6000, `--port 8000`) and show the output.'
+  checks:
+  - {kind: file_regex, path: examples/precedence.py, pattern: get_parameter_source}
+  - {kind: tests, runner: cmd, cmd: python3 examples/precedence.py 2>/dev/null | grep -qx 'port=5000 source=DEFAULT' && APP_PORT=6000 python3 examples/precedence.py 2>/dev/null | grep -qx 'port=6000 source=ENVIRONMENT' && python3 examples/precedence.py --port 8000 2>/dev/null | grep -qx 'port=8000 source=COMMANDLINE' && perl -pi -e 's/envvar_value = self\.value_from_envvar\(ctx\)/envvar_value = None/' src/click/core.py && APP_PORT=6000 python3 examples/precedence.py 2>/dev/null | grep -qx 'port=5000 source=DEFAULT', timeout: 240}
+- prompt: How does click know the 'current' context from anywhere (click.get_current_context)? Explain src/click/globals.py and when a context is pushed and popped. Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: [get_current_context, push_context, pop_context, thread|local, stack, silent|RuntimeError]
+- prompt: Which parameter types does src/click/types.py provide, which of them are 'composite', what are the default accepted formats of `DateTime`, and what does `IntRange(1, 5, clamp=True)` do with 9 (versus without clamp)? Verify by running. Do not change repository files.
+  checks:
+  - kind: keyed_facts
+    all: [Choice, IntRange, FloatRange, File, Path, Tuple, '%Y-%m-%d', clamp, \b5\b, not in the range|range]
+- prompt: Add a level-2 `## Types` section to ARCHITECTURE.md listing at least four ParamType classes and the DateTime default formats.
+  checks:
+  - kind: doc_sections
+    path: ARCHITECTURE.md
+    headings: [Types]
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: IntRange}
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: Choice}
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: '%Y-%m-%d'}

@@ -1,0 +1,17 @@
+group,host,effort_changed,position,n,mean_cache_write,median_cache_write,mean_cache_read
+anchor,fable,False,turn_first_long_gap,12,70162.833333,69698.0,32029.0
+anchor,fable,False,turn_first_short_gap,174,14432.793103,974.0,89612.017241
+anchor,fable,False,within_turn,800,1084.8125,767.0,105550.5075
+anchor,opus,False,turn_first_long_gap,12,65476.166667,63031.0,24021.75
+anchor,opus,False,turn_first_short_gap,180,10567.133333,883.5,84286.127778
+anchor,opus,False,within_turn,531,1204.659134,1021.0,98604.278719
+sticky_host,fable,False,turn_first_short_gap,25,974.4,738.0,91329.16
+sticky_host,fable,False,within_turn,510,743.152941,541.5,101842.992157
+sticky_host,fable,True,turn_first_long_gap,12,72952.416667,69842.5,24021.75
+sticky_host,fable,True,turn_first_short_gap,149,19725.758389,4868.0,80053.33557
+sticky_host,fable,True,within_turn,258,12413.410853,4288.0,85716.972868
+sticky_host,opus,False,turn_first_short_gap,16,786.8125,595.0,88927.5
+sticky_host,opus,False,within_turn,349,1129.017192,936.0,101695.068768
+sticky_host,opus,True,turn_first_long_gap,12,59517.666667,59352.5,32029.0
+sticky_host,opus,True,turn_first_short_gap,164,16354.957317,4618.0,81237.914634
+sticky_host,opus,True,within_turn,228,10786.916667,3492.5,85569.921053

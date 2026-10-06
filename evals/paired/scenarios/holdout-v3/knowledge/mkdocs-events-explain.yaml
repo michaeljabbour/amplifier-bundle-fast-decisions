@@ -1,0 +1,63 @@
+# holdout-v3 knowledge scenario (11 turns, explain): mkdocs/mkdocs at 2862536 (280 files; dependencies are not installed so everything is read from source): explain the build flow, the plugin event system, priorities and registration, with an AST-based inventory tool checked by mutation
+id: mkdocs-events-explain
+task_type: explain
+language: python
+split: holdout
+source: {desc: 'mkdocs/mkdocs at 2862536 (280 files; dependencies are not installed so everything is read from source): explain the build flow, the plugin event system, priorities and registration, with an AST-based inventory tool checked by mutation', repo: 'https://github.com/mkdocs/mkdocs.git', sha: 2862536793b3c67d9d83c33e0dd6d50a791928f8}
+workspace: {kind: git, repo: 'https://github.com/mkdocs/mkdocs.git', sha: 2862536793b3c67d9d83c33e0dd6d50a791928f8, local_hint: ~/dev/afast-paired-src/mkdocs}
+turns:
+- prompt: 'Give me a map of the mkdocs/ package: one line per sub-package or top-level module (not the tests) saying what it is for. Do not change any files.'
+  checks:
+  - kind: keyed_facts
+    all: [commands, config, structure, contrib, livereload, themes, templates, utils, plugins\.py, theme\.py, localization]
+- prompt: In mkdocs/commands/build.py, what is the order of the main steps and plugin events in `build()`, and what happens on an exception? Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: [on_config, on_pre_build, on_files, on_nav, on_env, on_post_build, on_build_error, strict|Abort]
+- prompt: List all plugin events defined on `BasePlugin` in mkdocs/plugins.py in source order and say which ones are not part of the normal build sequence. Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: [startup, shutdown, serve, config, pre_build, files, nav, env, post_build, build_error, pre_template, template_context, post_template, pre_page, page_read_source, page_markdown, page_content, page_context, post_page]
+- prompt: 'The `on_*` methods on BasePlugin are placeholders: how does the module derive the `EVENTS` tuple from them, and what happens to the methods afterwards? Answer from src; do not change files.'
+  checks:
+  - kind: keyed_facts
+    all: [EVENTS, 'k\[3:\]|strip|\[3:\]|prefix', delattr, docs|type checking|placeholder, BasePlugin]
+- prompt: How are event handlers registered and ordered? Explain `PluginCollection.__setitem__`, `_register_event`, `event_priority` (recommended values) and `CombinedEvent`. Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: [__setitem__, _register_event, insort, mkdocs_priority, '100', '-100', CombinedEvent, dir\(|startswith\('on_'\)|on_]
+  gap_before_s: 420
+- prompt: What does `run_event` do with the `item` and the return values of the handlers? What happens if a handler returns None? Answer from mkdocs/plugins.py. Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: [run_event, item, None, keep|unchanged|ignored|stay, result|return, kwargs]
+- prompt: Write ARCHITECTURE.md in the repository root with level-2 sections Overview, Build order, Registration and Priorities using real names and the numeric priorities.
+  checks:
+  - kind: doc_sections
+    path: ARCHITECTURE.md
+    headings: [Overview, Build order, Registration, Priorities]
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: PluginCollection}
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: EVENTS}
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: '-100'}
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: insort}
+- prompt: 'Create tools/events.py: a stdlib-only script that uses the `ast` module to read mkdocs/plugins.py (no imports of mkdocs) and prints, one per line and in source order, the event names (without the `on_` prefix) of the `on_*` methods defined in the BasePlugin class body, then a final line `total: <N>`. Run it and show the output.'
+  checks:
+  - {kind: file_regex, path: tools/events.py, pattern: ast}
+  - {kind: tests, runner: cmd, cmd: 'O=$(mktemp -d) && python3 tools/events.py > $O/a.txt && grep -qx ''total: 19'' $O/a.txt && grep -qx ''startup'' $O/a.txt && grep -qx ''post_page'' $O/a.txt && [ "$(head -1 $O/a.txt)" = startup ] && perl -pi -e ''s/^    def on_shutdown\(/    def on_shutdownx(/'' mkdocs/plugins.py && python3 tools/events.py > $O/b.txt && grep -qx ''shutdownx'' $O/b.txt && ! grep -qx ''shutdown'' $O/b.txt', timeout: 240}
+- prompt: Why can't two plugins both provide `on_page_read_source`, and what exactly does the collection do about it? Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: [page_read_source, warn, len\(events\) == 1|already|second|multiple|both, plugin1|plugin names|origin|_event_origins]
+  gap_before_s: 420
+- prompt: Which events can a plugin use to change the generated HTML of a page, in order, and which of them can skip writing a page? Answer from the docstrings in mkdocs/plugins.py. Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: [page_markdown, page_content, page_context, post_page, empty string|skipped|nothing is written]
+- prompt: Append a level-2 `## Page events` section to ARCHITECTURE.md listing the four page-HTML events in order and the way to skip a page.
+  checks:
+  - kind: doc_sections
+    path: ARCHITECTURE.md
+    headings: [Page events]
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: on_page_markdown}
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: on_post_page}
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: empty string|skip}

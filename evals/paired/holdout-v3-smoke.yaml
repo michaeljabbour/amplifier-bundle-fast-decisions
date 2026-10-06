@@ -1,0 +1,72 @@
+schema: fast-decisions-paired/design/v1
+id: holdout-v3-smoke
+description: >-
+  Smoke for holdout-v3 (PLAN S1: "each scenario is validated by its reference solution and a single plain-Sonnet-default
+  smoke session; not an analysed cell"). One plain Sonnet 5 session at the provider default effort per scenario (60
+  sessions, 1 rep), no fast-decisions. Purpose: confirm that each scenario is solvable by a model agent and that its graders
+  and hidden tests behave live (timeouts, memory, flakiness, discriminating checks). NOT analysed for any hypothesis: no
+  cost or quality number from this run enters S1, and it is never pooled with it. Decisions it may inform: repair or
+  replace a scenario BEFORE the S1 preregistration is committed (a scenario that the model cannot pass at all, or whose
+  grader misbehaves live, is fixed or swapped and the scenario hashes re-frozen); after the preregistration, never.
+
+scenario_dir:
+  - evals/paired/scenarios/holdout-v3/polyglot
+  - evals/paired/scenarios/holdout-v3/repos
+  - evals/paired/scenarios/holdout-v3/mixed
+  - evals/paired/scenarios/holdout-v3/knowledge
+snapshot_root: ~/dev/afast-paired/snapshots
+campaign_root_base: ~/dev/afast-paired
+cells_file: evals/cells.yaml
+suite_for_argv: {suite: s1m, split: m-dev}
+
+nonce_mode: per_session
+default_reps: 1
+default_parallel: 8
+budget_usd: 250                                    # ledger hard stop; `plan` refuses an estimate (incl. retry reserve) above it
+max_wave_launch_spread_s: 60
+max_wave_attempts: 3
+deadline_seconds_per_turn: 900
+
+anchor_arm: sonnet
+hosts:
+  any: claude-sonnet-5                             # host-independent control: one stratum
+
+arms:
+  sonnet:
+    kind: control
+    cells: {any: plain-sonnet}
+    host_independent: true
+    role: smoke
+    gate: {served_model_prefix: claude-sonnet-5, effort: absent}
+
+# plain-sonnet base unit and the type factors: evals/v3/s1_cost_calibration.py (main-v1, n=140), as in holdout-v3.yaml.
+cost_model:
+  source: "main-v1 plain-Sonnet implied 4-turn unit and type factors (evals/v3/s1_cost_calibration.py)"
+  unit_usd_4turn:
+    plain-sonnet: {usd: 0.797, n: 140}
+  sticky_over_anchor: {}
+  turn_scaling: {4: 1.0, 8: 2.5, 12: 4.2, 16: 5.9}
+  type_factor: {bugfix: 1.034, docs: 0.890, explain: 1.057, feature: 1.132, mixed: 0.895, review: 1.225, knowledge: 1.0}
+  long_gap_extra_fraction: 0.10
+  infra_retry_reserve_fraction: 0.08
+
+wall_model: {minutes_per_turn: 1.66, wave_slowest_factor: 1.4}
+
+analysis: {none: "smoke, not analysed (see description)"}
+
+campaign_provider:
+  id: campaign-anthropic
+  module: provider-anthropic
+  source: git+https://github.com/microsoft/amplifier-module-provider-anthropic@main
+  config:
+    api_key: "${ANTHROPIC_API_KEY}"
+    base_url: https://api.anthropic.com
+    enable_1m_context: "true"
+    raw: true
+preflight:
+  scenario_dir: evals/paired/preflight
+  max_age_hours: 12
+  est_usd_per_session: 0.10
+
+cache_audit:
+  tools_prefix_tokens: 32100

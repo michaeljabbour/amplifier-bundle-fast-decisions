@@ -1,0 +1,841 @@
+# holdout-v3 repos scenario (10 turns, review): stefankoegl/python-json-pointer at 5998f95 with a planted 'refactor' of jsonpointer.py (three RFC 6901 regressions, only one caught by the repo's tests.py): find them by review, fix each against hidden tests, add regression tests proven against the merged copy
+id: jpointer-regress-review
+task_type: review
+language: python
+split: holdout
+source: {desc: 'stefankoegl/python-json-pointer at 5998f95 with a planted ''refactor'' of jsonpointer.py (three RFC 6901 regressions, only one caught by the repo''s tests.py): find them by review, fix each against hidden tests, add regression tests proven against the merged copy', repo: 'https://github.com/stefankoegl/python-json-pointer.git', sha: 5998f951dcc5ace60f67f35afe6778c445401a07}
+workspace:
+  kind: git
+  repo: https://github.com/stefankoegl/python-json-pointer.git
+  sha: 5998f951dcc5ace60f67f35afe6778c445401a07
+  local_hint: ~/dev/afast-paired-src/python-json-pointer
+  add_files:
+    jsonpointer.py: |
+      # python-json-pointer - An implementation of the JSON Pointer syntax
+      # https://github.com/stefankoegl/python-json-pointer
+      #
+      # Copyright (c) 2011 Stefan Kögl <stefan@skoegl.net>
+      # All rights reserved.
+      #
+      # Redistribution and use in source and binary forms, with or without
+      # modification, are permitted provided that the following conditions
+      # are met:
+      #
+      # 1. Redistributions of source code must retain the above copyright
+      # notice, this list of conditions and the following disclaimer.
+      # 2. Redistributions in binary form must reproduce the above copyright
+      # notice, this list of conditions and the following disclaimer in the
+      # documentation and/or other materials provided with the distribution.
+      # 3. The name of the author may not be used to endorse or promote products
+      # derived from this software without specific prior written permission.
+      #
+      # THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
+      # IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+      # OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+      # IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
+      # INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+      # NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+      # DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+      # THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+      # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+      # THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+      #
+
+      """ Identify specific nodes in a JSON document (RFC 6901) """
+
+      # Will be parsed by setup.py to determine package metadata
+      __author__ = 'Stefan Kögl <stefan@skoegl.net>'
+      __version__ = '3.1.1'
+      __website__ = 'https://github.com/stefankoegl/python-json-pointer'
+      __license__ = 'Modified BSD License'
+
+      import copy
+      import re
+      from collections.abc import Mapping, Sequence
+      from itertools import tee, chain
+
+      _nothing = object()
+
+
+      def set_pointer(doc, pointer, value, inplace=True):
+          """Resolves a pointer against doc and sets the value of the target within doc.
+
+          With inplace set to true, doc is modified as long as pointer is not the
+          root.
+
+          >>> obj = {'foo': {'anArray': [ {'prop': 44}], 'another prop': {'baz': 'A string' }}}
+
+          >>> set_pointer(obj, '/foo/anArray/0/prop', 55) == \
+          {'foo': {'another prop': {'baz': 'A string'}, 'anArray': [{'prop': 55}]}}
+          True
+
+          >>> set_pointer(obj, '/foo/yet another prop', 'added prop') == \
+          {'foo': {'another prop': {'baz': 'A string'}, 'yet another prop': 'added prop', 'anArray': [{'prop': 55}]}}
+          True
+
+          >>> obj = {'foo': {}}
+          >>> set_pointer(obj, '/foo/a%20b', 'x') == \
+          {'foo': {'a%20b': 'x' }}
+          True
+          """
+
+          pointer = JsonPointer(pointer)
+          return pointer.set(doc, value, inplace)
+
+
+      def resolve_pointer(doc, pointer, default=_nothing):
+          """ Resolves pointer against doc and returns the referenced object
+
+          >>> obj = {'foo': {'anArray': [ {'prop': 44}], 'another prop': {'baz': 'A string' }}, 'a%20b': 1, 'c d': 2}
+
+          >>> resolve_pointer(obj, '') == obj
+          True
+
+          >>> resolve_pointer(obj, '/foo') == obj['foo']
+          True
+
+          >>> resolve_pointer(obj, '/foo/another prop') == obj['foo']['another prop']
+          True
+
+          >>> resolve_pointer(obj, '/foo/another prop/baz') == obj['foo']['another prop']['baz']
+          True
+
+          >>> resolve_pointer(obj, '/foo/anArray/0') == obj['foo']['anArray'][0]
+          True
+
+          >>> resolve_pointer(obj, '/some/path', None) == None
+          True
+
+          >>> resolve_pointer(obj, '/a b', None) == None
+          True
+
+          >>> resolve_pointer(obj, '/a%20b') == 1
+          True
+
+          >>> resolve_pointer(obj, '/c d') == 2
+          True
+
+          >>> resolve_pointer(obj, '/c%20d', None) == None
+          True
+          """
+
+          pointer = JsonPointer(pointer)
+          return pointer.resolve(doc, default)
+
+
+      def pairwise(iterable):
+          """ Transforms a list to a list of tuples of adjacent items
+
+          s -> (s0,s1), (s1,s2), (s2, s3), ...
+
+          >>> list(pairwise([]))
+          []
+
+          >>> list(pairwise([1]))
+          []
+
+          >>> list(pairwise([1, 2, 3, 4]))
+          [(1, 2), (2, 3), (3, 4)]
+          """
+          a, b = tee(iterable)
+          for _ in b:
+              break
+          return zip(a, b)
+
+
+      class JsonPointerException(Exception):
+          pass
+
+
+      class EndOfList:
+          """Result of accessing element "-" of a list"""
+
+          def __init__(self, list_):
+              self.list_ = list_
+
+          def __repr__(self):
+              return '{cls}({lst})'.format(cls=self.__class__.__name__,
+                                           lst=repr(self.list_))
+
+
+      class JsonPointer:
+          """A JSON Pointer that can reference parts of a JSON document"""
+
+          # Array indices must not contain:
+          # leading zeros, signs, spaces, decimals, etc
+          _RE_ARRAY_INDEX = re.compile('0|[1-9][0-9]*$')
+          _RE_INVALID_ESCAPE = re.compile('(~[^01]|~$)')
+
+          def __init__(self, pointer):
+
+              # validate escapes
+              invalid_escape = self._RE_INVALID_ESCAPE.search(pointer)
+              if invalid_escape:
+                  raise JsonPointerException('Found invalid escape {}'.format(
+                      invalid_escape.group()))
+
+              parts = pointer.split('/')
+              if parts.pop(0) != '':
+                  raise JsonPointerException('Location must start with /')
+
+              parts = [unescape(part) for part in parts]
+              self.parts = parts
+
+          def to_last(self, doc):
+              """Resolves ptr until the last step, returns (sub-doc, last-step)"""
+
+              if not self.parts:
+                  return doc, None
+
+              for part in self.parts[:-1]:
+                  doc = self.walk(doc, part)
+
+              return doc, JsonPointer.get_part(doc, self.parts[-1])
+
+          def resolve(self, doc, default=_nothing):
+              """Resolves the pointer against doc and returns the referenced object"""
+
+              for part in self.parts:
+
+                  try:
+                      doc = self.walk(doc, part)
+                  except JsonPointerException:
+                      if default is _nothing:
+                          raise
+                      else:
+                          return default
+
+              return doc
+
+          get = resolve
+
+          def set(self, doc, value, inplace=True):
+              """Resolve the pointer against the doc and replace the target with value."""
+
+              if len(self.parts) == 0:
+                  if inplace:
+                      raise JsonPointerException('Cannot set root in place')
+                  return value
+
+              if not inplace:
+                  doc = copy.deepcopy(doc)
+
+              (parent, part) = self.to_last(doc)
+
+              if isinstance(parent, Sequence) and part == '-':
+                  parent.append(value)
+              else:
+                  parent[part] = value
+
+              return doc
+
+          @classmethod
+          def get_part(cls, doc, part):
+              """Returns the next step in the correct type"""
+
+              if isinstance(doc, Mapping):
+                  return part
+
+              elif isinstance(doc, Sequence):
+
+                  if part == '-':
+                      return part
+
+                  if not JsonPointer._RE_ARRAY_INDEX.match(str(part)):
+                      raise JsonPointerException("'%s' is not a valid sequence index" % part)
+
+                  return int(part)
+
+              elif hasattr(doc, '__getitem__'):
+                  # Allow indexing via ducktyping
+                  # if the target has defined __getitem__
+                  return part
+
+              else:
+                  raise JsonPointerException("Document '%s' does not support indexing, "
+                                             "must be mapping/sequence or support __getitem__" % type(doc))
+
+          def get_parts(self):
+              """Returns the list of the parts. For example, JsonPointer('/a/b').get_parts() == ['a', 'b']"""
+
+              return self.parts
+
+          def walk(self, doc, part):
+              """ Walks one step in doc and returns the referenced part """
+
+              part = JsonPointer.get_part(doc, part)
+
+              assert hasattr(doc, '__getitem__'), "invalid document type %s" % (type(doc),)
+
+              if isinstance(doc, Sequence):
+                  if part == '-':
+                      return EndOfList(doc)
+
+                  try:
+                      return doc[part]
+
+                  except IndexError:
+                      raise JsonPointerException("index '%s' is out of bounds" % (part,))
+
+              # Else the object is a mapping or supports __getitem__(so assume custom indexing)
+              try:
+                  return doc[part]
+
+              except KeyError:
+                  raise JsonPointerException("member '%s' not found in %s" % (part, doc))
+
+          def contains(self, ptr):
+              """ Returns True if self contains the given ptr """
+              return self.path.startswith(ptr.path)
+
+          def __contains__(self, item):
+              """ Returns True if self contains the given ptr """
+              return self.contains(item)
+
+          def join(self, suffix):
+              """ Returns a new JsonPointer with the given suffix append to this ptr """
+              if isinstance(suffix, JsonPointer):
+                  suffix_parts = suffix.parts
+              elif isinstance(suffix, str):
+                  suffix_parts = JsonPointer(suffix).parts
+              else:
+                  suffix_parts = suffix
+              try:
+                  return JsonPointer.from_parts(chain(self.parts, suffix_parts))
+              except:  # noqa E722
+                  raise JsonPointerException("Invalid suffix")
+
+          def __truediv__(self, suffix):
+              return self.join(suffix)
+
+          @property
+          def path(self):
+              """Returns the string representation of the pointer
+
+              >>> ptr = JsonPointer('/~0/0/~1').path == '/~0/0/~1'
+              """
+              parts = [escape(part) for part in self.parts]
+              return ''.join('/' + part for part in parts)
+
+          def __eq__(self, other):
+              """Compares a pointer to another object
+
+              Pointers can be compared by comparing their strings (or splitted
+              strings), because no two different parts can point to the same
+              structure in an object (eg no different number representations)
+              """
+
+              if not isinstance(other, JsonPointer):
+                  return False
+
+              return self.parts == other.parts
+
+          def __hash__(self):
+              return hash(tuple(self.parts))
+
+          def __str__(self):
+              return self.path
+
+          def __repr__(self):
+              return type(self).__name__ + "(" + repr(self.path) + ")"
+
+          @classmethod
+          def from_parts(cls, parts):
+              """Constructs a JsonPointer from a list of (unescaped) paths
+
+              >>> JsonPointer.from_parts(['a', '~', '/', 0]).path == '/a/~0/~1/0'
+              True
+              """
+              parts = [escape(str(part)) for part in parts]
+              ptr = cls(''.join('/' + part for part in parts))
+              return ptr
+
+
+      def escape(s):
+          return s.replace('~', '~0').replace('/', '~1')
+
+
+      def unescape(s):
+          return s.replace('~0', '~').replace('~1', '/')
+    patches/merged_jsonpointer.py: |
+      # python-json-pointer - An implementation of the JSON Pointer syntax
+      # https://github.com/stefankoegl/python-json-pointer
+      #
+      # Copyright (c) 2011 Stefan Kögl <stefan@skoegl.net>
+      # All rights reserved.
+      #
+      # Redistribution and use in source and binary forms, with or without
+      # modification, are permitted provided that the following conditions
+      # are met:
+      #
+      # 1. Redistributions of source code must retain the above copyright
+      # notice, this list of conditions and the following disclaimer.
+      # 2. Redistributions in binary form must reproduce the above copyright
+      # notice, this list of conditions and the following disclaimer in the
+      # documentation and/or other materials provided with the distribution.
+      # 3. The name of the author may not be used to endorse or promote products
+      # derived from this software without specific prior written permission.
+      #
+      # THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
+      # IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+      # OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+      # IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
+      # INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+      # NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+      # DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+      # THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+      # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+      # THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+      #
+
+      """ Identify specific nodes in a JSON document (RFC 6901) """
+
+      # Will be parsed by setup.py to determine package metadata
+      __author__ = 'Stefan Kögl <stefan@skoegl.net>'
+      __version__ = '3.1.1'
+      __website__ = 'https://github.com/stefankoegl/python-json-pointer'
+      __license__ = 'Modified BSD License'
+
+      import copy
+      import re
+      from collections.abc import Mapping, Sequence
+      from itertools import tee, chain
+
+      _nothing = object()
+
+
+      def set_pointer(doc, pointer, value, inplace=True):
+          """Resolves a pointer against doc and sets the value of the target within doc.
+
+          With inplace set to true, doc is modified as long as pointer is not the
+          root.
+
+          >>> obj = {'foo': {'anArray': [ {'prop': 44}], 'another prop': {'baz': 'A string' }}}
+
+          >>> set_pointer(obj, '/foo/anArray/0/prop', 55) == \
+          {'foo': {'another prop': {'baz': 'A string'}, 'anArray': [{'prop': 55}]}}
+          True
+
+          >>> set_pointer(obj, '/foo/yet another prop', 'added prop') == \
+          {'foo': {'another prop': {'baz': 'A string'}, 'yet another prop': 'added prop', 'anArray': [{'prop': 55}]}}
+          True
+
+          >>> obj = {'foo': {}}
+          >>> set_pointer(obj, '/foo/a%20b', 'x') == \
+          {'foo': {'a%20b': 'x' }}
+          True
+          """
+
+          pointer = JsonPointer(pointer)
+          return pointer.set(doc, value, inplace)
+
+
+      def resolve_pointer(doc, pointer, default=_nothing):
+          """ Resolves pointer against doc and returns the referenced object
+
+          >>> obj = {'foo': {'anArray': [ {'prop': 44}], 'another prop': {'baz': 'A string' }}, 'a%20b': 1, 'c d': 2}
+
+          >>> resolve_pointer(obj, '') == obj
+          True
+
+          >>> resolve_pointer(obj, '/foo') == obj['foo']
+          True
+
+          >>> resolve_pointer(obj, '/foo/another prop') == obj['foo']['another prop']
+          True
+
+          >>> resolve_pointer(obj, '/foo/another prop/baz') == obj['foo']['another prop']['baz']
+          True
+
+          >>> resolve_pointer(obj, '/foo/anArray/0') == obj['foo']['anArray'][0]
+          True
+
+          >>> resolve_pointer(obj, '/some/path', None) == None
+          True
+
+          >>> resolve_pointer(obj, '/a b', None) == None
+          True
+
+          >>> resolve_pointer(obj, '/a%20b') == 1
+          True
+
+          >>> resolve_pointer(obj, '/c d') == 2
+          True
+
+          >>> resolve_pointer(obj, '/c%20d', None) == None
+          True
+          """
+
+          pointer = JsonPointer(pointer)
+          return pointer.resolve(doc, default)
+
+
+      def pairwise(iterable):
+          """ Transforms a list to a list of tuples of adjacent items
+
+          s -> (s0,s1), (s1,s2), (s2, s3), ...
+
+          >>> list(pairwise([]))
+          []
+
+          >>> list(pairwise([1]))
+          []
+
+          >>> list(pairwise([1, 2, 3, 4]))
+          [(1, 2), (2, 3), (3, 4)]
+          """
+          a, b = tee(iterable)
+          for _ in b:
+              break
+          return zip(a, b)
+
+
+      class JsonPointerException(Exception):
+          pass
+
+
+      class EndOfList:
+          """Result of accessing element "-" of a list"""
+
+          def __init__(self, list_):
+              self.list_ = list_
+
+          def __repr__(self):
+              return '{cls}({lst})'.format(cls=self.__class__.__name__,
+                                           lst=repr(self.list_))
+
+
+      class JsonPointer:
+          """A JSON Pointer that can reference parts of a JSON document"""
+
+          # Array indices must not contain:
+          # leading zeros, signs, spaces, decimals, etc
+          _RE_ARRAY_INDEX = re.compile('0|[1-9][0-9]*$')
+          _RE_INVALID_ESCAPE = re.compile('(~[^01]|~$)')
+
+          def __init__(self, pointer):
+
+              # validate escapes
+              invalid_escape = self._RE_INVALID_ESCAPE.search(pointer)
+              if invalid_escape:
+                  raise JsonPointerException('Found invalid escape {}'.format(
+                      invalid_escape.group()))
+
+              parts = pointer.split('/')
+              if parts.pop(0) != '':
+                  raise JsonPointerException('Location must start with /')
+
+              parts = [unescape(part) for part in parts]
+              self.parts = parts
+
+          def to_last(self, doc):
+              """Resolves ptr until the last step, returns (sub-doc, last-step)"""
+
+              if not self.parts:
+                  return doc, None
+
+              for part in self.parts[:-1]:
+                  doc = self.walk(doc, part)
+
+              return doc, JsonPointer.get_part(doc, self.parts[-1])
+
+          def resolve(self, doc, default=_nothing):
+              """Resolves the pointer against doc and returns the referenced object"""
+
+              for part in self.parts:
+
+                  try:
+                      doc = self.walk(doc, part)
+                  except JsonPointerException:
+                      if default is _nothing:
+                          raise
+                      else:
+                          return default
+
+              return doc
+
+          get = resolve
+
+          def set(self, doc, value, inplace=True):
+              """Resolve the pointer against the doc and replace the target with value."""
+
+              if len(self.parts) == 0:
+                  if inplace:
+                      raise JsonPointerException('Cannot set root in place')
+                  return value
+
+              if not inplace:
+                  doc = copy.deepcopy(doc)
+
+              (parent, part) = self.to_last(doc)
+
+              if isinstance(parent, Sequence) and part == '-':
+                  parent.append(value)
+              else:
+                  parent[part] = value
+
+              return doc
+
+          @classmethod
+          def get_part(cls, doc, part):
+              """Returns the next step in the correct type"""
+
+              if isinstance(doc, Mapping):
+                  return part
+
+              elif isinstance(doc, Sequence):
+
+                  if part == '-':
+                      return part
+
+                  if not JsonPointer._RE_ARRAY_INDEX.match(str(part)):
+                      raise JsonPointerException("'%s' is not a valid sequence index" % part)
+
+                  return int(part)
+
+              elif hasattr(doc, '__getitem__'):
+                  # Allow indexing via ducktyping
+                  # if the target has defined __getitem__
+                  return part
+
+              else:
+                  raise JsonPointerException("Document '%s' does not support indexing, "
+                                             "must be mapping/sequence or support __getitem__" % type(doc))
+
+          def get_parts(self):
+              """Returns the list of the parts. For example, JsonPointer('/a/b').get_parts() == ['a', 'b']"""
+
+              return self.parts
+
+          def walk(self, doc, part):
+              """ Walks one step in doc and returns the referenced part """
+
+              part = JsonPointer.get_part(doc, part)
+
+              assert hasattr(doc, '__getitem__'), "invalid document type %s" % (type(doc),)
+
+              if isinstance(doc, Sequence):
+                  if part == '-':
+                      return EndOfList(doc)
+
+                  try:
+                      return doc[part]
+
+                  except IndexError:
+                      raise JsonPointerException("index '%s' is out of bounds" % (part,))
+
+              # Else the object is a mapping or supports __getitem__(so assume custom indexing)
+              try:
+                  return doc[part]
+
+              except KeyError:
+                  raise JsonPointerException("member '%s' not found in %s" % (part, doc))
+
+          def contains(self, ptr):
+              """ Returns True if self contains the given ptr """
+              return self.path.startswith(ptr.path)
+
+          def __contains__(self, item):
+              """ Returns True if self contains the given ptr """
+              return self.contains(item)
+
+          def join(self, suffix):
+              """ Returns a new JsonPointer with the given suffix append to this ptr """
+              if isinstance(suffix, JsonPointer):
+                  suffix_parts = suffix.parts
+              elif isinstance(suffix, str):
+                  suffix_parts = JsonPointer(suffix).parts
+              else:
+                  suffix_parts = suffix
+              try:
+                  return JsonPointer.from_parts(chain(self.parts, suffix_parts))
+              except:  # noqa E722
+                  raise JsonPointerException("Invalid suffix")
+
+          def __truediv__(self, suffix):
+              return self.join(suffix)
+
+          @property
+          def path(self):
+              """Returns the string representation of the pointer
+
+              >>> ptr = JsonPointer('/~0/0/~1').path == '/~0/0/~1'
+              """
+              parts = [escape(part) for part in self.parts]
+              return ''.join('/' + part for part in parts)
+
+          def __eq__(self, other):
+              """Compares a pointer to another object
+
+              Pointers can be compared by comparing their strings (or splitted
+              strings), because no two different parts can point to the same
+              structure in an object (eg no different number representations)
+              """
+
+              if not isinstance(other, JsonPointer):
+                  return False
+
+              return self.parts == other.parts
+
+          def __hash__(self):
+              return hash(tuple(self.parts))
+
+          def __str__(self):
+              return self.path
+
+          def __repr__(self):
+              return type(self).__name__ + "(" + repr(self.path) + ")"
+
+          @classmethod
+          def from_parts(cls, parts):
+              """Constructs a JsonPointer from a list of (unescaped) paths
+
+              >>> JsonPointer.from_parts(['a', '~', '/', 0]).path == '/a/~0/~1/0'
+              True
+              """
+              parts = [escape(str(part)) for part in parts]
+              ptr = cls(''.join('/' + part for part in parts))
+              return ptr
+
+
+      def escape(s):
+          return s.replace('~', '~0').replace('/', '~1')
+
+
+      def unescape(s):
+          return s.replace('~0', '~').replace('~1', '/')
+hidden_files:
+  hidden/test_index.py: |
+    import pytest
+
+    from jsonpointer import JsonPointer, JsonPointerException, resolve_pointer
+
+
+    def test_leading_zero_index_is_rejected():
+        with pytest.raises(JsonPointerException):
+            resolve_pointer([10, 20, 30], "/01")
+
+
+    def test_trailing_garbage_index_is_rejected():
+        with pytest.raises(JsonPointerException):
+            resolve_pointer([10, 20, 30], "/1x")
+
+
+    def test_plain_indexes_work():
+        assert resolve_pointer([10, 20, 30], "/0") == 10
+        assert resolve_pointer([10, 20, 30], "/2") == 30
+        assert JsonPointer("/1").resolve([5, 6]) == 6
+  hidden/test_unescape.py: |
+    from jsonpointer import JsonPointer, escape, unescape
+
+
+    def test_unescape_order_tilde_one_after_tilde_zero():
+        assert unescape("~01") == "~1"
+        assert JsonPointer("/~01").parts == ["~1"]
+
+
+    def test_unescape_slash_and_tilde():
+        assert unescape("a~1b~0c") == "a/b~c"
+
+
+    def test_round_trip():
+        for part in ("~1", "a/b", "~", "/~", "~01~10"):
+            assert unescape(escape(part)) == part
+        assert JsonPointer.from_parts(["~1"]).path == "/~01"
+  hidden/test_contains.py: |
+    from jsonpointer import JsonPointer
+
+
+    def test_prefix_by_parts_not_by_characters():
+        assert not JsonPointer("/ab").contains(JsonPointer("/a"))
+        assert not JsonPointer("/a/b") in JsonPointer("/a/bc")
+
+
+    def test_real_prefixes_are_contained():
+        assert JsonPointer("/a/b").contains(JsonPointer("/a"))
+        assert JsonPointer("/a") in JsonPointer("/a/b/c")
+        assert JsonPointer("/a").contains(JsonPointer("/a"))
+        assert JsonPointer("").contains(JsonPointer(""))
+  _mutate.py: |
+    """Grader helper: put one of the three merged regressions back into jsonpointer.py, whatever form the fix took.
+    usage: python3 _mutate.py index|unescape|contains   (rewrites ./jsonpointer.py; exit 2 when the piece cannot be found)"""
+    import ast
+    import sys
+
+    MERGED = {'re': "    _RE_ARRAY_INDEX = re.compile('0|[1-9][0-9]*$')\n", 'get_part': '    @classmethod\n    def get_part(cls, doc, part):\n        """Returns the next step in the correct type"""\n\n        if isinstance(doc, Mapping):\n            return part\n\n        elif isinstance(doc, Sequence):\n\n            if part == \'-\':\n                return part\n\n            if not JsonPointer._RE_ARRAY_INDEX.match(str(part)):\n                raise JsonPointerException("\'%s\' is not a valid sequence index" % part)\n\n            return int(part)\n\n        elif hasattr(doc, \'__getitem__\'):\n            # Allow indexing via ducktyping\n            # if the target has defined __getitem__\n            return part\n\n        else:\n            raise JsonPointerException("Document \'%s\' does not support indexing, "\n                                       "must be mapping/sequence or support __getitem__" % type(doc))\n', 'contains': '    def contains(self, ptr):\n        """ Returns True if self contains the given ptr """\n        return self.path.startswith(ptr.path)\n', 'unescape': "def unescape(s):\n    return s.replace('~0', '~').replace('~1', '/')\n"}
+    PLAN = {"index": ["re", "get_part"], "unescape": ["unescape"], "contains": ["contains"]}
+
+    src = open("jsonpointer.py", encoding="utf-8").read()
+    lines = src.splitlines(True)
+    spans = {}
+    for n in ast.parse(src).body:
+        if isinstance(n, ast.FunctionDef) and n.name == "unescape":
+            spans["unescape"] = (n.lineno, n.end_lineno)
+        if isinstance(n, ast.ClassDef) and n.name == "JsonPointer":
+            for m in n.body:
+                if isinstance(m, ast.FunctionDef) and m.name in ("get_part", "contains"):
+                    spans[m.name] = (min([m.lineno] + [d.lineno for d in m.decorator_list]), m.end_lineno)
+                if isinstance(m, ast.Assign) and getattr(m.targets[0], "id", "") == "_RE_ARRAY_INDEX":
+                    spans["re"] = (m.lineno, m.end_lineno)
+    want = PLAN[sys.argv[1]]
+    if any(w not in spans for w in want):
+        sys.exit(2)
+    for w in sorted(want, key=lambda k: -spans[k][0]):
+        a, b = spans[w]
+        lines[a - 1:b] = [MERGED[w]]
+    open("jsonpointer.py", "w", encoding="utf-8").write("".join(lines))
+protected: [tests.py]
+turns:
+- prompt: A teammate's refactor of jsonpointer.py was just merged (this directory has no git history). Run the project's own tests with `python3 -m pytest -q tests.py` and tell me exactly what fails and what passes. Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: [test_leading_zero, '1 failed|one (test )?fail', 22 passed|passed]
+- prompt: 'Explain why test_leading_zero fails: look at `JsonPointer.get_part` and `_RE_ARRAY_INDEX` in jsonpointer.py. What exactly is wrong in the merged version and how does the regex behave on ''01''? Do not change any files.'
+  checks:
+  - kind: keyed_facts
+    all: [fullmatch, \bmatch\b, _RE_ARRAY_INDEX|regex, '01', 'leading zero|0\|\[1-9\]|anchor|\$']
+- prompt: Fix that regression in jsonpointer.py with the smallest change. Keep tests.py untouched.
+  checks:
+  - kind: tests
+    runner: python
+    files: [tests.py, hidden/test_index.py]
+    restore: [tests.py]
+    hidden: [hidden/test_index.py]
+- prompt: The existing tests caught only one problem. Review the rest of jsonpointer.py for RFC 6901 conformance and tell me every other defect you can DEMONSTRATE with a short snippet (give the snippet and its wrong output). Check `escape`/`unescape`, `contains`/`__contains__`, `join`, `path`. Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: [unescape, ~01, ~1, contains, /ab|startswith|prefix|character]
+- prompt: Fix `unescape` in jsonpointer.py so that '~01' decodes to '~1' (RFC 6901 order). Keep the change minimal.
+  checks:
+  - kind: tests
+    runner: python
+    files: [tests.py, hidden/test_unescape.py]
+    restore: [tests.py]
+    hidden: [hidden/test_unescape.py]
+- prompt: Fix `JsonPointer.contains` so it compares parts, not characters, and keeps `'/a'` containing `'/a'` and the root pointer containing the root pointer.
+  checks:
+  - kind: tests
+    runner: python
+    files: [tests.py, hidden/test_contains.py]
+    restore: [tests.py]
+    hidden: [hidden/test_contains.py]
+- prompt: Add test_regressions.py to the repository root with at least four pytest tests that pin the three regressions (leading-zero index, unescape order, contains by parts) plus one positive prefix case. They must pass on the fixed code and fail when ANY of the three merged changes is put back (prove it by re-applying each one in a scratch copy).
+  checks:
+  - {kind: file_regex, path: test_regressions.py, pattern: ^def test_, min_count: 4}
+  - {kind: tests, runner: cmd, cmd: "export PYTHONDONTWRITEBYTECODE=1; O=$(mktemp -d) && rm -rf __pycache__ && python3 -m pytest -q -p no:cacheprovider test_regressions.py && cp jsonpointer.py $O/fixed.py && for k in index unescape contains; do python3 _mutate.py $k || exit 1; rm -rf __pycache__; if python3 -m pytest -q -p no:cacheprovider test_regressions.py; then exit 1; fi; cp $O/fixed.py jsonpointer.py; done", hidden: [_mutate.py], timeout: 280}
+- prompt: Explain how `JsonPointer.set` treats the '-' part and the `inplace` flag, and what `to_last` and `EndOfList` are for. Answer from jsonpointer.py. Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: ['''-''|\"-\"|dash', append, inplace, deepcopy|cop(y|ies), to_last, EndOfList, Cannot set root in place|root]
+- prompt: Write REVIEW.md in the repository root with level-2 sections Summary, Test suite gaps, get_part, unescape and contains describing what was wrong and how you fixed each, with one concrete input per section.
+  checks:
+  - kind: doc_sections
+    path: REVIEW.md
+    headings: [Summary, Test suite gaps, get_part, unescape, contains]
+  - {kind: file_regex, path: REVIEW.md, pattern: ~01}
+  - {kind: file_regex, path: REVIEW.md, pattern: /ab}
+  - {kind: file_regex, path: REVIEW.md, pattern: 'fullmatch|anchor'}
+- prompt: 'Final check: list every file you changed or added in this session, what changed in each, and any behaviour of jsonpointer.py you would still want a test for. Do not change any files.'
+  checks:
+  - kind: keyed_facts
+    all: [jsonpointer\.py, test_regressions\.py, REVIEW\.md, still|remaining|not covered|would add|edge|risk]

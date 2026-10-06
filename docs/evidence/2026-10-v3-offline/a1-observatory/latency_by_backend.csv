@@ -1,0 +1,10 @@
+kind,backend,model,n,p50_ms,p95_ms,mean_ms
+cua_decided,laya,laya-rl-agent,1,84.106,84.106,84.106
+difficulty_judged:judge_call,jev,unknown,248,159.32075,310.998938,193.871317
+difficulty_judged:no_judge_call,jev,claude-fable-5-1,1,0.0,0.0,0.0
+difficulty_judged:no_judge_call,jev,unknown,301,0.0,0.0,89.735207
+judge_usage,jev,jev-1.13.0,26,175.878645,296.461427,184.848937
+scored,ollama-token,qwen3:0.6b,736,69.033125,97.266781,70.385672
+shadow_proposed,ollama-token,qwen3:0.6b,993,48.129125,93.150616,56.260345
+shadow_proposed,scripted-demo,scripted-demo-not-jev,648,36.10348,52.41911,44.405682
+shadow_proposed,unknown,unknown,1,43.863458,43.863458,43.863458

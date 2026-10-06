@@ -1,0 +1,161 @@
+# holdout-v3 repos: tornado-zerotimeout -- 9 turns, short gaps.
+id: tornado-zerotimeout
+task_type: bugfix
+language: python
+split: holdout
+default_gap_s: 10
+source:
+  desc: >-
+    tornadoweb/tornado, Queue.get/put with timeout=0 waited forever because the timeout helper
+    tested truthiness instead of None, fixed upstream in aac84855 (the locks half of that commit is
+    left for a later turn); workspace is its parent
+  repo: https://github.com/tornadoweb/tornado.git
+  sha: 4d892393adb0a434baeaa98a427d23c6c459a4bc
+  fix_sha: aac84855f3bf8bcd37243ef72e7ff647edd8c207
+workspace:
+  kind: git
+  repo: https://github.com/tornadoweb/tornado.git
+  sha: 4d892393adb0a434baeaa98a427d23c6c459a4bc
+  local_hint: ~/dev/afast-v3-src/tornado
+hidden_files:
+  tornado/test/queues_test.py:
+    from_git:
+      repo: https://github.com/tornadoweb/tornado.git
+      sha: aac84855f3bf8bcd37243ef72e7ff647edd8c207
+      path: tornado/test/queues_test.py
+      local_hint: ~/dev/afast-v3-src/tornado
+  tornado/test/locks_test.py:
+    from_git:
+      repo: https://github.com/tornadoweb/tornado.git
+      sha: aac84855f3bf8bcd37243ef72e7ff647edd8c207
+      path: tornado/test/locks_test.py
+      local_hint: ~/dev/afast-v3-src/tornado
+  tornado/test/locks_zero_hidden_test.py: |
+    from datetime import timedelta
+
+    from tornado import locks
+    from tornado.gen import TimeoutError
+    from tornado.testing import AsyncTestCase, gen_test
+
+
+    class ZeroTimeoutTest(AsyncTestCase):
+        @gen_test
+        def test_condition_wait_zero_returns_false(self):
+            c = locks.Condition()
+            self.assertFalse((yield c.wait(timeout=0)))
+            self.assertFalse((yield c.wait(timeout=timedelta(seconds=0))))
+
+        @gen_test
+        def test_semaphore_acquire_zero_raises(self):
+            s = locks.Semaphore(0)
+            with self.assertRaises(TimeoutError):
+                yield s.acquire(timeout=0)
+
+        @gen_test
+        def test_lock_acquire_zero_when_held(self):
+            lock = locks.Lock()
+            yield lock.acquire()
+            with self.assertRaises(TimeoutError):
+                yield lock.acquire(timeout=timedelta(seconds=0))
+
+        @gen_test
+        def test_semaphore_acquire_zero_when_available(self):
+            s = locks.Semaphore(1)
+            yield s.acquire(timeout=0)
+
+        @gen_test
+        def test_event_wait_zero_raises(self):
+            e = locks.Event()
+            with self.assertRaises(TimeoutError):
+                yield e.wait(timeout=0)
+  tornado/test/queues_leak_hidden_test.py: |
+    from tornado import queues
+    from tornado.testing import AsyncTestCase, gen_test
+
+
+    class BadTimeoutTest(AsyncTestCase):
+        @gen_test
+        def test_get_bad_timeout_does_not_leave_a_getter(self):
+            q: queues.Queue[int] = queues.Queue()
+            with self.assertRaises(TypeError):
+                q.get(timeout="soon")  # type: ignore[arg-type]
+            q.put_nowait(1)
+            self.assertEqual(1, q.get_nowait())
+
+        @gen_test
+        def test_put_bad_timeout_does_not_leave_a_putter(self):
+            q: queues.Queue[int] = queues.Queue(maxsize=1)
+            q.put_nowait(0)
+            with self.assertRaises(TypeError):
+                q.put(1, timeout="soon")  # type: ignore[arg-type]
+            self.assertEqual(0, q.get_nowait())
+            self.assertEqual(0, q.qsize())
+
+        @gen_test
+        def test_valid_timeouts_still_work(self):
+            q: queues.Queue[int] = queues.Queue(maxsize=1)
+            yield q.put(1, timeout=1)
+            self.assertEqual(1, (yield q.get(timeout=1)))
+turns:
+  - prompt: >-
+      `tornado.queues.Queue.get(timeout=0)` just hangs forever on an empty queue instead of failing
+      right away with a TimeoutError (same with `timeout=timedelta(seconds=0)`), whereas a tiny
+      positive timeout like 0.01 works. Please find the cause in the queues module and fix it for the
+      queue. Run the tests from this directory with `python3 -m pytest -q
+      tornado/test/queues_test.py`.
+    checks:
+      - {kind: tests, runner: python, files: [tornado/test/queues_test.py], hidden: [tornado/test/queues_test.py]}
+  - prompt: >-
+      In three to five sentences explain the root cause: which helper decides whether a timeout is
+      armed, what condition it used, and why 0 and a zero timedelta both ended up meaning "wait
+      forever". Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [_set_timeout, if timeout, zero|0|falsy], any: [None, falsy, wait forever|forever]}
+  - prompt: >-
+      Add a test file `tornado/test/zero_timeout_test.py` in the same AsyncTestCase / gen_test style
+      with at least three tests: get with a zero timeout on an empty queue times out, put with a zero
+      timeout on a full queue times out, and a zero timeout still returns an item that is already
+      available. Run it.
+    checks:
+      - {kind: file_regex, path: tornado/test/zero_timeout_test.py, pattern: ^    def test_, min_count: 3}
+      - {kind: tests, runner: python, files: [tornado/test/zero_timeout_test.py]}
+  - prompt: >-
+      The same falsy-timeout mistake exists outside queues. `Condition.wait(timeout=0)` should resolve
+      to False immediately, and `Semaphore.acquire(timeout=0)` / `Lock.acquire(timeout=timedelta(0))`
+      should raise `tornado.gen.TimeoutError` right away when they would have to block; when the
+      semaphore is available an acquire with zero timeout must still succeed. Fix it in
+      tornado/locks.py.
+    checks:
+      - {kind: tests, runner: python, files: [tornado/test/locks_zero_hidden_test.py, tornado/test/locks_test.py, tornado/test/queues_test.py], hidden: [tornado/test/locks_zero_hidden_test.py, tornado/test/locks_test.py, tornado/test/queues_test.py]}
+  - prompt: >-
+      Document the zero-timeout behaviour in the docstrings of `Queue.get` and `Queue.put` in
+      tornado/queues.py: one sentence each saying that a timeout of zero (or a zero timedelta) means
+      do not wait, raising TimeoutError at once if the operation cannot complete immediately.
+      Docstrings only.
+    checks:
+      - {kind: file_regex, path: tornado/queues.py, pattern: '(?i)\bzero\b', min_count: 2}
+      - {kind: tests, runner: python, files: [tornado/test/queues_test.py], hidden: [tornado/test/queues_test.py]}
+  - prompt: >-
+      Question only: which public tornado methods accept a `timeout` argument, and for each one say
+      whether the deadline is armed with `IOLoop.add_timeout` directly or through `gen.with_timeout`
+      (look at Queue, Condition, Event, Semaphore and Lock). Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [Condition\.wait, Semaphore\.acquire, Event\.wait, with_timeout, add_timeout]}
+  - prompt: >-
+      One more problem in the same area: `q.get(timeout="soon")` raises a TypeError (fine), but the
+      queue is left corrupted, the abandoned getter is still registered, so the next `put_nowait(1)`
+      is swallowed and `get_nowait()` then raises QueueEmpty. `q.put(1, timeout="soon")` on a full
+      queue has the mirror problem (a later get_nowait lets the rejected item sneak in). Make both
+      leave the queue untouched when the timeout is invalid. Valid timeouts must behave as before.
+    checks:
+      - {kind: tests, runner: python, files: [tornado/test/queues_leak_hidden_test.py, tornado/test/queues_test.py, tornado/test/locks_zero_hidden_test.py], hidden: [tornado/test/queues_leak_hidden_test.py, tornado/test/queues_test.py, tornado/test/locks_zero_hidden_test.py]}
+  - prompt: >-
+      Run the queue and lock test modules together, your new test file included, and report the totals
+      (passed / failed). Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [queues_test, locks_test, \d+ passed]}
+  - prompt: >-
+      Review the changes you made in this session as a code reviewer would: list each file you changed
+      or added, what changed, and any remaining edge case you did not cover. Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [queues\.py, locks\.py, test], any: [edge, risk, not cover, remaining]}

@@ -1,0 +1,392 @@
+# holdout-v3 batch B (mixed, 9 turns): News-fragment directory to release notes: counts, SemVer bump rule, CHANGELOG section, version files, a build tool and a lint tool that generalise, a late removal that changes the version.
+id: release-fragments
+task_type: mixed
+language: python
+split: holdout
+default_gap_s: 10
+source:
+  desc: 'News-fragment directory to release notes: counts, SemVer bump rule, CHANGELOG section, version files, a build tool
+    and a lint tool that generalise, a late removal that changes the version.'
+  kind: self-authored deterministic workspace
+  adapted_from:
+  - 'changelog-generation theme from ~/dev/amplifier-agent .amplifier/evaluation/tasks/benchmark/git-changelog-generator (rewritten:
+    fragment directory instead of git log)'
+workspace:
+  kind: inline
+  files:
+    changes/588.feature.md: |
+      Support reading configuration from `PKG_CONFIG`.
+    changes/475.feature.md: |
+      Add a dry-run mode to `pkg sync`.
+    changes/256.feature.md: |
+      Add `Client.close()` for explicit shutdown.
+    changes/362.feature.md: |
+      Support gzip uploads.
+    changes/320.feature.md: |
+      Add retry support to the HTTP client.
+    changes/285.feature.md: |
+      Allow custom headers per request.
+    changes/219.feature.md: |
+      Add a `--json` flag to `pkg export`.
+    changes/265.feature.md: |
+      Allow UTF-16 input files.
+    changes/200.feature.md: |
+      Add `pkg doctor` to diagnose setups.
+    changes/324.feature.md: |
+      Add progress bars to long exports.
+    changes/588.bugfix.md: |
+      Fix off-by-one in pagination.
+    changes/429.bugfix.md: |
+      Handle empty responses without raising.
+    changes/411.bugfix.md: |
+      Fix wrong exit code on timeout.
+    changes/497.bugfix.md: |
+      Escape unicode paths in logs.
+    changes/379.bugfix.md: |
+      Fix a race in the token refresher.
+    changes/300.bugfix.md: |
+      Close sockets after failed handshakes.
+    changes/365.bugfix.md: |
+      Fix duplicate entries in the audit log.
+    changes/260.bugfix.md: |
+      Fix `pkg sync` ignoring `--exclude`.
+    changes/454.bugfix.md: |
+      Respect `NO_COLOR` in all output.
+    changes/245.bugfix.md: |
+      Preserve key order when exporting.
+    changes/312.bugfix.md: |
+      Fix a crash when the cache directory is read-only.
+    changes/236.bugfix.md: |
+      Stop leaking file handles on retry.
+    changes/351.bugfix.md: |
+      Fix a deadlock under heavy parallelism.
+    changes/592.bugfix.md: |
+      Fix timezone drift in schedule parsing.
+    changes/356.doc.md: |
+      Describe the cache layout.
+    changes/305.doc.md: |
+      Document the retry policy.
+    changes/579.doc.md: |
+      Add an FAQ for proxies.
+    changes/220.doc.md: |
+      Clarify install steps for Windows.
+    changes/545.doc.md: |
+      Add a troubleshooting section.
+    changes/293.doc.md: |
+      Fix typos in the API reference.
+    changes/579.misc.md: |
+      Pin linter versions.
+    changes/311.misc.md: |
+      Refresh the vendored certificates.
+    changes/551.misc.md: |
+      Switch the test runner to pytest.
+    changes/566.misc.md: |
+      Update the CI matrix.
+    changes/404.misc.md: |
+      Bump the minimum Python version to 3.9.
+    changes/432.misc.md: |
+      Drop an unused dependency.
+    CHANGELOG.md: |
+      # Changelog
+
+      ## 1.5.0 (2025-02-10)
+
+      ### Features
+
+      - Add `--json` output to the CLI. (#101)
+      - Support environment overrides. (#118)
+
+      ### Bug fixes
+
+      - Fix a crash on empty config files. (#122)
+
+      ## 1.4.0 (2025-01-05)
+
+      ### Features
+
+      - Add the `pkg sync` command. (#87)
+
+      ### Bug fixes
+
+      - Fix wrong default timeout. (#90)
+    VERSION: |
+      1.5.0
+    src/pkg/__init__.py: |
+      """pkg - small example package."""
+      __version__ = "1.5.0"
+    pyproject.toml: |
+      [project]
+      name = "pkg"
+      dynamic = ["version"]
+    README.md: |
+      # pkg
+
+      Release notes are assembled from the news fragments in `changes/` (`<issue>.<type>.md`, one line of text each).
+      Types: feature, bugfix, removal, doc, misc.
+protected:
+- pyproject.toml
+hidden_files:
+  _grade.py: |
+    import csv, json, os, re, subprocess, sys
+    from pathlib import Path
+
+    W = Path(".")
+
+
+    def fail(msg):
+        print("FAIL:", msg)
+        sys.exit(1)
+
+
+    def need(cond, msg):
+        if not cond:
+            fail(msg)
+
+
+    def read(rel):
+        p = W / rel
+        need(p.exists(), f"missing {rel}")
+        return p.read_text(encoding="utf-8")
+
+
+    def load_json(rel):
+        try:
+            return json.loads(read(rel))
+        except ValueError as e:
+            fail(f"{rel} is not valid JSON: {e}")
+
+
+    def close(a, b, tol=0.011):
+        try:
+            return abs(float(a) - float(b)) <= tol
+        except (TypeError, ValueError):
+            return False
+
+
+    def num(s):
+        m = re.search(r"-?\d[\d,]*\.?\d*", str(s))
+        return float(m.group(0).replace(",", "")) if m else None
+
+
+    def run(cmd, timeout=60, stdin=None):
+        p = subprocess.run(cmd, shell=True, cwd=W, capture_output=True, text=True, timeout=timeout, input=stdin)
+        return p.returncode, p.stdout, p.stderr
+
+
+    def md_lines(rel, under=None):
+        lines = read(rel).splitlines()
+        if not under:
+            return lines
+        out, on, lvl = [], False, 0
+        for ln in lines:
+            m = re.match(r"^(#+)\s+(.*)", ln)
+            if m:
+                if on and len(m.group(1)) <= lvl:
+                    break
+                if not on and re.search(under, m.group(2), re.I):
+                    on, lvl = True, len(m.group(1))
+                continue
+            if on:
+                out.append(ln)
+        need(on, f"no heading matching {under!r} in {rel}")
+        return out
+
+
+    def md_rows(rel, under=None):
+        rows = []
+        for ln in md_lines(rel, under):
+            if ln.strip().startswith("|") and not re.match(r"^\s*\|[\s:|-]+\|\s*$", ln):
+                rows.append([c.strip() for c in ln.strip().strip("|").split("|")])
+        return rows
+
+
+    def cmp(got, want, tol, path):
+        if isinstance(want, dict):
+            need(isinstance(got, dict), f"{path}: expected an object, got {type(got).__name__}")
+            for k, v in want.items():
+                need(k in got, f"{path}.{k}: missing")
+                cmp(got[k], v, tol, f"{path}.{k}")
+        elif isinstance(want, list):
+            need(isinstance(got, list) and len(got) == len(want), f"{path}: expected list of {len(want)}, got {got!r}")
+            for i, (g, w) in enumerate(zip(got, want)):
+                cmp(g, w, tol, f"{path}[{i}]")
+        elif isinstance(want, bool) or want is None or isinstance(want, str):
+            need(got == want, f"{path}: {got!r} != {want!r}")
+        else:
+            need(not isinstance(got, bool) and close(got, want, tol), f"{path}: {got!r} != {want!r}")
+
+
+    def chk_json(rel, exp, tol=0.051):
+        cmp(load_json(rel), exp, tol, rel)
+
+
+    def chk_table(rel, under, exp, col=1, tol=0.051):
+        rows = md_rows(rel, under)
+        need(rows, f"no table under {under!r} in {rel}")
+        got = {r[0].strip("* `"): num(r[col]) for r in rows if len(r) > col and num(r[col]) is not None}
+        for k, v in exp.items():
+            need(k in got and close(got[k], v, tol), f"{k}: {got.get(k)} != {v}")
+
+
+    def chk_cmd_json(cmd, exp, tol=0.051, stdin=None):
+        rc, out, err = run(cmd, stdin=stdin)
+        need(rc == 0, f"`{cmd}` exited {rc}: {err[-200:]}")
+        try:
+            d = json.loads(out)
+        except ValueError as e:
+            fail(f"`{cmd}` stdout is not JSON: {e}")
+        cmp(d, exp, tol, cmd)
+
+
+    def chk_cmd_out(cmd, lines, stdin=None, expect_rc=0):
+        rc, out, err = run(cmd, stdin=stdin)
+        need(rc == expect_rc, f"`{cmd}` exited {rc} (want {expect_rc}): {err[-200:]}")
+        got = [ln.rstrip() for ln in out.strip().splitlines()]
+        need(got == list(lines), f"`{cmd}` output {got[:8]} != {list(lines)[:8]}")
+
+
+    def t3():
+        lines = read('CHANGELOG.md').splitlines()
+        idx = [i for i, ln in enumerate(lines) if ln.startswith('## ')]
+        heads = [lines[i] for i in idx]
+        need(heads[:3] == ['## 1.6.0 (2025-04-15)', '## 1.5.0 (2025-02-10)', '## 1.4.0 (2025-01-05)'], 'section headings: ' + str(heads[:4]))
+        end = idx[1]
+        got = [l.rstrip() for l in lines[idx[0]:end]]
+        while got and not got[-1]:
+            got.pop()
+        want = ['## 1.6.0 (2025-04-15)', '', '### Features', '', '- Add `pkg doctor` to diagnose setups. (#200)', '- Add a `--json` flag to `pkg export`. (#219)', '- Add `Client.close()` for explicit shutdown. (#256)', '- Allow UTF-16 input files. (#265)', '- Allow custom headers per request. (#285)', '- Add retry support to the HTTP client. (#320)', '- Add progress bars to long exports. (#324)', '- Support gzip uploads. (#362)', '- Add a dry-run mode to `pkg sync`. (#475)', '- Support reading configuration from `PKG_CONFIG`. (#588)', '', '### Bug fixes', '', '- Stop leaking file handles on retry. (#236)', '- Preserve key order when exporting. (#245)', '- Fix `pkg sync` ignoring `--exclude`. (#260)', '- Close sockets after failed handshakes. (#300)', '- Fix a crash when the cache directory is read-only. (#312)', '- Fix a deadlock under heavy parallelism. (#351)', '- Fix duplicate entries in the audit log. (#365)', '- Fix a race in the token refresher. (#379)', '- Fix wrong exit code on timeout. (#411)', '- Handle empty responses without raising. (#429)', '- Respect `NO_COLOR` in all output. (#454)', '- Escape unicode paths in logs. (#497)', '- Fix off-by-one in pagination. (#588)', '- Fix timezone drift in schedule parsing. (#592)', '', '### Documentation', '', '- Clarify install steps for Windows. (#220)', '- Fix typos in the API reference. (#293)', '- Document the retry policy. (#305)', '- Describe the cache layout. (#356)', '- Add a troubleshooting section. (#545)', '- Add an FAQ for proxies. (#579)', '', '### Miscellaneous', '', '- Refresh the vendored certificates. (#311)', '- Bump the minimum Python version to 3.9. (#404)', '- Drop an unused dependency. (#432)', '- Switch the test runner to pytest. (#551)', '- Update the CI matrix. (#566)', '- Pin linter versions. (#579)']
+        need(got == want, 'new section differs: ' + str([g for g in got if g not in want][:3]) + ' / missing ' + str([w for w in want if w not in got][:3]))
+        need('(#101)' in read('CHANGELOG.md') and '(#90)' in read('CHANGELOG.md'), 'old sections damaged')
+
+
+    def t5():
+        for rel, text in {'_alt/changes/536.feature.md': 'Add a dry-run mode to `pkg sync`.\n', '_alt/changes/659.feature.md': 'Add retry support to the HTTP client.\n', '_alt/changes/722.bugfix.md': 'Fix wrong exit code on timeout.\n', '_alt/changes/626.bugfix.md': 'Fix timezone drift in schedule parsing.\n', '_alt/changes/728.removal.md': 'Remove the deprecated `legacy_mode` option.\n', '_alt/changes/650.doc.md': 'Clarify install steps for Windows.\n'}.items():
+            p = W / rel
+            p.parent.mkdir(parents=True, exist_ok=True)
+            p.write_text(text, encoding='utf-8')
+        need((W / 'tools/build_changelog.py').exists(), 'missing tools/build_changelog.py')
+        chk_cmd_out('python3 tools/build_changelog.py --version 3.0.0 --date 2025-06-01 --changes _alt/changes', ['## 3.0.0 (2025-06-01)', '', '### Features', '', '- Add a dry-run mode to `pkg sync`. (#536)', '- Add retry support to the HTTP client. (#659)', '', '### Bug fixes', '', '- Fix timezone drift in schedule parsing. (#626)', '- Fix wrong exit code on timeout. (#722)', '', '### Removals', '', '- Remove the deprecated `legacy_mode` option. (#728)', '', '### Documentation', '', '- Clarify install steps for Windows. (#650)'])
+        rc, out, err = run('python3 tools/build_changelog.py --version 1.6.0 --date 2025-04-15')
+        need(rc == 0 and [l.rstrip() for l in out.rstrip().splitlines()] == ['## 1.6.0 (2025-04-15)', '', '### Features', '', '- Add `pkg doctor` to diagnose setups. (#200)', '- Add a `--json` flag to `pkg export`. (#219)', '- Add `Client.close()` for explicit shutdown. (#256)', '- Allow UTF-16 input files. (#265)', '- Allow custom headers per request. (#285)', '- Add retry support to the HTTP client. (#320)', '- Add progress bars to long exports. (#324)', '- Support gzip uploads. (#362)', '- Add a dry-run mode to `pkg sync`. (#475)', '- Support reading configuration from `PKG_CONFIG`. (#588)', '', '### Bug fixes', '', '- Stop leaking file handles on retry. (#236)', '- Preserve key order when exporting. (#245)', '- Fix `pkg sync` ignoring `--exclude`. (#260)', '- Close sockets after failed handshakes. (#300)', '- Fix a crash when the cache directory is read-only. (#312)', '- Fix a deadlock under heavy parallelism. (#351)', '- Fix duplicate entries in the audit log. (#365)', '- Fix a race in the token refresher. (#379)', '- Fix wrong exit code on timeout. (#411)', '- Handle empty responses without raising. (#429)', '- Respect `NO_COLOR` in all output. (#454)', '- Escape unicode paths in logs. (#497)', '- Fix off-by-one in pagination. (#588)', '- Fix timezone drift in schedule parsing. (#592)', '', '### Documentation', '', '- Clarify install steps for Windows. (#220)', '- Fix typos in the API reference. (#293)', '- Document the retry policy. (#305)', '- Describe the cache layout. (#356)', '- Add a troubleshooting section. (#545)', '- Add an FAQ for proxies. (#579)', '', '### Miscellaneous', '', '- Refresh the vendored certificates. (#311)', '- Bump the minimum Python version to 3.9. (#404)', '- Drop an unused dependency. (#432)', '- Switch the test runner to pytest. (#551)', '- Update the CI matrix. (#566)', '- Pin linter versions. (#579)'], 'default dir output differs')
+
+
+    def t8():
+        lines = read('CHANGELOG.md').splitlines()
+        heads = [l for l in lines if l.startswith('## ')]
+        need(heads[:3] == ['## 2.0.0 (2025-04-15)', '## 1.5.0 (2025-02-10)', '## 1.4.0 (2025-01-05)'], 'headings: ' + str(heads[:4]))
+        idx = [i for i, l in enumerate(lines) if l.startswith('## ')]
+        got = [l.rstrip() for l in lines[idx[0]:idx[1]]]
+        while got and not got[-1]:
+            got.pop()
+        need(got == ['## 2.0.0 (2025-04-15)', '', '### Features', '', '- Add `pkg doctor` to diagnose setups. (#200)', '- Add a `--json` flag to `pkg export`. (#219)', '- Add `Client.close()` for explicit shutdown. (#256)', '- Allow UTF-16 input files. (#265)', '- Allow custom headers per request. (#285)', '- Add retry support to the HTTP client. (#320)', '- Add progress bars to long exports. (#324)', '- Support gzip uploads. (#362)', '- Add a dry-run mode to `pkg sync`. (#475)', '- Support reading configuration from `PKG_CONFIG`. (#588)', '', '### Bug fixes', '', '- Stop leaking file handles on retry. (#236)', '- Preserve key order when exporting. (#245)', '- Fix `pkg sync` ignoring `--exclude`. (#260)', '- Close sockets after failed handshakes. (#300)', '- Fix a crash when the cache directory is read-only. (#312)', '- Fix a deadlock under heavy parallelism. (#351)', '- Fix duplicate entries in the audit log. (#365)', '- Fix a race in the token refresher. (#379)', '- Fix wrong exit code on timeout. (#411)', '- Handle empty responses without raising. (#429)', '- Respect `NO_COLOR` in all output. (#454)', '- Escape unicode paths in logs. (#497)', '- Fix off-by-one in pagination. (#588)', '- Fix timezone drift in schedule parsing. (#592)', '', '### Removals', '', '- Remove the deprecated `legacy_mode` option. (#412)', '', '### Documentation', '', '- Clarify install steps for Windows. (#220)', '- Fix typos in the API reference. (#293)', '- Document the retry policy. (#305)', '- Describe the cache layout. (#356)', '- Add a troubleshooting section. (#545)', '- Add an FAQ for proxies. (#579)', '', '### Miscellaneous', '', '- Refresh the vendored certificates. (#311)', '- Bump the minimum Python version to 3.9. (#404)', '- Drop an unused dependency. (#432)', '- Switch the test runner to pytest. (#551)', '- Update the CI matrix. (#566)', '- Pin linter versions. (#579)'], 'section differs')
+        need(read('VERSION').strip() == '2.0.0' and '__version__ = "2.0.0"' in read('src/pkg/__init__.py'), 'version files')
+
+
+    def t10():
+        d = W / '_lint'
+        d.mkdir(exist_ok=True)
+        for n in ['12.feat.md', 'abc.feature.md', '7.bugfix.txt', 'notes.md', '5.feature.md', '9.doc.md', '.gitkeep']:
+            (d / n).write_text('x\n', encoding='utf-8')
+        need((W / 'tools/check_fragments.py').exists(), 'missing tools/check_fragments.py')
+        chk_cmd_out('python3 tools/check_fragments.py --changes _lint', ['12.feat.md', '7.bugfix.txt', 'abc.feature.md', 'notes.md'], expect_rc=1)
+        for n in ['12.feat.md', 'abc.feature.md', '7.bugfix.txt', 'notes.md']:
+            (d / n).unlink()
+        chk_cmd_out('python3 tools/check_fragments.py --changes _lint', ['ok'])
+        chk_cmd_out('python3 tools/check_fragments.py', ['ok'])
+
+
+    if __name__ == "__main__":
+        fn = globals().get(sys.argv[1]) if len(sys.argv) > 1 else None
+        need(callable(fn) and sys.argv[1] in ['t10', 't3', 't5', 't8'], "unknown check " + str(sys.argv[1:]))
+        fn()
+        print("OK")
+turns:
+- prompt: Count the news fragments in changes/ by type (the second dot-separated part of the file name). Give the number of
+    feature, bugfix, doc and misc fragments. Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all:
+    - feature\D{0,12}(?<![\d.,])1,?0(?:\.0+)?(?!\d|[.,]\d)|(?<![\d.,])1,?0(?:\.0+)?(?!\d|[.,]\d)\D{0,3}feature\b
+    - bugfix\D{0,12}(?<![\d.,])1,?4(?:\.0+)?(?!\d|[.,]\d)|(?<![\d.,])1,?4(?:\.0+)?(?!\d|[.,]\d)\D{0,3}bugfix\b
+    - doc\D{0,12}(?<![\d.,])6(?:\.0+)?(?!\d|[.,]\d)|(?<![\d.,])6(?:\.0+)?(?!\d|[.,]\d)\D{0,3}doc\b
+    - misc\D{0,12}(?<![\d.,])6(?:\.0+)?(?!\d|[.,]\d)|(?<![\d.,])6(?:\.0+)?(?!\d|[.,]\d)\D{0,3}misc\b
+- prompt: 'The current version is in VERSION. Release rule: any removal fragment means a major bump, otherwise any feature
+    fragment means a minor bump, otherwise a patch bump. What is the next version? Do not change any files.'
+  checks:
+  - kind: keyed_facts
+    all:
+    - (?<![\d.])1\.6\.0(?![\d])
+- prompt: 'Add a section for the next version, dated 2025-04-15, at the top of CHANGELOG.md (above 1.5.0). Format: `## <version>
+    (2025-04-15)`, then a `### <Title>` block per type in the order Features, Bug fixes, Removals, Documentation, Miscellaneous
+    (skip empty ones), each entry `- <fragment text> (#<issue>)` sorted by issue number ascending. Leave the old sections
+    alone.'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t3
+    hidden:
+    - _grade.py
+    timeout: 60
+- prompt: Set the version to 1.6.0 in both VERSION and src/pkg/__init__.py (`__version__`).
+  checks:
+  - kind: file_regex
+    path: VERSION
+    pattern: ^1\.6\.0\s*$
+  - kind: file_regex
+    path: src/pkg/__init__.py
+    pattern: ^__version__ = "1\.6\.0"
+  - kind: file_regex
+    path: VERSION
+    pattern: 1\.5\.0
+    absent: true
+  - kind: file_regex
+    path: src/pkg/__init__.py
+    pattern: 1\.5\.0
+    absent: true
+  gap_before_s: 420
+- prompt: 'Add tools/build_changelog.py: `python3 tools/build_changelog.py --version X --date YYYY-MM-DD [--changes DIR]`
+    (default changes) prints on stdout exactly the changelog section described above (heading line, blank line, blocks), built
+    from the fragments in DIR.'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t5
+    hidden:
+    - _grade.py
+    timeout: 60
+- prompt: 'A removal just landed: the `legacy_mode` option is dropped (issue 412). Add the fragment for it with the text `Remove
+    the deprecated \`legacy_mode\` option.` (put the text in backticks exactly as written, one line).'
+  checks:
+  - kind: file_exists
+    path: changes/412.removal.md
+  - kind: file_regex
+    path: changes/412.removal.md
+    pattern: ^Remove the deprecated `legacy_mode` option\.\s*$
+- prompt: Because the release is not out yet, recompute the next version with the removal fragment included, and replace the
+    unreleased section at the top of CHANGELOG.md with the new one (no duplicate section for the old number). Update VERSION
+    and src/pkg/__init__.py too.
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t8
+    hidden:
+    - _grade.py
+    timeout: 60
+  gap_before_s: 420
+- prompt: Which issue numbers appear in more than one fragment in changes/ (same number, different type)? List them. Do not
+    change any files.
+  checks:
+  - kind: keyed_facts
+    all:
+    - (?<!\d)579(?!\d)
+    - (?<!\d)588(?!\d)
+- prompt: 'Add tools/check_fragments.py [--changes DIR] (default changes): it prints every file name in DIR (ignoring names
+    that start with a dot) that does not match `<digits>.<feature|bugfix|removal|doc|misc>.md`, one per line sorted, and exits
+    1; if all names are valid it prints `ok` and exits 0.'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t10
+    hidden:
+    - _grade.py
+    timeout: 60

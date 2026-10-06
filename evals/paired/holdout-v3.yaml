@@ -1,0 +1,171 @@
+schema: fast-decisions-paired/design/v1
+id: holdout-v3
+description: >-
+  v3 core study S1 (docs/design/v3/PLAN.md, section S1): the holdout decomposition panel. 60 fresh scenarios that no
+  agent has run (evals/paired/scenarios/holdout-v3: 10 per task type; polyglot 12, repos 20, mixed 16, knowledge 12),
+  2 reps, two hosts (Fable 5.1, Opus 5.5). Per scenario-rep a Fable wave of 6 sessions (A0F, A0F-m, PhF, PhF-m, ShF and the
+  host-independent Pc) and an Opus wave of 4 (A0O, A0O-m, ShO, ShO-m), the two waves admitted back to back, plus a seeded
+  10% A/A (a second A0F and A0O). Every arm of a wave starts together from one frozen workspace snapshot, isolated by a
+  per-session cache nonce. Every other factorial cell (decider x strong effort x scope gate x keep_on_host, the oracle) is
+  computed from PhF, PhF-m, Pc (Fable) and ShO, ShO-m, Pc (Opus) without running it; ShF validates that a live decide-once
+  session equals its predicted potential outcome. Preregistration: evals/paired/PREREGISTRATION-holdout-v3.md.
+  Arm keys map to the plan's labels by host: anchor = A0F | A0O, anchor_m = A0F-m | A0O-m, ph = PhF, ph_m = PhF-m,
+  shipped = ShF | ShO, shipped_m = ShO-m, pc = Pc (any host), aa = the second anchor.
+
+scenario_dir:
+  - evals/paired/scenarios/holdout-v3/polyglot
+  - evals/paired/scenarios/holdout-v3/repos
+  - evals/paired/scenarios/holdout-v3/mixed
+  - evals/paired/scenarios/holdout-v3/knowledge
+snapshot_root: ~/dev/afast-paired/snapshots
+campaign_root_base: ~/dev/afast-paired
+cells_file: evals/cells.yaml
+suite_for_argv: {suite: s1m, split: m-dev}
+
+nonce_mode: per_session
+default_reps: 2
+default_parallel: 8                                # waves are 6-7 (Fable) and 4-5 (Opus) sessions; --parallel must be >= 7
+wave_order: scenario_rep_adjacent                  # a scenario-rep's Fable and Opus waves are admitted back to back
+no_control_wave_split: true                        # Pc stays inside the Fable wave: --parallel below 7 is refused, never silently split
+budget_usd: 5000                                   # ledger hard stop; `plan` refuses an estimate (incl. retry reserve) above it
+max_wave_launch_spread_s: 60
+max_wave_attempts: 3
+deadline_seconds_per_turn: 900
+
+hosts:                                             # order matters: the host-independent Pc joins the first host's wave
+  fable: claude-fable-5-1
+  opus:  claude-opus-5-5
+
+# Mechanism gates (checked per session from its events; a failure marks the pair invalid and a gate failure in the first
+# waves stops the run, see the preregistration). Keys beyond served_model_prefix / effort are documented in
+# evals/paired.py:_v3_gate_checks. `effort: absent` = the provider default (no output_config.effort on main requests).
+arms:
+  anchor:
+    kind: plain
+    cells: {fable: plain, opus: plain-opus}
+    role: anchor
+    gate: {effort: absent}
+    gate_by_host: {fable: {served_model_prefix: claude-fable-5-1}, opus: {served_model_prefix: claude-opus-5-5}}
+  aa:
+    kind: plain
+    cells: {fable: plain, opus: plain-opus}
+    role: noise
+    subsample: {fraction: 0.1, seed: 20261005}     # seeded 10% of scenario-reps (stratified by gap pattern), BOTH hosts
+    gate: {effort: absent}
+    gate_by_host: {fable: {served_model_prefix: claude-fable-5-1}, opus: {served_model_prefix: claude-opus-5-5}}
+  anchor_m:                                        # A0F-m / A0O-m: the "just set medium" competitor
+    kind: plain
+    cells: {fable: plain-medium, opus: plain-opus-medium}
+    role: competitor
+    gate: {effort: medium}
+    gate_by_host: {fable: {served_model_prefix: claude-fable-5-1}, opus: {served_model_prefix: claude-opus-5-5}}
+  ph:                                              # PhF: bundle, host pinned (decided once), strong effort default
+    kind: fd
+    cells: {fable: v3-pin-host}
+    role: potential-host
+    gate: {served_model_prefix: claude-fable-5-1, effort: absent, effort_constant: true, single_model: true,
+           decided_once: true, no_routing: true}
+  ph_m:                                            # PhF-m: PhF with strong effort medium
+    kind: fd
+    cells: {fable: v3-pin-host-medium}
+    role: potential-host
+    gate: {served_model_prefix: claude-fable-5-1, effort: medium, effort_constant: true, single_model: true,
+           decided_once: true, no_routing: true}
+  shipped:                                         # ShF / ShO: the shipped defaults, live
+    kind: fd
+    cells: {fable: v3-shipped, opus: v3-shipped-opus}
+    role: shipped
+    gate: {effort_constant: true, single_model: true, decided_once: true}
+    gate_by_host:
+      fable: {effort_by_model: {claude-sonnet-5: medium, claude-fable-5-1: absent}}      # decided once, whichever way
+      opus: {served_model_prefix: claude-opus-5-5, effort: absent, no_routing: true, gate_closed: true}
+  shipped_m:                                       # ShO-m: shipped + strong medium (candidate C*_O)
+    kind: fd
+    cells: {opus: v3-shipped-opus-medium}
+    role: candidate
+    gate: {served_model_prefix: claude-opus-5-5, effort: medium, effort_constant: true, single_model: true,
+           decided_once: true, no_routing: true, gate_closed: true}
+  pc:                                              # Pc: bundle pinned to Sonnet 5 at medium (host-independent)
+    kind: fd
+    cells: {any: v3-pin-cheap}
+    host_independent: true
+    role: potential-cheap
+    gate: {served_model_prefix: claude-sonnet-5, effort: medium, effort_constant: true, single_model: true,
+           decided_once: true, min_model_routed: 1}
+
+# Cells that must differ from their comparator ONLY in the listed setting. `evals/v3/s1_render_cells.py` loads every cell
+# through the real bundle composition (no model call), flattens the effective config, and fails when anything outside
+# `allowed` differs. `model` = the session's host model; other entries are config path prefixes.
+render_contrasts:
+  - {a: anchor_m, b: anchor, host: fable, allowed: [providers]}                       # reasoning_effort only
+  - {a: anchor_m, b: anchor, host: opus,  allowed: [providers]}
+  - {a: anchor,   b: anchor, host: opus,  vs_host: fable, allowed: [model]}           # Opus vs Fable plain: the model only
+  - {a: ph,       b: shipped, host: fable, allowed: [session.orchestrator.config.model_routing.start_policy,
+                                                     session.orchestrator.config.model_routing.complex_min_prompt_chars]}
+  - {a: ph_m,     b: ph,      host: fable, allowed: [session.orchestrator.config.effort_routing.by_tier.strong]}
+  - {a: pc,       b: ph,      host: fable, allowed: [session.orchestrator.config.model_routing.complex_min_prompt_chars,
+                                                     session.orchestrator.config.model_routing.cheap_max_workspace_files,
+                                                     session.orchestrator.config.model_routing.price_gate]}
+  - {a: shipped,  b: shipped, host: opus, vs_host: fable, allowed: [model]}           # ShO vs ShF: the host model only
+  - {a: shipped_m, b: shipped, host: opus, allowed: [session.orchestrator.config.effort_routing.by_tier.strong]}
+
+# Cost model (cost_usd_tools_normalized). `python3 evals/v3/s1_cost_calibration.py` derives, from the 1,036 main-v1 sessions,
+# (1) type factors (plain-anchor cost per turn-scale unit by task type, relative to the host mean, averaged over hosts;
+# n per type per host: bugfix 36, docs 8, explain 6, feature 26, mixed 56, review 8) and (2) the base units under them:
+# plain Fable 1.301, plain Opus 0.522, plain Sonnet 0.797 (n=140 each). unit_usd_4turn of every other cell = its base x:
+#   plain-medium (Fable)     x0.860  (effort-control-fable-v1: 0.860 [0.833, 0.885], n=23)
+#   plain-opus-medium        x0.850  (ASSUMED: Opus medium has no data; Sonnet 0.821, Fable 0.860)
+#   v3-pin-host              x1.017  (bundle overhead; PLAN S1 5.40/5.31, ASSUMED: this is what H3 measures)
+#   v3-pin-host-medium       x0.860 x1.017
+#   v3-shipped (ShF)         x0.640  (PLAN S1 $3.40 vs $5.31: main-v1 sticky Fable $3.33 + decider; host-kept sessions at host rates)
+#   v3-pin-cheap (Pc)        Sonnet base x0.821 (effort-control-v1) x1.04 (PLAN S1 $2.75 / ($3.22 x 0.821))
+#   v3-shipped-opus (ShO)    x1.019  (PLAN S1 2.17/2.13: the unrouted bundle on Opus; H3 measures it)
+#   v3-shipped-opus-medium   x0.850 x1.019
+cost_model:
+  source: "main-v1 implied 4-turn units and type factors (evals/v3/s1_cost_calibration.py; n=140 per base cell, tools-normalized) x preregistered factors"
+  unit_usd_4turn:
+    plain:                  {usd: 1.301, n: 140}
+    plain-medium:           {usd: 1.119, n: 0}
+    v3-pin-host:            {usd: 1.323, n: 0}
+    v3-pin-host-medium:     {usd: 1.138, n: 0}
+    v3-shipped:             {usd: 0.833, n: 0}
+    v3-pin-cheap:           {usd: 0.680, n: 0}
+    plain-opus:             {usd: 0.522, n: 140}
+    plain-opus-medium:      {usd: 0.444, n: 0}
+    v3-shipped-opus:        {usd: 0.532, n: 0}
+    v3-shipped-opus-medium: {usd: 0.452, n: 0}
+  sticky_over_anchor: {}
+  turn_scaling: {4: 1.0, 8: 2.5, 12: 4.2, 16: 5.9}
+  type_factor: {bugfix: 1.034, docs: 0.890, explain: 1.057, feature: 1.132, mixed: 0.895, review: 1.225, knowledge: 1.0}
+  long_gap_extra_fraction: 0.10
+  infra_retry_reserve_fraction: 0.05               # PLAN S1: +5% infra
+
+# Wall model: main-v1 measured ~26 min per 11.2-turn wave slot (PLAN section 2, shared method; setup and hidden tests
+# included): 26 / (1.4 x 11.2) = 1.66 min per scripted turn at the harness's 1.4 slowest-arm factor. Idle gaps are added.
+wall_model: {minutes_per_turn: 1.66, wave_slowest_factor: 1.4}
+
+analysis:
+  script: evals/v3/s1_analysis.py
+  preregistration: evals/paired/PREREGISTRATION-holdout-v3.md
+  frozen_rule: evals/v3/frozen_rule.json                 # R*, C*_F, C*_O (evals/v3/FROZEN.md)
+  scenario_hashes: evals/paired/scenarios/holdout-v3/scenario-hashes.json
+  split: evals/paired/scenarios/holdout-v3/SPLIT.md
+  primary_cost_basis: cost_usd_tools_normalized
+  noise_floor: aa arm (10% subsample) vs anchor, per host
+
+campaign_provider:
+  id: campaign-anthropic
+  module: provider-anthropic
+  source: git+https://github.com/microsoft/amplifier-module-provider-anthropic@main
+  config:
+    api_key: "${ANTHROPIC_API_KEY}"
+    base_url: https://api.anthropic.com
+    enable_1m_context: "true"
+    raw: true
+preflight:
+  scenario_dir: evals/paired/preflight
+  max_age_hours: 12
+  est_usd_per_session: 0.10
+
+cache_audit:
+  tools_prefix_tokens: 32100

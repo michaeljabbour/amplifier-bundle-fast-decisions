@@ -1,0 +1,109 @@
+{
+  "fable_host_what_if": {
+    "host_ratio_strong_medium": 0.86,
+    "label": "ESTIMATED: main-v1 (small workspaces) routed ratio applied to the production share the scope gate would leave routable; assumes the owner hosted on Fable",
+    "ratio_R*_strong_default": 0.74659,
+    "ratio_R*_strong_medium": 0.677898,
+    "routed_ratio_main_v1": 0.502479
+  },
+  "goal_cost_target": 0.5,
+  "label": "PROVISIONAL (pre-S1) projection inputs; not the A3 result",
+  "main_v1_comparison": {
+    "C*_F_predicted": {
+      "gm_cost_ratio": 0.508271,
+      "gm_cost_ratio_ci95": [
+        0.483382,
+        0.535736
+      ]
+    },
+    "jev_route_share_main_v1_fable": 0.885714
+  },
+  "monthly_usd_at_waste_census_scale": {
+    "C*": {
+      "projected_usd": 11589.474813,
+      "saved_usd": 2334.525187
+    },
+    "shipped": {
+      "projected_usd": 13924.0,
+      "saved_usd": 0.0
+    }
+  },
+  "production_recorded_spend_usd_by_host": {
+    "opus": 632.661945,
+    "other": 7.947491,
+    "sonnet": 545.061332
+  },
+  "projection_on_recorded_mix": {
+    "C*": {
+      "band": [
+        0.803812,
+        0.861398
+      ],
+      "meets_goal_cost": false,
+      "ratio": 0.832338
+    },
+    "shipped": {
+      "band": [
+        1.0,
+        1.0
+      ],
+      "meets_goal_cost": false,
+      "ratio": 1.0
+    }
+  },
+  "ratios_used": {
+    "opus": {
+      "C*_O (strong medium)": {
+        "high": 0.86,
+        "label": "prior band from Sonnet 0.821 / Fable 0.860; unmeasured",
+        "low": 0.821,
+        "point": 0.84
+      },
+      "shipped (gate closed, strong default)": {
+        "high": 1.0,
+        "label": "expected, unmeasured (S1 H3)",
+        "low": 1.0,
+        "point": 1.0
+      }
+    },
+    "other": {
+      "plain medium": {
+        "high": 1.0,
+        "label": "no data",
+        "low": 1.0,
+        "point": 1.0
+      },
+      "shipped (strong default)": {
+        "high": 1.0,
+        "label": "no lever",
+        "low": 1.0,
+        "point": 1.0
+      }
+    },
+    "sonnet": {
+      "plain medium": {
+        "high": 0.861,
+        "label": "measured, preregistered (2026-10-05-effort-control)",
+        "low": 0.781,
+        "point": 0.821
+      },
+      "shipped (strong default)": {
+        "high": 1.0,
+        "label": "no lever applies to a Sonnet host by default",
+        "low": 1.0,
+        "point": 1.0
+      }
+    }
+  },
+  "spend_share_by_host": {
+    "opus": 0.53359,
+    "other": 0.006703,
+    "sonnet": 0.459707
+  },
+  "start_tier_production": {
+    "routed_cheap_share": 0.186916,
+    "scope_gate_share": 0.490654,
+    "sessions": 214
+  },
+  "waste_census_30d_usd": 13924.0
+}

@@ -1,0 +1,12 @@
+store,backend,model,synthetic,period,era,traffic,host_tool,agreement,n
+events,ollama-token,qwen3:0.6b,False,week,pre_jev_default,production,candidate_tool,match,1
+events,ollama-token,qwen3:0.6b,False,week,pre_jev_default,test,candidate_tool,abstained,11
+events,ollama-token,qwen3:0.6b,False,week,pre_jev_default,test,candidate_tool,match,113
+events,ollama-token,qwen3:0.6b,False,week,pre_jev_default,test,candidate_tool,mismatch,23
+events,ollama-token,qwen3:0.6b,False,week,pre_jev_default,test,other_tool,abstained,382
+events,ollama-token,qwen3:0.6b,False,week,pre_jev_default,test,other_tool,mismatch,461
+events,ollama-token,qwen3:0.6b,False,week,pre_jev_default,unclassified,candidate_tool,match,2
+events,scripted-demo,scripted-demo-not-jev,True,after,jev_default_era,test,other_tool,mismatch,1
+events,scripted-demo,scripted-demo-not-jev,True,week,pre_jev_default,production,other_tool,mismatch,632
+events,scripted-demo,scripted-demo-not-jev,True,week,pre_jev_default,unclassified,other_tool,mismatch,15
+events,unknown,unknown,False,week,pre_jev_default,unclassified,candidate_tool,match,1

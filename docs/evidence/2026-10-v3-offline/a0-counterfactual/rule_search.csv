@@ -1,0 +1,182 @@
+idx,rule,complexity,train_log_ratio,train_d_turn_pass,route_share,feasible,chosen
+0,always route,0,-0.678092,-0.028917,0.978723,True,True
+1,host if turn1_prompt_chars > 112,1,-0.082159,-0.003546,0.106383,True,False
+2,host if turn1_prompt_chars < 112,1,-0.595933,-0.025371,0.87234,True,False
+3,host if turn1_prompt_chars > 130,1,-0.172471,-0.005319,0.212766,True,False
+4,host if turn1_prompt_chars < 130,1,-0.525396,-0.022269,0.787234,True,False
+5,host if turn1_prompt_chars > 156,1,-0.239714,-0.006137,0.297872,True,False
+6,host if turn1_prompt_chars < 156,1,-0.438378,-0.02278,0.680851,True,False
+7,host if turn1_prompt_chars > 173,1,-0.34704,-0.003055,0.425532,True,False
+8,host if turn1_prompt_chars < 173,1,-0.37165,-0.026528,0.595745,True,False
+9,host if turn1_prompt_chars > 184,1,-0.421734,-0.003941,0.531915,True,False
+10,host if turn1_prompt_chars < 184,1,-0.283475,-0.022317,0.489362,True,False
+11,host if turn1_prompt_chars > 220,1,-0.465521,-0.00476,0.595745,True,False
+12,host if turn1_prompt_chars < 220,1,-0.212571,-0.024158,0.382979,True,False
+13,host if turn1_prompt_chars > 243,1,-0.537598,-0.015398,0.702128,True,False
+14,host if turn1_prompt_chars < 243,1,-0.155637,-0.01352,0.297872,True,False
+15,host if turn1_prompt_chars > 458,1,-0.610845,-0.03069,0.808511,True,False
+16,host if turn1_prompt_chars < 458,1,-0.078323,0.001773,0.191489,True,False
+17,host if turn1_prompt_chars > 599,1,-0.641853,-0.028917,0.87234,True,False
+18,host if turn1_prompt_chars < 599,1,-0.036239,0.0,0.106383,True,False
+19,host if workspace_files > 3,1,-0.115022,0.003989,0.12766,True,False
+20,host if workspace_files < 3,1,-0.638452,-0.030247,0.93617,True,False
+21,host if workspace_files > 4,1,-0.219567,0.003989,0.297872,True,False
+22,host if workspace_files < 4,1,-0.56307,-0.032907,0.851064,True,False
+23,host if workspace_files > 5,1,-0.314865,0.000201,0.425532,True,False
+24,host if workspace_files < 5,1,-0.458526,-0.032907,0.680851,True,False
+25,host if workspace_files > 8,1,-0.390862,-0.019456,0.531915,True,False
+26,host if workspace_files < 8,1,-0.319622,-0.024755,0.489362,True,False
+27,host if workspace_files > 18,1,-0.445765,-0.019899,0.595745,True,False
+28,host if workspace_files < 18,1,-0.232327,-0.009019,0.382979,True,False
+29,host if workspace_files > 39,1,-0.504957,-0.023888,0.723404,True,False
+30,host if workspace_files < 39,1,-0.190009,-0.005029,0.297872,True,False
+31,host if workspace_files > 60,1,-0.573426,-0.029518,0.808511,True,False
+32,host if workspace_files < 60,1,-0.12145,-6.5e-05,0.191489,True,False
+33,host if workspace_files > 166,1,-0.622842,-0.028099,0.893617,True,False
+34,host if workspace_files < 166,1,-0.05525,-0.000818,0.085106,True,False
+35,host if intent in {implement},1,-0.455364,-0.012565,0.680851,True,False
+36,host if intent in {question},1,-0.300368,-0.01458,0.489362,True,False
+37,host if intent in {fix},1,-0.600452,-0.03069,0.787234,True,False
+38,host if intent in {other},1,-0.678092,-0.028917,0.978723,True,False
+39,"host if intent in {implement,question}",2,-0.07764,0.001773,0.191489,True,False
+40,"host if intent in {implement,fix}",2,-0.377724,-0.014338,0.489362,True,False
+41,"host if intent in {implement,other}",2,-0.455364,-0.012565,0.680851,True,False
+42,"host if intent in {question,fix}",2,-0.222728,-0.016353,0.297872,True,False
+43,"host if intent in {question,other}",2,-0.300368,-0.01458,0.489362,True,False
+44,"host if intent in {fix,other}",2,-0.600452,-0.03069,0.787234,True,False
+45,host if turn1_prompt_chars > 112 or intent in {implement},2,-0.082159,-0.003546,0.106383,True,False
+46,host if turn1_prompt_chars > 112 or intent in {question},2,0.0,0.0,0.0,True,False
+47,host if turn1_prompt_chars > 112 or intent in {fix},2,-0.082159,-0.003546,0.106383,True,False
+48,host if turn1_prompt_chars > 112 or intent in {other},2,-0.082159,-0.003546,0.106383,True,False
+49,host if turn1_prompt_chars < 112 or intent in {implement},2,-0.373206,-0.009019,0.574468,True,False
+50,host if turn1_prompt_chars < 112 or intent in {question},2,-0.300368,-0.01458,0.489362,True,False
+51,host if turn1_prompt_chars < 112 or intent in {fix},2,-0.518293,-0.027144,0.680851,True,False
+52,host if turn1_prompt_chars < 112 or intent in {other},2,-0.595933,-0.025371,0.87234,True,False
+53,host if turn1_prompt_chars > 130 or intent in {implement},2,-0.172471,-0.005319,0.212766,True,False
+54,host if turn1_prompt_chars > 130 or intent in {question},2,0.0,0.0,0.0,True,False
+55,host if turn1_prompt_chars > 130 or intent in {fix},2,-0.172471,-0.005319,0.212766,True,False
+56,host if turn1_prompt_chars > 130 or intent in {other},2,-0.172471,-0.005319,0.212766,True,False
+57,host if turn1_prompt_chars < 130 or intent in {implement},2,-0.302668,-0.005916,0.489362,True,False
+58,host if turn1_prompt_chars < 130 or intent in {question},2,-0.300368,-0.01458,0.489362,True,False
+59,host if turn1_prompt_chars < 130 or intent in {fix},2,-0.447756,-0.024042,0.595745,True,False
+60,host if turn1_prompt_chars < 130 or intent in {other},2,-0.525396,-0.022269,0.787234,True,False
+61,host if turn1_prompt_chars > 156 or intent in {implement},2,-0.239714,-0.006137,0.297872,True,False
+62,host if turn1_prompt_chars > 156 or intent in {question},2,0.0,0.0,0.0,True,False
+63,host if turn1_prompt_chars > 156 or intent in {fix},2,-0.239714,-0.006137,0.297872,True,False
+64,host if turn1_prompt_chars > 156 or intent in {other},2,-0.239714,-0.006137,0.297872,True,False
+65,host if turn1_prompt_chars < 156 or intent in {implement},2,-0.215651,-0.006427,0.382979,True,False
+66,host if turn1_prompt_chars < 156 or intent in {question},2,-0.300368,-0.01458,0.489362,True,False
+67,host if turn1_prompt_chars < 156 or intent in {fix},2,-0.360738,-0.024553,0.489362,True,False
+68,host if turn1_prompt_chars < 156 or intent in {other},2,-0.438378,-0.02278,0.680851,True,False
+69,host if turn1_prompt_chars > 173 or intent in {implement},2,-0.30486,-0.010792,0.382979,True,False
+70,host if turn1_prompt_chars > 173 or intent in {question},2,-0.042181,0.007737,0.042553,True,False
+71,host if turn1_prompt_chars > 173 or intent in {fix},2,-0.34704,-0.003055,0.425532,True,False
+72,host if turn1_prompt_chars > 173 or intent in {other},2,-0.34704,-0.003055,0.425532,True,False
+73,host if turn1_prompt_chars < 173 or intent in {implement},2,-0.167289,-0.002438,0.319149,True,False
+74,host if turn1_prompt_chars < 173 or intent in {question},2,-0.282002,-0.022317,0.468085,True,False
+75,host if turn1_prompt_chars < 173 or intent in {fix},2,-0.29401,-0.028301,0.404255,True,False
+76,host if turn1_prompt_chars < 173 or intent in {other},2,-0.37165,-0.026528,0.595745,True,False
+77,host if turn1_prompt_chars > 184 or intent in {implement},2,-0.34456,-0.014338,0.446809,True,False
+78,host if turn1_prompt_chars > 184 or intent in {question},2,-0.077174,0.010397,0.085106,True,False
+79,host if turn1_prompt_chars > 184 or intent in {fix},2,-0.421734,-0.003941,0.531915,True,False
+80,host if turn1_prompt_chars > 184 or intent in {other},2,-0.421734,-0.003941,0.531915,True,False
+81,host if turn1_prompt_chars < 184 or intent in {implement},2,-0.120211,0.001773,0.255319,True,False
+82,host if turn1_prompt_chars < 184 or intent in {question},2,-0.240904,-0.022317,0.425532,True,False
+83,host if turn1_prompt_chars < 184 or intent in {fix},2,-0.205835,-0.02409,0.297872,True,False
+84,host if turn1_prompt_chars < 184 or intent in {other},2,-0.283475,-0.022317,0.489362,True,False
+85,host if turn1_prompt_chars > 220 or intent in {implement},2,-0.361789,-0.014338,0.468085,True,False
+86,host if turn1_prompt_chars > 220 or intent in {question},2,-0.103732,0.009578,0.12766,True,False
+87,host if turn1_prompt_chars > 220 or intent in {fix},2,-0.465521,-0.00476,0.595745,True,False
+88,host if turn1_prompt_chars > 220 or intent in {other},2,-0.465521,-0.00476,0.595745,True,False
+89,host if turn1_prompt_chars < 220 or intent in {implement},2,-0.093575,0.001773,0.212766,True,False
+90,host if turn1_prompt_chars < 220 or intent in {question},2,-0.196636,-0.024158,0.361702,True,False
+91,host if turn1_prompt_chars < 220 or intent in {fix},2,-0.134931,-0.025931,0.191489,True,False
+92,host if turn1_prompt_chars < 220 or intent in {other},2,-0.212571,-0.024158,0.382979,True,False
+93,host if turn1_prompt_chars > 243 or intent in {implement},2,-0.377724,-0.014338,0.489362,True,False
+94,host if turn1_prompt_chars > 243 or intent in {question},2,-0.159874,-0.00106,0.212766,True,False
+95,host if turn1_prompt_chars > 243 or intent in {fix},2,-0.537598,-0.015398,0.702128,True,False
+96,host if turn1_prompt_chars > 243 or intent in {other},2,-0.537598,-0.015398,0.702128,True,False
+97,host if turn1_prompt_chars < 243 or intent in {implement},2,-0.07764,0.001773,0.191489,True,False
+98,host if turn1_prompt_chars < 243 or intent in {question},2,-0.155637,-0.01352,0.297872,True,False
+99,host if turn1_prompt_chars < 243 or intent in {fix},2,-0.077997,-0.015293,0.106383,True,False
+100,host if turn1_prompt_chars < 243 or intent in {other},2,-0.155637,-0.01352,0.297872,True,False
+101,host if turn1_prompt_chars > 458 or intent in {implement},2,-0.403631,-0.014338,0.531915,True,False
+102,host if turn1_prompt_chars > 458 or intent in {question},2,-0.233121,-0.016353,0.319149,True,False
+103,host if turn1_prompt_chars > 458 or intent in {fix},2,-0.584939,-0.03069,0.765957,True,False
+104,host if turn1_prompt_chars > 458 or intent in {other},2,-0.610845,-0.03069,0.808511,True,False
+105,host if turn1_prompt_chars < 458 or intent in {implement},2,-0.062811,0.001773,0.170213,True,False
+106,host if turn1_prompt_chars < 458 or intent in {question},2,-0.078323,0.001773,0.191489,True,False
+107,host if turn1_prompt_chars < 458 or intent in {fix},2,-0.015513,0.0,0.021277,True,False
+108,host if turn1_prompt_chars < 458 or intent in {other},2,-0.078323,0.001773,0.191489,True,False
+109,host if turn1_prompt_chars > 599 or intent in {implement},2,-0.434638,-0.012565,0.595745,True,False
+110,host if turn1_prompt_chars > 599 or intent in {question},2,-0.264129,-0.01458,0.382979,True,False
+111,host if turn1_prompt_chars > 599 or intent in {fix},2,-0.584939,-0.03069,0.765957,True,False
+112,host if turn1_prompt_chars > 599 or intent in {other},2,-0.641853,-0.028917,0.87234,True,False
+113,host if turn1_prompt_chars < 599 or intent in {implement},2,-0.020726,0.0,0.085106,True,False
+114,host if turn1_prompt_chars < 599 or intent in {question},2,-0.036239,0.0,0.106383,True,False
+115,host if turn1_prompt_chars < 599 or intent in {fix},2,-0.015513,0.0,0.021277,True,False
+116,host if turn1_prompt_chars < 599 or intent in {other},2,-0.036239,0.0,0.106383,True,False
+117,host if workspace_files > 3 or intent in {implement},2,-0.073497,0.00133,0.085106,True,False
+118,host if workspace_files > 3 or intent in {question},2,-0.041525,0.00266,0.042553,True,False
+119,host if workspace_files > 3 or intent in {fix},2,-0.115022,0.003989,0.12766,True,False
+120,host if workspace_files > 3 or intent in {other},2,-0.115022,0.003989,0.12766,True,False
+121,host if workspace_files < 3 or intent in {implement},2,-0.415724,-0.013895,0.638298,True,False
+122,host if workspace_files < 3 or intent in {question},2,-0.300368,-0.01458,0.489362,True,False
+123,host if workspace_files < 3 or intent in {fix},2,-0.560812,-0.03202,0.744681,True,False
+124,host if workspace_files < 3 or intent in {other},2,-0.638452,-0.030247,0.93617,True,False
+125,host if workspace_files > 4 or intent in {implement},2,-0.11313,0.00133,0.148936,True,False
+126,host if workspace_files > 4 or intent in {question},2,-0.106436,0.00266,0.148936,True,False
+127,host if workspace_files > 4 or intent in {fix},2,-0.219567,0.003989,0.297872,True,False
+128,host if workspace_files > 4 or intent in {other},2,-0.219567,0.003989,0.297872,True,False
+129,host if workspace_files < 4 or intent in {implement},2,-0.381867,-0.013895,0.595745,True,False
+130,host if workspace_files < 4 or intent in {question},2,-0.258843,-0.017239,0.446809,True,False
+131,host if workspace_files < 4 or intent in {fix},2,-0.48543,-0.03468,0.659574,True,False
+132,host if workspace_files < 4 or intent in {other},2,-0.56307,-0.032907,0.851064,True,False
+133,host if workspace_files > 5 or intent in {implement},2,-0.154666,0.000443,0.212766,True,False
+134,host if workspace_files > 5 or intent in {question},2,-0.1602,-0.000242,0.212766,True,False
+135,host if workspace_files > 5 or intent in {fix},2,-0.314865,0.000201,0.425532,True,False
+136,host if workspace_files > 5 or intent in {other},2,-0.314865,0.000201,0.425532,True,False
+137,host if workspace_files < 5 or intent in {implement},2,-0.342234,-0.013895,0.531915,True,False
+138,host if workspace_files < 5 or intent in {question},2,-0.193932,-0.017239,0.340426,True,False
+139,host if workspace_files < 5 or intent in {fix},2,-0.380885,-0.03468,0.489362,True,False
+140,host if workspace_files < 5 or intent in {other},2,-0.458526,-0.032907,0.680851,True,False
+141,host if workspace_files > 8 or intent in {implement},2,-0.183647,-0.003103,0.255319,True,False
+142,host if workspace_files > 8 or intent in {question},2,-0.207215,-0.016353,0.276596,True,False
+143,host if workspace_files > 8 or intent in {fix},2,-0.390862,-0.019456,0.531915,True,False
+144,host if workspace_files > 8 or intent in {other},2,-0.390862,-0.019456,0.531915,True,False
+145,host if workspace_files < 8 or intent in {implement},2,-0.271717,-0.009462,0.425532,True,False
+146,host if workspace_files < 8 or intent in {question},2,-0.125545,-0.01352,0.255319,True,False
+147,host if workspace_files < 8 or intent in {fix},2,-0.241982,-0.026528,0.297872,True,False
+148,host if workspace_files < 8 or intent in {other},2,-0.319622,-0.024755,0.489362,True,False
+149,host if workspace_files > 18 or intent in {implement},2,-0.238551,-0.003546,0.319149,True,False
+150,host if workspace_files > 18 or intent in {question},2,-0.207215,-0.016353,0.276596,True,False
+151,host if workspace_files > 18 or intent in {fix},2,-0.445765,-0.019899,0.595745,True,False
+152,host if workspace_files > 18 or intent in {other},2,-0.445765,-0.019899,0.595745,True,False
+153,host if workspace_files < 18 or intent in {implement},2,-0.216814,-0.009019,0.361702,True,False
+154,host if workspace_files < 18 or intent in {question},2,-0.093153,0.001773,0.212766,True,False
+155,host if workspace_files < 18 or intent in {fix},2,-0.154687,-0.010792,0.191489,True,False
+156,host if workspace_files < 18 or intent in {other},2,-0.232327,-0.009019,0.382979,True,False
+157,host if workspace_files > 39 or intent in {implement},2,-0.282229,-0.007535,0.425532,True,False
+158,host if workspace_files > 39 or intent in {question},2,-0.24747,-0.016353,0.382979,True,False
+159,host if workspace_files > 39 or intent in {fix},2,-0.480215,-0.023888,0.638298,True,False
+160,host if workspace_files > 39 or intent in {other},2,-0.504957,-0.023888,0.723404,True,False
+161,host if workspace_files < 39 or intent in {implement},2,-0.190009,-0.005029,0.297872,True,False
+162,host if workspace_files < 39 or intent in {question},2,-0.069772,0.001773,0.148936,True,False
+163,host if workspace_files < 39 or intent in {fix},2,-0.120237,-0.006802,0.148936,True,False
+164,host if workspace_files < 39 or intent in {other},2,-0.190009,-0.005029,0.297872,True,False
+165,host if workspace_files > 60 or intent in {implement},2,-0.350699,-0.013165,0.510638,True,False
+166,host if workspace_files > 60 or intent in {question},2,-0.261604,-0.01458,0.404255,True,False
+167,host if workspace_files > 60 or intent in {fix},2,-0.53455,-0.031291,0.702128,True,False
+168,host if workspace_files > 60 or intent in {other},2,-0.573426,-0.029518,0.808511,True,False
+169,host if workspace_files < 60 or intent in {implement},2,-0.12145,-6.5e-05,0.191489,True,False
+170,host if workspace_files < 60 or intent in {question},2,-0.038764,0.0,0.085106,True,False
+171,host if workspace_files < 60 or intent in {fix},2,-0.082685,-6.5e-05,0.106383,True,False
+172,host if workspace_files < 60 or intent in {other},2,-0.12145,-6.5e-05,0.191489,True,False
+173,host if workspace_files > 166 or intent in {implement},2,-0.400114,-0.011746,0.595745,True,False
+174,host if workspace_files > 166 or intent in {question},2,-0.29229,-0.01458,0.468085,True,False
+175,host if workspace_files > 166 or intent in {fix},2,-0.553279,-0.029872,0.723404,True,False
+176,host if workspace_files > 166 or intent in {other},2,-0.622842,-0.028099,0.893617,True,False
+177,host if workspace_files < 166 or intent in {implement},2,-0.05525,-0.000818,0.085106,True,False
+178,host if workspace_files < 166 or intent in {question},2,-0.008078,0.0,0.021277,True,False
+179,host if workspace_files < 166 or intent in {fix},2,-0.047172,-0.000818,0.06383,True,False
+180,host if workspace_files < 166 or intent in {other},2,-0.05525,-0.000818,0.085106,True,False

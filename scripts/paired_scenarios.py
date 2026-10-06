@@ -49,7 +49,7 @@ os.environ.setdefault(memguard.ENV_CAP, str(memguard.DEFAULT_CAP_GB))
 os.environ.setdefault(memguard.ENV_TIMEOUT, str(int(memguard.DEFAULT_TIMEOUT_S)))
 
 TASK_TYPES = ("feature", "bugfix", "review", "mixed", "knowledge", "docs", "explain")
-SPLITS = ("train", "test", "pilot")
+SPLITS = ("train", "test", "pilot", "holdout")
 CHECK_KINDS = ("tests", "file_exists", "file_regex", "keyed_facts", "doc_sections")
 DEFAULT_GAP_S = 10
 TURN_SEPARATOR = "\n\n=== NEXT TURN ===\n\n"

@@ -1,0 +1,10 @@
+lever,decision,traffic,period,n,usd_saved_sum,seconds_saved_sum,kind,measured_later,measured_source
+cache_keepalive,keepalive_missed,production,after,16,-6.986765,0.0,receipt-estimated (policy's own claim),"one live A/B, 330 s wait: measured saving $0.160384 = receipt $0.160384",evals/levers-2026-09-25/wait330-c-post-review-summary.json
+cache_keepalive,keepalive_not_needed,production,after,6,-0.308926,0.0,receipt-estimated (policy's own claim),"one live A/B, 330 s wait: measured saving $0.160384 = receipt $0.160384",evals/levers-2026-09-25/wait330-c-post-review-summary.json
+cache_keepalive,kept_cache_warm,production,after,172,229.954349,0.0,receipt-estimated (policy's own claim),"one live A/B, 330 s wait: measured saving $0.160384 = receipt $0.160384",evals/levers-2026-09-25/wait330-c-post-review-summary.json
+cheaper_model,kept_on_host,production,after,68,0.0,-15.3438,receipt-estimated (policy's own claim),real-workload replay: routing routine steps to Sonnet would ADD $17-46,docs/evidence/2026-09-25/step-opportunity/summary.json; docs/GOAL.md
+cheaper_model,kept_on_host,test,after,3,0.0,-0.5121,receipt-estimated (policy's own claim),real-workload replay: routing routine steps to Sonnet would ADD $17-46,docs/evidence/2026-09-25/step-opportunity/summary.json; docs/GOAL.md
+cheaper_model,step_on_claude-sonnet-5,production,after,170,-1.79891,432.5089,receipt-estimated (policy's own claim),real-workload replay: routing routine steps to Sonnet would ADD $17-46,docs/evidence/2026-09-25/step-opportunity/summary.json; docs/GOAL.md
+cheaper_model,step_on_claude-sonnet-5,test,after,23,0.997824,14.8114,receipt-estimated (policy's own claim),real-workload replay: routing routine steps to Sonnet would ADD $17-46,docs/evidence/2026-09-25/step-opportunity/summary.json; docs/GOAL.md
+context_rightsize,duplicate_output_elided,production,after,3,0.105595,0.0,receipt-estimated (policy's own claim),none,
+loop_stop,poll_run_in_place,production,after,3,0.703448,28.7328,receipt-estimated (policy's own claim),"waste-guards A/B (Opus, 3 reps), poll wait: measured $0.0558 vs receipt $0.0514",docs/evidence/2026-09-25/waste-guards-ab/README.md

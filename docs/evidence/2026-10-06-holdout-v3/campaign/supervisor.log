@@ -1,0 +1,39 @@
+Mon Oct  5 21:29:00 EDT 2026 run #1 start
+Mon Oct  5 23:04:26 EDT 2026 restarted at --parallel 32 (Forge maxSessions 34) after indexing settled
+Mon Oct  5 23:04:29 EDT 2026 run #1 start
+Mon Oct  5 23:17:28 EDT 2026 reduced to --parallel 28: load 25.4/14.4 at 32
+Mon Oct  5 23:17:31 EDT 2026 run #1 start
+Mon Oct  5 23:25:32 EDT 2026 ramp to --parallel 48 (Forge maxSessions 110): sessions use ~250% CPU total at 28; load is mostly Spotlight/Defender
+Mon Oct  5 23:25:35 EDT 2026 run #1 start
+Mon Oct  5 23:32:29 EDT 2026 ramp to --parallel 96: at 48 sessions RSS 10.5 GB, ~70 GB free, py CPU 160%, load 16.8
+Mon Oct  5 23:32:32 EDT 2026 run #1 start
+Mon Oct  5 23:47:25 EDT 2026 ramp to --parallel 160 (Forge maxSessions 190): at 96 -> 53% CPU idle, RSS 16.7 GB, 95% mem free; target finish ~6am
+Mon Oct  5 23:47:30 EDT 2026 run #1 start
+Tue Oct  6 00:20:30 EDT 2026 run #1 ended: EXIT 4
+Tue Oct  6 00:20:30 EDT 2026 breaker caused by Forge daemon restart at 2026-10-06T03:56:03.591Z; resuming in 60s
+Tue Oct  6 00:21:30 EDT 2026 run #2 start
+Tue Oct  6 01:24:27 EDT 2026 run #2 ended: EXIT 4
+Tue Oct  6 01:24:27 EDT 2026 breaker caused by Forge daemon restart at 2026-10-06T05:01:12.341Z; resuming in 60s
+Tue Oct  6 01:25:27 EDT 2026 run #3 start
+Tue Oct  6 02:28:55 EDT 2026 run #3 ended: EXIT 4
+Tue Oct  6 02:28:55 EDT 2026 breaker caused by Forge daemon restart at 2026-10-06T06:10:42.999Z; resuming in 60s
+Tue Oct  6 02:29:55 EDT 2026 run #4 start
+Tue Oct  6 03:23:23 EDT 2026 run #4 ended: EXIT 4
+Tue Oct  6 03:23:23 EDT 2026 breaker caused by Forge daemon restart at 2026-10-06T07:23:17.177Z; resuming in 60s
+Tue Oct  6 03:24:23 EDT 2026 run #5 start
+Tue Oct  6 03:24:23 EDT 2026 run #5 ended: EXIT 1
+Tue Oct  6 03:24:23 EDT 2026 stop not caused by a daemon restart; leaving it stopped
+Tue Oct  6 07:07:43 EDT 2026 forge was crash-looping (EMFILE: 943 git fsmonitor daemons from workspace repos); killed them, disabled fsmonitor for ~/dev/afast-paired via includeIf, raised forge launchd NumberOfFiles to 65536, maxSessions 100; resuming at --parallel 96
+Tue Oct  6 07:07:45 EDT 2026 run #1 start
+Tue Oct  6 07:11:26 EDT 2026 budget cap raised 5000 -> 6300: actual/estimate 1.42, projected total ~5,790 (program total stays well under $20k); disclosed as an operational deviation
+Tue Oct  6 07:11:31 EDT 2026 run #1 start
+Tue Oct  6 08:22:10 EDT 2026 run #1 ended: EXIT 1
+Tue Oct  6 08:22:10 EDT 2026 stop not caused by a daemon restart; leaving it stopped
+Tue Oct  6 09:00:45 EDT 2026 moved unrecorded attempt dirs aside (FileExistsError w122-a2 from a launch killed at 07:11); resuming
+Tue Oct  6 09:00:48 EDT 2026 run #1 start
+Tue Oct  6 10:50:59 EDT 2026 restart with unbuffered logs: admission stalled at 3 running / 33 pending
+Tue Oct  6 10:51:04 EDT 2026 run #1 start
+Tue Oct  6 11:42:31 EDT 2026 run #1 ended: EXIT 0
+Tue Oct  6 11:42:31 EDT 2026 campaign complete
+Tue Oct  6 12:00:40 EDT 2026 rerun the 2 waves excluded by the 03:24-07:07 Forge outage (infra, not scenario)
+Tue Oct  6 12:25:53 EDT 2026 rerun ended: EXIT 0

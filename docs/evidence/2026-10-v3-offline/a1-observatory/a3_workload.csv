@@ -1,0 +1,14 @@
+traffic,host_model,sessions,slow_calls,recorded_cost_usd,provider_seconds,cache_read_tokens,cache_write_tokens
+production,claude-haiku-4-5-20251001,41,519,7.854674,2107.94013,19548452.0,1816190.0
+production,claude-opus-5-5,64,3993,632.661945,42169.873197,1093512246.0,63443039.0
+production,claude-sonnet-5,71,5483,545.061332,40805.93518,1398082533.0,19031477.0
+production,claude-sonnet-5-5,37,1957,0.0,23956.14511,425215001.0,14089611.0
+production,gemini-3.1-pro-preview,1,1,0.092817,8.035897,24477.0,0.0
+production,unknown,5,138,0.0,1344.100532,0.0,0.0
+test,claude-fable-5-1,1,1,0.0,3.252659,0.0,100132.0
+test,claude-haiku-4-5-20251001,81,81,5.733142,179.69563,1816317.0,4408044.0
+test,claude-opus-5-5,123,262,42.762354,1435.627601,24240108.0,9073972.0
+test,claude-sonnet-5,1,5,0.273423,37.346715,168196.0,44813.0
+test,gemini-3.1-pro-preview,5,5,0.370286,14.60718,0.0,0.0
+test,unknown,511,3563,8.226527,30486.525885,14577959.0,909215.0
+unclassified,unknown,3,4,0.0,21.975309,0.0,0.0

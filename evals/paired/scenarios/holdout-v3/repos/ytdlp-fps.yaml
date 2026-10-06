@@ -1,0 +1,149 @@
+# holdout-v3 repos: ytdlp-fps -- 8 turns, short gaps.
+id: ytdlp-fps
+task_type: feature
+language: python
+split: holdout
+default_gap_s: 10
+source:
+  desc: >-
+    yt-dlp/yt-dlp, parse_resolution() learns fps suffixes such as 1080p60 / 4K60 (parse_fps option,
+    PR #17073), added upstream in 1249676e; workspace is its parent
+  repo: https://github.com/yt-dlp/yt-dlp.git
+  sha: 7a569456f24fd9afcda09ae55c10d3bbd03f46ef
+  fix_sha: 1249676e98aecf2131901f10f0230fb5e1bdc17e
+workspace:
+  kind: git
+  repo: https://github.com/yt-dlp/yt-dlp.git
+  sha: 7a569456f24fd9afcda09ae55c10d3bbd03f46ef
+  local_hint: ~/dev/afast-v3-src/yt-dlp
+hidden_files:
+  test/test_utils.py:
+    from_git:
+      repo: https://github.com/yt-dlp/yt-dlp.git
+      sha: 1249676e98aecf2131901f10f0230fb5e1bdc17e
+      path: test/test_utils.py
+      local_hint: ~/dev/afast-v3-src/yt-dlp
+  test/test_parse_resolution_separators_hidden.py: |
+    import pytest
+
+    from yt_dlp.utils import parse_resolution
+
+
+    @pytest.mark.parametrize('text, expected', [
+        ('1080p@60', {'height': 1080, 'fps': 60}),
+        ('1080p 60fps', {'height': 1080, 'fps': 60}),
+        ('1080p60fps', {'height': 1080, 'fps': 60}),
+        ('1080P 120 fps', {'height': 1080, 'fps': 120}),
+        ('4K 30fps', {'height': 2160, 'fps': 30}),
+        ('4K@60', {'height': 2160, 'fps': 60}),
+        ('video_720p@30_final', {'height': 720, 'fps': 30}),
+    ])
+    def test_fps_separators_with_parse_fps(text, expected):
+        assert parse_resolution(text, parse_fps=True) == expected
+
+
+    @pytest.mark.parametrize('text, expected', [
+        ('1080p@60', {'height': 1080}),
+        ('1080p 60fps', {'height': 1080}),
+        ('4K 30fps', {'height': 2160}),
+    ])
+    def test_fps_is_ignored_without_parse_fps(text, expected):
+        assert parse_resolution(text) == expected
+
+
+    @pytest.mark.parametrize('text', ['720p 30 minutes', '1080p 60', '720p 5fps', '1080p@6'])
+    def test_no_false_fps(text):
+        assert 'fps' not in parse_resolution(text, parse_fps=True)
+
+
+    def test_existing_adjacent_form_still_works():
+        assert parse_resolution('1080p60', parse_fps=True) == {'height': 1080, 'fps': 60}
+        assert parse_resolution('720p', parse_fps=True) == {'height': 720}
+  test/test_parse_resolution_wxh_hidden.py: |
+    import pytest
+
+    from yt_dlp.utils import parse_resolution
+
+
+    @pytest.mark.parametrize('kwargs, expected', [
+        ({'parse_fps': True}, {'width': 1920, 'height': 1080, 'fps': 60}),
+        ({}, {'width': 1920, 'height': 1080}),
+        ({'lenient': True, 'parse_fps': True}, {'width': 1920, 'height': 1080, 'fps': 60}),
+    ])
+    def test_wxh_with_fps(kwargs, expected):
+        assert parse_resolution('1920x1080@60', **kwargs) == expected
+
+
+    def test_wxh_without_fps_has_no_fps_key():
+        assert parse_resolution('1920x1080', parse_fps=True) == {'width': 1920, 'height': 1080}
+        assert parse_resolution('pre_1920x1080_post', parse_fps=True) == {'width': 1920, 'height': 1080}
+
+
+    def test_wxh_fps_needs_two_or_three_digits():
+        assert parse_resolution('1920x1080@6', parse_fps=True) == {'width': 1920, 'height': 1080}
+
+
+    def test_partial_application_still_works():
+        assert parse_resolution(parse_fps=True)('1280X720@30') == {'width': 1280, 'height': 720, 'fps': 30}
+turns:
+  - prompt: >-
+      yt-dlp's `parse_resolution` ignores frame rates in names like `1080p60` and `4K60`:
+      `parse_resolution('1080p60')` returns `{}` because the digits after the `p` make the height
+      pattern fail. Make it recognise an optional two or three digit fps suffix after `p`/`i`
+      resolutions and after `4K`/`8K`, returning only the height by default (`{'height': 1080}`), and
+      add a keyword-only `parse_fps=False` option: with `parse_fps=True` the result also carries
+      `'fps'` when a suffix was present (`parse_resolution('1080p120', parse_fps=True)` gives
+      `{'height': 1080, 'fps': 120}`). The function is used with `partial_application`, so
+      `parse_resolution(parse_fps=True)` must still return a callable. Run the tests from this
+      directory with `python3 -m pytest -q -k parse_resolution test/test_utils.py`.
+    checks:
+      - {kind: tests, runner: python, files: [-k, parse_resolution, test/test_utils.py], hidden: [test/test_utils.py]}
+  - prompt: >-
+      Question only: how widely is `parse_resolution` used? Name the module that defines it, how many
+      extractor modules call it (roughly) and give three examples, and say what `partial_application`
+      does for it. Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [_utils\.py, extractor, partial_application, parse_resolution], any: [spankbang, ninenow, bpb, sbscokr, functools\.partial|partial]}
+  - prompt: >-
+      Add a test file `test/test_parse_resolution_fps.py` (pytest style, parametrize is fine) with at
+      least four test functions: the fps suffix does not break the height, `parse_fps=True` returns
+      the frame rate for p and K forms, None and garbage give an empty dict, and the partial
+      application form with `parse_fps=True` works. Run it.
+    checks:
+      - {kind: file_regex, path: test/test_parse_resolution_fps.py, pattern: ^def test_, min_count: 4}
+      - {kind: tests, runner: python, files: [test/test_parse_resolution_fps.py]}
+  - prompt: >-
+      Real world names also write the frame rate with a separator. With `parse_fps=True`,
+      `parse_resolution` should read `1080p@60`, `1080p 60fps`, `1080p60fps`, `1080P 120 fps`, `4K
+      30fps`, `4K@60` and `video_720p@30_final` (heights 1080/1080/1080/1080/2160/2160/720 with those
+      fps). It must not invent a frame rate: `720p 30 minutes`, `1080p 60` (no `fps` word and no `@`),
+      `720p 5fps` and `1080p@6` (fps needs two or three digits) give the height only. Without
+      `parse_fps` the height alone is returned, and the adjacent form (`1080p60`) keeps working.
+    checks:
+      - {kind: tests, runner: python, files: [-k, parse_resolution, test/test_parse_resolution_separators_hidden.py, test/test_utils.py], hidden: [test/test_parse_resolution_separators_hidden.py, test/test_utils.py]}
+  - prompt: >-
+      Give `parse_resolution` a docstring: what it returns (a dict with some of width, height and,
+      with `parse_fps`, fps), what `lenient` changes, the accepted forms (`1920x1080`, `720p`,
+      `1080p60`, `1080p@60`, `4K`) and that it returns `{}` when nothing is recognised. Docstring
+      only.
+    checks:
+      - {kind: file_regex, path: yt_dlp/utils/_utils.py, pattern: '(?s)def parse_resolution\(s, \*, lenient=False, parse_fps=False\):\n\s+"""(?=(?:(?!""").)*lenient)(?=(?:(?!""").)*fps)(?=(?:(?!""").)*4K)'}
+      - {kind: tests, runner: python, files: [-k, parse_resolution, test/test_utils.py], hidden: [test/test_utils.py]}
+  - prompt: >-
+      The frame rate can come with the explicit size, too: `parse_resolution('1920x1080@60',
+      parse_fps=True)` should give `{'width': 1920, 'height': 1080, 'fps': 60}` (also with
+      `lenient=True`), while the same string without `parse_fps` gives just width and height.
+      `1920x1080`, `pre_1920x1080_post` and `1920x1080@6` (one digit) get no fps, and
+      `parse_resolution(parse_fps=True)('1280X720@30')` still works as a partial application.
+    checks:
+      - {kind: tests, runner: python, files: [-k, parse_resolution, test/test_parse_resolution_wxh_hidden.py, test/test_parse_resolution_separators_hidden.py, test/test_utils.py], hidden: [test/test_parse_resolution_wxh_hidden.py, test/test_parse_resolution_separators_hidden.py, test/test_utils.py]}
+  - prompt: >-
+      Run the parse_resolution tests from test/test_utils.py together with your new test file and
+      report the totals (passed / failed). Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [parse_resolution, test_parse_resolution_fps, \d+ passed]}
+  - prompt: >-
+      Review the changes you made in this session as a code reviewer would: list each file you changed
+      or added, what changed, and any remaining edge case you did not cover. Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [_utils\.py, test], any: [edge, risk, not cover, remaining]}

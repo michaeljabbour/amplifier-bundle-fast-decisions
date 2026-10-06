@@ -1,0 +1,442 @@
+# holdout-v3 batch B (docs, 10 turns): Turn meeting-note decisions into architecture decision records: numbering by date, exact section content, supersession chains, an index, an ADR linter, and a second batch of notes that changes the chain.
+id: adr-records
+task_type: docs
+language: markdown
+split: holdout
+default_gap_s: 10
+source:
+  desc: 'Turn meeting-note decisions into architecture decision records: numbering by date, exact section content, supersession
+    chains, an index, an ADR linter, and a second batch of notes that changes the chain.'
+  kind: self-authored deterministic workspace
+  adapted_from:
+  - new self-authored decision notes; ADR-writing theme (cf. amplifier-agent documentation tasks)
+workspace:
+  kind: inline
+  files:
+    notes/2025-01-14-use-postgres.txt: |
+      slug: use-postgres
+      title: Use PostgreSQL for orders
+      date: 2025-01-14
+      status: accepted
+      replaces: none
+      context: Orders outgrew the single SQLite file and need concurrent writers.
+      decision: Store orders in PostgreSQL 15 behind a repository interface.
+      consequences: We must run and back up a database server; migrations become mandatory.
+    notes/2025-01-21-adopt-rest.txt: |
+      slug: adopt-rest
+      title: Expose a REST API
+      date: 2025-01-21
+      status: accepted
+      replaces: none
+      context: Partners ask for a stable integration surface.
+      decision: Publish a versioned REST API under /v1 with JSON bodies.
+      consequences: Clients get a stable contract; breaking changes require /v2.
+    notes/2025-02-03-graphql-gateway.txt: |
+      slug: graphql-gateway
+      title: Add a GraphQL gateway
+      date: 2025-02-03
+      status: rejected
+      replaces: none
+      context: The mobile team wanted flexible queries.
+      decision: Do not build a GraphQL gateway this year.
+      consequences: Mobile keeps using REST with a few purpose-built endpoints.
+    notes/2025-02-11-queue-rabbit.txt: |
+      slug: queue-rabbit
+      title: Use RabbitMQ for background jobs
+      date: 2025-02-11
+      status: accepted
+      replaces: none
+      context: Email and export jobs block request threads.
+      decision: Run jobs through RabbitMQ with a worker pool of 8.
+      consequences: Operations owns another stateful service; jobs gain retries.
+    notes/2025-02-18-cache-memory.txt: |
+      slug: cache-memory
+      title: Cache lookups in process memory
+      date: 2025-02-18
+      status: accepted
+      replaces: none
+      context: Catalogue reads dominate traffic.
+      decision: Keep a 60 second in-process cache for catalogue reads.
+      consequences: Each instance warms its own cache; staleness is bounded by 60 seconds.
+    notes/2025-02-25-monorepo.txt: |
+      slug: monorepo
+      title: Move to a monorepo
+      date: 2025-02-25
+      status: rejected
+      replaces: none
+      context: Three repositories drift apart.
+      decision: Stay with separate repositories and share code through a package.
+      consequences: Release coordination stays manual.
+    notes/2025-03-05-jobs-sqs.txt: |
+      slug: jobs-sqs
+      title: Use SQS instead of RabbitMQ
+      date: 2025-03-05
+      status: accepted
+      replaces: queue-rabbit
+      context: Running RabbitMQ costs more on-call time than the jobs justify.
+      decision: Move background jobs to the managed SQS service.
+      consequences: No broker to patch; message size is capped at 256 KB.
+    notes/2025-03-12-structured-logs.txt: |
+      slug: structured-logs
+      title: Emit structured JSON logs
+      date: 2025-03-12
+      status: accepted
+      replaces: none
+      context: Grepping free-text logs does not scale.
+      decision: All services log one JSON object per line.
+      consequences: Log tooling must parse JSON; local reading is harder.
+    notes/2025-03-19-feature-flags.txt: |
+      slug: feature-flags
+      title: Use a feature flag service
+      date: 2025-03-19
+      status: proposed
+      replaces: none
+      context: Releases are coupled to deploys.
+      decision: Evaluate a hosted flag service for a quarter.
+      consequences: Decision deferred until the trial ends.
+    notes/2025-03-27-api-v2.txt: |
+      slug: api-v2
+      title: Replace /v1 with /v2 in 2026
+      date: 2025-03-27
+      status: accepted
+      replaces: none
+      context: The /v1 pagination model cannot be extended.
+      decision: Introduce /v2 with cursor pagination and sunset /v1 in 2026.
+      consequences: Two versions run side by side for a year.
+    notes/2025-04-02-cache-redis.txt: |
+      slug: cache-redis
+      title: Move the cache to Redis
+      date: 2025-04-02
+      status: accepted
+      replaces: cache-memory
+      context: Per-instance caches show inconsistent prices.
+      decision: Use a shared Redis 7 cache with a 60 second TTL.
+      consequences: A new dependency; cache is consistent across instances.
+    notes/2025-04-09-sunset-v1.txt: |
+      slug: sunset-v1
+      title: Announce the /v1 sunset date
+      date: 2025-04-09
+      status: proposed
+      replaces: none
+      context: Partners need a date to plan against.
+      decision: Propose 2026-06-30 as the /v1 shutdown date.
+      consequences: Partner communication is required before acceptance.
+    README.md: |
+      # decisions
+
+      `notes/` holds one decision note per file (`slug`, `title`, `date`, `status`, `replaces`, `context`, `decision`, `consequences`). Architecture decision records go in `docs/adr/` as `NNNN-<slug>.md`, numbered 0001, 0002, ... in order of the note's date (ties by slug).
+protected:
+- notes/2025-01-14-use-postgres.txt
+- notes/2025-01-21-adopt-rest.txt
+- notes/2025-02-03-graphql-gateway.txt
+- notes/2025-02-11-queue-rabbit.txt
+- notes/2025-02-18-cache-memory.txt
+- notes/2025-02-25-monorepo.txt
+- notes/2025-03-05-jobs-sqs.txt
+- notes/2025-03-12-structured-logs.txt
+- notes/2025-03-19-feature-flags.txt
+- notes/2025-03-27-api-v2.txt
+- notes/2025-04-02-cache-redis.txt
+- notes/2025-04-09-sunset-v1.txt
+hidden_files:
+  _grade.py: |
+    import csv, json, os, re, subprocess, sys
+    from pathlib import Path
+
+    W = Path(".")
+
+
+    def fail(msg):
+        print("FAIL:", msg)
+        sys.exit(1)
+
+
+    def need(cond, msg):
+        if not cond:
+            fail(msg)
+
+
+    def read(rel):
+        p = W / rel
+        need(p.exists(), f"missing {rel}")
+        return p.read_text(encoding="utf-8")
+
+
+    def load_json(rel):
+        try:
+            return json.loads(read(rel))
+        except ValueError as e:
+            fail(f"{rel} is not valid JSON: {e}")
+
+
+    def close(a, b, tol=0.011):
+        try:
+            return abs(float(a) - float(b)) <= tol
+        except (TypeError, ValueError):
+            return False
+
+
+    def num(s):
+        m = re.search(r"-?\d[\d,]*\.?\d*", str(s))
+        return float(m.group(0).replace(",", "")) if m else None
+
+
+    def run(cmd, timeout=60, stdin=None):
+        p = subprocess.run(cmd, shell=True, cwd=W, capture_output=True, text=True, timeout=timeout, input=stdin)
+        return p.returncode, p.stdout, p.stderr
+
+
+    def md_lines(rel, under=None):
+        lines = read(rel).splitlines()
+        if not under:
+            return lines
+        out, on, lvl = [], False, 0
+        for ln in lines:
+            m = re.match(r"^(#+)\s+(.*)", ln)
+            if m:
+                if on and len(m.group(1)) <= lvl:
+                    break
+                if not on and re.search(under, m.group(2), re.I):
+                    on, lvl = True, len(m.group(1))
+                continue
+            if on:
+                out.append(ln)
+        need(on, f"no heading matching {under!r} in {rel}")
+        return out
+
+
+    def md_rows(rel, under=None):
+        rows = []
+        for ln in md_lines(rel, under):
+            if ln.strip().startswith("|") and not re.match(r"^\s*\|[\s:|-]+\|\s*$", ln):
+                rows.append([c.strip() for c in ln.strip().strip("|").split("|")])
+        return rows
+
+
+    def cmp(got, want, tol, path):
+        if isinstance(want, dict):
+            need(isinstance(got, dict), f"{path}: expected an object, got {type(got).__name__}")
+            for k, v in want.items():
+                need(k in got, f"{path}.{k}: missing")
+                cmp(got[k], v, tol, f"{path}.{k}")
+        elif isinstance(want, list):
+            need(isinstance(got, list) and len(got) == len(want), f"{path}: expected list of {len(want)}, got {got!r}")
+            for i, (g, w) in enumerate(zip(got, want)):
+                cmp(g, w, tol, f"{path}[{i}]")
+        elif isinstance(want, bool) or want is None or isinstance(want, str):
+            need(got == want, f"{path}: {got!r} != {want!r}")
+        else:
+            need(not isinstance(got, bool) and close(got, want, tol), f"{path}: {got!r} != {want!r}")
+
+
+    def chk_json(rel, exp, tol=0.051):
+        cmp(load_json(rel), exp, tol, rel)
+
+
+    def chk_table(rel, under, exp, col=1, tol=0.051):
+        rows = md_rows(rel, under)
+        need(rows, f"no table under {under!r} in {rel}")
+        got = {r[0].strip("* `"): num(r[col]) for r in rows if len(r) > col and num(r[col]) is not None}
+        for k, v in exp.items():
+            need(k in got and close(got[k], v, tol), f"{k}: {got.get(k)} != {v}")
+
+
+    def chk_cmd_json(cmd, exp, tol=0.051, stdin=None):
+        rc, out, err = run(cmd, stdin=stdin)
+        need(rc == 0, f"`{cmd}` exited {rc}: {err[-200:]}")
+        try:
+            d = json.loads(out)
+        except ValueError as e:
+            fail(f"`{cmd}` stdout is not JSON: {e}")
+        cmp(d, exp, tol, cmd)
+
+
+    def chk_cmd_out(cmd, lines, stdin=None, expect_rc=0):
+        rc, out, err = run(cmd, stdin=stdin)
+        need(rc == expect_rc, f"`{cmd}` exited {rc} (want {expect_rc}): {err[-200:]}")
+        got = [ln.rstrip() for ln in out.strip().splitlines()]
+        need(got == list(lines), f"`{cmd}` output {got[:8]} != {list(lines)[:8]}")
+
+
+    def t2():
+        for p, want in {'docs/adr/0001-use-postgres.md': '# ADR-0001: Use PostgreSQL for orders\n\n- Status: Accepted\n- Date: 2025-01-14\n- Supersedes: none\n- Superseded by: none\n\n## Context\n\nOrders outgrew the single SQLite file and need concurrent writers.\n\n## Decision\n\nStore orders in PostgreSQL 15 behind a repository interface.\n\n## Consequences\n\nWe must run and back up a database server; migrations become mandatory.\n', 'docs/adr/0002-adopt-rest.md': '# ADR-0002: Expose a REST API\n\n- Status: Accepted\n- Date: 2025-01-21\n- Supersedes: none\n- Superseded by: none\n\n## Context\n\nPartners ask for a stable integration surface.\n\n## Decision\n\nPublish a versioned REST API under /v1 with JSON bodies.\n\n## Consequences\n\nClients get a stable contract; breaking changes require /v2.\n', 'docs/adr/0003-graphql-gateway.md': '# ADR-0003: Add a GraphQL gateway\n\n- Status: Rejected\n- Date: 2025-02-03\n- Supersedes: none\n- Superseded by: none\n\n## Context\n\nThe mobile team wanted flexible queries.\n\n## Decision\n\nDo not build a GraphQL gateway this year.\n\n## Consequences\n\nMobile keeps using REST with a few purpose-built endpoints.\n', 'docs/adr/0004-queue-rabbit.md': '# ADR-0004: Use RabbitMQ for background jobs\n\n- Status: Accepted\n- Date: 2025-02-11\n- Supersedes: none\n- Superseded by: none\n\n## Context\n\nEmail and export jobs block request threads.\n\n## Decision\n\nRun jobs through RabbitMQ with a worker pool of 8.\n\n## Consequences\n\nOperations owns another stateful service; jobs gain retries.\n'}.items():
+            got = read(p)
+            def norm(t):
+                return [l.rstrip() for l in t.strip().splitlines() if l.strip()]
+            need(norm(got) == norm(want), f'{p}: expected {norm(want)[:5]} got {norm(got)[:5]}')
+        import glob
+        need(len(glob.glob('docs/adr/[0-9][0-9][0-9][0-9]-*.md')) == 4, 'unexpected number of ADR files: ' + str(sorted(glob.glob('docs/adr/*.md'))))
+
+
+    def t3():
+        for p, want in {'docs/adr/0001-use-postgres.md': '# ADR-0001: Use PostgreSQL for orders\n\n- Status: Accepted\n- Date: 2025-01-14\n- Supersedes: none\n- Superseded by: none\n\n## Context\n\nOrders outgrew the single SQLite file and need concurrent writers.\n\n## Decision\n\nStore orders in PostgreSQL 15 behind a repository interface.\n\n## Consequences\n\nWe must run and back up a database server; migrations become mandatory.\n', 'docs/adr/0002-adopt-rest.md': '# ADR-0002: Expose a REST API\n\n- Status: Accepted\n- Date: 2025-01-21\n- Supersedes: none\n- Superseded by: none\n\n## Context\n\nPartners ask for a stable integration surface.\n\n## Decision\n\nPublish a versioned REST API under /v1 with JSON bodies.\n\n## Consequences\n\nClients get a stable contract; breaking changes require /v2.\n', 'docs/adr/0003-graphql-gateway.md': '# ADR-0003: Add a GraphQL gateway\n\n- Status: Rejected\n- Date: 2025-02-03\n- Supersedes: none\n- Superseded by: none\n\n## Context\n\nThe mobile team wanted flexible queries.\n\n## Decision\n\nDo not build a GraphQL gateway this year.\n\n## Consequences\n\nMobile keeps using REST with a few purpose-built endpoints.\n', 'docs/adr/0004-queue-rabbit.md': '# ADR-0004: Use RabbitMQ for background jobs\n\n- Status: Accepted\n- Date: 2025-02-11\n- Supersedes: none\n- Superseded by: none\n\n## Context\n\nEmail and export jobs block request threads.\n\n## Decision\n\nRun jobs through RabbitMQ with a worker pool of 8.\n\n## Consequences\n\nOperations owns another stateful service; jobs gain retries.\n', 'docs/adr/0005-cache-memory.md': '# ADR-0005: Cache lookups in process memory\n\n- Status: Accepted\n- Date: 2025-02-18\n- Supersedes: none\n- Superseded by: none\n\n## Context\n\nCatalogue reads dominate traffic.\n\n## Decision\n\nKeep a 60 second in-process cache for catalogue reads.\n\n## Consequences\n\nEach instance warms its own cache; staleness is bounded by 60 seconds.\n', 'docs/adr/0006-monorepo.md': '# ADR-0006: Move to a monorepo\n\n- Status: Rejected\n- Date: 2025-02-25\n- Supersedes: none\n- Superseded by: none\n\n## Context\n\nThree repositories drift apart.\n\n## Decision\n\nStay with separate repositories and share code through a package.\n\n## Consequences\n\nRelease coordination stays manual.\n', 'docs/adr/0007-jobs-sqs.md': '# ADR-0007: Use SQS instead of RabbitMQ\n\n- Status: Accepted\n- Date: 2025-03-05\n- Supersedes: none\n- Superseded by: none\n\n## Context\n\nRunning RabbitMQ costs more on-call time than the jobs justify.\n\n## Decision\n\nMove background jobs to the managed SQS service.\n\n## Consequences\n\nNo broker to patch; message size is capped at 256 KB.\n', 'docs/adr/0008-structured-logs.md': '# ADR-0008: Emit structured JSON logs\n\n- Status: Accepted\n- Date: 2025-03-12\n- Supersedes: none\n- Superseded by: none\n\n## Context\n\nGrepping free-text logs does not scale.\n\n## Decision\n\nAll services log one JSON object per line.\n\n## Consequences\n\nLog tooling must parse JSON; local reading is harder.\n', 'docs/adr/0009-feature-flags.md': '# ADR-0009: Use a feature flag service\n\n- Status: Proposed\n- Date: 2025-03-19\n- Supersedes: none\n- Superseded by: none\n\n## Context\n\nReleases are coupled to deploys.\n\n## Decision\n\nEvaluate a hosted flag service for a quarter.\n\n## Consequences\n\nDecision deferred until the trial ends.\n', 'docs/adr/0010-api-v2.md': '# ADR-0010: Replace /v1 with /v2 in 2026\n\n- Status: Accepted\n- Date: 2025-03-27\n- Supersedes: none\n- Superseded by: none\n\n## Context\n\nThe /v1 pagination model cannot be extended.\n\n## Decision\n\nIntroduce /v2 with cursor pagination and sunset /v1 in 2026.\n\n## Consequences\n\nTwo versions run side by side for a year.\n'}.items():
+            got = read(p)
+            def norm(t):
+                return [l.rstrip() for l in t.strip().splitlines() if l.strip()]
+            need(norm(got) == norm(want), f'{p}: expected {norm(want)[:5]} got {norm(got)[:5]}')
+        import glob
+        need(len(glob.glob('docs/adr/[0-9][0-9][0-9][0-9]-*.md')) == 10, 'unexpected number of ADR files: ' + str(sorted(glob.glob('docs/adr/*.md'))))
+
+
+    def t5():
+        for p, want in {'docs/adr/0001-use-postgres.md': '# ADR-0001: Use PostgreSQL for orders\n\n- Status: Accepted\n- Date: 2025-01-14\n- Supersedes: none\n- Superseded by: none\n\n## Context\n\nOrders outgrew the single SQLite file and need concurrent writers.\n\n## Decision\n\nStore orders in PostgreSQL 15 behind a repository interface.\n\n## Consequences\n\nWe must run and back up a database server; migrations become mandatory.\n', 'docs/adr/0002-adopt-rest.md': '# ADR-0002: Expose a REST API\n\n- Status: Accepted\n- Date: 2025-01-21\n- Supersedes: none\n- Superseded by: none\n\n## Context\n\nPartners ask for a stable integration surface.\n\n## Decision\n\nPublish a versioned REST API under /v1 with JSON bodies.\n\n## Consequences\n\nClients get a stable contract; breaking changes require /v2.\n', 'docs/adr/0003-graphql-gateway.md': '# ADR-0003: Add a GraphQL gateway\n\n- Status: Rejected\n- Date: 2025-02-03\n- Supersedes: none\n- Superseded by: none\n\n## Context\n\nThe mobile team wanted flexible queries.\n\n## Decision\n\nDo not build a GraphQL gateway this year.\n\n## Consequences\n\nMobile keeps using REST with a few purpose-built endpoints.\n', 'docs/adr/0004-queue-rabbit.md': '# ADR-0004: Use RabbitMQ for background jobs\n\n- Status: Superseded\n- Date: 2025-02-11\n- Supersedes: none\n- Superseded by: ADR-0007\n\n## Context\n\nEmail and export jobs block request threads.\n\n## Decision\n\nRun jobs through RabbitMQ with a worker pool of 8.\n\n## Consequences\n\nOperations owns another stateful service; jobs gain retries.\n', 'docs/adr/0005-cache-memory.md': '# ADR-0005: Cache lookups in process memory\n\n- Status: Accepted\n- Date: 2025-02-18\n- Supersedes: none\n- Superseded by: none\n\n## Context\n\nCatalogue reads dominate traffic.\n\n## Decision\n\nKeep a 60 second in-process cache for catalogue reads.\n\n## Consequences\n\nEach instance warms its own cache; staleness is bounded by 60 seconds.\n', 'docs/adr/0006-monorepo.md': '# ADR-0006: Move to a monorepo\n\n- Status: Rejected\n- Date: 2025-02-25\n- Supersedes: none\n- Superseded by: none\n\n## Context\n\nThree repositories drift apart.\n\n## Decision\n\nStay with separate repositories and share code through a package.\n\n## Consequences\n\nRelease coordination stays manual.\n', 'docs/adr/0007-jobs-sqs.md': '# ADR-0007: Use SQS instead of RabbitMQ\n\n- Status: Accepted\n- Date: 2025-03-05\n- Supersedes: ADR-0004\n- Superseded by: none\n\n## Context\n\nRunning RabbitMQ costs more on-call time than the jobs justify.\n\n## Decision\n\nMove background jobs to the managed SQS service.\n\n## Consequences\n\nNo broker to patch; message size is capped at 256 KB.\n', 'docs/adr/0008-structured-logs.md': '# ADR-0008: Emit structured JSON logs\n\n- Status: Accepted\n- Date: 2025-03-12\n- Supersedes: none\n- Superseded by: none\n\n## Context\n\nGrepping free-text logs does not scale.\n\n## Decision\n\nAll services log one JSON object per line.\n\n## Consequences\n\nLog tooling must parse JSON; local reading is harder.\n', 'docs/adr/0009-feature-flags.md': '# ADR-0009: Use a feature flag service\n\n- Status: Proposed\n- Date: 2025-03-19\n- Supersedes: none\n- Superseded by: none\n\n## Context\n\nReleases are coupled to deploys.\n\n## Decision\n\nEvaluate a hosted flag service for a quarter.\n\n## Consequences\n\nDecision deferred until the trial ends.\n', 'docs/adr/0010-api-v2.md': '# ADR-0010: Replace /v1 with /v2 in 2026\n\n- Status: Accepted\n- Date: 2025-03-27\n- Supersedes: none\n- Superseded by: none\n\n## Context\n\nThe /v1 pagination model cannot be extended.\n\n## Decision\n\nIntroduce /v2 with cursor pagination and sunset /v1 in 2026.\n\n## Consequences\n\nTwo versions run side by side for a year.\n'}.items():
+            got = read(p)
+            def norm(t):
+                return [l.rstrip() for l in t.strip().splitlines() if l.strip()]
+            need(norm(got) == norm(want), f'{p}: expected {norm(want)[:5]} got {norm(got)[:5]}')
+        import glob
+        need(len(glob.glob('docs/adr/[0-9][0-9][0-9][0-9]-*.md')) == 10, 'unexpected number of ADR files: ' + str(sorted(glob.glob('docs/adr/*.md'))))
+
+
+    def t6():
+        rows = md_rows('docs/adr/README.md')
+        need(rows and [c.lower() for c in rows[0][:4]] == ['adr', 'title', 'status', 'date'], 'header: ' + str(rows[:1]))
+        want = [('ADR-0001', '0001-use-postgres.md', 'Use PostgreSQL for orders', 'Accepted', '2025-01-14'), ('ADR-0002', '0002-adopt-rest.md', 'Expose a REST API', 'Accepted', '2025-01-21'), ('ADR-0003', '0003-graphql-gateway.md', 'Add a GraphQL gateway', 'Rejected', '2025-02-03'), ('ADR-0004', '0004-queue-rabbit.md', 'Use RabbitMQ for background jobs', 'Superseded', '2025-02-11'), ('ADR-0005', '0005-cache-memory.md', 'Cache lookups in process memory', 'Accepted', '2025-02-18'), ('ADR-0006', '0006-monorepo.md', 'Move to a monorepo', 'Rejected', '2025-02-25'), ('ADR-0007', '0007-jobs-sqs.md', 'Use SQS instead of RabbitMQ', 'Accepted', '2025-03-05'), ('ADR-0008', '0008-structured-logs.md', 'Emit structured JSON logs', 'Accepted', '2025-03-12'), ('ADR-0009', '0009-feature-flags.md', 'Use a feature flag service', 'Proposed', '2025-03-19'), ('ADR-0010', '0010-api-v2.md', 'Replace /v1 with /v2 in 2026', 'Accepted', '2025-03-27')]
+        got = []
+        for r in rows[1:]:
+            m = re.fullmatch(r'\[([^\]]+)\]\(([^)]+)\)', r[0].strip())
+            need(m, 'ADR cell must be a markdown link: ' + r[0])
+            need((W / 'docs/adr' / m.group(2)).exists(), 'broken link ' + m.group(2))
+            got.append((m.group(1), m.group(2), r[1], r[2], r[3]))
+        need(got == want, 'index rows differ: ' + str([g for g in got if g not in want][:2]))
+
+
+    def t7():
+        for rel, text in {'0001-a.md': '# ADR-0001: A\n\n- Status: Accepted\n- Date: 2025-01-01\n- Supersedes: none\n- Superseded by: none\n\n## Context\n\nx\n\n## Decision\n\ny\n\n## Consequences\n\nz\n', '0002-b.md': '# ADR-0002: B\n\n- Status: Maybe\n- Date: 2025-01-02\n- Supersedes: none\n- Superseded by: none\n\n## Context\n\nx\n\n## Decision\n\ny\n', '0003-c.md': '# ADR-0003: C\n\n- Status: Superseded\n- Date: 2025-01-03\n- Supersedes: none\n- Superseded by: none\n\n## Context\n\nx\n\n## Decision\n\ny\n\n## Consequences\n\nz\n'}.items():
+            p = W / '_adr' / rel
+            p.parent.mkdir(parents=True, exist_ok=True)
+            p.write_text(text, encoding='utf-8')
+        need((W / 'scripts/adr_lint.py').exists(), 'missing scripts/adr_lint.py')
+        chk_cmd_out('python3 scripts/adr_lint.py --dir _adr', ['ADR-0002: bad status Maybe', 'ADR-0002: missing section Consequences', 'ADR-0003: superseded without successor'], expect_rc=1)
+        chk_cmd_out('python3 scripts/adr_lint.py', ['ok'])
+
+
+    def t8():
+        for p, want in {'docs/adr/0001-use-postgres.md': '# ADR-0001: Use PostgreSQL for orders\n\n- Status: Accepted\n- Date: 2025-01-14\n- Supersedes: none\n- Superseded by: none\n\n## Context\n\nOrders outgrew the single SQLite file and need concurrent writers.\n\n## Decision\n\nStore orders in PostgreSQL 15 behind a repository interface.\n\n## Consequences\n\nWe must run and back up a database server; migrations become mandatory.\n', 'docs/adr/0002-adopt-rest.md': '# ADR-0002: Expose a REST API\n\n- Status: Accepted\n- Date: 2025-01-21\n- Supersedes: none\n- Superseded by: none\n\n## Context\n\nPartners ask for a stable integration surface.\n\n## Decision\n\nPublish a versioned REST API under /v1 with JSON bodies.\n\n## Consequences\n\nClients get a stable contract; breaking changes require /v2.\n', 'docs/adr/0003-graphql-gateway.md': '# ADR-0003: Add a GraphQL gateway\n\n- Status: Rejected\n- Date: 2025-02-03\n- Supersedes: none\n- Superseded by: none\n\n## Context\n\nThe mobile team wanted flexible queries.\n\n## Decision\n\nDo not build a GraphQL gateway this year.\n\n## Consequences\n\nMobile keeps using REST with a few purpose-built endpoints.\n', 'docs/adr/0004-queue-rabbit.md': '# ADR-0004: Use RabbitMQ for background jobs\n\n- Status: Superseded\n- Date: 2025-02-11\n- Supersedes: none\n- Superseded by: ADR-0007\n\n## Context\n\nEmail and export jobs block request threads.\n\n## Decision\n\nRun jobs through RabbitMQ with a worker pool of 8.\n\n## Consequences\n\nOperations owns another stateful service; jobs gain retries.\n', 'docs/adr/0005-cache-memory.md': '# ADR-0005: Cache lookups in process memory\n\n- Status: Superseded\n- Date: 2025-02-18\n- Supersedes: none\n- Superseded by: ADR-0011\n\n## Context\n\nCatalogue reads dominate traffic.\n\n## Decision\n\nKeep a 60 second in-process cache for catalogue reads.\n\n## Consequences\n\nEach instance warms its own cache; staleness is bounded by 60 seconds.\n', 'docs/adr/0006-monorepo.md': '# ADR-0006: Move to a monorepo\n\n- Status: Rejected\n- Date: 2025-02-25\n- Supersedes: none\n- Superseded by: none\n\n## Context\n\nThree repositories drift apart.\n\n## Decision\n\nStay with separate repositories and share code through a package.\n\n## Consequences\n\nRelease coordination stays manual.\n', 'docs/adr/0007-jobs-sqs.md': '# ADR-0007: Use SQS instead of RabbitMQ\n\n- Status: Accepted\n- Date: 2025-03-05\n- Supersedes: ADR-0004\n- Superseded by: none\n\n## Context\n\nRunning RabbitMQ costs more on-call time than the jobs justify.\n\n## Decision\n\nMove background jobs to the managed SQS service.\n\n## Consequences\n\nNo broker to patch; message size is capped at 256 KB.\n', 'docs/adr/0008-structured-logs.md': '# ADR-0008: Emit structured JSON logs\n\n- Status: Accepted\n- Date: 2025-03-12\n- Supersedes: none\n- Superseded by: none\n\n## Context\n\nGrepping free-text logs does not scale.\n\n## Decision\n\nAll services log one JSON object per line.\n\n## Consequences\n\nLog tooling must parse JSON; local reading is harder.\n', 'docs/adr/0009-feature-flags.md': '# ADR-0009: Use a feature flag service\n\n- Status: Proposed\n- Date: 2025-03-19\n- Supersedes: none\n- Superseded by: none\n\n## Context\n\nReleases are coupled to deploys.\n\n## Decision\n\nEvaluate a hosted flag service for a quarter.\n\n## Consequences\n\nDecision deferred until the trial ends.\n', 'docs/adr/0010-api-v2.md': '# ADR-0010: Replace /v1 with /v2 in 2026\n\n- Status: Accepted\n- Date: 2025-03-27\n- Supersedes: none\n- Superseded by: none\n\n## Context\n\nThe /v1 pagination model cannot be extended.\n\n## Decision\n\nIntroduce /v2 with cursor pagination and sunset /v1 in 2026.\n\n## Consequences\n\nTwo versions run side by side for a year.\n', 'docs/adr/0011-cache-redis.md': '# ADR-0011: Move the cache to Redis\n\n- Status: Accepted\n- Date: 2025-04-02\n- Supersedes: ADR-0005\n- Superseded by: none\n\n## Context\n\nPer-instance caches show inconsistent prices.\n\n## Decision\n\nUse a shared Redis 7 cache with a 60 second TTL.\n\n## Consequences\n\nA new dependency; cache is consistent across instances.\n', 'docs/adr/0012-sunset-v1.md': '# ADR-0012: Announce the /v1 sunset date\n\n- Status: Proposed\n- Date: 2025-04-09\n- Supersedes: none\n- Superseded by: none\n\n## Context\n\nPartners need a date to plan against.\n\n## Decision\n\nPropose 2026-06-30 as the /v1 shutdown date.\n\n## Consequences\n\nPartner communication is required before acceptance.\n'}.items():
+            got = read(p)
+            def norm(t):
+                return [l.rstrip() for l in t.strip().splitlines() if l.strip()]
+            need(norm(got) == norm(want), f'{p}: expected {norm(want)[:5]} got {norm(got)[:5]}')
+        import glob
+        need(len(glob.glob('docs/adr/[0-9][0-9][0-9][0-9]-*.md')) == 12, 'unexpected number of ADR files: ' + str(sorted(glob.glob('docs/adr/*.md'))))
+
+
+    def t9():
+        rows = md_rows('docs/adr/README.md')
+        need(rows and [c.lower() for c in rows[0][:4]] == ['adr', 'title', 'status', 'date'], 'header: ' + str(rows[:1]))
+        want = [('ADR-0001', '0001-use-postgres.md', 'Use PostgreSQL for orders', 'Accepted', '2025-01-14'), ('ADR-0002', '0002-adopt-rest.md', 'Expose a REST API', 'Accepted', '2025-01-21'), ('ADR-0003', '0003-graphql-gateway.md', 'Add a GraphQL gateway', 'Rejected', '2025-02-03'), ('ADR-0004', '0004-queue-rabbit.md', 'Use RabbitMQ for background jobs', 'Superseded', '2025-02-11'), ('ADR-0005', '0005-cache-memory.md', 'Cache lookups in process memory', 'Superseded', '2025-02-18'), ('ADR-0006', '0006-monorepo.md', 'Move to a monorepo', 'Rejected', '2025-02-25'), ('ADR-0007', '0007-jobs-sqs.md', 'Use SQS instead of RabbitMQ', 'Accepted', '2025-03-05'), ('ADR-0008', '0008-structured-logs.md', 'Emit structured JSON logs', 'Accepted', '2025-03-12'), ('ADR-0009', '0009-feature-flags.md', 'Use a feature flag service', 'Proposed', '2025-03-19'), ('ADR-0010', '0010-api-v2.md', 'Replace /v1 with /v2 in 2026', 'Accepted', '2025-03-27'), ('ADR-0011', '0011-cache-redis.md', 'Move the cache to Redis', 'Accepted', '2025-04-02'), ('ADR-0012', '0012-sunset-v1.md', 'Announce the /v1 sunset date', 'Proposed', '2025-04-09')]
+        got = []
+        for r in rows[1:]:
+            m = re.fullmatch(r'\[([^\]]+)\]\(([^)]+)\)', r[0].strip())
+            need(m, 'ADR cell must be a markdown link: ' + r[0])
+            need((W / 'docs/adr' / m.group(2)).exists(), 'broken link ' + m.group(2))
+            got.append((m.group(1), m.group(2), r[1], r[2], r[3]))
+        need(got == want, 'index rows differ: ' + str([g for g in got if g not in want][:2]))
+
+
+    if __name__ == "__main__":
+        fn = globals().get(sys.argv[1]) if len(sys.argv) > 1 else None
+        need(callable(fn) and sys.argv[1] in ['t2', 't3', 't5', 't6', 't7', 't8', 't9'], "unknown check " + str(sys.argv[1:]))
+        fn()
+        print("OK")
+turns:
+- prompt: How many decision notes in notes/ are dated before 2025-04-01, and which of those have status rejected (give their
+    slugs)? Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all:
+    - (?<![\d.,])1,?0(?:\.0+)?(?!\d|[.,]\d)
+    - graphql\-gateway
+    - monorepo
+- prompt: 'Write the ADRs for the four earliest notes dated before 2025-04-01. Number by note date (ties by slug), starting
+    at 0001. Each ADR is `docs/adr/<NNNN>-<slug>.md` and has exactly this layout: `# ADR-<NNNN>: <title>`, then the lines
+    `- Status: <Accepted|Rejected|Proposed>` (from the note''s status), `- Date: <date>`, `- Supersedes: none`, `- Superseded
+    by: none`, then `## Context`, `## Decision` and `## Consequences` sections whose text is the note''s context, decision
+    and consequences lines verbatim. Do not write ADRs for later notes yet.'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t2
+    hidden:
+    - _grade.py
+    timeout: 60
+- prompt: Write the remaining ADRs for the notes dated before 2025-04-01, continuing the numbering by date, same layout.
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t3
+    hidden:
+    - _grade.py
+    timeout: 60
+- prompt: Which note replaces an earlier decision, which ADR number does it get, and what is the ADR number of the decision
+    it replaces? Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all:
+    - ADR-?0007|7
+    - ADR-?0004|4
+    - jobs\-sqs
+- prompt: 'Apply supersession from the `replaces` lines: in the replacing ADR set `- Supersedes: ADR-<number of the replaced
+    ADR>`; in the replaced ADR set `- Status: Superseded` and `- Superseded by: ADR-<number of the replacing ADR>`. Leave
+    everything else unchanged.'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t5
+    hidden:
+    - _grade.py
+    timeout: 60
+- prompt: 'Create docs/adr/README.md: a `# Decision log` title and a table (columns ADR, title, status, date), one row per
+    ADR in number order. The ADR cell is a relative link like `[ADR-0001](0001-use-postgres.md)`; status is the ADR''s current
+    status.'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t6
+    hidden:
+    - _grade.py
+    timeout: 60
+- prompt: 'Add scripts/adr_lint.py [--dir DIR] (default docs/adr). For every NNNN-*.md in DIR it reports, one line each: `ADR-NNNN:
+    missing section <Name>` for a missing Context, Decision or Consequences heading; `ADR-NNNN: bad status <value>` when the
+    Status is not Proposed, Accepted, Rejected or Superseded; `ADR-NNNN: superseded without successor` when the status is
+    Superseded but `Superseded by` is none. Print the lines sorted and exit 1, or print `ok` and exit 0.'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t7
+    hidden:
+    - _grade.py
+    timeout: 60
+- prompt: Notes dated 2025-04-01 or later are now in scope. Write ADRs for them, continuing the numbering by date, same layout,
+    and apply the supersession their `replaces` lines imply (including the Status and Superseded by of the replaced ADR).
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t8
+    hidden:
+    - _grade.py
+    timeout: 60
+- prompt: Update docs/adr/README.md so it lists every ADR, with current statuses.
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t9
+    hidden:
+    - _grade.py
+    timeout: 60
+- prompt: Add a '## Decisions' section to README.md that links docs/adr/README.md, explains the numbering rule (by note date,
+    ties by slug) and mentions scripts/adr_lint.py.
+  checks:
+  - kind: doc_sections
+    path: README.md
+    headings:
+    - Decisions
+  - kind: file_regex
+    path: README.md
+    pattern: docs/adr/README\.md
+  - kind: file_regex
+    path: README.md
+    pattern: (?i)ties
+  - kind: file_regex
+    path: README.md
+    pattern: scripts/adr_lint\.py

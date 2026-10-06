@@ -1,0 +1,14 @@
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}l r r r r@{}}
+\toprule
+Policy (decided once per session) & routed & cost ratio [95\,\% CI] & turn-pass $\Delta$ [95\,\% CI] & \$ / 1,000 \\
+\midrule
+Fable: always host (plain) & 0\,\% & 1.000 [1.000, 1.000] & 0.000 [0.000, 0.000] & 5{,}311 \\
+Fable: Jev decides once & 89\,\% & 0.545 [0.510, 0.585] & $-$0.019 [$-$0.052, 0.010] & 3{,}108 \\
+Fable: rule R* (always route, scope gate) & 99\,\% & 0.509 [0.484, 0.538] & $-$0.019 [$-$0.052, 0.010] & 2{,}739 \\
+Fable: oracle, equal quality & 81\,\% & 0.583 [0.544, 0.627] & 0.012 [$-$0.004, 0.030] & 3{,}268 \\
+Opus: shipped (price gate, never routes) & 0\,\% & 1.000 [1.000, 1.000] & 0.000 [0.000, 0.000] & 2{,}125 \\
+Opus: Jev decides once, no gate & 89\,\% & 1.159 [1.092, 1.232] & $-$0.009 [$-$0.033, 0.013] & 2{,}498 \\
+Opus: always route & 100\,\% & 1.197 [1.125, 1.273] & $-$0.005 [$-$0.030, 0.019] & 2{,}620 \\
+Opus: oracle, equal quality & 22\,\% & 0.991 [0.975, 1.008] & 0.000 [$-$0.011, 0.009] & 2{,}124 \\
+\bottomrule
+\end{tabular*}

@@ -1,0 +1,114 @@
+# holdout-v3 repos: rich-softwrap -- 9 turns, short gaps.
+id: rich-softwrap
+task_type: bugfix
+language: python
+split: holdout
+default_gap_s: 10
+source:
+  desc: >-
+    Textualize/rich, Console.print with a style and soft_wrap=True styled the line break and bled
+    the background into the next line (#3838), fixed upstream in 39ee57df; workspace is its parent
+  repo: https://github.com/Textualize/rich.git
+  sha: 05ff970926cbd0b5d0acb6fc18cdbd1fc971e582
+  fix_sha: 39ee57dfe70614381c3ebce34cb35cab557af2f5
+workspace:
+  kind: git
+  repo: https://github.com/Textualize/rich.git
+  sha: 05ff970926cbd0b5d0acb6fc18cdbd1fc971e582
+  local_hint: ~/dev/afast-v3-src/rich
+hidden_files:
+  tests/test_text.py:
+    from_git:
+      repo: https://github.com/Textualize/rich.git
+      sha: 39ee57dfe70614381c3ebce34cb35cab557af2f5
+      path: tests/test_text.py
+      local_hint: ~/dev/afast-v3-src/rich
+  tests/test_soft_wrap_end_hidden.py: |
+    from rich.console import Console
+
+
+    def _out(*args, **kwargs):
+        console = Console(color_system="standard", width=40, force_terminal=True)
+        with console.capture() as capture:
+            console.print(*args, style="red", soft_wrap=True, **kwargs)
+        return capture.get()
+
+
+    def test_end_empty_is_respected():
+        assert _out("x", end="") == "\x1b[31mx\x1b[0m"
+
+
+    def test_default_end_is_a_plain_newline():
+        assert _out("x") == "\x1b[31mx\x1b[0m\n"
+
+
+    def test_multiple_lines_reset_before_each_newline():
+        assert _out("a\nb") == "\x1b[31ma\x1b[0m\n\x1b[31mb\x1b[0m\n"
+
+
+    def test_sep_between_renderables():
+        assert _out("a", "b") == "\x1b[31ma b\x1b[0m\n"
+
+
+    def test_two_renderables_without_end():
+        assert _out("a\nb", end="") == "\x1b[31ma\x1b[0m\n\x1b[31mb\x1b[0m"
+turns:
+  - prompt: >-
+      With `soft_wrap=True` and a style, rich's `Console.print` leaves the style active across the
+      line break: `console.print("soft wrap is on", style="blue on white", soft_wrap=True)` followed
+      by `console.print("Next line")` makes the next line start inside the blue-on-white run. (Use
+      `Console(color_system="standard", width=80, force_terminal=True)` and `console.capture()` to see
+      the escape codes.) The expected output is `\x1b[34;47msoft wrap is on\x1b[0m\nNext line\n`, so
+      the style must be reset before the newline. Find the cause in the rich package and fix it. Run
+      the tests from this directory with `python3 -m pytest -q tests/test_text.py`.
+    checks:
+      - {kind: tests, runner: python, files: [tests/test_text.py], hidden: [tests/test_text.py]}
+  - prompt: >-
+      In three to five sentences explain the root cause: in which branch of `Console.print` the style
+      is applied, what it was applied to, and why that pulled the line break into the styled run. Do
+      not change any files.
+    checks:
+      - {kind: keyed_facts, all: [print, apply_style, style, newline|\\n|line break], any: [soft_wrap, segment, Segment]}
+  - prompt: >-
+      Add a test file `tests/test_soft_wrap_style.py` with at least four tests using a captured
+      `Console(color_system="standard", width=80, force_terminal=True)`: the style is reset before the
+      newline, a following unstyled print starts clean, each line of multi-line text is styled
+      separately, and without a style nothing changes. Run it.
+    checks:
+      - {kind: file_regex, path: tests/test_soft_wrap_style.py, pattern: ^def test_, min_count: 4}
+      - {kind: tests, runner: python, files: [tests/test_soft_wrap_style.py]}
+  - prompt: >-
+      The fix has a side effect: `console.print("x", style="red", soft_wrap=True, end="")` now still
+      writes a trailing newline, although `end=""` asks for none. Make `end` work again with a style
+      and soft_wrap: no newline for `end=""`, the default `end` unchanged, multi-line text still reset
+      before each newline, `sep` between renderables unchanged. The earlier cases must keep passing.
+    checks:
+      - {kind: tests, runner: python, files: [tests/test_soft_wrap_end_hidden.py, tests/test_soft_wrap_style.py, tests/test_text.py], hidden: [tests/test_soft_wrap_end_hidden.py, tests/test_text.py]}
+  - prompt: >-
+      Add an entry to the Fixed list under [Unreleased] in CHANGELOG.md for the soft_wrap style fix:
+      with a style and `soft_wrap=True` the style is no longer applied to the line break. Match the
+      style of the other bullets.
+    checks:
+      - {kind: file_regex, path: CHANGELOG.md, pattern: '^## \[Unreleased\]\n\n### Fixed\n\n(?:- .*\n)*?- .*(?i:style|background).*(?i:soft.wrap)|^## \[Unreleased\]\n\n### Fixed\n\n(?:- .*\n)*?- .*(?i:soft.wrap).*(?i:style|background)'}
+  - prompt: >-
+      Question only: where is `Console.print` implemented, which branch handles `soft_wrap`, and which
+      `Segment` helpers does the styled path use to apply the style and to split text into lines? Name
+      the file and the helpers. Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [console\.py, soft_wrap, apply_style, Segment], any: [split_lines, split_and_crop_lines, line\(\)]}
+  - prompt: >-
+      Update the `soft_wrap` entry in the `Console.print` docstring to mention that a style passed
+      with soft_wrap is not applied to the line break (the newline stays unstyled). Docstring only.
+    checks:
+      - {kind: file_regex, path: rich/console.py, pattern: '(?s)soft_wrap \(bool, optional\)(?:(?!\n\s+\w+ \().){0,400}?(?i:line break|newline|new line)'}
+      - {kind: tests, runner: python, files: [tests/test_text.py], hidden: [tests/test_text.py]}
+  - prompt: >-
+      Run the text test module together with your new test file and report the totals (passed /
+      failed). Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [test_text, test_soft_wrap_style, \d+ passed]}
+  - prompt: >-
+      Review the changes you made in this session as a code reviewer would: list each file you changed
+      or added, what changed, and any remaining edge case you did not cover. Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [console\.py, CHANGELOG, test], any: [edge, risk, not cover, remaining]}

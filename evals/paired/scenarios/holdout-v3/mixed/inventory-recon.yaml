@@ -1,0 +1,576 @@
+# holdout-v3 batch B (mixed, 11 turns): Warehouse stock reconciliation: cycle counts vs system stock CSVs; exact variance figures, JSON/markdown/CSV reports, a small CLI that must generalise to another dataset, docs.
+id: inventory-recon
+task_type: mixed
+language: python
+split: holdout
+default_gap_s: 10
+source:
+  desc: 'Warehouse stock reconciliation: cycle counts vs system stock CSVs; exact variance figures, JSON/markdown/CSV reports,
+    a small CLI that must generalise to another dataset, docs.'
+  kind: self-authored deterministic workspace
+  adapted_from:
+  - ~/dev/amplifier-agent/.amplifier/evaluation/tasks (data-question-into-file pattern); inventory data is new and self-authored
+workspace:
+  kind: inline
+  files:
+    data/skus.csv: |
+      sku,name,unit_cost,reorder_point,supplier
+      SKU-1000,Gasket A82,46.89,39,Cato
+      SKU-1007,Clamp A97,47.62,47,Delta
+      SKU-1014,Sensor G69,35.29,26,Borealis
+      SKU-1021,Bolt H11,39.64,8,Acme
+      SKU-1028,Spring A99,29.62,35,Borealis
+      SKU-1035,Gasket B92,41.81,11,Acme
+      SKU-1042,Sensor C64,25.75,32,Borealis
+      SKU-1049,Relay G35,16.15,43,Delta
+      SKU-1056,Bolt G99,14.78,21,Delta
+      SKU-1063,Bracket G51,23.96,28,Borealis
+      SKU-1070,Bearing E70,32.44,13,Borealis
+      SKU-1077,Clamp A17,6.74,12,Acme
+      SKU-1084,Valve A48,5.89,11,Delta
+      SKU-1091,Washer G78,46.83,41,Borealis
+      SKU-1098,Cable F69,19.99,30,Delta
+      SKU-1105,Clamp A51,21.12,26,Cato
+      SKU-1112,Hinge B65,40.50,30,Delta
+      SKU-1119,Clamp H80,32.51,19,Acme
+      SKU-1126,Washer C26,12.74,23,Acme
+      SKU-1133,Cable E38,44.23,24,Acme
+      SKU-1140,Gasket H42,19.30,25,Delta
+      SKU-1147,Cable A10,31.64,39,Borealis
+      SKU-1154,Relay B69,28.81,45,Delta
+      SKU-1161,Bearing C53,9.06,32,Cato
+      SKU-1168,Bracket G81,40.52,34,Delta
+      SKU-1175,Bearing E89,5.00,21,Cato
+      SKU-1182,Bracket D49,3.83,11,Acme
+      SKU-1189,Spring B66,28.18,43,Cato
+      SKU-1196,Gasket A20,13.41,24,Acme
+      SKU-1203,Spring D74,39.19,30,Acme
+      SKU-1210,Cable A19,26.23,38,Cato
+      SKU-1217,Sensor C44,14.07,13,Cato
+      SKU-1224,Clamp E93,13.95,11,Delta
+      SKU-1231,Washer A65,47.41,23,Cato
+      SKU-1238,Relay G11,10.80,40,Delta
+      SKU-1245,Bolt H49,18.78,38,Borealis
+      SKU-1252,Hinge D17,26.34,47,Cato
+      SKU-1259,Cable G19,13.82,45,Delta
+      SKU-1266,Washer C16,10.00,33,Acme
+      SKU-1273,Valve G37,16.96,25,Acme
+      SKU-1280,Spring F84,18.65,14,Cato
+      SKU-1287,Hinge H59,16.07,33,Cato
+      SKU-1294,Gasket E46,21.10,43,Borealis
+      SKU-1301,Bracket B19,15.64,26,Borealis
+      SKU-1308,Washer H87,38.52,14,Borealis
+      SKU-1315,Hinge B67,6.48,37,Borealis
+      SKU-1322,Bolt A46,12.96,10,Acme
+      SKU-1329,Cable G64,30.42,31,Acme
+    data/system_stock.csv: |
+      sku,warehouse,qty_system
+      SKU-1000,WH-A,6
+      SKU-1000,WH-B,12
+      SKU-1007,WH-A,35
+      SKU-1007,WH-B,14
+      SKU-1014,WH-A,22
+      SKU-1014,WH-B,11
+      SKU-1021,WH-A,3
+      SKU-1021,WH-B,22
+      SKU-1028,WH-A,32
+      SKU-1028,WH-B,22
+      SKU-1035,WH-A,4
+      SKU-1035,WH-B,3
+      SKU-1042,WH-A,19
+      SKU-1042,WH-B,0
+      SKU-1049,WH-A,27
+      SKU-1049,WH-B,29
+      SKU-1056,WH-A,32
+      SKU-1056,WH-B,32
+      SKU-1063,WH-A,33
+      SKU-1063,WH-B,19
+      SKU-1070,WH-A,5
+      SKU-1070,WH-B,29
+      SKU-1077,WH-A,32
+      SKU-1077,WH-B,38
+      SKU-1084,WH-A,29
+      SKU-1084,WH-B,22
+      SKU-1091,WH-A,2
+      SKU-1091,WH-B,9
+      SKU-1098,WH-A,25
+      SKU-1098,WH-B,30
+      SKU-1105,WH-A,35
+      SKU-1105,WH-B,5
+      SKU-1112,WH-A,15
+      SKU-1112,WH-B,19
+      SKU-1119,WH-A,3
+      SKU-1119,WH-B,27
+      SKU-1126,WH-A,23
+      SKU-1126,WH-B,37
+      SKU-1133,WH-A,20
+      SKU-1133,WH-B,28
+      SKU-1140,WH-A,14
+      SKU-1140,WH-B,26
+      SKU-1147,WH-A,38
+      SKU-1147,WH-B,0
+      SKU-1154,WH-A,23
+      SKU-1154,WH-B,5
+      SKU-1161,WH-A,37
+      SKU-1161,WH-B,3
+      SKU-1168,WH-A,5
+      SKU-1168,WH-B,26
+      SKU-1175,WH-A,23
+      SKU-1175,WH-B,12
+      SKU-1182,WH-A,26
+      SKU-1182,WH-B,28
+      SKU-1189,WH-A,26
+      SKU-1189,WH-B,28
+      SKU-1196,WH-A,11
+      SKU-1196,WH-B,6
+      SKU-1203,WH-A,18
+      SKU-1203,WH-B,37
+      SKU-1210,WH-A,2
+      SKU-1210,WH-B,21
+      SKU-1217,WH-A,9
+      SKU-1217,WH-B,11
+      SKU-1224,WH-A,0
+      SKU-1224,WH-B,8
+      SKU-1231,WH-A,40
+      SKU-1231,WH-B,9
+      SKU-1238,WH-A,16
+      SKU-1238,WH-B,9
+      SKU-1245,WH-A,10
+      SKU-1245,WH-B,24
+      SKU-1252,WH-A,11
+      SKU-1252,WH-B,3
+      SKU-1259,WH-A,27
+      SKU-1259,WH-B,21
+      SKU-1266,WH-A,33
+      SKU-1266,WH-B,16
+      SKU-1273,WH-A,23
+      SKU-1273,WH-B,40
+      SKU-1280,WH-A,19
+      SKU-1280,WH-B,31
+      SKU-1287,WH-A,40
+      SKU-1287,WH-B,32
+      SKU-1294,WH-A,23
+      SKU-1294,WH-B,15
+      SKU-1301,WH-A,22
+      SKU-1301,WH-B,9
+      SKU-1308,WH-A,35
+      SKU-1308,WH-B,11
+      SKU-1315,WH-A,39
+      SKU-1315,WH-B,3
+      SKU-1322,WH-A,11
+      SKU-1322,WH-B,6
+      SKU-1329,WH-A,27
+      SKU-1329,WH-B,24
+    data/cycle_counts.csv: |
+      sku,warehouse,qty_counted,counted_on
+      SKU-1000,WH-A,6,2025-02-21
+      SKU-1000,WH-B,12,2025-02-24
+      SKU-1007,WH-A,18,2025-02-26
+      SKU-1007,WH-B,14,2025-02-27
+      SKU-1014,WH-A,22,2025-02-23
+      SKU-1021,WH-A,0,2025-02-25
+      SKU-1021,WH-B,22,2025-02-20
+      SKU-1028,WH-A,28,2025-02-26
+      SKU-1035,WH-A,0,2025-02-26
+      SKU-1035,WH-B,3,2025-02-27
+      SKU-1042,WH-A,15,2025-02-27
+      SKU-1049,WH-A,27,2025-03-01
+      SKU-1056,WH-A,32,2025-03-01
+      SKU-1056,WH-B,32,2025-02-21
+      SKU-1063,WH-A,28,2025-02-27
+      SKU-1063,WH-B,19,2025-02-28
+      SKU-1070,WH-B,29,2025-03-01
+      SKU-1077,WH-A,29,2025-02-22
+      SKU-1077,WH-B,29,2025-02-23
+      SKU-1084,WH-A,29,2025-02-28
+      SKU-1084,WH-B,28,2025-02-25
+      SKU-1091,WH-A,2,2025-02-27
+      SKU-1091,WH-B,9,2025-02-20
+      SKU-1105,WH-A,35,2025-02-26
+      SKU-1112,WH-B,19,2025-02-28
+      SKU-1119,WH-A,9,2025-02-26
+      SKU-1119,WH-B,26,2025-02-26
+      SKU-1126,WH-B,37,2025-02-20
+      SKU-1133,WH-B,32,2025-02-23
+      SKU-1140,WH-A,14,2025-03-01
+      SKU-1154,WH-A,23,2025-03-01
+      SKU-1154,WH-B,5,2025-02-26
+      SKU-1161,WH-A,43,2025-03-01
+      SKU-1161,WH-B,3,2025-02-27
+      SKU-1168,WH-A,7,2025-02-24
+      SKU-1175,WH-A,23,2025-03-01
+      SKU-1182,WH-A,26,2025-02-26
+      SKU-1182,WH-B,28,2025-02-28
+      SKU-1189,WH-A,19,2025-03-01
+      SKU-1189,WH-B,28,2025-02-21
+      SKU-1210,WH-A,2,2025-02-20
+      SKU-1210,WH-B,21,2025-02-27
+      SKU-1217,WH-B,11,2025-02-24
+      SKU-1224,WH-A,0,2025-02-24
+      SKU-1224,WH-B,14,2025-02-23
+      SKU-1231,WH-A,40,2025-02-23
+      SKU-1231,WH-B,13,2025-02-26
+      SKU-1245,WH-A,10,2025-02-23
+      SKU-1245,WH-B,30,2025-02-21
+      SKU-1252,WH-A,11,2025-03-01
+      SKU-1252,WH-B,3,2025-02-22
+      SKU-1259,WH-A,27,2025-02-23
+      SKU-1259,WH-B,21,2025-02-27
+      SKU-1273,WH-A,18,2025-02-22
+      SKU-1273,WH-B,44,2025-02-27
+      SKU-1280,WH-A,16,2025-03-01
+      SKU-1287,WH-A,39,2025-03-01
+      SKU-1287,WH-B,32,2025-02-21
+      SKU-1294,WH-A,23,2025-02-28
+      SKU-1294,WH-B,15,2025-02-26
+      SKU-1301,WH-B,9,2025-02-21
+      SKU-1308,WH-A,35,2025-02-22
+      SKU-1308,WH-B,11,2025-02-23
+      SKU-1315,WH-A,39,2025-02-27
+      SKU-1315,WH-B,3,2025-03-01
+      SKU-1322,WH-A,11,2025-02-21
+      SKU-1322,WH-B,6,2025-02-28
+      SKU-1329,WH-A,18,2025-02-27
+      SKU-1329,WH-B,15,2025-03-01
+    data/inbound.csv: |
+      po,sku,qty,eta,status
+      PO-4400,SKU-1070,10,2025-03-18,cancelled
+      PO-4401,SKU-1252,60,2025-03-23,open
+      PO-4402,SKU-1119,40,2025-03-06,open
+      PO-4403,SKU-1112,20,2025-03-05,open
+      PO-4404,SKU-1266,60,2025-03-17,open
+      PO-4405,SKU-1035,25,2025-03-21,open
+      PO-4406,SKU-1154,50,2025-03-06,received
+      PO-4407,SKU-1245,40,2025-03-13,cancelled
+      PO-4408,SKU-1238,20,2025-03-19,open
+      PO-4409,SKU-1203,40,2025-03-17,open
+      PO-4410,SKU-1308,20,2025-03-08,open
+      PO-4411,SKU-1329,20,2025-03-11,cancelled
+      PO-4412,SKU-1056,25,2025-03-14,cancelled
+      PO-4413,SKU-1231,60,2025-03-24,open
+      PO-4414,SKU-1098,40,2025-03-06,open
+      PO-4415,SKU-1098,25,2025-03-14,open
+      PO-4416,SKU-1028,10,2025-03-22,cancelled
+      PO-4417,SKU-1210,40,2025-03-05,received
+      PO-4418,SKU-1238,50,2025-03-27,open
+      PO-4419,SKU-1077,20,2025-03-13,open
+      PO-4420,SKU-1217,50,2025-03-14,open
+      PO-4421,SKU-1280,60,2025-03-24,cancelled
+      PO-4422,SKU-1231,40,2025-03-19,open
+      PO-4423,SKU-1021,40,2025-03-08,cancelled
+      PO-4424,SKU-1049,60,2025-03-19,open
+      PO-4425,SKU-1091,40,2025-03-06,open
+      PO-4426,SKU-1140,20,2025-03-18,open
+      PO-4427,SKU-1287,25,2025-03-25,open
+      PO-4428,SKU-1070,50,2025-03-19,open
+      PO-4429,SKU-1231,50,2025-03-06,open
+    README.md: |
+      # stockroom
+
+      Monthly stock reconciliation inputs live in `data/`:
+
+      - `skus.csv` - sku, name, unit_cost, reorder_point, supplier
+      - `system_stock.csv` - the ERP stock snapshot taken 2025-03-01 (sku, warehouse, qty_system)
+      - `cycle_counts.csv` - physical counts (sku, warehouse, qty_counted, counted_on). Counts dated before 2025-03-01 are stale.
+      - `inbound.csv` - purchase orders (po, sku, qty, eta, status = open | received | cancelled)
+
+      Variance = qty_counted - qty_system. Outputs go to `out/`; helper scripts go to `scripts/`.
+protected:
+- data/skus.csv
+- data/system_stock.csv
+- data/cycle_counts.csv
+- data/inbound.csv
+hidden_files:
+  _grade.py: |
+    import csv, json, os, re, subprocess, sys
+    from pathlib import Path
+
+    W = Path(".")
+
+
+    def fail(msg):
+        print("FAIL:", msg)
+        sys.exit(1)
+
+
+    def need(cond, msg):
+        if not cond:
+            fail(msg)
+
+
+    def read(rel):
+        p = W / rel
+        need(p.exists(), f"missing {rel}")
+        return p.read_text(encoding="utf-8")
+
+
+    def load_json(rel):
+        try:
+            return json.loads(read(rel))
+        except ValueError as e:
+            fail(f"{rel} is not valid JSON: {e}")
+
+
+    def close(a, b, tol=0.011):
+        try:
+            return abs(float(a) - float(b)) <= tol
+        except (TypeError, ValueError):
+            return False
+
+
+    def num(s):
+        m = re.search(r"-?\d[\d,]*\.?\d*", str(s))
+        return float(m.group(0).replace(",", "")) if m else None
+
+
+    def run(cmd, timeout=60, stdin=None):
+        p = subprocess.run(cmd, shell=True, cwd=W, capture_output=True, text=True, timeout=timeout, input=stdin)
+        return p.returncode, p.stdout, p.stderr
+
+
+    def md_lines(rel, under=None):
+        lines = read(rel).splitlines()
+        if not under:
+            return lines
+        out, on, lvl = [], False, 0
+        for ln in lines:
+            m = re.match(r"^(#+)\s+(.*)", ln)
+            if m:
+                if on and len(m.group(1)) <= lvl:
+                    break
+                if not on and re.search(under, m.group(2), re.I):
+                    on, lvl = True, len(m.group(1))
+                continue
+            if on:
+                out.append(ln)
+        need(on, f"no heading matching {under!r} in {rel}")
+        return out
+
+
+    def md_rows(rel, under=None):
+        rows = []
+        for ln in md_lines(rel, under):
+            if ln.strip().startswith("|") and not re.match(r"^\s*\|[\s:|-]+\|\s*$", ln):
+                rows.append([c.strip() for c in ln.strip().strip("|").split("|")])
+        return rows
+
+
+    def cmp(got, want, tol, path):
+        if isinstance(want, dict):
+            need(isinstance(got, dict), f"{path}: expected an object, got {type(got).__name__}")
+            for k, v in want.items():
+                need(k in got, f"{path}.{k}: missing")
+                cmp(got[k], v, tol, f"{path}.{k}")
+        elif isinstance(want, list):
+            need(isinstance(got, list) and len(got) == len(want), f"{path}: expected list of {len(want)}, got {got!r}")
+            for i, (g, w) in enumerate(zip(got, want)):
+                cmp(g, w, tol, f"{path}[{i}]")
+        elif isinstance(want, bool) or want is None or isinstance(want, str):
+            need(got == want, f"{path}: {got!r} != {want!r}")
+        else:
+            need(not isinstance(got, bool) and close(got, want, tol), f"{path}: {got!r} != {want!r}")
+
+
+    def chk_json(rel, exp, tol=0.051):
+        cmp(load_json(rel), exp, tol, rel)
+
+
+    def chk_table(rel, under, exp, col=1, tol=0.051):
+        rows = md_rows(rel, under)
+        need(rows, f"no table under {under!r} in {rel}")
+        got = {r[0].strip("* `"): num(r[col]) for r in rows if len(r) > col and num(r[col]) is not None}
+        for k, v in exp.items():
+            need(k in got and close(got[k], v, tol), f"{k}: {got.get(k)} != {v}")
+
+
+    def chk_cmd_json(cmd, exp, tol=0.051, stdin=None):
+        rc, out, err = run(cmd, stdin=stdin)
+        need(rc == 0, f"`{cmd}` exited {rc}: {err[-200:]}")
+        try:
+            d = json.loads(out)
+        except ValueError as e:
+            fail(f"`{cmd}` stdout is not JSON: {e}")
+        cmp(d, exp, tol, cmd)
+
+
+    def chk_cmd_out(cmd, lines, stdin=None, expect_rc=0):
+        rc, out, err = run(cmd, stdin=stdin)
+        need(rc == expect_rc, f"`{cmd}` exited {rc} (want {expect_rc}): {err[-200:]}")
+        got = [ln.rstrip() for ln in out.strip().splitlines()]
+        need(got == list(lines), f"`{cmd}` output {got[:8]} != {list(lines)[:8]}")
+
+
+    def t3():
+        chk_json('out/variance.json', {'rows_counted': 69, 'mismatched': 24, 'net_variance_units': -40, 'abs_variance_units': 128, 'variance_value': -1455.43})
+
+
+    def t6():
+        chk_table('report.md', 'by warehouse', {'WH-A': -1754.6, 'WH-B': 299.17})
+
+
+    def t6b():
+        rows = md_rows('report.md', 'top 5')
+        need(len(rows) >= 6, 'need header + 5 rows')
+        got = [r for r in rows[1:] if r[0].startswith('SKU-')]
+        need([r[0] for r in got] == ['SKU-1007', 'SKU-1077', 'SKU-1329', 'SKU-1329', 'SKU-1189'], 'top-5 order: ' + str([r[0] for r in got]))
+        need([int(num(r[-1])) for r in got] == [17, 9, 9, 9, 7], 'absolute variances')
+
+
+    def t7():
+        import csv
+        need((W / 'out/reorder.csv').exists(), 'missing out/reorder.csv')
+        with open('out/reorder.csv', encoding='utf-8', newline='') as f:
+            rd = list(csv.DictReader(f))
+        need(rd and list(rd[0].keys()) == ['sku', 'on_hand', 'open_inbound', 'reorder_point', 'shortfall'], 'header: ' + str(rd and list(rd[0].keys())))
+        got = [[r['sku'], int(r['on_hand']), int(r['open_inbound']), int(r['shortfall'])] for r in rd]
+        need(got == [['SKU-1000', 18, 0, 21], ['SKU-1154', 28, 0, 17], ['SKU-1210', 23, 0, 15], ['SKU-1042', 19, 0, 13], ['SKU-1196', 17, 0, 7], ['SKU-1294', 38, 0, 5], ['SKU-1245', 34, 0, 4], ['SKU-1168', 31, 0, 3], ['SKU-1224', 8, 0, 3], ['SKU-1147', 38, 0, 1]], 'rows differ: ' + str(got[:4]))
+
+
+    def t10():
+        import os
+        for rel, text in {'data/skus.csv': 'sku,name,unit_cost,reorder_point,supplier\nSKU-1000,Washer D29,47.95,27,Acme\nSKU-1007,Bearing C48,5.62,38,Delta\nSKU-1014,Sensor G50,34.94,35,Acme\nSKU-1021,Spring E15,46.00,40,Acme\nSKU-1028,Clamp H38,3.94,22,Acme\n', 'data/system_stock.csv': 'sku,warehouse,qty_system\nSKU-1000,WH-A,32\nSKU-1000,WH-B,27\nSKU-1000,WH-C,12\nSKU-1007,WH-A,14\nSKU-1007,WH-B,13\nSKU-1007,WH-C,26\nSKU-1014,WH-A,10\nSKU-1014,WH-B,19\nSKU-1014,WH-C,21\nSKU-1021,WH-A,0\nSKU-1021,WH-B,6\nSKU-1021,WH-C,26\nSKU-1028,WH-A,19\nSKU-1028,WH-B,20\nSKU-1028,WH-C,23\n', 'data/cycle_counts.csv': 'sku,warehouse,qty_counted,counted_on\nSKU-1000,WH-A,32,2025-02-22\nSKU-1000,WH-C,12,2025-02-27\nSKU-1007,WH-A,20,2025-02-26\nSKU-1007,WH-C,25,2025-02-21\nSKU-1014,WH-A,16,2025-02-24\nSKU-1014,WH-B,19,2025-02-21\nSKU-1014,WH-C,22,2025-02-27\nSKU-1021,WH-A,0,2025-02-25\nSKU-1021,WH-B,6,2025-02-28\nSKU-1021,WH-C,26,2025-02-24\nSKU-1028,WH-A,19,2025-02-25\nSKU-1028,WH-C,23,2025-02-20\n', 'data/inbound.csv': 'po,sku,qty,eta,status\nPO-4400,SKU-1000,25,2025-03-27,open\nPO-4401,SKU-1021,25,2025-03-20,cancelled\nPO-4402,SKU-1014,50,2025-03-17,open\nPO-4403,SKU-1021,20,2025-03-26,open\nPO-4404,SKU-1007,50,2025-03-11,open\nPO-4405,SKU-1021,50,2025-03-25,received\n'}.items():
+            p = W / '_alt' / rel
+            p.parent.mkdir(parents=True, exist_ok=True)
+            p.write_text(text, encoding='utf-8')
+        need((W / 'scripts/recon.py').exists(), 'missing scripts/recon.py')
+        chk_cmd_json('python3 scripts/recon.py --data-dir _alt/data', {'rows_counted': 12, 'mismatched': 4, 'net_variance_units': 12, 'abs_variance_units': 14, 'variance_value': 272.68})
+        chk_cmd_json('python3 scripts/recon.py', {'rows_counted': 69, 'mismatched': 24, 'net_variance_units': -40, 'abs_variance_units': 128, 'variance_value': -1455.43})
+
+
+    def t11():
+        chk_json('out/variance.json', {'rows_counted_fresh': 13, 'mismatched_fresh': 5, 'net_variance_units_fresh': -14, 'rows_counted': 69, 'mismatched': 24, 'net_variance_units': -40, 'abs_variance_units': 128, 'variance_value': -1455.43})
+
+
+    def t12():
+        chk_cmd_json('python3 scripts/recon.py', {'rows_counted': 69, 'mismatched': 24, 'net_variance_units': -40, 'abs_variance_units': 128, 'variance_value': -1455.43, 'rows_counted_fresh': 13, 'mismatched_fresh': 5, 'net_variance_units_fresh': -14})
+
+
+    if __name__ == "__main__":
+        fn = globals().get(sys.argv[1]) if len(sys.argv) > 1 else None
+        need(callable(fn) and sys.argv[1] in ['t10', 't11', 't12', 't3', 't6', 't6b', 't7'], "unknown check " + str(sys.argv[1:]))
+        fn()
+        print("OK")
+turns:
+- prompt: Compare data/cycle_counts.csv with data/system_stock.csv (variance = qty_counted - qty_system, matched on sku +
+    warehouse). How many count rows have a non-zero variance, and what is the total absolute variance in units? Do not change
+    any files.
+  checks:
+  - kind: keyed_facts
+    all:
+    - (?<![\d.,])2,?4(?:\.0+)?(?!\d|[.,]\d)
+    - (?<![\d.,])1,?2,?8(?:\.0+)?(?!\d|[.,]\d)
+- prompt: Which single count row has the largest absolute variance? Give the sku, the warehouse and the signed variance in
+    units. Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all:
+    - SKU-1007
+    - WH-A
+    - (?<![\d.,])-17(?!\d)
+- prompt: Create out/variance.json with the keys rows_counted, mismatched, net_variance_units, abs_variance_units and variance_value
+    (net variance units multiplied by each sku's unit_cost, summed, rounded to 2 decimals).
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t3
+    hidden:
+    - _grade.py
+    timeout: 60
+- prompt: How many of the (sku, warehouse) rows in data/system_stock.csv have no row at all in data/cycle_counts.csv? Do not
+    change any files.
+  checks:
+  - kind: keyed_facts
+    all:
+    - (?<![\d.,])2,?7(?:\.0+)?(?!\d|[.,]\d)
+- prompt: 'Write report.md with level-2 sections Summary, Variance by warehouse, Top 5 variances and Open questions. Under
+    Variance by warehouse put a table (warehouse in the first column, net variance value = sum of variance x unit_cost, 2
+    decimals, in the second). Under Top 5 variances put a table of the five largest absolute variances, largest first (ties
+    by sku): sku, warehouse, absolute variance.'
+  checks:
+  - kind: doc_sections
+    path: report.md
+    headings:
+    - Summary
+    - Variance by warehouse
+    - Top 5 variances
+    - Open questions
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t6
+    hidden:
+    - _grade.py
+    timeout: 60
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t6b
+    hidden:
+    - _grade.py
+    timeout: 60
+  gap_before_s: 420
+- prompt: 'Write out/reorder.csv listing every sku whose on-hand stock (sum of qty_system over both warehouses) plus open
+    inbound quantity (inbound.csv rows with status open only) is below its reorder_point. Columns: sku, on_hand, open_inbound,
+    reorder_point, shortfall (reorder_point minus on_hand minus open_inbound). Sort by shortfall descending, ties by sku ascending.'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t7
+    hidden:
+    - _grade.py
+    timeout: 60
+- prompt: What is the total value of the shortfall, i.e. the sum of shortfall x unit_cost over the rows of out/reorder.csv,
+    to 2 decimals? Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all:
+    - (?<![\d.,])2,?6,?7,?2\.20*(?!\d|[.,]\d)
+- prompt: 'Add scripts/recon.py: a CLI that recomputes the five out/variance.json figures from the CSVs and prints them as
+    JSON on stdout. It must take --data-dir (default data) so it can run against another folder holding the same four CSV
+    files.'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t10
+    hidden:
+    - _grade.py
+    timeout: 60
+- prompt: The ERP snapshot is dated 2025-03-01, so counts dated before then are stale. Extend out/variance.json (keep the
+    five existing keys) with rows_counted_fresh, mismatched_fresh and net_variance_units_fresh, computed only over counts
+    dated on or after 2025-03-01.
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t11
+    hidden:
+    - _grade.py
+    timeout: 60
+  gap_before_s: 420
+- prompt: Update scripts/recon.py so its JSON output also contains the three *_fresh keys, exactly as in out/variance.json.
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t12
+    hidden:
+    - _grade.py
+    timeout: 60
+- prompt: Add a '## Reconciliation' section to README.md that explains how to run `python3 scripts/recon.py`, names the --data-dir
+    option, and lists the output files out/variance.json, out/reorder.csv and report.md.
+  checks:
+  - kind: doc_sections
+    path: README.md
+    headings:
+    - Reconciliation
+  - kind: file_regex
+    path: README.md
+    pattern: scripts/recon\.py
+  - kind: file_regex
+    path: README.md
+    pattern: --data-dir
+  - kind: file_regex
+    path: README.md
+    pattern: out/reorder\.csv
+  - kind: file_regex
+    path: README.md
+    pattern: out/variance\.json
+  - kind: file_regex
+    path: README.md
+    pattern: report\.md

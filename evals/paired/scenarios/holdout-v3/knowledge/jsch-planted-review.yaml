@@ -1,0 +1,88 @@
+# holdout-v3 knowledge scenario (16 turns, review): python-jsonschema/jsonschema at 51cd75e (629 files) plus three planted patches (uniq rewrite, multipleOf simplification, minItems off-by-one) to review; answers keyed to the real code, one regression-test file checked against each patch
+id: jsch-planted-review
+task_type: review
+language: python
+split: holdout
+source: {desc: 'python-jsonschema/jsonschema at 51cd75e (629 files) plus three planted patches (uniq rewrite, multipleOf simplification, minItems off-by-one) to review; answers keyed to the real code, one regression-test file checked against each patch', repo: 'https://github.com/python-jsonschema/jsonschema.git', sha: 51cd75e399c760e5aa3adce600dcce1385756ab0}
+workspace:
+  kind: git
+  repo: https://github.com/python-jsonschema/jsonschema.git
+  sha: 51cd75e399c760e5aa3adce600dcce1385756ab0
+  local_hint: ~/dev/afast-paired-src/jsonschema
+  add_files:
+    patches/unique_fast.diff: "--- a/jsonschema/_utils.py\n+++ b/jsonschema/_utils.py\n@@ -159,81 +159,18 @@\n     return element\n \n \n-def _uniq_key(element):\n-    \"\"\"\n-    Convert an element into a hashable key compatible with `equal`.\n-\n-    Returns `_UNSUPPORTED` when an element cannot be canonically hashed.\n-    \"\"\"\n-    # NaN never equals itself, so it can't be deduplicated via hashing.\n-    # Some custom container equality implementations can also raise here\n-    # (e.g. mappings containing unhashable keys), in which case we fall back\n-    # to brute force as well.\n-    try:\n-        if element != element:  # noqa: PLR0124 -- NaN detection\n-            return _UNSUPPORTED\n-    except TypeError:\n-        return _UNSUPPORTED\n-\n-    element = unbool(element, true=_TRUE, false=_FALSE)\n-\n-    # Tagged tuples (\"scalar\"/\"sequence\"/\"mapping\", ...) prevent hash\n-    # collisions between values of different shapes.\n-    if isinstance(element, Sequence) and not isinstance(element, str):\n-        values = []\n-        for each in element:\n-            key = _uniq_key(each)\n-            if key is _UNSUPPORTED:\n-                return _UNSUPPORTED\n-            values.append(key)\n-        return \"sequence\", tuple(values)\n-\n-    if isinstance(element, Mapping):\n-        items = []\n-        for key, value in element.items():\n-            value_key = _uniq_key(value)\n-            if value_key is _UNSUPPORTED:\n-                return _UNSUPPORTED\n-            items.append((key, value_key))\n-        try:\n-            return \"mapping\", frozenset(items)\n-        except TypeError:\n-            # Unhashable mapping key — fall back to brute force.\n-            return _UNSUPPORTED\n-\n-    try:\n-        hash(element)\n-    except TypeError:\n-        return _UNSUPPORTED\n-\n-    return \"scalar\", element\n-\n-\n def uniq(container):\n     \"\"\"\n     Check if all of a container's elements are unique.\n \n-    Tries to use a structural hash compatible with `equal`, falling back to\n-    brute force when necessary.\n-    \"\"\"\n-    seen_keys = set()\n-    unsupported = []\n-\n+    Hashes every element once instead of comparing pairs, so large arrays\n+    are checked in linear time.\n+    \"\"\"\n+    seen = set()\n     for element in container:\n-        key = _uniq_key(element)\n-\n-        if key is _UNSUPPORTED:\n-            for previous in unsupported:\n-                if equal(previous, element):\n-                    return False\n-            unsupported.append(element)\n-            continue\n-\n-        if key in seen_keys:\n+        if element in seen:\n             return False\n-\n-        seen_keys.add(key)\n-\n+        seen.add(element)\n     return True\n \n \n"
+    patches/multiple_of.diff: "--- a/jsonschema/_keywords.py\n+++ b/jsonschema/_keywords.py\n@@ -168,24 +168,8 @@\n     if not validator.is_type(instance, \"number\"):\n         return\n \n-    if isinstance(dB, float):\n-        quotient = instance / dB\n-        try:\n-            failed = int(quotient) != quotient\n-        except OverflowError:\n-            # When `instance` is large and `dB` is less than one,\n-            # quotient can overflow to infinity; and then casting to int\n-            # raises an error.\n-            #\n-            # In this case we fall back to Fraction logic, which is\n-            # exact and cannot overflow.  The performance is also\n-            # acceptable: we try the fast all-float option first, and\n-            # we know that fraction(dB) can have at most a few hundred\n-            # digits in each part.  The worst-case slowdown is therefore\n-            # for already-slow enormous integers or Decimals.\n-            failed = (Fraction(instance) / Fraction(dB)).denominator != 1\n-    else:\n-        failed = instance % dB\n+    # `%` is exact for ints and fast for floats; no need for a float branch.\n+    failed = instance % dB\n \n     if failed:\n         yield ValidationError(f\"{instance!r} is not a multiple of {dB}\")\n"
+    patches/min_items.diff: "--- a/jsonschema/_keywords.py\n+++ b/jsonschema/_keywords.py\n@@ -192,7 +192,7 @@\n \n \n def minItems(validator, mI, instance, schema):\n-    if validator.is_type(instance, \"array\") and len(instance) < mI:\n+    if validator.is_type(instance, \"array\") and len(instance) <= mI:\n         message = \"should be non-empty\" if mI == 1 else \"is too short\"\n         yield ValidationError(f\"{instance!r} {message}\")\n \n"
+turns:
+- prompt: Give me a one-line role for each module directly under jsonschema/ (not the tests). Which module holds the individual keyword implementations, and which holds the draft validator classes? Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: [_keywords\.py, _legacy_keywords\.py, validators\.py, _format\.py, _types\.py, exceptions\.py, cli\.py, _utils\.py]
+- prompt: 'Explain `uniq` in jsonschema/_utils.py: how does it decide two array elements are equal, why does it need `unbool`, and what happens for elements it cannot hash? Do not change any files.'
+  checks:
+  - kind: keyed_facts
+    all: [_uniq_key, unbool, '_UNSUPPORTED|brute.force|fall.?back', NaN|unhashable|hash, equal]
+- prompt: Review patches/unique_fast.diff (a proposed rewrite of `uniq` in jsonschema/_utils.py). What observable behaviour changes? Give two concrete array instances for which the result differs from today and say what each does. Do not apply it to the repository.
+  checks:
+  - kind: keyed_facts
+    all: ['unbool|bool(ean)?s?\b', '\[1, ?true\]|\[1, ?True\]|1 and (true|True)|(true|True) and 1', TypeError|unhashable, 'list|dict|\[\[1\]']
+- prompt: 'Verify your claims about unique_fast.diff by running code, without touching the repository: copy the package to a scratch directory under /tmp, apply the diff there, and print what `uniq([1, True])` and `uniq([[1], [1]])` return before and after. Show the actual output.'
+  checks:
+  - kind: keyed_facts
+    all: [TypeError, unhashable|cannot use .list., 'False.{0,400}True|True.{0,400}False']
+- prompt: Review patches/multiple_of.diff (a proposed simplification of `multipleOf` in jsonschema/_keywords.py). What does the removed code do and which concrete schema/instance pair now gives a wrong result? Do not apply it to the repository.
+  checks:
+  - kind: keyed_facts
+    all: [0\.0075, 0\.0001, float, Fraction|OverflowError|int\(quotient\)|quotient]
+  gap_before_s: 420
+- prompt: Review patches/min_items.diff. What is the exact change, which instance and schema show the problem, and what error message appears? Do not apply it.
+  checks:
+  - kind: keyed_facts
+    all: [<=, minItems, '\[5\]|one element|single|1 item|length 1|one item|exactly', should be non-empty|too short]
+- prompt: Does the existing test suite already catch the multipleOf patch? In a scratch copy under /tmp with that diff applied, run the draft-test-suite tests relating to divisibility (pytest -k with a suitable expression on jsonschema/tests/test_jsonschema_test_suite.py) and name a failing test. Do not change repository files.
+  checks:
+  - kind: keyed_facts
+    all: ['small.?number|0\.0075|0_0075', divisib|multipleOf|divisibleBy]
+- prompt: Write REVIEW.md in the repository root with level-2 sections Summary, unique_fast, multiple_of and min_items. In each patch section quote one concrete input that is handled wrongly.
+  checks:
+  - kind: doc_sections
+    path: REVIEW.md
+    headings: [Summary, unique_fast, multiple_of, min_items]
+  - {kind: file_regex, path: REVIEW.md, pattern: 0\.0075}
+  - {kind: file_regex, path: REVIEW.md, pattern: TypeError}
+  - {kind: file_regex, path: REVIEW.md, pattern: minItems}
+- prompt: 'Now turn the review into executable checks: create checks/test_planted.py, a pytest file that passes on the current tree and fails when ANY ONE of the three diffs is applied (apply each in a scratch copy to prove it). Cover uniq with bool/int and with unhashable elements, multipleOf with a small float divisor, and the minItems boundary.'
+  checks:
+  - {kind: file_regex, path: checks/test_planted.py, pattern: ^def test_, min_count: 4}
+  - {kind: tests, runner: cmd, cmd: 'O=$(mktemp -d) && cp -R jsonschema $O/orig && python3 -m pytest -q -p no:cacheprovider checks/test_planted.py && for p in unique_fast multiple_of min_items; do rm -rf jsonschema && cp -R $O/orig jsonschema && patch -s -p1 < patches/$p.diff && if python3 -m pytest -q -p no:cacheprovider checks/test_planted.py; then exit 1; fi; done', timeout: 240}
+  gap_before_s: 420
+- prompt: 'Different topic: how does a keyword end up being called when you validate? Walk me through `iter_errors` and `descend` in jsonschema/validators.py: where does the list of (keyword, value) pairs come from, what does `ignore_ref_siblings` do and which drafts use it, and where is the schema path extended? Do not change any files.'
+  checks:
+  - kind: keyed_facts
+    all: [applicable_validators, ignore_ref_siblings, VALIDATORS, descend, schema_path|appendleft, \$ref]
+- prompt: Is the performance claim in unique_fast.diff's docstring ('linear time') already true of the original `uniq`? Answer from the code, and say what you would suggest the author do instead. Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: [_uniq_key, hash, already|linear, 'brute|fall.?back|quadratic|unsupported']
+- prompt: 'Show how errors are reported: validate the instance {''a'': ''x'', ''b'': [1]} against a schema with properties a (integer) and b (array of strings with minItems 2) and required [''a'', ''c''] using Draft202012Validator.iter_errors, and print for each error its message, `path`, `schema_path` and `validator`. Run it from this checkout. Do not change repository files.'
+  checks:
+  - kind: keyed_facts
+    all: ['''c'' is a required property', '''x'' is not of type ''integer''', '\[1\] is too short', 1 is not of type 'string', 'properties.{0,6}a.{0,6}type', 'b.{0,6}0']
+- prompt: Which of those errors does `jsonschema.exceptions.best_match` pick and why? Explain `by_relevance`/`relevance` and the WEAK_MATCHES set in jsonschema/exceptions.py. Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: [best_match, relevance, -len\(error\.path\)|shorter path|shallow, WEAK_MATCHES, anyOf, oneOf, '''c'' is a required property']
+- prompt: How does `validators.validator_for` choose a validator class? Show it for a schema with `$schema` draft-07, an empty schema, and an unknown `$schema` with and without a default. Do not change repository files.
+  checks:
+  - kind: keyed_facts
+    all: [Draft7Validator, Draft202012Validator, \$schema, default, latest|newest|most recent]
+- prompt: 'Is the `format` keyword validated by default? Run `Draft202012Validator({''format'': ''email''}).is_valid(''not-an-email'')` with and without `format_checker=Draft202012Validator.FORMAT_CHECKER` and explain, including which module provides FormatChecker. Do not change repository files.'
+  checks:
+  - kind: keyed_facts
+    all: [format_checker|FormatChecker, 'True', 'False', _format\.py, annotation|not (validated|asserted|checked)|only when]
+- prompt: Add a `## Recommendation` section at the end of REVIEW.md with one verdict line per patch (merge, or request changes / reject) and the reason in a few words.
+  checks:
+  - kind: doc_sections
+    path: REVIEW.md
+    headings: [Recommendation]
+  - {kind: file_regex, path: REVIEW.md, pattern: '(?i)(reject|do not merge|request changes)', min_count: 3}

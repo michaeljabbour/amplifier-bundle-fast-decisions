@@ -1,0 +1,718 @@
+# holdout-v3 batch B (docs, 10 turns): Write a data dictionary for an orders CSV: exact row/column facts, per-column type/null/distinct/min/max table, categorical value lists, a profiling CLI that generalises, and a revised dictionary after a data refresh.
+id: data-dictionary
+task_type: docs
+language: markdown
+split: holdout
+default_gap_s: 10
+source:
+  desc: 'Write a data dictionary for an orders CSV: exact row/column facts, per-column type/null/distinct/min/max table, categorical
+    value lists, a profiling CLI that generalises, and a revised dictionary after a data refresh.'
+  kind: self-authored deterministic workspace
+  adapted_from:
+  - new self-authored dataset; data-documentation theme (cf. amplifier-agent csv/data tasks)
+workspace:
+  kind: inline
+  files:
+    data/orders.csv: |
+      order_id,customer_id,country,channel,order_date,total,discount_pct,shipped,notes
+      O5000,C059,DE,app,2025-02-05,288.99,5,true,gift
+      O5001,C024,DE,web,2025-02-01,105.16,5,false,
+      O5002,C004,ES,web,2025-01-16,240.72,,false,gift
+      O5003,C060,DE,app,2025-01-25,45.46,,false,
+      O5004,C060,,web,2025-02-11,94.12,0,false,
+      O5005,C057,,app,2025-02-22,271.00,5,false,gift
+      O5006,C057,UK,web,2025-01-01,136.45,10,true,gift
+      O5007,C028,UK,web,2025-03-07,79.10,10,false,gift
+      O5008,C006,,store,2025-01-15,244.82,10,true,gift
+      O5009,C012,ES,web,2025-03-04,229.45,15,true,call first
+      O5010,C038,,web,2025-03-20,351.78,,false,
+      O5011,C034,,app,2025-01-01,322.27,5,true,
+      O5012,C018,FR,app,2025-03-05,242.53,15,false,
+      O5013,C057,UK,web,2025-02-11,200.21,10,false,rush
+      O5014,C056,US,store,2025-01-11,64.74,,false,rush
+      O5015,C016,,web,2025-02-08,171.21,5,false,
+      O5016,C029,US,app,2025-02-24,184.98,0,true,call first
+      O5017,C029,UK,store,2025-02-23,132.65,15,true,rush
+      O5018,C024,UK,app,2025-01-19,247.67,15,false,call first
+      O5019,C007,FR,store,2025-01-15,51.72,10,false,rush
+      O5020,C023,ES,store,2025-01-10,374.92,0,false,
+      O5021,C031,US,store,2025-01-07,42.42,10,true,
+      O5022,C024,FR,store,2025-01-27,357.48,10,true,
+      O5023,C011,FR,app,2025-01-26,133.10,5,false,call first
+      O5024,C037,US,web,2025-03-26,302.89,10,false,
+      O5025,C034,DE,app,2025-01-18,360.55,,false,rush
+      O5026,C036,US,store,2025-01-12,198.14,,false,gift
+      O5027,C047,UK,store,2025-01-03,246.04,5,true,rush
+      O5028,C020,US,store,2025-02-05,95.29,,true,
+      O5029,C045,FR,web,2025-02-18,367.27,15,true,gift
+      O5030,C023,,web,2025-01-13,117.72,5,true,rush
+      O5031,C045,DE,app,2025-03-09,194.77,0,true,gift
+      O5032,C059,US,web,2025-01-04,95.49,0,true,
+      O5033,C060,FR,app,2025-01-22,61.26,0,false,
+      O5034,C048,FR,web,2025-01-27,292.73,5,false,
+      O5035,C013,FR,app,2025-01-22,350.16,10,false,
+      O5036,C017,,web,2025-02-17,346.29,0,false,gift
+      O5037,C006,DE,store,2025-01-02,13.53,0,true,call first
+      O5038,C041,US,web,2025-02-27,128.36,5,true,call first
+      O5039,C050,ES,web,2025-02-09,365.92,10,false,
+      O5040,C056,ES,web,2025-01-26,287.59,10,false,
+      O5041,C015,ES,store,2025-03-16,354.51,15,true,call first
+      O5042,C056,FR,web,2025-02-03,112.66,,false,call first
+      O5043,C009,UK,app,2025-02-15,298.61,5,true,rush
+      O5044,C025,FR,app,2025-02-11,22.14,,false,
+      O5045,C015,US,store,2025-01-25,62.57,15,false,
+      O5046,C013,US,app,2025-03-03,113.51,,false,
+      O5047,C049,ES,web,2025-03-19,8.50,10,false,
+      O5048,C031,,web,2025-03-16,340.51,0,true,call first
+      O5049,C027,,app,2025-01-05,300.89,0,true,gift
+      O5050,C004,ES,app,2025-01-17,37.81,10,true,call first
+      O5051,C006,UK,web,2025-03-18,37.73,10,true,
+      O5052,C005,US,app,2025-03-03,205.07,10,false,
+      O5053,C042,ES,store,2025-03-15,183.89,0,false,call first
+      O5054,C004,US,app,2025-01-07,358.85,15,true,
+      O5055,C022,FR,web,2025-02-01,185.68,5,true,
+      O5056,C045,FR,app,2025-01-27,90.90,,true,rush
+      O5057,C056,US,web,2025-02-13,19.82,,false,
+      O5058,C049,DE,web,2025-01-18,277.85,15,true,call first
+      O5059,C046,DE,web,2025-01-21,29.20,15,false,gift
+      O5060,C018,FR,web,2025-03-14,48.90,0,true,rush
+      O5061,C004,UK,store,2025-03-25,338.60,15,true,rush
+      O5062,C040,,app,2025-03-14,51.45,,false,
+      O5063,C044,DE,web,2025-03-05,115.00,,false,
+      O5064,C048,,app,2025-02-10,273.54,0,true,
+      O5065,C053,UK,app,2025-03-16,98.88,0,false,
+      O5066,C007,US,store,2025-03-03,100.13,5,true,rush
+      O5067,C024,US,web,2025-01-18,135.38,,true,
+      O5068,C027,DE,store,2025-01-16,385.51,5,false,
+      O5069,C059,FR,store,2025-03-04,89.40,5,false,gift
+      O5070,C006,US,web,2025-01-07,247.26,,true,
+      O5071,C023,ES,web,2025-03-23,134.33,15,false,
+      O5072,C006,DE,store,2025-01-18,187.67,,false,
+      O5073,C007,ES,web,2025-02-23,291.01,10,true,call first
+      O5074,C014,FR,web,2025-01-05,83.97,15,false,call first
+      O5075,C051,,app,2025-02-01,136.28,10,false,
+      O5076,C021,UK,store,2025-03-01,310.93,10,true,
+      O5077,C024,UK,app,2025-01-25,179.62,,false,
+      O5078,C023,FR,app,2025-02-05,346.12,10,false,rush
+      O5079,C012,FR,web,2025-02-26,291.90,5,false,
+      O5080,C051,FR,web,2025-03-14,312.66,10,true,
+      O5081,C055,DE,store,2025-03-26,364.79,15,true,
+      O5082,C034,UK,store,2025-03-05,206.02,15,false,call first
+      O5083,C048,FR,app,2025-01-09,292.70,0,false,
+      O5084,C045,DE,app,2025-03-25,202.02,15,true,call first
+      O5085,C038,,store,2025-01-27,305.75,10,false,
+      O5086,C054,US,web,2025-02-05,282.43,15,true,call first
+      O5087,C045,DE,web,2025-01-17,178.36,0,false,
+      O5088,C037,DE,store,2025-03-05,207.08,0,true,
+      O5089,C059,US,app,2025-01-25,258.10,10,true,
+      O5090,C015,US,web,2025-01-10,193.16,0,false,
+      O5091,C028,ES,web,2025-01-14,212.71,,true,
+      O5092,C011,ES,store,2025-01-28,308.68,0,true,rush
+      O5093,C042,ES,store,2025-01-07,283.32,0,true,
+      O5094,C004,FR,app,2025-03-11,254.49,10,false,rush
+      O5095,C055,US,app,2025-02-08,157.57,0,true,
+      O5096,C013,ES,app,2025-01-22,357.51,,false,gift
+      O5097,C052,US,store,2025-02-12,361.50,0,true,
+      O5098,C016,US,web,2025-02-27,199.82,,false,rush
+      O5099,C021,DE,store,2025-02-18,175.41,,true,rush
+      O5100,C013,UK,web,2025-02-07,137.56,0,false,
+      O5101,C031,ES,app,2025-02-07,334.94,15,false,
+      O5102,C050,UK,app,2025-03-19,28.39,5,true,rush
+      O5103,C054,US,web,2025-02-10,175.92,0,true,
+      O5104,C028,,app,2025-01-08,232.58,0,false,
+      O5105,C025,FR,app,2025-02-24,271.40,10,false,
+      O5106,C027,,web,2025-03-03,100.48,,false,
+      O5107,C019,ES,app,2025-01-06,114.80,,false,
+      O5108,C046,US,store,2025-02-08,29.40,0,true,
+      O5109,C011,US,web,2025-02-25,199.38,,false,
+      O5110,C004,US,web,2025-01-23,274.05,15,true,rush
+      O5111,C059,,web,2025-01-15,49.46,0,false,call first
+      O5112,C040,DE,store,2025-01-15,133.27,0,false,gift
+      O5113,C018,US,app,2025-02-25,142.25,0,false,gift
+      O5114,C002,FR,app,2025-03-19,130.10,,true,
+      O5115,C021,UK,app,2025-01-08,389.48,10,false,rush
+      O5116,C002,FR,app,2025-01-23,67.40,5,false,
+      O5117,C059,UK,web,2025-03-01,369.63,,false,call first
+      O5118,C033,,app,2025-03-08,142.20,0,true,
+      O5119,C023,ES,app,2025-01-23,69.54,15,true,
+      O5120,C005,,web,2025-03-21,305.98,0,false,
+      O5121,C038,ES,store,2025-02-16,233.71,15,false,
+      O5122,C007,UK,app,2025-01-18,248.16,0,true,gift
+      O5123,C036,FR,web,2025-02-21,292.67,15,false,
+      O5124,C011,DE,app,2025-02-19,258.78,5,false,rush
+      O5125,C045,DE,web,2025-02-07,294.87,,false,rush
+      O5126,C003,DE,web,2025-03-26,84.09,10,false,
+      O5127,C021,ES,store,2025-03-16,37.14,0,true,
+      O5128,C041,US,app,2025-02-16,354.02,5,true,gift
+      O5129,C012,ES,web,2025-03-23,187.47,15,true,call first
+      O5130,C029,,web,2025-02-03,250.82,15,true,rush
+      O5131,C059,US,web,2025-01-22,66.83,15,true,
+      O5132,C028,ES,app,2025-02-06,318.82,10,true,gift
+      O5133,C041,ES,store,2025-02-14,256.51,10,false,
+      O5134,C045,DE,web,2025-02-06,193.02,,false,rush
+      O5135,C001,UK,app,2025-01-10,202.32,0,false,call first
+      O5136,C001,,web,2025-03-04,285.69,,false,call first
+      O5137,C023,UK,app,2025-02-15,38.83,0,true,gift
+      O5138,C037,DE,store,2025-02-15,5.39,0,true,
+      O5139,C060,ES,web,2025-01-07,138.41,,true,rush
+      O5140,C027,,app,2025-03-06,156.93,5,true,rush
+      O5141,C024,ES,app,2025-02-18,339.01,5,false,gift
+      O5142,C040,DE,app,2025-01-20,228.42,,true,
+      O5143,C003,,app,2025-02-09,292.86,5,true,gift
+      O5144,C022,US,web,2025-01-09,174.51,10,false,
+      O5145,C022,ES,web,2025-01-02,181.25,0,true,call first
+      O5146,C060,US,store,2025-03-19,363.29,,true,
+      O5147,C036,US,app,2025-02-23,332.79,,true,call first
+      O5148,C011,DE,app,2025-03-14,165.42,10,true,
+      O5149,C019,,app,2025-01-22,149.72,15,false,gift
+      O5150,C022,DE,web,2025-02-12,340.66,10,false,
+      O5151,C059,,web,2025-03-08,259.19,0,true,
+      O5152,C034,,store,2025-01-15,237.15,5,true,call first
+      O5153,C052,,app,2025-02-07,239.07,15,true,
+      O5154,C055,UK,store,2025-03-11,161.41,5,true,gift
+      O5155,C033,UK,app,2025-01-20,392.42,,false,call first
+      O5156,C003,DE,app,2025-03-06,396.23,,true,call first
+      O5157,C021,,store,2025-01-21,155.18,0,false,gift
+      O5158,C029,DE,store,2025-03-15,272.37,10,true,
+      O5159,C047,DE,store,2025-01-06,344.09,15,false,rush
+      O5160,C049,FR,web,2025-02-01,390.94,15,true,call first
+      O5161,C022,US,web,2025-03-02,310.44,,true,rush
+      O5162,C014,DE,web,2025-03-14,398.07,,false,
+      O5163,C001,US,app,2025-03-10,138.53,5,true,
+      O5164,C038,DE,app,2025-03-28,277.14,10,false,
+      O5165,C001,UK,app,2025-03-19,41.01,15,true,rush
+      O5166,C017,ES,store,2025-03-12,24.43,0,true,gift
+      O5167,C013,US,store,2025-02-22,381.14,0,true,call first
+      O5168,C011,DE,store,2025-01-19,203.48,5,true,rush
+      O5169,C019,UK,app,2025-01-09,260.80,0,false,gift
+      O5170,C013,US,app,2025-01-04,295.60,0,false,gift
+      O5171,C057,ES,web,2025-02-22,372.39,5,false,rush
+      O5172,C044,,web,2025-03-08,232.68,5,false,rush
+      O5173,C003,UK,app,2025-02-28,144.43,0,false,gift
+      O5174,C007,DE,web,2025-02-17,201.23,0,true,
+      O5175,C055,US,store,2025-03-12,368.33,5,false,
+      O5176,C047,,store,2025-03-12,286.75,5,false,
+      O5177,C023,DE,store,2025-03-03,376.09,10,false,
+      O5178,C042,US,app,2025-01-17,255.05,,true,gift
+      O5179,C026,,app,2025-01-03,378.39,5,false,
+    data/orders_refresh.csv: |
+      order_id,customer_id,country,channel,order_date,total,discount_pct,shipped,notes
+      O5000,C059,DE,app,2025-02-05,288.99,5,true,gift
+      O5001,C024,DE,web,2025-02-01,105.16,5,false,
+      O5002,C004,ES,web,2025-01-16,240.72,,false,gift
+      O5003,C060,DE,app,2025-01-25,45.46,,false,
+      O5004,C060,,web,2025-02-11,94.12,0,false,
+      O5005,C057,,app,2025-02-22,271.00,5,false,gift
+      O5006,C057,UK,web,2025-01-01,136.45,10,true,gift
+      O5007,C028,UK,web,2025-03-07,79.10,10,false,gift
+      O5008,C006,,store,2025-01-15,244.82,10,true,gift
+      O5009,C012,ES,web,2025-03-04,229.45,15,true,call first
+      O5010,C038,,web,2025-03-20,351.78,,false,
+      O5011,C034,,app,2025-01-01,322.27,5,true,
+      O5012,C018,FR,app,2025-03-05,242.53,15,false,
+      O5013,C057,UK,web,2025-02-11,200.21,10,false,rush
+      O5014,C056,US,store,2025-01-11,64.74,,false,rush
+      O5015,C016,,web,2025-02-08,171.21,5,false,
+      O5016,C029,US,app,2025-02-24,184.98,0,true,call first
+      O5017,C029,UK,store,2025-02-23,132.65,15,true,rush
+      O5018,C024,UK,app,2025-01-19,247.67,15,false,call first
+      O5019,C007,FR,store,2025-01-15,51.72,10,false,rush
+      O5020,C023,ES,store,2025-01-10,374.92,0,false,
+      O5021,C031,US,store,2025-01-07,42.42,10,true,
+      O5022,C024,FR,store,2025-01-27,357.48,10,true,
+      O5023,C011,FR,app,2025-01-26,133.10,5,false,call first
+      O5024,C037,US,web,2025-03-26,302.89,10,false,
+      O5025,C034,DE,app,2025-01-18,360.55,,false,rush
+      O5026,C036,US,store,2025-01-12,198.14,,false,gift
+      O5027,C047,UK,store,2025-01-03,246.04,5,true,rush
+      O5028,C020,US,store,2025-02-05,95.29,,true,
+      O5029,C045,FR,web,2025-02-18,367.27,15,true,gift
+      O5030,C023,,web,2025-01-13,117.72,5,true,rush
+      O5031,C045,DE,app,2025-03-09,194.77,0,true,gift
+      O5032,C059,US,web,2025-01-04,95.49,0,true,
+      O5033,C060,FR,app,2025-01-22,61.26,0,false,
+      O5034,C048,FR,web,2025-01-27,292.73,5,false,
+      O5035,C013,FR,app,2025-01-22,350.16,10,false,
+      O5036,C017,,web,2025-02-17,346.29,0,false,gift
+      O5037,C006,DE,store,2025-01-02,13.53,0,true,call first
+      O5038,C041,US,web,2025-02-27,128.36,5,true,call first
+      O5039,C050,ES,web,2025-02-09,365.92,10,false,
+      O5040,C056,ES,web,2025-01-26,287.59,10,false,
+      O5041,C015,ES,store,2025-03-16,354.51,15,true,call first
+      O5042,C056,FR,web,2025-02-03,112.66,,false,call first
+      O5043,C009,UK,app,2025-02-15,298.61,5,true,rush
+      O5044,C025,FR,app,2025-02-11,22.14,,false,
+      O5045,C015,US,store,2025-01-25,62.57,15,false,
+      O5046,C013,US,app,2025-03-03,113.51,,false,
+      O5047,C049,ES,web,2025-03-19,8.50,10,false,
+      O5048,C031,,web,2025-03-16,340.51,0,true,call first
+      O5049,C027,,app,2025-01-05,300.89,0,true,gift
+      O5050,C004,ES,app,2025-01-17,37.81,10,true,call first
+      O5051,C006,UK,web,2025-03-18,37.73,10,true,
+      O5052,C005,US,app,2025-03-03,205.07,10,false,
+      O5053,C042,ES,store,2025-03-15,183.89,0,false,call first
+      O5054,C004,US,app,2025-01-07,358.85,15,true,
+      O5055,C022,FR,web,2025-02-01,185.68,5,true,
+      O5056,C045,FR,app,2025-01-27,90.90,,true,rush
+      O5057,C056,US,web,2025-02-13,19.82,,false,
+      O5058,C049,DE,web,2025-01-18,277.85,15,true,call first
+      O5059,C046,DE,web,2025-01-21,29.20,15,false,gift
+      O5060,C018,FR,web,2025-03-14,48.90,0,true,rush
+      O5061,C004,UK,store,2025-03-25,338.60,15,true,rush
+      O5062,C040,,app,2025-03-14,51.45,,false,
+      O5063,C044,DE,web,2025-03-05,115.00,,false,
+      O5064,C048,,app,2025-02-10,273.54,0,true,
+      O5065,C053,UK,app,2025-03-16,98.88,0,false,
+      O5066,C007,US,store,2025-03-03,100.13,5,true,rush
+      O5067,C024,US,web,2025-01-18,135.38,,true,
+      O5068,C027,DE,store,2025-01-16,385.51,5,false,
+      O5069,C059,FR,store,2025-03-04,89.40,5,false,gift
+      O5070,C006,US,web,2025-01-07,247.26,,true,
+      O5071,C023,ES,web,2025-03-23,134.33,15,false,
+      O5072,C006,DE,store,2025-01-18,187.67,,false,
+      O5073,C007,ES,web,2025-02-23,291.01,10,true,call first
+      O5074,C014,FR,web,2025-01-05,83.97,15,false,call first
+      O5075,C051,,app,2025-02-01,136.28,10,false,
+      O5076,C021,UK,store,2025-03-01,310.93,10,true,
+      O5077,C024,UK,app,2025-01-25,179.62,,false,
+      O5078,C023,FR,app,2025-02-05,346.12,10,false,rush
+      O5079,C012,FR,web,2025-02-26,291.90,5,false,
+      O5080,C051,FR,web,2025-03-14,312.66,10,true,
+      O5081,C055,DE,store,2025-03-26,364.79,15,true,
+      O5082,C034,UK,store,2025-03-05,206.02,15,false,call first
+      O5083,C048,FR,app,2025-01-09,292.70,0,false,
+      O5084,C045,DE,app,2025-03-25,202.02,15,true,call first
+      O5085,C038,,store,2025-01-27,305.75,10,false,
+      O5086,C054,US,web,2025-02-05,282.43,15,true,call first
+      O5087,C045,DE,web,2025-01-17,178.36,0,false,
+      O5088,C037,DE,store,2025-03-05,207.08,0,true,
+      O5089,C059,US,app,2025-01-25,258.10,10,true,
+      O5090,C015,US,web,2025-01-10,193.16,0,false,
+      O5091,C028,ES,web,2025-01-14,212.71,,true,
+      O5092,C011,ES,store,2025-01-28,308.68,0,true,rush
+      O5093,C042,ES,store,2025-01-07,283.32,0,true,
+      O5094,C004,FR,app,2025-03-11,254.49,10,false,rush
+      O5095,C055,US,app,2025-02-08,157.57,0,true,
+      O5096,C013,ES,app,2025-01-22,357.51,,false,gift
+      O5097,C052,US,store,2025-02-12,361.50,0,true,
+      O5098,C016,US,web,2025-02-27,199.82,,false,rush
+      O5099,C021,DE,store,2025-02-18,175.41,,true,rush
+      O5100,C013,UK,web,2025-02-07,137.56,0,false,
+      O5101,C031,ES,app,2025-02-07,334.94,15,false,
+      O5102,C050,UK,app,2025-03-19,28.39,5,true,rush
+      O5103,C054,US,web,2025-02-10,175.92,0,true,
+      O5104,C028,,app,2025-01-08,232.58,0,false,
+      O5105,C025,FR,app,2025-02-24,271.40,10,false,
+      O5106,C027,,web,2025-03-03,100.48,,false,
+      O5107,C019,ES,app,2025-01-06,114.80,,false,
+      O5108,C046,US,store,2025-02-08,29.40,0,true,
+      O5109,C011,US,web,2025-02-25,199.38,,false,
+      O5110,C004,US,web,2025-01-23,274.05,15,true,rush
+      O5111,C059,,web,2025-01-15,49.46,0,false,call first
+      O5112,C040,DE,store,2025-01-15,133.27,0,false,gift
+      O5113,C018,US,app,2025-02-25,142.25,0,false,gift
+      O5114,C002,FR,app,2025-03-19,130.10,,true,
+      O5115,C021,UK,app,2025-01-08,389.48,10,false,rush
+      O5116,C002,FR,app,2025-01-23,67.40,5,false,
+      O5117,C059,UK,web,2025-03-01,369.63,,false,call first
+      O5118,C033,,app,2025-03-08,142.20,0,true,
+      O5119,C023,ES,app,2025-01-23,69.54,15,true,
+      O5120,C005,,web,2025-03-21,305.98,0,false,
+      O5121,C038,ES,store,2025-02-16,233.71,15,false,
+      O5122,C007,UK,app,2025-01-18,248.16,0,true,gift
+      O5123,C036,FR,web,2025-02-21,292.67,15,false,
+      O5124,C011,DE,app,2025-02-19,258.78,5,false,rush
+      O5125,C045,DE,web,2025-02-07,294.87,,false,rush
+      O5126,C003,DE,web,2025-03-26,84.09,10,false,
+      O5127,C021,ES,store,2025-03-16,37.14,0,true,
+      O5128,C041,US,app,2025-02-16,354.02,5,true,gift
+      O5129,C012,ES,web,2025-03-23,187.47,15,true,call first
+      O5130,C029,,web,2025-02-03,250.82,15,true,rush
+      O5131,C059,US,web,2025-01-22,66.83,15,true,
+      O5132,C028,ES,app,2025-02-06,318.82,10,true,gift
+      O5133,C041,ES,store,2025-02-14,256.51,10,false,
+      O5134,C045,DE,web,2025-02-06,193.02,,false,rush
+      O5135,C001,UK,app,2025-01-10,202.32,0,false,call first
+      O5136,C001,,web,2025-03-04,285.69,,false,call first
+      O5137,C023,UK,app,2025-02-15,38.83,0,true,gift
+      O5138,C037,DE,store,2025-02-15,5.39,0,true,
+      O5139,C060,ES,web,2025-01-07,138.41,,true,rush
+      O5140,C027,,app,2025-03-06,156.93,5,true,rush
+      O5141,C024,ES,app,2025-02-18,339.01,5,false,gift
+      O5142,C040,DE,app,2025-01-20,228.42,,true,
+      O5143,C003,,app,2025-02-09,292.86,5,true,gift
+      O5144,C022,US,web,2025-01-09,174.51,10,false,
+      O5145,C022,ES,web,2025-01-02,181.25,0,true,call first
+      O5146,C060,US,store,2025-03-19,363.29,,true,
+      O5147,C036,US,app,2025-02-23,332.79,,true,call first
+      O5148,C011,DE,app,2025-03-14,165.42,10,true,
+      O5149,C019,,app,2025-01-22,149.72,15,false,gift
+      O5150,C022,DE,web,2025-02-12,340.66,10,false,
+      O5151,C059,,web,2025-03-08,259.19,0,true,
+      O5152,C034,,store,2025-01-15,237.15,5,true,call first
+      O5153,C052,,app,2025-02-07,239.07,15,true,
+      O5154,C055,UK,store,2025-03-11,161.41,5,true,gift
+      O5155,C033,UK,app,2025-01-20,392.42,,false,call first
+      O5156,C003,DE,app,2025-03-06,396.23,,true,call first
+      O5157,C021,,store,2025-01-21,155.18,0,false,gift
+      O5158,C029,DE,store,2025-03-15,272.37,10,true,
+      O5159,C047,DE,store,2025-01-06,344.09,15,false,rush
+      O5160,C049,FR,web,2025-02-01,390.94,15,true,call first
+      O5161,C022,US,web,2025-03-02,310.44,,true,rush
+      O5162,C014,DE,web,2025-03-14,398.07,,false,
+      O5163,C001,US,app,2025-03-10,138.53,5,true,
+      O5164,C038,DE,app,2025-03-28,277.14,10,false,
+      O5165,C001,UK,app,2025-03-19,41.01,15,true,rush
+      O5166,C017,ES,store,2025-03-12,24.43,0,true,gift
+      O5167,C013,US,store,2025-02-22,381.14,0,true,call first
+      O5168,C011,DE,store,2025-01-19,203.48,5,true,rush
+      O5169,C019,UK,app,2025-01-09,260.80,0,false,gift
+      O5170,C013,US,app,2025-01-04,295.60,0,false,gift
+      O5171,C057,ES,web,2025-02-22,372.39,5,false,rush
+      O5172,C044,,web,2025-03-08,232.68,5,false,rush
+      O5173,C003,UK,app,2025-02-28,144.43,0,false,gift
+      O5174,C007,DE,web,2025-02-17,201.23,0,true,
+      O5175,C055,US,store,2025-03-12,368.33,5,false,
+      O5176,C047,,store,2025-03-12,286.75,5,false,
+      O5177,C023,DE,store,2025-03-03,376.09,10,false,
+      O5178,C042,US,app,2025-01-17,255.05,,true,gift
+      O5179,C026,,app,2025-01-03,378.39,5,false,
+      O5000,C042,ES,store,2025-01-21,203.02,10,false,
+      O5001,C027,UK,app,2025-02-20,361.75,5,true,
+      O5002,C018,,web,2025-01-07,200.99,15,true,call first
+      O5003,C057,ES,app,2025-02-08,189.85,15,true,call first
+      O5004,C050,,web,2025-03-11,327.78,0,true,
+      O5005,C003,,web,2025-03-28,346.52,,true,rush
+      O5006,C020,UK,app,2025-02-07,394.89,0,false,
+      O5007,C011,FR,app,2025-03-11,192.12,5,true,
+      O5008,C002,FR,store,2025-01-06,327.73,15,false,rush
+      O5009,C007,DE,app,2025-02-22,65.77,0,false,call first
+      O5010,C056,ES,store,2025-03-08,220.66,5,true,
+      O5011,C026,FR,app,2025-02-13,107.30,10,false,
+      O5012,C017,UK,web,2025-02-08,213.47,0,false,gift
+      O5013,C011,,store,2025-02-15,389.04,5,true,
+      O5014,C016,FR,app,2025-02-08,274.12,0,false,call first
+      O5015,C023,FR,app,2025-02-16,103.06,10,true,gift
+      O5016,C019,UK,app,2025-01-06,188.45,,true,
+      O5017,C014,UK,app,2025-01-26,240.66,15,false,gift
+      O5018,C044,ES,app,2025-01-04,272.17,15,false,
+      O5019,C029,US,web,2025-03-25,392.48,0,false,
+      O5020,C028,,app,2025-03-17,191.76,,false,
+      O5021,C028,FR,app,2025-02-27,356.80,0,false,
+      O5022,C044,FR,store,2025-02-18,7.01,10,true,call first
+      O5023,C034,ES,store,2025-02-23,150.87,,true,call first
+      O5024,C015,ES,web,2025-02-21,391.74,,true,gift
+      O5025,C006,FR,app,2025-03-22,192.79,,true,
+      O5026,C047,,web,2025-01-04,80.91,5,false,
+      O5027,C034,UK,web,2025-03-09,252.23,15,false,
+      O5028,C046,DE,app,2025-03-19,354.88,10,false,
+      O5029,C015,US,store,2025-02-02,275.05,5,true,call first
+      O5030,C054,DE,app,2025-02-20,191.83,,true,
+      O5031,C008,FR,web,2025-03-25,395.27,5,false,
+      O5032,C052,US,app,2025-03-10,352.74,5,false,gift
+      O5033,C016,FR,store,2025-03-02,227.24,,true,rush
+      O5034,C040,,app,2025-03-12,303.09,,true,
+      O5035,C014,,store,2025-03-10,133.89,15,false,rush
+      O5036,C011,,store,2025-03-27,194.83,,true,
+      O5037,C005,UK,app,2025-03-28,152.45,0,false,gift
+      O5038,C038,,web,2025-03-19,323.22,10,true,
+      O5039,C060,UK,store,2025-02-08,88.81,15,true,rush
+      O5040,C002,FR,web,2025-01-18,237.39,0,true,
+      O5041,C008,,web,2025-02-19,355.79,5,false,rush
+      O5042,C019,,web,2025-03-09,224.73,15,false,gift
+      O5043,C035,ES,web,2025-02-04,177.35,10,true,call first
+      O5044,C045,FR,app,2025-01-03,399.01,5,true,
+      O5045,C054,ES,store,2025-03-06,86.67,,true,rush
+      O5046,C003,ES,store,2025-02-12,395.66,5,true,
+      O5047,C010,US,app,2025-01-02,381.56,15,false,rush
+      O5048,C025,,store,2025-02-21,10.95,15,true,gift
+      O5049,C017,FR,app,2025-03-20,305.02,0,false,rush
+      O5050,C043,DE,store,2025-02-22,345.22,15,true,rush
+      O5051,C008,DE,store,2025-02-02,108.40,0,true,
+      O5052,C021,,store,2025-01-25,102.72,5,true,
+      O5053,C014,FR,web,2025-01-18,236.70,0,true,rush
+      O5054,C012,US,app,2025-02-27,150.84,0,true,
+      O5055,C054,UK,web,2025-02-20,24.63,0,false,gift
+      O5056,C026,DE,web,2025-03-11,263.48,15,false,
+      O5057,C043,,app,2025-02-12,197.55,5,false,gift
+      O5058,C048,ES,store,2025-03-07,290.07,5,true,call first
+      O5059,C008,,app,2025-01-09,257.66,0,false,gift
+    README.md: |
+      # orders-data
+
+      `data/orders.csv` is the Q1 order extract; `data/orders_refresh.csv` is the same extract after a late refresh. Empty cells mean null.
+protected:
+- data/orders.csv
+- data/orders_refresh.csv
+hidden_files:
+  _grade.py: |
+    import csv, json, os, re, subprocess, sys
+    from pathlib import Path
+
+    W = Path(".")
+
+
+    def fail(msg):
+        print("FAIL:", msg)
+        sys.exit(1)
+
+
+    def need(cond, msg):
+        if not cond:
+            fail(msg)
+
+
+    def read(rel):
+        p = W / rel
+        need(p.exists(), f"missing {rel}")
+        return p.read_text(encoding="utf-8")
+
+
+    def load_json(rel):
+        try:
+            return json.loads(read(rel))
+        except ValueError as e:
+            fail(f"{rel} is not valid JSON: {e}")
+
+
+    def close(a, b, tol=0.011):
+        try:
+            return abs(float(a) - float(b)) <= tol
+        except (TypeError, ValueError):
+            return False
+
+
+    def num(s):
+        m = re.search(r"-?\d[\d,]*\.?\d*", str(s))
+        return float(m.group(0).replace(",", "")) if m else None
+
+
+    def run(cmd, timeout=60, stdin=None):
+        p = subprocess.run(cmd, shell=True, cwd=W, capture_output=True, text=True, timeout=timeout, input=stdin)
+        return p.returncode, p.stdout, p.stderr
+
+
+    def md_lines(rel, under=None):
+        lines = read(rel).splitlines()
+        if not under:
+            return lines
+        out, on, lvl = [], False, 0
+        for ln in lines:
+            m = re.match(r"^(#+)\s+(.*)", ln)
+            if m:
+                if on and len(m.group(1)) <= lvl:
+                    break
+                if not on and re.search(under, m.group(2), re.I):
+                    on, lvl = True, len(m.group(1))
+                continue
+            if on:
+                out.append(ln)
+        need(on, f"no heading matching {under!r} in {rel}")
+        return out
+
+
+    def md_rows(rel, under=None):
+        rows = []
+        for ln in md_lines(rel, under):
+            if ln.strip().startswith("|") and not re.match(r"^\s*\|[\s:|-]+\|\s*$", ln):
+                rows.append([c.strip() for c in ln.strip().strip("|").split("|")])
+        return rows
+
+
+    def cmp(got, want, tol, path):
+        if isinstance(want, dict):
+            need(isinstance(got, dict), f"{path}: expected an object, got {type(got).__name__}")
+            for k, v in want.items():
+                need(k in got, f"{path}.{k}: missing")
+                cmp(got[k], v, tol, f"{path}.{k}")
+        elif isinstance(want, list):
+            need(isinstance(got, list) and len(got) == len(want), f"{path}: expected list of {len(want)}, got {got!r}")
+            for i, (g, w) in enumerate(zip(got, want)):
+                cmp(g, w, tol, f"{path}[{i}]")
+        elif isinstance(want, bool) or want is None or isinstance(want, str):
+            need(got == want, f"{path}: {got!r} != {want!r}")
+        else:
+            need(not isinstance(got, bool) and close(got, want, tol), f"{path}: {got!r} != {want!r}")
+
+
+    def chk_json(rel, exp, tol=0.051):
+        cmp(load_json(rel), exp, tol, rel)
+
+
+    def chk_table(rel, under, exp, col=1, tol=0.051):
+        rows = md_rows(rel, under)
+        need(rows, f"no table under {under!r} in {rel}")
+        got = {r[0].strip("* `"): num(r[col]) for r in rows if len(r) > col and num(r[col]) is not None}
+        for k, v in exp.items():
+            need(k in got and close(got[k], v, tol), f"{k}: {got.get(k)} != {v}")
+
+
+    def chk_cmd_json(cmd, exp, tol=0.051, stdin=None):
+        rc, out, err = run(cmd, stdin=stdin)
+        need(rc == 0, f"`{cmd}` exited {rc}: {err[-200:]}")
+        try:
+            d = json.loads(out)
+        except ValueError as e:
+            fail(f"`{cmd}` stdout is not JSON: {e}")
+        cmp(d, exp, tol, cmd)
+
+
+    def chk_cmd_out(cmd, lines, stdin=None, expect_rc=0):
+        rc, out, err = run(cmd, stdin=stdin)
+        need(rc == expect_rc, f"`{cmd}` exited {rc} (want {expect_rc}): {err[-200:]}")
+        got = [ln.rstrip() for ln in out.strip().splitlines()]
+        need(got == list(lines), f"`{cmd}` output {got[:8]} != {list(lines)[:8]}")
+
+
+    def t2():
+        rows = md_rows('docs/data-dictionary.md', 'columns')
+        need(rows and [c.lower() for c in rows[0][:3]] == ['column', 'type', 'nulls'], 'header: ' + str(rows[:1]))
+        got = {r[0].strip('` '): [r[1], int(num(r[2]))] for r in rows[1:] if len(r) >= 3}
+        want = {'order_id': ['text', 0], 'customer_id': ['text', 0], 'country': ['text', 31], 'channel': ['text', 0], 'order_date': ['date', 0], 'total': ['decimal', 0], 'discount_pct': ['integer', 39], 'shipped': ['boolean', 0], 'notes': ['text', 89]}
+        need(got == want, 'type/nulls differ: ' + str({k: (got.get(k), v) for k, v in want.items() if got.get(k) != v}))
+        need(list(got) == ['order_id', 'customer_id', 'country', 'channel', 'order_date', 'total', 'discount_pct', 'shipped', 'notes'], 'column order')
+
+
+    def t4():
+        rows = md_rows('docs/data-dictionary.md', 'columns')
+        need([c.lower() for c in rows[0][:6]] == ['column', 'type', 'nulls', 'distinct', 'min', 'max'], 'header: ' + str(rows[:1]))
+        got = {r[0].strip('` '): [r[1], int(num(r[2])), int(num(r[3])), r[4].strip('` '), r[5].strip('` ')] for r in rows[1:] if len(r) >= 6}
+        want = {'order_id': ['text', 0, 180, '-', '-'], 'customer_id': ['text', 0, 52, '-', '-'], 'country': ['text', 31, 5, '-', '-'], 'channel': ['text', 0, 3, '-', '-'], 'order_date': ['date', 0, 75, '2025-01-01', '2025-03-28'], 'total': ['decimal', 0, 180, '5.39', '398.07'], 'discount_pct': ['integer', 39, 4, '0', '15'], 'shipped': ['boolean', 0, 2, '-', '-'], 'notes': ['text', 89, 3, '-', '-']}
+        need(got == want, 'differs: ' + str({k: (got.get(k), v) for k, v in want.items() if got.get(k) != v}))
+
+
+    def t5():
+        txt = read('docs/data-dictionary.md')
+        m = re.search(r'^## Categorical values\s*$(.*?)(?=^## |\Z)', txt, re.M | re.S)
+        need(m, 'missing ## Categorical values')
+        got = {}
+        for mm in re.finditer(r'^- `(\w+)`:\s*(.*)$', m.group(1), re.M):
+            got[mm.group(1)] = [x.strip('` ') for x in mm.group(2).split(',')]
+        need(got == {'country': ['DE', 'ES', 'FR', 'UK', 'US'], 'channel': ['app', 'store', 'web'], 'discount_pct': ['0', '10', '15', '5'], 'notes': ['call first', 'gift', 'rush']}, f'categorical lists differ: {got}')
+
+
+    def t7():
+        rows = md_rows('docs/data-dictionary.md', 'revenue by channel')
+        got = {r[0].strip('` '): num(r[1]) for r in rows[1:] if len(r) >= 2}
+        need(sorted(got) == ['app', 'store', 'web'] and all(abs(got[k] - v) <= 0.011 for k, v in {'app': 14566.63, 'web': 13918.99, 'store': 9916.64}.items()), 'channel sums: ' + str(got))
+        need(len(rows[1:]) == 3, 'three rows')
+
+
+    def t8():
+        import tempfile
+        (W / '_alt').mkdir(exist_ok=True)
+        (W / '_alt/t.csv').write_text('id,flag,amount,day,note\n1,true,2.5,2025-01-02,\n2,false,10.25,2025-01-09,x\n3,true,,2025-02-01,x\n', encoding='utf-8')
+        need((W / 'scripts/profile.py').exists(), 'missing scripts/profile.py')
+        chk_cmd_json('python3 scripts/profile.py --csv _alt/t.csv', {
+            'id': {'type': 'integer', 'nulls': 0, 'distinct': 3, 'min': '1', 'max': '3'},
+            'flag': {'type': 'boolean', 'nulls': 0, 'distinct': 2, 'min': '-', 'max': '-'},
+            'amount': {'type': 'decimal', 'nulls': 1, 'distinct': 2, 'min': '2.50', 'max': '10.25'},
+            'day': {'type': 'date', 'nulls': 0, 'distinct': 3, 'min': '2025-01-02', 'max': '2025-02-01'},
+            'note': {'type': 'text', 'nulls': 1, 'distinct': 1, 'min': '-', 'max': '-'}}, tol=0)
+        chk_cmd_json('python3 scripts/profile.py', {'order_id': {'type': 'text', 'nulls': 0, 'distinct': 180, 'min': '-', 'max': '-'}, 'customer_id': {'type': 'text', 'nulls': 0, 'distinct': 52, 'min': '-', 'max': '-'}, 'country': {'type': 'text', 'nulls': 31, 'distinct': 5, 'min': '-', 'max': '-'}, 'channel': {'type': 'text', 'nulls': 0, 'distinct': 3, 'min': '-', 'max': '-'}, 'order_date': {'type': 'date', 'nulls': 0, 'distinct': 75, 'min': '2025-01-01', 'max': '2025-03-28'}, 'total': {'type': 'decimal', 'nulls': 0, 'distinct': 180, 'min': '5.39', 'max': '398.07'}, 'discount_pct': {'type': 'integer', 'nulls': 39, 'distinct': 4, 'min': '0', 'max': '15'}, 'shipped': {'type': 'boolean', 'nulls': 0, 'distinct': 2, 'min': '-', 'max': '-'}, 'notes': {'type': 'text', 'nulls': 89, 'distinct': 3, 'min': '-', 'max': '-'}}, tol=0)
+
+
+    def t9():
+        rows = md_rows('docs/data-dictionary.md', 'columns')
+        got = {r[0].strip('` '): [r[1], int(num(r[2])), int(num(r[3])), r[4].strip('` '), r[5].strip('` ')] for r in rows[1:] if len(r) >= 6}
+        want = {'order_id': ['text', 0, 180, '-', '-'], 'customer_id': ['text', 0, 56, '-', '-'], 'country': ['text', 47, 5, '-', '-'], 'channel': ['text', 0, 3, '-', '-'], 'order_date': ['date', 0, 81, '2025-01-01', '2025-03-28'], 'total': ['decimal', 0, 240, '5.39', '399.01'], 'discount_pct': ['integer', 50, 4, '0', '15'], 'shipped': ['boolean', 0, 2, '-', '-'], 'notes': ['text', 118, 3, '-', '-']}
+        need(got == want, 'refresh profile differs: ' + str({k: (got.get(k), v) for k, v in want.items() if got.get(k) != v}))
+        need('240' in read('docs/data-dictionary.md'), 'mention the new row count 240')
+
+
+    if __name__ == "__main__":
+        fn = globals().get(sys.argv[1]) if len(sys.argv) > 1 else None
+        need(callable(fn) and sys.argv[1] in ['t2', 't4', 't5', 't7', 't8', 't9'], "unknown check " + str(sys.argv[1:]))
+        fn()
+        print("OK")
+turns:
+- prompt: How many data rows (excluding the header) and how many columns does data/orders.csv have? Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all:
+    - (?<![\d.,])1,?8,?0(?:\.0+)?(?!\d|[.,]\d)
+    - (?<![\d.,])9(?:\.0+)?(?!\d|[.,]\d)
+- prompt: 'Create docs/data-dictionary.md with a `## Columns` section holding a table (columns column, type, nulls): one row
+    per CSV column in file order. type is the narrowest of boolean (only true/false), integer, decimal, date (YYYY-MM-DD)
+    or text that fits every non-empty value; nulls is the number of empty cells.'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t2
+    hidden:
+    - _grade.py
+    timeout: 60
+- prompt: How many distinct non-empty values do country, channel and customer_id have? Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all:
+    - country\D{0,10}(?<![\d.,])5(?:\.0+)?(?!\d|[.,]\d)
+    - channel\D{0,10}(?<![\d.,])3(?:\.0+)?(?!\d|[.,]\d)
+    - customer_id\D{0,10}(?<![\d.,])5,?2(?:\.0+)?(?!\d|[.,]\d)
+- prompt: Extend the Columns table with columns distinct (number of distinct non-empty values), min and max. For integer,
+    decimal and date columns min/max are the smallest and largest value (decimals with 2 places); for boolean and text columns
+    write `-` in both.
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t4
+    hidden:
+    - _grade.py
+    timeout: 60
+- prompt: 'Add a `## Categorical values` section with one bullet per column among country, channel, discount_pct and notes:
+    ``- `column`: `a`, `b`, ...`` listing its distinct non-empty values sorted as plain strings (each value in backticks).'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t5
+    hidden:
+    - _grade.py
+    timeout: 60
+- prompt: What is the sum of the total column per channel in data/orders.csv, to 2 decimals? Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all:
+    - (?<![\d.,])1,?4,?5,?6,?6\.630*(?!\d|[.,]\d)
+    - (?<![\d.,])1,?3,?9,?1,?8\.990*(?!\d|[.,]\d)
+    - (?<![\d.,])9,?9,?1,?6\.640*(?!\d|[.,]\d)
+- prompt: 'Add a `## Revenue by channel` section with a table (channel, total): the sum of the total column per channel, 2
+    decimals, channels sorted alphabetically.'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t7
+    hidden:
+    - _grade.py
+    timeout: 60
+- prompt: 'Add scripts/profile.py [--csv FILE] (default data/orders.csv): it prints JSON {column: {type, nulls, distinct,
+    min, max}} using the same type rules as the dictionary and the same min/max formatting (strings; `-` when not applicable).'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t8
+    hidden:
+    - _grade.py
+    timeout: 60
+- prompt: 'data/orders_refresh.csv replaces the extract. Regenerate the Columns table in docs/data-dictionary.md from it (same
+    rules as before: one row per CSV column, so the three id/date columns and all six value columns) and add one sentence
+    naming the file and its row count.'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t9
+    hidden:
+    - _grade.py
+    timeout: 60
+- prompt: Add a '## Data dictionary' section to README.md linking docs/data-dictionary.md and showing how to run `python3
+    scripts/profile.py --csv data/orders_refresh.csv`.
+  checks:
+  - kind: doc_sections
+    path: README.md
+    headings:
+    - Data dictionary
+  - kind: file_regex
+    path: README.md
+    pattern: docs/data-dictionary\.md
+  - kind: file_regex
+    path: README.md
+    pattern: scripts/profile\.py --csv data/orders_refresh\.csv

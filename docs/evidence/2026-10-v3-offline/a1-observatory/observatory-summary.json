@@ -1,0 +1,925 @@
+{
+  "a3_inputs": {
+    "effort_switching": [
+      {
+        "changes_per_request": 0.000992,
+        "effort_changes": 12,
+        "requested_efforts": {
+          "None": 11134,
+          "high": 131,
+          "low": 3,
+          "medium": 826
+        },
+        "requests": 12094,
+        "sessions": 219,
+        "sessions_with_a_change": 7,
+        "traffic": "production"
+      },
+      {
+        "changes_per_request": 0.220682,
+        "effort_changes": 828,
+        "requested_efforts": {
+          "None": 2712,
+          "high": 256,
+          "low": 542,
+          "medium": 242
+        },
+        "requests": 3752,
+        "sessions": 709,
+        "sessions_with_a_change": 430,
+        "traffic": "test"
+      }
+    ],
+    "label": "MEASURED recorded workload (slow_end cost_usd is the recorder's own price-table estimate per call); start-tier = first difficulty_judged per session",
+    "start_tier_first_per_session": [
+      {
+        "reason_code": "judge_cheap",
+        "sessions": 35,
+        "traffic": "production"
+      },
+      {
+        "reason_code": "judge_strong",
+        "sessions": 68,
+        "traffic": "production"
+      },
+      {
+        "reason_code": "rules_cheap",
+        "sessions": 5,
+        "traffic": "production"
+      },
+      {
+        "reason_code": "rules_strong",
+        "sessions": 1,
+        "traffic": "production"
+      },
+      {
+        "reason_code": "scope_strong",
+        "sessions": 105,
+        "traffic": "production"
+      },
+      {
+        "reason_code": "judge_cheap",
+        "sessions": 113,
+        "traffic": "test"
+      },
+      {
+        "reason_code": "judge_strong",
+        "sessions": 4,
+        "traffic": "test"
+      },
+      {
+        "reason_code": "rules_cheap",
+        "sessions": 1,
+        "traffic": "test"
+      },
+      {
+        "reason_code": "scope_strong",
+        "sessions": 93,
+        "traffic": "test"
+      }
+    ],
+    "workload": [
+      {
+        "cache_read_tokens": 19548452.0,
+        "cache_write_tokens": 1816190.0,
+        "host_model": "claude-haiku-4-5-20251001",
+        "provider_seconds": 2107.94013,
+        "recorded_cost_usd": 7.854674,
+        "sessions": 41,
+        "slow_calls": 519,
+        "traffic": "production"
+      },
+      {
+        "cache_read_tokens": 1093512246.0,
+        "cache_write_tokens": 63443039.0,
+        "host_model": "claude-opus-5-5",
+        "provider_seconds": 42169.873197,
+        "recorded_cost_usd": 632.661945,
+        "sessions": 64,
+        "slow_calls": 3993,
+        "traffic": "production"
+      },
+      {
+        "cache_read_tokens": 1398082533.0,
+        "cache_write_tokens": 19031477.0,
+        "host_model": "claude-sonnet-5",
+        "provider_seconds": 40805.93518,
+        "recorded_cost_usd": 545.061332,
+        "sessions": 71,
+        "slow_calls": 5483,
+        "traffic": "production"
+      },
+      {
+        "cache_read_tokens": 425215001.0,
+        "cache_write_tokens": 14089611.0,
+        "host_model": "claude-sonnet-5-5",
+        "provider_seconds": 23956.14511,
+        "recorded_cost_usd": 0.0,
+        "sessions": 37,
+        "slow_calls": 1957,
+        "traffic": "production"
+      },
+      {
+        "cache_read_tokens": 24477.0,
+        "cache_write_tokens": 0.0,
+        "host_model": "gemini-3.1-pro-preview",
+        "provider_seconds": 8.035897,
+        "recorded_cost_usd": 0.092817,
+        "sessions": 1,
+        "slow_calls": 1,
+        "traffic": "production"
+      },
+      {
+        "cache_read_tokens": 0.0,
+        "cache_write_tokens": 0.0,
+        "host_model": "unknown",
+        "provider_seconds": 1344.100532,
+        "recorded_cost_usd": 0.0,
+        "sessions": 5,
+        "slow_calls": 138,
+        "traffic": "production"
+      },
+      {
+        "cache_read_tokens": 0.0,
+        "cache_write_tokens": 100132.0,
+        "host_model": "claude-fable-5-1",
+        "provider_seconds": 3.252659,
+        "recorded_cost_usd": 0.0,
+        "sessions": 1,
+        "slow_calls": 1,
+        "traffic": "test"
+      },
+      {
+        "cache_read_tokens": 1816317.0,
+        "cache_write_tokens": 4408044.0,
+        "host_model": "claude-haiku-4-5-20251001",
+        "provider_seconds": 179.69563,
+        "recorded_cost_usd": 5.733142,
+        "sessions": 81,
+        "slow_calls": 81,
+        "traffic": "test"
+      },
+      {
+        "cache_read_tokens": 24240108.0,
+        "cache_write_tokens": 9073972.0,
+        "host_model": "claude-opus-5-5",
+        "provider_seconds": 1435.627601,
+        "recorded_cost_usd": 42.762354,
+        "sessions": 123,
+        "slow_calls": 262,
+        "traffic": "test"
+      },
+      {
+        "cache_read_tokens": 168196.0,
+        "cache_write_tokens": 44813.0,
+        "host_model": "claude-sonnet-5",
+        "provider_seconds": 37.346715,
+        "recorded_cost_usd": 0.273423,
+        "sessions": 1,
+        "slow_calls": 5,
+        "traffic": "test"
+      },
+      {
+        "cache_read_tokens": 0.0,
+        "cache_write_tokens": 0.0,
+        "host_model": "gemini-3.1-pro-preview",
+        "provider_seconds": 14.60718,
+        "recorded_cost_usd": 0.370286,
+        "sessions": 5,
+        "slow_calls": 5,
+        "traffic": "test"
+      },
+      {
+        "cache_read_tokens": 14577959.0,
+        "cache_write_tokens": 909215.0,
+        "host_model": "unknown",
+        "provider_seconds": 30486.525885,
+        "recorded_cost_usd": 8.226527,
+        "sessions": 511,
+        "slow_calls": 3563,
+        "traffic": "test"
+      },
+      {
+        "cache_read_tokens": 0.0,
+        "cache_write_tokens": 0.0,
+        "host_model": "unknown",
+        "provider_seconds": 21.975309,
+        "recorded_cost_usd": 0.0,
+        "sessions": 3,
+        "slow_calls": 4,
+        "traffic": "unclassified"
+      }
+    ]
+  },
+  "health_mix": [
+    {
+      "health_kind": "advisory_result",
+      "n": 3,
+      "share_of_store_events": 6e-06,
+      "store": "events"
+    },
+    {
+      "health_kind": "configuration",
+      "n": 3286,
+      "share_of_store_events": 0.007074,
+      "store": "events"
+    },
+    {
+      "health_kind": "native_hook_metadata",
+      "n": 84048,
+      "share_of_store_events": 0.180934,
+      "store": "events"
+    },
+    {
+      "health_kind": "recorder_status",
+      "n": 4399,
+      "share_of_store_events": 0.00947,
+      "store": "events"
+    },
+    {
+      "health_kind": "session_closed",
+      "n": 3157,
+      "share_of_store_events": 0.006796,
+      "store": "events"
+    },
+    {
+      "health_kind": "session_heartbeat",
+      "n": 227610,
+      "share_of_store_events": 0.489985,
+      "store": "events"
+    },
+    {
+      "health_kind": "shadow",
+      "n": 7975,
+      "share_of_store_events": 0.017168,
+      "store": "events"
+    },
+    {
+      "health_kind": "turn_start",
+      "n": 1599,
+      "share_of_store_events": 0.003442,
+      "store": "events"
+    },
+    {
+      "health_kind": "configuration",
+      "n": 226,
+      "share_of_store_events": 0.028453,
+      "store": "events-eval"
+    },
+    {
+      "health_kind": "native_hook_metadata",
+      "n": 2187,
+      "share_of_store_events": 0.275337,
+      "store": "events-eval"
+    },
+    {
+      "health_kind": "recorder_status",
+      "n": 297,
+      "share_of_store_events": 0.037391,
+      "store": "events-eval"
+    },
+    {
+      "health_kind": "session_closed",
+      "n": 216,
+      "share_of_store_events": 0.027194,
+      "store": "events-eval"
+    },
+    {
+      "health_kind": "session_heartbeat",
+      "n": 868,
+      "share_of_store_events": 0.109279,
+      "store": "events-eval"
+    },
+    {
+      "health_kind": "turn_start",
+      "n": 113,
+      "share_of_store_events": 0.014226,
+      "store": "events-eval"
+    }
+  ],
+  "label": "privacy-safe aggregates of the local observatory store; counts are MEASURED event counts; receipt dollars and projected savings are ESTIMATES",
+  "latency": [
+    {
+      "backend": "laya",
+      "kind": "cua_decided",
+      "mean_ms": 84.106,
+      "model": "laya-rl-agent",
+      "n": 1,
+      "p50_ms": 84.106,
+      "p95_ms": 84.106
+    },
+    {
+      "backend": "jev",
+      "kind": "difficulty_judged:judge_call",
+      "mean_ms": 193.871317,
+      "model": "unknown",
+      "n": 248,
+      "p50_ms": 159.32075,
+      "p95_ms": 310.998938
+    },
+    {
+      "backend": "jev",
+      "kind": "difficulty_judged:no_judge_call",
+      "mean_ms": 0.0,
+      "model": "claude-fable-5-1",
+      "n": 1,
+      "p50_ms": 0.0,
+      "p95_ms": 0.0
+    },
+    {
+      "backend": "jev",
+      "kind": "difficulty_judged:no_judge_call",
+      "mean_ms": 89.735207,
+      "model": "unknown",
+      "n": 301,
+      "p50_ms": 0.0,
+      "p95_ms": 0.0
+    },
+    {
+      "backend": "jev",
+      "kind": "judge_usage",
+      "mean_ms": 184.848937,
+      "model": "jev-1.13.0",
+      "n": 26,
+      "p50_ms": 175.878645,
+      "p95_ms": 296.461427
+    },
+    {
+      "backend": "ollama-token",
+      "kind": "scored",
+      "mean_ms": 70.385672,
+      "model": "qwen3:0.6b",
+      "n": 736,
+      "p50_ms": 69.033125,
+      "p95_ms": 97.266781
+    },
+    {
+      "backend": "ollama-token",
+      "kind": "shadow_proposed",
+      "mean_ms": 56.260345,
+      "model": "qwen3:0.6b",
+      "n": 993,
+      "p50_ms": 48.129125,
+      "p95_ms": 93.150616
+    },
+    {
+      "backend": "scripted-demo",
+      "kind": "shadow_proposed",
+      "mean_ms": 44.405682,
+      "model": "scripted-demo-not-jev",
+      "n": 648,
+      "p50_ms": 36.10348,
+      "p95_ms": 52.41911
+    },
+    {
+      "backend": "unknown",
+      "kind": "shadow_proposed",
+      "mean_ms": 43.863458,
+      "model": "unknown",
+      "n": 1,
+      "p50_ms": 43.863458,
+      "p95_ms": 43.863458
+    }
+  ],
+  "receipts": [
+    {
+      "decision": "keepalive_missed",
+      "kind": "receipt-estimated (policy's own claim)",
+      "lever": "cache_keepalive",
+      "measured_later": "one live A/B, 330 s wait: measured saving $0.160384 = receipt $0.160384",
+      "measured_source": "evals/levers-2026-09-25/wait330-c-post-review-summary.json",
+      "n": 16,
+      "period": "after",
+      "seconds_saved_sum": 0.0,
+      "traffic": "production",
+      "usd_saved_sum": -6.986765
+    },
+    {
+      "decision": "keepalive_not_needed",
+      "kind": "receipt-estimated (policy's own claim)",
+      "lever": "cache_keepalive",
+      "measured_later": "one live A/B, 330 s wait: measured saving $0.160384 = receipt $0.160384",
+      "measured_source": "evals/levers-2026-09-25/wait330-c-post-review-summary.json",
+      "n": 6,
+      "period": "after",
+      "seconds_saved_sum": 0.0,
+      "traffic": "production",
+      "usd_saved_sum": -0.308926
+    },
+    {
+      "decision": "kept_cache_warm",
+      "kind": "receipt-estimated (policy's own claim)",
+      "lever": "cache_keepalive",
+      "measured_later": "one live A/B, 330 s wait: measured saving $0.160384 = receipt $0.160384",
+      "measured_source": "evals/levers-2026-09-25/wait330-c-post-review-summary.json",
+      "n": 172,
+      "period": "after",
+      "seconds_saved_sum": 0.0,
+      "traffic": "production",
+      "usd_saved_sum": 229.954349
+    },
+    {
+      "decision": "kept_on_host",
+      "kind": "receipt-estimated (policy's own claim)",
+      "lever": "cheaper_model",
+      "measured_later": "real-workload replay: routing routine steps to Sonnet would ADD $17-46",
+      "measured_source": "docs/evidence/2026-09-25/step-opportunity/summary.json; docs/GOAL.md",
+      "n": 68,
+      "period": "after",
+      "seconds_saved_sum": -15.3438,
+      "traffic": "production",
+      "usd_saved_sum": 0.0
+    },
+    {
+      "decision": "kept_on_host",
+      "kind": "receipt-estimated (policy's own claim)",
+      "lever": "cheaper_model",
+      "measured_later": "real-workload replay: routing routine steps to Sonnet would ADD $17-46",
+      "measured_source": "docs/evidence/2026-09-25/step-opportunity/summary.json; docs/GOAL.md",
+      "n": 3,
+      "period": "after",
+      "seconds_saved_sum": -0.5121,
+      "traffic": "test",
+      "usd_saved_sum": 0.0
+    },
+    {
+      "decision": "step_on_claude-sonnet-5",
+      "kind": "receipt-estimated (policy's own claim)",
+      "lever": "cheaper_model",
+      "measured_later": "real-workload replay: routing routine steps to Sonnet would ADD $17-46",
+      "measured_source": "docs/evidence/2026-09-25/step-opportunity/summary.json; docs/GOAL.md",
+      "n": 170,
+      "period": "after",
+      "seconds_saved_sum": 432.5089,
+      "traffic": "production",
+      "usd_saved_sum": -1.79891
+    },
+    {
+      "decision": "step_on_claude-sonnet-5",
+      "kind": "receipt-estimated (policy's own claim)",
+      "lever": "cheaper_model",
+      "measured_later": "real-workload replay: routing routine steps to Sonnet would ADD $17-46",
+      "measured_source": "docs/evidence/2026-09-25/step-opportunity/summary.json; docs/GOAL.md",
+      "n": 23,
+      "period": "after",
+      "seconds_saved_sum": 14.8114,
+      "traffic": "test",
+      "usd_saved_sum": 0.997824
+    },
+    {
+      "decision": "duplicate_output_elided",
+      "kind": "receipt-estimated (policy's own claim)",
+      "lever": "context_rightsize",
+      "measured_later": "none",
+      "measured_source": null,
+      "n": 3,
+      "period": "after",
+      "seconds_saved_sum": 0.0,
+      "traffic": "production",
+      "usd_saved_sum": 0.105595
+    },
+    {
+      "decision": "poll_run_in_place",
+      "kind": "receipt-estimated (policy's own claim)",
+      "lever": "loop_stop",
+      "measured_later": "waste-guards A/B (Opus, 3 reps), poll wait: measured $0.0558 vs receipt $0.0514",
+      "measured_source": "docs/evidence/2026-09-25/waste-guards-ab/README.md",
+      "n": 3,
+      "period": "after",
+      "seconds_saved_sum": 28.7328,
+      "traffic": "production",
+      "usd_saved_sum": 0.703448
+    }
+  ],
+  "routed": [
+    {
+      "n": 1,
+      "reason_code": "prepared_action_selected",
+      "route": "fast",
+      "traffic": "production"
+    },
+    {
+      "n": 7,
+      "reason_code": "backend_circuit_open",
+      "route": "slow",
+      "traffic": "production"
+    },
+    {
+      "n": 14,
+      "reason_code": "backend_error",
+      "route": "slow",
+      "traffic": "production"
+    },
+    {
+      "n": 1,
+      "reason_code": "decision_timeout",
+      "route": "slow",
+      "traffic": "production"
+    },
+    {
+      "n": 117,
+      "reason_code": "no_eligible_candidates",
+      "route": "slow",
+      "traffic": "production"
+    },
+    {
+      "n": 11955,
+      "reason_code": "read_shortcut_disabled",
+      "route": "slow",
+      "traffic": "production"
+    },
+    {
+      "n": 127,
+      "reason_code": "prepared_action_selected",
+      "route": "fast",
+      "traffic": "test"
+    },
+    {
+      "n": 491,
+      "reason_code": "already_read_unchanged",
+      "route": "slow",
+      "traffic": "test"
+    },
+    {
+      "n": 205,
+      "reason_code": "backend_circuit_open",
+      "route": "slow",
+      "traffic": "test"
+    },
+    {
+      "n": 431,
+      "reason_code": "backend_error",
+      "route": "slow",
+      "traffic": "test"
+    },
+    {
+      "n": 13,
+      "reason_code": "decision_timeout",
+      "route": "slow",
+      "traffic": "test"
+    },
+    {
+      "n": 266,
+      "reason_code": "external_state_not_enabled",
+      "route": "slow",
+      "traffic": "test"
+    },
+    {
+      "n": 4,
+      "reason_code": "judge_disabled",
+      "route": "slow",
+      "traffic": "test"
+    },
+    {
+      "n": 399,
+      "reason_code": "model_abstained",
+      "route": "slow",
+      "traffic": "test"
+    },
+    {
+      "n": 1548,
+      "reason_code": "no_eligible_candidates",
+      "route": "slow",
+      "traffic": "test"
+    },
+    {
+      "n": 357,
+      "reason_code": "read_shortcut_disabled",
+      "route": "slow",
+      "traffic": "test"
+    },
+    {
+      "n": 201,
+      "reason_code": "selection_threshold",
+      "route": "slow",
+      "traffic": "test"
+    },
+    {
+      "n": 3,
+      "reason_code": "shadow_only",
+      "route": "slow",
+      "traffic": "test"
+    },
+    {
+      "n": 2,
+      "reason_code": "prepared_action_selected",
+      "route": "fast",
+      "traffic": "unclassified"
+    },
+    {
+      "n": 1,
+      "reason_code": "decision_timeout",
+      "route": "slow",
+      "traffic": "unclassified"
+    },
+    {
+      "n": 3,
+      "reason_code": "no_eligible_candidates",
+      "route": "slow",
+      "traffic": "unclassified"
+    }
+  ],
+  "schema": "fast-decisions-observatory-summary/v1",
+  "sessions_by_traffic": {
+    "production": 398,
+    "test": 1136,
+    "unclassified": 63
+  },
+  "shadow": {
+    "backends_scored": {
+      "ollama-token|qwen3:0.6b": 993,
+      "scripted-demo|scripted-demo-not-jev": 648,
+      "unknown|unknown": 1
+    },
+    "rates": {
+      "after the week": {
+        "match": 0,
+        "n": 1,
+        "rate": 0.0,
+        "wilson95": [
+          0.0,
+          0.793451
+        ]
+      },
+      "all (the 7.1% headline)": {
+        "match": 117,
+        "n": 1642,
+        "rate": 0.071255,
+        "wilson95": [
+          0.059787,
+          0.084724
+        ]
+      },
+      "any scorer, host used another tool (unmatchable by construction)": {
+        "match": 0,
+        "n": 1491,
+        "rate": 0.0,
+        "wilson95": [
+          0.0,
+          0.00257
+        ]
+      },
+      "eval store (events-eval)": {
+        "match": 0,
+        "n": 0,
+        "rate": null,
+        "wilson95": [
+          null,
+          null
+        ]
+      },
+      "jev-default era (>= 09-24)": {
+        "match": 0,
+        "n": 1,
+        "rate": 0.0,
+        "wilson95": [
+          0.0,
+          0.793451
+        ]
+      },
+      "observatory week": {
+        "match": 117,
+        "n": 1641,
+        "rate": 0.071298,
+        "wilson95": [
+          0.059823,
+          0.084775
+        ]
+      },
+      "production traffic": {
+        "match": 1,
+        "n": 633,
+        "rate": 0.00158,
+        "wilson95": [
+          0.000279,
+          0.008894
+        ]
+      },
+      "real scorer (non-synthetic)": {
+        "match": 117,
+        "n": 994,
+        "rate": 0.117706,
+        "wilson95": [
+          0.099129,
+          0.139227
+        ]
+      },
+      "real scorer, host used the candidate tool": {
+        "match": 117,
+        "n": 151,
+        "rate": 0.774834,
+        "wilson95": [
+          0.701874,
+          0.834158
+        ]
+      },
+      "real scorer, host used the candidate tool, not abstained": {
+        "match": 117,
+        "n": 140,
+        "rate": 0.835714,
+        "wilson95": [
+          0.765536,
+          0.887962
+        ]
+      },
+      "real scorer, not abstained": {
+        "match": 117,
+        "n": 601,
+        "rate": 0.194676,
+        "wilson95": [
+          0.165,
+          0.228229
+        ]
+      },
+      "scripted-demo backend (synthetic: always the first candidate)": {
+        "match": 0,
+        "n": 648,
+        "rate": 0.0,
+        "wilson95": [
+          0.0,
+          0.005893
+        ]
+      },
+      "test traffic": {
+        "match": 113,
+        "n": 991,
+        "rate": 0.114026,
+        "wilson95": [
+          0.09571,
+          0.135324
+        ]
+      }
+    },
+    "relabel_step": "not run ($0): the store keeps no state text (privacy allow-list: hashes, counts, ids only), so a strong model cannot judge whether a mismatch was defensible; the correctness of the shadow choices is unidentifiable from this store",
+    "unjoined_agreements": 0,
+    "what_match_means": "match = the scorer's chosen prepared read candidate (always a `fast_workspace` read) has the same tool AND argument digest as the host LLM's next actual tool call. It measures agreement with the host, not correctness; a host call to any other tool (read_file, bash, grep, ...) is a mismatch by construction, even when it reads the same file. abstained = the scorer chose the slow path."
+  },
+  "slow_end_ms": {
+    "mean": 8904.013304,
+    "n": 16012,
+    "p50": 4828.199,
+    "p95": 26920.107763
+  },
+  "start_tier_decisions": [
+    {
+      "backend": "jev",
+      "choice": "cheap",
+      "n": 48,
+      "reason_code": "judge_cheap",
+      "traffic": "production"
+    },
+    {
+      "backend": "jev",
+      "choice": "cheap",
+      "n": 7,
+      "reason_code": "rules_cheap",
+      "traffic": "production"
+    },
+    {
+      "backend": "jev",
+      "choice": "strong",
+      "n": 79,
+      "reason_code": "judge_strong",
+      "traffic": "production"
+    },
+    {
+      "backend": "jev",
+      "choice": "strong",
+      "n": 1,
+      "reason_code": "rules_strong",
+      "traffic": "production"
+    },
+    {
+      "backend": "jev",
+      "choice": "strong",
+      "n": 199,
+      "reason_code": "scope_strong",
+      "traffic": "production"
+    },
+    {
+      "backend": "jev",
+      "choice": "cheap",
+      "n": 117,
+      "reason_code": "judge_cheap",
+      "traffic": "test"
+    },
+    {
+      "backend": "jev",
+      "choice": "cheap",
+      "n": 1,
+      "reason_code": "rules_cheap",
+      "traffic": "test"
+    },
+    {
+      "backend": "jev",
+      "choice": "strong",
+      "n": 4,
+      "reason_code": "judge_strong",
+      "traffic": "test"
+    },
+    {
+      "backend": "jev",
+      "choice": "strong",
+      "n": 93,
+      "reason_code": "scope_strong",
+      "traffic": "test"
+    },
+    {
+      "backend": "jev",
+      "choice": "strong",
+      "n": 1,
+      "reason_code": "user_model_strong",
+      "traffic": "test"
+    }
+  ],
+  "store": {
+    "bad_lines": 0,
+    "cutoff_utc": "2026-10-05T17:00:00+00:00",
+    "eval_dir": "~/.amplifier/fast-decisions/events-eval",
+    "events_dir": "~/.amplifier/fast-decisions/events",
+    "excluded_after_cutoff": 4196,
+    "session_files": {
+      "events": 4470,
+      "events-eval": 307
+    },
+    "totals": {
+      "events-eval|after": 7943,
+      "events-eval|all": 7943,
+      "events|after": 292915,
+      "events|all": 464524,
+      "events|week": 171609
+    },
+    "week": [
+      "2026-09-17",
+      "2026-09-23"
+    ],
+    "week_events": 171609
+  },
+  "traffic": [
+    {
+      "basis": "afast_traffic_tag",
+      "events": 146564,
+      "sessions": 77,
+      "store": "events",
+      "traffic": "production"
+    },
+    {
+      "basis": "workspace_default",
+      "events": 201809,
+      "sessions": 321,
+      "store": "events",
+      "traffic": "production"
+    },
+    {
+      "basis": "afast_traffic_tag",
+      "events": 5756,
+      "sessions": 16,
+      "store": "events",
+      "traffic": "test"
+    },
+    {
+      "basis": "forge_label",
+      "events": 72264,
+      "sessions": 860,
+      "store": "events",
+      "traffic": "test"
+    },
+    {
+      "basis": "workspace_marker",
+      "events": 37485,
+      "sessions": 260,
+      "store": "events",
+      "traffic": "test"
+    },
+    {
+      "basis": "no_config",
+      "events": 211,
+      "sessions": 46,
+      "store": "events",
+      "traffic": "unclassified"
+    },
+    {
+      "basis": "no_name",
+      "events": 435,
+      "sessions": 17,
+      "store": "events",
+      "traffic": "unclassified"
+    },
+    {
+      "basis": "eval_store",
+      "events": 7943,
+      "sessions": 92,
+      "store": "events-eval",
+      "traffic": "test"
+    }
+  ],
+  "would_have_saved_estimate": {
+    "avoided_llm_turns_claimed": 117,
+    "avoided_rate": 0.117706,
+    "decisions": 994,
+    "label": "ESTIMATED (never measured): decisions x (mean slow_end ms - mean scorer ms) x avoided-turn rate; docs/design/redesign-2026-09-17.md `projected_task_latency_delta_ms`",
+    "mean_scorer_ms_week": 56.247873,
+    "mean_slow_end_ms_week": 8586.402081,
+    "projected_latency_saved_s": 998.028042
+  }
+}

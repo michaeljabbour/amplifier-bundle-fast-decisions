@@ -1,0 +1,123 @@
+# holdout-v3 repos: faker-nonutf-cli -- 9 turns, short gaps.
+id: faker-nonutf-cli
+task_type: bugfix
+language: python
+split: holdout
+default_gap_s: 10
+source:
+  desc: >-
+    joke2k/faker, CLI documentation (print_provider) crashed with UnicodeEncodeError on non-UTF
+    consoles, fixed upstream in 7b41840a; workspace is its parent
+  repo: https://github.com/joke2k/faker.git
+  sha: 5b56bd720b92456dcadb574d9f795a0d309c6433
+  fix_sha: 7b41840a2d9283eceeca6d7ac953febf90178bb4
+workspace:
+  kind: git
+  repo: https://github.com/joke2k/faker.git
+  sha: 5b56bd720b92456dcadb574d9f795a0d309c6433
+  local_hint: ~/dev/afast-v3-src/faker
+hidden_files:
+  tests/test_factory.py:
+    from_git:
+      repo: https://github.com/joke2k/faker.git
+      sha: 7b41840a2d9283eceeca6d7ac953febf90178bb4
+      path: tests/test_factory.py
+      local_hint: ~/dev/afast-v3-src/faker
+  tests/test_cli_single_field_hidden.py: |
+    import io
+    import re
+
+    from faker.cli import print_doc
+
+
+    def _render(field, lang, encoding):
+        output = io.TextIOWrapper(io.BytesIO(), encoding=encoding)
+        print_doc(field, lang=lang, seed=1, output=output)
+        output.flush()
+        return output.buffer.getvalue().decode(encoding)
+
+
+    def test_single_field_cyrillic_on_cp1252_is_escaped():
+        rendered = _render("name", "ru_RU", "cp1252")
+        assert re.search(r"\\u04[0-9a-f]{2}", rendered)
+
+
+    def test_single_field_emoji_on_cp950_is_escaped():
+        rendered = _render("emoji", "en_US", "cp950")
+        assert re.search(r"\\U0001[0-9a-f]{4}|\\u[0-9a-f]{4}", rendered)
+
+
+    def test_single_field_on_utf8_is_unchanged():
+        rendered = _render("name", "ru_RU", "utf-8")
+        assert re.search("[\u0400-\u04ff]", rendered)
+        assert "\\u04" not in rendered
+
+
+    def test_single_field_ascii_output_is_unchanged():
+        output = io.StringIO()
+        print_doc("pystr", seed=1, output=output)
+        assert output.getvalue()
+turns:
+  - prompt: >-
+      `faker --doc`-style provider listings crash on terminals that are not UTF-8. Repro: call
+      `faker.cli.print_provider(doc, provider, {"fake.emoji()": "\U0001f469"},
+      output=io.TextIOWrapper(io.BytesIO(), encoding="cp950"))` (doc and provider can be MagicMocks
+      with `max_name_len` and `get_provider_name` set): it raises UnicodeEncodeError. Characters the
+      output stream's encoding cannot represent should come out as backslash escapes (the emoji as
+      `\U0001f469`), everything else unchanged, and streams without an encoding (StringIO) must keep
+      working. Please fix it in the faker package, putting the escaping in a module-level helper
+      `_encode_for_output(value: str, output: TextIO) -> str` in faker/cli.py that print_provider uses.
+      Run the tests from this directory with `python3 -m pytest -q tests/test_factory.py`.
+    checks:
+      - {kind: tests, runner: python, files: [tests/test_factory.py], hidden: [tests/test_factory.py]}
+  - prompt: >-
+      In three to five sentences explain the root cause: which function writes the text, what the
+      stream's encoding has to do with the failure, and why UTF-8 terminals never saw it. Do not
+      change any files.
+    checks:
+      - {kind: keyed_facts, all: [print_provider, encod, UTF|utf], any: [UnicodeEncodeError, cp950, cp1252, print]}
+  - prompt: >-
+      Add a test file `tests/test_cli_nonutf.py` that calls print_provider with
+      TextIOWrapper(BytesIO()) outputs: an emoji example on cp950 comes out escaped, a Cyrillic
+      example on cp1252 comes out escaped, the same emoji on utf-8 is kept as the character, and a
+      plain StringIO output is untouched. At least four test functions. Run it.
+    checks:
+      - {kind: file_regex, path: tests/test_cli_nonutf.py, pattern: ^def test_, min_count: 4}
+      - {kind: tests, runner: python, files: [tests/test_cli_nonutf.py]}
+  - prompt: >-
+      The single-field path has the same crash: printing one value with a non-UTF output, for example
+      `print_doc("name", lang="ru_RU", seed=1, output=<cp1252 TextIOWrapper>)` or `print_doc("emoji",
+      output=<cp950 wrapper>)`, still raises UnicodeEncodeError. Apply the same escaping there
+      (Cyrillic on cp1252 should show `\u04..` escapes) and keep UTF-8 and plain ASCII output
+      unchanged.
+    checks:
+      - {kind: tests, runner: python, files: [tests/test_cli_single_field_hidden.py, tests/test_factory.py], hidden: [tests/test_cli_single_field_hidden.py, tests/test_factory.py]}
+  - prompt: >-
+      Add a bullet to the top section of CHANGELOG.md (the first `### [v...]` block) saying the CLI
+      documentation and single-field output no longer crash on non-UTF consoles and escape unencodable
+      characters, in the same bullet style.
+    checks:
+      - {kind: file_regex, path: CHANGELOG.md, pattern: '^### \[v40\.14\.0[^\n]*\n\n(?:(?!### ).*\n)*?\* .*(?i:non-utf|encod)'}
+  - prompt: >-
+      Question only: how does the `faker` command pick its default locale, and where does the
+      `-l/--lang` option take effect? Name the function and the environment variable involved. Do not
+      change any files.
+    checks:
+      - {kind: keyed_facts, all: [LANG, execute, AVAILABLE_LOCALES|DEFAULT_LOCALE, cli\.py]}
+  - prompt: >-
+      Give the `_encode_for_output` helper in faker/cli.py a docstring: what it does, that it only
+      changes text when the stream's encoding cannot represent it, and that streams without an
+      `encoding` attribute are returned untouched. Docstring only.
+    checks:
+      - {kind: file_regex, path: faker/cli.py, pattern: 'def _encode_for_output\(value: str, output: TextIO\) -> str:\n\s+"""'}
+      - {kind: tests, runner: python, files: [tests/test_factory.py, tests/test_cli_single_field_hidden.py], hidden: [tests/test_factory.py, tests/test_cli_single_field_hidden.py]}
+  - prompt: >-
+      Run the factory tests, your new CLI test file and the single-field checks together and report
+      the totals (passed / failed). Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [test_factory, test_cli_nonutf, \d+ passed]}
+  - prompt: >-
+      Review the changes you made in this session as a code reviewer would: list each file you changed
+      or added, what changed, and any remaining edge case you did not cover. Do not change any files.
+    checks:
+      - {kind: keyed_facts, all: [cli\.py, CHANGELOG, test], any: [edge, risk, not cover, remaining]}

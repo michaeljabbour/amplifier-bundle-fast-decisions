@@ -1,0 +1,81 @@
+# holdout-v3 knowledge scenario (14 turns, explain): psf/black at 77c0cae (504 files, src/black + src/blib2to3): explain the formatting pipeline, parser selection, line splitting, delimiter priorities, exit codes and cache; checked with keyed facts, ARCHITECTURE.md and a mutation-checked demo script
+id: black-pipeline-explain
+task_type: explain
+language: python
+split: holdout
+source: {desc: 'psf/black at 77c0cae (504 files, src/black + src/blib2to3): explain the formatting pipeline, parser selection, line splitting, delimiter priorities, exit codes and cache; checked with keyed facts, ARCHITECTURE.md and a mutation-checked demo script', repo: 'https://github.com/psf/black.git', sha: 77c0cae18bcc82257882afc7bbb9a5cd95cba16c}
+workspace: {kind: git, repo: 'https://github.com/psf/black.git', sha: 77c0cae18bcc82257882afc7bbb9a5cd95cba16c, local_hint: ~/dev/afast-paired-src/_v3c/black}
+turns:
+- prompt: 'Give me a map of src/: one line per module of the `black` package (not the resources) and say what `blib2to3` is. Do not change any files.'
+  checks:
+  - kind: keyed_facts
+    all: [linegen\.py, lines\.py, brackets\.py, comments\.py, trans\.py, parsing\.py, mode\.py, cache\.py, 'blib2to3.{0,200}(lib2to3|fork|vendored|grammar)|(lib2to3|fork|vendored|grammar).{0,200}blib2to3']
+- prompt: Describe the pipeline `format_str` runs on a string, in order, naming the functions in src/black/__init__.py, parsing.py and linegen.py. Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: [_format_str_once, decode_bytes, lib2to3_parse, LineGenerator, EmptyLineTracker|maybe_empty_lines, transform_line, normalize_fmt_off|target.version]
+- prompt: How does `lib2to3_parse` choose the grammar when no target version is given, and in what order are they tried? Answer from src/black/parsing.py. Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: [get_grammars, async_keywords|3\.7, python_grammar|3\.0, soft_keywords|3\.10, order|first|then|try|tries]
+- prompt: 'In `transform_line` (src/black/linegen.py), which transformers are tried in which situations: a short line, a def, a line inside brackets, a line outside brackets? What happens when none works? Do not change any files.'
+  checks:
+  - kind: keyed_facts
+    all: [left_hand_split, delimiter_split, right_hand_split_with_omits, standalone_comment_split, CannotTransform|cannot, short|fits|line_length, magic trailing comma|magic_trailing_comma]
+- prompt: 'Verify the default and a narrow line length by running real code from this checkout (put src/ on sys.path): format `result = some_function(argument_number_one, argument_number_two, argument_number_three, argument_4)` with the default Mode and with Mode(line_length=40), and paste both outputs.'
+  checks:
+  - kind: keyed_facts
+    all: ['some_function\(\s*\n\s+argument_number_one, argument_number_two, argument_number_three, argument_4\s*\n\)', 'argument_number_three,\s*\n\s+argument_4,\s*\n\)']
+- prompt: What is the magic trailing comma, how does it change the output of `a = [1, 2,]`, and which Mode field / CLI flag turns it off? Verify by running it. Do not change repository files.
+  checks:
+  - kind: keyed_facts
+    all: [magic trailing comma|trailing comma, 'a = \[\s*\n\s+1,\s*\n\s+2,\s*\n\s*\]', magic_trailing_comma, -C|skip-magic-trailing-comma]
+  gap_before_s: 420
+- prompt: 'Explain how `delimiter_split` decides where to split: what are the delimiter priorities in src/black/brackets.py (give the numbers for comprehension, comma, ternary, logic, comparator, dot) and which one is used? Do not change any files.'
+  checks:
+  - kind: keyed_facts
+    all: ['COMPREHENSION_PRIORITY.{0,20}20|20.{0,30}comprehension', 'COMMA_PRIORITY.{0,20}18|18.{0,30}comma', 'TERNARY.{0,20}16|16.{0,30}ternary', 'LOGIC.{0,20}14|14.{0,30}logic', 'COMPARATOR.{0,20}10|10.{0,30}comparator', 'DOT_PRIORITY.{0,20}1\b|1\b.{0,30}dot', max_delimiter_priority|highest]
+- prompt: Write ARCHITECTURE.md in the repository root with level-2 sections Overview, Pipeline, Parsing, Line splitting and Caching. Use real function and file names from the source and state the default line length.
+  checks:
+  - kind: doc_sections
+    path: ARCHITECTURE.md
+    headings: [Overview, Pipeline, Parsing, Line splitting, Caching]
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: _format_str_once}
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: transform_line}
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: \b88\b}
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: blib2to3}
+- prompt: What decides Black's exit status, what does `NothingChanged` mean in `format_file_contents`, and what extra checks run when `fast=False`? Answer from src/black/report.py and src/black/__init__.py. Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: ['123', --check|check, \b1\b, NothingChanged, assert_equivalent, assert_stable]
+- prompt: 'Create tools/fmt_demo.py: a script that puts this checkout''s src/ on sys.path, formats `result = some_function(argument_number_one, argument_number_two, argument_number_three, argument_4)` with the DEFAULT `black.Mode()` (do not pass a line length) and prints the formatted code. Run it and show the output.'
+  checks:
+  - {kind: file_regex, path: tools/fmt_demo.py, pattern: black\.Mode\(\)|Mode\(\)}
+  - {kind: tests, runner: cmd, cmd: 'O=$(mktemp -d) && python3 tools/fmt_demo.py > $O/a.txt && grep -qx ''result = some_function('' $O/a.txt && grep -q ''^    argument_number_one, argument_number_two, argument_number_three, argument_4$'' $O/a.txt && perl -pi -e ''s/^DEFAULT_LINE_LENGTH = 88/DEFAULT_LINE_LENGTH = 40/'' src/black/const.py && python3 tools/fmt_demo.py > $O/b.txt && grep -qx ''    argument_number_two,'' $O/b.txt && grep -qx ''    argument_4,'' $O/b.txt', timeout: 240}
+  gap_before_s: 420
+- prompt: 'How does Black''s file cache work: where is it stored, what is it keyed on, and how can you relocate it? Answer from src/black/cache.py. Do not change any files.'
+  checks:
+  - kind: keyed_facts
+    all: [BLACK_CACHE_DIR, pickle, get_cache_key|mode, user_cache_dir|user cache, mtime|size|hash|sha]
+- prompt: |-
+    How do `# fmt: off`, `# fmt: on` and `# fmt: skip` behave? Format the source `# fmt: off
+    x   =  1
+    # fmt: on
+    y   =  2
+    z   = 3  # fmt: skip
+    ` with the default Mode using this checkout (src/ on sys.path), show the result and name the function in src/black/comments.py that handles the off/on regions. Do not change repository files.
+  checks:
+  - kind: keyed_facts
+    all: ['x {3}= {2}1', y = 2, 'z {3}= 3 {2}# fmt: skip', normalize_fmt_off, comments\.py]
+- prompt: 'Explain how blank lines are decided: which class does it, what are the limits at module level and inside functions/classes, and what does Black do to `a = 1` followed by five blank lines and `b = 2`? Run a small example with a def containing blank lines and a class with a method. Do not change repository files.'
+  checks:
+  - kind: keyed_facts
+    all: [EmptyLineTracker, maybe_empty_lines, two|2, one|1, 'class\s+\w+', 'def\s+\w+', 'a = 1(?:\\+n|\n){3}b = 2|(two|2) blank lines?|clamp\w* (down )?to (two|2)|(at most|max\w*|limit\w*|to) (two|2) (consecutive )?blank']
+- prompt: Add a level-2 `## Priorities and exit codes` section to ARCHITECTURE.md that lists the delimiter priority numbers for COMMA and LOGIC and the exit codes 0, 1 and 123.
+  checks:
+  - kind: doc_sections
+    path: ARCHITECTURE.md
+    headings: [Priorities and exit codes]
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: 'COMMA_PRIORITY.{0,20}18'}
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: 'LOGIC_PRIORITY.{0,20}14'}
+  - {kind: file_regex, path: ARCHITECTURE.md, pattern: '123'}

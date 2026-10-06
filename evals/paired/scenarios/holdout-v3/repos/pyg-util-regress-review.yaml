@@ -1,0 +1,819 @@
+# holdout-v3 repos scenario (12 turns, review): pygments/pygments at 156d85f (2796 files) with a planted merged change to pygments/util.py (four contract regressions, only one caught by tests/test_util.py): orient in the large repo, find, fix each against hidden tests, prove new regression tests against the merged copy
+id: pyg-util-regress-review
+task_type: review
+language: python
+split: holdout
+source: {desc: 'pygments/pygments at 156d85f (2796 files) with a planted merged change to pygments/util.py (four contract regressions, only one caught by tests/test_util.py): orient in the large repo, find, fix each against hidden tests, prove new regression tests against the merged copy', repo: 'https://github.com/pygments/pygments.git', sha: 156d85fdd18d34427fe893527e71da91dcfb0eb5}
+workspace:
+  kind: git
+  repo: https://github.com/pygments/pygments.git
+  sha: 156d85fdd18d34427fe893527e71da91dcfb0eb5
+  local_hint: ~/dev/afast-paired-src/_v3c/pygments
+  add_files:
+    pygments/util.py: |
+      """
+          pygments.util
+          ~~~~~~~~~~~~~
+
+          Utility functions.
+
+          :copyright: Copyright 2006-present by the Pygments team, see AUTHORS.
+          :license: BSD, see LICENSE for details.
+      """
+
+      import re
+      from io import TextIOWrapper
+      import html
+
+
+      split_path_re = re.compile(r'[/\\ ]')
+      doctype_lookup_re = re.compile(r'''
+          <!DOCTYPE\s+(
+           [a-zA-Z_][a-zA-Z0-9]*
+           (?: \s+      # optional in HTML5
+           [a-zA-Z_][a-zA-Z0-9]*\s+
+           "[^"]*")?
+           )
+           [^>]*>
+      ''', re.DOTALL | re.MULTILINE | re.VERBOSE)
+      tag_re = re.compile(r'<([a-zA-Z][a-zA-Z0-9._:-]*)(\s[^>]*)?>.*?</\1\s*>',
+                          re.IGNORECASE | re.DOTALL | re.MULTILINE)
+      xml_decl_re = re.compile(r'\s*<\?xml[^>]*\?>', re.I)
+
+
+      class ClassNotFound(ValueError):
+          """Raised if one of the lookup functions didn't find a matching class."""
+
+
+      class OptionError(Exception):
+          """
+          This exception will be raised by all option processing functions if
+          the type or value of the argument is not correct.
+          """
+
+      def get_choice_opt(options, optname, allowed, default=None, normcase=False):
+          """
+          If the key `optname` from the dictionary is not in the sequence
+          `allowed`, raise an error, otherwise return it.
+          """
+          string = options.get(optname, default)
+          if normcase:
+              string = string.lower()
+          if string not in allowed:
+              raise OptionError('Value for option {} must be one of {}'.format(optname, ', '.join(map(str, allowed))))
+          return string
+
+
+      def get_bool_opt(options, optname, default=None):
+          """
+          Intuitively, this is `options.get(optname, default)`, but restricted to
+          Boolean value. The Booleans can be represented as string, in order to accept
+          Boolean value from the command line arguments. If the key `optname` is
+          present in the dictionary `options` and is not associated with a Boolean,
+          raise an `OptionError`. If it is absent, `default` is returned instead.
+
+          The valid string values for ``True`` are ``1``, ``yes``, ``true`` and
+          ``on``, the ones for ``False`` are ``0``, ``no``, ``false`` and ``off``
+          (matched case-insensitively).
+          """
+          string = options.get(optname, default)
+          if isinstance(string, bool):
+              return string
+          elif isinstance(string, int):
+              return bool(string)
+          elif not isinstance(string, str):
+              raise OptionError(f'Invalid type {string!r} for option {optname}; use '
+                                '1/0, yes/no, true/false, on/off')
+          elif string in ('1', 'yes', 'true', 'on'):
+              return True
+          elif string in ('0', 'no', 'false', 'off'):
+              return False
+          else:
+              raise OptionError(f'Invalid value {string!r} for option {optname}; use '
+                                '1/0, yes/no, true/false, on/off')
+
+
+      def get_int_opt(options, optname, default=None):
+          """As :func:`get_bool_opt`, but interpret the value as an integer."""
+          string = options.get(optname, default)
+          try:
+              return int(string)
+          except TypeError:
+              raise OptionError(f'Invalid type {string!r} for option {optname}; you '
+                                'must give an integer value')
+          except ValueError:
+              raise OptionError(f'Invalid value {string!r} for option {optname}; you '
+                                'must give an integer value')
+
+      def get_list_opt(options, optname, default=None):
+          """
+          If the key `optname` from the dictionary `options` is a string,
+          split it at whitespace and return it. If it is already a list
+          or a tuple, it is returned as a list.
+          """
+          val = options.get(optname, default)
+          if isinstance(val, str):
+              return val.split(',')
+          elif isinstance(val, (list, tuple)):
+              return list(val)
+          else:
+              raise OptionError(f'Invalid type {val!r} for option {optname}; you '
+                                'must give a list value')
+
+
+      def docstring_headline(obj):
+          if not obj.__doc__:
+              return ''
+          res = []
+          for line in obj.__doc__.strip().splitlines():
+              if line.strip():
+                  res.append(" " + line.strip())
+              else:
+                  break
+          return ''.join(res).lstrip()
+
+
+      def make_analysator(f):
+          """Return a static text analyser function that returns float values."""
+          def text_analyse(text):
+              try:
+                  rv = f(text)
+              except Exception:
+                  return 0.0
+              if not rv:
+                  return 0.0
+              try:
+                  return min(1.0, max(0.0, float(rv)))
+              except (ValueError, TypeError):
+                  return 0.0
+          text_analyse.__doc__ = f.__doc__
+          return staticmethod(text_analyse)
+
+
+      def shebang_matches(text, regex):
+          r"""Check if the given regular expression matches the last part of the
+          shebang if one exists.
+
+              >>> from pygments.util import shebang_matches
+              >>> shebang_matches('#!/usr/bin/env python', r'python(2\.\d)?')
+              True
+              >>> shebang_matches('#!/usr/bin/python2.4', r'python(2\.\d)?')
+              True
+              >>> shebang_matches('#!/usr/bin/python-ruby', r'python(2\.\d)?')
+              False
+              >>> shebang_matches('#!/usr/bin/python/ruby', r'python(2\.\d)?')
+              False
+              >>> shebang_matches('#!/usr/bin/startsomethingwith python',
+              ...                 r'python(2\.\d)?')
+              True
+
+          It also checks for common windows executable file extensions::
+
+              >>> shebang_matches('#!C:\\Python2.4\\Python.exe', r'python(2\.\d)?')
+              True
+
+          Parameters (``'-f'`` or ``'--foo'`` are ignored so ``'perl'`` does
+          the same as ``'perl -e'``)
+
+          Note that this method automatically searches the whole string (eg:
+          the regular expression is wrapped in ``'^$'``)
+          """
+          index = text.find('\n')
+          if index >= 0:
+              first_line = text[:index].lower()
+          else:
+              first_line = text.lower()
+          if first_line.startswith('#!'):
+              try:
+                  found = [x for x in split_path_re.split(first_line[2:].strip())
+                           if x][-1]
+              except IndexError:
+                  return False
+              regex = re.compile(rf'^{regex}(\.(exe|cmd|bat|bin))?$', re.IGNORECASE)
+              if regex.search(found) is not None:
+                  return True
+          return False
+
+
+      def doctype_matches(text, regex):
+          """Check if the doctype matches a regular expression (if present).
+
+          Note that this method only checks the first part of a DOCTYPE.
+          eg: 'html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"'
+          """
+          m = doctype_lookup_re.search(text)
+          if m is None:
+              return False
+          doctype = m.group(1)
+          return re.compile(regex, re.I).match(doctype.strip()) is not None
+
+
+      def html_doctype_matches(text):
+          """Check if the file looks like it has a html doctype."""
+          return doctype_matches(text, r'html')
+
+
+      _looks_like_xml_cache = {}
+
+
+      def looks_like_xml(text):
+          """Check if a doctype exists or if we have some tags."""
+          if xml_decl_re.match(text):
+              return True
+          key = hash(text)
+          try:
+              return _looks_like_xml_cache[key]
+          except KeyError:
+              m = doctype_lookup_re.search(text)
+              if m is not None:
+                  return True
+              rv = tag_re.search(text[:1000]) is not None
+              _looks_like_xml_cache[key] = rv
+              return rv
+
+
+      def surrogatepair(c):
+          """Given a unicode character code with length greater than 16 bits,
+          return the two 16 bit surrogate pair.
+          """
+          # From example D28 of:
+          # http://www.unicode.org/book/ch03.pdf
+          return (0xd7c0 + (c >> 10), (0xdc00 + (c & 0x3ff)))
+
+
+      def format_lines(var_name, seq, raw=False, indent_level=0):
+          """Formats a sequence of strings for output."""
+          lines = []
+          base_indent = ' ' * indent_level * 4
+          inner_indent = ' ' * (indent_level + 1) * 4
+          lines.append(base_indent + var_name + ' = (')
+          if raw:
+              # These should be preformatted reprs of, say, tuples.
+              for i in seq:
+                  lines.append(inner_indent + i + ',')
+          else:
+              for i in seq:
+                  # Force use of single quotes
+                  r = repr(i + '"')
+                  lines.append(inner_indent + r[:-2] + r[-1] + ',')
+          lines.append(base_indent + ')')
+          return '\n'.join(lines)
+
+
+      def duplicates_removed(it, already_seen=()):
+          """
+          Returns a list with duplicates removed from the iterable `it`.
+
+          Order is preserved.
+          """
+          lst = []
+          seen = set()
+          for i in it:
+              if i in seen or i in already_seen:
+                  continue
+              lst.append(i)
+              seen.add(i)
+          return lst if already_seen else sorted(lst, key=str)
+
+
+      class Future:
+          """Generic class to defer some work.
+
+          Handled specially in RegexLexerMeta, to support regex string construction at
+          first use.
+          """
+          def get(self):
+              raise NotImplementedError
+
+
+      def guess_decode(text):
+          """Decode *text* with guessed encoding.
+
+          First try UTF-8; this should fail for non-UTF-8 encodings.
+          Then try the preferred locale encoding.
+          Fall back to latin-1, which always works.
+          """
+          try:
+              text = text.decode('utf-8')
+              return text, 'utf-8'
+          except UnicodeDecodeError:
+              try:
+                  import locale
+                  prefencoding = locale.getpreferredencoding()
+                  text = text.decode(prefencoding)
+                  return text, prefencoding
+              except (UnicodeDecodeError, LookupError):
+                  text = text.decode('latin1')
+                  return text, 'latin1'
+
+
+      def guess_decode_from_terminal(text, term):
+          """Decode *text* coming from terminal *term*.
+
+          First try the terminal encoding, if given.
+          Then try UTF-8.  Then try the preferred locale encoding.
+          Fall back to latin-1, which always works.
+          """
+          if getattr(term, 'encoding', None):
+              try:
+                  text = text.decode(term.encoding)
+              except UnicodeDecodeError:
+                  pass
+              else:
+                  return text, term.encoding
+          return guess_decode(text)
+
+
+      def terminal_encoding(term):
+          """Return our best guess of encoding for the given *term*."""
+          if getattr(term, 'encoding', None):
+              return term.encoding
+          import locale
+          return locale.getpreferredencoding()
+
+
+      class UnclosingTextIOWrapper(TextIOWrapper):
+          # Don't close underlying buffer on destruction.
+          def close(self):
+              self.flush()
+
+
+      def html_escape(string, quote=True) -> str:
+          """Return a safe version of the passed `string`,
+          and an empty string if `None`.
+
+          `NoneType` is not supported by `html.escape`, as `html.escape`
+          uses the built-in `replace` function on `string`, so we need to
+          check for it first.
+
+          Optional flag quote is true by default, which also escapes
+          double and single quotes.
+          See https://docs.python.org/3/library/html.html#html.escape for more details.
+          """
+          if string is not None:
+              # TODO: Eventually, check that string is a str, and if not, print a
+              #       warning or error here.
+              return html.escape(str(string), quote=quote)
+          return ''
+    patches/merged_util.py: |
+      """
+          pygments.util
+          ~~~~~~~~~~~~~
+
+          Utility functions.
+
+          :copyright: Copyright 2006-present by the Pygments team, see AUTHORS.
+          :license: BSD, see LICENSE for details.
+      """
+
+      import re
+      from io import TextIOWrapper
+      import html
+
+
+      split_path_re = re.compile(r'[/\\ ]')
+      doctype_lookup_re = re.compile(r'''
+          <!DOCTYPE\s+(
+           [a-zA-Z_][a-zA-Z0-9]*
+           (?: \s+      # optional in HTML5
+           [a-zA-Z_][a-zA-Z0-9]*\s+
+           "[^"]*")?
+           )
+           [^>]*>
+      ''', re.DOTALL | re.MULTILINE | re.VERBOSE)
+      tag_re = re.compile(r'<([a-zA-Z][a-zA-Z0-9._:-]*)(\s[^>]*)?>.*?</\1\s*>',
+                          re.IGNORECASE | re.DOTALL | re.MULTILINE)
+      xml_decl_re = re.compile(r'\s*<\?xml[^>]*\?>', re.I)
+
+
+      class ClassNotFound(ValueError):
+          """Raised if one of the lookup functions didn't find a matching class."""
+
+
+      class OptionError(Exception):
+          """
+          This exception will be raised by all option processing functions if
+          the type or value of the argument is not correct.
+          """
+
+      def get_choice_opt(options, optname, allowed, default=None, normcase=False):
+          """
+          If the key `optname` from the dictionary is not in the sequence
+          `allowed`, raise an error, otherwise return it.
+          """
+          string = options.get(optname, default)
+          if normcase:
+              string = string.lower()
+          if string not in allowed:
+              raise OptionError('Value for option {} must be one of {}'.format(optname, ', '.join(map(str, allowed))))
+          return string
+
+
+      def get_bool_opt(options, optname, default=None):
+          """
+          Intuitively, this is `options.get(optname, default)`, but restricted to
+          Boolean value. The Booleans can be represented as string, in order to accept
+          Boolean value from the command line arguments. If the key `optname` is
+          present in the dictionary `options` and is not associated with a Boolean,
+          raise an `OptionError`. If it is absent, `default` is returned instead.
+
+          The valid string values for ``True`` are ``1``, ``yes``, ``true`` and
+          ``on``, the ones for ``False`` are ``0``, ``no``, ``false`` and ``off``
+          (matched case-insensitively).
+          """
+          string = options.get(optname, default)
+          if isinstance(string, bool):
+              return string
+          elif isinstance(string, int):
+              return bool(string)
+          elif not isinstance(string, str):
+              raise OptionError(f'Invalid type {string!r} for option {optname}; use '
+                                '1/0, yes/no, true/false, on/off')
+          elif string in ('1', 'yes', 'true', 'on'):
+              return True
+          elif string in ('0', 'no', 'false', 'off'):
+              return False
+          else:
+              raise OptionError(f'Invalid value {string!r} for option {optname}; use '
+                                '1/0, yes/no, true/false, on/off')
+
+
+      def get_int_opt(options, optname, default=None):
+          """As :func:`get_bool_opt`, but interpret the value as an integer."""
+          string = options.get(optname, default)
+          try:
+              return int(string)
+          except TypeError:
+              raise OptionError(f'Invalid type {string!r} for option {optname}; you '
+                                'must give an integer value')
+          except ValueError:
+              raise OptionError(f'Invalid value {string!r} for option {optname}; you '
+                                'must give an integer value')
+
+      def get_list_opt(options, optname, default=None):
+          """
+          If the key `optname` from the dictionary `options` is a string,
+          split it at whitespace and return it. If it is already a list
+          or a tuple, it is returned as a list.
+          """
+          val = options.get(optname, default)
+          if isinstance(val, str):
+              return val.split(',')
+          elif isinstance(val, (list, tuple)):
+              return list(val)
+          else:
+              raise OptionError(f'Invalid type {val!r} for option {optname}; you '
+                                'must give a list value')
+
+
+      def docstring_headline(obj):
+          if not obj.__doc__:
+              return ''
+          res = []
+          for line in obj.__doc__.strip().splitlines():
+              if line.strip():
+                  res.append(" " + line.strip())
+              else:
+                  break
+          return ''.join(res).lstrip()
+
+
+      def make_analysator(f):
+          """Return a static text analyser function that returns float values."""
+          def text_analyse(text):
+              try:
+                  rv = f(text)
+              except Exception:
+                  return 0.0
+              if not rv:
+                  return 0.0
+              try:
+                  return min(1.0, max(0.0, float(rv)))
+              except (ValueError, TypeError):
+                  return 0.0
+          text_analyse.__doc__ = f.__doc__
+          return staticmethod(text_analyse)
+
+
+      def shebang_matches(text, regex):
+          r"""Check if the given regular expression matches the last part of the
+          shebang if one exists.
+
+              >>> from pygments.util import shebang_matches
+              >>> shebang_matches('#!/usr/bin/env python', r'python(2\.\d)?')
+              True
+              >>> shebang_matches('#!/usr/bin/python2.4', r'python(2\.\d)?')
+              True
+              >>> shebang_matches('#!/usr/bin/python-ruby', r'python(2\.\d)?')
+              False
+              >>> shebang_matches('#!/usr/bin/python/ruby', r'python(2\.\d)?')
+              False
+              >>> shebang_matches('#!/usr/bin/startsomethingwith python',
+              ...                 r'python(2\.\d)?')
+              True
+
+          It also checks for common windows executable file extensions::
+
+              >>> shebang_matches('#!C:\\Python2.4\\Python.exe', r'python(2\.\d)?')
+              True
+
+          Parameters (``'-f'`` or ``'--foo'`` are ignored so ``'perl'`` does
+          the same as ``'perl -e'``)
+
+          Note that this method automatically searches the whole string (eg:
+          the regular expression is wrapped in ``'^$'``)
+          """
+          index = text.find('\n')
+          if index >= 0:
+              first_line = text[:index].lower()
+          else:
+              first_line = text.lower()
+          if first_line.startswith('#!'):
+              try:
+                  found = [x for x in split_path_re.split(first_line[2:].strip())
+                           if x][-1]
+              except IndexError:
+                  return False
+              regex = re.compile(rf'^{regex}(\.(exe|cmd|bat|bin))?$', re.IGNORECASE)
+              if regex.search(found) is not None:
+                  return True
+          return False
+
+
+      def doctype_matches(text, regex):
+          """Check if the doctype matches a regular expression (if present).
+
+          Note that this method only checks the first part of a DOCTYPE.
+          eg: 'html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"'
+          """
+          m = doctype_lookup_re.search(text)
+          if m is None:
+              return False
+          doctype = m.group(1)
+          return re.compile(regex, re.I).match(doctype.strip()) is not None
+
+
+      def html_doctype_matches(text):
+          """Check if the file looks like it has a html doctype."""
+          return doctype_matches(text, r'html')
+
+
+      _looks_like_xml_cache = {}
+
+
+      def looks_like_xml(text):
+          """Check if a doctype exists or if we have some tags."""
+          if xml_decl_re.match(text):
+              return True
+          key = hash(text)
+          try:
+              return _looks_like_xml_cache[key]
+          except KeyError:
+              m = doctype_lookup_re.search(text)
+              if m is not None:
+                  return True
+              rv = tag_re.search(text[:1000]) is not None
+              _looks_like_xml_cache[key] = rv
+              return rv
+
+
+      def surrogatepair(c):
+          """Given a unicode character code with length greater than 16 bits,
+          return the two 16 bit surrogate pair.
+          """
+          # From example D28 of:
+          # http://www.unicode.org/book/ch03.pdf
+          return (0xd7c0 + (c >> 10), (0xdc00 + (c & 0x3ff)))
+
+
+      def format_lines(var_name, seq, raw=False, indent_level=0):
+          """Formats a sequence of strings for output."""
+          lines = []
+          base_indent = ' ' * indent_level * 4
+          inner_indent = ' ' * (indent_level + 1) * 4
+          lines.append(base_indent + var_name + ' = (')
+          if raw:
+              # These should be preformatted reprs of, say, tuples.
+              for i in seq:
+                  lines.append(inner_indent + i + ',')
+          else:
+              for i in seq:
+                  # Force use of single quotes
+                  r = repr(i + '"')
+                  lines.append(inner_indent + r[:-2] + r[-1] + ',')
+          lines.append(base_indent + ')')
+          return '\n'.join(lines)
+
+
+      def duplicates_removed(it, already_seen=()):
+          """
+          Returns a list with duplicates removed from the iterable `it`.
+
+          Order is preserved.
+          """
+          lst = []
+          seen = set()
+          for i in it:
+              if i in seen or i in already_seen:
+                  continue
+              lst.append(i)
+              seen.add(i)
+          return lst if already_seen else sorted(lst, key=str)
+
+
+      class Future:
+          """Generic class to defer some work.
+
+          Handled specially in RegexLexerMeta, to support regex string construction at
+          first use.
+          """
+          def get(self):
+              raise NotImplementedError
+
+
+      def guess_decode(text):
+          """Decode *text* with guessed encoding.
+
+          First try UTF-8; this should fail for non-UTF-8 encodings.
+          Then try the preferred locale encoding.
+          Fall back to latin-1, which always works.
+          """
+          try:
+              text = text.decode('utf-8')
+              return text, 'utf-8'
+          except UnicodeDecodeError:
+              try:
+                  import locale
+                  prefencoding = locale.getpreferredencoding()
+                  text = text.decode(prefencoding)
+                  return text, prefencoding
+              except (UnicodeDecodeError, LookupError):
+                  text = text.decode('latin1')
+                  return text, 'latin1'
+
+
+      def guess_decode_from_terminal(text, term):
+          """Decode *text* coming from terminal *term*.
+
+          First try the terminal encoding, if given.
+          Then try UTF-8.  Then try the preferred locale encoding.
+          Fall back to latin-1, which always works.
+          """
+          if getattr(term, 'encoding', None):
+              try:
+                  text = text.decode(term.encoding)
+              except UnicodeDecodeError:
+                  pass
+              else:
+                  return text, term.encoding
+          return guess_decode(text)
+
+
+      def terminal_encoding(term):
+          """Return our best guess of encoding for the given *term*."""
+          if getattr(term, 'encoding', None):
+              return term.encoding
+          import locale
+          return locale.getpreferredencoding()
+
+
+      class UnclosingTextIOWrapper(TextIOWrapper):
+          # Don't close underlying buffer on destruction.
+          def close(self):
+              self.flush()
+
+
+      def html_escape(string, quote=True) -> str:
+          """Return a safe version of the passed `string`,
+          and an empty string if `None`.
+
+          `NoneType` is not supported by `html.escape`, as `html.escape`
+          uses the built-in `replace` function on `string`, so we need to
+          check for it first.
+
+          Optional flag quote is true by default, which also escapes
+          double and single quotes.
+          See https://docs.python.org/3/library/html.html#html.escape for more details.
+          """
+          if string is not None:
+              # TODO: Eventually, check that string is a str, and if not, print a
+              #       warning or error here.
+              return html.escape(str(string), quote=quote)
+          return ''
+hidden_files:
+  hidden/test_bool.py: |
+    import pytest
+
+    from pygments.util import OptionError, get_bool_opt
+
+
+    def test_string_values_are_case_insensitive():
+        assert get_bool_opt({"x": "True"}, "x") is True
+        assert get_bool_opt({"x": "YES"}, "x") is True
+        assert get_bool_opt({"x": "Off"}, "x") is False
+        assert get_bool_opt({"x": "0"}, "x") is False
+
+
+    def test_non_strings_pass_through():
+        assert get_bool_opt({"x": True}, "x") is True
+        assert get_bool_opt({"x": 0}, "x") is False
+
+
+    def test_garbage_still_rejected():
+        with pytest.raises(OptionError):
+            get_bool_opt({"x": "maybe"}, "x")
+  hidden/test_dups.py: |
+    from pygments.util import duplicates_removed
+
+
+    def test_order_is_preserved():
+        assert duplicates_removed(["b", "a", "b", "c", "a"]) == ["b", "a", "c"]
+
+
+    def test_already_seen_items_are_skipped_and_order_kept():
+        assert duplicates_removed(["z", "a", "q"], already_seen=("a",)) == ["z", "q"]
+
+
+    def test_unorderable_mix_does_not_crash():
+        assert duplicates_removed([3, "a", 3, (1, 2)]) == [3, "a", (1, 2)]
+  hidden/test_shebang.py: |
+    from pygments.util import shebang_matches
+
+
+    def test_flags_after_the_interpreter_are_ignored():
+        assert shebang_matches("#!/usr/bin/perl -w", "perl")
+        assert shebang_matches("#!/usr/bin/env python3 -u\nprint(1)", r"python(3)?")
+
+
+    def test_non_matching_interpreter():
+        assert not shebang_matches("#!/usr/bin/perl -w", "python")
+        assert not shebang_matches("print(1)", "python")
+protected: [tests/test_util.py]
+turns:
+- prompt: 'This is a big repository. Orient me: list the top-level modules of the pygments package (not the lexers themselves) with one line each, and the four sub-packages that hold lexers, formatters, styles and filters. Do not change any files.'
+  checks:
+  - kind: keyed_facts
+    all: [lexer\.py, formatter\.py, style\.py, token\.py, util\.py, filter\.py, cmdline\.py, plugin\.py, lexers, formatters, styles, filters]
+- prompt: How does `pygments.lexers.get_lexer_by_name('py')` find the right lexer class without importing all lexer modules? Walk through pygments/lexers/__init__.py and _mapping.py, and tell me how many builtin lexers the LEXERS mapping has (count it with a script). Do not change repository files.
+  checks:
+  - kind: keyed_facts
+    all: [LEXERS, _mapping, aliases, _load_lexers, _lexer_cache, lazy|lazily|on demand|just that|only that|only when, ClassNotFound, '602']
+- prompt: Run the project's own tests for the utilities (`python3 -m pytest -q tests/test_util.py`) and tell me what fails. Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: [test_getoptions, '1 failed|one (test )?fail', 18 passed|passed]
+- prompt: 'Explain that failure: what does `get_list_opt` in pygments/util.py do with a string today, what does its docstring promise, and what is the smallest fix? Do not change any files.'
+  checks:
+  - kind: keyed_facts
+    all: [get_list_opt, 'split\('',''\)|split\(\",\"\)|comma', whitespace, split\(\), docstring]
+- prompt: Apply that smallest fix to pygments/util.py.
+  checks:
+  - {kind: file_regex, path: pygments/util.py, pattern: return val\.split\(\)}
+  - kind: tests
+    runner: python
+    files: [tests/test_util.py]
+    restore: [tests/test_util.py]
+- prompt: The suite caught only one problem. Review the other helpers in pygments/util.py against their docstrings (`get_bool_opt`, `duplicates_removed`, `shebang_matches`, `make_analysator`, `get_int_opt`) and report every contract violation you can demonstrate with a short snippet and its wrong output. Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all: [get_bool_opt, 'True', OptionError|raise, duplicates_removed, order|sorted, shebang_matches, perl, -w|flag]
+- prompt: Fix `get_bool_opt` in pygments/util.py (restore the documented case-insensitive matching).
+  checks:
+  - {kind: file_regex, path: pygments/util.py, pattern: 'string\.lower\(\) in \(''1'', ''yes'', ''true'', ''on''\)'}
+  - kind: tests
+    runner: python
+    files: [tests/test_util.py, hidden/test_bool.py]
+    restore: [tests/test_util.py]
+    hidden: [hidden/test_bool.py]
+- prompt: Fix `duplicates_removed` so first-seen order is always preserved.
+  checks:
+  - {kind: file_regex, path: pygments/util.py, pattern: return lst\n, min_count: 1}
+  - {kind: file_regex, path: pygments/util.py, pattern: sorted\(lst, absent: true}
+  - kind: tests
+    runner: python
+    files: [tests/test_util.py, hidden/test_dups.py]
+    restore: [tests/test_util.py]
+    hidden: [hidden/test_dups.py]
+- prompt: Fix `shebang_matches` so command-line flags after the interpreter are ignored again.
+  checks:
+  - kind: tests
+    runner: python
+    files: [tests/test_util.py, hidden/test_shebang.py]
+    restore: [tests/test_util.py]
+    hidden: [hidden/test_shebang.py]
+- prompt: Add tests/test_util_regress.py with at least five pytest tests covering the four regressions (case-insensitive bool strings, bool garbage rejected, duplicate order, shebang flags, whitespace list split). They must pass on the fixed util.py and at least four of them must fail against the merged copy in patches/merged_util.py (prove it by temporarily copying that file over pygments/util.py, then restore your fixed version).
+  checks:
+  - {kind: file_regex, path: tests/test_util_regress.py, pattern: ^def test_, min_count: 5}
+  - {kind: tests, runner: cmd, cmd: 'python3 -m pytest -q -p no:cacheprovider tests/test_util_regress.py && O=$(mktemp -d) && cp pygments/util.py $O/fixed.py && cp patches/merged_util.py pygments/util.py && (python3 -m pytest -q -p no:cacheprovider tests/test_util_regress.py > $O/out.txt 2>&1; true) && n=$(grep -Eo ''[0-9]+ failed'' $O/out.txt | cut -d'' '' -f1) && [ "${n:-0}" -ge 4 ] && cp $O/fixed.py pygments/util.py && python3 -m pytest -q -p no:cacheprovider tests/test_util_regress.py', timeout: 280}
+- prompt: Write REVIEW.md in the repository root with level-2 sections Summary, Test gaps, get_list_opt, get_bool_opt, duplicates_removed and shebang_matches, each with one concrete input and the wrong output the merged code gave.
+  checks:
+  - kind: doc_sections
+    path: REVIEW.md
+    headings: [Summary, Test gaps, get_list_opt, get_bool_opt, duplicates_removed, shebang_matches]
+  - {kind: file_regex, path: REVIEW.md, pattern: '(?ms)^## get_list_opt\b(?:(?!^## ).)*?\[[''"][^\]\n]*[''"]'}
+  - {kind: file_regex, path: REVIEW.md, pattern: '(?ms)^## get_bool_opt\b(?:(?!^## ).)*?[''"][A-Za-z]*[A-Z][A-Za-z]*[''"]'}
+  - {kind: file_regex, path: REVIEW.md, pattern: '(?ms)^## shebang_matches\b(?:(?!^## ).)*?\s-\w'}
+- prompt: 'Final check: list every file you changed or added in this session with a one-line summary, and name one more helper in pygments/util.py that deserves a test but is not covered. Do not change any files.'
+  checks:
+  - kind: keyed_facts
+    all: [pygments/util\.py, test_util_regress\.py, REVIEW\.md, html_escape|guess_decode|doctype_matches|looks_like_xml|get_choice_opt|format_lines|surrogatepair|terminal_encoding]

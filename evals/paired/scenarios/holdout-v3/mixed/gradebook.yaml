@@ -1,0 +1,730 @@
+# holdout-v3 batch B (mixed, 9 turns): Course gradebook CSVs: weighted category averages with drop-lowest and zero-for-missing, letter grades, distribution reports, an excused-assignment rule change, a CLI that generalises, docs.
+id: gradebook
+task_type: mixed
+language: python
+split: holdout
+default_gap_s: 10
+source:
+  desc: 'Course gradebook CSVs: weighted category averages with drop-lowest and zero-for-missing, letter grades, distribution
+    reports, an excused-assignment rule change, a CLI that generalises, docs.'
+  kind: self-authored deterministic workspace
+  adapted_from:
+  - new self-authored gradebook; weighted-report pattern similar to the amplifier-agent data-question benchmark tasks
+workspace:
+  kind: inline
+  files:
+    data/students.csv: |
+      id,name,section
+      S100,Jon Lind,A
+      S101,Fay Moss,B
+      S102,Kai Park,C
+      S103,Gus Diaz,A
+      S104,Oto Moss,B
+      S105,Oto Moss,C
+      S106,Bo Lind,A
+      S107,Ivy Park,B
+      S108,Jon Park,C
+      S109,Ivy Moss,A
+      S110,Max Reed,B
+      S111,Max Reed,C
+      S112,Hal Lind,A
+      S113,Gus Okafor,B
+      S114,Eli Reed,C
+      S115,Hal Diaz,A
+      S116,Dee Reed,B
+      S117,Jon Reed,C
+      S118,Gus Park,A
+      S119,Gus Lind,B
+      S120,Dee Reed,C
+      S121,Eli Okafor,A
+      S122,Kai Moss,B
+      S123,Nia Moss,C
+      S124,Ivy Moss,A
+      S125,Ana Park,B
+      S126,Fay Reed,C
+      S127,Eli Reed,A
+      S128,Max Okafor,B
+      S129,Gus Diaz,C
+    data/scores.csv: |
+      student_id,assignment,score
+      S100,hw1,10
+      S100,hw2,11
+      S100,hw3,7
+      S100,hw4,9
+      S100,hw5,12
+      S100,hw6,6
+      S100,hw7,10
+      S100,hw8,13
+      S100,ex1,60
+      S100,ex2,71
+      S100,pt1,3
+      S100,pt2,3
+      S100,pt3,3
+      S101,hw1,12
+      S101,hw2,16
+      S101,hw3,8
+      S101,hw4,12
+      S101,hw5,19
+      S101,hw6,8
+      S101,hw7,11
+      S101,hw8,18
+      S101,ex1,79
+      S101,ex2,95
+      S101,pt1,4
+      S101,pt2,4
+      S101,pt3,5
+      S102,hw1,6
+      S102,hw2,12
+      S102,hw3,5
+      S102,hw4,7
+      S102,hw5,8
+      S102,hw6,4
+      S102,hw7,6
+      S102,hw8,11
+      S102,ex1,52
+      S102,ex2,54
+      S102,pt1,2
+      S102,pt2,3
+      S102,pt3,2
+      S103,hw1,12
+      S103,hw2,19
+      S103,hw3,9
+      S103,hw4,11
+      S103,hw5,18
+      S103,hw6,9
+      S103,hw7,12
+      S103,hw8,16
+      S103,ex1,99
+      S103,ex2,96
+      S103,pt1,4
+      S103,pt2,4
+      S103,pt3,5
+      S104,hw1,8
+      S104,hw2,14
+      S104,hw3,7
+      S104,hw4,9
+      S104,hw5,15
+      S104,hw6,7
+      S104,hw7,10
+      S104,hw8,13
+      S104,ex2,77
+      S104,pt1,3
+      S104,pt2,3
+      S104,pt3,3
+      S105,hw1,12
+      S105,hw2,17
+      S105,hw3,7
+      S105,hw4,9
+      S105,hw5,14
+      S105,hw6,7
+      S105,hw7,13
+      S105,hw8,14
+      S105,ex1,62
+      S105,ex2,74
+      S105,pt2,4
+      S105,pt3,4
+      S106,hw1,7
+      S106,hw2,8
+      S106,hw3,4
+      S106,hw4,8
+      S106,hw5,8
+      S106,hw6,6
+      S106,hw7,8
+      S106,hw8,11
+      S106,ex1,47
+      S106,ex2,58
+      S106,pt1,3
+      S106,pt2,3
+      S106,pt3,3
+      S107,hw1,9
+      S107,hw2,8
+      S107,hw3,6
+      S107,hw4,9
+      S107,hw5,11
+      S107,hw6,6
+      S107,hw7,10
+      S107,hw8,9
+      S107,ex1,53
+      S107,ex2,49
+      S107,pt1,3
+      S107,pt2,3
+      S107,pt3,3
+      S108,hw1,8
+      S108,hw2,14
+      S108,hw3,6
+      S108,hw4,8
+      S108,hw5,11
+      S108,hw6,7
+      S108,hw7,8
+      S108,hw8,11
+      S108,ex1,66
+      S108,ex2,70
+      S108,pt1,3
+      S108,pt2,3
+      S108,pt3,3
+      S109,hw1,12
+      S109,hw3,8
+      S109,hw4,10
+      S109,hw5,15
+      S109,hw6,6
+      S109,hw7,12
+      S109,hw8,14
+      S109,ex2,67
+      S109,pt1,4
+      S109,pt2,3
+      S109,pt3,3
+      S110,hw1,8
+      S110,hw2,8
+      S110,hw3,6
+      S110,hw4,7
+      S110,hw5,12
+      S110,hw6,6
+      S110,hw7,9
+      S110,hw8,11
+      S110,ex1,47
+      S110,ex2,51
+      S110,pt1,2
+      S110,pt2,2
+      S110,pt3,2
+      S111,hw1,14
+      S111,hw2,19
+      S111,hw3,10
+      S111,hw4,14
+      S111,hw5,18
+      S111,hw6,8
+      S111,hw7,13
+      S111,hw8,18
+      S111,ex1,89
+      S111,ex2,87
+      S111,pt1,5
+      S111,pt2,4
+      S111,pt3,5
+      S112,hw1,12
+      S112,hw2,14
+      S112,hw3,9
+      S112,hw4,14
+      S112,hw5,17
+      S112,hw6,8
+      S112,hw7,13
+      S112,hw8,17
+      S112,ex1,79
+      S112,ex2,87
+      S112,pt1,4
+      S112,pt2,4
+      S112,pt3,4
+      S113,hw1,12
+      S113,hw2,16
+      S113,hw3,10
+      S113,hw4,15
+      S113,hw5,16
+      S113,hw6,9
+      S113,hw7,15
+      S113,hw8,20
+      S113,ex1,87
+      S113,ex2,90
+      S113,pt1,5
+      S113,pt2,4
+      S113,pt3,4
+      S114,hw1,8
+      S114,hw2,14
+      S114,hw3,5
+      S114,hw4,7
+      S114,hw5,13
+      S114,hw6,7
+      S114,hw7,8
+      S114,hw8,12
+      S114,ex1,52
+      S114,ex2,56
+      S114,pt1,2
+      S114,pt2,2
+      S114,pt3,3
+      S115,hw1,10
+      S115,hw2,13
+      S115,hw3,6
+      S115,hw4,7
+      S115,hw5,10
+      S115,hw6,7
+      S115,hw7,7
+      S115,hw8,9
+      S115,ex1,49
+      S115,ex2,56
+      S115,pt1,3
+      S115,pt2,2
+      S115,pt3,3
+      S116,hw1,10
+      S116,hw2,13
+      S116,hw3,6
+      S116,hw4,12
+      S116,hw5,17
+      S116,hw6,8
+      S116,hw7,13
+      S116,hw8,16
+      S116,ex1,83
+      S116,ex2,75
+      S116,pt1,4
+      S116,pt2,4
+      S116,pt3,4
+      S117,hw1,11
+      S117,hw2,12
+      S117,hw3,7
+      S117,hw4,12
+      S117,hw5,15
+      S117,hw6,6
+      S117,hw7,12
+      S117,hw8,14
+      S117,ex1,78
+      S117,ex2,60
+      S117,pt1,3
+      S117,pt2,3
+      S117,pt3,3
+      S118,hw1,11
+      S118,hw2,10
+      S118,hw3,6
+      S118,hw4,9
+      S118,hw5,10
+      S118,hw6,7
+      S118,hw7,8
+      S118,hw8,15
+      S118,ex1,64
+      S118,ex2,63
+      S118,pt1,4
+      S118,pt2,3
+      S118,pt3,3
+      S119,hw1,14
+      S119,hw2,16
+      S119,hw3,9
+      S119,hw4,14
+      S119,hw5,19
+      S119,hw6,10
+      S119,hw7,14
+      S119,hw8,20
+      S119,ex1,80
+      S119,ex2,98
+      S119,pt1,4
+      S119,pt2,5
+      S119,pt3,5
+      S120,hw1,10
+      S120,hw2,12
+      S120,hw3,5
+      S120,hw4,10
+      S120,hw5,13
+      S120,hw7,10
+      S120,hw8,10
+      S120,ex1,57
+      S120,ex2,63
+      S120,pt1,3
+      S120,pt2,2
+      S120,pt3,3
+      S121,hw1,13
+      S121,hw2,16
+      S121,hw3,8
+      S121,hw4,14
+      S121,hw5,17
+      S121,hw6,8
+      S121,hw7,13
+      S121,hw8,18
+      S121,ex1,100
+      S121,ex2,82
+      S121,pt1,4
+      S121,pt2,4
+      S121,pt3,4
+      S122,hw1,12
+      S122,hw2,16
+      S122,hw3,9
+      S122,hw4,11
+      S122,hw5,15
+      S122,hw6,9
+      S122,hw7,14
+      S122,ex2,80
+      S122,pt1,4
+      S122,pt2,4
+      S122,pt3,5
+      S123,hw1,12
+      S123,hw2,15
+      S123,hw3,8
+      S123,hw4,12
+      S123,hw5,12
+      S123,hw6,8
+      S123,hw7,12
+      S123,hw8,15
+      S123,ex1,61
+      S123,ex2,66
+      S123,pt1,3
+      S123,pt2,4
+      S123,pt3,4
+      S124,hw1,9
+      S124,hw2,14
+      S124,hw3,7
+      S124,hw4,8
+      S124,hw6,5
+      S124,hw7,8
+      S124,hw8,12
+      S124,ex1,67
+      S124,ex2,61
+      S124,pt1,2
+      S124,pt2,3
+      S124,pt3,3
+      S125,hw1,11
+      S125,hw2,16
+      S125,hw3,6
+      S125,hw4,11
+      S125,hw5,16
+      S125,hw6,8
+      S125,hw7,12
+      S125,hw8,16
+      S125,ex1,65
+      S125,ex2,62
+      S125,pt1,4
+      S125,pt2,4
+      S125,pt3,4
+      S126,hw1,9
+      S126,hw2,13
+      S126,hw3,6
+      S126,hw4,11
+      S126,hw5,15
+      S126,hw6,7
+      S126,hw7,9
+      S126,hw8,15
+      S126,ex1,55
+      S126,ex2,76
+      S126,pt1,3
+      S126,pt2,4
+      S126,pt3,4
+      S127,hw1,10
+      S127,hw2,11
+      S127,hw3,5
+      S127,hw4,9
+      S127,hw5,13
+      S127,hw6,6
+      S127,hw7,10
+      S127,hw8,10
+      S127,ex1,60
+      S127,ex2,57
+      S127,pt1,3
+      S127,pt2,3
+      S127,pt3,3
+      S128,hw1,12
+      S128,hw2,17
+      S128,hw4,15
+      S128,hw6,8
+      S128,hw7,15
+      S128,hw8,17
+      S128,ex1,82
+      S128,ex2,80
+      S128,pt2,5
+      S128,pt3,4
+      S129,hw1,8
+      S129,hw2,12
+      S129,hw3,7
+      S129,hw4,11
+      S129,hw5,10
+      S129,hw6,7
+      S129,hw7,8
+      S129,hw8,15
+      S129,ex1,53
+      S129,ex2,73
+      S129,pt1,3
+      S129,pt2,4
+      S129,pt3,4
+    data/assignments.csv: |
+      assignment,category,max
+      hw1,homework,15
+      hw2,homework,20
+      hw3,homework,10
+      hw4,homework,15
+      hw5,homework,20
+      hw6,homework,10
+      hw7,homework,15
+      hw8,homework,20
+      ex1,exams,100
+      ex2,exams,100
+      pt1,participation,5
+      pt2,participation,5
+      pt3,participation,5
+    data/excused.csv: |
+      student_id,assignment
+      S102,hw2
+      S102,hw8
+      S104,hw6
+      S105,hw8
+      S106,hw7
+      S107,hw8
+      S113,hw7
+      S117,hw6
+      S121,hw7
+      S125,hw2
+    README.md: |
+      # gradebook
+
+      Weights: homework 40%, exams 50%, participation 10%. Each score is a percentage of the assignment's max (data/assignments.csv). A missing score row counts as 0. For homework the lowest percentage per student is dropped.
+      Letter: A >= 90, B >= 80, C >= 70, D >= 60, otherwise F, using the final grade rounded to 2 decimals.
+protected:
+- data/students.csv
+- data/scores.csv
+- data/assignments.csv
+- data/excused.csv
+hidden_files:
+  _grade.py: |
+    import csv, json, os, re, subprocess, sys
+    from pathlib import Path
+
+    W = Path(".")
+
+
+    def fail(msg):
+        print("FAIL:", msg)
+        sys.exit(1)
+
+
+    def need(cond, msg):
+        if not cond:
+            fail(msg)
+
+
+    def read(rel):
+        p = W / rel
+        need(p.exists(), f"missing {rel}")
+        return p.read_text(encoding="utf-8")
+
+
+    def load_json(rel):
+        try:
+            return json.loads(read(rel))
+        except ValueError as e:
+            fail(f"{rel} is not valid JSON: {e}")
+
+
+    def close(a, b, tol=0.011):
+        try:
+            return abs(float(a) - float(b)) <= tol
+        except (TypeError, ValueError):
+            return False
+
+
+    def num(s):
+        m = re.search(r"-?\d[\d,]*\.?\d*", str(s))
+        return float(m.group(0).replace(",", "")) if m else None
+
+
+    def run(cmd, timeout=60, stdin=None):
+        p = subprocess.run(cmd, shell=True, cwd=W, capture_output=True, text=True, timeout=timeout, input=stdin)
+        return p.returncode, p.stdout, p.stderr
+
+
+    def md_lines(rel, under=None):
+        lines = read(rel).splitlines()
+        if not under:
+            return lines
+        out, on, lvl = [], False, 0
+        for ln in lines:
+            m = re.match(r"^(#+)\s+(.*)", ln)
+            if m:
+                if on and len(m.group(1)) <= lvl:
+                    break
+                if not on and re.search(under, m.group(2), re.I):
+                    on, lvl = True, len(m.group(1))
+                continue
+            if on:
+                out.append(ln)
+        need(on, f"no heading matching {under!r} in {rel}")
+        return out
+
+
+    def md_rows(rel, under=None):
+        rows = []
+        for ln in md_lines(rel, under):
+            if ln.strip().startswith("|") and not re.match(r"^\s*\|[\s:|-]+\|\s*$", ln):
+                rows.append([c.strip() for c in ln.strip().strip("|").split("|")])
+        return rows
+
+
+    def cmp(got, want, tol, path):
+        if isinstance(want, dict):
+            need(isinstance(got, dict), f"{path}: expected an object, got {type(got).__name__}")
+            for k, v in want.items():
+                need(k in got, f"{path}.{k}: missing")
+                cmp(got[k], v, tol, f"{path}.{k}")
+        elif isinstance(want, list):
+            need(isinstance(got, list) and len(got) == len(want), f"{path}: expected list of {len(want)}, got {got!r}")
+            for i, (g, w) in enumerate(zip(got, want)):
+                cmp(g, w, tol, f"{path}[{i}]")
+        elif isinstance(want, bool) or want is None or isinstance(want, str):
+            need(got == want, f"{path}: {got!r} != {want!r}")
+        else:
+            need(not isinstance(got, bool) and close(got, want, tol), f"{path}: {got!r} != {want!r}")
+
+
+    def chk_json(rel, exp, tol=0.051):
+        cmp(load_json(rel), exp, tol, rel)
+
+
+    def chk_table(rel, under, exp, col=1, tol=0.051):
+        rows = md_rows(rel, under)
+        need(rows, f"no table under {under!r} in {rel}")
+        got = {r[0].strip("* `"): num(r[col]) for r in rows if len(r) > col and num(r[col]) is not None}
+        for k, v in exp.items():
+            need(k in got and close(got[k], v, tol), f"{k}: {got.get(k)} != {v}")
+
+
+    def chk_cmd_json(cmd, exp, tol=0.051, stdin=None):
+        rc, out, err = run(cmd, stdin=stdin)
+        need(rc == 0, f"`{cmd}` exited {rc}: {err[-200:]}")
+        try:
+            d = json.loads(out)
+        except ValueError as e:
+            fail(f"`{cmd}` stdout is not JSON: {e}")
+        cmp(d, exp, tol, cmd)
+
+
+    def chk_cmd_out(cmd, lines, stdin=None, expect_rc=0):
+        rc, out, err = run(cmd, stdin=stdin)
+        need(rc == expect_rc, f"`{cmd}` exited {rc} (want {expect_rc}): {err[-200:]}")
+        got = [ln.rstrip() for ln in out.strip().splitlines()]
+        need(got == list(lines), f"`{cmd}` output {got[:8]} != {list(lines)[:8]}")
+
+
+    def t3():
+        import csv
+        need((W / 'out/final.csv').exists(), 'missing out/final.csv')
+        rd = list(csv.DictReader(open('out/final.csv', encoding='utf-8', newline='')))
+        need(rd and list(rd[0].keys()) == ['id', 'homework_avg', 'exams_avg', 'participation_avg', 'final', 'letter'], 'header ' + str(rd and list(rd[0])))
+        got = [[r['id'], round(float(r['homework_avg']), 2), round(float(r['exams_avg']), 2), round(float(r['participation_avg']), 2), round(float(r['final']), 2), r['letter']] for r in rd]
+        want = [['S103', 86.43, 97.5, 86.67, 91.99, 'A'], ['S119', 95.0, 89.0, 93.33, 91.83, 'A'], ['S111', 92.62, 88.0, 93.33, 90.38, 'A'], ['S113', 92.86, 88.5, 86.67, 90.06, 'A'], ['S121', 85.95, 91.0, 80.0, 87.88, 'B'], ['S101', 83.57, 87.0, 86.67, 85.6, 'B'], ['S112', 85.71, 83.0, 80.0, 83.79, 'B'], ['S116', 77.62, 79.0, 80.0, 78.55, 'C'], ['S128', 75.71, 81.0, 60.0, 76.79, 'C'], ['S125', 78.1, 63.5, 80.0, 70.99, 'C'], ['S123', 78.57, 63.5, 73.33, 70.51, 'C'], ['S105', 75.95, 68.0, 53.33, 69.71, 'D'], ['S117', 72.62, 69.0, 60.0, 69.55, 'D'], ['S126', 68.33, 65.5, 73.33, 67.42, 'D'], ['S129', 65.0, 63.0, 73.33, 64.83, 'D'], ['S100', 64.05, 65.5, 60.0, 64.37, 'D'], ['S108', 59.52, 68.0, 60.0, 63.81, 'D'], ['S118', 63.1, 63.5, 66.67, 63.65, 'D'], ['S122', 83.1, 40.0, 86.67, 61.9, 'D'], ['S124', 59.52, 64.0, 53.33, 61.14, 'D'], ['S120', 60.71, 60.0, 53.33, 59.62, 'F'], ['S127', 60.48, 58.5, 60.0, 59.44, 'F'], ['S114', 60.24, 54.0, 46.67, 55.76, 'F'], ['S107', 58.1, 51.0, 60.0, 54.74, 'F'], ['S115', 57.86, 52.5, 53.33, 54.73, 'F'], ['S109', 73.1, 33.5, 66.67, 52.65, 'F'], ['S104', 68.1, 38.5, 60.0, 52.49, 'F'], ['S106', 49.76, 52.5, 60.0, 52.15, 'F'], ['S110', 56.43, 49.0, 40.0, 51.07, 'F'], ['S102', 47.38, 53.0, 46.67, 50.12, 'F']]
+        need([g[0] for g in got] == [w[0] for w in want], 'order/ids differ: ' + str([g[0] for g in got][:4]))
+        for g, w in zip(got, want):
+            need(all(abs(a - b) <= 0.011 for a, b in zip(g[1:5], w[1:5])) and g[5] == w[5], f'{g} != {w}')
+
+
+    def t5():
+        chk_table('report.md', 'distribution', {'A': 4, 'B': 3, 'C': 4, 'D': 9, 'F': 10})
+        rows = md_rows('report.md', 'top')
+        got = [(r[0], num(r[1])) for r in rows if len(r) >= 2 and r[0].startswith('S') and num(r[1]) is not None]
+        need([g[0] for g in got[:3]] == ['S103', 'S119', 'S111'] and all(abs(g[1] - w) <= 0.011 for g, w in zip(got, [91.99, 91.83, 90.38])), 'top 3 table: ' + str(got[:3]))
+
+
+    def t6():
+        import csv
+        rd = list(csv.DictReader(open('out/final.csv', encoding='utf-8', newline='')))
+        got = [[r['id'], round(float(r['homework_avg']), 2), round(float(r['exams_avg']), 2), round(float(r['participation_avg']), 2), round(float(r['final']), 2), r['letter']] for r in rd]
+        want = [['S103', 86.43, 97.5, 86.67, 91.99, 'A'], ['S119', 95.0, 89.0, 93.33, 91.83, 'A'], ['S111', 92.62, 88.0, 93.33, 90.38, 'A'], ['S113', 91.67, 88.5, 86.67, 89.58, 'B'], ['S121', 85.83, 91.0, 80.0, 87.83, 'B'], ['S101', 83.57, 87.0, 86.67, 85.6, 'B'], ['S112', 85.71, 83.0, 80.0, 83.79, 'B'], ['S116', 77.62, 79.0, 80.0, 78.55, 'C'], ['S128', 75.71, 81.0, 60.0, 76.79, 'C'], ['S125', 77.78, 63.5, 80.0, 70.86, 'C'], ['S123', 78.57, 63.5, 73.33, 70.51, 'C'], ['S117', 74.72, 69.0, 60.0, 70.39, 'C'], ['S105', 76.94, 68.0, 53.33, 70.11, 'C'], ['S126', 68.33, 65.5, 73.33, 67.42, 'D'], ['S129', 65.0, 63.0, 73.33, 64.83, 'D'], ['S100', 64.05, 65.5, 60.0, 64.37, 'D'], ['S108', 59.52, 68.0, 60.0, 63.81, 'D'], ['S118', 63.1, 63.5, 66.67, 63.65, 'D'], ['S122', 83.1, 40.0, 86.67, 61.9, 'D'], ['S124', 59.52, 64.0, 53.33, 61.14, 'D'], ['S120', 60.71, 60.0, 53.33, 59.62, 'F'], ['S127', 60.48, 58.5, 60.0, 59.44, 'F'], ['S114', 60.24, 54.0, 46.67, 55.76, 'F'], ['S107', 60.28, 51.0, 60.0, 55.61, 'F'], ['S115', 57.86, 52.5, 53.33, 54.73, 'F'], ['S109', 73.1, 33.5, 66.67, 52.65, 'F'], ['S104', 67.78, 38.5, 60.0, 52.36, 'F'], ['S106', 49.17, 52.5, 60.0, 51.92, 'F'], ['S110', 56.43, 49.0, 40.0, 51.07, 'F'], ['S102', 43.33, 53.0, 46.67, 48.5, 'F']]
+        need([g[0] for g in got] == [w[0] for w in want], 'order/ids differ')
+        for g, w in zip(got, want):
+            need(all(abs(a - b) <= 0.011 for a, b in zip(g[1:5], w[1:5])) and g[5] == w[5], f'{g} != {w}')
+
+
+    def t7():
+        import csv
+        need((W / 'out/letter_changes.csv').exists(), 'missing out/letter_changes.csv')
+        rd = list(csv.reader(open('out/letter_changes.csv', encoding='utf-8', newline='')))
+        need(rd[0] == ['id', 'before', 'after'], 'header ' + str(rd[0]))
+        need(sorted(rd[1:]) == [['S105', 'D', 'C'], ['S113', 'A', 'B'], ['S117', 'D', 'C']], 'changes differ: ' + str(rd[1:6]))
+
+
+    def t8():
+        for rel, text in {'_alt/students.csv': 'id,name,section\nS100,Gus Okafor,X\nS101,Lea Lind,Y\nS102,Oto Reed,X\nS103,Kai Diaz,Y\nS104,Oto Okafor,X\nS105,Max Lind,Y\nS106,Cy Reed,X\nS107,Bo Park,Y\nS108,Nia Okafor,X\n', '_alt/scores.csv': 'student_id,assignment,score\nS100,hw1,10\nS100,hw2,13\nS100,hw3,6\nS100,hw4,9\nS100,hw5,12\nS100,hw6,6\nS100,hw7,7\nS100,hw8,10\nS100,ex1,61\nS100,ex2,65\nS100,pt2,3\nS100,pt3,3\nS101,hw1,7\nS101,hw2,12\nS101,hw3,4\nS101,hw4,8\nS101,hw5,9\nS101,hw6,6\nS101,hw7,7\nS101,hw8,10\nS101,ex1,53\nS101,ex2,41\nS101,pt1,3\nS101,pt2,3\nS101,pt3,3\nS102,hw1,10\nS102,hw2,13\nS102,hw3,9\nS102,hw4,10\nS102,hw5,14\nS102,hw6,8\nS102,hw7,12\nS102,hw8,17\nS102,ex1,72\nS102,ex2,84\nS102,pt1,4\nS102,pt2,4\nS102,pt3,4\nS103,hw1,8\nS103,hw2,12\nS103,hw3,7\nS103,hw4,8\nS103,hw5,10\nS103,hw6,6\nS103,hw7,8\nS103,hw8,10\nS103,ex1,54\nS103,ex2,51\nS103,pt1,3\nS103,pt2,3\nS103,pt3,4\nS104,hw2,19\nS104,hw3,9\nS104,hw4,12\nS104,hw5,19\nS104,hw6,9\nS104,hw7,12\nS104,hw8,19\nS104,ex1,81\nS104,ex2,95\nS104,pt1,5\nS104,pt2,4\nS104,pt3,4\nS105,hw1,12\nS105,hw2,15\nS105,hw3,8\nS105,hw4,12\nS105,hw5,18\nS105,hw6,9\nS105,hw7,13\nS105,ex1,72\nS105,ex2,76\nS105,pt1,4\nS105,pt2,4\nS105,pt3,4\nS106,hw1,10\nS106,hw2,15\nS106,hw4,13\nS106,hw5,14\nS106,hw6,8\nS106,hw7,12\nS106,hw8,17\nS106,ex1,70\nS106,ex2,85\nS106,pt1,4\nS106,pt2,4\nS106,pt3,4\nS107,hw1,14\nS107,hw2,17\nS107,hw3,8\nS107,hw4,12\nS107,hw5,16\nS107,hw6,8\nS107,hw7,12\nS107,hw8,16\nS107,ex1,79\nS107,ex2,99\nS107,pt1,5\nS107,pt2,5\nS107,pt3,4\nS108,hw1,11\nS108,hw2,13\nS108,hw3,6\nS108,hw4,10\nS108,hw5,12\nS108,hw6,7\nS108,hw7,11\nS108,hw8,13\nS108,ex1,68\nS108,ex2,58\nS108,pt1,3\nS108,pt2,4\nS108,pt3,3\n', '_alt/assignments.csv': 'assignment,category,max\nhw1,homework,15\nhw2,homework,20\nhw3,homework,10\nhw4,homework,15\nhw5,homework,20\nhw6,homework,10\nhw7,homework,15\nhw8,homework,20\nex1,exams,100\nex2,exams,100\npt1,participation,5\npt2,participation,5\npt3,participation,5\n', '_alt/excused.csv': 'student_id,assignment\nS105,hw4\nS105,hw7\nS106,hw1\n'}.items():
+            (W / rel).parent.mkdir(parents=True, exist_ok=True)
+            (W / rel).write_text(text, encoding='utf-8')
+        need((W / 'scripts/grade.py').exists(), 'missing scripts/grade.py')
+        chk_cmd_json('python3 scripts/grade.py --data-dir _alt', {'S104': {'final': 88.38, 'letter': 'B'}, 'S107': {'final': 86.88, 'letter': 'B'}, 'S106': {'final': 78.53, 'letter': 'C'}, 'S105': {'final': 78.2, 'letter': 'C'}, 'S102': {'final': 77.76, 'letter': 'C'}, 'S108': {'final': 65.21, 'letter': 'D'}, 'S100': {'final': 59.6, 'letter': 'F'}, 'S103': {'final': 55.77, 'letter': 'F'}, 'S101': {'final': 50.17, 'letter': 'F'}}, tol=0.011)
+        chk_cmd_json('python3 scripts/grade.py', {'S103': {'final': 91.99, 'letter': 'A'}, 'S119': {'final': 91.83, 'letter': 'A'}, 'S111': {'final': 90.38, 'letter': 'A'}, 'S113': {'final': 89.58, 'letter': 'B'}, 'S121': {'final': 87.83, 'letter': 'B'}, 'S101': {'final': 85.6, 'letter': 'B'}, 'S112': {'final': 83.79, 'letter': 'B'}, 'S116': {'final': 78.55, 'letter': 'C'}, 'S128': {'final': 76.79, 'letter': 'C'}, 'S125': {'final': 70.86, 'letter': 'C'}, 'S123': {'final': 70.51, 'letter': 'C'}, 'S117': {'final': 70.39, 'letter': 'C'}, 'S105': {'final': 70.11, 'letter': 'C'}, 'S126': {'final': 67.42, 'letter': 'D'}, 'S129': {'final': 64.83, 'letter': 'D'}, 'S100': {'final': 64.37, 'letter': 'D'}, 'S108': {'final': 63.81, 'letter': 'D'}, 'S118': {'final': 63.65, 'letter': 'D'}, 'S122': {'final': 61.9, 'letter': 'D'}, 'S124': {'final': 61.14, 'letter': 'D'}, 'S120': {'final': 59.62, 'letter': 'F'}, 'S127': {'final': 59.44, 'letter': 'F'}, 'S114': {'final': 55.76, 'letter': 'F'}, 'S107': {'final': 55.61, 'letter': 'F'}, 'S115': {'final': 54.73, 'letter': 'F'}, 'S109': {'final': 52.65, 'letter': 'F'}, 'S104': {'final': 52.36, 'letter': 'F'}, 'S106': {'final': 51.92, 'letter': 'F'}, 'S110': {'final': 51.07, 'letter': 'F'}, 'S102': {'final': 48.5, 'letter': 'F'}}, tol=0.011)
+
+
+    if __name__ == "__main__":
+        fn = globals().get(sys.argv[1]) if len(sys.argv) > 1 else None
+        need(callable(fn) and sys.argv[1] in ['t3', 't5', 't6', 't7', 't8'], "unknown check " + str(sys.argv[1:]))
+        fn()
+        print("OK")
+turns:
+- prompt: How many students are in each section of data/students.csv, and how many rows does data/scores.csv have (excluding
+    the header)? Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all:
+    - (?<![\d.])A\D{0,6}(?<![\d.,])1,?0(?:\.0+)?(?!\d|[.,]\d)|(?<![\d.,])1,?0(?:\.0+)?(?!\d|[.,]\d)\D{0,8}\bA\b|(?<![\d.,])1,?0(?:\.0+)?(?!\d|[.,]\d)\D{0,30}\beach\b\D{0,60}\bA\b
+    - (?<![\d.])B\D{0,6}(?<![\d.,])1,?0(?:\.0+)?(?!\d|[.,]\d)|(?<![\d.,])1,?0(?:\.0+)?(?!\d|[.,]\d)\D{0,8}\bB\b|(?<![\d.,])1,?0(?:\.0+)?(?!\d|[.,]\d)\D{0,30}\beach\b\D{0,60}\bB\b
+    - (?<![\d.])C\D{0,6}(?<![\d.,])1,?0(?:\.0+)?(?!\d|[.,]\d)|(?<![\d.,])1,?0(?:\.0+)?(?!\d|[.,]\d)\D{0,8}\bC\b|(?<![\d.,])1,?0(?:\.0+)?(?!\d|[.,]\d)\D{0,30}\beach\b\D{0,60}\bC\b
+    - (?<![\d.,])3,?7,?9(?:\.0+)?(?!\d|[.,]\d)
+- prompt: What is the class mean of ex1 as a percentage of its max, over the students who have an ex1 score row, to 2 decimals?
+    Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all:
+    - (?<![\d.,])6,?7\.630*(?!\d|[.,]\d)
+- prompt: Create out/final.csv (header id,homework_avg,exams_avg,participation_avg,final,letter) with one row per student
+    following the rules in README.md. Category averages and final have 2 decimals; sort by final descending, ties by id. Ignore
+    data/excused.csv for now.
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t3
+    hidden:
+    - _grade.py
+    timeout: 60
+- prompt: How many students got each letter (A, B, C, D, F) in out/final.csv? Do not change any files.
+  checks:
+  - kind: keyed_facts
+    all:
+    - (?<![A-Za-z])A\D{0,6}(?<![\d.,])4(?:\.0+)?(?!\d|[.,]\d)
+    - (?<![A-Za-z])B\D{0,6}(?<![\d.,])3(?:\.0+)?(?!\d|[.,]\d)
+    - (?<![A-Za-z])C\D{0,6}(?<![\d.,])4(?:\.0+)?(?!\d|[.,]\d)
+    - (?<![A-Za-z])D\D{0,6}(?<![\d.,])9(?:\.0+)?(?!\d|[.,]\d)
+    - (?<![A-Za-z])F\D{0,6}(?<![\d.,])1,?0(?:\.0+)?(?!\d|[.,]\d)
+- prompt: Write report.md with level-2 sections Letter distribution, Top students and Notes. Letter distribution is a table
+    (letter, students); Top students is a table of the three highest finals (id, final), best first.
+  checks:
+  - kind: doc_sections
+    path: report.md
+    headings:
+    - Letter distribution
+    - Top students
+    - Notes
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t5
+    hidden:
+    - _grade.py
+    timeout: 60
+- prompt: 'data/excused.csv lists (student_id, assignment) pairs that are excused: an excused assignment is left out of that
+    student''s category average entirely (it is neither a zero nor a score; the homework drop-lowest applies to what remains).
+    Rewrite out/final.csv with the same columns applying this rule.'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t6
+    hidden:
+    - _grade.py
+    timeout: 60
+- prompt: Compare the letters from before and after applying excused assignments. Write out/letter_changes.csv (header id,before,after)
+    with one row per student whose letter changed, sorted by id. Keep out/final.csv as is.
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t7
+    hidden:
+    - _grade.py
+    timeout: 60
+- prompt: 'Add scripts/grade.py [--data-dir DIR] (default data): it applies the full rules, including excused.csv when that
+    file exists in DIR, and prints JSON {student_id: {"final": number, "letter": letter}} on stdout.'
+  checks:
+  - kind: tests
+    runner: cmd
+    cmd: python3 _grade.py t8
+    hidden:
+    - _grade.py
+    timeout: 60
+- prompt: Add a '## Rules' section to README.md that restates the excused-assignment rule, names data/excused.csv, and shows
+    how to run `python3 scripts/grade.py --data-dir data`.
+  checks:
+  - kind: doc_sections
+    path: README.md
+    headings:
+    - Rules
+  - kind: file_regex
+    path: README.md
+    pattern: excused\.csv
+  - kind: file_regex
+    path: README.md
+    pattern: (?i)excused
+  - kind: file_regex
+    path: README.md
+    pattern: scripts/grade\.py --data-dir
