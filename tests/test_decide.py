@@ -62,17 +62,23 @@ def shipped() -> dict:
     return fd_config.shipped_config()
 
 
+JUDGE_OPT_IN = {"model_routing": {"start_policy": "judge", "keep_on_host": None}}
+
+
 def decide_sync(task, host, *, judge=None, files=10, **kw):
+    """`judge=` is the opt-in to the judge path (Jev by default); without it the shipped rule decider R* decides."""
+    if judge is not None:
+        kw["config"] = fd_config.deep_merge(JUDGE_OPT_IN, kw.get("config") or {})
     with mock.patch.object(orchestrator, "workspace_file_count", lambda root, limit: files):
         return asyncio.run(decide_lib.adecide(task, host, "/ws", _backend=judge, use_settings=False, **kw))
 
 
-async def orchestrator_decision(host: str, prompt: str, judge: FakeJudge, files: int) -> dict:
+async def orchestrator_decision(host: str, prompt: str, judge: FakeJudge, files: int, config: dict | None = None) -> dict:
     """What the real orchestrator does at turn 1 under the shipped policy (the reference `decide` must match)."""
     events: list[dict] = []
     coordinator = DemoCoordinator()
     emitter = Emitter(coordinator.session_id, callback=events.append)
-    policy = Policy.from_config({**shipped(), "mode": "off", "read_shortcut": False})
+    policy = Policy.from_config({**fd_config.deep_merge(shipped(), config or {}), "mode": "off", "read_shortcut": False})
     service = DecisionService(policy, judge, emitter, coordinator, [])
     service.turn = TurnState("t1")
     provider = DemoProvider(delay_ms=0)
@@ -96,7 +102,9 @@ class DecideBehaviorTests(unittest.TestCase):
 
     def test_hard_task_stays_on_the_host_with_the_default_effort(self):
         d = decide_sync("redesign the storage layer", FABLE, judge=FakeJudge(0.9))
-        self.assertEqual((d.route, d.tier, d.model, d.effort, d.reason), (False, "strong", FABLE, None, "judge_strong"))
+        self.assertEqual((d.route, d.tier, d.model, d.effort, d.reason), (False, "strong", FABLE, "medium", "judge_strong"))  # Fable: by_host strong medium
+        d = decide_sync("redesign the storage layer", OPUS, judge=FakeJudge(0.9), config={"model_routing": {"price_gate": {"enabled": False}}})
+        self.assertEqual((d.route, d.model, d.effort), (False, OPUS, None))  # Opus: provider default effort
 
     def test_price_gate_keeps_opus_on_the_host_without_asking_the_judge(self):
         judge = FakeJudge(0.1)
@@ -136,7 +144,8 @@ class DecideBehaviorTests(unittest.TestCase):
         self.assertEqual((judge2.calls, d2.reason), (1, "judge_strong"))
 
     def test_the_shipped_bundle_consent_is_not_inherited_outside_amplifier(self):
-        self.assertIs(shipped()["allow_external_state"], True)
+        # The shipped decider needs no consent (allow_external_state: false); a judge opt-in still has to ask for it.
+        self.assertIs(shipped()["allow_external_state"], False)
         judge = FakeJudge(0.1, external=True)
         with mock.patch.dict(os.environ, {}, clear=False):
             os.environ.pop("FAST_DECISIONS_ALLOW_EXTERNAL_STATE", None)
@@ -147,7 +156,12 @@ class DecideBehaviorTests(unittest.TestCase):
         self.assertEqual(decide_sync("x", FABLE, decider="always-host").route, False)
         cheap = decide_sync("x", OPUS, decider="always-cheap")
         self.assertEqual((cheap.route, cheap.model, cheap.effort), (True, "claude-sonnet-5", "medium"))
-        long_task = decide_sync("x" * 2500, FABLE, decider="rules")
+        # Shipped `rules` is R*: no prompt-length rule, so a long prompt routes too.
+        always = decide_sync("x" * 2500, FABLE, decider="rules")
+        self.assertEqual((always.tier, always.route, always.reason), ("cheap", True, "rules_cheap"))
+        # The older length rule is still there for a config that sets the key.
+        length = {"model_routing": {"complex_min_prompt_chars": 2000}}
+        long_task = decide_sync("x" * 2500, FABLE, decider="rules", config=length)
         self.assertEqual((long_task.tier, long_task.reason), ("strong", "rules_strong"))
         short = decide_sync("x" * 20, FABLE, decider="rules")
         self.assertEqual((short.tier, short.route, short.reason), ("cheap", True, "rules_cheap"))
@@ -204,11 +218,20 @@ class DecideBehaviorTests(unittest.TestCase):
 class ParityWithOrchestratorTests(unittest.TestCase):
     """decide == the orchestrator's turn-1 decision, on the recorded campaign and on the real scenario prompts."""
 
+    # The shipped rule decider R* (no judge is asked) and the Jev opt-in (a fake judge answers).
+    VARIANTS = (None, JUDGE_OPT_IN)
+
     def _assert_same(self, host, prompt, p_complex, files):
-        reference = asyncio.run(orchestrator_decision(host, prompt, FakeJudge(p_complex), files))
-        mine = decide_sync(prompt, host, judge=FakeJudge(p_complex), files=files)
-        got = {"tier": mine.tier, "reason": mine.reason, "model": mine.model, "effort": mine.effort}
-        self.assertEqual(got, reference, f"{host} p={p_complex} files={files} prompt={prompt[:40]!r}")
+        reference = None
+        for variant in self.VARIANTS:
+            ref = asyncio.run(orchestrator_decision(host, prompt, FakeJudge(p_complex), files, variant))
+            if variant is None:
+                mine = decide_sync(prompt, host, files=files)
+            else:
+                mine = decide_sync(prompt, host, judge=FakeJudge(p_complex), files=files)
+            got = {"tier": mine.tier, "reason": mine.reason, "model": mine.model, "effort": mine.effort}
+            self.assertEqual(got, ref, f"{variant} {host} p={p_complex} files={files} prompt={prompt[:40]!r}")
+            reference = reference or ref
         return reference
 
     @unittest.skipUnless((EVIDENCE / "campaign" / "decisions.jsonl").exists(), "main-v1 evidence not present")

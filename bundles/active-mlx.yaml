@@ -34,13 +34,21 @@ session:
         by_tier:
           cheap: medium
           strong: null
+        by_host:
+          claude-fable-5-1:
+            strong: medium
       model_routing:
         start_model: claude-sonnet-5
         provider_match: anthropic
         start_policy: judge
+        complex_min_prompt_chars: null
         decision_scope: session
         price_gate:
           enabled: true
+        keep_on_host:
+          task_types:
+          - review
+          - explain
         cheap_max_workspace_files: 300
         max_requests_before_escalation: null
         escalate_on_test_failure: false

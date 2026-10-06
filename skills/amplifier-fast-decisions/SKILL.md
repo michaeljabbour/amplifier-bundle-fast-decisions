@@ -12,7 +12,7 @@ uv tool install 'amplifier-fast-decisions[local] @ git+https://github.com/michae
 amplifier-fast-decisions doctor
 ```
 
-`amplifier-fast-decisions --version` should print 0.2.0 or later. If a command below is
+`amplifier-fast-decisions --version` should print 0.3.0 or later. If a command below is
 "not a valid choice" or `--version` is not recognised, an older copy is first on the PATH:
 upgrade it with the install line above (add `--force`), then check again.
 
@@ -28,7 +28,8 @@ changes. Each command has its own: `amplifier-fast-decisions <command> --help`.
 - `select`: pick one target from a caller-validated read/list set, or abstain.
   `search` and `cua` follow the same shape (see `--help`).
 
-**Consent.** The default judge is external (Jev, or Cloudflare Workers AI by opt-in), so
-`decide`, `launch` and `select` need its API key and `--allow-external-state` (or the
-saved setting) before any task text leaves the machine. Without consent they say so and
-change nothing. `doctor` and `--dry-run` never call a model.
+**Consent.** `decide` and `launch` use the shipped rule decider R*: no model is asked, nothing
+leaves the machine, no consent is needed. Opting in to a judge (`--decider jev`, or Cloudflare
+Workers AI) and `select` need its API key and `--allow-external-state` (or the saved setting)
+before any task text leaves the machine. Without consent they say so and fall back or change
+nothing. `doctor` and `--dry-run` never call a model.

@@ -1,6 +1,6 @@
 bundle:
   name: fast-decisions-behavior
-  version: 0.2.0
+  version: 0.3.0
   description: >-
     Orchestrator-primary fast-decisions: replaces the host's orchestrator with
     loop-fast-decisions, which wraps the same upstream loop-streaming loop
@@ -36,12 +36,17 @@ session:
       # effort, only when the price gate says it is cheaper on this host;
       # complex: the host model at provider-default effort, exactly plain
       # Amplifier. No switches, so the prompt cache is never re-written.
-      # Jev is the default judge after the local/hosted Laya quality screen.
-      # Missing/uncertain/failed decisions retain the normal routing fallback;
-      # native approvals and confidence gates remain unchanged. AnyJev is opt-in
-      # only and is not selected by this behavior.
+      # The default decider is the deterministic rule R* (model_routing.start_policy:
+      # rules below): route every session to the cheap model unless the workspace
+      # is over the scope gate. No external call, no consent. S1 (holdout-v3, 60
+      # fresh scenarios) found Jev and R* equivalent on cost (1.008x, 90% CI
+      # 1.000-1.019) and turn-pass (-0.003), so the simpler decider ships
+      # (docs/evidence/2026-10-06-holdout-v3/RESULT.md, H2). Jev stays selectable:
+      # set start_policy: judge, allow_external_state: true and TYPESAFE_API_KEY
+      # (docs/CONFIGURATION.md, "Decider"). `backend` only names the judge used
+      # under start_policy: judge. AnyJev stays opt-in as before.
       backend: jev
-      allow_external_state: true
+      allow_external_state: false
       # The judged read shortcut stays off: it rarely fired in the studies and
       # would put a scoring call in front of every slow request.
       read_shortcut: false
@@ -56,12 +61,18 @@ session:
         # cheap: medium cut plain
         # Sonnet's cost to 0.821x its default effort with non-inferior turn-pass
         # (docs/evidence/2026-10-05-effort-control/RESULT.md). strong is the
-        # host-model effort: null = provider default. Opt-in `strong: medium` cut
-        # plain Fable 5.1 to 0.860x on 23 scenarios (see docs/CONFIGURATION.md
-        # "Host effort"); unmeasured on Opus 5.5.
+        # host-model effort: null = provider default. S1 (preregistered C*_F)
+        # ships `strong: medium` for Fable 5.1 only, through by_host below. Opus
+        # 5.5 keeps the provider default: plain Opus at medium cost 0.992x
+        # (95% CI 0.974-1.009), not shown to save (H4 not supported).
         by_tier:
           cheap: medium
           strong: null
+        # Per-host override of by_tier: the longest key that is a prefix of the
+        # host model id replaces those tiers. Other hosts keep by_tier.
+        by_host:
+          claude-fable-5-1:
+            strong: medium
       # Research levers (default off; see src/amplifier_fast_decisions/routing_levers.py):
       # one knob, profile: frugal | balanced | careful (balanced = this file),
       # or the individual model_routing keys tiers / large_repo / strong_effort.
@@ -80,7 +91,13 @@ session:
         start_model: claude-sonnet-5
         # Only ever send the Anthropic start model to Anthropic providers.
         provider_match: anthropic
-        start_policy: judge
+        # Session-start decider. `rules` = R* (docs/CONFIGURATION.md, "Decider"):
+        # no model is asked. complex_min_prompt_chars: null switches the
+        # prompt-length rule off, so every session routes unless the scope gate
+        # (below) or keep_on_host (below) keeps it on the host. `judge` asks the
+        # `backend` above (Jev) one typed question and needs allow_external_state.
+        start_policy: rules
+        complex_min_prompt_chars: null
         # Decide once per session (the turn-1 request), never switch: in the
         # paired campaign this cost 0.86x (Fable) and 0.92x (Opus) of deciding
         # per turn (docs/evidence/2026-10-02-paired-campaign/confirm/CONFIRM.md, H3).
@@ -96,11 +113,15 @@ session:
         # Turn off with price_gate: {enabled: false}.
         price_gate:
           enabled: true
-        # Opt-in, exploratory: keep these task types on the host model (one extra
-        # question in the same judge call; no answer -> host). On Fable the routed
-        # session lost turn-pass on review/explain/feature work (post hoc).
-        # keep_on_host:
-        #   task_types: [review, explain, feature]
+        # Keep these task types on the host model. S1 H7: on review + explain
+        # scenarios routing to Sonnet lost 0.028 turn-pass (95% CI -0.063 to
+        # +0.013), so a 5-point loss cannot be excluded -> they stay on the host.
+        # Under start_policy: rules the type comes from the keyword intent
+        # classifier intent-kw-v1 (question-shaped first prompt -> explain; it
+        # cannot tell review from explain, so both keep the same sessions); under
+        # judge, from the judge's task-type answer. Remove the key to route them.
+        keep_on_host:
+          task_types: [review, explain]
         # Quality-safe scope gate (STUDY-DESIGN.md 18.8): in a workspace with
         # more files than this, the turn starts on the host model whatever the
         # judge says. On SWE-bench repositories cheap-first lost quality

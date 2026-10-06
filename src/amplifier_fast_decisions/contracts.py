@@ -142,6 +142,9 @@ def validate_effort_routing(effort_routing: Any) -> None:
         # never invalidated by an effort change. None = provider default;
         # "phase" = this tier uses the phase map (with ``monotonic`` if set).
         "by_tier",
+        # Per-host override of by_tier: {host_model_id_prefix: {cheap|strong: effort|null}}. The longest matching
+        # prefix of the host model id replaces those tiers; other hosts keep by_tier.
+        "by_host",
     }
     if unknown:
         raise ValueError(f"effort_routing has unknown keys: {sorted(unknown)}")
@@ -152,6 +155,16 @@ def validate_effort_routing(effort_routing: Any) -> None:
         for tier_effort in by_tier.values():
             if tier_effort is not None and tier_effort != "phase" and tier_effort not in ALLOWED_EFFORTS:
                 raise ValueError(f"effort_routing.by_tier values must be one of {sorted(ALLOWED_EFFORTS)}, 'phase' or null")
+    by_host = effort_routing.get("by_host")
+    if by_host is not None:
+        if not isinstance(by_host, dict) or not all(isinstance(k, str) and k for k in by_host):
+            raise ValueError("effort_routing.by_host must map host model ids to cheap/strong effort maps")
+        for host, tiers in by_host.items():
+            if not isinstance(tiers, dict) or not tiers or set(tiers) - {"cheap", "strong"}:
+                raise ValueError(f"effort_routing.by_host[{host!r}] must map cheap/strong to an effort or null")
+            for tier_effort in tiers.values():
+                if tier_effort is not None and tier_effort not in ALLOWED_EFFORTS:
+                    raise ValueError(f"effort_routing.by_host values must be one of {sorted(ALLOWED_EFFORTS)} or null")
     for key in ("max_explore_requests", "escalate_after_provider_errors"):
         value = effort_routing.get(key)
         if value is not None and (
@@ -517,8 +530,8 @@ def validate_model_routing(model_routing: Any) -> None:
         if (not isinstance(task_types, (list, tuple)) or not task_types
                 or any(t not in TASK_TYPES for t in task_types) or len(set(task_types)) != len(task_types)):
             raise ValueError(f"model_routing.keep_on_host.task_types must be a non-empty list of unique values from {list(TASK_TYPES)}")
-        if start_policy != "judge":
-            raise ValueError("model_routing.keep_on_host requires start_policy: judge")
+        if start_policy not in ("judge", "rules"):
+            raise ValueError("model_routing.keep_on_host requires start_policy: judge or rules")
     cmp_ = model_routing.get("complex_min_probability")
     if cmp_ is not None and (isinstance(cmp_, bool) or not isinstance(cmp_, (int, float)) or not 0 < cmp_ < 1):
         raise ValueError("model_routing.complex_min_probability must be in (0, 1)")

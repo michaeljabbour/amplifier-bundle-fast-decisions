@@ -101,14 +101,15 @@ class OrchestratorPrimaryBehaviorOfflineTests(unittest.TestCase):
         config = orchestrator["config"]
         self.assertEqual(config["mode"], "active")
         self.assertEqual(config["backend"], "jev")
-        self.assertIs(config["allow_external_state"], True)
+        self.assertIs(config["allow_external_state"], False)  # the shipped decider is the rule R*: no external call
         self.assertEqual(config["model_routing"]["provider_match"], "anthropic")
-        self.assertEqual(config["model_routing"]["start_policy"], "judge")
+        self.assertEqual(config["model_routing"]["start_policy"], "rules")
+        self.assertIsNone(config["model_routing"]["complex_min_prompt_chars"])
+        self.assertEqual(config["model_routing"]["keep_on_host"], {"task_types": ["review", "explain"]})
         self.assertEqual(config["model_routing"]["cheap_max_workspace_files"], 300)
         self.assertIs(config["read_shortcut"], False)
         self.assertEqual(config["model_routing"]["decision_scope"], "session")
         self.assertEqual(config["model_routing"]["price_gate"], {"enabled": True})
-        self.assertNotIn("keep_on_host", config["model_routing"])
         self.assertEqual(config["effort_routing"]["by_tier"], {"cheap": "medium", "strong": None})
         # No explicit upstream block: the root's loop-streaming settings are
         # inherited through composition and forwarded (upstream_config).
@@ -196,8 +197,8 @@ class ActiveBundleOfflineTests(unittest.TestCase):
         self.assertEqual(config["mode"], "active")
         self.assertEqual(config["backend"], "jev")
         self.assertEqual(config["timeout_ms"], 3000)
-        self.assertIs(config["allow_external_state"], True)
-        self.assertEqual(config["effort_routing"], {"by_tier": {"cheap": "medium", "strong": None}})
+        self.assertIs(config["allow_external_state"], False)
+        self.assertEqual(config["effort_routing"], {"by_tier": {"cheap": "medium", "strong": None}, "by_host": {"claude-fable-5-1": {"strong": "medium"}}})
         routing = config["model_routing"]
         self.assertEqual(routing["start_model"], "claude-sonnet-5")
         self.assertEqual(routing["decision_scope"], "session")
@@ -222,8 +223,8 @@ class ActiveRoutingBundleOfflineTests(unittest.TestCase):
         self.assertEqual(config["mode"], "active")
         self.assertEqual(config["backend"], "jev")
         self.assertEqual(config["timeout_ms"], 3000)
-        self.assertIs(config["allow_external_state"], True)
-        self.assertEqual(config["effort_routing"], {"by_tier": {"cheap": "medium", "strong": None}})
+        self.assertIs(config["allow_external_state"], False)
+        self.assertEqual(config["effort_routing"], {"by_tier": {"cheap": "medium", "strong": None}, "by_host": {"claude-fable-5-1": {"strong": "medium"}}})
         self.assertEqual(config["model_routing"]["start_model"], "claude-sonnet-5")
         self.assertEqual(config["model_routing"]["price_gate"], {"enabled": True})
         self.assertEqual(data["includes"], [
@@ -366,18 +367,18 @@ class BundleLoadTests(unittest.TestCase):
         self.assertIn("tool-fast-workspace", tool_modules)
 
     def test_active_bundle(self):
-        # bundles/active.yaml now carries the shipped defaults (scripts/sync_active_bundles.py keeps it equal to
-        # behaviors/fast-decisions.yaml): Jev judge with consent, price gate, decide once per session.
+        # bundles/active.yaml carries the shipped defaults (scripts/sync_active_bundles.py keeps it equal to
+        # behaviors/fast-decisions.yaml): rule decider R* (no external judge, so no external state), price gate,
+        # decide once per session. Jev stays selectable as an opt-in.
         self._assert_decision_bundle(
             "bundles/active.yaml",
             expected_name="fast-decisions-active",
             expected_mode="active",
-            expected_allow_external=True,
+            expected_allow_external=False,
         )
         bundle = self._load("bundles/active.yaml")
         config = bundle.to_mount_plan()["session"]["orchestrator"]["config"]
-        self.assertEqual(config["backend"], "jev")
-        self.assertEqual(config["timeout_ms"], 3000)
+        self.assertEqual(config["model_routing"]["start_policy"], "rules")
         # The mount plan deep-merges the pinned include's config, so keys from that older commit can appear
         # alongside ours; the bundle's own block (held by test_config_parity) is what this release ships.
         self.assertEqual(config["effort_routing"]["by_tier"], {"cheap": "medium", "strong": None})

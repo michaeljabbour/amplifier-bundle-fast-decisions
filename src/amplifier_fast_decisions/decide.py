@@ -142,7 +142,10 @@ async def adecide(task: str, host_model: str | None, workspace: str | os.PathLik
     policy = dataclasses.replace(eff.policy, allow_external_state=consent)
     workspace_dir = os.fspath(workspace) if workspace is not None else os.getcwd()
 
-    name = decider or eff.config.get("backend") or "jev"
+    # The shipped default decider is the rule R* (start_policy: rules, no model asked). Naming a judge backend
+    # (``decider=`` or ``--decider``) is the opt-in: it switches this decision to start_policy: judge.
+    configured_policy = routing.get("start_policy", "cheap")
+    name = decider or ("rules" if configured_policy == "rules" else (eff.config.get("backend") or "jev"))
     always: str | None = None
     if name in ("always-host", "always-cheap"):
         always, backend = name, _FixedBackend()
@@ -150,6 +153,7 @@ async def adecide(task: str, host_model: str | None, workspace: str | os.PathLik
         routing["start_policy"] = "rules"
         backend = _FixedBackend()
     else:
+        routing["start_policy"] = "judge"
         backend = _backend or build_backend({**eff.config, "backend": name, "model": eff.config.get("model")}, policy)
     spec = judge_backends.spec(getattr(backend, "name", name)) or judge_backends.spec(name)
 
@@ -224,7 +228,7 @@ async def adecide(task: str, host_model: str | None, workspace: str | os.PathLik
     pick = bool(user_model)
     decided, effort, _ = tier_effort_decision(
         eff.effort_routing, start_tier=tier, escalated=False, tier_effort=turn.tier_effort,
-        tier_label=turn.tier_label, user_model_pick=pick, host_pinned=False)
+        tier_label=turn.tier_label, user_model_pick=pick, host_pinned=False, host_model=host_model)
     if not decided:
         effort = None
     if route and effort is None and routing.get("start_effort"):

@@ -19,10 +19,20 @@ right model from any harness; use the bundle path to have Amplifier itself route
 session. They are independent and can be used together. Details of the bundle option are
 under "Install (Amplifier bundle)" below.
 
-Fast Decisions makes Amplifier faster by asking one quick question at the start of every session: *is this easy
-or hard?* Easy sessions go to a faster, cheaper model (Claude Sonnet 5), and only when that is predicted to be
-cheaper on your default model. Hard ones, and all work inside large projects, stay on your usual model. The decision
-is made once per session, so the AI service's memory of the conversation is never thrown away mid-session.
+Fast Decisions makes Amplifier faster by deciding once, at the start of every session, which model it runs on.
+Sessions go to a faster, cheaper model (Claude Sonnet 5), and only when that is predicted to be cheaper on your
+default model. Work inside large projects (over 300 files) and read-only questions and reviews stay on your usual
+model. The decision is a plain rule (no model call, nothing leaves your machine) and is made once per session, so the
+AI service's memory of the conversation is never thrown away mid-session.
+
+**Change note (0.3.0, S1 defaults).** The session-start decider is now the rule R* instead of Jev: on 60 fresh
+scenarios Jev and R* were equivalent (cost 1.008x, turn-pass -0.003; preregistered H2), so the simpler decider ships and
+`allow_external_state` is `false`. Jev is an opt-in (`model_routing.start_policy: judge`). On a Fable 5.1 host strong
+effort is `medium` (`effort_routing.by_host`; the preregistered C*_F: 0.581x cost, turn-pass -0.013 vs plain Fable,
+H1) and review/explain-shaped sessions stay on the host (`keep_on_host`; H7 could not exclude a 5-point loss). Opus
+5.5 is unchanged: the price gate never routes and the effort is the provider default (no candidate beat plain Opus).
+Evidence: [S1 result](https://github.com/michaeljabbour/amplifier-bundle-fast-decisions/blob/v3/program/docs/evidence/2026-10-06-holdout-v3/RESULT.md);
+config table in [docs/CONFIGURATION.md](docs/CONFIGURATION.md#decider).
 
 **Change note (research-backed defaults).** The shipped behavior now decides once per session
 (`decision_scope: session`) and only routes when a price gate predicts a saving (`price_gate: {enabled: true}`).
@@ -35,10 +45,10 @@ Experimental, MIT licensed. Not an official Microsoft or TypeSafe release, and n
 Approvals, permissions and tool execution are unchanged: Fast Decisions wraps Amplifier's standard loop rather
 than replacing it.
 
-**Default judge: Jev.** Routing and opt-in computer-use selection use Jev 1.13.0;
-source relevance search uses upstream Jevgrep. Configure `TYPESAFE_API_KEY` privately.
-The bundle behaviors explicitly permit bounded external state; standalone calls
-require `--allow-external-state`. Laya remains an explicit experimental backend.
+**Judge: Jev (opt-in for routing).** Session routing no longer calls a judge by default (see the change note).
+Opt-in routing with Jev 1.13.0, computer-use selection (`select`) and source relevance search (upstream Jevgrep)
+still use it. Configure `TYPESAFE_API_KEY` privately and set `allow_external_state: true`
+(standalone calls require `--allow-external-state`). Laya remains an explicit experimental backend.
 AnyJev remains disabled in the normal path.
 
 **Quality check, September 29:** base Laya scored 35/60 versus Jev's 56/60
@@ -65,9 +75,11 @@ Paired-campaign rows: preregistered, confirmatory test split, tools-normalized c
 in [docs/evidence/2026-10-02-paired-campaign](docs/evidence/2026-10-02-paired-campaign/README.md) and the
 [paper](docs/papers/2026-10-02-paired-measurement/README.md). The shipped price gate and once-per-session decision implement
 its recommendations, and an [offline replay](docs/evidence/2026-10-05-defaults-replay/REPLAY.md) of the recorded campaign
-through the shipped code confirms Opus 5.5 hosts never route (140/140) and Fable 5.1 hosts match the recorded decisions
-(140/140). Host effort is opt-in: plain Fable 5.1 at `medium` effort cost 0.860x default effort (CI 0.833-0.885,
-turn-pass +0.033, 23 scenarios; see [CONFIGURATION.md](docs/CONFIGURATION.md#host-effort-opt-in)).
+through the shipped code confirms Opus 5.5 hosts never route (140/140) and, through the judge opt-in, Fable 5.1 hosts
+match the recorded Jev decisions (140/140); the shipped rule R* agrees with them on 126/140. Host effort `medium` ships
+for Fable 5.1 only: plain Fable at `medium` cost 0.860x default effort (CI 0.833-0.885, turn-pass +0.033, 23 scenarios;
+see [CONFIGURATION.md](docs/CONFIGURATION.md#host-effort)); Opus 5.5 keeps the default (plain Opus at `medium`: 0.992x, upper
+bound 1.009, not shown to save).
 
 Everyday rows: the historical Jev configuration (one decision per request) on a fresh split of 12 tasks never run
 before (`holdout2`, 4 of them longer multi-file tasks), 3 runs each, one request per fresh session, against standard

@@ -2,7 +2,7 @@
 {
   "smart_tool_format": 1,
   "name": "amplifier-fast-decisions",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Decide once at session start which model and effort a coding session should run on (the same price-gated, scope-gated decision the Amplifier orchestrator makes), and use Jev for bounded read/list decisions, source relevance search, and proposals on observed UI controls. The host keeps execution and approval authority; uncertain decisions abstain.",
   "use_cases": [
     "Decide, before a Claude Code, Codex, Copilot CLI or Amplifier session starts, whether to run it on a cheaper model and at which effort",
@@ -58,14 +58,14 @@ eligibility checks, approvals, execution and evaluation of the result.
 ## Decide once, at session start
 
 ```bash
-amplifier-fast-decisions decide --host-model claude-fable-5-1 --workspace . --allow-external-state \
+amplifier-fast-decisions decide --host-model claude-fable-5-1 --workspace . \
   --task "Fix the off-by-one in pagination"
-# {"route": true, "model": "claude-sonnet-5", "effort": "medium", "reason": "judge_cheap", "gate": {...}, ...}
+# {"route": true, "model": "claude-sonnet-5", "effort": "medium", "reason": "rules_cheap", "decider": "rules", "gate": {...}, ...}
 amplifier-fast-decisions launch --harness claude --host-model claude-fable-5-1 -- -p "Fix the off-by-one in pagination"
 ```
 
 `decide` is the Amplifier orchestrator's turn-1 decision, callable from any harness. It runs the same code (the
-price gate, the workspace-size scope gate, the Jev difficulty judge, the effort-by-tier rule) over the defaults in
+price gate, the workspace-size scope gate, the rule decider R*, the task-type opt-out, the effort-by-tier/by-host rule) over the defaults in
 `behaviors/fast-decisions.yaml`; nothing here has its own thresholds. A user overlay at
 `~/.amplifier/fast-decisions/settings.yaml` (or `$AFAST_SETTINGS`) is deep-merged over those defaults, and
 `afast doctor` shows the result. The decision is made once because switching model or effort inside a session
@@ -76,11 +76,13 @@ model would cost more there.
 The result is typed: `route`, `tier`, `model` (what to run), `effort` (set it for the whole session, or null),
 `reason`, `gate` (host and start-model rates, request multiplier, predicted cost ratio), `judge` (backend, status,
 `p_complex`, `task_type`, duration), `workspace_files`, `scope_limit`, `latency_ms`, `usd` (estimated judge cost) and
-`config_sha`. `--decider` replaces the judge for studies (`rules`, `always-host`, `always-cheap`, or any backend in
-the table below). A remote judge receives the first 2,500 characters of the task, scrubbed of secret-shaped strings;
-it needs `--allow-external-state` or `FAST_DECISIONS_ALLOW_EXTERNAL_STATE=true`. The shipped bundle's own consent
-is not inherited outside Amplifier. Without consent the answer falls back to the prompt-length rule and
-`judge.status` says `no_consent`.
+`config_sha`. The shipped decider is the rule R* (`decider: rules`, `judge.status: not_used`): no model is asked and
+no consent is needed. Route every session unless the price gate (Opus 5.5), the scope gate (more than 300 files) or
+`keep_on_host` (review/explain-shaped first prompt) keeps it on the host; on Fable 5.1 the host effort is `medium`.
+`--decider` selects another decider: `rules`, `always-host`, `always-cheap`, or any backend in the table below (Jev is
+the opt-in judge). A remote judge receives the first 2,500 characters of the task, scrubbed of secret-shaped strings;
+it needs `--allow-external-state` or `FAST_DECISIONS_ALLOW_EXTERNAL_STATE=true`. Without consent the answer falls
+back to the prompt-length rule and `judge.status` says `no_consent`.
 
 `launch --harness claude|codex|copilot` runs `decide` and then replaces itself with the harness, adding
 `--model`/`--effort` (Claude Code), `-c model=... -c model_reasoning_effort=...` (Codex) or `--model` (Copilot CLI,

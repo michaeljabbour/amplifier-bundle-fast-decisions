@@ -39,6 +39,7 @@ from . import planner as turn_planner
 
 
 from . import routing_levers
+from . import rules
 from . import step_actions
 from . import price_gate
 from .savings import DEFAULT_RATES
@@ -677,11 +678,17 @@ async def decide_start_tier(service: Any, request: Any, model_routing: dict[str,
                     turn.start_reason, turn.start_scope_files = "scope_strong", files
                 return "strong"
             scope_files = files  # large_repo lever: ask the judge anyway
+    # ``complex_min_prompt_chars: null`` disables the length rule under ``rules`` (R*, "always route"); an absent
+    # key keeps 2000. A judge that abstains still falls back to the 2000-character rule, never to "always route".
     min_chars = model_routing.get("complex_min_prompt_chars", 2000)
-    tier = "strong" if len(task) >= min_chars else "cheap"
+    if min_chars is None and policy != "rules":
+        min_chars = 2000
+    tier = "strong" if (min_chars is not None and len(task) >= min_chars) else "cheap"
     decided_by, p_complex, p_edit, duration_ms = "rules", None, None, 0.0
     task_type = None
     keep_on_host = model_routing.get("keep_on_host")
+    if policy == "rules" and keep_on_host and task:
+        task_type = rules.rule_task_type(task)  # deterministic proxy; no judge is asked under rules
     if policy == "judge" and task:
         state = {"task": task[:_DIFFICULTY_STATE_CHARS]}
         questions = [Question(name="task_difficulty", type="choice", instructions=DIFFICULTY_INSTRUCTIONS,
@@ -786,6 +793,8 @@ async def decide_start_tier(service: Any, request: Any, model_routing: dict[str,
         start_mech = "rule:scope_gate"
     elif decided_by == "judge":
         start_mech = f"{service.backend.name}:" + ("edits_code" if p_edit is not None else "task_difficulty")
+    elif min_chars is None:
+        start_mech = "rule:always_route"
     else:
         start_mech = "rule:prompt_length"
     _note_start(service, start_mech, duration_ms / 1000 if policy == "judge" and task else 0.0)
@@ -794,14 +803,14 @@ async def decide_start_tier(service: Any, request: Any, model_routing: dict[str,
 
 def tier_effort_decision(effort_routing: dict[str, Any], *, start_tier: str | None, escalated: bool,
                          tier_effort: str | None, tier_label: str | None, user_model_pick: bool,
-                         host_pinned: bool) -> tuple[bool, str | None, str | None]:
+                         host_pinned: bool, host_model: Any = None) -> tuple[bool, str | None, str | None]:
     """The session-level effort for a request: ``(decided, effort_or_None, reason_code)``.
 
     One effort per tier for the whole session/turn (``effort_routing.by_tier``), never per phase: an effort
     change between requests rewrites the provider's prompt cache (the v3 study plan, section 0, finding 4).
     ``decided`` is False when no tier rule applies, which leaves the legacy phase path (opt-in, off in every
     shipped config) to decide. Shared by the orchestrator and ``decide`` so the two cannot drift."""
-    by_tier = effort_routing.get("by_tier")
+    by_tier = effort.effort_by_tier(effort_routing, host_model)
     if tier_effort is not None and not host_pinned and not escalated:
         # Routing levers: the chosen tier's own effort, for the whole turn.
         return True, tier_effort, f"tier_{tier_label}"
@@ -1599,7 +1608,8 @@ docs/UPSTREAM_CONTRACT.md.
             tier_decided, tier_applied, tier_reason = tier_effort_decision(
                 effort_routing, start_tier=turn.start_tier, escalated=turn.escalated,
                 tier_effort=turn.tier_effort, tier_label=turn.tier_label,
-                user_model_pick=turn.start_mechanism == "user:model_pick", host_pinned=host_pinned)
+                user_model_pick=turn.start_mechanism == "user:model_pick", host_pinned=host_pinned,
+                host_model=self._host_model())
             if tier_decided:
                 applied_effort, reason_code = tier_applied, tier_reason
             elif effort_routing.get("monotonic") and applied_effort is not None:

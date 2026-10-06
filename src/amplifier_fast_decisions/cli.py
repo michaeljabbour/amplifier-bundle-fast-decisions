@@ -726,6 +726,9 @@ def configure(args) -> int:
                 "events_dir": events_dir,
             }
         )
+        # Configuring an active profile with a judge backend is the opt-in to that judge: the shipped default
+        # decider is the rule R* (start_policy: rules), which would never ask it.
+        config["model_routing"] = {**(config.get("model_routing") or {}), "start_policy": "judge"}
         # Only an explicit --timeout-ms overrides the shipped value (behaviors/fast-decisions.yaml).
         if getattr(args, "timeout_ms", None) is not None:
             config["timeout_ms"] = args.timeout_ms

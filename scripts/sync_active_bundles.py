@@ -21,12 +21,16 @@ TARGETS = {"bundles/active.yaml": {"upstream": {"max_iterations": 100, "extended
            "bundles/active-routing.yaml": {},
            # The local-judge rung: the shipped config with an Apple MLX judge and no external state.
            "bundles/active-mlx.yaml": {"backend": "mlx", "model": "mlx-community/Qwen3-0.6B-4bit",
-                                       "mlx_url": "http://127.0.0.1:8080", "allow_external_state": False}}
+                                       "mlx_url": "http://127.0.0.1:8080", "allow_external_state": False,
+                                       # The shipped decider is the rule R*; this rung is the one that asks a (local) judge.
+                                       "model_routing": {"start_policy": "judge"}}}
 
 
 def render(extra: dict) -> str:
     cfg = yaml.safe_load((ROOT / "behaviors/fast-decisions.yaml").read_text(encoding="utf-8"))["session"]["orchestrator"]["config"]
-    cfg = {**cfg, **extra}
+    extra = dict(extra)
+    routing = {**cfg["model_routing"], **extra.pop("model_routing", {})}
+    cfg = {**cfg, **extra, "model_routing": routing}
     lines = yaml.safe_dump(cfg, sort_keys=False, default_flow_style=False, width=100).splitlines()
     return "    config:\n" + "\n".join("      " + line for line in lines) + "\n"
 

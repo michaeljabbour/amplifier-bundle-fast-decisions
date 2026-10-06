@@ -135,7 +135,10 @@ class _RecordedJudge:
 def shipped_orchestrator_config(behavior: Path) -> dict:
     import yaml
 
-    return yaml.safe_load(behavior.read_text(encoding="utf-8"))["session"]["orchestrator"]["config"]
+    config = yaml.safe_load(behavior.read_text(encoding="utf-8"))["session"]["orchestrator"]["config"]
+    # main-v1 recorded Jev decisions: replay them through the judge path, which the shipped rule decider (R*) no longer
+    # takes by default (S1 H2). The task-type opt-out is a judge question the recorded campaign never asked.
+    return {**config, "model_routing": {**config["model_routing"], "start_policy": "judge", "keep_on_host": None}}
 
 
 async def _wave(config: dict, host_model: str, decision: str, workspace_files: int, turns: int = 3) -> dict:

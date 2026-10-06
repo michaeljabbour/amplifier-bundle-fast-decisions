@@ -242,3 +242,18 @@ def hold_monotonic(effort: str | None, max_so_far: str | None) -> tuple[str | No
         return max_so_far, True
     return effort, False
 
+
+def effort_by_tier(effort_routing: dict[str, Any], host_model: Any = None) -> dict[str, Any] | None:
+    """``effort_routing.by_tier`` with the ``by_host`` override for ``host_model`` applied.
+
+    ``by_host`` maps a host model id to a partial ``{cheap, strong}`` map; the longest key that is a prefix of the
+    host model id wins (``claude-fable-5-1`` also matches a dated ``claude-fable-5-1-20261001``), and its tiers
+    replace the same tiers of ``by_tier``. No match or an unknown host leaves ``by_tier`` as is."""
+    by_tier = effort_routing.get("by_tier")
+    by_host = effort_routing.get("by_host")
+    if not by_host or not isinstance(host_model, str):
+        return by_tier
+    keys = [k for k in by_host if host_model == k or host_model.startswith(k)]
+    if not keys:
+        return by_tier
+    return {**(by_tier or {}), **by_host[max(keys, key=len)]}
