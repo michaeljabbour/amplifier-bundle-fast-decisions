@@ -1,0 +1,29 @@
+{
+  "sessions": 1224,
+  "turns": 12856,
+  "requests": 49254,
+  "pairs": 1104,
+  "tools_normalized_delta_usd_total": -5.154677,
+  "skipped_no_result": [],
+  "cache_audit_flagged_sessions": [
+    "black-pipeline-explain-r2-fable-anchor",
+    "black-pipeline-explain-r2-any-pc",
+    "black-pipeline-explain-r2-opus-anchor",
+    "black-pipeline-explain-r2-opus-aa"
+  ],
+  "mechanism_failed": [
+    "bleach-sanitize-review-r1-fable-anchor",
+    "bleach-sanitize-review-r1-fable-anchor_m",
+    "bleach-sanitize-review-r1-fable-ph",
+    "bleach-sanitize-review-r1-fable-ph_m",
+    "bleach-sanitize-review-r2-fable-anchor",
+    "bleach-sanitize-review-r2-fable-anchor_m",
+    "bleach-sanitize-review-r2-fable-ph",
+    "bleach-sanitize-review-r2-fable-ph_m"
+  ],
+  "killed_memory": [],
+  "cost_mismatch": [
+    "bleach-sanitize-review-r1-opus-anchor",
+    "bleach-sanitize-review-r2-opus-anchor"
+  ]
+}

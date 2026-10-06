@@ -1,0 +1,327 @@
+plan 67ac57d27320  design=holdout-v3  seed=20261005  reps=2  hosts=fable,opus  parallel=16  nonce=per_session
+arms: anchor, aa, anchor_m, ph, ph_m, shipped, shipped_m, pc
+1224 sessions in 240 waves
+
+scenario         type     lang    turns gaps>=5m
+access-log-stats mixed    python      8        0
+adr-records      docs     markdown    10        0
+alert-runbooks   docs     markdown    10        0
+bank-recon       mixed    python     10        0
+black-pipeline-explain explain  python     14        2
+bleach-sanitize-review review   python     10        2
+bottle-etag      bugfix   python     10        0
+cli-manual       docs     python     10        2
+click-flow-explain explain  python     10        0
+config-reference docs     json       11        0
+cssselect-xpath-explain explain  python     10        2
+data-dictionary  docs     markdown    10        0
+dateutil-calendar-review review   python     10        2
+db-evolution     mixed    sql        13        0
+docs-corpus      docs     markdown    10        2
+faker-nonutf-cli bugfix   python      9        0
+falcon-regexconv feature  python     10        2
+fleet-fuel       mixed    python      9        0
+fpdf2-booldict   bugfix   python      9        0
+go-bowling       feature  go         14        0
+go-crypto-docs   mixed    go          8        0
+go-cryptosquare  feature  go         11        2
+go-sublist-docs  docs     go          9        2
+gradebook        mixed    python      9        0
+honcho-process-review review   python      8        0
+inventory-recon  mixed    python     11        2
+isodate-regress-review review   python     10        2
+itsdang-signer-review review   python     13        0
+jpointer-regress-review review   python     10        0
+js-linkedlist    feature  javascript    14        0
+js-queenattack   feature  javascript    11        0
+jsch-planted-review review   python     16        2
+jsonpatch-ops-explain explain  python     10        0
+jsonschema-jsonpath bugfix   python     10        0
+lib-reference    docs     python     10        0
+marsh-load-explain explain  python     10        0
+mkdocs-events-explain explain  python     11        2
+onboarding-guide docs     markdown    10        2
+peewee-filterfk  bugfix   python      9        0
+pluggy-calls-explain explain  python     10        0
+py-dotdsl        feature  python     12        0
+py-gradeschool   feature  python     10        0
+py-grep          feature  python     16        0
+py-linked-list-docs docs     python      9        2
+py-zipper        feature  python     11        0
+py-zipper-docs   mixed    python     10        2
+pyg-rawtoken     bugfix   python     10        2
+pyg-util-regress-review review   python     12        0
+pyparsing-quotedws bugfix   python     10        0
+release-fragments mixed    python      9        2
+rich-softwrap    bugfix   python      9        0
+rich-text-split-explain explain  python     11        2
+schedule-semantics-review review   python     10        0
+svc-config-audit mixed    python     15        2
+tomlkit-roundtrip-explain explain  python     10        0
+tornado-zerotimeout bugfix   python      9        0
+validators-regress-review review   python     11        0
+xlsxwriter-filter bugfix   python      9        0
+xmlschema-arch-explain explain  python     12        2
+ytdlp-fps        feature  python      8        0
+
+wave (seeded order)                sessions    est $
+falcon-regexconv-r1-fable                 6    29.10
+falcon-regexconv-r1-opus                  4     8.87
+js-queenattack-r2-fable                   6    27.32
+js-queenattack-r2-opus                    4     8.33
+dateutil-calendar-review-r2-fable         6    31.49
+dateutil-calendar-review-r2-opus          4     9.60
+cssselect-xpath-explain-r2-fable          7    32.70
+cssselect-xpath-explain-r2-opus           5    10.50
+config-reference-r1-fable                 7    25.85
+config-reference-r1-opus                  5     8.31
+peewee-filterfk-r1-fable                  6    19.34
+peewee-filterfk-r1-opus                   4     5.90
+go-cryptosquare-r2-fable                  6    32.79
+go-cryptosquare-r2-opus                   4    10.00
+dateutil-calendar-review-r1-fable         6    31.49
+dateutil-calendar-review-r1-opus          4     9.60
+click-flow-explain-r1-fable               6    22.64
+click-flow-explain-r1-opus                4     6.90
+rich-text-split-explain-r1-fable          6    30.62
+rich-text-split-explain-r1-opus           4     9.34
+faker-nonutf-cli-r1-fable                 6    19.34
+faker-nonutf-cli-r1-opus                  4     5.90
+xlsxwriter-filter-r1-fable                6    19.34
+xlsxwriter-filter-r1-opus                 4     5.90
+honcho-process-review-r2-fable            6    19.58
+honcho-process-review-r2-opus             4     5.97
+cli-manual-r2-fable                       7    27.53
+cli-manual-r2-opus                        5     8.84
+rich-softwrap-r1-fable                    6    19.34
+rich-softwrap-r1-opus                     4     5.90
+bottle-etag-r2-fable                      6    22.15
+bottle-etag-r2-opus                       4     6.75
+jsch-planted-review-r1-fable              6    55.46
+jsch-planted-review-r1-opus               4    16.91
+js-linkedlist-r2-fable                    7    43.99
+js-linkedlist-r2-opus                     5    14.13
+go-bowling-r1-fable                       6    36.55
+go-bowling-r1-opus                        4    11.15
+black-pipeline-explain-r2-fable           7    49.29
+black-pipeline-explain-r2-opus            5    15.83
+docs-corpus-r1-fable                      6    22.88
+docs-corpus-r1-opus                       4     6.98
+pluggy-calls-explain-r2-fable             7    27.25
+pluggy-calls-explain-r2-opus              5     8.75
+jsonpatch-ops-explain-r2-fable            6    22.64
+jsonpatch-ops-explain-r2-opus             4     6.90
+db-evolution-r1-fable                     6    26.47
+db-evolution-r1-opus                      4     8.07
+tomlkit-roundtrip-explain-r2-fable        7    27.25
+tomlkit-roundtrip-explain-r2-opus         5     8.75
+svc-config-audit-r1-fable                 6    37.60
+svc-config-audit-r1-opus                  4    11.47
+bank-recon-r2-fable                       6    19.17
+bank-recon-r2-opus                        4     5.85
+go-sublist-docs-r2-fable                  6    19.97
+go-sublist-docs-r2-opus                   4     6.09
+pyg-rawtoken-r2-fable                     6    26.58
+pyg-rawtoken-r2-opus                      4     8.11
+py-dotdsl-r2-fable                        6    30.40
+py-dotdsl-r2-opus                         4     9.27
+alert-runbooks-r2-fable                   6    19.06
+alert-runbooks-r2-opus                    4     5.81
+py-zipper-docs-r2-fable                   6    23.01
+py-zipper-docs-r2-opus                    4     7.02
+pyg-rawtoken-r1-fable                     6    26.58
+pyg-rawtoken-r1-opus                      4     8.11
+data-dictionary-r2-fable                  6    19.06
+data-dictionary-r2-opus                   4     5.81
+inventory-recon-r1-fable                  7    31.20
+inventory-recon-r1-opus                   5    10.02
+onboarding-guide-r1-fable                 6    22.88
+onboarding-guide-r1-opus                  4     6.98
+rich-text-split-explain-r2-fable          6    30.62
+rich-text-split-explain-r2-opus           4     9.34
+peewee-filterfk-r2-fable                  6    19.34
+peewee-filterfk-r2-opus                   4     5.90
+bleach-sanitize-review-r1-fable           6    31.49
+bleach-sanitize-review-r1-opus            4     9.60
+marsh-load-explain-r2-fable               6    22.64
+marsh-load-explain-r2-opus                4     6.90
+mkdocs-events-explain-r2-fable            6    30.62
+mkdocs-events-explain-r2-opus             4     9.34
+go-sublist-docs-r1-fable                  6    19.97
+go-sublist-docs-r1-opus                   4     6.09
+mkdocs-events-explain-r1-fable            6    30.62
+mkdocs-events-explain-r1-opus             4     9.34
+py-grep-r1-fable                          6    42.70
+py-grep-r1-opus                           4    13.02
+py-linked-list-docs-r2-fable              6    19.97
+py-linked-list-docs-r2-opus               4     6.09
+schedule-semantics-review-r2-fable        6    26.24
+schedule-semantics-review-r2-opus         4     8.00
+access-log-stats-r1-fable                 6    14.31
+access-log-stats-r1-opus                  4     4.36
+validators-regress-review-r2-fable        6    29.57
+validators-regress-review-r2-opus         4     9.02
+jsonpatch-ops-explain-r1-fable            6    22.64
+jsonpatch-ops-explain-r1-opus             4     6.90
+js-linkedlist-r1-fable                    6    36.55
+js-linkedlist-r1-opus                     4    11.15
+fleet-fuel-r1-fable                       6    16.74
+fleet-fuel-r1-opus                        4     5.10
+isodate-regress-review-r2-fable           6    31.49
+isodate-regress-review-r2-opus            4     9.60
+ytdlp-fps-r1-fable                        6    18.09
+ytdlp-fps-r1-opus                         4     5.52
+release-fragments-r2-fable                6    20.09
+release-fragments-r2-opus                 4     6.13
+py-zipper-docs-r1-fable                   6    23.01
+py-zipper-docs-r1-opus                    4     7.02
+tornado-zerotimeout-r1-fable              7    23.27
+tornado-zerotimeout-r1-opus               5     7.48
+go-cryptosquare-r1-fable                  6    32.79
+go-cryptosquare-r1-opus                   4    10.00
+jpointer-regress-review-r2-fable          7    31.58
+jpointer-regress-review-r2-opus           5    10.14
+alert-runbooks-r1-fable                   6    19.06
+alert-runbooks-r1-opus                    4     5.81
+py-grep-r2-fable                          6    42.70
+py-grep-r2-opus                           4    13.02
+go-crypto-docs-r1-fable                   6    14.31
+go-crypto-docs-r1-opus                    4     4.36
+rich-softwrap-r2-fable                    6    19.34
+rich-softwrap-r2-opus                     4     5.90
+adr-records-r2-fable                      6    19.06
+adr-records-r2-opus                       4     5.81
+jsonschema-jsonpath-r2-fable              6    22.15
+jsonschema-jsonpath-r2-opus               4     6.75
+itsdang-signer-review-r2-fable            6    36.23
+itsdang-signer-review-r2-opus             4    11.05
+py-linked-list-docs-r1-fable              6    19.97
+py-linked-list-docs-r1-opus               4     6.09
+tornado-zerotimeout-r2-fable              6    19.34
+tornado-zerotimeout-r2-opus               4     5.90
+black-pipeline-explain-r1-fable           6    40.96
+black-pipeline-explain-r1-opus            4    12.49
+py-gradeschool-r2-fable                   6    24.25
+py-gradeschool-r2-opus                    4     7.39
+faker-nonutf-cli-r2-fable                 7    23.27
+faker-nonutf-cli-r2-opus                  5     7.48
+schedule-semantics-review-r1-fable        7    31.58
+schedule-semantics-review-r1-opus         5    10.14
+go-crypto-docs-r2-fable                   6    14.31
+go-crypto-docs-r2-opus                    4     4.36
+itsdang-signer-review-r1-fable            6    36.23
+itsdang-signer-review-r1-opus             4    11.05
+click-flow-explain-r2-fable               6    22.64
+click-flow-explain-r2-opus                4     6.90
+js-queenattack-r1-fable                   6    27.32
+js-queenattack-r1-opus                    4     8.33
+py-dotdsl-r1-fable                        6    30.40
+py-dotdsl-r1-opus                         4     9.27
+data-dictionary-r1-fable                  6    19.06
+data-dictionary-r1-opus                   4     5.81
+pyparsing-quotedws-r1-fable               6    22.15
+pyparsing-quotedws-r1-opus                4     6.75
+pyparsing-quotedws-r2-fable               6    22.15
+pyparsing-quotedws-r2-opus                4     6.75
+jsch-planted-review-r2-fable              6    55.46
+jsch-planted-review-r2-opus               4    16.91
+validators-regress-review-r1-fable        6    29.57
+validators-regress-review-r1-opus         4     9.02
+pluggy-calls-explain-r1-fable             6    22.64
+pluggy-calls-explain-r1-opus              4     6.90
+go-bowling-r2-fable                       6    36.55
+go-bowling-r2-opus                        4    11.15
+falcon-regexconv-r2-fable                 6    29.10
+falcon-regexconv-r2-opus                  4     8.87
+cssselect-xpath-explain-r1-fable          6    27.17
+cssselect-xpath-explain-r1-opus           4     8.29
+db-evolution-r2-fable                     6    26.47
+db-evolution-r2-opus                      4     8.07
+bank-recon-r1-fable                       6    19.17
+bank-recon-r1-opus                        4     5.85
+pyg-util-regress-review-r2-fable          6    32.90
+pyg-util-regress-review-r2-opus           4    10.03
+tomlkit-roundtrip-explain-r1-fable        6    22.64
+tomlkit-roundtrip-explain-r1-opus         4     6.90
+ytdlp-fps-r2-fable                        6    18.09
+ytdlp-fps-r2-opus                         4     5.52
+release-fragments-r1-fable                6    20.09
+release-fragments-r1-opus                 4     6.13
+xmlschema-arch-explain-r2-fable           6    34.06
+xmlschema-arch-explain-r2-opus            4    10.39
+gradebook-r2-fable                        6    16.74
+gradebook-r2-opus                         4     5.10
+xmlschema-arch-explain-r1-fable           6    34.06
+xmlschema-arch-explain-r1-opus            4    10.39
+gradebook-r1-fable                        6    16.74
+gradebook-r1-opus                         4     5.10
+xlsxwriter-filter-r2-fable                6    19.34
+xlsxwriter-filter-r2-opus                 4     5.90
+access-log-stats-r2-fable                 6    14.31
+access-log-stats-r2-opus                  4     4.36
+docs-corpus-r2-fable                      6    22.88
+docs-corpus-r2-opus                       4     6.98
+honcho-process-review-r1-fable            6    19.58
+honcho-process-review-r1-opus             4     5.97
+py-zipper-r1-fable                        6    27.32
+py-zipper-r1-opus                         4     8.33
+onboarding-guide-r2-fable                 6    22.88
+onboarding-guide-r2-opus                  4     6.98
+isodate-regress-review-r1-fable           6    31.49
+isodate-regress-review-r1-opus            4     9.60
+py-gradeschool-r1-fable                   6    24.25
+py-gradeschool-r1-opus                    4     7.39
+jpointer-regress-review-r1-fable          6    26.24
+jpointer-regress-review-r1-opus           4     8.00
+pyg-util-regress-review-r1-fable          6    32.90
+pyg-util-regress-review-r1-opus           4    10.03
+svc-config-audit-r2-fable                 6    37.60
+svc-config-audit-r2-opus                  4    11.47
+lib-reference-r1-fable                    6    19.06
+lib-reference-r1-opus                     4     5.81
+fpdf2-booldict-r1-fable                   6    19.34
+fpdf2-booldict-r1-opus                    4     5.90
+py-zipper-r2-fable                        6    27.32
+py-zipper-r2-opus                         4     8.33
+cli-manual-r1-fable                       6    22.88
+cli-manual-r1-opus                        4     6.98
+bleach-sanitize-review-r2-fable           6    31.49
+bleach-sanitize-review-r2-opus            4     9.60
+adr-records-r1-fable                      6    19.06
+adr-records-r1-opus                       4     5.81
+jsonschema-jsonpath-r1-fable              6    22.15
+jsonschema-jsonpath-r1-opus               4     6.75
+marsh-load-explain-r1-fable               6    22.64
+marsh-load-explain-r1-opus                4     6.90
+bottle-etag-r1-fable                      6    22.15
+bottle-etag-r1-opus                       4     6.75
+config-reference-r2-fable                 6    21.48
+config-reference-r2-opus                  4     6.55
+inventory-recon-r2-fable                  6    25.92
+inventory-recon-r2-opus                   4     7.91
+fpdf2-booldict-r2-fable                   6    19.34
+fpdf2-booldict-r2-opus                    4     5.90
+lib-reference-r2-fable                    6    19.06
+lib-reference-r2-opus                     4     5.81
+fleet-fuel-r2-fable                       6    16.74
+fleet-fuel-r2-opus                        4     5.10
+
+arm        host     n     est $
+aa         fable   12     63.36
+aa         opus    12     25.42
+anchor     fable  120    623.47
+anchor     opus   120    250.16
+anchor_m   fable  120    536.25
+anchor_m   opus   120    212.78
+pc         any    120    325.87
+ph         fable  120    634.01
+ph_m       fable  120    545.36
+shipped    fable  120    399.19
+shipped    opus   120    254.95
+shipped_m  opus   120    216.61
+
+estimate (sessions)      $4087.44
+infra retry reserve      $204.37
+estimate incl. reserve   $4291.81   budget $5000.00
+estimated wall time    47.3 h at --parallel 16 (FIFO waves; wall_model assumptions)
+cost basis: main-v1 implied 4-turn units and type factors (evals/v3/s1_cost_calibration.py; n=140 per base cell, tools-normalized) x preregistered factors (4-turn unit means, scaled to scenario turns/type; an estimate)

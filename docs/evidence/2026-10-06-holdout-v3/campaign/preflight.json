@@ -1,0 +1,264 @@
+{
+  "ok": true,
+  "run_at": "2026-10-06T14:51:05.067107+00:00",
+  "root": "<campaign>/pf-1791298265066",
+  "sessions": [
+    {
+      "cell": "plain",
+      "model": "claude-fable-5-1",
+      "key_env": null,
+      "variant": "plain",
+      "outcome": "done",
+      "models_seen": [
+        "claude-fable-5-1"
+      ],
+      "efforts_seen": [
+        "None"
+      ],
+      "gate": {
+        "effort": "absent",
+        "served_model_prefix": "claude-fable-5-1"
+      },
+      "gate_problems": [],
+      "cost_usd": 0.47206,
+      "raw_events": true,
+      "passed": true
+    },
+    {
+      "cell": "plain-medium",
+      "model": "claude-fable-5-1",
+      "key_env": null,
+      "variant": "plain",
+      "outcome": "done",
+      "models_seen": [
+        "claude-fable-5-1"
+      ],
+      "efforts_seen": [
+        "medium"
+      ],
+      "gate": {
+        "effort": "medium",
+        "served_model_prefix": "claude-fable-5-1"
+      },
+      "gate_problems": [],
+      "cost_usd": 0.471785,
+      "raw_events": true,
+      "passed": true
+    },
+    {
+      "cell": "v3-pin-host",
+      "model": "claude-fable-5-1",
+      "key_env": null,
+      "variant": "fd",
+      "outcome": "done",
+      "models_seen": [
+        "claude-fable-5-1"
+      ],
+      "efforts_seen": [
+        "None"
+      ],
+      "gate": {
+        "served_model_prefix": "claude-fable-5-1",
+        "effort": "absent",
+        "effort_constant": true,
+        "single_model": true,
+        "decided_once": true,
+        "no_routing": true
+      },
+      "gate_problems": [],
+      "cost_usd": 0.471985,
+      "raw_events": true,
+      "passed": true
+    },
+    {
+      "cell": "v3-pin-host-medium",
+      "model": "claude-fable-5-1",
+      "key_env": null,
+      "variant": "fd",
+      "outcome": "done",
+      "models_seen": [
+        "claude-fable-5-1"
+      ],
+      "efforts_seen": [
+        "medium"
+      ],
+      "gate": {
+        "served_model_prefix": "claude-fable-5-1",
+        "effort": "medium",
+        "effort_constant": true,
+        "single_model": true,
+        "decided_once": true,
+        "no_routing": true
+      },
+      "gate_problems": [],
+      "cost_usd": 0.472847,
+      "raw_events": true,
+      "passed": true
+    },
+    {
+      "cell": "v3-shipped",
+      "model": "claude-fable-5-1",
+      "key_env": null,
+      "variant": "fd",
+      "outcome": "done",
+      "models_seen": [
+        "claude-sonnet-5"
+      ],
+      "efforts_seen": [
+        "medium"
+      ],
+      "gate": {
+        "effort_constant": true,
+        "single_model": true,
+        "decided_once": true,
+        "effort_by_model": {
+          "claude-sonnet-5": "medium",
+          "claude-fable-5-1": "absent"
+        }
+      },
+      "gate_problems": [],
+      "cost_usd": 0.148715,
+      "raw_events": true,
+      "passed": true
+    },
+    {
+      "cell": "v3-pin-cheap",
+      "model": "claude-fable-5-1",
+      "key_env": null,
+      "variant": "fd",
+      "outcome": "done",
+      "models_seen": [
+        "claude-sonnet-5"
+      ],
+      "efforts_seen": [
+        "medium"
+      ],
+      "gate": {
+        "served_model_prefix": "claude-sonnet-5",
+        "effort": "medium",
+        "effort_constant": true,
+        "single_model": true,
+        "decided_once": true,
+        "min_model_routed": 1
+      },
+      "gate_problems": [],
+      "cost_usd": 0.148816,
+      "raw_events": true,
+      "passed": true
+    },
+    {
+      "cell": "plain-opus",
+      "model": "claude-opus-5-5",
+      "key_env": null,
+      "variant": "plain",
+      "outcome": "done",
+      "models_seen": [
+        "claude-opus-5-5"
+      ],
+      "efforts_seen": [
+        "None"
+      ],
+      "gate": {
+        "effort": "absent",
+        "served_model_prefix": "claude-opus-5-5"
+      },
+      "gate_problems": [],
+      "cost_usd": 0.191587,
+      "raw_events": true,
+      "passed": true
+    },
+    {
+      "cell": "plain-opus-medium",
+      "model": "claude-opus-5-5",
+      "key_env": null,
+      "variant": "plain",
+      "outcome": "done",
+      "models_seen": [
+        "claude-opus-5-5"
+      ],
+      "efforts_seen": [
+        "medium"
+      ],
+      "gate": {
+        "effort": "medium",
+        "served_model_prefix": "claude-opus-5-5"
+      },
+      "gate_problems": [],
+      "cost_usd": 0.191612,
+      "raw_events": true,
+      "passed": true
+    },
+    {
+      "cell": "v3-shipped-opus",
+      "model": "claude-opus-5-5",
+      "key_env": null,
+      "variant": "fd",
+      "outcome": "done",
+      "models_seen": [
+        "claude-opus-5-5"
+      ],
+      "efforts_seen": [
+        "None"
+      ],
+      "gate": {
+        "effort_constant": true,
+        "single_model": true,
+        "decided_once": true,
+        "served_model_prefix": "claude-opus-5-5",
+        "effort": "absent",
+        "no_routing": true,
+        "gate_closed": true
+      },
+      "gate_problems": [],
+      "cost_usd": 0.191542,
+      "raw_events": true,
+      "passed": true
+    },
+    {
+      "cell": "v3-shipped-opus-medium",
+      "model": "claude-opus-5-5",
+      "key_env": null,
+      "variant": "fd",
+      "outcome": "done",
+      "models_seen": [
+        "claude-opus-5-5"
+      ],
+      "efforts_seen": [
+        "medium"
+      ],
+      "gate": {
+        "served_model_prefix": "claude-opus-5-5",
+        "effort": "medium",
+        "effort_constant": true,
+        "single_model": true,
+        "decided_once": true,
+        "no_routing": true,
+        "gate_closed": true
+      },
+      "gate_problems": [],
+      "cost_usd": 0.191567,
+      "raw_events": true,
+      "passed": true
+    }
+  ],
+  "total_cost_usd": 2.952514,
+  "fingerprint": "ba79507e28da64b6",
+  "provider_module": {
+    "module": "provider-anthropic",
+    "path": "~/.amplifier/cache/amplifier-module-provider-anthropic-5181591dcf06d076/amplifier_module_provider_anthropic",
+    "version": "1.0.0",
+    "git_sha": "9e2f20c9342253666d0bdb3dcf593a58456e72f9",
+    "git_root": "~/.amplifier/cache/amplifier-module-provider-anthropic-5181591dcf06d076/amplifier_module_provider_anthropic"
+  },
+  "campaign_provider": {
+    "id": "campaign-anthropic",
+    "module": "provider-anthropic",
+    "source": "git+https://github.com/microsoft/amplifier-module-provider-anthropic@main",
+    "config_keys": [
+      "api_key",
+      "base_url",
+      "enable_1m_context",
+      "raw"
+    ]
+  }
+}
