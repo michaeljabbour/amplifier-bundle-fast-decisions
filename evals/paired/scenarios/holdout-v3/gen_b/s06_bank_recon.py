@@ -138,7 +138,7 @@ def build():
     s.turn("Which refs exist in both files but with different amounts? List them. Do not change any files.",
            [facts(all=mism)], msg="ANSWER: " + ", ".join(mism), wrong_msg="ANSWER: " + ", ".join(mism[:-1]), bump=False)
     s.func("t3", f"chk_json('out/recon.json', {out!r}, tol=0.0051)")
-    s.turn("Create out/recon.json with matched, amount_mismatch, bank_only (refs only in the bank file), ledger_only (refs only in the ledger), bank_only_total and ledger_only_total (signed sums, 2 decimals).",
+    s.turn("Create out/recon.json with the integer counts matched, amount_mismatch, bank_only (refs only in the bank file) and ledger_only (refs only in the ledger), plus bank_only_total and ledger_only_total (signed sums, 2 decimals).",
            [s.g("t3")], files={"out/recon.json": json.dumps(out, indent=2) + "\n"}, wrong_files={"out/recon.json": json.dumps({**out, "ledger_only": out["ledger_only"] + 1}) + "\n"}, bump=True)
     s.turn("What is the signed sum of all amounts in the bank file minus the signed sum of all amounts in the ledger file, to 2 decimals? Do not change any files.",
            [facts(all=[numrx(diff, 2)])], msg=f"ANSWER: {diff:.2f}", wrong_msg=f"ANSWER: {diff + 5:.2f}", bump=True)

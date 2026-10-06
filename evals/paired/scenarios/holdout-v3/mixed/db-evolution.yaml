@@ -314,8 +314,8 @@ turns:
   - kind: keyed_facts
     all:
     - (?<!\d)005(?:\D|\d{4,})*?(?<!\d)009(?:\D|\d{4,})*?(?<!\d)004(?:\D|\d{4,})*?(?<!\d)010(?:\D|\d{4,})*?(?<!\d)011(?:\D|\d{4,})*?(?<!\d)012(?:\D|\d{4,})*?(?<!\d)003(?:\D|\d{4,})*?(?<!\d)006(?:\D|\d{4,})*?(?<!\d)002(?:\D|\d{4,})*?(?<!\d)007(?:\D|\d{4,})*?(?<!\d)008(?:\D|\d{4,})*?(?<!\d)013(?:\D|\d{4,})*?(?<!\d)001(?!\d)
-- prompt: 'Create out/plan.json with `order` (the apply order from the previous answer) and `destructive` (ids of migrations
-    whose header says destructive: yes, sorted ascending).'
+- prompt: 'Create out/plan.json with `order` (the correct apply order, by the rule in the previous question) and `destructive`
+    (ids of migrations whose header says destructive: yes, sorted ascending).'
   checks:
   - kind: tests
     runner: cmd

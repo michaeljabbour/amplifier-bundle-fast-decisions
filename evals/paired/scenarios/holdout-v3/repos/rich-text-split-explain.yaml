@@ -66,7 +66,7 @@ turns:
 - prompt: What does `t.divide([5])` return for that text and how are the spans re-based? Run it and also `t.divide([4, 6])`. Which attributes of the original Text do the pieces keep? Answer from rich/text.py. Do not change repository files.
   checks:
   - kind: keyed_facts
-    all: [Lines, '\(''Hello''.{0,80}Span\(0, 5, ''bold''\).{0,40}Span\(3, 5, ''red''\)', ''' World''.{0,60}Span\(0, 3, ''red''\)', style, justify, overflow]
+    all: [Lines, '\(''Hello''.{0,80}Span\(0,\s*5,\s*''bold''\).{0,40}Span\(3,\s*5,\s*''red''\)', ''' World''.{0,60}Span\(0,\s*3,\s*''red''\)', style, justify, overflow]
 - prompt: How does `Text.wrap` break `'one two three four'` at width 10, which function in rich/_wrap.py does the work, and how does the width of a character get measured (what is `cell_len('日本')`)? Run both. Do not change repository files.
   checks:
   - kind: keyed_facts

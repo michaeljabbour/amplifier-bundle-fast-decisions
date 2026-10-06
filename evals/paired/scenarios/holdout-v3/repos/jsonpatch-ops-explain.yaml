@@ -53,11 +53,11 @@ turns:
 - prompt: Which exceptions can applying a patch raise and how are they related? Trigger a failing `test` operation and a `remove` of a missing key and quote the messages. Do not change repository files.
   checks:
   - kind: keyed_facts
-    all: [JsonPatchException, JsonPatchConflict, JsonPatchTestFailed, InvalidJsonPatch, AssertionError, non-existent object 'z', is not equal to tested value]
+    all: [JsonPatchException, JsonPatchConflict, JsonPatchTestFailed, InvalidJsonPatch, AssertionError, 'non-existent object ''[^'']+''', is not equal to tested value]
 - prompt: 'How does `make_patch` find moves and replacements? Run `make_patch({''a'': [1, 2, 3], ''b'': 1}, {''a'': [1, 3], ''c'': 2})`, show the result and explain what DiffBuilder does (index storage, move detection and the remove+add merge in `execute`). Do not change repository files.'
   checks:
   - kind: keyed_facts
-    all: ['"op": "remove", "path": "/b"', '"op": "move", "from": "/a/1", "path": "/c"', DiffBuilder, index_storage|store_index|take_index, replace, execute]
+    all: ['[''"]op[''"]:\s*[''"]remove[''"],\s*[''"]path[''"]:\s*[''"]/b[''"]', '[''"]op[''"]:\s*[''"]move[''"],\s*[''"]from[''"]:\s*[''"]/a/1[''"],\s*[''"]path[''"]:\s*[''"]/c[''"]', DiffBuilder, index_storage|store_index|take_index, replace, execute]
 - prompt: Write ARCHITECTURE.md in the repository root with level-2 sections Overview, Operations, Errors and Diffing, using real class names.
   checks:
   - kind: doc_sections

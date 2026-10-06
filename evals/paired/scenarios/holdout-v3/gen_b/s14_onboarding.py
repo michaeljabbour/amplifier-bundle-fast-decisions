@@ -86,12 +86,13 @@ def build():
     s.turn("How many targets in the Makefile have a `##` description comment, and which target is the default goal? Do not change any files.",
            [facts(all=[numrx(ntg), r"\bhelp\b"])], msg=f"ANSWER: {ntg} documented targets; default goal is help", wrong_msg=f"ANSWER: {ntg - 1} documented targets; default goal is setup", bump=True)
 
-    def tfunc(name, rows_expr, header, under, want):
+    def tfunc(name, rows_expr, header, under, want, unordered=False):
+        cmpx = "sorted(got) == sorted({want!r})" if unordered else "got == {want!r}"
         s.func(name, f"""
         rows = md_rows('docs/onboarding.md', {under!r})
         need(rows and [c.lower() for c in rows[0]] == {header!r}, 'header under {under}: ' + str(rows[:1]))
         got = [[c.strip('` ') for c in r] for r in rows[1:]]
-        need(got == {want!r}, 'rows differ: ' + str([g for g in got if g not in {want!r}][:2]) + ' / want ' + str({want!r}[:2]))
+        need({cmpx.format(want=want)}, 'rows differ: ' + str([g for g in got if g not in {want!r}][:2]) + ' / want ' + str({want!r}[:2]))
         """)
     tfunc("t2", None, ["target", "description"], "make targets", [[t, d] for t, n, d in TARGETS])
     hdr = "# Onboarding\n\nWelcome to the shop codebase.\n\n"
@@ -104,15 +105,15 @@ def build():
     d4 = d2 + env_sec()
     s.turn("Add a `## Environment variables` section with a table (columns variable, default, description): every variable from .env.example in order, the default in backticks (or `-` when empty, no backticks), and the comment line above it as the description.",
            [s.g("t4")], files={"docs/onboarding.md": d4}, wrong_files={"docs/onboarding.md": d4.replace("`8080`", "`80`")})
-    tfunc("t5", None, ["service", "image", "ports"], "services", [[n, i, p or "-"] for n, i, p in SERVICES])
+    tfunc("t5", None, ["service", "image", "ports"], "services", [[n, i, p or "-"] for n, i, p in SERVICES], unordered=True)
     d5 = d4 + svc_sec()
     s.turn("Add a `## Services` section with a table (columns service, image, ports) from docker-compose.yml: service and image in backticks, ports as `host:container` in backticks, or `-` for services that publish none.",
            [s.g("t5")], files={"docs/onboarding.md": d5}, wrong_files={"docs/onboarding.md": d5.replace("`3000:80`", "`3000:3000`")})
-    tfunc("t6", None, ["script", "usage"], "^scripts$", [[f"scripts/{n}", u] for n, u in SCRIPTS])
+    tfunc("t6", None, ["script", "usage"], "^scripts$", [[f"scripts/{n}", u] for n, u in SCRIPTS], unordered=True)
     d6 = d5 + scripts_sec()
     s.turn("Add a `## Scripts` section with a table (columns script, usage) covering every file in scripts/: the path in backticks and the text after `Usage:` on the script's second line, in backticks.",
            [s.g("t6")], files={"docs/onboarding.md": d6}, wrong_files={"docs/onboarding.md": d6.replace("scripts/backup.sh <dest-dir>", "scripts/backup.sh")})
-    tfunc("t7", None, ["directory", "purpose"], "directory map", [[f"{d}/", p] for d, p in DIRS])
+    tfunc("t7", None, ["directory", "purpose"], "directory map", [[f"{d}/", p] for d, p in DIRS], unordered=True)
     d7 = d6 + dirs_sec()
     s.turn("Add a `## Directory map` section with a table (columns directory, purpose) for every top-level directory that contains a README.txt: the directory with a trailing slash in backticks, and the first line of its README.txt.",
            [s.g("t7")], files={"docs/onboarding.md": d7}, wrong_files={"docs/onboarding.md": d7.replace("Background job runner.", "Jobs.")})

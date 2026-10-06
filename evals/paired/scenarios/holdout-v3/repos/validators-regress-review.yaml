@@ -242,6 +242,28 @@ hidden_files:
         result = picky(-1)
         assert isinstance(result, ValidationError)
         assert result.reason == "negative"
+
+
+    @validator
+    def encoder(value):
+        return value.encode("ascii") is not None
+
+
+    @validator
+    def measure(value):
+        return len(value) > 0
+
+
+    def test_unicode_errors_become_validation_errors():
+        result = encoder("caf\u00e9")
+        assert isinstance(result, ValidationError)
+        assert "ascii" in result.reason
+
+
+    def test_type_errors_become_validation_errors():
+        result = measure(None)
+        assert isinstance(result, ValidationError)
+        assert result.reason
   hidden/test_env.py: |
     import pytest
 
@@ -300,38 +322,34 @@ turns:
   checks:
   - kind: keyed_facts
     all: [818 passed, 'no (test )?fail|all pass|green', cover|gap|not|does not|doesn't|untested]
-- prompt: 'Explain the contract of the `validator` decorator in src/validators/utils.py as documented in its docstring and docs/install_and_use.md: what does a decorated function return, how can raising be enabled, and which exceptions are converted into a ValidationError? Do not change any files.'
+- prompt: 'Explain the contract of the `validator` decorator in src/validators/utils.py: what does a decorated function return and how can raising be enabled (as documented in its docstring and docs/install_and_use.md), and which exceptions are converted into a ValidationError? The documentation does not spell out the exception rule, so take it from the intended behaviour: only ValueError, TypeError and UnicodeError raised by the wrapped function are converted, into a ValidationError whose `reason` is the exception text; any other exception propagates. Do not change any files.'
   checks:
   - kind: keyed_facts
     all: ['True', ValidationError, r_ve, RAISE_VALIDATION_ERROR, ValueError, TypeError, UnicodeError, reason]
 - prompt: Now review the merged src/validators/utils.py against that contract. List every deviation you can DEMONSTRATE with a short snippet (run it from this checkout with src/ on sys.path) and the output it gives. Do not change any files.
   checks:
   - kind: keyed_facts
-    all: [ZeroDivisionError|division by zero, '''func''|func.{0,20}key|<function', 'reason.{0,10}''''|empty reason|hasattr', RAISE_VALIDATION_ERROR, '!= ?.False.|0\b|any value']
+    all: [ZeroDivisionError|division by zero|KeyError|AttributeError|RuntimeError|IndexError|OSError|LookupError|ArithmeticError, 'propagat|swallow|narrow|too (broad|wide)|overly broad|should not be (converted|caught|wrapped)|shouldn.t be (converted|caught|wrapped)|only (ValueError|TypeError|UnicodeError|those|the three)|any other exception|every exception|all exceptions|arbitrary exception', '''func''|func.{0,20}key|<function', 'reason.{0,10}''''|empty reason|hasattr', RAISE_VALIDATION_ERROR, '!= ?.False.|0\b|any value']
 - prompt: 'Fix the exception handling in the decorator: only ValueError, TypeError and UnicodeError may be converted.'
   checks:
-  - {kind: file_regex, path: src/validators/utils.py, pattern: 'except \(ValueError, TypeError, UnicodeError\) as exp:'}
   - kind: tests
     runner: python
     files: [tests/test_validation_failure.py, hidden/test_exc.py]
     hidden: [hidden/test_exc.py]
 - prompt: Fix how RAISE_VALIDATION_ERROR is interpreted so that only the string True enables raising (as documented).
   checks:
-  - {kind: file_regex, path: src/validators/utils.py, pattern: == "True"}
   - kind: tests
     runner: python
     files: [tests/test_validation_failure.py, hidden/test_env.py]
     hidden: [hidden/test_env.py]
 - prompt: Fix `ValidationError.__init__` so `reason` is only set when a message is given.
   checks:
-  - {kind: file_regex, path: src/validators/utils.py, pattern: 'if message:\n\s+self\.reason = message'}
   - kind: tests
     runner: python
     files: [tests/test_validation_failure.py, hidden/test_reason.py]
     hidden: [hidden/test_reason.py]
 - prompt: Fix the repr of ValidationError so the func entry is not repeated inside args.
   checks:
-  - {kind: file_regex, path: src/validators/utils.py, pattern: if k != 'func'}
   - kind: tests
     runner: python
     files: [tests/test_validation_failure.py, hidden/test_repr.py]
@@ -340,13 +358,13 @@ turns:
   checks:
   - {kind: file_regex, path: tests/test_validator_regress.py, pattern: ^def test_, min_count: 5}
   - {kind: tests, runner: cmd, cmd: 'python3 -m pytest -q -p no:cacheprovider tests/test_validator_regress.py && O=$(mktemp -d) && cp src/validators/utils.py $O/fixed.py && cp patches/merged_utils.py src/validators/utils.py && (python3 -m pytest -q -p no:cacheprovider tests/test_validator_regress.py > $O/out.txt 2>&1; true) && n=$(grep -Eo ''[0-9]+ failed'' $O/out.txt | cut -d'' '' -f1) && [ "${n:-0}" -ge 4 ] && cp $O/fixed.py src/validators/utils.py && python3 -m pytest -q -p no:cacheprovider tests/test_validator_regress.py', timeout: 280}
-- prompt: Write REVIEW.md in the repository root with level-2 sections Summary, Test gaps, except clause, repr, reason and environment variable, each with the concrete input and the wrong output the merged code produced.
+- prompt: Write REVIEW.md in the repository root with level-2 sections Summary, Test gaps, except clause, repr, reason and environment variable, each with the concrete input and the wrong output the merged code produced; the Summary states how many existing tests passed on the merged code.
   checks:
   - kind: doc_sections
     path: REVIEW.md
     headings: [Summary, Test gaps, except clause, repr, reason, environment variable]
-  - {kind: file_regex, path: REVIEW.md, pattern: ZeroDivisionError}
-  - {kind: file_regex, path: REVIEW.md, pattern: RAISE_VALIDATION_ERROR=0}
+  - {kind: file_regex, path: REVIEW.md, pattern: 'ZeroDivisionError|division by zero|KeyError|AttributeError|RuntimeError|IndexError|OSError|LookupError|ArithmeticError'}
+  - {kind: file_regex, path: REVIEW.md, pattern: 'RAISE_VALIDATION_ERROR=[''"]?(?!True)\w+'}
   - {kind: file_regex, path: REVIEW.md, pattern: '818'}
 - prompt: 'Final check: which files did you change or add, does the whole suite still pass (`python3 -m pytest -q --ignore=tests/crypto_addresses tests`), and which other piece of utils.py would you add a test for? Do not change any files.'
   checks:

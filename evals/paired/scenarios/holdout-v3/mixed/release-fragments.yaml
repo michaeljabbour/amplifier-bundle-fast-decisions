@@ -306,10 +306,10 @@ turns:
   checks:
   - kind: keyed_facts
     all:
-    - feature\D{0,12}(?<![\d.,])1,?0(?:\.0+)?(?!\d|[.,]\d)
-    - bugfix\D{0,12}(?<![\d.,])1,?4(?:\.0+)?(?!\d|[.,]\d)
-    - doc\D{0,12}(?<![\d.,])6(?:\.0+)?(?!\d|[.,]\d)
-    - misc\D{0,12}(?<![\d.,])6(?:\.0+)?(?!\d|[.,]\d)
+    - feature\D{0,12}(?<![\d.,])1,?0(?:\.0+)?(?!\d|[.,]\d)|(?<![\d.,])1,?0(?:\.0+)?(?!\d|[.,]\d)\D{0,3}feature\b
+    - bugfix\D{0,12}(?<![\d.,])1,?4(?:\.0+)?(?!\d|[.,]\d)|(?<![\d.,])1,?4(?:\.0+)?(?!\d|[.,]\d)\D{0,3}bugfix\b
+    - doc\D{0,12}(?<![\d.,])6(?:\.0+)?(?!\d|[.,]\d)|(?<![\d.,])6(?:\.0+)?(?!\d|[.,]\d)\D{0,3}doc\b
+    - misc\D{0,12}(?<![\d.,])6(?:\.0+)?(?!\d|[.,]\d)|(?<![\d.,])6(?:\.0+)?(?!\d|[.,]\d)\D{0,3}misc\b
 - prompt: 'The current version is in VERSION. Release rule: any removal fragment means a major bump, otherwise any feature
     fragment means a minor bump, otherwise a patch bump. What is the next version? Do not change any files.'
   checks:

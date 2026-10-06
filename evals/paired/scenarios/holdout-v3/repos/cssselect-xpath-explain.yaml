@@ -50,7 +50,7 @@ turns:
 - prompt: 'What does HTMLTranslator change compared with GenericTranslator? Run `:checked` through HTMLTranslator and `DIV P` through both translators and describe the differences. Also: what is the `prefix` argument? Do not change repository files.'
   checks:
   - kind: keyed_facts
-    all: [lower, checked, '@selected.{0,40}option', '@checked', prefix, 'self::a']
+    all: [lower, checked, '@selected.{0,40}option', '@checked', 'prefix.{0,300}(self::|descendant-or-self::|axis|prepend|in front|leading|//)']
 - prompt: 'What does `parse(''ul li.x::before, #id a'')` return? Run it and print each selector''s type, `specificity()` and `pseudo_element`, and explain how specificity is counted. Do not change repository files.'
   checks:
   - kind: keyed_facts

@@ -1,5 +1,5 @@
 import random, re
-from lib import Scn, dedent, exists, facts, numrx, rx, sections
+from lib import Scn, dedent, exists, facts, lblnum, numrx, rx, sections
 
 TYPES = ["feature", "bugfix", "removal", "doc", "misc"]
 TITLE = {"feature": "Features", "bugfix": "Bug fixes", "removal": "Removals", "doc": "Documentation", "misc": "Miscellaneous"}
@@ -142,7 +142,7 @@ def build():
     s.file("README.md", "# pkg\n\nRelease notes are assembled from the news fragments in `changes/` (`<issue>.<type>.md`, one line of text each).\nTypes: feature, bugfix, removal, doc, misc.\n")
     tc = {t: sum(1 for _, ty, _ in frags if ty == t) for t in TYPES}
     s.turn("Count the news fragments in changes/ by type (the second dot-separated part of the file name). Give the number of feature, bugfix, doc and misc fragments. Do not change any files.",
-           [facts(all=[r"feature\D{0,12}" + numrx(tc["feature"]), r"bugfix\D{0,12}" + numrx(tc["bugfix"]), r"doc\D{0,12}" + numrx(tc["doc"]), r"misc\D{0,12}" + numrx(tc["misc"])])],
+           [facts(all=[lblnum("feature", tc["feature"]), lblnum("bugfix", tc["bugfix"]), lblnum("doc", tc["doc"]), lblnum("misc", tc["misc"])])],
            msg=f"ANSWER: feature {tc['feature']}, bugfix {tc['bugfix']}, doc {tc['doc']}, misc {tc['misc']}",
            wrong_msg=f"ANSWER: feature {tc['feature']}, bugfix {tc['bugfix'] + 1}, doc {tc['doc']}, misc {tc['misc']}", bump=True)
     nv = bump("1.5.0", frags)

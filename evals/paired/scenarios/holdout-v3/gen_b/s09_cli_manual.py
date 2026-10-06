@@ -93,11 +93,12 @@ def build():
            [s.g("t2")], files={"docs/cli.md": doc_skeleton()}, wrong_files={"docs/cli.md": doc_skeleton().replace("### purge", "### clean")})
     exp = {c: {n: df for n, df, h in opt_rows(c)} for c in SPEC if SPEC[c]["opts"]}
     s.func("t3", f"""
+        ok = lambda g, w: g == w or (w in ('-', 'off') and g == '`' + w + '`')
         for c, opts in {exp!r}.items():
             rows = md_rows('docs/cli.md', '^' + c + '$')
             need(rows, 'no option table under ' + c)
             got = {{r[0].strip('` '): r[1].strip() for r in rows[1:] if len(r) >= 3}}
-            need(got == opts, f'{{c}} options {{got}} != {{opts}}')
+            need(got.keys() == opts.keys() and all(ok(got[k], opts[k]) for k in opts), f'{{c}} options {{got}} != {{opts}}')
         for c, d in {({c: [h for *_, h in SPEC[c]['opts']] for c in SPEC if SPEC[c]['opts']})!r}.items():
             body = ' '.join(md_lines('docs/cli.md', '^' + c + '$'))
             for h in d:
@@ -162,7 +163,7 @@ def build():
            [s.g("t8")], files={"docs/cli.md": full}, wrong_files={"docs/cli.md": full.replace("(#list)", "(#listing)")})
     man = ".TH TASKQ 1\n.SH NAME\ntaskq \\- tiny task queue\n.SH SYNOPSIS\n.B taskq\n<command> [options]\n.SH COMMANDS\n" + "".join(f".TP\n.B {c}\n{d['help']}\n" for c, d in SPEC.items()) + ".SH OPTIONS\n" + "".join(f".TP\n.B {n}\n{h}\n" for c, d in SPEC.items() for n, ty, df, ex_, h in d["opts"]) + ".SH EXIT STATUS\n0 success, 2 usage error, 3 task not found.\n"
     s.func("t9", f"""
-        t = read('docs/taskq.1')
+        t = read('docs/taskq.1').replace('\\\\-', '-')
         need(re.search(r'^\\.TH\\s+TASKQ\\s+1', t, re.M), 'missing .TH TASKQ 1')
         for sh in ['NAME', 'SYNOPSIS', 'COMMANDS', 'OPTIONS', 'EXIT STATUS']:
             need(re.search(r'^\\.SH\\s+' + sh + r'\\s*$', t, re.M), 'missing .SH ' + sh)

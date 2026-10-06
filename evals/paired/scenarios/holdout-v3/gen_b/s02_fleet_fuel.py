@@ -1,4 +1,5 @@
 import datetime as dt, json, random
+from decimal import ROUND_HALF_UP, Decimal
 from lib import Scn, csv_text, dedent, facts, numrx, rx, sections
 
 
@@ -32,6 +33,11 @@ def make(seed, nveh, fills):
     return veh, rows
 
 
+def cost(r):
+    """Cost of a fill: litres x price_per_l rounded half up to 2 decimals (decimal arithmetic)."""
+    return (Decimal(str(r[3])) * Decimal(str(r[4]))).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+
+
 def analyse(veh, rows):
     tank = {v["id"]: v["tank"] for v in veh}
     last, anomalies, clean = {}, [], []
@@ -45,10 +51,10 @@ def analyse(veh, rows):
             clean.append(r)
             last[r[1]] = r[2]
     anomalies.sort(key=lambda a: (a["date"], a["vehicle"]))
-    spend = round(sum(round(float(r[3]) * float(r[4]), 2) for r in clean), 2)
+    spend = float(sum(cost(r) for r in clean))
     monthly = {}
     for r in clean:
-        monthly[r[0][:7]] = round(monthly.get(r[0][:7], 0) + round(float(r[3]) * float(r[4]), 2), 2)
+        monthly[r[0][:7]] = round(monthly.get(r[0][:7], 0) + float(cost(r)), 2)
     eco, prev = {}, {}
     for r in sorted(clean, key=lambda r: (r[1], r[0])):
         if r[1] in prev:
@@ -102,7 +108,7 @@ def build():
     veh, rows = make(7202, 12, 14)
     for k, v in files(veh, rows).items():
         s.file(k, v)
-    s.file("README.md", "# fleet-fuel\n\n`data/fuel_log.csv` holds one row per fill-up (date, vehicle, odometer_km, litres, price_per_l, station).\n`data/vehicles.csv` lists tank capacity per vehicle. Cost of a fill = litres x price_per_l rounded to 2 decimals.\n")
+    s.file("README.md", "# fleet-fuel\n\n`data/fuel_log.csv` holds one row per fill-up (date, vehicle, odometer_km, litres, price_per_l, station).\n`data/vehicles.csv` lists tank capacity per vehicle. Cost of a fill = litres x price_per_l rounded half up to 2 decimals.\n")
     anomalies, clean, spend, monthly, table = analyse(veh, rows)
     assert len(anomalies) == 6, anomalies
     over = [a for a in anomalies if a["reason"] == "over_tank"]
@@ -126,7 +132,7 @@ def build():
     aj = json.dumps(anomalies, indent=2) + "\n"
     s.turn("Create out/anomalies.json: a JSON list with one object {vehicle, date, reason} per bad row. reason is `over_tank` (litres > tank_l) or `odometer_decrease` (odometer lower than the vehicle's previous kept fill-up by date; a row flagged earlier does not become the reference). If both apply use odometer_decrease.",
            [s.g("t3")], files={"out/anomalies.json": aj}, wrong_files={"out/anomalies.json": json.dumps(anomalies[:-1]) + "\n"}, bump=True)
-    s.turn("Ignoring every row listed in out/anomalies.json, what is the total fuel spend over the remaining rows? A fill costs litres x price_per_l rounded to 2 decimals; give the sum to 2 decimals. Do not change any files.",
+    s.turn("Ignoring every row listed in out/anomalies.json, what is the total fuel spend over the remaining rows? A fill costs litres x price_per_l rounded half up to 2 decimals; give the sum to 2 decimals. Do not change any files.",
            [facts(all=[numrx(spend, 2)])], msg=f"ANSWER: {spend:.2f}", wrong_msg=f"ANSWER: {spend + 12.34:.2f}", bump=True)
     s.func("t5", f"""
         import csv

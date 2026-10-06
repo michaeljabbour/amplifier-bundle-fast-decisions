@@ -186,10 +186,10 @@ turns:
       - {kind: tests, runner: python, files: [dot_dsl_test.py, hidden_eq_test.py], restore: [dot_dsl_test.py], hidden: [hidden_eq_test.py]}
   - prompt: >-
       Add `Graph.to_dot()` returning the graph in DOT text: `graph {` first, then one line per graph
-      attribute (` foo="1";`), per node (` a;` or ` a [color="green", shape="box"];`) and per edge (`
-      a -- b;` or with attributes in the same bracket form), then `}`; every line ends with a newline,
-      the empty graph is `graph {\n}\n`, attribute values are always double quoted and `"` inside a
-      value is escaped as `\"` (and a backslash as `\\`).
+      attribute (`  foo="1";`), per node (`  a;` or `  a [color="green", shape="box"];`) and per edge
+      (`  a -- b;` or `  a -- b [color="blue"];`), then `}`. Every line between the braces is indented by exactly
+      two spaces; every line ends with a newline; the empty graph is `graph {\n}\n`; attribute values are
+      always double quoted and `"` inside a value is escaped as `\"` (and a backslash as `\\`).
     checks:
       - {kind: tests, runner: python, files: [dot_dsl_test.py, hidden_eq_test.py, hidden_dot_test.py], restore: [dot_dsl_test.py], hidden: [hidden_eq_test.py, hidden_dot_test.py]}
   - prompt: >-

@@ -65,8 +65,9 @@ turns:
       with `max_name_len` and `get_provider_name` set): it raises UnicodeEncodeError. Characters the
       output stream's encoding cannot represent should come out as backslash escapes (the emoji as
       `\U0001f469`), everything else unchanged, and streams without an encoding (StringIO) must keep
-      working. Please fix it in the faker package. Run the tests from this directory with `python3 -m
-      pytest -q tests/test_factory.py`.
+      working. Please fix it in the faker package, putting the escaping in a module-level helper
+      `_encode_for_output(value: str, output: TextIO) -> str` in faker/cli.py that print_provider uses.
+      Run the tests from this directory with `python3 -m pytest -q tests/test_factory.py`.
     checks:
       - {kind: tests, runner: python, files: [tests/test_factory.py], hidden: [tests/test_factory.py]}
   - prompt: >-

@@ -188,7 +188,7 @@ turns:
   checks:
   - kind: keyed_facts
     all:
-    - leaves? the original|original (is|stays|remains) (unchanged|untouched|intact)|does not (modify|mutate|change)|not (modif|mutat)
+    - leav(es|ing) (the )?original|original.{0,40}(unchanged|untouched|intact)|does not (modify|mutate|change)|not (modif|mutat)|new (linked)?list
     - every|each|all (the )?(nodes|values|elements)|visits|iterates|linear
   gap_before_s: 420
 - prompt: Create CHANGELOG.md with `## 0.2.0` / `### Added` listing `__repr__` and `clear()` (names in backticks, one bullet

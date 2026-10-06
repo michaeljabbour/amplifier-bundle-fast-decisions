@@ -2753,7 +2753,8 @@ turns:
     - _grade.py
     timeout: 60
 - prompt: 'Now that the renamed links are fixed, write docs/_reports/orphans.md: `# Orphan pages` and a bullet `- <path relative
-    to docs/>` for every section page with no inbound link from another section page, sorted by path.'
+    to docs/>` for every original section page with no inbound link from another original section page, sorted by path (the
+    index.md pages you created do not count, neither as pages nor as sources of links).'
   checks:
   - kind: tests
     runner: cmd

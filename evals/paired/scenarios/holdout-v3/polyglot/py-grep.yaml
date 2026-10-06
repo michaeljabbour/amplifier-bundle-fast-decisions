@@ -304,7 +304,7 @@ turns:
       Question only: list every function in grep.py after the refactoring, public and private, with a
       one line description each. Do not change any files.
     checks:
-      - {kind: keyed_facts, all: [grep, _expand_flags, _line_matcher, _read_lines]}
+      - {kind: keyed_facts, all: [grep, '(?s)\b_[a-z]\w{2,}.*\b_[a-z]\w{2,}.*\b_[a-z]\w{2,}']}
   - prompt: >-
       Question only: which flags interact, and what are the precedence rules in your implementation
       (think about -l, -c, -x, -w, -v and -m)? Answer as a short list. Do not change any files.

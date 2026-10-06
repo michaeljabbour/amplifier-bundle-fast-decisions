@@ -401,7 +401,7 @@ turns:
 - prompt: 'The suite caught only those two. Review the rest of isoduration.py for defects you can still DEMONSTRATE: decimal commas (the docstring and regex advertise `[,.]`), and the sign in `duration_isoformat` for negative `timedelta` and `Duration` values. Show each snippet and its wrong output. Do not change any files.'
   checks:
   - kind: keyed_facts
-    all: ['PT1,5S', 'ISO8601Error|Unrecognised|Unable to parse|fails?', Duration\(days=-1\), '''P1D''|\"P1D\"', -P1D, tdelta]
+    all: ['PT1,5S', 'ISO8601Error|Unrecognised|Unable to parse|fails?', 'Duration\(\w+=-\d+', '[''"]P(T|\d)[^''"]*[''"]', '-P(T|\d)', 'tdelta|years.{0,60}months|only (checks|looks at)']
 - prompt: Fix the decimal comma for seconds in the regex of src/isodate/isoduration.py.
   checks:
   - {kind: file_regex, path: src/isodate/isoduration.py, pattern: '\(\?P<seconds>\[0-9\]\+\(\[,\.\]\[0-9\]\+\)\?S\)'}

@@ -34,7 +34,7 @@ turns:
 - prompt: Review patches/procfile_name.diff. What input is now treated differently? Show the result of parse_procfile on a concrete two-line Procfile before and after (run it in a scratch copy under /tmp, not in the repository).
   checks:
   - kind: keyed_facts
-    all: [web-api, worker, drop|ignore|silently|skipp|missing|not (parsed|matched)]
+    all: ['hyphen|dash|[a-z]+-[a-z]+\s*:', drop|ignore|silently|skipp|missing|not (parsed|matched)]
 - prompt: 'Review patches/last_returncode.diff, then verify it with a real run in a scratch copy under /tmp: Procfile with `a: sh -c ''exit 3''` and `b: sleep 20`; run `python3 -m honcho start` and report the exit status before and after applying the diff. Do not change the repository.'
   checks:
   - kind: keyed_facts

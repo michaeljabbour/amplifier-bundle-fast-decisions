@@ -165,7 +165,7 @@ def build():
             got = {{r[0].strip('` '): [r[1], r[2].strip('` '), r[3].lower()] for r in rows[1:] if len(r) >= 4}}
             need(got == keys, f'{{sec}}: {{got}} != {{keys}}')
         """)
-    s.turn("Under each section add a table with columns key, type, default, required. type is the JSON schema type; default is the schema default as a JSON literal in backticks (strings keep their double quotes, booleans are true/false) or `-` in the cell when the schema has none (no backticks around the dash); required is yes or no.",
+    s.turn("Under each section add a table with columns key, type, default, required. key is the key name in backticks; type is the JSON schema type; default is the schema default as a JSON literal in backticks (strings keep their double quotes, booleans are true/false) or `-` in the cell when the schema has none (no backticks around the dash); required is yes or no.",
            [s.g("t3")], files={"docs/configuration.md": tables(SCHEMA)}, wrong_files={"docs/configuration.md": tables(SCHEMA).replace("| `port` | integer | `8080` |", "| `port` | integer | `80` |")})
     ek = [(sec, k[0], k[5]) for sec, v in SCHEMA.items() for k in v[1] if k[5]]
     s.turn("Which schema keys restrict their value with an `enum`, and what are the allowed values? Do not change any files.",

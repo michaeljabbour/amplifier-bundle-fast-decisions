@@ -29,7 +29,7 @@ turns:
 - prompt: What is the magic trailing comma, how does it change the output of `a = [1, 2,]`, and which Mode field / CLI flag turns it off? Verify by running it. Do not change repository files.
   checks:
   - kind: keyed_facts
-    all: [magic trailing comma|trailing comma, 'a = \[\s*\n\s+1,\s*\n\s+2,\s*\n\]', magic_trailing_comma, -C|skip-magic-trailing-comma]
+    all: [magic trailing comma|trailing comma, 'a = \[\s*\n\s+1,\s*\n\s+2,\s*\n\s*\]', magic_trailing_comma, -C|skip-magic-trailing-comma]
   gap_before_s: 420
 - prompt: 'Explain how `delimiter_split` decides where to split: what are the delimiter priorities in src/black/brackets.py (give the numbers for comprehension, comma, ternary, logic, comparator, dot) and which one is used? Do not change any files.'
   checks:
@@ -70,7 +70,7 @@ turns:
 - prompt: 'Explain how blank lines are decided: which class does it, what are the limits at module level and inside functions/classes, and what does Black do to `a = 1` followed by five blank lines and `b = 2`? Run a small example with a def containing blank lines and a class with a method. Do not change repository files.'
   checks:
   - kind: keyed_facts
-    all: [EmptyLineTracker, maybe_empty_lines, two|2, one|1, class A, def g, a = 1\\n\\n\\nb = 2|two blank lines]
+    all: [EmptyLineTracker, maybe_empty_lines, two|2, one|1, 'class\s+\w+', 'def\s+\w+', 'a = 1(?:\\+n|\n){3}b = 2|(two|2) blank lines?|clamp\w* (down )?to (two|2)|(at most|max\w*|limit\w*|to) (two|2) (consecutive )?blank']
 - prompt: Add a level-2 `## Priorities and exit codes` section to ARCHITECTURE.md that lists the delimiter priority numbers for COMMA and LOGIC and the exit codes 0, 1 and 123.
   checks:
   - kind: doc_sections

@@ -41,6 +41,11 @@ def numrx(v, dec=None):
     return r"(?<![\d.,])" + neg + ipx + fx + r"(?!\d|[.,]\d)"
 
 
+def lblnum(label, v, gap=12):
+    """Regex: `label: N` or `N label` (either order of a count and its label in prose)."""
+    return label + r"\D{0," + str(gap) + "}" + numrx(v) + "|" + numrx(v) + r"\D{0,3}" + label + r"\b"
+
+
 def facts(all=None, any=None, min_any=1):
     d = {"kind": "keyed_facts"}
     if all:

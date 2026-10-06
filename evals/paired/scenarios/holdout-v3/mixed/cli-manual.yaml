@@ -239,11 +239,12 @@ hidden_files:
 
 
     def t3():
+        ok = lambda g, w: g == w or (w in ('-', 'off') and g == '`' + w + '`')
         for c, opts in {'add': {'--priority': '`3`', '--due': '-', '--tag': '-'}, 'list': {'--status': '`open`', '--tag': '-', '--limit': '`20`'}, 'export': {'--format': '`json`', '--output': '`-`'}, 'purge': {'--dry-run': 'off'}}.items():
             rows = md_rows('docs/cli.md', '^' + c + '$')
             need(rows, 'no option table under ' + c)
             got = {r[0].strip('` '): r[1].strip() for r in rows[1:] if len(r) >= 3}
-            need(got == opts, f'{c} options {got} != {opts}')
+            need(got.keys() == opts.keys() and all(ok(got[k], opts[k]) for k in opts), f'{c} options {got} != {opts}')
         for c, d in {'add': ['Priority from 1 (high) to 5', 'Due date as YYYY-MM-DD', 'Tag to attach (repeatable)'], 'list': ['Which tasks to show', 'Only tasks with this tag', 'Maximum rows to print'], 'export': ['Output format', 'File to write, - for stdout'], 'purge': ['Only report what would be deleted']}.items():
             body = ' '.join(md_lines('docs/cli.md', '^' + c + '$'))
             for h in d:
@@ -292,7 +293,7 @@ hidden_files:
 
 
     def t9():
-        t = read('docs/taskq.1')
+        t = read('docs/taskq.1').replace('\\-', '-')
         need(re.search(r'^\.TH\s+TASKQ\s+1', t, re.M), 'missing .TH TASKQ 1')
         for sh in ['NAME', 'SYNOPSIS', 'COMMANDS', 'OPTIONS', 'EXIT STATUS']:
             need(re.search(r'^\.SH\s+' + sh + r'\s*$', t, re.M), 'missing .SH ' + sh)

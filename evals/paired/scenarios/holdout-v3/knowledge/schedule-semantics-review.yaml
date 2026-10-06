@@ -44,11 +44,11 @@ turns:
     path: REVIEW.md
     headings: [Summary, unsorted, weekday_strict, until_cancel]
   - {kind: file_regex, path: REVIEW.md, pattern: '(?im)^Severity:\s*(high|medium|low)', min_count: 3}
-  - {kind: file_regex, path: REVIEW.md, pattern: '2024-01-0[18]'}
+  - {kind: file_regex, path: REVIEW.md, pattern: '\d{4}-\d{2}-\d{2}|\d{1,2}:\d{2}|datetime\('}
   - {kind: file_regex, path: REVIEW.md, pattern: CancelJob}
 - prompt: Create checks/test_review.py (pytest) that passes on the current tree and fails when ANY ONE of the three diffs is applied; prove each failure in a scratch copy. Use the repo-root `schedule` package.
   checks:
-  - {kind: file_regex, path: checks/test_review.py, pattern: ^def test_, min_count: 4}
+  - {kind: file_regex, path: checks/test_review.py, pattern: ^def test_, min_count: 3}
   - {kind: tests, runner: cmd, cmd: 'O=$(mktemp -d) && cp -R schedule $O/orig && python3 -m pytest -q -p no:cacheprovider checks/test_review.py && for p in unsorted weekday_strict until_cancel; do rm -rf schedule && cp -R $O/orig schedule && patch -s -p1 < patches/$p.diff && if python3 -m pytest -q -p no:cacheprovider checks/test_review.py; then exit 1; fi; done', timeout: 240}
 - prompt: 'Explain `Job._schedule_next_run`: in which order are the weekday, the at-time and the interval applied, what does the `while next_run <= now` loop do, and why is the stored `next_run` naive? Answer from the code. Do not change any files.'
   checks:

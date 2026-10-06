@@ -136,7 +136,7 @@ turns:
   checks:
   - kind: file_regex
     path: sublist.go
-    pattern: ^// Contains .*(?i:empty)
+    pattern: '^// Contains (?:[^\n]*\n// ?)*[^\n]*(?i:empty)'
   - kind: file_regex
     path: README.md
     pattern: Contains

@@ -14,7 +14,7 @@ turns:
   checks:
   - kind: keyed_facts
     all: [PluginManager, HookspecMarker, HookimplMarker, HookCaller, HookRelay, Result, HookCallError, PluginValidationError, PluggyWarning, PluggyTeardownRaisedWarning]
-- prompt: 'In what order are hook implementations called? Set it up with real code from this checkout (src/ on sys.path): a hookspec `calc(x)`, plugin classes A and B with plain impls, C with `tryfirst=True`, and W with `wrapper=True` printing before/after the yield, registered in the order A, B, C, W; print the call order and the final result. Do not change repository files.'
+- prompt: 'In what order are hook implementations called? Set it up with real code from this checkout (src/ on sys.path): a hookspec `calc(x)`, plugin classes A and B with plain impls, C with `tryfirst=True`, and W with `wrapper=True` printing before/after the yield, registered in the order A, B, C, W; each impl prints its marker (`A`, `B`, `C tryfirst`, and `W before` / `W after` around the yield) and you then print the final result. Do not change repository files.'
   checks:
   - kind: keyed_facts
     all: ['W before.{0,100}C tryfirst.{0,60}\bB\b.{0,60}\bA\b.{0,100}W after', '\[''c'', ''b'', ''a''\]|c.{0,6}b.{0,6}a']
@@ -39,7 +39,7 @@ turns:
   - {kind: file_regex, path: ARCHITECTURE.md, pattern: HookCallError}
   - {kind: file_regex, path: ARCHITECTURE.md, pattern: PluginManager}
   - {kind: file_regex, path: ARCHITECTURE.md, pattern: _execution\.py}
-- prompt: 'Create tools/order_demo.py: the A/B/C/W ordering demo as a standalone script (this checkout''s src/ on sys.path) that prints each plugin''s marker when called and finally the hook result. Run it and show the output.'
+- prompt: 'Create tools/order_demo.py: the A/B/C/W ordering demo as a standalone script (this checkout''s src/ on sys.path) that prints the same markers (`A`, `B`, `C tryfirst`, `W before`, `W after`), one per line, when each impl is called and finally the hook result. Run it and show the output.'
   checks:
   - {kind: file_regex, path: tools/order_demo.py, pattern: tryfirst}
   - {kind: tests, runner: cmd, cmd: 'O=$(mktemp -d) && python3 tools/order_demo.py 2>/dev/null | tr ''\n'' '','' > $O/a.txt && grep -q ''^W before,C tryfirst,B,A,W after '' $O/a.txt && perl -pi -e ''s/for hook_impl in reversed\(hook_impls\):/for hook_impl in hook_impls:/'' src/pluggy/_execution.py && python3 tools/order_demo.py 2>/dev/null | tr ''\n'' '','' > $O/b.txt && ! cmp -s $O/a.txt $O/b.txt && grep -q ''^A,B,C tryfirst,W before,W after '' $O/b.txt', timeout: 240}

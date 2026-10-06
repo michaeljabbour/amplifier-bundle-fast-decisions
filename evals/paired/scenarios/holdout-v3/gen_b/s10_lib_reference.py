@@ -269,7 +269,7 @@ def _check(x):''')
     s.func("t9", f"""
         rows = md_rows('docs/index.md', 'module summary')
         got = [(r[0].strip('` '), int(num(r[1])), r[2]) for r in rows[1:] if len(r) >= 3]
-        need(got == {[(m, len(fs), ast.get_docstring(ast.parse(mods2[m]))) for m, fs in info2.items()]!r}, 'module summary rows: ' + str(got))
+        need(sorted(got) == {sorted((m, len(fs), ast.get_docstring(ast.parse(mods2[m]))) for m, fs in info2.items())!r}, 'module summary rows: ' + str(got))
         """)
     s.turn("Create docs/index.md with a `## Module summary` table (columns module, functions, summary): one row per module, the number of public functions it now defines, and its module docstring verbatim.",
            [s.g("t9")], files={"docs/index.md": idx}, wrong_files={"docs/index.md": idx.replace("| geom.shapes | 5 |", "| geom.shapes | 4 |")})

@@ -796,7 +796,6 @@ turns:
     hidden: [hidden/test_dups.py]
 - prompt: Fix `shebang_matches` so command-line flags after the interpreter are ignored again.
   checks:
-  - {kind: file_regex, path: pygments/util.py, pattern: 'if x and not x\.startswith\(''-''\)\]\[-1\]'}
   - kind: tests
     runner: python
     files: [tests/test_util.py, hidden/test_shebang.py]
@@ -811,9 +810,9 @@ turns:
   - kind: doc_sections
     path: REVIEW.md
     headings: [Summary, Test gaps, get_list_opt, get_bool_opt, duplicates_removed, shebang_matches]
-  - {kind: file_regex, path: REVIEW.md, pattern: '''True'''}
-  - {kind: file_regex, path: REVIEW.md, pattern: '\[''a'', ''b''\]'}
-  - {kind: file_regex, path: REVIEW.md, pattern: -w}
+  - {kind: file_regex, path: REVIEW.md, pattern: '(?ms)^## get_list_opt\b(?:(?!^## ).)*?\[[''"][^\]\n]*[''"]'}
+  - {kind: file_regex, path: REVIEW.md, pattern: '(?ms)^## get_bool_opt\b(?:(?!^## ).)*?[''"][A-Za-z]*[A-Z][A-Za-z]*[''"]'}
+  - {kind: file_regex, path: REVIEW.md, pattern: '(?ms)^## shebang_matches\b(?:(?!^## ).)*?\s-\w'}
 - prompt: 'Final check: list every file you changed or added in this session with a one-line summary, and name one more helper in pygments/util.py that deserves a test but is not covered. Do not change any files.'
   checks:
   - kind: keyed_facts

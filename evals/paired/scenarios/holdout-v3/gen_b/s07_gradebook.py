@@ -1,6 +1,11 @@
 import json, random
 from lib import Scn, csv_text, facts, numrx, rx, sections
 
+
+def secrx(sec, n):
+    """`A: 10`, `10 in A` or `10 students each in sections A, B, and C`."""
+    return (r"(?<![\d.])" + sec + r"\D{0,6}" + numrx(n) + "|" + numrx(n) + r"\D{0,8}\b" + sec + r"\b|" + numrx(n) + r"\D{0,30}\beach\b\D{0,60}\b" + sec + r"\b")
+
 W8 = {"homework": 0.4, "exams": 0.5, "participation": 0.1}
 CATS = {"homework": [f"hw{i}" for i in range(1, 9)], "exams": ["ex1", "ex2"], "participation": ["pt1", "pt2", "pt3"]}
 MAXP = {**{f"hw{i}": 10 + (i % 3) * 5 for i in range(1, 9)}, "ex1": 100, "ex2": 100, "pt1": 5, "pt2": 5, "pt3": 5}
@@ -114,7 +119,7 @@ def build():
     ex1 = [v / MAXP["ex1"] * 100 for (sid, a, v) in scores if a == "ex1"]
     ex1m = round(sum(ex1) / len(ex1), 2)
     s.turn("How many students are in each section of data/students.csv, and how many rows does data/scores.csv have (excluding the header)? Do not change any files.",
-           [facts(all=[r"(?<![\d.])A\D{0,6}" + numrx(nsec["A"]), r"(?<![\d.])B\D{0,6}" + numrx(nsec["B"]), r"(?<![\d.])C\D{0,6}" + numrx(nsec["C"]), numrx(len(scores))])],
+           [facts(all=[secrx("A", nsec["A"]), secrx("B", nsec["B"]), secrx("C", nsec["C"]), numrx(len(scores))])],
            msg=f"ANSWER: A {nsec['A']}, B {nsec['B']}, C {nsec['C']}; {len(scores)} score rows", wrong_msg=f"ANSWER: A {nsec['A'] + 1}, B {nsec['B']}, C {nsec['C']}; {len(scores)} score rows", bump=True)
     s.turn("What is the class mean of ex1 as a percentage of its max, over the students who have an ex1 score row, to 2 decimals? Do not change any files.",
            [facts(all=[numrx(ex1m, 2)])], msg=f"ANSWER: {ex1m:.2f}", wrong_msg=f"ANSWER: {ex1m + 1.01:.2f}", bump=True)

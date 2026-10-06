@@ -149,7 +149,7 @@ def build():
     s.turn("In which order must the migrations be applied? Every migration runs only after all of its dependencies; whenever several are ready, run the one with the smallest id first. List the ids in order. Do not change any files.",
            [facts(all=[seq_rx(P["order"])])], msg="ANSWER: " + ", ".join(P["order"]), wrong_msg="ANSWER: " + ", ".join(sorted(migs)), bump=False)
     s.func("t3", f"chk_json('out/plan.json', {{'order': {P['order']!r}, 'destructive': {P['destructive']!r}}})")
-    s.turn("Create out/plan.json with `order` (the apply order from the previous answer) and `destructive` (ids of migrations whose header says destructive: yes, sorted ascending).",
+    s.turn("Create out/plan.json with `order` (the correct apply order, by the rule in the previous question) and `destructive` (ids of migrations whose header says destructive: yes, sorted ascending).",
            [s.g("t3")], files={"out/plan.json": json.dumps({"order": P["order"], "destructive": P["destructive"]}, indent=2) + "\n"},
            wrong_files={"out/plan.json": json.dumps({"order": P["order"][::-1], "destructive": P["destructive"]}) + "\n"})
     s.turn("Which table is touched by the most migrations (per the `touches` headers), and by how many? Do not change any files.",

@@ -186,7 +186,7 @@ def build():
         got = [l[2:].strip() for l in read('docs/_reports/orphans.md').splitlines() if l.startswith('- ')]
         need(got == {orphans1!r}, f'orphans: {{len(got)}} listed, want {len(orphans1)}; first diffs: ' + str([g for g in got if g not in {orphans1!r}][:2]))
         """)
-    s.turn("Now that the renamed links are fixed, write docs/_reports/orphans.md: `# Orphan pages` and a bullet `- <path relative to docs/>` for every section page with no inbound link from another section page, sorted by path.",
+    s.turn("Now that the renamed links are fixed, write docs/_reports/orphans.md: `# Orphan pages` and a bullet `- <path relative to docs/>` for every original section page with no inbound link from another original section page, sorted by path (the index.md pages you created do not count, neither as pages nor as sources of links).",
            [s.g("t9")], files={"docs/_reports/orphans.md": orph}, wrong_files={"docs/_reports/orphans.md": "# Orphan pages\n\n" + "".join(f"- {p}\n" for p in orphans0)})
     s.turn("Add a '## Maintenance' section to README.md that explains `python3 scripts/linkcheck.py`, points at docs/_reports/broken-links.md and docs/_reports/orphans.md, and mentions docs/RENAMES.txt.",
            [sections("README.md", "Maintenance"), rx("README.md", r"scripts/linkcheck\.py"), rx("README.md", r"docs/_reports/orphans\.md"), rx("README.md", r"docs/RENAMES\.txt")],

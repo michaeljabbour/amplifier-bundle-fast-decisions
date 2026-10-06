@@ -42,7 +42,7 @@ turns:
 - prompt: 'Show what happens to comments and layout when you edit a parsed document: change `owner.name` to ''Tim'' and add a new top-level key `new = 1`. Where does the new key end up in the output and what stays untouched? Run it. Do not change repository files.'
   checks:
   - kind: keyed_facts
-    all: ['# top', '# inline', name = \"Tim\", new = 1, before|above|first|top-level|root, preserv|unchanged|untouched|kept]
+    all: [comment, name = \"Tim\", new = 1, before|above|first|top-level|root, preserv|unchanged|untouched|kept]
 - prompt: 'What does `doc.unwrap()` return and why would you use it? Also: how many names are in `tomlkit.__all__`? Run both. Do not change repository files.'
   checks:
   - kind: keyed_facts

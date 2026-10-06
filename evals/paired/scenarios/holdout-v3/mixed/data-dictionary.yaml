@@ -693,8 +693,9 @@ turns:
     hidden:
     - _grade.py
     timeout: 60
-- prompt: data/orders_refresh.csv replaces the extract. Regenerate the Columns table in docs/data-dictionary.md from it (all
-    six value columns) and add one sentence naming the file and its row count.
+- prompt: 'data/orders_refresh.csv replaces the extract. Regenerate the Columns table in docs/data-dictionary.md from it (same
+    rules as before: one row per CSV column, so the three id/date columns and all six value columns) and add one sentence
+    naming the file and its row count.'
   checks:
   - kind: tests
     runner: cmd

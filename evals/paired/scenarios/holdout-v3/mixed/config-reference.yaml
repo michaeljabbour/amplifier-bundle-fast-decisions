@@ -451,9 +451,10 @@ turns:
     hidden:
     - _grade.py
     timeout: 60
-- prompt: Under each section add a table with columns key, type, default, required. type is the JSON schema type; default
-    is the schema default as a JSON literal in backticks (strings keep their double quotes, booleans are true/false) or `-`
-    in the cell when the schema has none (no backticks around the dash); required is yes or no.
+- prompt: Under each section add a table with columns key, type, default, required. key is the key name in backticks; type
+    is the JSON schema type; default is the schema default as a JSON literal in backticks (strings keep their double quotes,
+    booleans are true/false) or `-` in the cell when the schema has none (no backticks around the dash); required is yes or
+    no.
   checks:
   - kind: tests
     runner: cmd

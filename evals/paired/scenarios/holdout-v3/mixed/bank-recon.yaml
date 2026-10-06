@@ -357,8 +357,8 @@ turns:
     - TX-1065
     - TX-1067
     - TX-1076
-- prompt: Create out/recon.json with matched, amount_mismatch, bank_only (refs only in the bank file), ledger_only (refs only
-    in the ledger), bank_only_total and ledger_only_total (signed sums, 2 decimals).
+- prompt: Create out/recon.json with the integer counts matched, amount_mismatch, bank_only (refs only in the bank file) and
+    ledger_only (refs only in the ledger), plus bank_only_total and ledger_only_total (signed sums, 2 decimals).
   checks:
   - kind: tests
     runner: cmd

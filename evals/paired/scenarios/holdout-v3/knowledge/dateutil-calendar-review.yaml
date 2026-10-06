@@ -39,7 +39,7 @@ turns:
 - prompt: Give me a one-line role for each module and sub-package directly under src/dateutil/ (relativedelta, rrule, easter, utils, parser, tz, zoneinfo, _common). Do not change any files.
   checks:
   - kind: keyed_facts
-    all: [relativedelta\.py, rrule\.py, easter\.py, utils\.py, parser, tz, zoneinfo, _common]
+    all: ['relativedelta.{0,200}(arithmetic|delta|relative|offset|add|subtract)', 'rrule.{0,200}(recurr|rfc|ical|rule)', 'easter.{0,200}(date|sunday|comput|calculat)', 'utils.{0,200}(helper|util|convenien|today|default_tzinfo|within_delta)', 'parser.{0,200}(pars|string)', 'tz.{0,200}(tzinfo|time ?zone)', 'zoneinfo.{0,200}(zone|tarball|database|bundled)', '_common.{0,200}(common|shared|base|private|helper)']
 - prompt: 'Explain what `relativedelta.__add__` does when adding to a datetime: in which order are absolute fields, relative months/years, the day, the time fields, leapdays and the weekday applied, and what protects against ''February 31''? Answer from src/dateutil/relativedelta.py. Do not change any files.'
   checks:
   - kind: keyed_facts
@@ -71,7 +71,7 @@ turns:
   - {kind: file_regex, path: REVIEW.md, pattern: -5|negative}
 - prompt: 'Turn the review into executable checks: create checks/test_review.py (pytest) that passes on the current tree and fails when ANY ONE of the three diffs is applied. Import dateutil from this checkout (src layout: run with PYTHONPATH=src) and prove each failure in a scratch copy.'
   checks:
-  - {kind: file_regex, path: checks/test_review.py, pattern: ^def test_, min_count: 4}
+  - {kind: file_regex, path: checks/test_review.py, pattern: ^def test_, min_count: 3}
   - {kind: tests, runner: cmd, cmd: 'O=$(mktemp -d) && cp -R src $O/orig && PYTHONPATH=src python3 -m pytest -q -p no:cacheprovider checks/test_review.py && for p in day_clamp within_delta_abs xafter_count; do rm -rf src && cp -R $O/orig src && patch -s -p1 < patches/$p.diff && if PYTHONPATH=src python3 -m pytest -q -p no:cacheprovider checks/test_review.py; then exit 1; fi; done', timeout: 240}
   gap_before_s: 420
 - prompt: 'Explain how an `rrule` stops: how do `count` and `until` interact in the generator `rrule._iter`, what does the `_len` attribute record, and what does `cache=True` on rrulebase change? Answer from src/dateutil/rrule.py. Do not change any files.'

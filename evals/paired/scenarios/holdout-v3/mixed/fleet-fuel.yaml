@@ -200,7 +200,7 @@ workspace:
       # fleet-fuel
 
       `data/fuel_log.csv` holds one row per fill-up (date, vehicle, odometer_km, litres, price_per_l, station).
-      `data/vehicles.csv` lists tank capacity per vehicle. Cost of a fill = litres x price_per_l rounded to 2 decimals.
+      `data/vehicles.csv` lists tank capacity per vehicle. Cost of a fill = litres x price_per_l rounded half up to 2 decimals.
 protected:
 - data/fuel_log.csv
 - data/vehicles.csv
@@ -341,7 +341,7 @@ hidden_files:
 
 
     def t7():
-        chk_table('report.md', 'monthly', {'2025-01': 3662.04, '2025-02': 3289.95, '2025-03': 3259.66, '2025-04': 4041.64, '2025-05': 1477.25})
+        chk_table('report.md', 'monthly', {'2025-01': 3662.05, '2025-02': 3289.95, '2025-03': 3259.66, '2025-04': 4041.65, '2025-05': 1477.26})
 
 
     def t8():
@@ -388,11 +388,11 @@ turns:
     - _grade.py
     timeout: 60
 - prompt: Ignoring every row listed in out/anomalies.json, what is the total fuel spend over the remaining rows? A fill costs
-    litres x price_per_l rounded to 2 decimals; give the sum to 2 decimals. Do not change any files.
+    litres x price_per_l rounded half up to 2 decimals; give the sum to 2 decimals. Do not change any files.
   checks:
   - kind: keyed_facts
     all:
-    - (?<![\d.,])1,?5,?7,?3,?0\.540*(?!\d|[.,]\d)
+    - (?<![\d.,])1,?5,?7,?3,?0\.570*(?!\d|[.,]\d)
 - prompt: Write out/economy.csv with columns vehicle, km, litres, l_per_100km over the non-anomalous rows only. Per vehicle,
     order its rows by date; the first kept row is only a baseline; km is the sum of odometer differences between consecutive
     kept rows and litres is the sum of the litres of every kept row except the baseline. l_per_100km = litres / km * 100 rounded

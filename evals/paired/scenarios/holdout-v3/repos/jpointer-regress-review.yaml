@@ -756,6 +756,34 @@ hidden_files:
         assert JsonPointer("/a") in JsonPointer("/a/b/c")
         assert JsonPointer("/a").contains(JsonPointer("/a"))
         assert JsonPointer("").contains(JsonPointer(""))
+  _mutate.py: |
+    """Grader helper: put one of the three merged regressions back into jsonpointer.py, whatever form the fix took.
+    usage: python3 _mutate.py index|unescape|contains   (rewrites ./jsonpointer.py; exit 2 when the piece cannot be found)"""
+    import ast
+    import sys
+
+    MERGED = {'re': "    _RE_ARRAY_INDEX = re.compile('0|[1-9][0-9]*$')\n", 'get_part': '    @classmethod\n    def get_part(cls, doc, part):\n        """Returns the next step in the correct type"""\n\n        if isinstance(doc, Mapping):\n            return part\n\n        elif isinstance(doc, Sequence):\n\n            if part == \'-\':\n                return part\n\n            if not JsonPointer._RE_ARRAY_INDEX.match(str(part)):\n                raise JsonPointerException("\'%s\' is not a valid sequence index" % part)\n\n            return int(part)\n\n        elif hasattr(doc, \'__getitem__\'):\n            # Allow indexing via ducktyping\n            # if the target has defined __getitem__\n            return part\n\n        else:\n            raise JsonPointerException("Document \'%s\' does not support indexing, "\n                                       "must be mapping/sequence or support __getitem__" % type(doc))\n', 'contains': '    def contains(self, ptr):\n        """ Returns True if self contains the given ptr """\n        return self.path.startswith(ptr.path)\n', 'unescape': "def unescape(s):\n    return s.replace('~0', '~').replace('~1', '/')\n"}
+    PLAN = {"index": ["re", "get_part"], "unescape": ["unescape"], "contains": ["contains"]}
+
+    src = open("jsonpointer.py", encoding="utf-8").read()
+    lines = src.splitlines(True)
+    spans = {}
+    for n in ast.parse(src).body:
+        if isinstance(n, ast.FunctionDef) and n.name == "unescape":
+            spans["unescape"] = (n.lineno, n.end_lineno)
+        if isinstance(n, ast.ClassDef) and n.name == "JsonPointer":
+            for m in n.body:
+                if isinstance(m, ast.FunctionDef) and m.name in ("get_part", "contains"):
+                    spans[m.name] = (min([m.lineno] + [d.lineno for d in m.decorator_list]), m.end_lineno)
+                if isinstance(m, ast.Assign) and getattr(m.targets[0], "id", "") == "_RE_ARRAY_INDEX":
+                    spans["re"] = (m.lineno, m.end_lineno)
+    want = PLAN[sys.argv[1]]
+    if any(w not in spans for w in want):
+        sys.exit(2)
+    for w in sorted(want, key=lambda k: -spans[k][0]):
+        a, b = spans[w]
+        lines[a - 1:b] = [MERGED[w]]
+    open("jsonpointer.py", "w", encoding="utf-8").write("".join(lines))
 protected: [tests.py]
 turns:
 - prompt: A teammate's refactor of jsonpointer.py was just merged (this directory has no git history). Run the project's own tests with `python3 -m pytest -q tests.py` and tell me exactly what fails and what passes. Do not change any files.
@@ -768,7 +796,6 @@ turns:
     all: [fullmatch, \bmatch\b, _RE_ARRAY_INDEX|regex, '01', 'leading zero|0\|\[1-9\]|anchor|\$']
 - prompt: Fix that regression in jsonpointer.py with the smallest change. Keep tests.py untouched.
   checks:
-  - {kind: file_regex, path: jsonpointer.py, pattern: _RE_ARRAY_INDEX\.fullmatch\(}
   - kind: tests
     runner: python
     files: [tests.py, hidden/test_index.py]
@@ -780,7 +807,6 @@ turns:
     all: [unescape, ~01, ~1, contains, /ab|startswith|prefix|character]
 - prompt: Fix `unescape` in jsonpointer.py so that '~01' decodes to '~1' (RFC 6901 order). Keep the change minimal.
   checks:
-  - {kind: file_regex, path: jsonpointer.py, pattern: 's\.replace\(''~1'', ''/''\)\.replace\(''~0'', ''~''\)'}
   - kind: tests
     runner: python
     files: [tests.py, hidden/test_unescape.py]
@@ -788,7 +814,6 @@ turns:
     hidden: [hidden/test_unescape.py]
 - prompt: Fix `JsonPointer.contains` so it compares parts, not characters, and keeps `'/a'` containing `'/a'` and the root pointer containing the root pointer.
   checks:
-  - {kind: file_regex, path: jsonpointer.py, pattern: 'self\.parts\[:len\(ptr\.parts\)\] == ptr\.parts'}
   - kind: tests
     runner: python
     files: [tests.py, hidden/test_contains.py]
@@ -797,7 +822,7 @@ turns:
 - prompt: Add test_regressions.py to the repository root with at least four pytest tests that pin the three regressions (leading-zero index, unescape order, contains by parts) plus one positive prefix case. They must pass on the fixed code and fail when ANY of the three merged changes is put back (prove it by re-applying each one in a scratch copy).
   checks:
   - {kind: file_regex, path: test_regressions.py, pattern: ^def test_, min_count: 4}
-  - {kind: tests, runner: cmd, cmd: 'O=$(mktemp -d) && python3 -m pytest -q -p no:cacheprovider test_regressions.py && cp jsonpointer.py $O/fixed.py && perl -0pi -e "s/return s\.replace\(''~1'', ''\/''\)\.replace\(''~0'', ''~''\)/return s.replace(''~0'', ''~'').replace(''~1'', ''\/'')/" jsonpointer.py && if python3 -m pytest -q -p no:cacheprovider test_regressions.py; then exit 1; fi && cp $O/fixed.py jsonpointer.py && perl -0pi -e ''s/return self\.parts\[:len\(ptr\.parts\)\] == ptr\.parts/return self.path.startswith(ptr.path)/'' jsonpointer.py && if python3 -m pytest -q -p no:cacheprovider test_regressions.py; then exit 1; fi && cp $O/fixed.py jsonpointer.py && perl -0pi -e ''s/_RE_ARRAY_INDEX\.fullmatch\(/_RE_ARRAY_INDEX.match(/'' jsonpointer.py && if python3 -m pytest -q -p no:cacheprovider test_regressions.py; then exit 1; fi && cp $O/fixed.py jsonpointer.py', timeout: 280}
+  - {kind: tests, runner: cmd, cmd: "export PYTHONDONTWRITEBYTECODE=1; O=$(mktemp -d) && rm -rf __pycache__ && python3 -m pytest -q -p no:cacheprovider test_regressions.py && cp jsonpointer.py $O/fixed.py && for k in index unescape contains; do python3 _mutate.py $k || exit 1; rm -rf __pycache__; if python3 -m pytest -q -p no:cacheprovider test_regressions.py; then exit 1; fi; cp $O/fixed.py jsonpointer.py; done", hidden: [_mutate.py], timeout: 280}
 - prompt: Explain how `JsonPointer.set` treats the '-' part and the `inplace` flag, and what `to_last` and `EndOfList` are for. Answer from jsonpointer.py. Do not change any files.
   checks:
   - kind: keyed_facts
@@ -809,7 +834,7 @@ turns:
     headings: [Summary, Test suite gaps, get_part, unescape, contains]
   - {kind: file_regex, path: REVIEW.md, pattern: ~01}
   - {kind: file_regex, path: REVIEW.md, pattern: /ab}
-  - {kind: file_regex, path: REVIEW.md, pattern: fullmatch}
+  - {kind: file_regex, path: REVIEW.md, pattern: 'fullmatch|anchor'}
 - prompt: 'Final check: list every file you changed or added in this session, what changed in each, and any behaviour of jsonpointer.py you would still want a test for. Do not change any files.'
   checks:
   - kind: keyed_facts

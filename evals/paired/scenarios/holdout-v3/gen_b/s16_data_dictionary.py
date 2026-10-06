@@ -198,7 +198,7 @@ def build():
         need('{len(refresh)}' in read('docs/data-dictionary.md'), 'mention the new row count {len(refresh)}')
         """)
     dr = "# Data dictionary\n\n" + f"Based on data/orders_refresh.csv ({len(refresh)} rows).\n\n## Columns\n\n" + dd_table(P2)
-    s.turn("data/orders_refresh.csv replaces the extract. Regenerate the Columns table in docs/data-dictionary.md from it (all six value columns) and add one sentence naming the file and its row count.",
+    s.turn("data/orders_refresh.csv replaces the extract. Regenerate the Columns table in docs/data-dictionary.md from it (same rules as before: one row per CSV column, so the three id/date columns and all six value columns) and add one sentence naming the file and its row count.",
            [s.g("t9")], files={"docs/data-dictionary.md": dr}, wrong_files={"docs/data-dictionary.md": d4}, bump=True)
     s.turn("Add a '## Data dictionary' section to README.md linking docs/data-dictionary.md and showing how to run `python3 scripts/profile.py --csv data/orders_refresh.csv`.",
            [sections("README.md", "Data dictionary"), rx("README.md", r"docs/data-dictionary\.md"), rx("README.md", r"scripts/profile\.py --csv data/orders_refresh\.csv")],
