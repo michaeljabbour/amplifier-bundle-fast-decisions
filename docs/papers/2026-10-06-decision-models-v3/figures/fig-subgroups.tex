@@ -1,0 +1,24 @@
+% S1, Fable: the frozen configuration against plain Fable, per task type and per family.
+\begin{tikzpicture}
+\begin{axis}[benchmark, name=cost, xmode=log, log ticks with fixed point, xtick={0.4,0.6,0.8,1}, xmin=0.35, xmax=1.1,
+  scale only axis, width=5.0cm, height=6.6cm, xmajorgrids, ymin=-0.6, ymax=10.6, ytick={\SubTicks},
+  yticklabels/.expanded={\SubLabels}, y tick label style={font=\footnotesize},
+  xlabel={Cost ratio (log)}, title={Cost}, title style={font=\small\bfseries},
+  legend to name=sublegend, legend columns=2, legend cell align=left,
+  legend style={/tikz/every even column/.append style={column sep=10pt}}]
+\draw[black!70, line width=0.8pt] (axis cs:1,-0.6) -- (axis cs:1,10.6);
+\addplot[only marks, mark=*, mark size=2.4pt, color=okblue, error bars/.cd, x dir=both, x explicit,
+  error bar style={line width=1pt}] table[x=r, y=y, x error minus=rm, x error plus=rp]{generated/data/s1-subgroups.dat};
+\addlegendentry{estimate, 95\,\% CI}
+\addlegendimage{okorange, dashed, line width=0.8pt}\addlegendentry{quality margin}
+\end{axis}
+\begin{axis}[benchmark, at={(cost.south east)}, xshift=0.5cm, scale only axis, width=4.0cm, height=6.6cm,
+  xmin=-0.12, xmax=0.07, xtick={-0.1,-0.05,0,0.05}, scaled x ticks=false, xticklabel style={/pgf/number format/fixed}, xmajorgrids,
+  ymin=-0.6, ymax=10.6, ytick={\SubTicks}, yticklabels={}, xlabel={Turn-pass difference}, title={Quality},
+  title style={font=\small\bfseries}]
+\draw[black!70, line width=0.8pt] (axis cs:0,-0.6) -- (axis cs:0,10.6);
+\draw[okorange, dashed, line width=0.8pt] (axis cs:-0.05,-0.6) -- (axis cs:-0.05,10.6);
+\addplot[only marks, mark=square*, mark size=2.2pt, color=okgreen, error bars/.cd, x dir=both, x explicit,
+  error bar style={line width=1pt}] table[x=d, y=y, x error minus=dm, x error plus=dp]{generated/data/s1-subgroups.dat};
+\end{axis}
+\end{tikzpicture}

@@ -1,0 +1,8 @@
+\addplot[only marks, mark=*, mark size=2.4pt, color=okblue] table[x=x, y=y]{generated/data/fz-fable-cand.dat};
+\addlegendentry{candidate}
+\addplot[only marks, mark=o, mark size=2.4pt, color=okgray, mark options={line width=0.9pt}] table[x=x, y=y]{generated/data/fz-fable-non.dat};
+\addlegendentry{not a candidate}
+\addplot[only marks, mark=star, mark size=5pt, color=okorange, mark options={line width=1.3pt}] table[x=x, y=y]{generated/data/fz-fable-chosen.dat};
+\addlegendentry{chosen by the freeze rule}
+\addplot[only marks, mark=diamond, mark size=4.5pt, color=okgreen, mark options={line width=1.3pt}] table[x=x, y=y]{generated/data/fz-fable-prereg.dat};
+\addlegendentry{preregistered C*}

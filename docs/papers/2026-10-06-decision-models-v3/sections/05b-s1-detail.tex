@@ -1,0 +1,146 @@
+\section{Inside S1: what the core study shows}\label{sec:s1detail}
+
+This section opens up the S1 results one picture at a time. All of it is the preregistered S1 data; anything not
+preregistered is labelled exploratory.
+
+\subsection{Every hypothesis on one page}
+
+\begin{figure}[htbp]
+\centering
+\pgfplotslegendfromname{sforestlegend}\par\smallskip
+\input{figures/fig-s1-forest.tex}
+\caption{S1 hypotheses H1--H7: cost ratio (left, log scale) and turn-pass difference (right), each with its 95\,\%
+interval. H3b is descriptive. Thresholds: the H1 cost bound (\SThreshOne) and the quality margin (\NIMargin).}
+\label{fig:s1forest}
+\howtoread{Read each row across both panels. A row helps a configuration when its cost dot is left of 1 and its
+quality whisker stays right of the dashed line. H1 does both. H5 is far right of 1: routing on Opus costs more. H4
+straddles 1: medium effort did nothing measurable on Opus. H7's quality whisker crosses the dashed line, which is why
+review and explain stay on the host.}
+\end{figure}
+
+\begin{keyidea}
+Two of the eight rows carry money: H1 (Fable routing saves about two fifths) and H5 (Opus routing loses about a
+quarter). The rest are guards: no overhead (H3), the model adds nothing over the rule (H2), live sessions behave as
+predicted (H6), and review and explain need protection (H7).
+\end{keyidea}
+
+\subsection{How to read a paired cost ratio}\label{sec:worked}
+
+\begin{casecard}{Worked example: one scenario, two reps, one ratio}
+Take \code{\WxScen}, the S1 scenario whose ratio sits closest to the overall result. Under the frozen Fable
+configuration it was \WxArm. Across its \WxReps\ repetitions the routed sessions cost \$\WxRouted\ on average and the
+plain Fable sessions \$\WxPlain. Its paired cost ratio is therefore $\WxRouted / \WxPlain = \WxRatio$; on the log scale
+that is $\ln \WxRatio = \WxLog$. Doing the same for each of the \WxNScen\ scenarios, averaging the logs and
+exponentiating gives the \term{geometric mean}, \WxGM: the H1 headline. The interval comes from resampling whole
+scenarios \SResamples\ times and repeating the calculation.
+\end{casecard}
+
+Why a geometric mean? A ratio of 0.5 and a ratio of 2 should cancel; their arithmetic mean (1.25) says ``more
+expensive'', their geometric mean (1) says ``no change''. Averaging logs treats halving and doubling symmetrically.
+
+\subsection{The variance underneath the headline}
+
+\begin{figure}[htbp]
+\centering
+\pgfplotslegendfromname{pslegend}\par\smallskip
+\input{figures/fig-perscen.tex}
+\caption{Per-scenario paired cost ratios in S1, sorted. Left: the frozen Fable configuration against plain Fable
+(\PsFableN\ scenarios). Right: Sonnet decided once against plain Opus (\PsOpusN\ scenarios). Log scale.}
+\label{fig:perscen}
+\howtoread{Each dot is one scenario. Below the line saves money. On Fable, \PsFableAbove\ of \PsFableN\ scenarios cost
+more than plain Fable, and the ratios run from \PsFableMin\ to \PsFableMax. On Opus, \PsOpusAbove\ of \PsOpusN\ cost
+more, from \PsOpusMin\ to \PsOpusMax. The direction is consistent; the size varies a lot from task to task.}
+\end{figure}
+
+\subsection{Where the risk sits: task types and families}
+
+\begin{figure}[htbp]
+\centering
+\pgfplotslegendfromname{sublegend}\par\smallskip
+\input{figures/fig-subgroups.tex}
+\caption{The frozen Fable configuration against plain Fable, split by task type and by scenario family (number of
+scenarios in brackets), with 95\,\% intervals. Exploratory: subgroups were not preregistered except H7.}
+\label{fig:subgroups}
+\howtoread{Every subgroup saves money. The quality panel is where they differ: explain (\SubExplainTaskDtp; lower
+bound \SubExplainTaskLow) and mixed work cross the margin, review touches it (\SubReviewTaskLow), while bugfix and
+feature sit near zero. Small subgroups give wide whiskers; treat single rows with caution.}
+\end{figure}
+
+\subsection{Which configuration the rule picked}
+
+\begin{figure}[htbp]
+\centering
+\pgfplotslegendfromname{fzlegendFable}\par\smallskip
+\fzpanel{Fable}{Fable}{fable}\par\medskip
+\fzpanel{Opus}{Opus}{opus}
+\caption{All \FzFableN\ Fable and \FzOpusN\ Opus configurations the freeze rule considered: cost ratio against the
+host's plain default and turn-pass difference (point estimates). Keys group configurations that land on the same
+point; \cref{tab:fzkey} lists them.}
+\label{fig:fz}
+\howtoread{Left and up is better. Filled dots passed the preregistered candidate test (cost upper bound below 1,
+quality lower bound above the margin, final-state point not worse than the limit). The star is the rule's choice; the
+diamond is the preregistered configuration. On Fable \FzFableCand\ configurations qualified; the cheapest cluster
+drops the scope gate. On Opus none qualified, so the shipped default stays.}
+\end{figure}
+
+\subsection{The decision model against the rule}\label{sec:bound}
+
+Jev and the rule R* chose differently on only \DcN\ of \DcUnits\ Fable scenario-reps (\cref{tab:discordant}).
+
+\begin{table}[htbp]
+\centering\small
+\caption{The \DcN\ S1 scenario-reps on which the decision model (Jev) and the rule R* chose different session
+models, with what each choice cost and how it scored.}
+\label{tab:discordant}
+\input{generated/tables/discordant.tex}
+\end{table}
+
+\begin{casecard}{Worked example: why the two deciders cannot differ much}
+Two deciders that agree on a scenario-rep produce the same session there, so their difference comes only from the
+scenario-reps where they disagree. The share of those is $d = \DcN/\DcUnits = \DcD$. On them the choices differed in
+cost by \$\DcMeanAbsDiff\ per session on average. So the most the deciders can differ, averaged over all sessions, is
+$d \times \$\DcMeanAbsDiff = \$\DcBound$ per session, about \DcBoundPct\,\% of a typical session (\$\DcMeanCost).
+That bound, not a significance test, is what makes ``equivalent'' believable: with so few disagreements, no amount of
+skill on those few can move the total.
+\end{casecard}
+
+\subsection{Effort, across three hosts}
+
+\begin{figure}[htbp]
+\centering
+\pgfplotslegendfromname{efflegend}\par\smallskip
+\input{figures/fig-effort-hosts.tex}
+\caption{Medium against default reasoning effort, measured in three studies: Sonnet (follow-up 1), Fable (follow-up
+2) and Opus (S1, H4). 95\,\% intervals.}
+\label{fig:effort}
+\howtoread{Sonnet and Fable sit well left of 1: medium effort is cheaper with no detectable quality loss. Opus sits
+on 1. The same setting saves money on two models and nothing on the third, so effort must be set per host.}
+\end{figure}
+
+\subsection{Where the money goes}
+
+\begin{figure}[htbp]
+\centering
+\pgfplotslegendfromname{complegend}\par\smallskip
+\input{figures/fig-composition.tex}
+\caption{Mean cost per S1 session split by token class, at the study's price table (exploratory).}
+\label{fig:composition}
+\howtoread{Each bar is the average session. Plain Fable spends most on cache writes (\CcPlainFableWriteShare\,\% of
+\$\CcPlainFableTotal): writing context into Fable's cache is expensive. The Sonnet session (\$\CcSonnetDecidedOTotal)
+spends more on cache reads (\CcSonnetDecidedOReadShare\,\%), which are cheap per token but many. Plain Opus
+(\$\CcPlainOpusTotal) is already cheaper than the Sonnet session, which is the whole H5 story in one bar.}
+\end{figure}
+
+\subsection{Does the answer replicate?}
+
+\begin{figure}[htbp]
+\centering
+\pgfplotslegendfromname{cumlegend}\par\smallskip
+\input{figures/fig-cumulative.tex}
+\caption{Routing to Sonnet against the plain host, per host, across the pilot, the main-v1 training and test splits
+and S1. Main-v1 rows are the sticky arm without the quality filter; the S1 rows are H1 (Fable) and H5 (Opus).}
+\label{fig:cumulative}
+\howtoread{Read top to bottom within a host. The Fable rows (\CumFablePilot, \CumFableTrain, \CumFableTest,
+\CumFableSone) all lie near one half; the Opus rows (\CumOpusPilot, \CumOpusTrain, \CumOpusTest, \CumOpusSone) all lie
+above 1. Four independent sets of scenarios, the same sign and roughly the same size.}
+\end{figure}

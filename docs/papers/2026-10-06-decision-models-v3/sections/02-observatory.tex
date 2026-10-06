@@ -19,6 +19,16 @@ at p95. Speed is not the obstacle.
 shorter than a host model call; the p95 bars show the slow tail.}
 \end{figure}
 
+\begin{figure}[htbp]
+\centering
+\pgfplotslegendfromname{mixlegend}\par\smallskip
+\input{figures/fig-obs-mix.tex}
+\caption{What the observatory store holds: the seven most common kinds of recorded event, as a share of all events.}
+\label{fig:obsmix}
+\howtoread{The longest bar, \ObMixTop, is \ObMixTopPct\,\% of everything recorded. Decision-bearing events are a thin
+slice. A store this dominated by bookkeeping can tell you that decisions happen, not whether they were right.}
+\end{figure}
+
 \paragraph{The 7.1\,\% that was not what it seemed.} The telemetry reported that the read-shortcut proposals agreed
 with the host's next action only \ObAllRate\,\% of the time (\ObAllMatch\ of \ObAllN). Taken at face value, that
 condemns the idea. Decomposed, it says little about the decision model:

@@ -2349,6 +2349,8 @@ if s1 is not None:
         M(f"S{k}N", e["n_scenarios"])
         M(f"S{k}Verdict", {True: "supported", False: "not supported", None: "descriptive"}[H[h]["supported"]])
     M("SHTwoDisc", H["H2"]["discordant_scenario_reps"])
+    M("SThreshOne", re.search(r"< ([0-9.]+)", H["H1"]["rule"]).group(1))
+    M("SResamples", thousands(s1["resamples"]))
     M("SHTwoReps", H["H2"]["n_scenario_reps"])
     pr = A0["s1_predictions"]["C*_F"]
     M("SPredRatio", hu(pr["gm_cost_ratio"], 3))
@@ -2421,6 +2423,276 @@ if s1 is not None:
         M(f"Kp{nm}Dtp", hu(c["d_turn_pass"], 3))
     M("KpProxyTwo", hu(prx["gm_ratio"], 2))
     M("KpRstarTwo", hu(H["H1"]["estimate"]["gm_ratio"], 2))
+
+
+# ================================================================ v3 rich: figure data (S1 and cross-study)
+if s1 is not None:
+    rowsR = [json.loads(x) for x in (S1EV / "data" / "sessions.jsonl").read_text().splitlines() if x.strip()]
+    DR = _A.Data(rowsR)
+    BR = _A.Boot(DR.scenarios, s1["resamples"], s1["seed"])
+    famS = {}
+    for f in sorted((REPO / "evals" / "paired" / "scenarios" / "holdout-v3").glob("*/*.yaml")):
+        y = _yaml2.safe_load(f.read_text())
+        if isinstance(y, dict) and "id" in y:
+            famS[y["id"]] = f.parent.name
+    anchF, anchO = _A.arm_outcomes(DR, "fable", "anchor"), _A.arm_outcomes(DR, "opus", "anchor")
+    cstarF = _A.policy(DR, "fable", decider="rstar", strong="medium", scope=True)
+    pcO = _A.arm_outcomes(DR, "opus", "pc")
+
+    # --- F2: S1 forest (cost and quality panels)
+    HLAB = {"H1": "H1 Fable frozen config vs plain", "H2": "H2 Jev vs rule R* (Fable)", "H3": "H3 bundle overhead, Opus",
+            "H3b": "H3b bundle overhead, Fable", "H4": "H4 Opus medium vs default", "H5": "H5 Sonnet vs plain Opus",
+            "H6": "H6 live vs predicted (Fable)", "H7": "H7 Sonnet vs Fable, review+explain"}
+    order = ["H1", "H2", "H3", "H3b", "H4", "H5", "H6", "H7"]
+    fr_rows = []
+    for i, h in enumerate(order):
+        e = H[h]["estimate"]
+        y = len(order) - 1 - i
+        fr_rows.append([y, "{" + HLAB[h] + "}", f"{e['gm_ratio']:.4f}", f"{e['gm_ratio'] - e['gm_ratio_ci95'][0]:.4f}",
+                        f"{e['gm_ratio_ci95'][1] - e['gm_ratio']:.4f}", f"{e['d_turn_pass']:.4f}",
+                        f"{e['d_turn_pass'] - e['d_turn_pass_ci95'][0]:.4f}", f"{e['d_turn_pass_ci95'][1] - e['d_turn_pass']:.4f}"])
+    dat("s1-forest.dat", ["y", "label", "r", "rm", "rp", "d", "dm", "dp"], fr_rows)
+
+    # --- F3: freeze candidates (numbered, label-placed)
+    LP.configure(OUT, DATA, 12.0, 5.2)
+    fz = s1["freeze"]
+    keyrows = []
+    for h in ("fable", "opus"):
+        tab = sorted(fz[h]["table"], key=lambda r: (r["gm_ratio"], r["config"]))
+        groups_ = []  # merge configurations that land on (nearly) the same point
+        for r in tab:
+            for g in groups_:
+                if abs(g["x"] - r["gm_ratio"]) < 0.012 and abs(g["y"] - r["d_turn_pass"]) < 0.0045:
+                    g["rows"].append(r)
+                    break
+            else:
+                groups_.append({"x": r["gm_ratio"], "y": r["d_turn_pass"], "rows": [r]})
+        pts, cand, non = [], [], []
+        for j, g in enumerate(groups_, 1):
+            k = f"{h[0].upper()}{j}"
+            for r in g["rows"]:
+                keyrows.append(f"{k} & {h.capitalize()} & {tex_escape(r['config'])} & {hu(r['gm_ratio'], 3)} & {hu(r['d_turn_pass'], 3)} & "
+                               + (r"\ok" if r["candidate"] else "") + r" \\")
+                (cand if r["candidate"] else non).append([f"{r['gm_ratio']:.4f}", f"{r['d_turn_pass']:.4f}"])
+            pts.append((k, k, g["x"], g["y"]))
+        xs = [p[2] for p in pts]
+        ys = [p[3] for p in pts]
+        xr = (min(xs) - 0.05, max(xs) + 0.05)
+        yr = (min(ys) - 0.012, max(ys) + 0.012)
+        M(f"Fz{h.capitalize()}Xmin", f"{xr[0]:.3f}"); M(f"Fz{h.capitalize()}Xmax", f"{xr[1]:.3f}")
+        M(f"Fz{h.capitalize()}Ymin", f"{yr[0]:.3f}"); M(f"Fz{h.capitalize()}Ymax", f"{yr[1]:.3f}")
+        dat(f"fz-{h}-cand.dat", ["x", "y"], cand or [["nan", "nan"]])
+        dat(f"fz-{h}-non.dat", ["x", "y"], non or [["nan", "nan"]])
+        ch = [r for r in tab if r["config"] == fz[h]["chosen"]]
+        pre = [r for r in tab if r["config"] == fz[h]["preregistered_C*"]]
+        plots = []
+        sty = {"cand": r"only marks, mark=*, mark size=2.4pt, color=okblue",
+               "non": r"only marks, mark=o, mark size=2.4pt, color=okgray, mark options={line width=0.9pt}",
+               "chosen": r"only marks, mark=star, mark size=5pt, color=okorange, mark options={line width=1.3pt}",
+               "prereg": r"only marks, mark=diamond, mark size=4.5pt, color=okgreen, mark options={line width=1.3pt}"}
+        nonempty = {"cand": bool(cand), "non": bool(non),
+                    "chosen": any(r["config"] == fz[h]["chosen"] for r in tab),
+                    "prereg": any(r["config"] == fz[h]["preregistered_C*"] for r in tab)}
+        for kk, lab in (("cand", "candidate"), ("non", "not a candidate"), ("chosen", "chosen by the freeze rule"), ("prereg", "preregistered C*")):
+            if nonempty[kk]:
+                plots.append(f"\\addplot[{sty[kk]}] table[x=x, y=y]{{generated/data/fz-{h}-{kk}.dat}};")
+                plots.append(f"\\addlegendentry{{{lab}}}")
+            else:
+                plots.append(f"\\addlegendimage{{{sty[kk]}}}\\addlegendentry{{{lab}}}")
+        write(OUT / f"fz-{h}-plots.tex", "\n".join(plots) + "\n")
+        dat(f"fz-{h}-chosen.dat", ["x", "y"], [[f"{r['gm_ratio']:.4f}", f"{r['d_turn_pass']:.4f}"] for r in ch] or [["nan", "nan"]])
+        dat(f"fz-{h}-prereg.dat", ["x", "y"], [[f"{r['gm_ratio']:.4f}", f"{r['d_turn_pass']:.4f}"] for r in pre] or [["nan", "nan"]])
+        LP.place_labels(f"fz-{h}", pts, xr, yr)
+        M(f"Fz{h.capitalize()}N", len(tab))
+        M(f"Fz{h.capitalize()}Groups", len(groups_))
+        M(f"Fz{h.capitalize()}Cand", sum(1 for r in tab if r["candidate"]))
+    write(TABLES / "fz-key.tex", table(r"l l >{\raggedright\arraybackslash}p{0.5\textwidth} r r c",
+                                       [r"Key & Host & Configuration & cost ratio & turn-pass $\Delta$ & candidate \\"], keyrows))
+    hdr = r"\toprule Key & Host & Configuration & cost ratio & turn-pass $\Delta$ & candidate \\ \midrule"
+    write(TABLES / "fz-key-long.tex", "\\begin{xltabular}{\\textwidth}{l l >{\\raggedright\\arraybackslash}X r r c}\n"
+          + r"\caption{Every configuration the S1 freeze rule considered (keys as in \cref{fig:fz}). Cost ratio and turn-pass difference against the host's plain default.}\label{tab:fzkey}\\" + "\n"
+          + hdr + r" \endfirsthead" + "\n" + hdr + r" \endhead" + "\n" + "\n".join(keyrows) + "\n\\bottomrule\n\\end{xltabular}\n")
+
+    # --- F4: Fable routing by task type and by family (C*_F vs plain Fable)
+    sub_rows = []
+    groups = [("task", t) for t in ("bugfix", "feature", "mixed", "docs", "explain", "review")] + \
+             [("family", f) for f in ("polyglot", "repos", "mixed", "knowledge")]
+    for i, (kind, g) in enumerate(groups):
+        subset = {s for s in DR.scenarios if (DR.meta[s]["task_type"] if kind == "task" else famS.get(s)) == g}
+        c = _A.contrast(cstarF, anchF, BR, subset=subset)
+        y = len(groups) - 1 - i + (0 if kind == "family" else 1)
+        lab = ("task: " if kind == "task" else "family: ") + g + f" ({c['n_scenarios']})"
+        sub_rows.append([y, "{" + lab + "}", f"{c['gm_ratio']:.4f}", f"{c['gm_ratio'] - c['gm_ratio_ci95'][0]:.4f}",
+                         f"{c['gm_ratio_ci95'][1] - c['gm_ratio']:.4f}", f"{c['d_turn_pass']:.4f}",
+                         f"{c['d_turn_pass'] - c['d_turn_pass_ci95'][0]:.4f}", f"{c['d_turn_pass_ci95'][1] - c['d_turn_pass']:.4f}"])
+        M(f"Sub{g.capitalize()}{kind.capitalize()}Dtp", hu(c["d_turn_pass"], 3))
+        M(f"Sub{g.capitalize()}{kind.capitalize()}Low", hu(c["d_turn_pass_ci95"][0], 3))
+        M(f"Sub{g.capitalize()}{kind.capitalize()}Ratio", hu(c["gm_ratio"], 3))
+    dat("s1-subgroups.dat", ["y", "label", "r", "rm", "rp", "d", "dm", "dp"], sub_rows)
+    M("SubTicks", ",".join(str(r[0]) for r in sub_rows))
+    M("SubLabels", ",".join(r[1] for r in sub_rows))
+
+    # --- F5: per-scenario paired ratios
+    def per_scen(a, b):
+        out = {}
+        for s in DR.scenarios:
+            ok = [k for k in a if k[0] == s and k in b and a[k]["_cost_ok"] and b[k]["_cost_ok"]]
+            if ok:
+                ca = _st.mean(_A.cost(a[k]) for k in ok)
+                cb = _st.mean(_A.cost(b[k]) for k in ok)
+                out[s] = (ca / cb, ok, ca, cb)
+        return out
+    psF, psO = per_scen(cstarF, anchF), per_scen(pcO, anchO)
+    for nm, ps in (("fable", psF), ("opus", psO)):
+        vals = sorted(v[0] for v in ps.values())
+        dat(f"perscen-{nm}.dat", ["x", "r"], [[i + 1, f"{v:.4f}"] for i, v in enumerate(vals)])
+        M(f"Ps{nm.capitalize()}N", len(vals))
+        M(f"Ps{nm.capitalize()}Min", hu(vals[0], 2))
+        M(f"Ps{nm.capitalize()}Max", hu(vals[-1], 2))
+        M(f"Ps{nm.capitalize()}Above", sum(1 for v in vals if v > 1))
+    # worked example: the Fable scenario whose ratio is closest to the geometric mean
+    gmF = math.exp(_st.mean(math.log(v[0]) for v in psF.values()))
+    wx = min(psF, key=lambda s: abs(math.log(psF[s][0]) - math.log(gmF)))
+    r_, ok_, ca_, cb_ = psF[wx]
+    M("WxScen", tex_escape(wx))
+    M("WxReps", len(ok_))
+    M("WxRouted", money(ca_))
+    M("WxPlain", money(cb_))
+    M("WxRatio", hu(r_, 3))
+    M("WxLog", hu(math.log(r_), 3))
+    M("WxArm", "routed to Sonnet" if cstarF[ok_[0]]["arm"] == "pc" else "kept on Fable")
+    M("WxGM", hu(gmF, 3))
+    M("WxNScen", len(psF))
+
+    # --- F6: decision model vs rule: discordant scenario-reps and the bound
+    jevP = _A.policy(DR, "fable", decider="jev", strong="medium", scope=True)
+    disc = sorted(k for k in jevP if k in cstarF and jevP[k]["arm"] != cstarF[k]["arm"])
+    drows, dcost, dtp_ = [], [], []
+    for k in disc:
+        a, b = jevP[k], cstarF[k]
+        dc = _A.cost(a) - _A.cost(b)
+        dcost.append(dc)
+        dtp_.append(a["turn_pass_frac"] - b["turn_pass_frac"])
+        nm = lambda r: "Sonnet (Pc)" if r["arm"] == "pc" else "Fable, medium"
+        drows.append(f"{tex_escape(k[0])} & {k[1]} & {nm(a)} & {nm(b)} & \\${money(_A.cost(a))} & \\${money(_A.cost(b))} & "
+                     f"{hu(a['turn_pass_frac'], 3)} & {hu(b['turn_pass_frac'], 3)} \\\\")
+    write(TABLES / "discordant.tex", table("l r l l r r r r", [
+        r" & & \multicolumn{2}{c}{model chosen by} & \multicolumn{2}{c}{session cost} & \multicolumn{2}{c}{turn-pass} \\",
+        r"\cmidrule(lr){3-4}\cmidrule(lr){5-6}\cmidrule(l){7-8}",
+        r"Scenario & rep & Jev & rule R* & Jev & R* & Jev & R* \\"], drows))
+    nrep = len([k for k in jevP if k in cstarF])
+    meanF = _st.mean(_A.cost(cstarF[k]) for k in cstarF)
+    M("DcN", len(disc)); M("DcUnits", nrep)
+    M("DcD", hu(len(disc) / nrep, 3))
+    M("DcMeanDiff", money(_st.mean(dcost)))
+    M("DcMeanAbsDiff", money(_st.mean(abs(x) for x in dcost)))
+    M("DcBound", money(len(disc) / nrep * _st.mean(abs(x) for x in dcost), 3))
+    M("DcMeanCost", money(meanF))
+    M("DcBoundPct", pct(len(disc) / nrep * _st.mean(abs(x) for x in dcost) / meanF, 1))
+
+    # --- F7: effort across hosts (three studies)
+    eff_rows = []
+    effs = [("Sonnet 5 (follow-up 1)", ej["rows"][0]["gm_ratio"], ej["rows"][0]["ci95"], ej["quality"]["mean_delta_turn_pass"], ej["quality"]["ci95"]),
+            ("Fable 5.1 (follow-up 2)", f1["gm_ratio"], f1["ci95"], fq["mean_delta_turn_pass"], fq["ci95"]),
+            ("Opus 5.5 (S1, H4)", H["H4"]["estimate"]["gm_ratio"], H["H4"]["estimate"]["gm_ratio_ci95"],
+             H["H4"]["estimate"]["d_turn_pass"], H["H4"]["estimate"]["d_turn_pass_ci95"])]
+    for i, (lab, g, ci, d, dci) in enumerate(effs):
+        eff_rows.append([2 - i, "{" + lab + "}", f"{g:.4f}", f"{g - ci[0]:.4f}", f"{ci[1] - g:.4f}", f"{d:.4f}", f"{d - dci[0]:.4f}", f"{dci[1] - d:.4f}"])
+    dat("effort-hosts.dat", ["y", "label", "r", "rm", "rp", "d", "dm", "dp"], eff_rows)
+
+    # --- F8: where the money goes (S1, mean $ per session by token class)
+    groupsC = [("plain Fable", lambda r: r["host"] == "fable" and r["arm"] == "anchor"),
+               ("shipped, Fable host", lambda r: r["host"] == "fable" and r["arm"] == "shipped"),
+               ("Sonnet decided once (Pc)", lambda r: r["arm"] == "pc"),
+               ("plain Opus", lambda r: r["host"] == "opus" and r["arm"] == "anchor")]
+    comp_rows = []
+    for i, (lab, fn) in enumerate(groupsC):
+        ss = [r for r in rowsR if fn(r) and r.get("cost_valid")]
+        acc = [0.0, 0.0, 0.0, 0.0]
+        for r in ss:
+            for mdl, tk in r["tokens"].items():
+                pr = PRICE.get(mdl)
+                if pr is None:
+                    continue
+                for j, cls in enumerate(("input", "cache_read", "cache_write", "output")):
+                    acc[j] += tk.get(cls, 0) * pr[j] / 1e6
+        acc = [a / len(ss) for a in acc]
+        comp_rows.append([3 - i, "{" + lab + "}"] + [f"{a:.4f}" for a in acc])
+        key = "".join(w.capitalize() for w in re.sub(r"[^a-z ]", "", lab.lower()).split())[:14]
+        M(f"Cc{key}Total", money(sum(acc)))
+        M(f"Cc{key}ReadShare", pct(acc[1] / sum(acc)))
+        M(f"Cc{key}WriteShare", pct(acc[2] / sum(acc)))
+    dat("s1-composition.dat", ["y", "label", "inp", "rd", "wr", "out"], comp_rows)
+
+    # --- F9: cumulative evidence for routing, per host
+    PIL = [json.loads(x) for x in (REPO / "docs/evidence/2026-10-02-paired-campaign/pilot/pairs.jsonl").read_text().splitlines() if x.strip()]
+    cum = []
+
+    def gmci(vals, cl, key):
+        e, lo, hi, n = PM.cluster_boot_mean(vals, cl, PM.rng_for(20261005, *key), 10000)
+        return math.exp(e), math.exp(lo), math.exp(hi), n
+    for h in ("fable", "opus"):
+        pv = [p for p in PIL if p["host"] == h and p["arm"] == "sticky" and p.get("valid", p.get("cost_valid", True)) and p.get("log_cost_ratio") is not None]
+        stages = [("pilot (sticky, 5 scenarios)", gmci([p["log_cost_ratio"] for p in pv], [p["scenario_id"] for p in pv], ("cum", h, "pilot")))]
+        for sp in ("train", "test"):
+            rr = [r for r in PM._cost_rows(DS["pairs"]) if r["host"] == h and r["arm"] == "sticky" and r["split"] == sp]
+            stages.append((f"main-v1 {sp} (sticky)", gmci([r["y"] for r in rr], [r["scenario"] for r in rr], ("cum", h, sp))))
+        e = H["H1" if h == "fable" else "H5"]["estimate"]
+        stages.append(("S1 holdout (" + ("frozen config, H1" if h == "fable" else "Sonnet, H5") + ")",
+                       (e["gm_ratio"], e["gm_ratio_ci95"][0], e["gm_ratio_ci95"][1], e["n_scenarios"])))
+        for j, (lab, (g, lo, hi, n)) in enumerate(stages):
+            cum.append([(3 - j) + (5 if h == "fable" else 0), "{" + f"{h.capitalize()}: {lab}" + "}", f"{g:.4f}", f"{g - lo:.4f}", f"{hi - g:.4f}"])
+            M(f"Cum{h.capitalize()}{['Pilot', 'Train', 'Test', 'Sone'][j]}", hu(g, 3))
+            M(f"Cum{h.capitalize()}{['Pilot', 'Train', 'Test', 'Sone'][j]}N", n)
+    dat("cumulative.dat", ["y", "label", "r", "rm", "rp"], cum)
+    M("CumTicks", ",".join(str(r[0]) for r in cum))
+    M("CumLabels", ",".join(r[1] for r in cum))
+
+    # --- F10a: observatory event mix and latency by backend
+    hm = list(_csv.DictReader(open(V3 / "a1-observatory" / "health_mix.csv")))
+    hm = sorted([r for r in hm if r["store"] == "events"], key=lambda r: -float(r["share_of_store_events"]))[:7]
+    dat("obs-mix.dat", ["y", "label", "share"], [[len(hm) - 1 - i, "{" + r["health_kind"].replace("_", " ") + "}",
+                                                  f"{100 * float(r['share_of_store_events']):.2f}"] for i, r in enumerate(hm)])
+    M("ObMixTop", hm[0]["health_kind"].replace("_", " "))
+    M("ObMixTopPct", pct(float(hm[0]["share_of_store_events"]), 1))
+
+    # --- Findings at a glance
+    def ci2(v):
+        return f"{hu(v[0], 3)}--{hu(v[1], 3)}"
+    FIND = [
+        ("Decision calls are fast next to host calls", f"Jev p50 \\ObJevPfifty{{}}\\,ms; host p50 \\ObHostPfifty{{}}\\,s", "observatory", "measured"),
+        ("Shadow ``agreement'' was mostly unmatchable", f"\\ObUnmatchN{{}} of \\ObAllN{{}} could not match", "observatory", "measured"),
+        ("Jev accurate within noise of the best, cheapest", f"\\JevHoldAccK{{}}/\\HoldN{{}} correct", "judge benchmark", "preregistered"),
+        ("No judge useful on real read decisions", f"\\TrNUseful{{}} of \\NumBase{{}} judges", "trace study", "preregistered"),
+        ("Routing on Fable saves", f"\\CfFableStickyPairTwo{{}}\\X\\ (\\CfFableStickyPairCITwo{{}})", "main-v1", "preregistered"),
+        ("Routing on Fable saves, fresh scenarios", f"{hu(H['H1']['estimate']['gm_ratio'], 3)}\\X\\ ({ci2(H['H1']['estimate']['gm_ratio_ci95'])})", "S1, H1", "preregistered, replicated"),
+        ("Routing on Opus costs more", f"{hu(H['H5']['estimate']['gm_ratio'], 3)}\\X\\ ({ci2(H['H5']['estimate']['gm_ratio_ci95'])})", "S1, H5", "preregistered, replicated"),
+        ("Rule R* equals the decision model at session start", f"{hu(H['H2']['estimate']['gm_ratio'], 3)}\\X\\ (90\\,\\% {ci2(H['H2']['estimate']['gm_ratio_ci90'])})", "S1, H2", "preregistered"),
+        ("No bundle overhead on Opus", f"{hu(H['H3']['estimate']['gm_ratio'], 3)}\\X\\ (90\\,\\% {ci2(H['H3']['estimate']['gm_ratio_ci90'])})", "S1, H3", "preregistered"),
+        ("Medium effort: Sonnet", f"\\EcRatio{{}}\\X\\ (\\EcCI{{}})", "follow-up 1", "preregistered, provenance-limited"),
+        ("Medium effort: Fable", f"\\EfRatio{{}}\\X\\ (\\EfCI{{}})", "follow-up 2", "preregistered"),
+        ("Medium effort: Opus, no saving", f"{hu(H['H4']['estimate']['gm_ratio'], 3)}\\X\\ ({ci2(H['H4']['estimate']['gm_ratio_ci95'])})", "S1, H4", "preregistered"),
+        ("Review/explain lose quality on Sonnet", f"lower bound {hu(H['H7']['estimate']['d_turn_pass_ci95'][0], 3)}", "S1, H7", "preregistered"),
+        ("Live decide-once equals its prediction", f"{hu(H['H6']['estimate']['gm_ratio'], 3)}\\X\\ (90\\,\\% {ci2(H['H6']['estimate']['gm_ratio_ci90'])})", "S1, H6", "preregistered"),
+        ("Effort switches rewrite the cache", f"\\AoEcX{{}}\\X\\ cache writes", "main-v1 re-analysis", "exploratory"),
+        ("Keyword proxy keeps quality at a cost", f"\\KpProxyRatio{{}}\\X, turn-pass \\KpProxyDtp{{}}", "S1 replay", "exploratory"),
+    ]
+    write(TABLES / "findings.tex", table(r">{\raggedright\arraybackslash}p{0.31\textwidth} >{\raggedright\arraybackslash}p{0.26\textwidth} l >{\raggedright\arraybackslash}p{0.16\textwidth}",
+                                         [r"Finding & Number (95\,\% CI unless noted) & Study & Evidence \\"],
+                                         [f"{a} & {b} & {c} & {d} \\\\" for a, b, c, d in FIND]))
+
+    # --- Configuration recipe: the shipped orchestrator config, verbatim from behaviors/fast-decisions.yaml
+    beh = (REPO / "behaviors" / "fast-decisions.yaml").read_text().splitlines()
+    i0 = next(i for i, l in enumerate(beh) if l.strip() == "config:" and i > 0 and "orchestrator" in "".join(beh[max(0, i - 3):i]))
+    blk = []
+    for l in beh[i0:]:
+        if blk and l.strip() and not l.startswith("      ") and not l.startswith("    config"):
+            break
+        if l.strip().startswith("#"):
+            continue
+        blk.append(l[4:] if l.startswith("    ") else l)
+    write(OUT / "recipe-shipped.yaml", "\n".join(b for b in blk if b.strip()) + "\n")
+    M("BundleVersion", re.search(r'^version = "([^"]+)"', (REPO / "pyproject.toml").read_text(), re.M).group(1))
 
 # ------------------------------------------------------------ numbers.tex
 header = ("% Generated by build_assets.py from docs/evidence/2026-10-02-paired-campaign/ and the files listed there. "

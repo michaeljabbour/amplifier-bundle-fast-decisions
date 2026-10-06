@@ -1,0 +1,54 @@
+\section{Configuration recipes}\label{sec:recipes}
+
+The recipes below use only keys that exist in the shipped bundle (version \BundleVersion). The first listing is the
+orchestrator configuration exactly as it ships in \path{behaviors/fast-decisions.yaml}; the others change one or two
+keys of it.
+
+\paragraph{The shipped default (Fable, Opus and Sonnet hosts alike).} The same configuration serves every host: the
+price gate keeps Opus sessions on Opus, \code{by\_host} sets Fable's own effort to medium, and \code{keep\_on\_host}
+keeps review- and explain-like sessions on the host.\par
+{\small
+\lstinputlisting[basicstyle=\ttfamily\footnotesize, columns=fullflexible, frame=single, rulecolor=\color{okgray}]{generated/recipe-shipped.yaml}}
+
+\paragraph{Recipe: accept the review and explain risk for the larger saving (Fable).} Remove the opt-out. Expected
+cost falls from about \KpProxyTwo\X\ to about \KpRstarTwo\X\ of plain Fable, at the quality risk H7 measured.
+\begin{lstlisting}[basicstyle=\ttfamily\footnotesize, frame=single, rulecolor=\color{okgray}]
+model_routing:
+  keep_on_host:
+    task_types: []
+\end{lstlisting}
+
+\paragraph{Recipe: medium effort on a Sonnet host.} Sonnet at medium cost \EcRatio\X\ its default. The per-host map
+takes any model id:
+\begin{lstlisting}[basicstyle=\ttfamily\footnotesize, frame=single, rulecolor=\color{okgray}]
+effort_routing:
+  by_host:
+    claude-sonnet-5:
+      strong: medium
+\end{lstlisting}
+Do not add Opus to this map: medium did not save money on Opus (\SHFourRatio\X).
+
+\paragraph{Recipe: use the decision model instead of the rule.} Jev chose the same session model as the rule on all
+but \SHTwoDisc\ of \SHTwoReps\ scenario-reps, so this buys nothing measurable and sends the starting state to an
+external service. If you want it anyway, opt in explicitly:
+\begin{lstlisting}[basicstyle=\ttfamily\footnotesize, frame=single, rulecolor=\color{okgray}]
+allow_external_state: true
+model_routing:
+  start_policy: judge
+\end{lstlisting}
+
+\paragraph{Claude Code, Codex and Copilot CLI.} The smart tool makes the same session-start decision outside
+Amplifier. \code{decide} prints the choice; \code{launch} makes it and starts the harness with that model and effort
+(\code{--dry-run} prints the command instead):
+\begin{lstlisting}[basicstyle=\ttfamily\footnotesize, frame=single, rulecolor=\color{okgray}]
+npx skills add michaeljabbour/amplifier-bundle-fast-decisions
+amplifier-fast-decisions decide --task "Fix the failing date parser test" \
+    --host-model claude-fable-5-1 --workspace . --decider rules
+amplifier-fast-decisions launch --harness claude --task "Explain the cache layer" \
+    --host-model claude-fable-5-1 --workspace . --dry-run
+amplifier-fast-decisions launch --harness codex  --task "..." --host-model claude-fable-5-1
+amplifier-fast-decisions launch --harness copilot --task "..." --host-model claude-fable-5-1
+npx skills update
+\end{lstlisting}
+For Amplifier itself, add the bundle as in the repository README and keep it current with \code{amplifier bundle
+update}. Savings outside Amplifier have not been measured yet (S4).

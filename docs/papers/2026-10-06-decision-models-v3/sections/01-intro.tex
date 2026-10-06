@@ -23,8 +23,27 @@ full paired agent sessions (\cref{sec:paired}), and reached a plateau where the 
 model rather than which one to pick (\cref{sec:plateau}). \Cref{sec:recommend} says what to set, per host model and
 per harness; \cref{sec:limits} says what we did not finish.
 
+\begin{figure}[htbp]
+\centering
+\input{figures/fig-timeline.tex}
+\caption{The study program in order: what each stage measured, how big it was and what it cost in model calls.}
+\label{fig:timeline}
+\howtoread{Follow the arrows. Each stage answered a question the previous one raised: telemetry could not say whether
+decisions were right (so we built benchmarks), benchmarks could not say what a decision saves (so we ran whole
+sessions), and whole sessions raised the effort and decider questions that the follow-ups and S1 settled.}
+\end{figure}
+
 \paragraph{How to read the evidence labels.} Results marked \prereg\ test hypotheses fixed before the data;
 \screen\ marks exploratory results. Cost ratios are \term{geometric means} of per-pair ratios unless labelled
 otherwise, and a 95\,\% interval is given wherever one exists. Every number is generated from committed evidence
 files. The full detail of each study, with its own figures and its peer review, is in the companion technical
 report v2 (\path{docs/papers/2026-10-02-paired-measurement/}), cited here as ``the companion report''.
+
+
+\begin{table}[htbp]
+\centering\small
+\caption{Findings at a glance. ``Preregistered'' means the hypothesis and its threshold were fixed before the data;
+``replicated'' means an independent set of scenarios gave the same answer; ``exploratory'' findings are hypotheses.}
+\label{tab:findings}
+\input{generated/tables/findings.tex}
+\end{table}
