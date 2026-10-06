@@ -1,0 +1,14 @@
+% S1 freeze candidates per host: cost ratio vs turn-pass difference; numbered (key table follows).
+\newcommand{\fzpanel}[3]{%
+\begin{tikzpicture}
+\begin{axis}[benchmark, scale only axis, width=12cm, height=5.2cm, clip=false,
+  xmin=\csname Fz#1Xmin\endcsname, xmax=\csname Fz#1Xmax\endcsname,
+  ymin=\csname Fz#1Ymin\endcsname, ymax=\csname Fz#1Ymax\endcsname,
+  scaled y ticks=false, yticklabel style={/pgf/number format/fixed, /pgf/number format/precision=3}, xmajorgrids, ymajorgrids,
+  xlabel={Cost ratio against plain #2}, ylabel={Turn-pass difference}, title={#2 host}, title style={font=\small\bfseries},
+  legend to name=fzlegend#1, legend columns=4, legend cell align=left,
+  legend style={/tikz/every even column/.append style={column sep=8pt}}]
+\input{generated/fz-#3-plots.tex}
+\input{generated/labels/fz-#3.tex}
+\end{axis}
+\end{tikzpicture}}

@@ -1,0 +1,8 @@
+y label share
+6 {session heartbeat} 49.00
+5 {native hook metadata} 18.09
+4 {shadow} 1.72
+3 {recorder status} 0.95
+2 {configuration} 0.71
+1 {session closed} 0.68
+0 {turn start} 0.34

@@ -1,0 +1,52 @@
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}l l >{\raggedright\arraybackslash}p{0.5\textwidth} r r c@{}}
+\toprule
+Key & Host & Configuration & cost ratio & turn-pass $\Delta$ & candidate \\
+\midrule
+F1 & Fable & always\_route | strong default | scope off | keep none & 0.528 & $-$0.017 & \ok \\
+F1 & Fable & always\_route | strong medium | scope off | keep none & 0.528 & $-$0.017 & \ok \\
+F1 & Fable & rstar | strong default | scope off | keep none & 0.528 & $-$0.017 & \ok \\
+F1 & Fable & rstar | strong medium | scope off | keep none & 0.528 & $-$0.017 & \ok \\
+F2 & Fable & always\_route | strong medium | scope 300 | keep none & 0.581 & $-$0.013 & \ok \\
+F2 & Fable & rstar | strong medium | scope 300 | keep none & 0.581 & $-$0.013 & \ok \\
+F2 & Fable & jev | strong medium | scope 300 | keep none & 0.586 & $-$0.016 & \ok \\
+F3 & Fable & always\_route | strong default | scope 300 | keep none & 0.608 & $-$0.012 & \ok \\
+F3 & Fable & rstar | strong default | scope 300 | keep none & 0.608 & $-$0.012 & \ok \\
+F3 & Fable & jev | strong default | scope 300 | keep none & 0.618 & $-$0.015 & \ok \\
+F4 & Fable & always\_route | strong medium | scope off | keep review+explain & 0.618 & $-$0.007 & \ok \\
+F4 & Fable & rstar | strong medium | scope off | keep review+explain & 0.618 & $-$0.007 & \ok \\
+F5 & Fable & always\_route | strong medium | scope 300 | keep review+explain & 0.650 & $-$0.006 & \ok \\
+F5 & Fable & rstar | strong medium | scope 300 | keep review+explain & 0.650 & $-$0.006 & \ok \\
+F5 & Fable & jev | strong medium | scope 300 | keep review+explain & 0.655 & $-$0.009 & \ok \\
+F6 & Fable & always\_route | strong default | scope off | keep review+explain & 0.650 & $-$0.001 & \ok \\
+F6 & Fable & rstar | strong default | scope off | keep review+explain & 0.650 & $-$0.001 & \ok \\
+F7 & Fable & always\_route | strong default | scope 300 | keep review+explain & 0.706 & 0.000 & \ok \\
+F7 & Fable & rstar | strong default | scope 300 | keep review+explain & 0.706 & 0.000 & \ok \\
+F7 & Fable & jev | strong default | scope 300 | keep review+explain & 0.717 & $-$0.003 & \ok \\
+F8 & Fable & plain-medium & 0.851 & 0.005 & \ok \\
+F9 & Fable & bundle-unrouted medium & 0.853 & $-$0.005 & \ok \\
+F10 & Fable & bundle-unrouted default & 1.004 & 0.004 &  \\
+O1 & Opus & plain-medium & 0.992 & $-$0.002 &  \\
+O2 & Opus & bundle-unrouted default & 0.999 & 0.007 &  \\
+O2 & Opus & bundle-unrouted medium & 1.009 & 0.003 &  \\
+O3 & Opus & jev | strong default | scope 300 | keep review+explain & 1.080 & 0.005 &  \\
+O4 & Opus & jev | strong medium | scope 300 | keep review+explain & 1.091 & 0.000 &  \\
+O5 & Opus & always\_route | strong default | scope 300 | keep review+explain & 1.097 & 0.005 &  \\
+O5 & Opus & rstar | strong default | scope 300 | keep review+explain & 1.097 & 0.005 &  \\
+O6 & Opus & always\_route | strong medium | scope 300 | keep review+explain & 1.109 & 0.004 &  \\
+O6 & Opus & rstar | strong medium | scope 300 | keep review+explain & 1.109 & 0.004 &  \\
+O7 & Opus & jev | strong default | scope 300 | keep none & 1.136 & $-$0.002 &  \\
+O7 & Opus & jev | strong medium | scope 300 | keep none & 1.144 & $-$0.006 &  \\
+O8 & Opus & always\_route | strong default | scope 300 | keep none & 1.153 & $-$0.002 &  \\
+O8 & Opus & rstar | strong default | scope 300 | keep none & 1.153 & $-$0.002 &  \\
+O8 & Opus & always\_route | strong medium | scope 300 | keep none & 1.163 & $-$0.002 &  \\
+O8 & Opus & rstar | strong medium | scope 300 | keep none & 1.163 & $-$0.002 &  \\
+O9 & Opus & always\_route | strong default | scope off | keep review+explain & 1.182 & 0.005 &  \\
+O9 & Opus & rstar | strong default | scope off | keep review+explain & 1.182 & 0.005 &  \\
+O9 & Opus & always\_route | strong medium | scope off | keep review+explain & 1.187 & 0.005 &  \\
+O9 & Opus & rstar | strong medium | scope off | keep review+explain & 1.187 & 0.005 &  \\
+O10 & Opus & always\_route | strong default | scope off | keep none & 1.255 & $-$0.004 &  \\
+O10 & Opus & always\_route | strong medium | scope off | keep none & 1.255 & $-$0.004 &  \\
+O10 & Opus & rstar | strong default | scope off | keep none & 1.255 & $-$0.004 &  \\
+O10 & Opus & rstar | strong medium | scope off | keep none & 1.255 & $-$0.004 &  \\
+\bottomrule
+\end{tabular*}

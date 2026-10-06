@@ -1,0 +1,25 @@
+% Medium vs default reasoning effort, per host, three studies.
+\begin{tikzpicture}
+\begin{axis}[benchmark, name=cost, scale only axis, width=5.2cm, height=2.8cm, xmin=0.75, xmax=1.05,
+  xtick={0.8,0.9,1}, xmajorgrids, ymin=-0.6, ymax=2.6, ytick={0,1,2},
+  yticklabels from table={generated/data/effort-hosts.dat}{label}, y tick label style={font=\footnotesize},
+  xlabel={Cost ratio, medium / default}, title={Cost}, title style={font=\small\bfseries},
+  legend to name=efflegend, legend columns=2, legend cell align=left,
+  legend style={/tikz/every even column/.append style={column sep=10pt}}]
+\draw[black!70, line width=0.8pt] (axis cs:1,-0.6) -- (axis cs:1,2.6);
+\addplot[only marks, mark=*, mark size=2.4pt, color=okblue, error bars/.cd, x dir=both, x explicit,
+  error bar style={line width=1pt}] table[x=r, y=y, x error minus=rm, x error plus=rp]{generated/data/effort-hosts.dat};
+\addlegendentry{cost, 95\,\% CI}
+\addplot[only marks, mark=square*, mark size=2.2pt, color=okgreen] coordinates {(5,5)};
+\addlegendentry{turn-pass, 95\,\% CI}
+\end{axis}
+\begin{axis}[benchmark, at={(cost.south east)}, xshift=0.5cm, scale only axis, width=4.0cm, height=2.8cm,
+  xmin=-0.06, xmax=0.09, xtick={-0.05,0,0.05}, scaled x ticks=false, xticklabel style={/pgf/number format/fixed}, xmajorgrids,
+  ymin=-0.6, ymax=2.6, ytick={0,1,2}, yticklabels={}, xlabel={Turn-pass difference}, title={Quality},
+  title style={font=\small\bfseries}]
+\draw[black!70, line width=0.8pt] (axis cs:0,-0.6) -- (axis cs:0,2.6);
+\draw[okorange, dashed, line width=0.8pt] (axis cs:-0.05,-0.6) -- (axis cs:-0.05,2.6);
+\addplot[only marks, mark=square*, mark size=2.2pt, color=okgreen, error bars/.cd, x dir=both, x explicit,
+  error bar style={line width=1pt}] table[x=d, y=y, x error minus=dm, x error plus=dp]{generated/data/effort-hosts.dat};
+\end{axis}
+\end{tikzpicture}

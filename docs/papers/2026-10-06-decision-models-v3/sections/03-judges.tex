@@ -27,6 +27,17 @@ whiskers overlap, which is why their differences are called ``within noise''. Je
 the cost and latency of the cloud models (companion report, Part I).}
 \end{figure}
 
+\begin{figure}[htbp]
+\centering
+\pgfplotslegendfromname{phcostlegend}\par\smallskip
+\input{figures/fig-ph-costacc.tex}
+\caption{Cost per million decisions (log scale) against holdout accuracy, for the judges that have a price.
+Blue: preregistered run; black pentagons: post-hoc run (Clef, Clef-Flash and the in-run Jev reference).}
+\label{fig:costacc}
+\howtoread{Left is cheaper, up is more accurate. Jev is the cheapest point near the top; the cloud models buy a few
+points of accuracy, within noise, for many times the price.}
+\end{figure}
+
 \paragraph{Real decisions.} Constructed cases can be easier or harder than real ones. A second preregistered study
 rebuilt \TrN\ real read-shortcut decisions from earlier sessions, exactly as the in-session judge had seen them.
 Reviewers agreed with each other ($\kappa = \TrKappaAB$) much more than with what the host actually did next

@@ -21,15 +21,26 @@ PDF = HERE / "decision-models-v3.pdf"
 MARK_R = 3.2
 LEGENDS = {  # caption start -> (first legend entry words, topmost words of the plot)
     "Latency of decision calls and": (["median", "(p50)"], ["A", "decision", "is"]),
+    "What the observatory store": (["event", "kind"], ["Mostly", "bookkeeping,"]),
     "Holdout accuracy with 95": (["preregistered", "run"], ["Holdout", "accuracy,"]),
+    "Cost per million decisions (log": (["preregistered", "run", "(Jev,"], ["What", "a", "point"]),
     "Confirmatory cost ratios on the": (["pair", "reading", "(co-primary)"], ["Fable", "sticky"]),
     "Decide-once policies priced on the": (["policy", "on", "main-v1,"], ["Who", "decides,"]),
+    "S1 hypotheses": (["estimate,", "95"], ["Cost"]),
+    "Per-scenario paired cost ratios": (["one", "scenario"], ["Fable:", "frozen"]),
+    "The frozen Fable configuration against plain": (["estimate,", "95"], ["Cost"]),
+    "All 23 Fable": (["candidate"], ["Fable", "host"]),
+    "Medium against default reasoning": (["cost,", "95"], ["Cost"]),
+    "Mean cost per S1 session": (["uncached", "input"], ["Where", "the", "money"]),
+    "Routing to Sonnet against the plain host, per": (["geometric-mean", "cost"], ["The", "same", "answer,"]),
 }
 NUM = dict(re.findall(r"\\newcommand\{\\(\w+)\}\{([^}]*)\}", (HERE / "generated/numbers.tex").read_text()))
 SC = (int(NUM["ScXMax"]), int(NUM["ScYMin"]), int(NUM["ScYMax"]))
 SCATTERS = [  # caption start, x ticks, y ticks, x range, y range, label panel, data dir, log x, extra markers file
     ("Real decisions: correct automatic reads", [0, 2, 4, 6, 8, 10, 12], [0, 5, 10, 15, 20], (-1, 14), (-1.5, 22),
      "reads-holdout-ph", "generated/data", False, None),
+    ("Cost per million decisions (log", [10, 30, 100, 300, 1000], [70, 80, 90, 100], (8, 2000), (70, 102),
+     "costacc-holdout", "generated/data", True, None),
 ]
 
 

@@ -1,0 +1,9 @@
+y label r rm rp d dm dp
+7 {H1 Fable frozen config vs plain} 0.5809 0.0391 0.0440 -0.0127 0.0149 0.0146
+6 {H2 Jev vs rule R* (Fable)} 1.0081 0.0081 0.0136 -0.0030 0.0049 0.0030
+5 {H3 bundle overhead, Opus} 0.9993 0.0175 0.0221 0.0069 0.0109 0.0147
+4 {H3b bundle overhead, Fable} 1.0038 0.0172 0.0178 0.0039 0.0060 0.0060
+3 {H4 Opus medium vs default} 0.9918 0.0181 0.0175 -0.0017 0.0117 0.0111
+2 {H5 Sonnet vs plain Opus} 1.2554 0.0584 0.0655 -0.0045 0.0196 0.0217
+1 {H6 live vs predicted (Fable)} 1.0139 0.0213 0.0212 0.0040 0.0148 0.0146
+0 {H7 Sonnet vs Fable, review+explain} 0.6160 0.0513 0.0562 -0.0279 0.0356 0.0405
