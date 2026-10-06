@@ -19,20 +19,25 @@ from amplifier_fast_decisions import cli, config as fd_config, operations  # noq
 
 SNAPSHOT = {
     "ok": True,
+    "decider": "rules",
     "backend": {"name": "jev", "external": True, "opt_in": False, "credentials_present": {"TYPESAFE_API_KEY": False}},
-    "consent": {"allow_external_state": True, "env_FAST_DECISIONS_ALLOW_EXTERNAL_STATE": None,
+    "consent": {"allow_external_state": False, "env_FAST_DECISIONS_ALLOW_EXTERNAL_STATE": None,
                 "note": "decide/select take consent from their argument or the environment variable, never from this file"},
-    "decision": {"start_policy": "judge", "decision_scope": "session", "start_model": "claude-sonnet-5",
-                 "provider_match": "anthropic", "keep_on_host": None},
+    "decision": {"start_policy": "rules", "decision_scope": "session", "complex_min_prompt_chars": None,
+                 "start_model": "claude-sonnet-5", "provider_match": "anthropic", "keep_on_host": ["review", "explain"]},
     "scope_gate": {"cheap_max_workspace_files": 300},
-    "effort": {"by_tier": {"cheap": "medium", "strong": None}, "phase_map": [], "constant_within_session": True},
+    "effort": {"by_tier": {"cheap": "medium", "strong": None},
+               "by_host": {"claude-fable-5-1": {"strong": "medium"}},
+               "by_tier_for_host": {"claude-opus-5-5": {"cheap": "medium", "strong": None},
+                                    "claude-fable-5-1": {"cheap": "medium", "strong": "medium"}},
+               "phase_map": [], "constant_within_session": True},
     "read_shortcut": False, "timeout_ms": 3000, "thresholds": {"min_probability": 0.9, "min_margin": 0.2},
     "price_gate": [
         {"host_model": "claude-opus-5-5", "route": False, "reason": "price_gate_host", "predicted_cost_ratio": 1.3656,
          "request_multiplier": 1.38, "multiplier_source": "table"},
         {"host_model": "claude-fable-5-1", "route": True, "reason": "price_gate_route", "predicted_cost_ratio": 0.5229,
          "request_multiplier": 1.11, "multiplier_source": "table"}],
-    "warnings": ["missing credential environment variable(s): TYPESAFE_API_KEY"],
+    "warnings": [],
 }
 
 
@@ -60,7 +65,8 @@ class ConfigReportTests(unittest.TestCase):
         self.assertEqual(report["warnings"], [])
 
     def test_an_opt_in_external_backend_without_consent_warns(self):
-        report = _report(overrides={"backend": "clef", "allow_external_state": False})
+        report = _report(overrides={"backend": "clef", "allow_external_state": False,
+                                   "model_routing": {"start_policy": "judge"}})
         self.assertEqual(report["backend"]["name"], "clef")
         self.assertTrue(report["backend"]["opt_in"])
         joined = " ".join(report["warnings"])
@@ -100,6 +106,9 @@ class DoctorAndDiagnoseTests(unittest.TestCase):
         self.assertEqual(report["backend"]["name"], "jev")
         self.assertEqual(report["scope_gate"], {"cheap_max_workspace_files": 300})
         self.assertEqual(report["effort"]["by_tier"], {"cheap": "medium", "strong": None})
+        self.assertEqual(report["effort"]["by_tier_for_host"], {"claude-fable-5-1": {"cheap": "medium", "strong": "medium"}})
+        self.assertEqual(report["decider"], "rules")
+        self.assertEqual(report["warnings"], [])
         self.assertEqual([g["host_model"] for g in report["price_gate"]], ["claude-fable-5-1"])
         gate = next(c for c in data["checks"] if c["check"] == "price_gate[claude-fable-5-1]")
         self.assertEqual(gate["value"], "route")
@@ -119,9 +128,13 @@ class DoctorAndDiagnoseTests(unittest.TestCase):
         self.assertEqual(diagnosed, reported)
 
     def test_diagnose_surfaces_configuration_warnings_as_next_actions(self):
-        with tempfile.TemporaryDirectory() as tmp, mock.patch.dict(os.environ, {"AFAST_SETTINGS": "/nonexistent/s.yaml"}):
-            os.environ.pop("TYPESAFE_API_KEY", None)
-            result = operations.diagnose(events_dir=tmp, probe=False)
+        with tempfile.TemporaryDirectory() as tmp:
+            # The shipped decider is the rule R*: Jev is only checked once a user opts into start_policy: judge.
+            settings = Path(tmp) / "settings.yaml"
+            settings.write_text("model_routing:\n  start_policy: judge\n", encoding="utf-8")
+            with mock.patch.dict(os.environ, {"AFAST_SETTINGS": str(settings)}):
+                os.environ.pop("TYPESAFE_API_KEY", None)
+                result = operations.diagnose(events_dir=tmp, probe=False)
         self.assertTrue(any(a.startswith("Configuration:") and "TYPESAFE_API_KEY" in a for a in result["next_actions"]))
 
 

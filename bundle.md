@@ -1,7 +1,7 @@
 ---
 bundle:
   name: fast-decisions
-  version: 0.2.0
+  version: 0.3.0
   description: >-
     Foundation plus orchestrator-primary fast-decisions: loop-fast-decisions
     replaces foundation's loop-streaming (and wraps it, so every upstream

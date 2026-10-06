@@ -44,10 +44,11 @@ class ConfigParityTests(unittest.TestCase):
                            ("bundles/active-mlx.yaml", {"model", "mlx_url"})):
             config = _orchestrator_config(rel)
             differing = {k for k in set(config) | set(base) if config.get(k) != base.get(k)}
-            declared = extra | ({"backend", "allow_external_state"} if rel.endswith("mlx.yaml") else set())
+            declared = extra | ({"backend", "model_routing"} if rel.endswith("mlx.yaml") else set())
             self.assertEqual(differing, declared, rel)
         mlx = _orchestrator_config("bundles/active-mlx.yaml")
         self.assertEqual((mlx["backend"], mlx["allow_external_state"]), ("mlx", False))
+        self.assertEqual(mlx["model_routing"]["start_policy"], "judge")  # the rung that asks a local judge
 
     def test_every_orchestrator_config_is_a_valid_policy(self):
         for rel in ("behaviors/fast-decisions.yaml", "bundles/active.yaml", "bundles/active-routing.yaml", "bundles/active-mlx.yaml"):
@@ -62,6 +63,7 @@ class ConfigParityTests(unittest.TestCase):
             effort = config.get("effort_routing") or {}
             self.assertEqual([k for k in PHASE_KEYS if k in effort], [], name)
             self.assertEqual(effort.get("by_tier"), {"cheap": "medium", "strong": None}, name)
+            self.assertEqual(effort.get("by_host"), {"claude-fable-5-1": {"strong": "medium"}}, name)
 
     def test_sync_script_finds_nothing_to_do(self):
         run = subprocess.run([sys.executable, str(ROOT / "scripts/sync_active_bundles.py"), "--check"],
@@ -100,7 +102,7 @@ class ConfigParityTests(unittest.TestCase):
             self.assertEqual(default["timeout_ms"], 3000)
             self.assertEqual(default["backend"], "jev")
             self.assertEqual(default["model_routing"]["decision_scope"], "session")
-            self.assertEqual(default["effort_routing"], {"by_tier": {"cheap": "medium", "strong": None}})
+            self.assertEqual(default["effort_routing"], {"by_tier": {"cheap": "medium", "strong": None}, "by_host": {"claude-fable-5-1": {"strong": "medium"}}})
             self.assertEqual(explicit["timeout_ms"], 900)
 
     def test_configure_active_external_backend_requires_consent(self):

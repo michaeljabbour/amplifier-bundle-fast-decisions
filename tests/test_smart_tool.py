@@ -240,7 +240,7 @@ class SmartToolTests(unittest.IsolatedAsyncioTestCase):
             self.assertFalse(blocked_loop)
 
     def test_deterministic_surface(self):
-        self.assertEqual(manifest()['version'], '0.2.0')
+        self.assertEqual(manifest()['version'], '0.3.0')
         self.assertFalse(describe()['executes_actions'])
         for capability in [None, 'manifest', 'describe', 'select', 'install-skill']:
             text = skill(capability)

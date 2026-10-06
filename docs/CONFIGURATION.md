@@ -21,15 +21,46 @@ explicitly. The research-backed shipped defaults are:
 | `model_routing.price_gate` | off (legacy: route whenever the start model's list price is lower) | `{enabled: true}` |
 | `model_routing.decision_scope` | `turn` (decide at every turn) | `session` (decide once, reuse) |
 | `effort_routing.by_tier.cheap` | unset | `medium` |
-| `effort_routing.by_tier.strong` (host effort) | unset | `null` (provider default; opt-in `medium`) |
-| `model_routing.keep_on_host` | off | off (commented example) |
+| `model_routing.start_policy` (the decider) | `cheap` | `rules` with `complex_min_prompt_chars: null` = the rule **R\*** (see "Decider") |
+| `effort_routing.by_tier.strong` (host effort) | unset | `null` (provider default) |
+| `effort_routing.by_host` | unset | `{claude-fable-5-1: {strong: medium}}`: Fable 5.1 host effort `medium` (S1 C\*_F); Opus 5.5 keeps the default |
+| `model_routing.keep_on_host` | off | `{task_types: [review, explain]}` (S1 H7) |
 | `model_routing.start_model` | required when `model_routing` is set | `claude-sonnet-5` |
 | `model_routing.cheap_max_workspace_files` | unset (no scope gate) | `300` |
 | `effort_routing.orient` / `explore` / `implement` | unset | **deleted** (see below): effort is one value per tier |
 | `read_shortcut` | `True` | `false` |
 | `timeout_ms` | `750` | `3000` |
-| `allow_external_state` | `False` (env `FAST_DECISIONS_ALLOW_EXTERNAL_STATE`) | `true` in the bundle (composing it is the consent); `decide`/`select` outside Amplifier take consent only from their argument or the environment variable |
+| `allow_external_state` | `False` (env `FAST_DECISIONS_ALLOW_EXTERNAL_STATE`) | `false`: the shipped decider R\* asks no model. A judge opt-in needs `true` (or, for `decide`/`select` outside Amplifier, the argument or the environment variable) |
 | `backend` | none | `jev` |
+
+### Decider
+
+The session-start decision is made by one of two deciders. **Shipped: the rule R\*** (`start_policy: rules`,
+`complex_min_prompt_chars: null`): route the whole session to `start_model` (cheap tier, `medium` effort) unless the
+price gate keeps it on the host (Opus 5.5), the workspace has more than `cheap_max_workspace_files` (300) files, or
+`keep_on_host` matches. No model is asked, no consent is needed, `amplifier-fast-decisions decide` reports
+`decider: rules` and `judge.status: not_used`. `complex_min_prompt_chars: null` switches the older prompt-length rule
+off; an absent key keeps 2000, and a judge that abstains still falls back to the 2000-character rule, never to
+"always route".
+
+Why: S1 (holdout-v3, 60 scenarios no agent had run, 2 reps, Fable 5.1 and Opus 5.5) found Jev and R\* equivalent on
+Fable: cost ratio 1.008 (90% CI 1.000-1.019, bound +-5%), turn-pass -0.003 (-0.007 to 0.000, bound +-0.02); the two
+disagreed on 4 of 120 scenario-reps. The preregistered rule: equivalent => ship the simpler decider
+([RESULT.md, H2](https://github.com/michaeljabbour/amplifier-bundle-fast-decisions/blob/v3/program/docs/evidence/2026-10-06-holdout-v3/RESULT.md),
+[preregistration](https://github.com/michaeljabbour/amplifier-bundle-fast-decisions/blob/v3/program/evals/paired/PREREGISTRATION-holdout-v3.md),
+[frozen rule](https://github.com/michaeljabbour/amplifier-bundle-fast-decisions/blob/v3/program/evals/v3/FROZEN.md)).
+
+**Opt in to Jev** (or any judge backend) in `~/.amplifier/fast-decisions/settings.yaml`:
+
+```yaml
+allow_external_state: true        # the judged text leaves the machine; also needs TYPESAFE_API_KEY
+model_routing:
+  start_policy: judge             # backend: jev is already the shipped judge name
+```
+
+`decide --decider jev` (with `--allow-external-state`) does the same for one decision. `afast configure --mode active`
+writes a profile with `start_policy: judge`. Under `judge`, `keep_on_host` is answered by the judge's task-type
+question; under `rules` by the keyword classifier below.
 
 Evidence: the paired campaign ([README](evidence/2026-10-02-paired-campaign/README.md),
 [confirmatory results](evidence/2026-10-02-paired-campaign/confirm/CONFIRM.md)), the
@@ -106,23 +137,34 @@ questions only; keep the read shortcut off. See [AnyJev setup](ANYJEV.md).
 | `max_explore_requests` | unset | Legacy, phase map only. Positive int; escalates effort after this many explore-phase requests. |
 | `escalate_after_provider_errors` | unset | Legacy, phase map only. Positive int. |
 | `by_tier` | unset | `{cheap: <effort|null|"phase">, strong: <...>}`: one effort per start tier for the whole session/turn (requires `model_routing.start_policy`). `null` = provider default; `"phase"` = keep per-phase efforts. Shipped: `{cheap: medium, strong: null}`. `strong` is the **host-model effort** (see "Host effort" below). |
+| `by_host` | unset | `{<host model id>: {cheap|strong: <effort|null>}}`: per-host override of `by_tier`. The longest key that is a prefix of the host model id wins (`claude-fable-5-1` also matches a dated id) and replaces just the tiers it names; other hosts keep `by_tier`. Shipped: `{claude-fable-5-1: {strong: medium}}`. Constant within a session like `by_tier`. |
 | `monotonic` | `False` | Never lower the effort within a turn once raised. |
 | `phase_judge` | `False` | HC05: ask the configured `DecisionBackend` to classify the phase instead of trusting `effort.classify_phase` alone. A non-null, gate-passing answer overrides the deterministic phase for the rest of this request. Gated by `confidence_gates["phase"]` (HC09; default gate `0.0` -- byte-identical to pre-HC09 "any non-abstain answer applies"). |
 
-### Host effort (opt-in)
+### Host effort
 
-`effort_routing.by_tier.strong` is the effort sent on every request that runs on the host model: sessions judged hard
-(or kept on the host by the price gate), turns escalated to the host, and nothing for a model the user picked
-(a picked model runs at its own effort). Shipped value: `null` (provider default). To opt in:
+`effort_routing.by_tier.strong` is the effort sent on every request that runs on the host model: sessions kept on the
+host (price gate, scope gate, `keep_on_host`, or a judged-hard session), turns escalated to the host, and nothing for
+a model the user picked (a picked model runs at its own effort). `by_host` overrides it per host. Shipped: `null`
+(provider default) for every host except Fable 5.1, which gets `medium` through `by_host`:
 
 ```yaml
 effort_routing:
   by_tier:
     cheap: medium
-    strong: medium     # host-model effort, opt-in
+    strong: null                    # every other host: provider default
+  by_host:
+    claude-fable-5-1:
+      strong: medium                # Fable 5.1 host effort (S1 C*_F)
 ```
 
-Evidence, by host:
+To set it for every host instead, put `strong: medium` in `by_tier` and drop `by_host`.
+
+S1 (holdout-v3): the preregistered C\*_F (rule R\*, cheap `medium`, strong `medium`, scope gate 300) cost **0.581x** plain
+Fable 5.1 (95% CI 0.542-0.625) with turn-pass -0.013 (-0.028 to +0.002), H1 supported. Plain Opus 5.5 at `medium` cost
+0.992x (95% CI 0.974-1.009): not shown to save (H4 not supported), so Opus keeps the default. The holdout-selected Fable
+configuration (always route, scope gate off, strong default; 0.528x) must replicate in S2 before it ships.
+Earlier evidence, by host:
 
 - **Cheap tier (Sonnet 5):** `cheap: medium` is shipped. Plain Sonnet at medium cost 0.821x its default effort with
   non-inferior turn-pass ([effort-control](evidence/2026-10-05-effort-control/RESULT.md)).
@@ -130,26 +172,20 @@ Evidence, by host:
   **+0.033** (non-inferior), 23 test-split scenarios, 46 pairs, preregistered
   (`docs/evidence/2026-10-06-effort-control-fable/RESULT.md`, branch `eval/effort-control-fable`, PR #61). Medium alone
   did not reach the routing saving: medium Fable cost 1.546x the sticky-routed sessions on the same host (descriptive).
-- **Opus 5.5 host:** unmeasured. Do not assume the Fable number transfers.
-
-Why it is off by default: the sessions it would touch are the ones the judge called *hard* (16/140 Fable sessions, but
-~32% of sticky spend), and the Fable test covered all 23 scenarios, not the judged-hard subset (it contains 2 explain,
-2 review and 0 docs scenarios; the main campaign hints at a turn-pass loss at medium on docs/explain/review work, -0.066,
-post hoc and confounded). The expected extra saving is about 4.5% of Fable session spend, next to the ~44% the
-routing decision already delivers. Promote it after a preregistered test on judged-hard sessions.
+- **Opus 5.5 host:** S1 measured it: 0.992x (95% CI 0.974-1.009), not supported. Do not assume the Fable number transfers.
 
 ## `model_routing` (HC04/HC05, opt-in; `None` = off; an explicit `{}` is invalid -- `start_model` is required)
 
 | Key | Default | Meaning |
 |---|---|---|
 | `start_model` | required | The cheaper/faster model a turn starts pinned to. |
-| `start_policy` | `"cheap"` (library); `judge` (shipped) | `cheap` (every turn starts on `start_model`, no judge), `rules` (prompt length), or `judge` (one typed simple/complex question to the configured backend; falls back to rules on abstain/error). |
+| `start_policy` | `"cheap"` (library); `rules` (shipped) | `cheap` (every turn starts on `start_model`, no judge), `rules` (prompt length, or with `complex_min_prompt_chars: null` always route: R\*; see "Decider"), or `judge` (one typed simple/complex question to the configured backend; falls back to rules on abstain/error). |
 | `complex_min_probability` | `0.5` | A judged turn with p(complex) at or above this starts on the host model. |
-| `complex_min_prompt_chars` | `2000` | The `rules` policy (and the judge fallback) starts a prompt this long on the host model. |
+| `complex_min_prompt_chars` | `2000` (shipped: `null`) | The `rules` policy (and the judge fallback) starts a prompt this long on the host model. `null` (key present) switches the rule off under `rules`: every session routes (R\*); a judge that abstains still uses 2000. |
 | `cheap_max_workspace_files` | unset (library); `300` (shipped) | In a workspace with more files than this, the session starts on the host model whatever the judge says. |
 | `decision_scope` | `"turn"` (library); `"session"` (shipped) | `turn`: decide the start tier at the first slow request of every turn. `session`: decide once, at the first slow request of the session's first turn (its prompt is the one judged), reuse for every later turn, persist across resumes (`<events_dir>/session-route/<session>.json`, no prompt text). A model the user picks always wins and never overwrites the stored decision; provider-error escalation stays per turn; the decision is re-made if the host model or routing config changes. Conflicts with `planner`. See "Decision scope". |
 | `price_gate` | `None` (library: off); `{enabled: true}` (shipped) | Route only when the predicted session cost on `start_model` is lower than on the host. See "Price gate". |
-| `keep_on_host` | `None` (off) | Opt-in: `{task_types: [...]}` keeps those task types on the host. Requires `start_policy: judge`. See "Task-type opt-out". |
+| `keep_on_host` | `None` (library); `{task_types: [review, explain]}` (shipped) | `{task_types: [...]}` keeps those task types on the host. Requires `start_policy: judge` or `rules`. See "Task-type opt-out". |
 | `start_effort` | unset | One of the `ALLOWED_EFFORTS` strings. |
 | `max_requests_before_escalation` | unset | Positive int; escalates after this many slow requests in the turn. |
 | `escalate_on_test_failure` | `False` | Escalate the first time `ObservedTool.execute` observes a failing test-tool result this turn. |
@@ -221,15 +257,24 @@ event records every input and the predicted ratio ([EVENTS.md](EVENTS.md)). A ti
 ```yaml
 model_routing:
   keep_on_host:
-    task_types: [review, explain, feature]   # any of bugfix, feature, docs, explain, review, other
+    task_types: [review, explain]   # shipped; any of bugfix, feature, docs, explain, review, other
 ```
 
-Adds one typed question (`task_type`) to the same batched judge call as `task_difficulty`, so there is no extra round
-trip. A session the judge classifies as one of these starts on the host; **no answer fails closed to the host**
-(`task_type_unknown_strong`). Requires `start_policy: judge`. **Exploratory:** on Fable the sticky-routed sessions lost
-turn-pass on review (-0.155), explain (-0.143) and feature (-0.071) work (post hoc, 3-13 scenarios per type, no docs
-scenario in the test split). The cost of using it: on the campaign mix it forfeits about **$676 of the $1,980 per 1,000
-Fable sessions** that sticky routing saves. Off by default.
+Shipped on (S1 H7). On review + explain scenarios (20, 19 cost-valid) routing to Sonnet 5 lost 0.028 turn-pass against
+the host at the same effort (95% CI -0.063 to +0.013): a 5-point loss cannot be excluded, so those sessions stay on the
+host. It costs savings: replayed on the holdout rows, R\* with scope gate 300 is 0.581x plain Fable; keeping oracle-labelled
+review/explain on the host gives 0.653x; the shipped keyword proxy below gives 0.751x (turn-pass +0.002).
+
+* **Under `start_policy: judge`** it adds one typed question (`task_type`) to the same batched judge call as
+  `task_difficulty` (no extra round trip). A session the judge classifies as one of these starts on the host; **no answer
+  fails closed to the host** (`task_type_unknown_strong`).
+* **Under `start_policy: rules`** (shipped) no model is asked. The type comes from the keyword intent classifier
+  `intent-kw-v1` (`src/amplifier_fast_decisions/rules.py`, the one frozen for S1): a question-shaped first prompt maps to
+  `explain`, `fix` to `bugfix`, `implement` to `feature`, anything else to `other` (routes). Review and explain prompts
+  look alike on turn 1 (e.g. "give me a one-line role for each module"), so the proxy cannot tell them apart: listing
+  `review` or `explain` keeps the same sessions on the host. Replayed on the 135 first prompts of holdout-v3, main-v1
+  and pilot-v1 it catches 26 of the 28 review/explain sessions and also 43 other read-only questions (precision 38%):
+  a conservative proxy that keeps more on the host than the oracle label would. Remove the key to route them.
 
 ## `delegation_routing` (per-delegation model routing, opt-in; `None` or `{}` = off)
 

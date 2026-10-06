@@ -214,7 +214,7 @@ class Handler(BaseHTTPRequestHandler):
                 events_dir = self.server.index.directory
                 return self._json(200, savings_summary(events_dir, cache_path=events_dir.parent / "savings-cache.json"))
             if parsed.path == "/api/health":
-                return self._json(200, {"read_only": True, "transport": "poll-500ms", "version": "0.2.0"})
+                return self._json(200, {"read_only": True, "transport": "poll-500ms", "version": "0.3.0"})
             if parsed.path == "/api/measure":
                 from .operations import summarize
                 query = parse_qs(parsed.query)

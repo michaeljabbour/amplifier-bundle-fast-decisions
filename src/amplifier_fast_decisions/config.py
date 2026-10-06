@@ -156,7 +156,7 @@ def config_report(host_model: str | None = None, *, overrides: dict[str, Any] | 
 
     Shared by ``afast doctor`` and the smart tool's ``diagnose`` so the two cannot disagree. ``host_model``
     defaults to ``AFAST_HOST_MODEL``; without either, the price gate is reported for the two priced hosts."""
-    from . import judge_backends, price_gate
+    from . import effort as effort_mod, judge_backends, price_gate
 
     env = os.environ if env is None else env
     try:
@@ -165,7 +165,10 @@ def config_report(host_model: str | None = None, *, overrides: dict[str, Any] | 
         return {"ok": False, "error": str(exc), "warnings": [str(exc)]}
     cfg, routing, effort = eff.config, eff.model_routing, eff.effort_routing
     warnings: list[str] = []
+    start_policy = routing.get("start_policy", "cheap")
+    # The shipped decider is the rule R* (start_policy: rules); a judge backend is only asked under start_policy: judge.
     backend_name = cfg.get("backend") or "jev"
+    decider = "rules" if start_policy == "rules" else backend_name
     spec = judge_backends.spec(backend_name)
     if spec is None:
         warnings.append(f"unknown backend {backend_name!r}")
@@ -173,7 +176,7 @@ def config_report(host_model: str | None = None, *, overrides: dict[str, Any] | 
     consent_env = env.get("FAST_DECISIONS_ALLOW_EXTERNAL_STATE")
     credentials = {name: bool(env.get(name)) for name in (spec.env if spec else ())
                    if name.endswith(("_KEY", "_TOKEN", "_ACCOUNT_ID"))}
-    if spec and spec.external:
+    if spec and spec.external and start_policy == "judge":
         if not consent_cfg:
             warnings.append(f"{backend_name} is an external judge and allow_external_state is false: the judge is never "
                             "asked and every decision falls back to the prompt-length rule")
@@ -198,16 +201,20 @@ def config_report(host_model: str | None = None, *, overrides: dict[str, Any] | 
                       "predicted_cost_ratio": None if g.predicted_ratio is None else round(g.predicted_ratio, 4),
                       "request_multiplier": g.request_multiplier, "multiplier_source": g.multiplier_source})
     return {
-        "ok": True, "config_sha": eff.sha, "sources": eff.sources,
+        "ok": True, "config_sha": eff.sha, "sources": eff.sources, "decider": decider,
         "backend": {"name": backend_name, "external": bool(spec and spec.external), "opt_in": bool(spec and spec.opt_in),
                     "credentials_present": credentials},
         "consent": {"allow_external_state": consent_cfg, "env_FAST_DECISIONS_ALLOW_EXTERNAL_STATE": consent_env,
                     "note": "decide/select take consent from their argument or the environment variable, never from this file"},
         "decision": {"start_policy": routing.get("start_policy", "cheap"), "decision_scope": routing.get("decision_scope", "turn"),
+                     "complex_min_prompt_chars": routing.get("complex_min_prompt_chars", 2000),
                      "start_model": start_model, "provider_match": routing.get("provider_match"),
                      "keep_on_host": (routing.get("keep_on_host") or {}).get("task_types")},
         "scope_gate": {"cheap_max_workspace_files": routing.get("cheap_max_workspace_files")},
-        "effort": {"by_tier": effort.get("by_tier"), "phase_map": phase, "constant_within_session": not phase},
+        "effort": {"by_tier": effort.get("by_tier"), "by_host": effort.get("by_host"),
+                   "by_tier_for_host": ({h: effort_mod.effort_by_tier(effort, h) for h in hosts}
+                                        if effort.get("by_host") else None),
+                   "phase_map": phase, "constant_within_session": not phase},
         "read_shortcut": eff.policy.read_shortcut, "timeout_ms": eff.policy.timeout_ms,
         "thresholds": {"min_probability": eff.policy.min_probability, "min_margin": eff.policy.min_margin},
         "price_gate": gates, "warnings": warnings,

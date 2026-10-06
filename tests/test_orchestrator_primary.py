@@ -929,7 +929,8 @@ class SessionScopeTests(_SessionHarness):
     def test_validation_new_keys(self):
         base = {"start_model": "m"}
         for bad in (dict(base, decision_scope="forever"),
-                    dict(base, keep_on_host={"task_types": ["review"]}, start_policy="rules"),
+                    dict(base, keep_on_host={"task_types": ["review"]}, start_policy="cheap"),
+                    dict(base, keep_on_host={"task_types": ["review"]}),
                     dict(base, keep_on_host={"task_types": ["poetry"]}, start_policy="judge"),
                     dict(base, keep_on_host={"task_types": []}, start_policy="judge"),
                     dict(base, decision_scope="session", planner={"enabled": True})):
@@ -937,6 +938,7 @@ class SessionScopeTests(_SessionHarness):
                 Policy(model_routing=bad)
         Policy(model_routing=dict(base, decision_scope="session", price_gate={}, start_policy="judge",
                                   keep_on_host={"task_types": ["review"]}))
+        Policy(model_routing=dict(base, start_policy="rules", keep_on_host={"task_types": ["review"]}))  # keyword proxy
 
 
 class PriceGateRoutingTests(_SessionHarness):

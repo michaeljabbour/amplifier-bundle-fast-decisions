@@ -51,14 +51,14 @@ def _messages(phase: int):
     return [[user], [user, read, result], [user, read, result, read, result], [user, read, result, write, result]][phase]
 
 
-async def session_efforts(config: dict, p_complex: float, *, turns: int = 3) -> list:
+async def session_efforts(config: dict, p_complex: float, *, turns: int = 3, host: str = HOST) -> list:
     """The effort set on every request of one session: `turns` turns, each moving orient -> explore -> implement."""
     coordinator = DemoCoordinator()
     emitter = Emitter(coordinator.session_id, callback=lambda e: None)
     policy = Policy.from_config({**config, "mode": "off", "read_shortcut": False})
     service = DecisionService(policy, Judge(p_complex), emitter, coordinator, [])
     provider = DemoProvider(delay_ms=0)
-    provider.default_model = HOST
+    provider.default_model = host
     facade = orchestrator.RoutedProvider(provider, Runtime(service), {}, demo_response, "anthropic-primary")
     seen = []
     with mock.patch.object(orchestrator, "workspace_file_count", lambda root, limit: 10):
@@ -71,19 +71,27 @@ async def session_efforts(config: dict, p_complex: float, *, turns: int = 3) -> 
     return seen
 
 
+def _judge(config: dict) -> dict:
+    """The shipped config with the Jev opt-in (the harness feeds a judge answer) and no task-type opt-out."""
+    return fd_config.deep_merge(config, {"model_routing": {"start_policy": "judge", "keep_on_host": None}})
+
+
 class EffortConstantTests(unittest.TestCase):
     def test_cheap_tier_session_has_one_model_and_one_effort(self):
-        seen = asyncio.run(session_efforts(fd_config.shipped_config(), 0.1))
+        seen = asyncio.run(session_efforts(_judge(fd_config.shipped_config()), 0.1))
         self.assertEqual(len(seen), 12)
         self.assertEqual(set(seen), {("claude-sonnet-5", "medium")})
 
     def test_strong_tier_session_has_one_effort(self):
-        seen = asyncio.run(session_efforts(fd_config.shipped_config(), 0.9))
-        self.assertEqual(set(seen), {(None, None)})
+        # The shipped config has no judge: R* routes every session, so a host-kept session needs the scope gate
+        # (or the judge opt-in). Fable's strong effort is medium (by_host); Opus keeps the provider default.
+        cfg = _judge(fd_config.shipped_config())
+        self.assertEqual(set(asyncio.run(session_efforts(cfg, 0.9))), {(None, "medium")})
+        self.assertEqual(set(asyncio.run(session_efforts(cfg, 0.9, host="claude-opus-5-5"))), {(None, None)})
 
     def test_opt_in_host_effort_is_still_constant(self):
-        cfg = fd_config.deep_merge(fd_config.shipped_config(), {"effort_routing": {"by_tier": {"strong": "medium"}}})
-        self.assertEqual(set(asyncio.run(session_efforts(cfg, 0.9))), {(None, "medium")})
+        cfg = fd_config.deep_merge(_judge(fd_config.shipped_config()), {"effort_routing": {"by_tier": {"strong": "medium"}}})
+        self.assertEqual(set(asyncio.run(session_efforts(cfg, 0.9, host="claude-opus-5-5"))), {(None, "medium")})
 
     def test_the_deleted_phase_map_would_have_varied_effort(self):
         """Why the map is gone: with it and without by_tier, effort moves between requests of one session."""
@@ -94,7 +102,7 @@ class EffortConstantTests(unittest.TestCase):
 
     def test_the_shipped_config_has_no_phase_map(self):
         effort = fd_config.shipped_config()["effort_routing"]
-        self.assertEqual(set(effort), {"by_tier"})
+        self.assertEqual(set(effort), {"by_tier", "by_host"})
         self.assertEqual(fd_config.config_report()["effort"]["phase_map"], [])
 
     def test_doctor_report_flags_a_phase_map(self):

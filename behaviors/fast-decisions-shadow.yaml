@@ -1,6 +1,6 @@
 bundle:
   name: fast-decisions-shadow-behavior
-  version: 0.2.0
+  version: 0.3.0
   description: >-
     Observer-only form: fast-decision telemetry hook plus the read-only
     fast_workspace tool, WITHOUT the orchestrator swap. The hook carries its
