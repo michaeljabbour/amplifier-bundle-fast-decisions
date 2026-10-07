@@ -1,0 +1,22 @@
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}l r r r r r r r r@{}}
+\toprule
+ & \multicolumn{2}{c}{Accuracy} & \multicolumn{2}{c}{Wrong automatic} & Coverage & \multicolumn{2}{c}{Latency (ms)} & \\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}\cmidrule(lr){7-8}
+Judge & correct & 95\,\% CI & count & 95\,\% CI & automatic & p50 & p95 & \$/1M \\
+\midrule
+Jev 1.13 + I1 & \JevClDevAccK/\DevN & \JevClDevAccCI & \JevClDevWaK & \JevClDevWaCI & \JevClDevCovK & \JevClDevPfifty & \JevClDevPninetyfive & \JevClDevCost \\
+GPT-6 Luna + I1 & \LunaClDevAccK/\DevN & \LunaClDevAccCI & \LunaClDevWaK & \LunaClDevWaCI & \LunaClDevCovK & \LunaClDevPfifty & \LunaClDevPninetyfive & \LunaClDevCost \\
+GPT-6.1 Sol & \SolDevAccK/\DevN & \SolDevAccCI & \SolDevWaK & \SolDevWaCI & \SolDevCovK & \SolDevPfifty & \SolDevPninetyfive & \SolDevCost \\
+GPT-6 Luna & \LunaDevAccK/\DevN & \LunaDevAccCI & \LunaDevWaK & \LunaDevWaCI & \LunaDevCovK & \LunaDevPfifty & \LunaDevPninetyfive & \LunaDevCost \\
+\textbf{Jev 1.13} & \JevDevAccK/\DevN & \JevDevAccCI & \JevDevWaK & \JevDevWaCI & \JevDevCovK & \JevDevPfifty & \JevDevPninetyfive & \JevDevCost \\
+Qwen3 8B + I1 & \QwenEightClDevAccK/\DevN & \QwenEightClDevAccCI & \QwenEightClDevWaK & \QwenEightClDevWaCI & \QwenEightClDevCovK & \QwenEightClDevPfifty & \QwenEightClDevPninetyfive & \QwenEightClDevCost \\
+Qwen3 8B & \QwenEightDevAccK/\DevN & \QwenEightDevAccCI & \QwenEightDevWaK & \QwenEightDevWaCI & \QwenEightDevCovK & \QwenEightDevPfifty & \QwenEightDevPninetyfive & \QwenEightDevCost \\
+Qwen3 4B & \QwenFourDevAccK/\DevN & \QwenFourDevAccCI & \QwenFourDevWaK & \QwenFourDevWaCI & \QwenFourDevCovK & \QwenFourDevPfifty & \QwenFourDevPninetyfive & \QwenFourDevCost \\
+nimble 9B & \NimbleDevAccK/\DevN & \NimbleDevAccCI & \NimbleDevWaK & \NimbleDevWaCI & \NimbleDevCovK & \NimbleDevPfifty & \NimbleDevPninetyfive & \NimbleDevCost \\
+tev1 4B & \TevFourDevAccK/\DevN & \TevFourDevAccCI & \TevFourDevWaK & \TevFourDevWaCI & \TevFourDevCovK & \TevFourDevPfifty & \TevFourDevPninetyfive & \TevFourDevCost \\
+tev1 0.8B & \TevPtEightDevAccK/\DevN & \TevPtEightDevAccCI & \TevPtEightDevWaK & \TevPtEightDevWaCI & \TevPtEightDevCovK & \TevPtEightDevPfifty & \TevPtEightDevPninetyfive & \TevPtEightDevCost \\
+tev1 0.8B + I1 & \TevPtEightClDevAccK/\DevN & \TevPtEightClDevAccCI & \TevPtEightClDevWaK & \TevPtEightClDevWaCI & \TevPtEightClDevCovK & \TevPtEightClDevPfifty & \TevPtEightClDevPninetyfive & \TevPtEightClDevCost \\
+Laya base & \LayaDevAccK/\DevN & \LayaDevAccCI & \LayaDevWaK & \LayaDevWaCI & \LayaDevCovK & \LayaDevPfifty & \LayaDevPninetyfive & \LayaDevCost \\
+Qwen3 0.6B & \QwenPtSixDevAccK/\DevN & \QwenPtSixDevAccCI & \QwenPtSixDevWaK & \QwenPtSixDevWaCI & \QwenPtSixDevCovK & \QwenPtSixDevPfifty & \QwenPtSixDevPninetyfive & \QwenPtSixDevCost \\
+\bottomrule
+\end{tabular*}

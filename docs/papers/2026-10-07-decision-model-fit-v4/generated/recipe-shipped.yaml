@@ -1,0 +1,45 @@
+config:
+  mode: active
+  backend: jev
+  allow_external_state: false
+  read_shortcut: false
+  timeout_ms: 3000
+  allowed_tools: [fast_workspace]
+  effort_routing:
+    by_tier:
+      cheap: medium
+      strong: null
+    by_host:
+      claude-fable-5-1:
+        strong: medium
+  model_routing:
+    start_model: claude-sonnet-5
+    provider_match: anthropic
+    start_policy: rules
+    complex_min_prompt_chars: null
+    decision_scope: session
+    price_gate:
+      enabled: true
+    keep_on_host:
+      task_types: [review, explain]
+    cheap_max_workspace_files: 300
+    max_requests_before_escalation: null
+    escalate_on_test_failure: false
+    escalate_on_provider_error: true
+  cache_keepalive:
+    enabled: true
+    interval_s: 270
+    max_refreshes: 6
+    min_prefix_tokens: 20000
+    max_output_tokens: 1
+  waste_guards:
+    enabled: true
+    repeat_stop: true
+    retry_stop: true
+    poll_wait: true
+    identical_results: true
+    poll_max_wait_s: 240
+  observatory:
+    enabled: true
+    open_browser: always
+    port: 8765

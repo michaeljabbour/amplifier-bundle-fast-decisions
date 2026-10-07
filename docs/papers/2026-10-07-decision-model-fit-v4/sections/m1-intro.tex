@@ -1,0 +1,23 @@
+\section{Introduction}\label{sec:intro}
+
+An AI coding agent spends nearly all of its money on calls to a large \term{host model}. Between those calls sit many
+small choices: which model runs this session, may a file be read without asking the host, how much should the model
+reason, is an action safe. A decision model answers such typed questions with a probability per allowed answer in
+tens to hundreds of milliseconds. We asked where it earns its place in a harness, and where something simpler does as
+well. Routing single queries to cheaper models is well studied~\cite{routellm,frugalgpt}; an agent session is many
+calls over one cached, growing context, so we measured whole sessions in pairs and tested the decision model against a
+deterministic rule. The report is organised around five takeaways:
+\begin{enumerate}[leftmargin=1.6em]
+  \item Jev is the best price--quality decision model we tested; OpenAI's Decisions API is the challenger
+    (\cref{sec:choose}; preregistered and post hoc).
+  \item Route to a cheaper model only when the host is much more expensive once caching and request volume are counted
+    (\cref{sec:routing}; preregistered, two hosts).
+  \item Configure model and effort once per session; change only after the cache has expired (\cref{sec:once}; once
+    preregistered, expiry exploratory and for effort only).
+  \item Guard risky actions with a deterministic rule plus the model's plain-text policy; editability is untested
+    (\cref{sec:gate}).
+  \item Real telemetry measures latency and usage, not accuracy, and showed routing applies far less often than in the
+    lab (\cref{sec:telemetry}; exploratory, one owner).
+\end{enumerate}
+\Cref{sec:setting} describes setting, data and measures once; \cref{sec:recs} gives the configuration and
+\cref{sec:conclusion} ranks the takeaways. Every supporting result is in the supplement.

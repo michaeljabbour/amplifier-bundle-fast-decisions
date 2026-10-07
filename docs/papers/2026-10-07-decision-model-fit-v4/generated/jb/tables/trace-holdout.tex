@@ -1,0 +1,20 @@
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}l l r r r r r r r r@{}}
+\toprule
+ & & \multicolumn{2}{c}{Accuracy} & \multicolumn{2}{c}{Wrong automatic} & & Correct & \multicolumn{2}{c}{Latency (ms)} \\
+\cmidrule(lr){3-4}\cmidrule(lr){5-6}\cmidrule(lr){9-10}
+Judge & form & correct & 95\,\% CI & count & upper & automatic & reads (of \TrReadCases) & p50 & p95 \\
+\midrule
+\textbf{Jev 1.13} & native & \TrJevAccK/\TrN & \TrJevAccCI & \TrJevWaK & \TrJevWaUpper\,\% & \TrJevCovK & \TrJevReads & \TrJevPfifty & \TrJevPninetyfive \\
+nimble 9B & adapted & \TrNimbleAccK/\TrN & \TrNimbleAccCI & \TrNimbleWaK & \TrNimbleWaUpper\,\% & \TrNimbleCovK & \TrNimbleReads & \TrNimblePfifty & \TrNimblePninetyfive \\
+GPT-6 Luna & adapted & \TrLunaAccK/\TrN & \TrLunaAccCI & \TrLunaWaK & \TrLunaWaUpper\,\% & \TrLunaCovK & \TrLunaReads & \TrLunaPfifty & \TrLunaPninetyfive \\
+GPT-6.1 Sol & adapted & \TrSolAccK/\TrN & \TrSolAccCI & \TrSolWaK & \TrSolWaUpper\,\% & \TrSolCovK & \TrSolReads & \TrSolPfifty & \TrSolPninetyfive \\
+Qwen3 8B & native & \TrQwenEightAccK/\TrN & \TrQwenEightAccCI & \TrQwenEightWaK & \TrQwenEightWaUpper\,\% & \TrQwenEightCovK & \TrQwenEightReads & \TrQwenEightPfifty & \TrQwenEightPninetyfive \\
+Qwen3 0.6B & native & \TrQwenPtSixAccK/\TrN & \TrQwenPtSixAccCI & \TrQwenPtSixWaK & \TrQwenPtSixWaUpper\,\% & \TrQwenPtSixCovK & \TrQwenPtSixReads & \TrQwenPtSixPfifty & \TrQwenPtSixPninetyfive \\
+tev1 4B & adapted & \TrTevFourAccK/\TrN & \TrTevFourAccCI & \TrTevFourWaK & \TrTevFourWaUpper\,\% & \TrTevFourCovK & \TrTevFourReads & \TrTevFourPfifty & \TrTevFourPninetyfive \\
+Laya base & native & \TrLayaAccK/\TrN & \TrLayaAccCI & \TrLayaWaK & \TrLayaWaUpper\,\% & \TrLayaCovK & \TrLayaReads & \TrLayaPfifty & \TrLayaPninetyfive \\
+Qwen3 4B & native & \TrQwenFourAccK/\TrN & \TrQwenFourAccCI & \TrQwenFourWaK & \TrQwenFourWaUpper\,\% & \TrQwenFourCovK & \TrQwenFourReads & \TrQwenFourPfifty & \TrQwenFourPninetyfive \\
+tev1 0.8B & adapted & \TrTevPtEightAccK/\TrN & \TrTevPtEightAccCI & \TrTevPtEightWaK & \TrTevPtEightWaUpper\,\% & \TrTevPtEightCovK & \TrTevPtEightReads & \TrTevPtEightPfifty & \TrTevPtEightPninetyfive \\
+\midrule
+\emph{Always fall back} & --- & \TrAlwaysK/\TrN & \TrAlwaysCI & 0 & --- & 0 & 0 & --- & --- \\
+\bottomrule
+\end{tabular*}

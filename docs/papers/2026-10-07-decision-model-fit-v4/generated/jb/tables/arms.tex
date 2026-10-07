@@ -1,0 +1,16 @@
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}l l l l r@{}}
+\toprule
+Judge & where it runs & how it is called & probabilities & \$ per 1M tokens in/out \\
+\midrule
+GPT-6.1 Sol & hosted & OpenAI API (effort \texttt{low}) & self-reported & 2 / 10 \\
+GPT-6 Luna & hosted & OpenAI API (effort \texttt{none}) & self-reported & 0.1 / 0.5 \\
+Jev 1.13 & hosted & System One endpoint & from the model & 0.042 / 0 \\
+nimble 9B & locally & System One endpoint & from the model & \textemdash \\
+tev1 4B & locally & System One endpoint & from the model & \textemdash \\
+tev1 0.8B & locally & System One endpoint & from the model & \textemdash \\
+Qwen3 8B & locally & bundle OllamaBackend & from the model & \textemdash \\
+Qwen3 4B & locally & bundle OllamaBackend & from the model & \textemdash \\
+Qwen3 0.6B & locally & bundle OllamaBackend & from the model & \textemdash \\
+Laya base & locally & System One endpoint & from the model & \textemdash \\
+\bottomrule
+\end{tabular*}

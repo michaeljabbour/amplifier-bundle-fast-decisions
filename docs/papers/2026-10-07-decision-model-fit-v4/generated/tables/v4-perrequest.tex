@@ -1,0 +1,11 @@
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}l S[table-format=1.4] S[table-format=2.0] S[table-format=2.0] S[table-format=2.0] c c c@{}}
+\toprule
+ & {\$ per request} & \multicolumn{3}{c}{share of request cost (\%)} & \multicolumn{3}{c}{routing to Sonnet} \\
+\cmidrule(lr){3-5}\cmidrule(l){6-8}
+Model & & {write} & {read} & {output} & per request & requests & predicted \\
+\midrule
+Fable 5.1 (host) & 0.1164 & 58 & 19 & 23 & 0.47 & 1.11 & 0.524 \\
+Opus 5.5 (host) & 0.0554 & 49 & 32 & 20 & 0.99 & 1.38 & 1.365 \\
+Sonnet 5 (routing target) & 0.0548 & 37 & 48 & 15 & -- & -- & -- \\
+\bottomrule
+\end{tabular*}

@@ -1,0 +1,11 @@
+% Observatory: what the event store holds (share of all events).
+\begin{tikzpicture}
+\begin{axis}[benchmark, xbar, bar width=7pt, scale only axis, width=8cm, height=4cm, xmin=0, xmajorgrids,
+  ymin=-0.6, ymax=6.6, ytick={0,...,6}, yticklabels from table={generated/data/obs-mix.dat}{label},
+  y tick label style={font=\small}, xlabel={Share of all recorded events (\%)},
+  title={Mostly bookkeeping, few decisions}, title style={font=\small\bfseries},
+  legend to name=mixlegend, legend columns=1, legend cell align=left]
+\addplot[nodes near coords, point meta=explicit symbolic, nodes near coords style={font=\scriptsize, fill=white, fill opacity=0.85, text opacity=1, inner sep=1pt, text=black!80}, fill=okblue!55, draw=black!60] table[meta=v, x=share, y=y]{generated/data/obs-mix.dat};
+\addlegendentry{event kind}
+\end{axis}
+\end{tikzpicture}

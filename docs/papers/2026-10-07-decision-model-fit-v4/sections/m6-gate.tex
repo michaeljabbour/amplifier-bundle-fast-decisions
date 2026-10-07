@@ -1,0 +1,26 @@
+\section{Risky actions: a deterministic guard works; editable criteria are untested}\label{sec:gate}
+
+\textbf{Claim.} For actions with side effects (buying, sending, deleting, deploying), use the decision model's
+natural-language criteria together with a deterministic guard. What we measured supports the guard; the model's
+advantage over a fixed classifier, that its criteria are plain text a user can edit, is a promise we have not yet
+tested.
+
+\paragraph{Evidence} In the constructed benchmark's computer-use cases, every judge, Jev included, clicked ``buy'' in
+a purchase case when the task asked for it and no policy said otherwise: models follow the task unless the risk rule
+is stated. A deterministic guard that matches a short list of irreversible verbs on the proposed action removed every
+side-effect wrong automatic action for all \ITwoHoldNApplicable\ applicable judges on the holdout
+(\ITwoHoldBefore\ to \ITwoHoldAfter), at a coverage cost of \ITwoHoldCovCostRange\ points and no accuracy loss
+\prereg. Jev itself made no such error on the holdout computer-use cases at the shipped gate; the guard matters for the
+other judges and for Jev on the development cases (\IOneDevJevClBefore\ side-effect errors there). A one-sentence natural-language risk clause in the prompt was \IOneHoldConfirmed\ overall
+(\IOneHoldBefore\ to \IOneHoldAfter\ targeted errors; confirmed for \IOneHoldNArmConfirmed\ of \IOneHoldNApplicable\
+applicable judges) \prereg; on the development cases it removed all of Jev's side-effect errors \expl. The shipped
+computer-use tool hard-codes both the clause and the guard, so its criteria are not yet user-editable; editability,
+live risky actions and a comparison with a trained risk classifier are untested.
+
+\begin{keyidea}[title={For practitioners}]
+Put the guarantee in a deterministic guard and the policy in plain text the model reads. Keep the confidence gate
+strict and let the host approve anything the model hands back. Treat editable criteria as the decision model's
+potential advantage over a fixed classifier, and measure it before relying on it.
+\end{keyidea}
+
+Details: Supplement Section~\ref{S-sec:judges}.

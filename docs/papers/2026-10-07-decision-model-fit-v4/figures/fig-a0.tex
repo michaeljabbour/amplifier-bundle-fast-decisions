@@ -1,0 +1,15 @@
+% A0 counterfactual: decide-once policies on main-v1 (all 70 scenarios x 2 reps), geometric-mean cost ratio vs the
+% plain host with 95% scenario-cluster bootstrap CIs. Log x axis.
+\begin{tikzpicture}
+\begin{axis}[benchmark, xmode=log, log ticks with fixed point, xtick={0.5,0.6,0.8,1,1.2}, xmin=0.45, xmax=1.35,
+  scale only axis, width=8.0cm, height=5.2cm, xmajorgrids, y tick label style={font=\small},
+  ymin=-0.7, ymax=8.0, ytick={\AoTicks}, yticklabels/.expanded={\AoLabels},
+  xlabel={Cost ratio, policy / plain host (log scale; below 1 saves money)},
+  title={Who decides, and what it costs}, title style={font=\small\bfseries},
+  legend to name=aolegend, legend columns=1, legend cell align=left]
+\draw[black!70, line width=0.8pt] (axis cs:1,-0.7) -- (axis cs:1,7.7);
+\addplot[nodes near coords, point meta=explicit symbolic, nodes near coords style={font=\scriptsize, fill=white, fill opacity=0.85, text opacity=1, inner sep=1pt, anchor=south, yshift=2.5pt, text=black!80}, only marks, mark=*, mark size=2.6pt, color=okblue, error bars/.cd, x dir=both, x explicit,
+  error bar style={line width=1pt}] table[meta=v, x=r, y=y, x error minus=m, x error plus=p]{generated/data/a0-policies.dat};
+\addlegendentry{policy on main-v1, all scenarios (95\,\% CI)}
+\end{axis}
+\end{tikzpicture}

@@ -1,0 +1,47 @@
+\section{Configure once per session; switch only when the cache has expired}\label{sec:once}
+
+\textbf{Claim.} Choose the model and reasoning effort once, at the start of the session, from the task and its initial
+context, and do not switch while the prompt cache is live. If a switch is ever worth it, make it after the cache has
+expired (measured for effort changes only, with five-minute caches). The start-of-session choice does not need a decision model: a one-line rule made the same choice.
+
+\paragraph{Evidence} Every switch of model or effort invalidates the provider's cached prefix, so the next request
+pays to write it again (\cref{fig:cachewrites}). Within a turn, a request after an effort change wrote \CwWithinChanged\
+cache tokens on average against \CwWithinAnchor\ for the plain host, which never switches (\CwWithinX\X; $n$ =
+\CwWithinChangedN\ and \CwWithinAnchorN) \expl. In the main campaign, deciding the model once per session cost
+\HThreeFableArmTwo\X\ (\HThreeFableArmCI) of re-deciding it every turn on Fable and \HThreeOpusArmTwo\X\
+(\HThreeOpusArmCI) on Opus (all \HThreeFableArmN\ paired triplets per host; the arm that decided once still applied a
+phase-based effort map in sessions that kept the host). The preregistered criterion was only that deciding once cost no
+more than \HThreeUpper\X\ of re-deciding; the size of the saving is descriptive \mbox{\textsf{\small\color{okblue}[preregistered criterion]}}. After a pause longer than the five-minute cache lifetime the picture
+changes: the first request rewrote the history whatever the configuration (\GapWriteFableX\X\ the writes after a short
+pause on Fable, \GapWriteOpusX\X\ on Opus), and an effort change at that point added no detectable write cost (\CwLongChanged\ against
+\CwLongAnchor\ tokens; $n$ = \CwLongN\ each, small sample, no interval computed) \expl.
+
+\begin{figure}[tbp]
+\centering
+\pgfplotslegendfromname{v4cwlegend}\par\smallskip
+\input{figures/fig-v4-cachewrites.tex}
+\caption{A switch rewrites the cache unless the cache has already expired. Mean cache-write tokens per request on the
+plain host, which never switches, and on requests made after an effort change, by position in the session (main
+campaign re-analysis).}
+\label{fig:cachewrites}
+\howtoread{Compare the two bars in each row. Within a turn the switch multiplies the write cost; after a seven-minute
+pause the two bars are about the same length ($n$ = \CwLongN\ each), consistent with the expired cache being rewritten
+whatever the configuration.}
+\end{figure}
+
+\paragraph{The start-of-session choice needs no model} In the preregistered holdout study, letting Jev choose the session's
+model and letting the rule ``route unless the workspace has more than \AoScopeFiles\ files'' choose it were
+equivalent within the preregistered $\pm$5\,\% margin: \SHTwoRatio\X\ (90\,\% CI \SHTwoCINinety), and the two disagreed on only \SHTwoDisc\ of \SHTwoReps\
+scenario-reps \prereg. Live decide-once sessions cost what the reconstruction from pinned sessions predicted
+(\SHSixRatio\X, 90\,\% CI \SHSixCINinety) \prereg.
+
+How much cheaper a new configuration must be to justify a mid-session switch was not measured, and a model switch
+timed to an expired cache was not isolated.
+
+\begin{keyidea}[title={For practitioners}]
+Decide once per session with a rule and a price gate. Keep model and effort fixed while the cache is warm. If a
+session idles past the cache lifetime, that is the cheap moment to change configuration, and only for a clearly
+cheaper one.
+\end{keyidea}
+
+Details: Supplement Sections~\ref{S-sec:campaign} and~\ref{S-sec:s1}.
