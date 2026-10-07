@@ -386,6 +386,97 @@ class OpenAIDecisionsArm:
             raise ArmParseError(f"{type(exc).__name__}: {exc}", usage_pair, response.status_code) from exc
 
 
+class DecisionsApiArm:
+    """OpenAI Decisions API (POST /v1/decisions, e.g. gpt-6-luna), adapter `openai-decisions`.
+
+    Maps the bench question to the API's question types: noul -> predicate, choice -> choice (criteria
+    value -> description; an object-valued criterion is serialized as JSON text), score -> score
+    (`levels`, or `criteria` as label -> description). The response is parsed back into the bench answer
+    format: predicate -> {"type": "noul", "noul": p}; choice -> probabilities as {value: p} in the
+    request's criteria order (so argmax ties resolve exactly as for the other arms); score -> score plus
+    probabilities by level. Nothing is synthesized: a body that cannot be mapped raises ArmParseError
+    (billed usage attached), HTTP errors and transport errors raise, and the runner records an invalid row.
+    A per-call timeout longer than the bundle's 3 s lets slow answers be recorded and scored."""
+
+    SENT = {"temperature_sent": None, "seed_sent": None}
+
+    def __init__(self, name, token, model, url: str = OPENAI_DECISIONS_URL, timeout_ms: int = 30000):
+        self.name, self.token, self.model, self.url = name, token, model, url
+        self.timeout_s = timeout_ms / 1000
+
+    @property
+    def determinism(self) -> dict:
+        return dict(self.SENT)
+
+    @staticmethod
+    def question(name: str, spec: dict) -> dict:
+        kind, text = spec["type"], spec["instructions"]
+        if kind == "noul":
+            return {"type": "predicate", "name": name, "instructions": text}
+        if kind == "choice":
+            choices = [{"value": k, "description": d if isinstance(d, str) else json.dumps(d, ensure_ascii=False)}
+                       for k, d in spec["criteria"].items()]
+            return {"type": "choice", "name": name, "instructions": text, "choices": choices}
+        if kind == "score":
+            levels = spec.get("levels") or [{"label": k, "description": d} for k, d in spec["criteria"].items()]
+            return {"type": "score", "name": name, "instructions": text, "levels": levels}
+        raise ValueError(f"unsupported question type {kind!r}")
+
+    def request_body(self, payload: dict) -> dict:
+        questions = [self.question(n, q) for n, q in payload["questions"].items()]
+        return {"model": self.model, "input": payload["state"], "questions": questions}
+
+    @staticmethod
+    def parse_answer(spec: dict, answer: dict) -> dict:
+        kind = spec["type"]
+        if kind == "noul":
+            if answer.get("type") != "predicate":
+                raise ValueError(f"expected a predicate answer, got {answer.get('type')!r}")
+            return {"type": "noul", "noul": answer["probability"]}
+        if kind == "choice":
+            if answer.get("type") != "choice":
+                raise ValueError(f"expected a choice answer, got {answer.get('type')!r}")
+            stated = {str(p["value"]): p["probability"] for p in answer["probabilities"]}
+            if set(stated) != set(spec["criteria"]):
+                raise ValueError("choice probabilities do not match the choices asked")
+            return {"type": "choice", "choice": answer.get("choice"), "confidence": answer.get("confidence"),
+                    "probabilities": {k: stated[k] for k in spec["criteria"]}}
+        if answer.get("type") != "score":
+            raise ValueError(f"expected a score answer, got {answer.get('type')!r}")
+        return {"type": "score", "score": answer["score"], "confidence": answer.get("confidence"),
+                "probabilities": {p["label"]: p["probability"] for p in answer["probabilities"]}}
+
+    async def decide(self, client, payload):
+        if not self.token:
+            raise ArmUnavailable(f"OPENAI_API_KEY is not set (needed by arm {self.name})")
+        headers = {"Authorization": "Bearer " + self.token, "User-Agent": "amplifier-fast-decisions/0.1"}
+        response = await client.post(self.url, json=self.request_body(payload), headers=headers,
+                                     timeout=self.timeout_s)
+        if not response.is_success:
+            try:
+                err = response.json().get("error")
+                detail = err.get("message") if isinstance(err, dict) else err
+            except Exception:
+                detail = None
+            raise ArmParseError(f"HTTP {response.status_code}: {detail or response.text[:200]}",
+                                http_status=response.status_code)
+        usage_pair = (None, None)
+        try:
+            data = response.json()
+            usage = data.get("usage") or {}
+            usage_pair = (usage.get("input_tokens"), usage.get("output_tokens"))
+            if not data.get("model"):
+                raise ValueError("Missing model identity")
+            by_name = {a["name"]: a for a in data["answers"]}
+            name, spec = next(iter(payload["questions"].items()))
+            details = usage.get("input_tokens_details") or {}
+            return _result(self.parse_answer(spec, by_name[name]), data["model"], usage_pair[0], usage_pair[1],
+                           server_ms(response.headers, ("openai-processing-ms", "x-processing-ms")),
+                           response.status_code, cached_tokens=details.get("cached_tokens"))
+        except Exception as exc:
+            raise ArmParseError(f"{type(exc).__name__}: {exc}", usage_pair, response.status_code) from exc
+
+
 class InstructionClauseArm:
     """A pre-declared prompt intervention: append `clause` to the instructions of
     choice questions only, then delegate to the wrapped arm unchanged."""
@@ -457,6 +548,9 @@ def build_arm(spec: dict, specs: dict | None = None, env=None):
                             spec.get("max_tokens", 200), spec.get("service_tier"), spec.get("url", OPENAI_URL))
     if adapter == "openai_decisions":
         return OpenAIDecisionsArm(name, env.get(spec.get("key_env") or "OPENAI_API_KEY"), spec.get("model"))
+    if adapter == "openai-decisions":
+        return DecisionsApiArm(name, key("OPENAI_API_KEY"), spec["model"], spec.get("url", OPENAI_DECISIONS_URL),
+                               spec.get("call_timeout_ms", 30000))
     if adapter == "instruction_clause":
         if not specs or spec["base"] not in specs:
             raise KeyError(f"arm {name}: unknown base {spec.get('base')!r}")

@@ -81,7 +81,8 @@ class CommittedBenchmarkReplayTests(unittest.TestCase):
     def test_committed_benchmarks_replay_exactly(self):
         evidence = ROOT / "docs" / "evidence"
         found = sorted(list(evidence.glob("*-judge-benchmark/**/requests.jsonl"))
-                       + list(evidence.glob("*-clef-judges/**/requests.jsonl")))  # post-hoc arms, labeled in run.json
+                       + list(evidence.glob("*-clef-judges/**/requests.jsonl"))  # post-hoc arms, labeled in run.json
+                       + list(evidence.glob("*-openai-decisions/**/requests.jsonl")))
         if not found:
             self.skipTest("no committed judge-benchmark evidence yet")
         for requests in found:

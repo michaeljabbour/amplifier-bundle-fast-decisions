@@ -174,6 +174,24 @@ arms:
     note: never faked; recorded as unavailable in run.json when the probe is not 200
     determinism: {temperature_sent: null, seed_sent: null}
 
+  # OpenAI Decisions API (public beta, post-hoc addition 2026-10-06; not in the preregistration).
+  # POST https://api.openai.com/v1/decisions with typed questions: noul -> predicate, choice -> choice.
+  # Billed $0.10 per million input tokens, nothing for output or cache. No native_form: it runs `form: adapted`
+  # on the trace splits. call_timeout_ms is the transport limit (so slow answers are recorded); the bundle's 3 s
+  # deadline is applied at scoring time (decision_timeout), exactly as for every other arm.
+  luna-decisions:
+    adapter: openai-decisions
+    model: gpt-6-luna
+    key_env: OPENAI_API_KEY
+    call_timeout_ms: 30000
+    local: false
+    external_state: true
+    price_in: 0.10
+    price_out: 0.0
+    est_tokens_in: 800
+    est_tokens_out: 0
+    determinism: {temperature_sent: null, seed_sent: null}
+
   # Pre-declared prompt interventions: the same clause appended to choice instructions.
   jev-1.13+sideeffect-clause:
     adapter: instruction_clause
@@ -263,3 +281,4 @@ contrasts:
   - [jev-1.13, clef]
   - [jev-1.13, clef-flash]
   - [clef, clef-flash]
+  - [jev-1.13, luna-decisions]
