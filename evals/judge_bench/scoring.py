@@ -88,7 +88,9 @@ def validate_answer(case: dict, answer: dict) -> None:
         raise ValueError("Invalid probabilities")
     for p in probabilities.values():
         _number(p)
-    if not math.isclose(sum(probabilities.values()), 1, abs_tol=.01):
+    # math.fsum: exact and version-independent (Python 3.12 changed float sum() to compensated summation,
+    # which flipped [0.11, 0.68, 0.2] across this boundary between 3.11 and 3.12+).
+    if not math.isclose(math.fsum(probabilities.values()), 1, abs_tol=.01):
         raise ValueError("Invalid probabilities")
 
 
