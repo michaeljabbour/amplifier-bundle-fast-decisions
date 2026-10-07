@@ -1,0 +1,74 @@
+\section{Setting, data and measures}\label{sec:setting}
+
+\paragraph{The harness and the decision interface} The harness is an agent runtime with a pluggable orchestrator.
+At chosen points (session start, before a file read, before a computer-use action) it asks a decision model a typed
+question: a short state, a question and two to four allowed answers. The model returns a probability per answer. The
+harness acts automatically only when the top probability is at least \MinP, leads the runner-up by at least
+\MinMargin\ and arrives within \TimeoutS\,s; otherwise it falls back to the host model. The session-start decision
+chooses the session's model and reasoning effort once; the shipped default can also use a one-line rule instead of a
+model (route to the cheaper model unless the workspace has more than \AoScopeFiles\ files) and a price gate that keeps
+the host whenever routing cannot pay at current prices.
+
+\paragraph{Models and prices} The hosts were Fable~5.1 and Opus~5.5; the routing target was Sonnet~5. At list prices
+(US dollars per million tokens: input, output, cache read, cache write) Fable costs \PriceFableIn, \PriceFableOut,
+\PriceFableRead\ and \PriceFableWrite; Opus \PriceOpusIn, \PriceOpusOut, \PriceOpusRead\ and \PriceOpusWrite; Sonnet
+\PriceSonnetIn, \PriceSonnetOut, \PriceSonnetRead\ and \PriceSonnetWrite. Sonnet's cache reads cost more than either
+host's. The decision models were Jev (a hosted typed-decision service), GPT-6 Luna and GPT-6.1 Sol prompted for
+probabilities, Cloudflare's Clef and Clef-Flash, OpenAI's Decisions API (Luna behind a native typed-decision endpoint)
+and seven local models.
+
+\paragraph{Data} \Cref{tab:data} lists the sources and what each can and cannot show. The \emph{production
+telemetry} is one owner's harness: \ObProdTagged\ sessions carried an explicit production tag and \ObProdDefault\ were
+counted as production because they carried no test tag; \emph{test} traffic is sessions tagged as tests or
+evaluations, including our own benchmark runs. The \emph{constructed} judge cases were labelled by language models
+under a written guide and checked by two further language-model reviewers, so labels follow the guide rather than any
+operator's preference. The \emph{real-decision} cases were rebuilt from earlier agent sessions by fingerprint matching,
+with the state clipped to the decision model's \TrStateBudget-character input budget. The \emph{holdout study (S1)}
+panel was disjoint from the main campaign and was smoke-tested before preregistration: one plain-Sonnet session per
+scenario found prompt or grader defects in \SmokeFixed\ of the \SmokeN\ scenarios, which were repaired (genuine agent
+mistakes were kept) before the confirmatory run. Every pair of sessions starts from the same frozen workspace at the
+same time, each with its own cache key, so the two arms differ only in the configuration under test.
+
+\begin{table}[htbp]
+\centering\small
+\caption{Data sources, what each shows, and its main weakness. ``Preregistered'' means hypotheses, thresholds and
+analysis were committed before the data existed.}
+\label{tab:data}
+\begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}p{0.19\textwidth} >{\raggedright\arraybackslash}X
+  >{\raggedright\arraybackslash}p{0.29\textwidth}@{}}
+\toprule
+Source & What it is & Strength / weakness \\
+\midrule
+Production telemetry & \ObEvents\ events over \ObDays\ days; \ObProdSessions\ production sessions of one owner &
+  Real usage and latency / one user, production partly a residual class, no correctness labels \\
+Constructed judge benchmark & \DevN\ development and \HoldN\ preregistered holdout cases (read, search, select,
+  computer use), \HoldReps\ repetitions & Known answers, paired across judges / labels written by language models \\
+Real-decision benchmark & \TrN\ held-out read decisions rebuilt from earlier agent sessions & Realistic states /
+  small; rebuilt, not captured \\
+Main paired campaign & \NSessions\ sessions on \NScenarios\ scripted scenarios, \MinTurns--\MaxTurns\ turns, both hosts &
+  Whole-session cost and quality / estimator written after the data \\
+Holdout study (S1) & \SOneSessions\ sessions on \SOnePanelN\ fresh scenarios & Preregistered, fresh tasks / scripted
+  tasks, list prices \\
+Effort follow-ups & Medium vs default effort on Sonnet and Fable & Clean effort contrast / \EcScen\ scenarios each \\
+Decisions API run & The native endpoint against an in-run Jev reference on all four judge splits & Paired in time /
+  post hoc, slow network \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\paragraph{What makes this evidence strong} Sessions are paired and start together from one frozen workspace; the
+central routing result was preregistered and replicated on \SOnePanelN\ fresh scenarios (\SOneSessions\ sessions);
+every number is regenerated from committed evidence; and results that cut against our own default (the Decisions API,
+a corrected projection) are reported in the body. The common limits are also stated here once: session results use
+one provider's models (two hosts, one routing target), scripted tasks of at most \MaxTurns\ turns, automated quality
+checks rather than human judgement, and list prices rather than invoices.
+
+\paragraph{Measures} \emph{Cost} is the list-price cost of a session's measured tokens, with the shared
+tool-definition prefix repriced from the cache-write to the cache-read rate (a \NormShareMain\,\% adjustment) plus the
+decision model's estimated charge. A \term{cost ratio} compares paired sessions of the same task; we report the
+\term{geometric mean} of per-scenario ratios with 95\,\% scenario-cluster bootstrap intervals (90\,\% for
+equivalence tests). \emph{Quality} is the \term{turn-pass} fraction: the share of a session's scripted turns whose
+automated checks passed; non-inferiority means its 95\,\% lower bound stays above \NIMargin. For decision models,
+\emph{accuracy} is the share of cases answered correctly after the fallback rule, \emph{wrong automatic} the share
+acted on wrongly without fallback, \emph{coverage} the share acted on automatically, and \emph{latency} the client
+wall time. Labels mark each result \prereg, \posthoc\ or \expl.

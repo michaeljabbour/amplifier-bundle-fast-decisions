@@ -1,0 +1,29 @@
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}>{\raggedright\arraybackslash}p{0.36\textwidth} l r r r c@{}}
+\toprule
+Configuration & class & cost ratio & 95\,\% CI & turn-pass $\Delta$ 95\,\% CI & candidate \\
+\midrule
+rstar | strong default | scope off | keep none & bundle+rule & 0.528 & 0.503--0.558 & $-$0.032--$-$0.002 & \ok \\
+rstar | strong medium | scope off | keep none & bundle+rule & 0.528 & 0.503--0.558 & $-$0.032--$-$0.002 & \ok \\
+always\_route | strong default | scope off | keep none & bundle+rule & 0.528 & 0.503--0.558 & $-$0.032--$-$0.002 & \ok \\
+always\_route | strong medium | scope off | keep none & bundle+rule & 0.528 & 0.503--0.558 & $-$0.032--$-$0.002 & \ok \\
+rstar | strong medium | scope 300 | keep none & bundle+rule & 0.581 & 0.542--0.625 & $-$0.028--0.002 & \ok \\
+always\_route | strong medium | scope 300 | keep none & bundle+rule & 0.581 & 0.542--0.625 & $-$0.028--0.002 & \ok \\
+jev | strong medium | scope 300 | keep none & bundle+jev & 0.586 & 0.545--0.631 & $-$0.030--$-$0.002 & \ok \\
+rstar | strong default | scope 300 | keep none & bundle+rule & 0.608 & 0.558--0.666 & $-$0.027--0.002 & \ok \\
+always\_route | strong default | scope 300 | keep none & bundle+rule & 0.608 & 0.558--0.666 & $-$0.027--0.002 & \ok \\
+rstar | strong medium | scope off | keep review+explain & bundle+rule & 0.618 & 0.574--0.666 & $-$0.022--0.007 & \ok \\
+always\_route | strong medium | scope off | keep review+explain & bundle+rule & 0.618 & 0.574--0.666 & $-$0.022--0.007 & \ok \\
+jev | strong default | scope 300 | keep none & bundle+jev & 0.618 & 0.565--0.679 & $-$0.029--$-$0.001 & \ok \\
+rstar | strong medium | scope 300 | keep review+explain & bundle+rule & 0.650 & 0.601--0.703 & $-$0.021--0.008 & \ok \\
+always\_route | strong medium | scope 300 | keep review+explain & bundle+rule & 0.650 & 0.601--0.703 & $-$0.021--0.008 & \ok \\
+rstar | strong default | scope off | keep review+explain & bundle+rule & 0.650 & 0.595--0.713 & $-$0.015--0.011 & \ok \\
+always\_route | strong default | scope off | keep review+explain & bundle+rule & 0.650 & 0.595--0.713 & $-$0.015--0.011 & \ok \\
+jev | strong medium | scope 300 | keep review+explain & bundle+jev & 0.655 & 0.605--0.709 & $-$0.024--0.004 & \ok \\
+rstar | strong default | scope 300 | keep review+explain & bundle+rule & 0.706 & 0.640--0.778 & $-$0.014--0.012 & \ok \\
+always\_route | strong default | scope 300 | keep review+explain & bundle+rule & 0.706 & 0.640--0.778 & $-$0.014--0.012 & \ok \\
+jev | strong default | scope 300 | keep review+explain & bundle+jev & 0.717 & 0.650--0.792 & $-$0.016--0.009 & \ok \\
+plain-medium & plain-medium & 0.851 & 0.829--0.873 & $-$0.005--0.014 & \ok \\
+bundle-unrouted medium & bundle-unrouted & 0.853 & 0.834--0.873 & $-$0.016--0.005 & \ok \\
+bundle-unrouted default & bundle-unrouted & 1.004 & 0.987--1.022 & $-$0.002--0.010 &  \\
+\bottomrule
+\end{tabular*}

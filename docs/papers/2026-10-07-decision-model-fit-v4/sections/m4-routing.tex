@@ -1,0 +1,54 @@
+\section{Route only when the host is much more expensive, caching included}\label{sec:routing}
+
+\textbf{Claim.} Routing a session to a cheaper model saves money only when the host is much more expensive once you
+count what a session actually buys (mostly cache reads and writes) and the extra requests the cheaper model makes.
+On Fable, routing alone cost \CfFableSonnetArm\X\ the plain host and the full preregistered package
+\SHOneRatio\X; on Opus it cost \SHFiveRatio--\CfOpusSonnetArm\X. Both directions replicated on fresh scenarios.
+
+\paragraph{Why we measured whole sessions} Per-token list prices misled. Opus's input price is above Sonnet's, yet
+an agent session is mostly cached context, and Sonnet's cache reads cost more than Opus's. The only honest test was
+to run the same task twice, once on the plain host and once routed, and compare the bills.
+
+\paragraph{Evidence} \Cref{tab:perrequest} prices one average request of the plain-host sessions (\RqMixRead\
+cache-read, \RqMixWrite\ cache-write and \RqMixOut\ output tokens, measured over \RqMixAnchors\ sessions) at each
+model's list prices. Sonnet costs \RqSonnetOverFable\X\ Fable per request but \RqSonnetOverOpus\X\ Opus. Sonnet
+sessions also made more requests (\RpMultFable\X\ on Fable's tasks, \RpMultOpus\X\ on Opus's), so the predicted
+routing ratios are \RqPredFable\ and \RqPredOpus. The measured ratios agree in sign and size (\cref{fig:replication}).
+In the main campaign plain Sonnet against plain Fable, both at default effort, cost \CfFableSonnetArm\X\
+(\CfFableSonnetArmCIThree), the cleanest model-only contrast; against plain Opus it cost \CfOpusSonnetArm\X\
+(\CfOpusSonnetArmCIThree) \prereg\ (all pairs; the quality-filtered pair reading is in the supplement). On \SOnePanelN\ fresh scenarios the preregistered Fable configuration (routing plus medium
+effort) cost \SHOneRatio\X\ plain Fable (\SHOneCI) and routing on Opus cost \SHFiveRatio\X\ (\SHFiveCI) \prereg.
+Holding token counts fixed, routing on Opus would only break even if Opus's cache reads cost about
+\$\BEStickyPair\ per million tokens instead of \$\PriceOpusRead\ \expl.
+
+\begin{table}[tbp]
+\centering\small
+\caption{Sonnet is half Fable's price per request but Opus's equal. Cost of one average plain-host request at list
+prices, its composition, and the routing ratio predicted from the per-request price and the measured request
+multiplier \expl.}
+\label{tab:perrequest}
+\input{generated/tables/v4-perrequest.tex}
+\end{table}
+
+\begin{figure}[tbp]
+\centering
+\pgfplotslegendfromname{cumlegend}\par\smallskip
+\input{figures/fig-cumulative.tex}
+\caption{The same direction in every study. Routing to Sonnet against the plain host, per host: the pilot and the
+main campaign's training scenarios \expl, its test scenarios (sticky arm, all pairs) and the preregistered holdout
+study (the frozen Fable configuration; Sonnet on Opus).}
+\label{fig:replication}
+\howtoread{Each dot is a geometric-mean cost ratio with its 95\,\% interval on a log scale; left of 1 saves money.
+Every Fable row sits near one half and every Opus row above 1; the small Opus pilot is the highest.}
+\end{figure}
+
+Because two hosts and one cheap model were measured, ``much more expensive'' is a modelled threshold: no host lay
+between Opus's one-to-one and Fable's two-to-one per-request price against Sonnet.
+
+\begin{keyidea}[title={For practitioners}]
+Before routing, price an average request of your own sessions on both models, including cache reads and writes, and
+multiply by how many more requests the cheaper model makes. Route only when the result is clearly below one; a price
+gate that does exactly this predicted both of our directions.
+\end{keyidea}
+
+Details: Supplement Sections~\ref{S-sec:campaign} and~\ref{S-sec:s1}.

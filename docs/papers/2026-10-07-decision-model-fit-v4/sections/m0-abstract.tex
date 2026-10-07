@@ -1,0 +1,17 @@
+\begin{center}\begin{minipage}{0.93\textwidth}\small
+\noindent\textbf{Abstract.} A \emph{system-1 decision model} answers an AI agent's small typed questions (which model
+should run this session, may this file be read, is this action safe) in a fraction of a second. We measured where such
+models fit in an agent harness, using judge benchmarks, paired multi-turn sessions (one study preregistered on
+\SOnePanelN\ fresh scenarios) and \ObDays\ days of production telemetry. \emph{First,} Jev, a hosted typed-decision
+service, was the best price--quality choice when cost and latency matter (\JevHoldAccK/\HoldN\ correct at
+\$\JevHoldCost\ per million decisions): dearer models were 8--11 points more accurate, which the preregistered
+corrected tests could not confirm, at many times the price; post hoc, OpenAI's Decisions API scored the same or
+higher on every split at \OaPriceXLo--\OaPriceXHi\X\ the price but automated fewer real reads. \emph{Second,} routing a
+session to a cheaper model paid only on the much dearer host once caching was counted: \SHOneRatio\X\ the plain host
+on Fable~5.1 (about \KpProxyTwo\X\ with the review safeguard we recommend, replayed) and \SHFiveRatio\X\ on Opus~5.5.
+\emph{Third,} configure once per session: deciding once cost \HThreeOpusArmSaving--\HThreeFableArmSaving\,\% less than
+re-deciding every turn, and a one-line rule matched the decision model at session start. \emph{Fourth,} a
+deterministic guard removed all side-effect errors in risky actions; editable criteria remain untested.
+\emph{Fifth,} telemetry measures latency and usage, not accuracy. Session results use one provider's models, scripted
+tasks and list prices.
+\end{minipage}\end{center}

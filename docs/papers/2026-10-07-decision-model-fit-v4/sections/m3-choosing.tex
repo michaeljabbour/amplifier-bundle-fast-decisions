@@ -1,0 +1,54 @@
+\section{Choosing the decision model: Jev is the best price--quality choice}\label{sec:choose}
+
+\textbf{Claim.} Among the system-1 models we tested, Jev is the best price--quality tradeoff when cost and latency
+matter: it is the cheapest and fastest accurate judge, and no dearer model was shown more accurate in the preregistered
+test. OpenAI's Decisions API is the main challenger (post hoc: the same or higher accuracy at
+\OaPriceXLo--\OaPriceXHi\X\ the price, with fewer automated real reads).
+
+\paragraph{Evidence} On the preregistered constructed holdout, Jev answered \JevHoldAccK\ of \HoldN\ cases correctly at
+\$\JevHoldCost\ per million decisions with a client p95 of \JevHoldPninetyfiveRange\,ms (\cref{fig:frontier}). GPT-6
+Luna answered \LunaHoldAccK\ at \LunaHoldCostX\X\ the cost and a p95 of \LunaHoldPninetyfiveRangeS\,s; GPT-6.1 Sol
+answered \SolHoldAccK\ at \SolHoldCostX\X\ the cost and \SolHoldPninetyfiveRangeS\,s. That is an apparent accuracy
+premium of 8--11 points (\LunaHoldRAccDiff\ and \SolHoldRAccDiff; \LunaHoldRAccCandOnly\ and \SolHoldRAccCandOnly\ cases,
+never wrong where Jev was right), with paired bootstrap intervals of \LunaHoldRAccDiffCI\ and \SolHoldRAccDiffCI\ points,
+that the corrected preregistered tests could not confirm (Holm $p$ = \LunaHoldRAccPHolm\ and \SolHoldRAccPHolm, over a
+13-arm family) \prereg. Clef scored \ClHoldClefAcc\ against an in-run Jev's \ClHoldJevAcc\ at
+\ClClefCostXLow--\ClClefCostXHigh\X\ the cost \posthoc; Clef-Flash scored \ClHoldFlashAcc. The seven local models were
+less accurate and none met the preregistered safety bar. No challenger met the preregistered rule for replacing the
+incumbent (better accuracy or fewer misfires, p95 within 500\,ms, at most twice the cost).
+
+\begin{figure}[tbp]
+\centering
+\pgfplotslegendfromname{v4frontierlegend}\par\smallskip
+\input{figures/fig-v4-frontier.tex}
+\caption{Jev is the low-cost point on the accuracy--cost frontier. Holdout accuracy against cost per million
+decisions for the cloud judges with a price; labels give correct answers out of \HoldN. Local models are omitted (no
+priced compute).}
+\label{fig:frontier}
+\howtoread{Up is more accurate, left is cheaper. Luna and Sol are more accurate at about two and fifty times Jev's price;
+Clef-Flash is cheaper per point than neither. Luna-D, the post hoc Decisions API run, sits above Jev at
+\OaPriceXLo--\OaPriceXHi\X\ the price.}
+\end{figure}
+
+\paragraph{The Decisions API, post hoc} OpenAI's native typed-decision endpoint was run after the preregistered work,
+paired in time with an in-run Jev reference. It scored \OaDevLunaK\ against \OaDevJevK\ development cases,
+\OaHoldoutLunaK\ against \OaHoldoutJevK\ holdout cases, \OaTraceDevLunaK\ against \OaTraceDevJevK\ and
+\OaTraceHoldoutLunaK\ against \OaTraceHoldoutJevK\ real read decisions; only the last difference survived Holm
+correction ($p = \OaTrHoldHolm$, exploratory). On real read decisions it automated fewer (\OaTrHoldLunaCovK\ against
+\OaTrHoldJevCovK\ of \OaTrHoldN), so part of its accuracy gain is more fallbacks to the host. Its misfire rate was never
+higher than Jev's and it cost \OaPriceXLo--\OaPriceXHi\X\ as much per decision. Its servers answered in
+\OaServerPninetyfiveLo--\OaServerPninetyfiveHi\,ms at p95, but on a network that was slow for both judges the client saw
+seconds; \OaInvalid\ of its \OaRequests\ requests and \OaInvalidJev\ of Jev's failed in transport.
+
+\paragraph{On real read decisions} On \TrN\ held-out read decisions, \TrNUseful\ of \NumBase\ judges met the
+preregistered usefulness rule; Jev took the most correct automatic reads (\TrJevReads\ of \TrReadCases) but also made
+\TrJevWaK\ wrong ones. No model was safe enough to act alone there.
+
+\begin{keyidea}[title={For practitioners}]
+Use Jev as the default: it is the cheapest accurate option and fast enough for interactive use on a clean network path.
+Pay for a dearer judge only where 8--11 points of possible accuracy are worth many times the price, and re-test the
+Decisions API, which matched or beat Jev on our cases at \OaPriceXLo--\OaPriceXHi\X\ the price. Keep a fallback to the
+host on real read decisions.
+\end{keyidea}
+
+Details: Supplement Section~\ref{S-sec:judges}.

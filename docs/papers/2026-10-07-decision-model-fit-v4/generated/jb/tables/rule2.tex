@@ -1,0 +1,15 @@
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}l r r r r r r r r@{}}
+\toprule
+ & \multicolumn{4}{c}{Dev (screen)} & \multicolumn{4}{c}{Holdout (preregistered)} \\
+\cmidrule(lr){2-5}\cmidrule(lr){6-9}
+Local judge & cov. & wrong & upper & acc. & cov. & wrong & upper & acc. \\
+\midrule
+tev1 4B & 54\,\% & 3 & 9\,\% & 79\,\% & 44\,\% & 3 & 13\,\% & 75\,\% \\
+nimble 9B & 69\,\% & 5 & 12\,\% & 82\,\% & 59\,\% & 4 & 15\,\% & 78\,\% \\
+Qwen3 8B & 71\,\% & 5 & 12\,\% & 86\,\% & 70\,\% & 10 & 27\,\% & 71\,\% \\
+Qwen3 0.6B & 52\,\% & 19 & 31\,\% & 60\,\% & 40\,\% & 15 & 36\,\% & 43\,\% \\
+Laya base & 2\,\%$^{\dagger}$ & 1 & 6\,\% & 60\,\% & 3\,\%$^{\dagger}$ & 0 & 6\,\% & 44\,\% \\
+Qwen3 4B & 30\,\% & 0 & 4\,\% & 84\,\% & 25\,\%$^{\dagger}$ & 4 & 15\,\% & 60\,\% \\
+tev1 0.8B & 12\,\%$^{\dagger}$ & 0 & 4\,\% & 74\,\% & 27\,\%$^{\dagger}$ & 8 & 23\,\% & 56\,\% \\
+\bottomrule
+\end{tabular*}

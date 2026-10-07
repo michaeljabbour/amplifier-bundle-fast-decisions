@@ -1,0 +1,6 @@
+\addlegendimage{only marks, mark=*, mark size=2.4pt, color=okblue}\addlegendentry{candidate}
+\addplot[only marks, mark=o, mark size=2.4pt, color=okgray, mark options={line width=0.9pt}] table[x=x, y=y]{generated/data/fz-opus-non.dat};
+\addlegendentry{not a candidate}
+\addlegendimage{only marks, mark=star, mark size=5pt, color=okorange, mark options={line width=1.3pt}}\addlegendentry{chosen by the freeze rule}
+\addplot[only marks, mark=diamond, mark size=4.5pt, color=okgreen, mark options={line width=1.3pt}] table[x=x, y=y]{generated/data/fz-opus-prereg.dat};
+\addlegendentry{preregistered C*}

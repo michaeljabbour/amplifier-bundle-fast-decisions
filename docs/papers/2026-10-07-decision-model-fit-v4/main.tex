@@ -1,0 +1,43 @@
+% Where a Decision Model Fits in an Agent Harness -- main paper (v4).
+% Build with `make` (runs build_assets.py, then the supplement and the main paper).
+\documentclass[11pt,letterpaper]{article}
+\input{preamble}
+\externaldocument[S-]{decision-model-fit-v4-supplement}
+\hypersetup{
+  pdftitle={Where a Decision Model Fits in an Agent Harness},
+  pdfauthor={Amplifier; Michael J. Jabbour; David Koleczek},
+  pdfsubject={Technical report v4, October 7, 2026: decision models in agent harnesses},
+  pdfkeywords={decision models, model routing, prompt caching, reasoning effort, paired design, preregistration, AI agents},
+  pdflang={en-US}, pdfdisplaydoctitle=true, pdfcreationdate={D:20261007000000}, pdfmoddate={D:20261007000000},
+  colorlinks=true, linkcolor=okblue!65!black, urlcolor=okblue!65!black, citecolor=okblue!65!black, filecolor=okblue!65!black, runcolor=okblue!65!black,
+  bookmarksnumbered=true, bookmarksopen=true,
+}
+\newcommand{\supp}[1]{Supplement~\ref{S-#1}}
+\newcommand{\suppfig}[1]{Supplement Figure~\ref{S-#1}}
+\newcommand{\supptab}[1]{Supplement Table~\ref{S-#1}}
+
+\begin{document}
+\thispagestyle{plain}
+\begin{center}
+  {\LARGE\sffamily\bfseries Where a Decision Model Fits\\[3pt] in an Agent Harness\par}
+  \vspace{10pt}
+  {\large Amplifier \qquad Michael J.\ Jabbour \qquad David Koleczek\par}
+  \vspace{3pt}
+  {\normalsize Microsoft, Office of the CTO\par}
+  \vspace{3pt}
+  {\normalsize October 7, 2026\par}
+\end{center}
+\vspace{4pt}
+\input{sections/m0-abstract}
+
+\input{sections/m1-intro}
+\input{sections/m2-setting}
+\input{sections/m3-choosing}
+\input{sections/m4-routing}
+\input{sections/m5-once}
+\input{sections/m6-gate}
+\input{sections/m7-telemetry}
+\input{sections/m8-recommendations}
+\input{sections/m9-limits}
+\input{sections/m10-references}
+\end{document}

@@ -1,0 +1,32 @@
+\section{Recommendations}\label{sec:recs}
+
+\Cref{tab:recs} summarises the configuration these results support. The same settings apply whether the decision is
+made inside the harness or by a small command-line tool before a third-party agent starts; the supplement gives
+ready-to-use configurations (Supplement Section~\ref{S-sec:recipes}).
+
+\begin{table}[htbp]
+\centering\small
+\caption{Recommended configuration per host model, at the list prices of \cref{sec:setting}.}
+\label{tab:recs}
+\begin{tabularx}{\textwidth}{@{}l >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}p{0.22\textwidth}
+  >{\raggedright\arraybackslash}p{0.15\textwidth}@{}}
+\toprule
+Host & Session model & Reasoning effort & Evidence \\
+\midrule
+Fable 5.1 & Route to Sonnet, decided once by the workspace-size rule and the price gate; keep review and explain tasks on
+  the host$^{a}$ & Sonnet at medium; Fable at medium when kept & \Cref{sec:routing,sec:once} \\
+Opus 5.5 & Keep the host: the price gate never routes & Default (medium showed no saving) & \Cref{sec:routing} \\
+Sonnet 5 & Already the cheap model & Medium (\EcRatio\X) & Effort follow-up \\
+\midrule
+Any harness & \multicolumn{3}{>{\raggedright\arraybackslash}p{0.77\textwidth}@{}}{Decide once per session; keep the price
+  gate on; use the rule, not a model, for the session start; use Jev where a decision model is needed and re-test the
+  Decisions API; keep a deterministic guard on risky actions (\cref{sec:choose,sec:gate}).} \\
+\bottomrule
+\end{tabularx}
+\par\smallskip
+{\footnotesize\raggedright $^{a}$\,In the holdout study, non-inferiority of Sonnet's turn-pass was not established on
+review and explain tasks (lower bound \SHSevenDtpLow\ against \NIMargin), so a preregistered rule keeps them on the host.
+Without a decision model the shipped configuration identifies them with a keyword classifier; replayed on the holdout
+sessions this gives about \KpProxyTwo\X\ of plain Fable, against \KpRstarTwo\X\ without the safeguard (replayed, not
+run live).\par}
+\end{table}

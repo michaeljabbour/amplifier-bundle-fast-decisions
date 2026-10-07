@@ -1,0 +1,41 @@
+\section{What real-usage telemetry tells you, and what it cannot}\label{sec:telemetry}
+
+\textbf{Claim.} Production telemetry is the right instrument for latency, usage mix and how often routing actually
+applies, and the wrong one for accuracy or savings. In real use routing applied far less often than in the lab.
+
+\paragraph{Evidence} One owner's harness recorded \ObEvents\ events over \ObDays\ days, \ObProdSessions\ of them
+production sessions (\cref{tab:data}) \expl. A Jev decision
+took \ObJevPfifty\,ms at the median against \ObHostPfifty\,s for a host call, \ObJevHostXFifty\X\ faster
+(\ObJevHostXNinetyfive\X\ at p95; \cref{fig:latency}). In production the workspace-size gate kept \ObStScopePct\,\% of
+sessions on the host, and Jev routed \ObJevRouteProd\,\% of the sessions it judged, against \AoFableJevRoute\,\% in
+the main campaign and \ObJevRouteTest\,\% of test sessions. Effort was switched \ObEffSwitchProd\ times in
+\ObEffReqProd\ production requests (against \ObEffSwitchTest\ in \ObEffReqTest\ test requests), and no production
+session ran on Fable, the host where routing pays. The bundle's record of how often its proposals matched the host's
+next action was a usage signal, not a correctness label: \ObProdRate\,\% in production against \ObTestRate\,\% in test
+traffic, because most host actions could not have matched by construction (the headline \ObAllRate\,\% agreement was
+mostly such unmatchable decisions).
+
+\begin{figure}[tbp]
+\centering
+\pgfplotslegendfromname{obslegend}\par\smallskip
+\input{figures/fig-obs-latency.tex}
+\caption{A decision call is about thirty times faster than a host call at the median. Latency of decision calls and of
+host model calls recorded in production and test traffic (log scale).}
+\label{fig:latency}
+\howtoread{Each row has a median and a 95th-percentile bar; values at the bar ends are p95 in milliseconds.}
+\end{figure}
+
+\paragraph{A corrected projection} Before S1 we projected that the recommended configuration would cost
+\AthreeOld\X\ (\AthreeOldBand) of shipped defaults on this owner's spend mix. That projection assumed medium effort
+saves about as much on Opus as on Sonnet, which S1 did not demonstrate (\SHFourRatio\X). Recomputed on the same mix
+(\AthreeOpusShare\,\% Opus, \AthreeSonnetShare\,\% Sonnet spend), with Opus at default effort and Sonnet hosts at
+medium (\EcRatio\X), the projection is \AthreeNew\X\ (\AthreeNewBand) \expl; the correction is documented in the
+supplement.
+
+\begin{keyidea}[title={For practitioners}]
+Instrument your harness for latency, the host-model mix and how often each gate fires. Do not read accuracy or
+savings from it: measure those with labelled cases and paired sessions. Expect real usage to route less often than a
+benchmark suggests.
+\end{keyidea}
+
+Details: Supplement Section~\ref{S-sec:telemetrydetail}.

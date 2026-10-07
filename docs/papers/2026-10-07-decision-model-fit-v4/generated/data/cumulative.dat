@@ -1,0 +1,9 @@
+y label r rm rp v
+8 {Fable: pilot (sticky, 5 scenarios)} 0.5289 0.0764 0.1223 0.529
+7 {Fable: main-v1 train (sticky)} 0.5710 0.0559 0.0675 0.571
+6 {Fable: main-v1 test (sticky)} 0.5372 0.0574 0.0742 0.537
+5 {Fable: S1 holdout (frozen config, H1)} 0.5809 0.0391 0.0440 0.581
+3 {Opus: pilot (sticky, 5 scenarios)} 1.4586 0.2086 0.3448 1.459
+2 {Opus: main-v1 train (sticky)} 1.1992 0.0902 0.1032 1.199
+1 {Opus: main-v1 test (sticky)} 1.2027 0.1184 0.1303 1.203
+0 {Opus: S1 holdout (Sonnet, H5)} 1.2554 0.0584 0.0655 1.255

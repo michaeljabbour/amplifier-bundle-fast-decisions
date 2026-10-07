@@ -1,0 +1,11 @@
+key	text	x	y	px	py	x0	y0	x1	y1	own_dist	nearest_other	nearest_other_dist	leader
+tev1-0.8b+qwen3-4b+laya-base	tev1 0.8B, Qwen3 4B, Laya base	0.0000	0.0000	27.50	16.35	7.80	61.05	47.21	93.98	44.70	ph-clef-flash	63.95	yes
+tev1-4b	tev1 4B	4.0000	3.0000	137.52	49.04	123.41	53.74	151.63	63.07	4.70	ph-clef-flash	14.19	no
+qwen3-0.6b	Qwen3 0.6B	6.0000	9.0000	192.53	114.42	197.23	108.95	240.36	119.88	4.70	nimble-9b	34.68	no
+gpt-6.1-sol	GPT-6.1 Sol	7.0000	2.0000	220.03	38.14	224.73	33.29	267.25	42.99	4.70	gpt-6-luna	27.84	no
+qwen3-8b	Qwen3 8B	7.0000	13.0000	220.03	158.00	224.73	152.54	262.38	163.47	4.70	nimble-9b	40.17	no
+gpt-6-luna	GPT-6 Luna	8.0000	5.0000	247.54	70.83	199.37	66.16	242.84	75.50	4.70	gpt-6.1-sol	28.02	no
+nimble-9b	nimble 9B	9.0000	9.0000	275.04	114.42	279.74	109.56	316.62	119.27	4.70	jev-1.13	38.74	no
+jev-1.13	Jev 1.13 (also in-run)	10.0000	5.0000	302.55	70.83	307.25	59.94	351.70	81.72	4.70	nimble-9b	45.89	no
+ph-clef	Clef (post hoc)	4.0000	2.0000	137.52	38.14	140.85	23.32	192.54	34.82	4.70	tev1-4b	14.60	no
+ph-clef-flash	Clef-Flash (post hoc)	3.0000	3.0000	110.02	49.04	33.85	43.29	105.32	54.79	4.70	tev1-0.8b+qwen3-4b+laya-base	27.68	no

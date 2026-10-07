@@ -1,0 +1,24 @@
+\section{Glossary}\label{app:glossary}
+
+\begin{description}[style=nextline, leftmargin=1.2em]
+  \item[A/A pair] Two identical plain-host sessions; their difference shows the noise floor.
+  \item[Cache read / cache write] Tokens served from, or written into, the provider's prompt cache. Reads are cheap;
+    writes cost more than ordinary input.
+  \item[Confidence interval (95\,\%)] An interval produced by a procedure that, over many repetitions of the study,
+    would contain the true value of the parameter 95\,\% of the time; here computed by resampling whole scenarios.
+  \item[Decide once] Choose the session's model and effort at the start and never switch.
+  \item[Decision model (system~1)] A fast model that answers a typed question with a probability per allowed answer.
+  \item[Freeze rule] The preregistered, deterministic rule that picks each host's configuration from the S1 results.
+  \item[Geometric mean] The average of logs, exponentiated; the right average for ratios.
+  \item[Holm correction] A way to keep the overall false-positive rate at 5\,\% when testing several hypotheses.
+  \item[Host model] The large model the agent normally runs on (Fable 5.1 or Opus 5.5 here).
+  \item[keep\_on\_host] A setting that keeps chosen task types (review, explain) on the host model.
+  \item[Non-inferiority margin] How much worse quality may be and still count as ``no worse than the specified margin'': \NIMarginPts\ points of
+    turn-pass.
+  \item[Paired cost ratio] One arm's session cost divided by its partner's, on the same task, started together.
+  \item[Preregistered] Hypotheses and thresholds fixed in a committed document before the data existed.
+  \item[Price gate] Arithmetic that keeps the host when the cheaper model cannot save money at current prices.
+  \item[Rule R*] Route to Sonnet unless the workspace has more than \AoScopeFiles\ files.
+  \item[Scope gate] The workspace-size part of R*.
+  \item[Turn-pass fraction] The share of a session's scripted turns whose checks passed.
+\end{description}
