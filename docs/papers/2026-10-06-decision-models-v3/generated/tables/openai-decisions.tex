@@ -1,17 +1,17 @@
-\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}l l r r r r r r@{}}
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}l l r S[table-format=2.1] S[table-format=2.1] S[table-format=1.2] S[table-format=1.2] S[table-format=2.1]@{}}
 \toprule
-Split & Judge & correct & wrong auto. & coverage & p50 s & p95 s & \$ / 1M \\
+Split & Judge & correct & {wrong auto.\ (\%)} & {coverage (\%)} & {p50 s} & {p95 s} & {\$ / 1M} \\
 \midrule
 dev & GPT-6 Luna, Decisions API & 88/90 & 0.0 & 71.1 & 1.80 & 4.80 & 20.3 \\
 dev & Jev 1.13 (in-run reference) & 86/90 & 3.3 & 75.6 & 1.46 & 4.46 & 15.9 \\
 \addlinespace[2pt]
-holdout & GPT-6 Luna, Decisions API & 59/63 & 1.6 & 68.3 & 1.47 & 3.44 & 25.6 \\
+holdout & GPT-6 Luna, Decisions API & 59/63 & 1.6 & 68.2 & 1.47 & 3.44 & 25.6 \\
 holdout & Jev 1.13 (in-run reference) & 55/63 & 1.6 & 63.5 & 1.57 & 3.73 & 18.4 \\
 \addlinespace[2pt]
 trace-dev & GPT-6 Luna, Decisions API & 16/21 & 9.5 & 47.6 & 1.68 & 3.24 & 71.8 \\
 trace-dev & Jev 1.13 (in-run reference) & 16/21 & 14.3 & 66.7 & 1.40 & 4.07 & 43.2 \\
 \addlinespace[2pt]
-trace-holdout & GPT-6 Luna, Decisions API & 30/42 & 2.4 & 16.7 & 1.41 & 3.00 & 76.3 \\
+trace-holdout & GPT-6 Luna, Decisions API & 30/42 & 2.4 & 16.7 & 1.41 & 3.00 & 76.2 \\
 trace-holdout & Jev 1.13 (in-run reference) & 23/42 & 11.9 & 35.7 & 1.39 & 3.44 & 46.1 \\
 \bottomrule
 \end{tabular*}

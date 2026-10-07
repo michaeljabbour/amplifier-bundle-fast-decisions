@@ -1,6 +1,7 @@
-\section{What the telemetry showed}\label{sec:observatory}
+\section{Telemetry shows that decisions are fast, not whether they are right}\label{sec:observatory}
 
-The fast-decisions bundle records every decision it makes, privately and locally. Before measuring anything new we
+\emph{The question at this stage:} before building anything new, what could the bundle's own records tell us about
+whether its decisions help? The fast-decisions bundle records every decision it makes, privately and locally, so we
 read what was already there: \ObEvents\ events in \ObSessionFiles\ session files, recorded from \ObWeekStart\ to the
 \ObCutoff\ snapshot cutoff; \ObWeekEvents\ of them fall in the first week (\ObWeekStart\ to \ObWeekEnd). \ObProdSessions\ sessions were real work; \ObTestSessions\ were tests.
 
@@ -13,7 +14,7 @@ at p95. Speed is not the obstacle.
 \centering
 \pgfplotslegendfromname{obslegend}\par\smallskip
 \input{figures/fig-obs-latency.tex}
-\caption{Latency of decision calls and of host model calls, measured by the bundle's recorder (log scale).}
+\caption{A decision call is two orders of magnitude faster than a host model call. Latency of decision calls and of host model calls, measured by the bundle's recorder (log scale).}
 \label{fig:obslatency}
 \howtoread{Each row has a median bar and a 95th-percentile bar. The decision rows are two orders of magnitude
 shorter than a host model call; the p95 bars show the slow tail.}
@@ -23,7 +24,7 @@ shorter than a host model call; the p95 bars show the slow tail.}
 \centering
 \pgfplotslegendfromname{mixlegend}\par\smallskip
 \input{figures/fig-obs-mix.tex}
-\caption{What the observatory store holds: the seven most common kinds of recorded event, as a share of all events.}
+\caption{Most recorded events are bookkeeping; decision-bearing events are a thin slice. What the observatory store holds: the seven most common kinds of recorded event, as a share of all events.}
 \label{fig:obsmix}
 \howtoread{The longest bar, \ObMixTop, is \ObMixTopPct\,\% of everything recorded. Decision-bearing events are a thin
 slice. A store this dominated by bookkeeping can tell you that decisions happen, not whether they were right.}
@@ -53,3 +54,6 @@ of a session was most often the scope gate keeping the host (\ObStScope\ of \ObS
 Telemetry told us decisions are cheap and fast, and that the bundle's own savings claims were estimates. It could not
 tell us whether decisions were right or whether they saved money. That needed labelled cases and paired sessions.
 \end{keyidea}
+
+\paragraph{What this left open} Whether a decision is right needs a label that telemetry does not keep, so the next
+stage built labelled cases (\cref{sec:judges}).

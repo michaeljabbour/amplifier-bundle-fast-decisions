@@ -1,4 +1,4 @@
-\section{The question}\label{sec:intro}
+\section{What does a fast decision model buy an agent?}\label{sec:intro}
 
 Coding agents spend money in one place: calls to a large \term{host model}. Every turn re-sends the conversation, and
 a session of a dozen turns can cost several dollars. Between those calls sit many small choices. Should this session
@@ -7,6 +7,10 @@ should the model ``think''? A \term{decision model} (``system~1'') answers such 
 and a typed question and returns a probability for each allowed answer, in tens to hundreds of milliseconds. Jev,
 by Typesafe, is one; GPT-6 Luna and Sol, Cloudflare's Clef and Clef-Flash, and small local models (Qwen3, Laya) can
 play the same role.
+
+To keep the numbers concrete we follow one real task through the report: \code{\WxScen}, an \WxTaskType\ task from
+the S1 holdout. On plain Fable one of its sessions cost \$\WxPlain\ on average; that is the scale of money a single
+session-start decision moves.
 
 Our question was simple, and we followed it where it went: \emph{what does a decision model buy an agent harness in
 quality, cost and speed?}
@@ -26,7 +30,7 @@ per harness; \cref{sec:limits} says what we did not finish.
 \begin{figure}[htbp]
 \centering
 \input{figures/fig-timeline.tex}
-\caption{The study program in order: what each stage measured, how big it was and what it cost in model calls.}
+\caption{Each stage answered the question the previous one left open. The study program in order: what each stage measured, how big it was and what it cost in model calls.}
 \label{fig:timeline}
 \howtoread{Follow the arrows. Each stage answered a question the previous one raised: telemetry could not say whether
 decisions were right (so we built benchmarks), benchmarks could not say what a decision saves (so we ran whole
