@@ -1,4 +1,19 @@
-\section{What we did not finish}\label{sec:limits}
+\section{What this means, and what remains open}\label{sec:limits}
+
+\subsection{What this means}
+
+We set out to learn what a fast decision model buys an agent harness. The answer has three parts. Decisions are fast
+and cheap, so speed is never the obstacle. On labelled decisions the best-value model is Jev, but on real read
+decisions no model was safe enough to act alone. And where the money is, the model a whole session runs on, the
+measured saving came from price arithmetic and a deterministic rule, not from the decision model: routing to Sonnet
+at medium effort saves on Fable (\SHOneRatio\X, \cref{sec:plateau}), never routing is right on Opus, and the rule
+matched the model at the session start.
+
+\paragraph{The configuration answer} Decide once per session, keep the price gate on, use the rule R*, set effort to
+medium on Sonnet and Fable but not Opus, and keep review and explain work on the host (\cref{sec:recommend}).
+
+\subsection{What remains open}
+
 
 The plan for this program (\path{docs/design/v3/PLAN.md}) has five sessions studies; only the first is in this
 report. Each of the others has a written design there:
@@ -19,3 +34,13 @@ few scenario-reps are estimates. The telemetry is one owner's workload. Decision
 unidentified beyond the \TrN\ labelled cases. The judge's own cost is small but was estimated, not billed. S1 had
 operational deviations (\cref{sec:plateau}): a raised budget cap, a stop rule not followed to the letter, and many
 infrastructure reruns.
+
+\paragraph{Where a decision model might still matter} The session-start choice is made once, with little information,
+and a rule already captures it. A decision model may still earn its keep where the right answer changes during a
+session: escalating a stuck session to the host, choosing which sub-task to delegate, or stopping a loop. That is a
+hypothesis for S2--S4, not a finding.
+
+\begin{keyidea}[title={The takeaway}]
+At the start of a session, price arithmetic and a one-line rule captured all of the measured saving; a fast decision
+model will have to prove its worth on decisions that change during the session.
+\end{keyidea}

@@ -1,16 +1,17 @@
-\section{Inside S1: what the core study shows}\label{sec:s1detail}
+\section{Inside S1: where the result is solid and where it is thin}\label{sec:s1detail}
 
 This section opens up the S1 results one picture at a time. All of it is the preregistered S1 data; anything not
 preregistered is labelled exploratory.
 
-\FloatBarrier
 \subsection{Every hypothesis on one page}
+
+\Cref{fig:s1forest} puts all eight preregistered comparisons side by side, cost on the left and quality on the right, so the reader can see at once which results move money and which are guards.
 
 \begin{figure}[htbp]
 \centering
 \pgfplotslegendfromname{sforestlegend}\par\smallskip
 \input{figures/fig-s1-forest.tex}
-\caption{S1 hypotheses H1--H7: cost ratio (left, log scale) and turn-pass difference (right), each with its 95\,\%
+\caption{Two hypotheses carry money (H1, H5); the rest are guards. S1 hypotheses H1--H7: cost ratio (left, log scale) and turn-pass difference (right), each with its 95\,\%
 interval. H3b is descriptive. Thresholds: the H1 cost bound (\SThreshOne) and the quality margin (\NIMargin).}
 \label{fig:s1forest}
 \howtoread{Read each row across both panels. A row helps a configuration when its cost dot is left of 1 and its
@@ -25,7 +26,6 @@ quarter). The rest are guards: the bundle is cost-equivalent within the \(\pm\)5
 predicted (H6), and review and explain need protection (H7).
 \end{keyidea}
 
-\FloatBarrier
 \subsection{How to read a paired cost ratio}\label{sec:worked}
 
 \begin{casecard}{Worked example: one scenario, two reps, one ratio}
@@ -40,14 +40,15 @@ scenarios \SResamples\ times and repeating the calculation.
 Why a geometric mean? A ratio of 0.5 and a ratio of 2 should cancel; their arithmetic mean (1.25) says ``more
 expensive'', their geometric mean (1) says ``no change''. Averaging logs treats halving and doubling symmetrically.
 
-\FloatBarrier
 \subsection{The variance underneath the headline}
+
+A geometric mean hides how much individual tasks vary. \Cref{fig:perscen} shows every scenario's paired ratio, sorted, for the two results that carry money.
 
 \begin{figure}[htbp]
 \centering
 \pgfplotslegendfromname{pslegend}\par\smallskip
 \input{figures/fig-perscen.tex}
-\caption{Per-scenario paired cost ratios in S1, sorted. Left: the frozen Fable configuration against plain Fable
+\caption{The direction is consistent across scenarios; the size varies widely. Per-scenario paired cost ratios in S1, sorted. Left: the frozen Fable configuration against plain Fable
 (\PsFableN\ scenarios). Right: Sonnet decided once against plain Opus (\PsOpusN\ scenarios). Log scale.}
 \label{fig:perscen}
 \howtoread{Each dot is one scenario. Below the line saves money. On Fable, \PsFableAbove\ of \PsFableN\ scenarios cost
@@ -55,14 +56,15 @@ more than plain Fable, and the ratios run from \PsFableMin\ to \PsFableMax. On O
 more, from \PsOpusMin\ to \PsOpusMax. The direction is consistent; the size varies a lot from task to task.}
 \end{figure}
 
-\FloatBarrier
 \subsection{Where the risk sits: task types and families}
+
+The quality cost of routing is not spread evenly. \Cref{fig:subgroups} splits the Fable result by task type and by scenario family (exploratory).
 
 \begin{figure}[htbp]
 \centering
 \pgfplotslegendfromname{sublegend}\par\smallskip
 \input{figures/fig-subgroups.tex}
-\caption{The frozen Fable configuration against plain Fable, split by task type and by scenario family (number of
+\caption{Every subgroup saves money; the quality risk concentrates in explain and mixed work, with review at the margin. The frozen Fable configuration against plain Fable, split by task type and by scenario family (number of
 cost-valid scenarios in brackets; the quality panel is unfiltered and uses every scenario of the subgroup), with 95\,\%
 intervals. Exploratory: subgroups were not preregistered except H7.}
 \label{fig:subgroups}
@@ -71,15 +73,16 @@ bound \SubExplainTaskLow) and mixed work cross the margin, review touches it (\S
 feature sit near zero. Small subgroups give wide whiskers; treat single rows with caution.}
 \end{figure}
 
-\FloatBarrier
 \subsection{Which configuration the rule picked}
+
+The freeze rule considered every configuration the preregistration listed and chose one per host. \Cref{fig:fz} shows them all, with the choice and the preregistered configuration marked; \cref{tab:fzkey} in the appendix lists them.
 
 \begin{figure}[htbp]
 \centering
 \pgfplotslegendfromname{fzlegendFable}\par\smallskip
 \fzpanel{Fable}{Fable}{fable}\par\medskip
 \fzpanel{Opus}{Opus}{opus}
-\caption{All \FzFableN\ Fable and \FzOpusN\ Opus configurations the freeze rule considered: cost ratio against the
+\caption{On Fable many configurations qualify; on Opus none does. All \FzFableN\ Fable and \FzOpusN\ Opus configurations the freeze rule considered: cost ratio against the
 host's plain default and turn-pass difference (point estimates). Keys group configurations that land on the same
 point; \cref{tab:fzkey} lists them.}
 \label{fig:fz}
@@ -89,7 +92,6 @@ diamond is the preregistered configuration. On Fable \FzFableCand\ configuration
 drops the scope gate. On Opus none qualified, so the shipped default stays.}
 \end{figure}
 
-\FloatBarrier
 \subsection{The decision model against the rule}\label{sec:bound}
 
 Jev and the rule R* chose differently on only \DcN\ of \DcUnits\ Fable scenario-reps (\cref{tab:discordant}).
@@ -111,28 +113,30 @@ That bound, not a significance test, is what makes ``equivalent'' believable: wi
 skill on those few can move the total.
 \end{casecard}
 
-\FloatBarrier
 \subsection{Effort, across three hosts}
+
+Three separate studies measured medium against default reasoning effort, one per host model. \Cref{fig:effort} puts them on one chart.
 
 \begin{figure}[htbp]
 \centering
 \pgfplotslegendfromname{efflegend}\par\smallskip
 \input{figures/fig-effort-hosts.tex}
-\caption{Medium against default reasoning effort, measured in three studies: Sonnet (follow-up 1), Fable (follow-up
+\caption{Medium effort saved money on Sonnet and Fable but did not demonstrate a saving on Opus. Medium against default reasoning effort, measured in three studies: Sonnet (follow-up 1), Fable (follow-up
 2) and Opus (S1, H4). 95\,\% intervals.}
 \label{fig:effort}
 \howtoread{Sonnet and Fable sit well left of 1: medium effort is cheaper with no detectable quality loss. Opus sits
 on 1. The same setting saves money on two models and nothing on the third, so effort must be set per host.}
 \end{figure}
 
-\FloatBarrier
 \subsection{Where the money goes}
+
+Why does the same switch save money on one host and cost money on the other? \Cref{fig:composition} splits the average S1 session's cost by token class.
 
 \begin{figure}[htbp]
 \centering
 \pgfplotslegendfromname{complegend}\par\smallskip
 \input{figures/fig-composition.tex}
-\caption{Mean cost per S1 session split by token class, at the study's price table (exploratory).}
+\caption{Plain Fable spends most of its money writing to the cache. Mean cost per S1 session split by token class, at the study's price table (exploratory).}
 \label{fig:composition}
 \howtoread{Each bar is the average session. Plain Fable spends most on cache writes (\CcPlainFableWriteShare\,\% of
 \$\CcPlainFableTotal): writing context into Fable's cache is expensive. The Sonnet session (\$\CcSonnetDecidedOTotal)
@@ -140,14 +144,15 @@ spends more on cache reads (\CcSonnetDecidedOReadShare\,\%), which are cheap per
 (\$\CcPlainOpusTotal) is already cheaper than the Sonnet session, which is the whole H5 story in one bar.}
 \end{figure}
 
-\FloatBarrier
 \subsection{Does the answer replicate?}
+
+The routing result has now been measured on four independent sets of scenarios. \Cref{fig:cumulative} lines them up per host.
 
 \begin{figure}[htbp]
 \centering
 \pgfplotslegendfromname{cumlegend}\par\smallskip
 \input{figures/fig-cumulative.tex}
-\caption{Routing to Sonnet against the plain host, per host, across the pilot, the main-v1 training and test splits
+\caption{Four independent sets of scenarios give the same answer for each host. Routing to Sonnet against the plain host, per host, across the pilot, the main-v1 training and test splits
 and S1. Main-v1 rows are the sticky arm without the quality filter; the S1 rows are H1 (Fable) and H5 (Opus).}
 \label{fig:cumulative}
 \howtoread{Read top to bottom within a host. The Fable rows (\CumFablePilot, \CumFableTrain, \CumFableTest,
@@ -155,3 +160,9 @@ and S1. Main-v1 rows are the sticky arm without the quality filter; the S1 rows 
 above 1. Four independent sets of scenarios, the same sign and roughly the same size.}
 \end{figure}
 \FloatBarrier
+
+\paragraph{What this taught us, and what it left open.} Inside S1 the headline holds up: the direction is the same in
+almost every scenario and in four independent scenario sets, the rule and the decision model can barely differ, and
+cache writes explain why Fable and Opus point in opposite directions. What stays thin is quality on review and explain
+work, where non-inferiority was not established, and the Fable configuration the freeze rule selected on the holdout,
+which must replicate before it ships. \Cref{sec:recommend} turns this into settings.

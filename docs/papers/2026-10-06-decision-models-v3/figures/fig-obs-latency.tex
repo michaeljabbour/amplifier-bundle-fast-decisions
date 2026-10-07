@@ -1,7 +1,7 @@
 % Observatory latency: p50 and p95 of a decision call against the host model call (log x axis).
 \begin{tikzpicture}
 \begin{axis}[benchmark, xbar, bar width=6pt, xmode=log, log ticks with fixed point, xmin=10, xmax=60000,
-  xtick={10,100,1000,10000}, scale only axis, width=10.5cm, height=3.2cm, xmajorgrids,
+  xtick={10,100,1000,10000}, scale only axis, width=8.6cm, height=3.2cm, xmajorgrids,
   ymin=-0.6, ymax=2.6, ytick={0,1,2}, yticklabels from table={generated/data/obs-latency.dat}{label},
   y tick label style={font=\small}, xlabel={Milliseconds (log scale)},
   title={A decision is cheap next to a model call}, title style={font=\small\bfseries},

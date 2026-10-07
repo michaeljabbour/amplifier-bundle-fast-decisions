@@ -1,0 +1,37 @@
+\section*{The short version}\label{sec:short}
+\addcontentsline{toc}{section}{The short version}
+
+\textbf{The question.} A coding agent spends its money on calls to a large \term{host model}. A fast ``system~1''
+\term{decision model} can answer small typed questions in milliseconds: which model should run this session, may this
+file be read without asking, how hard should the model think. We asked what such a model buys an agent harness in
+quality, cost and speed, and followed the answer through telemetry, two judge benchmarks, a paired campaign of whole
+sessions and a preregistered holdout study (S1).
+
+\textbf{What we found.}
+\begin{enumerate}[leftmargin=1.5em, itemsep=2pt]
+  \item \textbf{Decisions are cheap and fast; telemetry cannot say whether they are right.} A Jev decision took
+    \ObJevPfifty\,ms at the median against \ObHostPfifty\,s for a host call, but the recorded ``agreement'' mostly
+    measured a labelling artefact (\cref{sec:observatory}).
+  \item \textbf{On labelled decisions Jev is the best value; on real read decisions no judge is safe enough.}
+    No accuracy difference from dearer judges was detected after correction, and \TrNUseful\ of \NumBase\ judges met
+    the usefulness rule on real reads (\cref{sec:judges}).
+  \item \textbf{Routing a whole session to Sonnet pays on Fable and costs on Opus.} On fresh scenarios the frozen
+    Fable configuration cost \SHOneRatio\X\ plain Fable (95\,\% CI \SHOneCI); routing on Opus cost \SHFiveRatio\X\
+    (\SHFiveCI), because Opus's cache reads are cheap (\cref{sec:paired,sec:plateau}).
+  \item \textbf{At session start, a one-line rule matches the decision model.} The rule and Jev were equivalent
+    (\SHTwoRatio\X, 90\,\% CI \SHTwoCINinety) and disagreed on only \SHTwoDisc\ of \SHTwoReps\ scenario-reps
+    (\cref{sec:plateau}).
+  \item \textbf{Reasoning effort is a second lever, but not on every host.} Medium effort cost \EcRatio\X\ the default
+    on Sonnet and \EfRatio\X\ on Fable; on Opus it did not demonstrate a saving (\SHFourRatio\X).
+\end{enumerate}
+
+\textbf{What to do on Monday.} Decide once per session. Let the price gate decide whether routing can pay: never on
+Opus, to Sonnet at medium effort on Fable. Use the rule rather than the decision model for that choice. Keep review and
+explain work on the host, where non-inferiority was not established; with the shipped keyword proxy that costs about
+\KpProxyTwo\X\ of plain Fable instead of about \KpRstarTwo\X. The exact settings are in \cref{sec:recommend,sec:recipes}.
+
+\begin{keyidea}[title={The one-sentence answer}]
+A fast decision model is worth what its decisions change: at the start of a session, price arithmetic and a one-line
+rule captured all of the measured saving, so the place where such a model might still earn its keep is in decisions
+whose right answer changes during a session, which we have not yet measured.
+\end{keyidea}

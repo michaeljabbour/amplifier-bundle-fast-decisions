@@ -24,13 +24,13 @@ in-run Jev 1.13 reference on the same cases: three repetitions in two option ord
 \centering
 \pgfplotslegendfromname{oalegend}\par\smallskip
 \input{figures/fig-openai.tex}
-\caption{OpenAI Decisions API (GPT-6 Luna) against the in-run Jev reference: per-case majority accuracy with 95\,\%
+\caption{The Decisions API was at or above Jev on every split (post hoc). OpenAI Decisions API (GPT-6 Luna) against the in-run Jev reference: per-case majority accuracy with 95\,\%
 Wilson intervals on the four splits (post hoc).}
 \label{fig:openai}
 \howtoread{Each pair of rows is one split. Luna is at or above Jev on every split; only the trace-holdout gap survived the
 correction. Overlapping whiskers mean no difference was detected, not that the judges are equivalent.}
 \end{figure}
-\begin{table}[htbp]\centering\small
+\begin{table}[htbp]\centering\footnotesize\setlength\tabcolsep{4pt}
 \caption{OpenAI Decisions API (post hoc) against the in-run Jev reference: correct decisions, wrong automatic actions,
 coverage, client latency (from our machine, slow network in this run) and dollars per million decisions.}\label{tab:openai}
 \input{generated/tables/openai-decisions.tex}\end{table}

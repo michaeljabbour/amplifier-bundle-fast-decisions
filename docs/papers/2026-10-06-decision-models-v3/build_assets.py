@@ -2455,7 +2455,7 @@ if s1 is not None:
     dat("s1-forest.dat", ["y", "label", "r", "rm", "rp", "d", "dm", "dp"], fr_rows)
 
     # --- F3: freeze candidates (numbered, label-placed)
-    LP.configure(OUT, DATA, 12.0, 5.2)
+    LP.configure(OUT, DATA, 10.6, 5.2)
     fz = s1["freeze"]
     keyrows = []
     for h in ("fable", "opus"):
@@ -2472,7 +2472,7 @@ if s1 is not None:
         for j, g in enumerate(groups_, 1):
             k = f"{h[0].upper()}{j}"
             for r in g["rows"]:
-                keyrows.append(f"{k} & {h.capitalize()} & {tex_escape(r['config'])} & {hu(r['gm_ratio'], 3)} & {hu(r['d_turn_pass'], 3)} & "
+                keyrows.append(f"{k} & {h.capitalize()} & {tex_escape(r['config'])} & {r['gm_ratio']:.3f} & {r['d_turn_pass']:.3f} & "
                                + (r"\ok" if r["candidate"] else "") + r" \\")
                 (cand if r["candidate"] else non).append([f"{r['gm_ratio']:.4f}", f"{r['d_turn_pass']:.4f}"])
             pts.append((k, k, g["x"], g["y"]))
@@ -2509,8 +2509,8 @@ if s1 is not None:
         M(f"Fz{h.capitalize()}Cand", sum(1 for r in tab if r["candidate"]))
     write(TABLES / "fz-key.tex", table(r"l l >{\raggedright\arraybackslash}p{0.5\textwidth} r r c",
                                        [r"Key & Host & Configuration & cost ratio & turn-pass $\Delta$ & candidate \\"], keyrows))
-    hdr = r"\toprule Key & Host & Configuration & cost ratio & turn-pass $\Delta$ & candidate \\ \midrule"
-    write(TABLES / "fz-key-long.tex", "\\begin{xltabular}{\\textwidth}{l l >{\\raggedright\\arraybackslash}X r r c}\n"
+    hdr = r"\toprule Key & Host & Configuration & {cost ratio} & {turn-pass $\Delta$} & candidate \\ \midrule"
+    write(TABLES / "fz-key-long.tex", "\\begin{xltabular}{\\textwidth}{l l >{\\raggedright\\arraybackslash}X S[table-format=1.3] S[table-format=-1.3] c}\n"
           + r"\caption{Every configuration the S1 freeze rule considered (keys as in \cref{fig:fz}). Cost ratio and turn-pass difference against the host's plain default.}\label{tab:fzkey}\\" + "\n"
           + hdr + r" \endfirsthead" + "\n" + hdr + r" \endhead" + "\n" + "\n".join(keyrows) + "\n\\bottomrule\n\\end{xltabular}\n")
 
@@ -2555,7 +2555,7 @@ if s1 is not None:
     gmF = math.exp(_st.mean(math.log(v[0]) for v in psF.values()))
     wx = min(psF, key=lambda s: abs(math.log(psF[s][0]) - math.log(gmF)))
     r_, ok_, ca_, cb_ = psF[wx]
-    M("WxScen", tex_escape(wx))
+    M("WxScen", tex_escape(wx).replace("-", "-\\allowbreak{}"))
     M("WxReps", len(ok_))
     M("WxRouted", money(ca_))
     M("WxPlain", money(cb_))
@@ -2564,6 +2564,8 @@ if s1 is not None:
     M("WxArm", "routed to Sonnet" if cstarF[ok_[0]]["arm"] == "pc" else "kept on Fable")
     M("WxGM", hu(gmF, 3))
     M("WxNScen", len(psF))
+    M("WxKeptByProxy", "kept on Fable" if wx in kept else "routed to Sonnet")
+    M("WxTaskType", DR.meta[wx]["task_type"])
 
     # --- F6: decision model vs rule: discordant scenario-reps and the bound
     jevP = _A.policy(DR, "fable", decider="jev", strong="medium", scope=True)
@@ -2678,7 +2680,7 @@ if s1 is not None:
         ("Effort switches rewrite the cache", f"\\AoEcX{{}}\\X\\ cache writes", "main-v1 re-analysis", "exploratory"),
         ("Keyword proxy keeps quality at a cost", f"\\KpProxyRatio{{}}\\X, turn-pass \\KpProxyDtp{{}}", "S1 replay", "exploratory"),
     ]
-    write(TABLES / "findings.tex", table(r">{\raggedright\arraybackslash}p{0.31\textwidth} >{\raggedright\arraybackslash}p{0.26\textwidth} l >{\raggedright\arraybackslash}p{0.16\textwidth}",
+    write(TABLES / "findings.tex", table(r">{\raggedright\arraybackslash}p{0.30\textwidth} >{\raggedright\arraybackslash}p{0.25\textwidth} l >{\raggedright\arraybackslash}p{0.17\textwidth}",
                                          [r"Finding & Number (95\,\% CI unless noted) & Study & Evidence \\"],
                                          [f"{a} & {b} & {c} & {d} \\\\" for a, b, c, d in FIND]))
 
@@ -2795,16 +2797,16 @@ if (OAI / "summary.json").exists():
             M(f"Oa{K}N", r["n"])
             M(f"Oa{K}Usd", hu(r["usd_per_1m"], 1))
             trows.append(f"{s} & {'GPT-6 Luna, Decisions API' if a == LUNA else 'Jev 1.13 (in-run reference)'} & {k}/{r['n']} & "
-                         f"{pct(r['wrong_automatic'], 1)} & {pct(r['coverage'], 1)} & {hu(r['p50_ms'] / 1000, 2)} & "
-                         f"{hu(r['p95_ms'] / 1000, 2)} & {hu(r['usd_per_1m'], 1)} \\\\")
+                         f"{100 * r['wrong_automatic']:.1f} & {100 * r['coverage']:.1f} & {r['p50_ms'] / 1000:.2f} & "
+                         f"{r['p95_ms'] / 1000:.2f} & {r['usd_per_1m']:.1f} \\\\")
             lo, hi = _wil(k, r["n"])
             y = (len(SPL) - 1 - i) * 3 + (1 - j)
             frows.append([y, "{" + f"{s}: {'Luna (Decisions API)' if a == LUNA else 'Jev 1.13'}" + "}", f"{k / r['n']:.4f}",
                           f"{k / r['n'] - lo:.4f}", f"{hi - k / r['n']:.4f}", f"{k / r['n']:.3f}"])
         if i < len(SPL) - 1:
             trows.append(r"\addlinespace[2pt]")
-    write(TABLES / "openai-decisions.tex", table("l l r r r r r r", [
-        r"Split & Judge & correct & wrong auto. & coverage & p50 s & p95 s & \$ / 1M \\"], trows))
+    write(TABLES / "openai-decisions.tex", table("l l r S[table-format=2.1] S[table-format=2.1] S[table-format=1.2] S[table-format=1.2] S[table-format=2.1]", [
+        r"Split & Judge & correct & {wrong auto.\ (\%)} & {coverage (\%)} & {p50 s} & {p95 s} & {\$ / 1M} \\"], trows))
     frows.sort(key=lambda r: r[0])
     dat("openai-acc.dat", ["y", "label", "r", "rm", "rp", "v"], frows)
     M("OaTicks", ",".join(str(r[0]) for r in frows))
@@ -2869,13 +2871,13 @@ in-run Jev 1.13 reference on the same cases: three repetitions in two option ord
 \centering
 \pgfplotslegendfromname{oalegend}\par\smallskip
 \input{figures/fig-openai.tex}
-\caption{OpenAI Decisions API (GPT-6 Luna) against the in-run Jev reference: per-case majority accuracy with 95\,\%
+\caption{The Decisions API was at or above Jev on every split (post hoc). OpenAI Decisions API (GPT-6 Luna) against the in-run Jev reference: per-case majority accuracy with 95\,\%
 Wilson intervals on the four splits (post hoc).}
 \label{fig:openai}
 \howtoread{Each pair of rows is one split. Luna is at or above Jev on every split; only the trace-holdout gap survived the
 correction. Overlapping whiskers mean no difference was detected, not that the judges are equivalent.}
 \end{figure}
-\begin{table}[htbp]\centering\small
+\begin{table}[htbp]\centering\footnotesize\setlength\tabcolsep{4pt}
 \caption{OpenAI Decisions API (post hoc) against the in-run Jev reference: correct decisions, wrong automatic actions,
 coverage, client latency (from our machine, slow network in this run) and dollars per million decisions.}\label{tab:openai}
 \input{generated/tables/openai-decisions.tex}\end{table}

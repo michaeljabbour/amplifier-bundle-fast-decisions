@@ -1,7 +1,9 @@
-\section{The plateau: what the decision model is actually worth}\label{sec:plateau}
+\section{At session start, a one-line rule matches the decision model}\label{sec:plateau}
 
-By now the open question was no longer which decision model is best, but whether the session-start decision needs a
-model at all, and how to configure it.
+\emph{The question at this stage:} whole sessions showed that routing pays on Fable, with a decision model making the
+choice. Does that choice need a model at all, and which configuration should ship? By now the open question was no
+longer which decision model is best, but whether the session-start decision needs a model at all, and how to
+configure it.
 
 \paragraph{A counterfactual on the existing sessions.} A decide-once policy makes one choice per session, so every
 policy's cost can be read off the paired sessions already run: the plain host where it keeps the host, the routed
@@ -17,7 +19,7 @@ oracle (regret \$\AoOpusShippedRegret\ per 1,000 sessions), while ungated Jev wo
 \centering
 \pgfplotslegendfromname{aolegend}\par\smallskip
 \input{figures/fig-a0.tex}
-\caption{Decide-once policies priced on the existing main-v1 sessions (all scenarios, both reps), with 95\,\%
+\caption{On Fable the rule R* is at least as cheap as Jev; on Opus every routing policy costs more. Decide-once policies priced on the existing main-v1 sessions (all scenarios, both reps), with 95\,\%
 scenario-cluster intervals. The oracle chooses with hindsight on the other rep, at equal quality. Exploratory.}
 \label{fig:a0}
 \howtoread{Each row is a policy. Left of 1 saves money. On Fable, the rule R* is at least as cheap as Jev; on Opus,
@@ -106,7 +108,8 @@ is, routing on Fable and never on Opus, price arithmetic and a rule decide it. T
 this decision.
 \end{keyidea}
 
-\paragraph{How the run went.} The study spent \$\SSpend. \SGateFail\ Fable sessions of one scenario
+\begin{processnote}{Process note: how the S1 run went}
+\raggedright The study spent \$\SSpend. \SGateFail\ Fable sessions of one scenario
 (\code{\SGateScen}) were served partly by Opus, most likely the provider's fallback (an inference); the preregistered rule
 excluded them from cost, so Fable cost contrasts use \SHOneN\ scenarios. The stop rule for gate failures was not followed
 to the letter, because the gate is evaluated when rows are extracted, not live; this is a disclosed deviation. A Forge
@@ -115,4 +118,10 @@ rerun whole. The budget cap was raised from \$\SBudgetOrig\ to \$\SBudgetFinal\ 
 stayed under the original cap, and concurrency changed several times. The A/A copies differed in turn-pass by
 \SNoiseOpusDtp\ on Opus (\SNoiseN\ pairs), so small quality differences cannot be interpreted. Rerunning the analysis
 without the flagged scenarios changed no verdict and no freeze choice.
+\end{processnote}
+
+\paragraph{What this taught us, and what it left open} At the session start the decision model added nothing that a
+one-line rule and price arithmetic did not already provide: routing pays on Fable and costs on Opus, and the rule
+and the model choose the same way. \Cref{sec:s1detail} opens the S1 results up to show where that answer is solid and
+where it is thin.
 \fi

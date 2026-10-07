@@ -1,6 +1,8 @@
-\section{Raising the difficulty: whole sessions}\label{sec:paired}
+\section{In whole sessions, routing pays on Fable and costs on Opus}\label{sec:paired}
 
-The decision that moves money is the session's starting model. To measure it we ran whole multi-turn sessions, in
+\emph{The question at this stage:} the judge benchmarks left one decision that clearly moves money, the model a
+whole session runs on. Does routing that choice to a cheaper model actually save money once caching and effort are
+counted? The decision that moves money is the session's starting model. To measure it we ran whole multi-turn sessions, in
 pairs: the same scripted task, started together from the same frozen workspace, once on the plain host and once under
 a routing policy, each with its own cache key. The main campaign (main-v1) ran \NSessions\ sessions on \NScenarios\
 scenarios of \MinTurns\ to \MaxTurns\ turns, with Fable~5.1 and Opus~5.5 as hosts. Hypotheses, thresholds and the
@@ -11,11 +13,15 @@ Prompt caching makes re-sending a conversation cheap on the model that cached it
 cache away. An earlier survey had found the shipped router's Opus-host ratio going from \CaOpusRoutedOne\X\ in
 single-turn sessions to \CaOpusRoutedFour\X\ in \CaTurns-turn ones. Estimates from receipts could not settle it.
 
+A \term{paired cost ratio} compares two sessions of the same task. For the running example, \code{\WxScen} in S1,
+the routed sessions cost \$\WxRouted\ against \$\WxPlain\ on plain Fable: a ratio of \WxRatio\X. The results below
+average such ratios over many tasks (\cref{sec:worked} works through the arithmetic).
+
 \begin{figure}[htbp]
 \centering
 \pgfplotslegendfromname{forestlegend}\par\smallskip
 \input{figures/fig-forest.tex}
-\caption{Confirmatory cost ratios on the main-v1 test split. Top: each routed arm against the plain host. Bottom: the
+\caption{On the main-v1 test split, every Fable routing arm saved money and every Opus arm cost more. Confirmatory cost ratios on the main-v1 test split. Top: each routed arm against the plain host. Bottom: the
 sticky arm against the shipped arm on the same scenarios. Whiskers are 95\,\% intervals; the dashed lines mark
 preregistered thresholds.}
 \label{fig:forest}
@@ -44,3 +50,7 @@ Measured, not estimated: on Fable, deciding once to run the session on Sonnet sa
 quality caveat on some task types. On Opus it cost more. Lowering reasoning effort is a second, smaller lever that
 works on both Sonnet and Fable.
 \end{keyidea}
+
+\paragraph{What this left open} The saving came with a decision model choosing the session's model. Was the model
+needed for that choice, or would a simple rule do as well? And would the result hold on tasks no one had tuned on?
+\Cref{sec:plateau} answers both.

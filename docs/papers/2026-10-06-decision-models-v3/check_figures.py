@@ -20,27 +20,27 @@ HERE = Path(__file__).resolve().parent
 PDF = HERE / "decision-models-v3.pdf"
 MARK_R = 3.2
 LEGENDS = {  # caption start -> (first legend entry words, topmost words of the plot)
-    "Latency of decision calls and": (["median", "(p50)"], ["A", "decision", "is"]),
-    "What the observatory store": (["event", "kind"], ["Mostly", "bookkeeping,"]),
-    "Holdout accuracy with 95": (["preregistered", "run"], ["Holdout", "accuracy,"]),
-    "Cost per million decisions (log": (["preregistered", "run", "(Jev,"], ["What", "a", "point"]),
-    "Confirmatory cost ratios on the": (["pair", "reading", "(co-primary)"], ["Fable", "sticky"]),
-    "Decide-once policies priced on the": (["policy", "on", "main-v1,"], ["Who", "decides,"]),
-    "S1 hypotheses": (["estimate,", "95"], ["Cost"]),
-    "Per-scenario paired cost ratios": (["one", "scenario"], ["Fable:", "frozen"]),
-    "The frozen Fable configuration against plain": (["estimate,", "95"], ["Cost"]),
-    "All 23 Fable": (["candidate"], ["Fable", "host"]),
-    "Medium against default reasoning": (["cost,", "95"], ["Cost"]),
-    "Mean cost per S1 session": (["uncached", "input"], ["Where", "the", "money"]),
-    "OpenAI Decisions API (GPT-6": (["accuracy,", "95"], ["Decisions", "API", "vs"]),
-    "Routing to Sonnet against the plain host, per": (["geometric-mean", "cost"], ["The", "same", "answer,"]),
+    "A decision call is two": (["median", "(p50)"], ["A", "decision", "is"]),
+    "Most recorded events are": (["event", "kind"], ["Mostly", "bookkeeping,"]),
+    "No accuracy difference between the": (["preregistered", "run"], ["Holdout", "accuracy,"]),
+    "Jev is the cheapest judge": (["preregistered", "run", "(Jev,"], ["What", "a", "point"]),
+    "On the main-v1 test split,": (["pair", "reading", "(co-primary)"], ["Fable", "sticky"]),
+    "On Fable the rule R*": (["policy", "on", "main-v1,"], ["Who", "decides,"]),
+    "Two hypotheses carry money": (["estimate,", "95"], ["Cost"]),
+    "The direction is consistent across": (["one", "scenario"], ["Fable:", "frozen"]),
+    "Every subgroup saves money;": (["estimate,", "95"], ["Cost"]),
+    "On Fable many configurations qualify;": (["candidate"], ["Fable", "host"]),
+    "Medium effort saved money on": (["cost,", "95"], ["Cost"]),
+    "Plain Fable spends most of": (["uncached", "input"], ["Cost", "per", "session,"]),
+    "The Decisions API was at": (["accuracy,", "95"], ["Decisions", "API", "vs"]),
+    "Four independent sets of scenarios": (["geometric-mean", "cost"], ["The", "same", "answer,"]),
 }
 NUM = dict(re.findall(r"\\newcommand\{\\(\w+)\}\{([^}]*)\}", (HERE / "generated/numbers.tex").read_text()))
 SC = (int(NUM["ScXMax"]), int(NUM["ScYMin"]), int(NUM["ScYMax"]))
 SCATTERS = [  # caption start, x ticks, y ticks, x range, y range, label panel, data dir, log x, extra markers file
-    ("Real decisions: correct automatic reads", [0, 2, 4, 6, 8, 10, 12], [0, 5, 10, 15, 20], (-1, 14), (-1.5, 22),
+    ("On real read decisions, no", [0, 2, 4, 6, 8, 10, 12], [0, 5, 10, 15, 20], (-1, 14), (-1.5, 22),
      "reads-holdout-ph", "generated/data", False, None),
-    ("Cost per million decisions (log", [10, 30, 100, 300, 1000], [70, 80, 90, 100], (8, 2000), (70, 102),
+    ("Jev is the cheapest judge", [10, 30, 100, 300, 1000], [70, 80, 90, 100], (8, 2000), (70, 102),
      "costacc-holdout", "generated/data", True, None),
 ]
 
@@ -184,16 +184,16 @@ def check_legends():
 
 
 ROWS = [  # caption start -> data files whose rows carry (label, v); every rendered row label must sit beside its own v
-    ("Latency of decision calls and", ["obs-latency.dat"]),
-    ("What the observatory store", ["obs-mix.dat"]),
-    ("Confirmatory cost ratios on the", ["forest.dat", "forest-h3.dat"]),
-    ("Decide-once policies priced on the", ["a0-policies.dat"]),
-    ("S1 hypotheses", ["s1-forest.dat"]),
-    ("The frozen Fable configuration against plain", ["s1-subgroups.dat"]),
-    ("Medium against default reasoning", ["effort-hosts.dat"]),
-    ("Mean cost per S1 session", ["s1-composition.dat"]),
-    ("Routing to Sonnet against the plain host, per", ["cumulative.dat"]),
-    ("OpenAI Decisions API (GPT-6", ["openai-acc.dat"]),
+    ("A decision call is two", ["obs-latency.dat"]),
+    ("Most recorded events are", ["obs-mix.dat"]),
+    ("On the main-v1 test split,", ["forest.dat", "forest-h3.dat"]),
+    ("On Fable the rule R*", ["a0-policies.dat"]),
+    ("Two hypotheses carry money", ["s1-forest.dat"]),
+    ("Every subgroup saves money;", ["s1-subgroups.dat"]),
+    ("Medium effort saved money on", ["effort-hosts.dat"]),
+    ("Plain Fable spends most of", ["s1-composition.dat"]),
+    ("Four independent sets of scenarios", ["cumulative.dat"]),
+    ("The Decisions API was at", ["openai-acc.dat"]),
 ]
 
 

@@ -3,7 +3,7 @@
 \begin{axis}[benchmark, xbar stacked, bar width=10pt, scale only axis, width=10cm, height=4.2cm, xmin=0, xmajorgrids,
   ymin=-0.6, ymax=3.6, ytick={0,1,2,3}, yticklabels from table={generated/data/s1-composition.dat}{label},
   y tick label style={font=\small}, xlabel={Mean cost per session (US dollars)},
-  title={Where the money goes}, title style={font=\small\bfseries},
+  title={Cost per session, by token class}, title style={font=\small\bfseries},
   legend to name=complegend, legend columns=4, legend cell align=left,
   legend style={/tikz/every even column/.append style={column sep=8pt}}]
 \addplot[fill=okgray!60, draw=black!60] table[x=inp, y=y]{generated/data/s1-composition.dat};
