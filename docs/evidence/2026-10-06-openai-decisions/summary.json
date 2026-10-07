@@ -1,0 +1,605 @@
+{
+ "description": "OpenAI Decisions API (POST /v1/decisions, model gpt-6-luna, public beta) as a post-hoc judge arm (luna-decisions) against the in-run Jev reference (jev-1.13), 3 repetitions x 2 option orders on dev (90), holdout (63), trace-dev (21), trace-holdout (42). Primary policy bundle-read-shortcut (0.90 / 0.20 margin / 3 s deadline), per-case majority over repetitions, every case in the denominator. Latency is client wall time from a Mac over the network, not server time. holdout and trace-holdout are post-hoc for luna-decisions: no preregistered verdict applies.",
+ "rows": [
+  {
+   "split": "dev",
+   "arm": "luna-decisions",
+   "accuracy": 0.9778,
+   "n": 90,
+   "wrong_automatic": 0.0,
+   "coverage": 0.7111,
+   "p50_ms": 1797.5,
+   "p95_ms": 4796.0,
+   "usd_per_1m": 20.26
+  },
+  {
+   "split": "dev",
+   "arm": "jev-1.13",
+   "accuracy": 0.9556,
+   "n": 90,
+   "wrong_automatic": 0.0333,
+   "coverage": 0.7556,
+   "p50_ms": 1460.1,
+   "p95_ms": 4462.0,
+   "usd_per_1m": 15.91
+  },
+  {
+   "split": "holdout",
+   "arm": "luna-decisions",
+   "accuracy": 0.9365,
+   "n": 63,
+   "wrong_automatic": 0.0159,
+   "coverage": 0.6825,
+   "p50_ms": 1473.1,
+   "p95_ms": 3438.9,
+   "usd_per_1m": 25.56
+  },
+  {
+   "split": "holdout",
+   "arm": "jev-1.13",
+   "accuracy": 0.873,
+   "n": 63,
+   "wrong_automatic": 0.0159,
+   "coverage": 0.6349,
+   "p50_ms": 1568.6,
+   "p95_ms": 3730.0,
+   "usd_per_1m": 18.4
+  },
+  {
+   "split": "trace-dev",
+   "arm": "luna-decisions",
+   "accuracy": 0.7619,
+   "n": 21,
+   "wrong_automatic": 0.0952,
+   "coverage": 0.4762,
+   "p50_ms": 1678.9,
+   "p95_ms": 3235.4,
+   "usd_per_1m": 71.78
+  },
+  {
+   "split": "trace-dev",
+   "arm": "jev-1.13",
+   "accuracy": 0.7619,
+   "n": 21,
+   "wrong_automatic": 0.1429,
+   "coverage": 0.6667,
+   "p50_ms": 1404.2,
+   "p95_ms": 4066.8,
+   "usd_per_1m": 43.18
+  },
+  {
+   "split": "trace-holdout",
+   "arm": "luna-decisions",
+   "accuracy": 0.7143,
+   "n": 42,
+   "wrong_automatic": 0.0238,
+   "coverage": 0.1667,
+   "p50_ms": 1414.2,
+   "p95_ms": 3001.9,
+   "usd_per_1m": 76.25
+  },
+  {
+   "split": "trace-holdout",
+   "arm": "jev-1.13",
+   "accuracy": 0.5476,
+   "n": 42,
+   "wrong_automatic": 0.119,
+   "coverage": 0.3571,
+   "p50_ms": 1386.9,
+   "p95_ms": 3436.1,
+   "usd_per_1m": 46.11
+  }
+ ],
+ "no_deadline_rows": [
+  {
+   "split": "dev",
+   "arm": "luna-decisions",
+   "accuracy": 0.9778,
+   "n": 90,
+   "wrong_automatic": 0.0,
+   "coverage": 0.7222,
+   "p50_ms": 1797.5,
+   "p95_ms": 4796.0,
+   "usd_per_1m": 20.26
+  },
+  {
+   "split": "dev",
+   "arm": "jev-1.13",
+   "accuracy": 0.9556,
+   "n": 90,
+   "wrong_automatic": 0.0333,
+   "coverage": 0.7667,
+   "p50_ms": 1460.1,
+   "p95_ms": 4462.0,
+   "usd_per_1m": 15.91
+  },
+  {
+   "split": "holdout",
+   "arm": "luna-decisions",
+   "accuracy": 0.9365,
+   "n": 63,
+   "wrong_automatic": 0.0159,
+   "coverage": 0.6984,
+   "p50_ms": 1473.1,
+   "p95_ms": 3438.9,
+   "usd_per_1m": 25.56
+  },
+  {
+   "split": "holdout",
+   "arm": "jev-1.13",
+   "accuracy": 0.873,
+   "n": 63,
+   "wrong_automatic": 0.0159,
+   "coverage": 0.6349,
+   "p50_ms": 1568.6,
+   "p95_ms": 3730.0,
+   "usd_per_1m": 18.4
+  },
+  {
+   "split": "trace-dev",
+   "arm": "luna-decisions",
+   "accuracy": 0.7619,
+   "n": 21,
+   "wrong_automatic": 0.0952,
+   "coverage": 0.4762,
+   "p50_ms": 1678.9,
+   "p95_ms": 3235.4,
+   "usd_per_1m": 71.78
+  },
+  {
+   "split": "trace-dev",
+   "arm": "jev-1.13",
+   "accuracy": 0.7619,
+   "n": 21,
+   "wrong_automatic": 0.1429,
+   "coverage": 0.6667,
+   "p50_ms": 1404.2,
+   "p95_ms": 4066.8,
+   "usd_per_1m": 43.18
+  },
+  {
+   "split": "trace-holdout",
+   "arm": "luna-decisions",
+   "accuracy": 0.7143,
+   "n": 42,
+   "wrong_automatic": 0.0238,
+   "coverage": 0.1667,
+   "p50_ms": 1414.2,
+   "p95_ms": 3001.9,
+   "usd_per_1m": 76.25
+  },
+  {
+   "split": "trace-holdout",
+   "arm": "jev-1.13",
+   "accuracy": 0.5476,
+   "n": 42,
+   "wrong_automatic": 0.119,
+   "coverage": 0.3571,
+   "p50_ms": 1386.9,
+   "p95_ms": 3436.1,
+   "usd_per_1m": 46.11
+  }
+ ],
+ "contrasts": [
+  {
+   "split": "dev",
+   "a": "luna-decisions",
+   "b": "jev-1.13",
+   "metric": "accuracy",
+   "a_rate": 0.9777777777777777,
+   "b_rate": 0.9555555555555556,
+   "diff": 0.022222222222222223,
+   "diff_ci95": [
+    -0.022222222222222223,
+    0.06666666666666667
+   ],
+   "a_only": 3,
+   "b_only": 1,
+   "p": 0.625,
+   "p_holm": 0.625
+  },
+  {
+   "split": "dev",
+   "a": "luna-decisions",
+   "b": "jev-1.13",
+   "metric": "wrong automatic",
+   "a_rate": 0.0,
+   "b_rate": 0.03333333333333333,
+   "diff": -0.03333333333333333,
+   "diff_ci95": [
+    -0.07777777777777778,
+    0.0
+   ],
+   "a_only": 0,
+   "b_only": 3,
+   "p": 0.25,
+   "p_holm": 0.25
+  },
+  {
+   "split": "holdout",
+   "a": "luna-decisions",
+   "b": "jev-1.13",
+   "metric": "accuracy",
+   "a_rate": 0.9365079365079365,
+   "b_rate": 0.873015873015873,
+   "diff": 0.06349206349206349,
+   "diff_ci95": [
+    -0.015873015873015872,
+    0.15873015873015872
+   ],
+   "a_only": 6,
+   "b_only": 2,
+   "p": 0.2890625,
+   "p_holm": 0.2890625
+  },
+  {
+   "split": "holdout",
+   "a": "luna-decisions",
+   "b": "jev-1.13",
+   "metric": "wrong automatic",
+   "a_rate": 0.015873015873015872,
+   "b_rate": 0.015873015873015872,
+   "diff": 0.0,
+   "diff_ci95": [
+    -0.047619047619047616,
+    0.047619047619047616
+   ],
+   "a_only": 1,
+   "b_only": 1,
+   "p": 1.0,
+   "p_holm": 1.0
+  },
+  {
+   "split": "trace-dev",
+   "a": "luna-decisions",
+   "b": "jev-1.13",
+   "metric": "accuracy",
+   "a_rate": 0.7619047619047619,
+   "b_rate": 0.7619047619047619,
+   "diff": 0.0,
+   "diff_ci95": [
+    -0.14285714285714285,
+    0.14285714285714285
+   ],
+   "a_only": 1,
+   "b_only": 1,
+   "p": 1.0,
+   "p_holm": 1.0
+  },
+  {
+   "split": "trace-dev",
+   "a": "luna-decisions",
+   "b": "jev-1.13",
+   "metric": "wrong automatic",
+   "a_rate": 0.09523809523809523,
+   "b_rate": 0.14285714285714285,
+   "diff": -0.047619047619047616,
+   "diff_ci95": [
+    -0.14285714285714285,
+    0.0
+   ],
+   "a_only": 0,
+   "b_only": 1,
+   "p": 1.0,
+   "p_holm": 1.0
+  },
+  {
+   "split": "trace-holdout",
+   "a": "luna-decisions",
+   "b": "jev-1.13",
+   "metric": "accuracy",
+   "a_rate": 0.7142857142857143,
+   "b_rate": 0.5476190476190477,
+   "diff": 0.16666666666666666,
+   "diff_ci95": [
+    0.047619047619047616,
+    0.30952380952380953
+   ],
+   "a_only": 8,
+   "b_only": 1,
+   "p": 0.0390625,
+   "p_holm": 0.0390625
+  },
+  {
+   "split": "trace-holdout",
+   "a": "luna-decisions",
+   "b": "jev-1.13",
+   "metric": "wrong automatic",
+   "a_rate": 0.023809523809523808,
+   "b_rate": 0.11904761904761904,
+   "diff": -0.09523809523809523,
+   "diff_ci95": [
+    -0.19047619047619047,
+    -0.023809523809523808
+   ],
+   "a_only": 0,
+   "b_only": 4,
+   "p": 0.125,
+   "p_holm": 0.125
+  }
+ ],
+ "latency": [
+  {
+   "split": "dev",
+   "arm": "luna-decisions",
+   "n_valid": 536,
+   "n_requests": 540,
+   "client_wall_ms": {
+    "p50": 1797.5,
+    "p90": 3410.3,
+    "p95": 4796.0,
+    "p99": 13330.4,
+    "max": 25725.8,
+    "min": 862.3
+   },
+   "server_ms": {
+    "n": 536,
+    "p50": 60.0,
+    "p95": 154.0,
+    "max": 1064.0
+   },
+   "valid_over_3000ms": 74,
+   "share_valid_over_3000ms": 0.1381
+  },
+  {
+   "split": "dev",
+   "arm": "jev-1.13",
+   "n_valid": 540,
+   "n_requests": 540,
+   "client_wall_ms": {
+    "p50": 1460.1,
+    "p90": 2882.6,
+    "p95": 4462.0,
+    "p99": 7929.9,
+    "max": 13683.1,
+    "min": 838.6
+   },
+   "server_ms": {
+    "n": 0,
+    "p50": null,
+    "p95": null,
+    "max": null
+   },
+   "valid_over_3000ms": 49,
+   "share_valid_over_3000ms": 0.0907
+  },
+  {
+   "split": "holdout",
+   "arm": "luna-decisions",
+   "n_valid": 373,
+   "n_requests": 378,
+   "client_wall_ms": {
+    "p50": 1473.1,
+    "p90": 2820.8,
+    "p95": 3438.9,
+    "p99": 6368.4,
+    "max": 13251.8,
+    "min": 853.3
+   },
+   "server_ms": {
+    "n": 373,
+    "p50": 62.0,
+    "p95": 179.0,
+    "max": 801.0
+   },
+   "valid_over_3000ms": 29,
+   "share_valid_over_3000ms": 0.0777
+  },
+  {
+   "split": "holdout",
+   "arm": "jev-1.13",
+   "n_valid": 377,
+   "n_requests": 378,
+   "client_wall_ms": {
+    "p50": 1568.6,
+    "p90": 2896.6,
+    "p95": 3730.0,
+    "p99": 5629.9,
+    "max": 29898.9,
+    "min": 847.6
+   },
+   "server_ms": {
+    "n": 0,
+    "p50": null,
+    "p95": null,
+    "max": null
+   },
+   "valid_over_3000ms": 36,
+   "share_valid_over_3000ms": 0.0955
+  },
+  {
+   "split": "trace-dev",
+   "arm": "luna-decisions",
+   "n_valid": 126,
+   "n_requests": 126,
+   "client_wall_ms": {
+    "p50": 1678.9,
+    "p90": 2641.0,
+    "p95": 3235.4,
+    "p99": 6711.8,
+    "max": 7730.0,
+    "min": 1055.6
+   },
+   "server_ms": {
+    "n": 126,
+    "p50": 59.0,
+    "p95": 154.0,
+    "max": 432.0
+   },
+   "valid_over_3000ms": 7,
+   "share_valid_over_3000ms": 0.0556
+  },
+  {
+   "split": "trace-dev",
+   "arm": "jev-1.13",
+   "n_valid": 125,
+   "n_requests": 126,
+   "client_wall_ms": {
+    "p50": 1404.2,
+    "p90": 2920.9,
+    "p95": 4066.8,
+    "p99": 8167.7,
+    "max": 9643.1,
+    "min": 1050.9
+   },
+   "server_ms": {
+    "n": 0,
+    "p50": null,
+    "p95": null,
+    "max": null
+   },
+   "valid_over_3000ms": 10,
+   "share_valid_over_3000ms": 0.08
+  },
+  {
+   "split": "trace-holdout",
+   "arm": "luna-decisions",
+   "n_valid": 252,
+   "n_requests": 252,
+   "client_wall_ms": {
+    "p50": 1414.2,
+    "p90": 2432.6,
+    "p95": 3001.9,
+    "p99": 6042.2,
+    "max": 16098.2,
+    "min": 1028.5
+   },
+   "server_ms": {
+    "n": 252,
+    "p50": 60.0,
+    "p95": 136.0,
+    "max": 576.0
+   },
+   "valid_over_3000ms": 13,
+   "share_valid_over_3000ms": 0.0516
+  },
+  {
+   "split": "trace-holdout",
+   "arm": "jev-1.13",
+   "n_valid": 250,
+   "n_requests": 252,
+   "client_wall_ms": {
+    "p50": 1386.9,
+    "p90": 2810.1,
+    "p95": 3436.1,
+    "p99": 6212.9,
+    "max": 11920.2,
+    "min": 1023.3
+   },
+   "server_ms": {
+    "n": 0,
+    "p50": null,
+    "p95": null,
+    "max": null
+   },
+   "valid_over_3000ms": 20,
+   "share_valid_over_3000ms": 0.08
+  }
+ ],
+ "invalid": [
+  {
+   "split": "dev",
+   "arm": "luna-decisions",
+   "rep": 1,
+   "id": "fresh-cua-03",
+   "elapsed_ms": 30003,
+   "error": "ReadTimeout: "
+  },
+  {
+   "split": "dev",
+   "arm": "luna-decisions",
+   "rep": 2,
+   "id": "select-16",
+   "elapsed_ms": 20321,
+   "error": "ReadError: "
+  },
+  {
+   "split": "dev",
+   "arm": "luna-decisions",
+   "rep": 3,
+   "id": "fresh-select-08",
+   "elapsed_ms": 27391,
+   "error": "ReadError: "
+  },
+  {
+   "split": "dev",
+   "arm": "luna-decisions",
+   "rep": 3,
+   "id": "fresh-search-05",
+   "elapsed_ms": 30002,
+   "error": "ReadTimeout: "
+  },
+  {
+   "split": "holdout",
+   "arm": "luna-decisions",
+   "rep": 2,
+   "id": "hold-cua-17",
+   "elapsed_ms": 31599,
+   "error": "ReadTimeout: "
+  },
+  {
+   "split": "holdout",
+   "arm": "luna-decisions",
+   "rep": 2,
+   "id": "hold-cua-18",
+   "elapsed_ms": 30354,
+   "error": "ConnectTimeout: "
+  },
+  {
+   "split": "holdout",
+   "arm": "luna-decisions",
+   "rep": 2,
+   "id": "hold-search-18",
+   "elapsed_ms": 21204,
+   "error": "ReadError: "
+  },
+  {
+   "split": "holdout",
+   "arm": "luna-decisions",
+   "rep": 3,
+   "id": "hold-cua-13",
+   "elapsed_ms": 30002,
+   "error": "ReadTimeout: "
+  },
+  {
+   "split": "holdout",
+   "arm": "luna-decisions",
+   "rep": 3,
+   "id": "hold-cua-14",
+   "elapsed_ms": 17140,
+   "error": "RemoteProtocolError: Server disconnected without sending a response."
+  },
+  {
+   "split": "holdout",
+   "arm": "jev-1.13",
+   "rep": 3,
+   "id": "hold-cua-14",
+   "elapsed_ms": 15856,
+   "error": "ReadError: "
+  },
+  {
+   "split": "trace-dev",
+   "arm": "jev-1.13",
+   "rep": 2,
+   "id": "rt-062",
+   "elapsed_ms": 60002,
+   "error": "ReadTimeout: "
+  },
+  {
+   "split": "trace-holdout",
+   "arm": "jev-1.13",
+   "rep": 2,
+   "id": "rt-039",
+   "elapsed_ms": 15923,
+   "error": "ReadError: "
+  },
+  {
+   "split": "trace-holdout",
+   "arm": "jev-1.13",
+   "rep": 2,
+   "id": "rt-048",
+   "elapsed_ms": 20687,
+   "error": "ReadError: "
+  }
+ ]
+}

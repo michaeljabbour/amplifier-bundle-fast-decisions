@@ -1,0 +1,18 @@
+{
+ "jev-1.13": {
+  "correct_automatic_reads": 10,
+  "n": 42,
+  "read_cases": 13,
+  "useful": false,
+  "wrong_automatic": 5,
+  "wrong_automatic_upper95": 0.2500068180710754
+ },
+ "luna-decisions": {
+  "correct_automatic_reads": 6,
+  "n": 42,
+  "read_cases": 13,
+  "useful": false,
+  "wrong_automatic": 1,
+  "wrong_automatic_upper95": 0.12321481165248252
+ }
+}
