@@ -17,7 +17,7 @@ expensive action, and it adds nothing when a fixed rule makes the same choice. M
 those two cases apart with measurements rather than estimates.
 \end{keyidea}
 
-\paragraph{How the story goes.} We first looked at a week of live telemetry (\cref{sec:observatory}). We then built
+\paragraph{How the story goes.} We first looked at the bundle's live telemetry (\cref{sec:observatory}). We then built
 tools to grade decision models against labelled cases and real traces (\cref{sec:judges}), raised the difficulty to
 full paired agent sessions (\cref{sec:paired}), and reached a plateau where the question became how to configure the
 model rather than which one to pick (\cref{sec:plateau}). \Cref{sec:recommend} says what to set, per host model and
@@ -32,6 +32,14 @@ per harness; \cref{sec:limits} says what we did not finish.
 decisions were right (so we built benchmarks), benchmarks could not say what a decision saves (so we ran whole
 sessions), and whole sessions raised the effort and decider questions that the follow-ups and S1 settled.}
 \end{figure}
+
+\paragraph{Related work.} Routing work to cheaper models is not new. RouteLLM learns, query by query, when a weaker
+model's answer will be good enough (\url{https://arxiv.org/abs/2406.18665}); FrugalGPT cascades queries through models
+of increasing cost and stops when an answer is judged reliable (\url{https://arxiv.org/abs/2305.05176}). Both treat a
+query as one call. This report measures something they do not: whole multi-turn agent sessions, where prompt caching
+makes the price of switching models depend on the conversation so far, where reasoning effort is a second cost lever,
+and where a learned decider is tested against a deterministic rule rather than against no routing at all. We did not
+conduct an exhaustive literature search.
 
 \paragraph{How to read the evidence labels.} Results marked \prereg\ test hypotheses fixed before the data;
 \screen\ marks exploratory results. Cost ratios are \term{geometric means} of per-pair ratios unless labelled

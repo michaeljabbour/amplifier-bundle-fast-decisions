@@ -7,8 +7,8 @@
   legend to name=efflegend, legend columns=2, legend cell align=left,
   legend style={/tikz/every even column/.append style={column sep=10pt}}]
 \draw[black!70, line width=0.8pt] (axis cs:1,-0.6) -- (axis cs:1,2.6);
-\addplot[only marks, mark=*, mark size=2.4pt, color=okblue, error bars/.cd, x dir=both, x explicit,
-  error bar style={line width=1pt}] table[x=r, y=y, x error minus=rm, x error plus=rp]{generated/data/effort-hosts.dat};
+\addplot[nodes near coords, point meta=explicit symbolic, nodes near coords style={font=\scriptsize, anchor=south, yshift=2.5pt, text=black!80}, only marks, mark=*, mark size=2.4pt, color=okblue, error bars/.cd, x dir=both, x explicit,
+  error bar style={line width=1pt}] table[meta=v, x=r, y=y, x error minus=rm, x error plus=rp]{generated/data/effort-hosts.dat};
 \addlegendentry{cost, 95\,\% CI}
 \addplot[only marks, mark=square*, mark size=2.2pt, color=okgreen] coordinates {(5,5)};
 \addlegendentry{turn-pass, 95\,\% CI}

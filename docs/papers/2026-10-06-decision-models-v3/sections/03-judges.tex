@@ -23,7 +23,8 @@ per decision and a p95 of \ClClefPninetyfiveLow--\ClClefPninetyfiveHigh\,ms from
 of Clef, Clef-Flash and the in-run Jev reference.}
 \label{fig:accuracy}
 \howtoread{Each row is a judge; the dot is its accuracy and the whisker its 95\,\% interval. The top judges'
-whiskers overlap, which is why their differences are called ``within noise''. Jev sits among them at a fraction of
+whiskers overlap: no accuracy difference was detected after the preregistered correction (which is not the same as
+showing the judges equivalent). Jev sits among them at a fraction of
 the cost and latency of the cloud models (companion report, Part I).}
 \end{figure}
 
@@ -35,7 +36,7 @@ the cost and latency of the cloud models (companion report, Part I).}
 Blue: preregistered run; black pentagons: post-hoc run (Clef, Clef-Flash and the in-run Jev reference).}
 \label{fig:costacc}
 \howtoread{Left is cheaper, up is more accurate. Jev is the cheapest point near the top; the cloud models buy a few
-points of accuracy, within noise, for many times the price.}
+points of measured accuracy, a difference not detected after correction, for many times the price.}
 \end{figure}
 
 \paragraph{Real decisions.} Constructed cases can be easier or harder than real ones. A second preregistered study
@@ -56,8 +57,10 @@ preregistered rule would call a judge useful.}
 enough correct reads also misfired.}
 \end{figure}
 
+\input{generated/openai-section.tex}
+
 \begin{keyidea}
-Jev is the best value among the decision models we tested: as accurate as the expensive ones within noise, and much
-cheaper and faster. But on real read decisions no model was safe enough to act on its own, so the read shortcut stays
+Jev is the best value among the decision models we tested: no accuracy difference from the expensive ones was
+detected after the preregistered correction, and it is much cheaper and faster. But on real read decisions no model was safe enough to act on its own, so the read shortcut stays
 off. The money, if any, had to come from a bigger decision: which model runs the session.
 \end{keyidea}

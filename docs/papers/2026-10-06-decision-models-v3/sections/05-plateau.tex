@@ -37,9 +37,37 @@ each time: within a turn, a request after an effort change wrote \AoEcChanged\ t
 \AoEcUnchanged\ when effort stayed the same (\AoEcX\X). Effort should be set once per session, like the model.
 
 \paragraph{The core study (S1) \texorpdfstring{\prereg}{[preregistered]}.} These findings were frozen into candidate
-configurations and a preregistered holdout study on \SOnePanelN\ scenarios no agent had run: does the frozen
-configuration hold up, does the decision model beat the rule, and does medium effort help Opus? A deterministic freeze
-rule then picks each host's configuration.
+configurations and a preregistered holdout study on \SOnePanelN\ scenarios disjoint from main-v1, smoke-tested before
+preregistration: does the frozen configuration hold up, does the decision model beat the rule, and does medium effort
+help Opus? A deterministic freeze rule then picks each host's configuration.
+
+\paragraph{How the panel was prepared.} Before the preregistration was committed, one plain-Sonnet smoke session ran on
+each of the \SmokeN\ scenarios (\$\SmokeUSD). It found prompt or grader defects in \SmokeFixed\ scenarios: prompts that
+did not state what a check required, and checks that rejected correct answers. These were repaired; genuine agent
+mistakes were left as they were; every scenario was then revalidated mechanically (the starting workspace fails, the
+reference passes, wrong variants fail). The smoke results enter no hypothesis and are not pooled with S1.
+
+\begin{casecard}{S1 methods in brief}
+\textbf{Quality.} Each scripted turn carries automated checks (tests, file patterns, required facts or document
+sections); the \term{turn-pass fraction} is the share of a session's turns whose checks passed, and a final-state check
+on the hidden tests is reported as additional evidence. The graders were validated before the run: the starting
+workspace must fail, the reference solution must pass every turn, and plausible wrong answers must fail.
+Non-inferiority means the 95\,\% lower bound of the turn-pass difference is above \NIMargin, that is, no worse than the
+specified \NIMarginPts-point margin. These are claims about these automated checks, not about human judgement of, for
+example, the quality of a code review or an explanation.
+
+\textbf{Cost.} The primary cost is the tools-normalized list-price cost of each session, plus estimated decider charges
+where a decider runs. The normalization reprices the first shared tool-definition prefix from the cache-write to the
+cache-read rate; it changed the accepted sessions' recomputed cost by \NormShareMain\,\% in main-v1 and \NormShareSone\,\%
+in S1 (data dictionary in the evidence package).
+
+\textbf{Composed policies.} S1 executed pinned-host, pinned-Sonnet and shipped-policy sessions. H1 and H2 evaluate
+decide-once policies by selecting the corresponding pinned outcome for each scenario and repetition: the rule or recorded
+Jev decision determines which session contributes its cost and quality. These policies therefore reuse executed outcomes
+rather than running a separate session for every configuration. Intervals resample whole scenarios. H6 separately
+compares live shipped sessions with their matched reconstructions, providing an empirical check of this cost
+decomposition (not of every quality property of every reconstructed policy).
+\end{casecard}
 \input{generated/s1-section.tex}
 \ifnum\SOnePending=0
 S1 ran \SOneSessions\ sessions on \SOneScen\ scenarios. \Cref{tab:s1hyp} lists the verdicts; in plain words:
@@ -52,15 +80,16 @@ S1 ran \SOneSessions\ sessions on \SOneScen\ scenarios. \Cref{tab:s1hyp} lists t
     disagreed on only \SHTwoDisc\ of \SHTwoReps\ scenario-reps. The preregistered decision follows: ship the simpler rule
     R*, with no external call and no consent needed; Jev becomes an opt-in decider.
   \item \textbf{H3 (bundle overhead), \SHThreeVerdict.} The shipped bundle on Opus cost \SHThreeRatio\X\ plain Opus (90\,\%
-    CI \SHThreeCINinety): no overhead. On Fable, the bundle with the host pinned cost \SHThreeBRatio\X\ (descriptive).
+    CI \SHThreeCINinety): cost-equivalent within the preregistered $\pm$5\,\% margin. On Fable, the bundle with the host pinned cost \SHThreeBRatio\X\ (descriptive).
   \item \textbf{H4 (Opus at medium effort), \SHFourVerdict.} Opus at medium cost \SHFourRatio\X\ its default (95\,\% CI
-    \SHFourCI): no detectable saving, unlike Sonnet (\EcRatio\X) and Fable (\EfRatio\X).
+    \SHFourCI): medium effort did not demonstrate a saving, unlike Sonnet (\EcRatio\X) and Fable (\EfRatio\X).
   \item \textbf{H5 (routing on Opus), \SHFiveVerdict.} Routing to Sonnet still lost on Opus: \SHFiveRatio\X\ (\SHFiveCI),
     on fresh scenarios and without the effort-switch artefact.
   \item \textbf{H6 (live equals predicted), \SHSixVerdict.} Live decide-once sessions cost what the decomposition predicted
     (\SHSixRatio\X, 90\,\% CI \SHSixCINinety).
-  \item \textbf{H7 (review and explain on Sonnet), \SHSevenVerdict.} On the \SHSevenN\ review and explain scenarios, the
-    turn-pass lower bound for Sonnet against the host was \SHSevenDtpLow, below the \NIMargin\ margin. The preregistered
+  \item \textbf{H7 (review and explain on Sonnet), \SHSevenVerdict.} On the \SHSevenQualN\ review and explain scenarios
+    (\SHSevenN\ for cost, after the gate-failed scenario is excluded), the turn-pass lower bound for Sonnet against the host was \SHSevenDtpLow, below the \NIMargin\ margin: non-inferiority was not
+    established (the interval also includes zero, so a loss is not shown either). The preregistered
     rule therefore keeps these task types on the host (\code{keep\_on\_host: [review, explain]}).
 \end{itemize}
 

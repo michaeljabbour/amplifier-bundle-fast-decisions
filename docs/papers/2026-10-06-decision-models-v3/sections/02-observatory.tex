@@ -1,8 +1,8 @@
-\section{What a week of telemetry showed}\label{sec:observatory}
+\section{What the telemetry showed}\label{sec:observatory}
 
 The fast-decisions bundle records every decision it makes, privately and locally. Before measuring anything new we
-read what was already there: \ObEvents\ events in \ObSessionFiles\ session files, \ObWeekEvents\ of them in the first
-week. \ObProdSessions\ sessions were real work; \ObTestSessions\ were tests.
+read what was already there: \ObEvents\ events in \ObSessionFiles\ session files, recorded from \ObWeekStart\ to the
+\ObCutoff\ snapshot cutoff; \ObWeekEvents\ of them fall in the first week (\ObWeekStart\ to \ObWeekEnd). \ObProdSessions\ sessions were real work; \ObTestSessions\ were tests.
 
 \paragraph{Decisions are fast.} \Cref{fig:obslatency} puts the decision calls next to the thing they try to save.
 A local Qwen3 model proposed a file read in \ObQwenPfifty\,ms at the median; Jev judged a session's starting model in

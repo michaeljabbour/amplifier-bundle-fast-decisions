@@ -1,0 +1,13 @@
+% OpenAI Decisions API vs in-run Jev: accuracy per split, Wilson 95% CIs (post hoc).
+\begin{tikzpicture}
+\begin{axis}[benchmark, scale only axis, width=8.5cm, height=5.4cm, xmin=0.3, xmax=1.05, xtick={0.4,0.6,0.8,1},
+  xmajorgrids, ymin=-0.7, ymax=10.7, ytick={\OaTicks}, yticklabels/.expanded={\OaLabels},
+  y tick label style={font=\footnotesize}, xlabel={Accuracy (share of cases decided correctly)},
+  title={Decisions API vs Jev, same run}, title style={font=\small\bfseries},
+  legend to name=oalegend, legend columns=1, legend cell align=left]
+\addplot[only marks, mark=*, mark size=2.4pt, color=okblue, nodes near coords, point meta=explicit symbolic,
+  nodes near coords style={font=\scriptsize, anchor=south, yshift=2.5pt, text=black!80}, error bars/.cd, x dir=both, x explicit,
+  error bar style={line width=1pt}] table[meta=v, x=r, y=y, x error minus=rm, x error plus=rp]{generated/data/openai-acc.dat};
+\addlegendentry{accuracy, 95\,\% Wilson interval (post hoc)}
+\end{axis}
+\end{tikzpicture}

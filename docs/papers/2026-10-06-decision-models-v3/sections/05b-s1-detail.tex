@@ -3,6 +3,7 @@
 This section opens up the S1 results one picture at a time. All of it is the preregistered S1 data; anything not
 preregistered is labelled exploratory.
 
+\FloatBarrier
 \subsection{Every hypothesis on one page}
 
 \begin{figure}[htbp]
@@ -20,10 +21,11 @@ review and explain stay on the host.}
 
 \begin{keyidea}
 Two of the eight rows carry money: H1 (Fable routing saves about two fifths) and H5 (Opus routing loses about a
-quarter). The rest are guards: no overhead (H3), the model adds nothing over the rule (H2), live sessions behave as
+quarter). The rest are guards: the bundle is cost-equivalent within the \(\pm\)5\,\% margin (H3), the model adds nothing over the rule (H2), live sessions behave as
 predicted (H6), and review and explain need protection (H7).
 \end{keyidea}
 
+\FloatBarrier
 \subsection{How to read a paired cost ratio}\label{sec:worked}
 
 \begin{casecard}{Worked example: one scenario, two reps, one ratio}
@@ -38,6 +40,7 @@ scenarios \SResamples\ times and repeating the calculation.
 Why a geometric mean? A ratio of 0.5 and a ratio of 2 should cancel; their arithmetic mean (1.25) says ``more
 expensive'', their geometric mean (1) says ``no change''. Averaging logs treats halving and doubling symmetrically.
 
+\FloatBarrier
 \subsection{The variance underneath the headline}
 
 \begin{figure}[htbp]
@@ -52,6 +55,7 @@ more than plain Fable, and the ratios run from \PsFableMin\ to \PsFableMax. On O
 more, from \PsOpusMin\ to \PsOpusMax. The direction is consistent; the size varies a lot from task to task.}
 \end{figure}
 
+\FloatBarrier
 \subsection{Where the risk sits: task types and families}
 
 \begin{figure}[htbp]
@@ -59,13 +63,15 @@ more, from \PsOpusMin\ to \PsOpusMax. The direction is consistent; the size vari
 \pgfplotslegendfromname{sublegend}\par\smallskip
 \input{figures/fig-subgroups.tex}
 \caption{The frozen Fable configuration against plain Fable, split by task type and by scenario family (number of
-scenarios in brackets), with 95\,\% intervals. Exploratory: subgroups were not preregistered except H7.}
+cost-valid scenarios in brackets; the quality panel is unfiltered and uses every scenario of the subgroup), with 95\,\%
+intervals. Exploratory: subgroups were not preregistered except H7.}
 \label{fig:subgroups}
 \howtoread{Every subgroup saves money. The quality panel is where they differ: explain (\SubExplainTaskDtp; lower
 bound \SubExplainTaskLow) and mixed work cross the margin, review touches it (\SubReviewTaskLow), while bugfix and
 feature sit near zero. Small subgroups give wide whiskers; treat single rows with caution.}
 \end{figure}
 
+\FloatBarrier
 \subsection{Which configuration the rule picked}
 
 \begin{figure}[htbp]
@@ -78,11 +84,12 @@ host's plain default and turn-pass difference (point estimates). Keys group conf
 point; \cref{tab:fzkey} lists them.}
 \label{fig:fz}
 \howtoread{Left and up is better. Filled dots passed the preregistered candidate test (cost upper bound below 1,
-quality lower bound above the margin, final-state point not worse than the limit). The star is the rule's choice; the
+quality lower bound above the margin, final-state point no worse than the specified limit). The star is the rule's choice; the
 diamond is the preregistered configuration. On Fable \FzFableCand\ configurations qualified; the cheapest cluster
 drops the scope gate. On Opus none qualified, so the shipped default stays.}
 \end{figure}
 
+\FloatBarrier
 \subsection{The decision model against the rule}\label{sec:bound}
 
 Jev and the rule R* chose differently on only \DcN\ of \DcUnits\ Fable scenario-reps (\cref{tab:discordant}).
@@ -104,6 +111,7 @@ That bound, not a significance test, is what makes ``equivalent'' believable: wi
 skill on those few can move the total.
 \end{casecard}
 
+\FloatBarrier
 \subsection{Effort, across three hosts}
 
 \begin{figure}[htbp]
@@ -117,6 +125,7 @@ skill on those few can move the total.
 on 1. The same setting saves money on two models and nothing on the third, so effort must be set per host.}
 \end{figure}
 
+\FloatBarrier
 \subsection{Where the money goes}
 
 \begin{figure}[htbp]
@@ -131,6 +140,7 @@ spends more on cache reads (\CcSonnetDecidedOReadShare\,\%), which are cheap per
 (\$\CcPlainOpusTotal) is already cheaper than the Sonnet session, which is the whole H5 story in one bar.}
 \end{figure}
 
+\FloatBarrier
 \subsection{Does the answer replicate?}
 
 \begin{figure}[htbp]
@@ -144,3 +154,4 @@ and S1. Main-v1 rows are the sticky arm without the quality filter; the S1 rows 
 \CumFableSone) all lie near one half; the Opus rows (\CumOpusPilot, \CumOpusTrain, \CumOpusTest, \CumOpusSone) all lie
 above 1. Four independent sets of scenarios, the same sign and roughly the same size.}
 \end{figure}
+\FloatBarrier

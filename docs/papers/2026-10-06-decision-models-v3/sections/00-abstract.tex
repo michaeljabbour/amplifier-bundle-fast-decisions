@@ -1,8 +1,8 @@
 \small
 \noindent An AI agent makes many small decisions: which model should run this session, may this file be read without
 asking the expensive model, how hard should the model think. A ``system~1'' decision model answers such typed
-questions in a fraction of a second. We asked what one buys an agent harness in quality, cost and speed. A week of
-live telemetry (\ObEvents\ events) showed decisions cost \ObJevPfifty\,ms against \ObHostPfifty\,s for a host model call,
+questions in a fraction of a second. We asked what one buys an agent harness in quality, cost and speed. Live
+telemetry (\ObEvents\ events from \ObWeekStart\ to the \ObCutoff\ cutoff, \ObWeekEvents\ of them in the first week) showed decisions cost \ObJevPfifty\,ms against \ObHostPfifty\,s for a host model call,
 but that the headline agreement figure mostly measured a labelling artefact. A preregistered judge benchmark found Jev,
 Typesafe's decision model, the most accurate per dollar; no judge was useful on real read decisions. A paired campaign
 of \NSessions\ multi-turn sessions measured what routing a session to a cheaper model really costs: with Fable~5.1 as
@@ -11,5 +11,5 @@ ratios); with Opus~5.5 as host every routing arm cost more. Two preregistered fo
 saving is reasoning effort (Sonnet at medium \EcRatio\X\ its default; Fable at medium \EfRatio\X). A counterfactual
 analysis then suggested, and a preregistered holdout study of \SOneSessions\ sessions confirmed, that a one-line rule
 matches the decision model at the session-start choice (\SHTwoRatio\X, equivalent). On fresh scenarios the frozen Fable
-configuration cost \SHOneRatio\X\ plain Fable; routing on Opus still lost (\SHFiveRatio\X); medium effort did not help Opus. We end with what to configure, per host model and per harness, and with what we have not yet measured.
+configuration cost \SHOneRatio\X\ plain Fable; routing on Opus still lost (\SHFiveRatio\X); medium effort on Opus did not demonstrate a saving. We end with what to configure, per host model and per harness, and with what we have not yet measured.
 \normalsize

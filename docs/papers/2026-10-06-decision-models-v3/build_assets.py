@@ -4,11 +4,11 @@
 Reads only committed files, and committed refs and history read with `git` (`git show`, `git archive`, `git log`):
     docs/evidence/2026-10-02-paired-campaign/   (the campaign evidence package)
     docs/evidence/2026-10-05-effort-control/    (the effort-control follow-up)
-    origin/main: judge-benchmark, trace-benchmark, caching-survey and Clef evidence (jb_import.py, `git show`)
+    commit 94bb7b58ab75: judge-benchmark, trace-benchmark, caching-survey and Clef evidence (jb_import.py, `git show`)
     docs/design/parallel-measurement-mode.md    (design v2: power table)
     docs/design/pilot-20261001/                 (cache-semantics probe)
     evals/paired/                               (memory-safety README, design yaml, scenario directories)
-    origin/main:docs/evidence/2026-10-01-caching/results.json  (the earlier caching survey;
+    94bb7b58ab75:docs/evidence/2026-10-01-caching/results.json  (the earlier caching survey;
         read with `git show`, the build stops if that ref is missing)
 and writes generated/:
     numbers.tex   \\newcommand macros for every number used in prose
@@ -39,7 +39,8 @@ EV = REPO / "docs" / "evidence" / "2026-10-02-paired-campaign"
 DESIGN = REPO / "docs" / "design" / "parallel-measurement-mode.md"
 PROBE = REPO / "docs" / "design" / "pilot-20261001" / "step1_cache_probe.json"
 PAIRED = REPO / "evals" / "paired"
-SURVEY_REF = "origin/main:docs/evidence/2026-10-01-caching/results.json"
+EVIDENCE_PIN = "94bb7b58ab75b71ce095a4eda9c19822765e7b55"  # recorded commit: every git-read input is pinned here, not to a moving branch
+SURVEY_REF = f"{EVIDENCE_PIN}:docs/evidence/2026-10-01-caching/results.json"
 OUT = HERE / "generated"
 TABLES, DATA = OUT / "tables", OUT / "data"
 
@@ -841,7 +842,7 @@ M("NStickySonnetOnly", len(son_only))
 M("NStickySonnetOnlyHost", sum(s["host"] == "fable" for s in son_only))
 M("NStickyPerHost", sum(s["host"] == "fable" for s in sticky))
 # the judge's own bill (not in session cost): Jev's cost per decision from the trace judge benchmark
-JEV_REF = "origin/main:docs/evidence/2026-10-01-trace-judge-benchmark/holdout/summary.json"
+JEV_REF = f"{EVIDENCE_PIN}:docs/evidence/2026-10-01-trace-judge-benchmark/holdout/summary.json"
 try:
     TJ = json.loads(subprocess.run(["git", "-C", str(REPO), "show", JEV_REF], capture_output=True, text=True,
                                    check=True).stdout)
@@ -1279,9 +1280,9 @@ for h in ("fable", "opus"):
 
 
 # ================================================================ Cloudflare Clef and Clef-Flash (post-hoc arms)
-# Committed on origin/main; read with `git show` so a clean clone builds.
-CLEF_REF = "origin/main:docs/evidence/2026-10-04-clef-judges"
-JB_REF = "origin/main:docs/evidence/2026-09-30-judge-benchmark"
+# Committed at EVIDENCE_PIN; read with `git show` so a clean clone builds.
+CLEF_REF = f"{EVIDENCE_PIN}:docs/evidence/2026-10-04-clef-judges"
+JB_REF = f"{EVIDENCE_PIN}:docs/evidence/2026-09-30-judge-benchmark"
 
 
 def gshow(path):
@@ -1362,7 +1363,7 @@ M("ClSpend", hu(spend, 2))
 M("ClSpendFour", hu(spend, 4))
 readme = gshow(f"{CLEF_REF}/README.md")
 assert f"${hu(spend, 4)}" in readme.replace("**", ""), "Clef spend differs from the evidence README"
-yaml_ = gshow("origin/main:evals/judges.yaml")
+yaml_ = gshow(f"{EVIDENCE_PIN}:evals/judges.yaml")
 for a, A in (("clef", "Clef"), ("clef-flash", "Flash")):
     blk = yaml_[yaml_.index(f"\n  {a}:"):]
     M(f"Cl{A}Price", "%.2f" % float(re.search(r"price_in:\s*([\d.]+)", blk).group(1)))
@@ -2310,7 +2311,7 @@ else:
         v, e = H[h], H[h]["estimate"]
         verdict = {True: r"\ok\ supported", False: r"\no\ not supported", None: "descriptive"}[v.get("supported")]
         hrows.append(f"{h} & {hu(e['gm_ratio'], 3)} ({ci(e.get('gm_ratio_ci95'))}) & {hu(e['d_turn_pass'], 3)} "
-                     f"({ci(e.get('d_turn_pass_ci95'))}) & {'--' if v.get('p_holm') is None else hu(v['p_holm'], 3)} & {verdict} \\\\")
+                     f"({ci(e.get('d_turn_pass_ci95'))}) & {'--' if v.get('p_holm') is None else ('$<$\\,0.001' if v['p_holm'] < 0.001 else hu(v['p_holm'], 3))} & {verdict} \\\\")
     write(TABLES / "s1-hypotheses.tex", table("l r r r l", [r"Hypothesis & cost ratio (95\,\% CI) & turn-pass $\Delta$ (95\,\% CI) & Holm $p$ & verdict \\"], hrows))
     frz = s1["freeze"]
     parts = []
@@ -2662,17 +2663,17 @@ if s1 is not None:
     FIND = [
         ("Decision calls are fast next to host calls", f"Jev p50 \\ObJevPfifty{{}}\\,ms; host p50 \\ObHostPfifty{{}}\\,s", "observatory", "measured"),
         ("Shadow ``agreement'' was mostly unmatchable", f"\\ObUnmatchN{{}} of \\ObAllN{{}} could not match", "observatory", "measured"),
-        ("Jev accurate within noise of the best, cheapest", f"\\JevHoldAccK{{}}/\\HoldN{{}} correct", "judge benchmark", "preregistered"),
+        ("No accuracy difference detected between Jev and the best judges (after correction); Jev cheapest", f"\\JevHoldAccK{{}}/\\HoldN{{}} correct", "judge benchmark", "preregistered"),
         ("No judge useful on real read decisions", f"\\TrNUseful{{}} of \\NumBase{{}} judges", "trace study", "preregistered"),
         ("Routing on Fable saves", f"\\CfFableStickyPairTwo{{}}\\X\\ (\\CfFableStickyPairCITwo{{}})", "main-v1", "preregistered"),
         ("Routing on Fable saves, fresh scenarios", f"{hu(H['H1']['estimate']['gm_ratio'], 3)}\\X\\ ({ci2(H['H1']['estimate']['gm_ratio_ci95'])})", "S1, H1", "preregistered, replicated"),
         ("Routing on Opus costs more", f"{hu(H['H5']['estimate']['gm_ratio'], 3)}\\X\\ ({ci2(H['H5']['estimate']['gm_ratio_ci95'])})", "S1, H5", "preregistered, replicated"),
         ("Rule R* equals the decision model at session start", f"{hu(H['H2']['estimate']['gm_ratio'], 3)}\\X\\ (90\\,\\% {ci2(H['H2']['estimate']['gm_ratio_ci90'])})", "S1, H2", "preregistered"),
-        ("No bundle overhead on Opus", f"{hu(H['H3']['estimate']['gm_ratio'], 3)}\\X\\ (90\\,\\% {ci2(H['H3']['estimate']['gm_ratio_ci90'])})", "S1, H3", "preregistered"),
+        ("Bundle cost-equivalent on Opus within the preregistered $\\pm$5\\,\\% margin", f"{hu(H['H3']['estimate']['gm_ratio'], 3)}\\X\\ (90\\,\\% {ci2(H['H3']['estimate']['gm_ratio_ci90'])})", "S1, H3", "preregistered"),
         ("Medium effort: Sonnet", f"\\EcRatio{{}}\\X\\ (\\EcCI{{}})", "follow-up 1", "preregistered, provenance-limited"),
         ("Medium effort: Fable", f"\\EfRatio{{}}\\X\\ (\\EfCI{{}})", "follow-up 2", "preregistered"),
-        ("Medium effort: Opus, no saving", f"{hu(H['H4']['estimate']['gm_ratio'], 3)}\\X\\ ({ci2(H['H4']['estimate']['gm_ratio_ci95'])})", "S1, H4", "preregistered"),
-        ("Review/explain lose quality on Sonnet", f"lower bound {hu(H['H7']['estimate']['d_turn_pass_ci95'][0], 3)}", "S1, H7", "preregistered"),
+        ("Medium effort on Opus: saving not demonstrated", f"{hu(H['H4']['estimate']['gm_ratio'], 3)}\\X\\ ({ci2(H['H4']['estimate']['gm_ratio_ci95'])})", "S1, H4", "preregistered"),
+        ("Noninferiority not established for review/explain on Sonnet", f"lower bound {hu(H['H7']['estimate']['d_turn_pass_ci95'][0], 3)}", "S1, H7", "preregistered"),
         ("Live decide-once equals its prediction", f"{hu(H['H6']['estimate']['gm_ratio'], 3)}\\X\\ (90\\,\\% {ci2(H['H6']['estimate']['gm_ratio_ci90'])})", "S1, H6", "preregistered"),
         ("Effort switches rewrite the cache", f"\\AoEcX{{}}\\X\\ cache writes", "main-v1 re-analysis", "exploratory"),
         ("Keyword proxy keeps quality at a cost", f"\\KpProxyRatio{{}}\\X, turn-pass \\KpProxyDtp{{}}", "S1 replay", "exploratory"),
@@ -2693,6 +2694,200 @@ if s1 is not None:
         blk.append(l[4:] if l.startswith("    ") else l)
     write(OUT / "recipe-shipped.yaml", "\n".join(b for b in blk if b.strip()) + "\n")
     M("BundleVersion", re.search(r'^version = "([^"]+)"', (REPO / "pyproject.toml").read_text(), re.M).group(1))
+
+
+# ---------------------------------------------------------------- row identity: ascending rows + a printed value per row
+# Every bar/forest chart prints its row's value next to the row (column v); check_figures.py verifies that each rendered
+# row label sits beside its own value. Charts whose tick labels come from `yticklabels from table` must list rows in
+# ascending y, the order pgfplots assigns those labels to ascending ticks.
+ROWVALUE = {  # file -> (sort ascending?, value column(s), format)
+    "obs-latency.dat": (True, ["p95"], lambda v: f"{float(v[0]):.0f}"),
+    "obs-mix.dat": (True, ["share"], lambda v: f"{float(v[0]):.1f}"),
+    "a0-policies.dat": (False, ["r"], lambda v: f"{float(v[0]):.3f}"),
+    "forest.dat": (True, ["pair"], lambda v: f"{float(v[0]):.3f}"),
+    "forest-h3.dat": (True, ["pair"], lambda v: f"{float(v[0]):.3f}"),
+    "s1-forest.dat": (True, ["r"], lambda v: f"{float(v[0]):.3f}"),
+    "s1-subgroups.dat": (False, ["r"], lambda v: f"{float(v[0]):.3f}"),
+    "effort-hosts.dat": (True, ["r"], lambda v: f"{float(v[0]):.3f}"),
+    "s1-composition.dat": (True, ["inp", "rd", "wr", "out"], lambda v: f"{sum(float(x) for x in v):.2f}"),
+    "cumulative.dat": (False, ["r"], lambda v: f"{float(v[0]):.3f}"),
+}
+for fname, (asc, cols, fmt) in ROWVALUE.items():
+    f = DATA / fname
+    lines = f.read_text().splitlines()
+    head = lines[0].split()
+    rows = []
+    for ln in lines[1:]:
+        lab = re.search(r"\{[^}]*\}", ln).group(0)
+        rest = ln.replace(lab, "LABEL", 1).split()
+        rows.append([lab if x == "LABEL" else x for x in rest])
+    if asc:
+        rows.sort(key=lambda r: float(r[head.index("y")]))
+    if "v" not in head:
+        head.append("v")
+        for r in rows:
+            r.append(fmt([r[head.index(c)] for c in cols]))
+    write(f, "\n".join([" ".join(head)] + [" ".join(r) for r in rows]) + "\n")
+
+# composition: the stacked bars' totals as explicit nodes (nodes near coords cannot label a stack's end)
+_cl = (DATA / "s1-composition.dat").read_text().splitlines()
+_h = _cl[0].split()
+_nodes = []
+for ln in _cl[1:]:
+    lab = re.search(r"\{[^}]*\}", ln).group(0)
+    r = ln.replace(lab, "L", 1).split()
+    tot = sum(float(r[_h.index(c)]) for c in ("inp", "rd", "wr", "out"))
+    _nodes.append(f"\\node[anchor=west, font=\\scriptsize, text=black!80] at (axis cs:{tot:.4f},{r[0]}) {{{r[_h.index('v')]}}};")
+write(OUT / "composition-totals.tex", "\n".join(_nodes) + "\n")
+
+# ================================================================ round-3 review additions
+_wk = OBS["store"]["week"]
+M("ObWeekStart", _wk[0])
+M("ObWeekEnd", _wk[1])
+M("ObCutoff", OBS["store"]["cutoff_utc"][:10])
+_pr = (REPO / "docs" / "evidence" / "2026-10-06-holdout-v3" / "prereg" / "PREREGISTRATION-holdout-v3.md").read_text()
+_m = re.search(r"smoke run \((\d+) plain-Sonnet sessions, \$([\d.,]+), mean turn-pass ([\d.]+)\) led to defect\s+fixes in (\d+) scenarios", _pr)
+M("SmokeN", _m.group(1))
+M("SmokeUSD", _m.group(2))
+M("SmokeFixed", _m.group(4))
+
+
+def _norm_share(d):
+    ss = [s for s in jsonl(REPO / "docs" / "evidence" / d / "data" / "sessions.jsonl")
+          if s.get("cost_valid") and s.get("cost_usd_recomputed") is not None]
+    a = sum(s["cost_usd_recomputed"] for s in ss)
+    b = sum(s["cost_usd_tools_normalized"] for s in ss)
+    return (a - b) / a
+
+
+M("NormShareMain", pct(_norm_share("2026-10-02-paired-campaign"), 2))
+M("NormShareSone", pct(_norm_share("2026-10-06-holdout-v3"), 3))
+if s1 is not None:
+    M("SHSevenQualN", len({s for s in DR.scenarios if DR.meta[s]["task_type"] in _A.KEEP_TYPES}))
+
+
+# ---------------------------------------------------------------- OpenAI Decisions API judge (post hoc; rendered only if committed)
+OAI = Path(_os.environ.get("OPENAI_DECISIONS_EVIDENCE", str(REPO / "docs" / "evidence" / "2026-10-06-openai-decisions")))
+oai_tex = ""
+if (OAI / "summary.json").exists():
+    oj = json.loads((OAI / "summary.json").read_text())
+    try:
+        ORW = {(r["split"], r["arm"]): r for r in oj["rows"]}
+        SPL = ["dev", "holdout", "trace-dev", "trace-holdout"]
+        LUNA, JEV = "luna-decisions", "jev-1.13"
+        assert all((s, a) in ORW for s in SPL for a in (LUNA, JEV))
+    except (KeyError, TypeError, AssertionError) as exc:
+        raise SystemExit(f"build_assets.py: {OAI}/summary.json lacks the expected rows: {exc!r}")
+
+    def _wil(k, n, z=1.959964):
+        p = k / n
+        d = 1 + z * z / n
+        c = (p + z * z / (2 * n)) / d
+        h = z * math.sqrt(p * (1 - p) / n + z * z / (4 * n * n)) / d
+        return c - h, c + h
+    trows, frows = [], []
+    for i, s in enumerate(SPL):
+        for j, a in enumerate((LUNA, JEV)):
+            r = ORW[(s, a)]
+            k = round(r["accuracy"] * r["n"])
+            K = "".join(w.capitalize() for w in s.split("-")) + ("Luna" if a == LUNA else "Jev")
+            M(f"Oa{K}K", k)
+            M(f"Oa{K}N", r["n"])
+            M(f"Oa{K}Usd", hu(r["usd_per_1m"], 1))
+            trows.append(f"{s} & {'GPT-6 Luna, Decisions API' if a == LUNA else 'Jev 1.13 (in-run reference)'} & {k}/{r['n']} & "
+                         f"{pct(r['wrong_automatic'], 1)} & {pct(r['coverage'], 1)} & {hu(r['p50_ms'] / 1000, 2)} & "
+                         f"{hu(r['p95_ms'] / 1000, 2)} & {hu(r['usd_per_1m'], 1)} \\\\")
+            lo, hi = _wil(k, r["n"])
+            y = (len(SPL) - 1 - i) * 3 + (1 - j)
+            frows.append([y, "{" + f"{s}: {'Luna (Decisions API)' if a == LUNA else 'Jev 1.13'}" + "}", f"{k / r['n']:.4f}",
+                          f"{k / r['n'] - lo:.4f}", f"{hi - k / r['n']:.4f}", f"{k / r['n']:.3f}"])
+        if i < len(SPL) - 1:
+            trows.append(r"\addlinespace[2pt]")
+    write(TABLES / "openai-decisions.tex", table("l l r r r r r r", [
+        r"Split & Judge & correct & wrong auto. & coverage & p50 s & p95 s & \$ / 1M \\"], trows))
+    frows.sort(key=lambda r: r[0])
+    dat("openai-acc.dat", ["y", "label", "r", "rm", "rp", "v"], frows)
+    M("OaTicks", ",".join(str(r[0]) for r in frows))
+    M("OaLabels", ",".join(r[1] for r in frows))
+    cons = {(c["split"], c["metric"]): c for c in oj["contrasts"]}
+    sig = [c for c in oj["contrasts"] if c["p_holm"] < 0.05]
+    M("OaNSig", len(sig))
+    M("OaTrHoldHolm", hu(cons[("trace-holdout", "accuracy")]["p_holm"], 3))
+    M("OaWrongNeverHigher", "yes" if all(ORW[(s, LUNA)]["wrong_automatic"] <= ORW[(s, JEV)]["wrong_automatic"] for s in SPL) else "no")
+    assert all(ORW[(s, LUNA)]["wrong_automatic"] <= ORW[(s, JEV)]["wrong_automatic"] for s in SPL), "text says wrong automatic <= Jev"
+    assert all(cons[(s, "wrong automatic")]["p_holm"] >= 0.05 for s in SPL)
+    lat = {(l["split"], l["arm"]): l for l in oj["latency"]}
+    cl50 = [lat[(s, LUNA)]["client_wall_ms"]["p50"] / 1000 for s in SPL]
+    cl95 = [lat[(s, LUNA)]["client_wall_ms"]["p95"] / 1000 for s in SPL]
+    sv50 = [lat[(s, LUNA)]["server_ms"]["p50"] for s in SPL]
+    sv95 = [lat[(s, LUNA)]["server_ms"]["p95"] for s in SPL]
+    jv50 = [lat[(s, JEV)]["client_wall_ms"]["p50"] / 1000 for s in SPL]
+    M("OaClientPfiftyLo", hu(min(cl50), 1)); M("OaClientPfiftyHi", hu(max(cl50), 1))
+    M("OaClientPninetyfiveLo", hu(min(cl95), 1)); M("OaClientPninetyfiveHi", hu(max(cl95), 1))
+    M("OaServerPfiftyLo", f"{min(sv50):.0f}"); M("OaServerPfiftyHi", f"{max(sv50):.0f}")
+    M("OaServerPninetyfiveLo", f"{min(sv95):.0f}"); M("OaServerPninetyfiveHi", f"{max(sv95):.0f}")
+    M("OaJevClientLo", hu(min(jv50), 1)); M("OaJevClientHi", hu(max(jv50), 1))
+    _rd = (OAI / "README.md").read_text()
+    _m = re.search(r"against about ([\d.]+)-([\d.]+) s in the (\d{4}-\d\d-\d\d) clef runs", _rd)
+    M("OaJevEarlierLo", _m.group(1)); M("OaJevEarlierHi", _m.group(2)); M("OaJevEarlierDate", _m.group(3))
+    usdL = [ORW[(s, LUNA)]["usd_per_1m"] for s in SPL]
+    usdJ = [ORW[(s, JEV)]["usd_per_1m"] for s in SPL]
+    M("OaUsdLo", f"{min(usdL):.0f}"); M("OaUsdHi", f"{max(usdL):.0f}")
+    M("OaJevUsdLo", f"{min(usdJ):.0f}"); M("OaJevUsdHi", f"{max(usdJ):.0f}")
+    inv = [x for x in oj["invalid"] if x["arm"] == LUNA]
+    M("OaInvalid", len(inv))
+    M("OaRequests", thousands(sum(lat[(s, LUNA)]["n_requests"] for s in SPL)))
+    useful = []
+    for s in ("trace-dev", "trace-holdout"):
+        r2 = json.loads((OAI / s / "rule2.json").read_text())
+        useful += [r2[a]["useful"] for a in (LUNA, JEV)]
+    M("OaAnyUseful", "yes" if any(useful) else "no")
+    assert not any(useful), "text says neither judge is useful under rule 2"
+    oai_tex = r"""\subsection{OpenAI Decisions API (post hoc)}\label{sec:openai}
+OpenAI's Decisions API is a native endpoint for exactly this kind of typed question: GPT-6 Luna returns a probability per
+allowed answer. We ran it after the preregistered work, so everything here is post hoc and exploratory, against an
+in-run Jev 1.13 reference on the same cases: three repetitions in two option orders, the bundle's gate with its
+3\,s deadline, and the per-case majority over repetitions (\cref{tab:openai,fig:openai}).
+\begin{itemize}
+  \item \textbf{Accuracy.} Luna was right on \OaDevLunaK/\OaDevLunaN\ development cases (Jev \OaDevJevK/\OaDevJevN),
+    \OaHoldoutLunaK/\OaHoldoutLunaN\ holdout cases (Jev \OaHoldoutJevK/\OaHoldoutJevN), \OaTraceDevLunaK/\OaTraceDevLunaN\
+    real trace-dev decisions (Jev \OaTraceDevJevK/\OaTraceDevJevN) and \OaTraceHoldoutLunaK/\OaTraceHoldoutLunaN\
+    trace-holdout decisions (Jev \OaTraceHoldoutJevK/\OaTraceHoldoutJevN). Only the trace-holdout accuracy difference
+    survived the Holm correction ($p = \OaTrHoldHolm$; exploratory).
+  \item \textbf{Misfires.} Luna's wrong-automatic rate was no higher than Jev's on every split; none of these differences
+    was significant. Under the trace usefulness rule, neither judge was useful on either trace split.
+  \item \textbf{Speed.} OpenAI's servers reported \OaServerPfiftyLo--\OaServerPfiftyHi\,ms at the median and
+    \OaServerPninetyfiveLo--\OaServerPninetyfiveHi\,ms at p95, but from our machine the client saw
+    \OaClientPfiftyLo--\OaClientPfiftyHi\,s at the median and \OaClientPninetyfiveLo--\OaClientPninetyfiveHi\,s at p95.
+    The network was slow in this run for both providers: Jev's client median was \OaJevClientLo--\OaJevClientHi\,s,
+    against \OaJevEarlierLo--\OaJevEarlierHi\,s on \OaJevEarlierDate. The comparison between the two judges is paired in
+    time; the absolute latencies are not comparable with earlier evidence.
+  \item \textbf{Cost and reliability.} \$\OaUsdLo--\OaUsdHi\ per million decisions against Jev's \$\OaJevUsdLo--\OaJevUsdHi.
+    \OaInvalid\ of \OaRequests\ Luna requests failed in transport.
+\end{itemize}
+\begin{figure}[htbp]
+\centering
+\pgfplotslegendfromname{oalegend}\par\smallskip
+\input{figures/fig-openai.tex}
+\caption{OpenAI Decisions API (GPT-6 Luna) against the in-run Jev reference: per-case majority accuracy with 95\,\%
+Wilson intervals on the four splits (post hoc).}
+\label{fig:openai}
+\howtoread{Each pair of rows is one split. Luna is at or above Jev on every split; only the trace-holdout gap survived the
+correction. Overlapping whiskers mean no difference was detected, not that the judges are equivalent.}
+\end{figure}
+\begin{table}[htbp]\centering\small
+\caption{OpenAI Decisions API (post hoc) against the in-run Jev reference: correct decisions, wrong automatic actions,
+coverage, client latency (from our machine, slow network in this run) and dollars per million decisions.}\label{tab:openai}
+\input{generated/tables/openai-decisions.tex}\end{table}
+\begin{keyidea}
+A native typed-decision endpoint from OpenAI matched or exceeded Jev's accuracy at a similar price on our cases. Its
+servers answer in tens of milliseconds, but from here each call took seconds. It does not change the session-start
+finding: a one-line rule matched the decision model there.
+\end{keyidea}
+"""
+elif FINAL:
+    raise SystemExit(f"build_assets.py: FINAL=1 but the OpenAI Decisions evidence is missing ({OAI}/summary.json)")
+write(OUT / "openai-section.tex", oai_tex)
 
 # ------------------------------------------------------------ numbers.tex
 header = ("% Generated by build_assets.py from docs/evidence/2026-10-02-paired-campaign/ and the files listed there. "

@@ -8,8 +8,8 @@
   legend style={/tikz/every even column/.append style={column sep=10pt}}]
 \draw[black!70, line width=0.8pt] (axis cs:1,-0.6) -- (axis cs:1,7.6);
 \draw[okorange, dashed, line width=0.8pt] (axis cs:\SThreshOne,-0.6) -- (axis cs:\SThreshOne,7.6);
-\addplot[only marks, mark=*, mark size=2.4pt, color=okblue, error bars/.cd, x dir=both, x explicit,
-  error bar style={line width=1pt}] table[x=r, y=y, x error minus=rm, x error plus=rp]{generated/data/s1-forest.dat};
+\addplot[nodes near coords, point meta=explicit symbolic, nodes near coords style={font=\scriptsize, anchor=south, yshift=2.5pt, text=black!80}, only marks, mark=*, mark size=2.4pt, color=okblue, error bars/.cd, x dir=both, x explicit,
+  error bar style={line width=1pt}] table[meta=v, x=r, y=y, x error minus=rm, x error plus=rp]{generated/data/s1-forest.dat};
 \addlegendentry{estimate, 95\,\% CI}
 \addlegendimage{black!70, line width=0.8pt}\addlegendentry{no difference}
 \addlegendimage{okorange, dashed, line width=0.8pt}\addlegendentry{preregistered threshold}

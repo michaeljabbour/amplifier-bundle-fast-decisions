@@ -17,4 +17,4 @@ their verification are in \path{docs/reviews/2026-10-paired-measurement/}.
 \end{itemize}\endgroup
 
 \paragraph{Reproducing this document.} \code{make} rebuilds every number from the evidence and the PDF;
-\code{make check} checks figure geometry; \code{make FINAL=1} additionally requires the S1 result and fails without it.
+\code{make check} checks figure geometry and, for every bar and forest chart, that each rendered row label sits beside its own value; \code{make FINAL=1} additionally requires the S1 result and fails without it.
