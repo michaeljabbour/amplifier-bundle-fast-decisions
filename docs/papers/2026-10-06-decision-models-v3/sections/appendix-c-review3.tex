@@ -1,0 +1,35 @@
+\section{Response to the independent review (round 3)}\label{app:review3}
+
+An independent reviewer read the 25-page version of this report, reran the S1, main-v1 and effort analyses from the
+published rows (all reproduced), and recommended publication after focused corrections. The review is kept with the
+review record:
+\begin{center}\small\path{docs/reviews/2026-10-paired-measurement/round3-independent-review-v3.md}\end{center} Each item and the change:
+\begin{enumerate}[leftmargin=1.6em]
+  \item \textbf{Row labels reversed in four figures} (event mix, S1 hypotheses, effort across hosts, cost composition).
+    Fixed: those charts' data rows are now written in the order pgfplots assigns tick labels. Every bar and forest chart
+    now prints each row's value beside it, and a new build-failing check reads every rendered row label and the value
+    next to it from the PDF and compares them with the source table (\cref{app:companion}). The check reports the
+    original defect when the old row order is restored.
+  \item \textbf{Statistical wording.} H7 now reads ``non-inferiority not established''; judge accuracy reads ``no
+    accuracy difference was detected after the preregistered correction'' (not equivalence; H2 remains a true
+    equivalence test); H3 reads ``cost-equivalent within the preregistered $\pm$5\,\% margin''; Opus effort reads
+    ``medium effort did not demonstrate a saving''.
+  \item \textbf{Holdout and observatory descriptions.} The S1 panel is described as disjoint from main-v1 and smoke-tested
+    before preregistration, with the pre-freeze repair account; the observatory window distinguishes all events (to the
+    snapshot cutoff) from the first week.
+  \item \textbf{S1 methods in the main text.} A methods box defines quality and its limits, the cost basis and the
+    composed policies, using the reviewer's wording for the latter, with H6 as the empirical check of the cost
+    reconstruction. H7 and the subgroup figure distinguish cost and quality denominators.
+  \item \textbf{Effort scale.} The cross-study log-cost share is replaced by ``medium effort independently reduced Fable
+    cost by about \EfCutPct\,\% in the follow-up; routing remained the larger cost lever.''
+  \item \textbf{Measurement and rebuild.} The tools normalization is defined and sized (\NormShareMain\,\% in main-v1,
+    \NormShareSone\,\% in S1). Every input read from git is pinned to a recorded commit instead of a moving branch.
+  \item \textbf{Related work.} A paragraph places the report next to RouteLLM and FrugalGPT.
+  \item \textbf{Editorial.} The confidence-interval definition now states long-run coverage; non-inferiority reads
+    ``no worse than the specified margin''; very small p-values print as $<$\,0.001; key-idea boxes no longer split
+    across pages; S1 figures stay with their subsections.
+  \item \textbf{Author block.} David Koleczek's title now sits under his name in the author block and nowhere else.
+\end{enumerate}
+Alongside the review response, the post-hoc OpenAI Decisions API results were added to the judge section
+(\cref{sec:openai}): a table, a figure covered by the row-identity check, and a key idea stating what they do and do not
+change.

@@ -32,6 +32,7 @@ LEGENDS = {  # caption start -> (first legend entry words, topmost words of the 
     "All 23 Fable": (["candidate"], ["Fable", "host"]),
     "Medium against default reasoning": (["cost,", "95"], ["Cost"]),
     "Mean cost per S1 session": (["uncached", "input"], ["Where", "the", "money"]),
+    "OpenAI Decisions API (GPT-6": (["accuracy,", "95"], ["Decisions", "API", "vs"]),
     "Routing to Sonnet against the plain host, per": (["geometric-mean", "cost"], ["The", "same", "answer,"]),
 }
 NUM = dict(re.findall(r"\\newcommand\{\\(\w+)\}\{([^}]*)\}", (HERE / "generated/numbers.tex").read_text()))
@@ -182,8 +183,74 @@ def check_legends():
     return fails
 
 
+ROWS = [  # caption start -> data files whose rows carry (label, v); every rendered row label must sit beside its own v
+    ("Latency of decision calls and", ["obs-latency.dat"]),
+    ("What the observatory store", ["obs-mix.dat"]),
+    ("Confirmatory cost ratios on the", ["forest.dat", "forest-h3.dat"]),
+    ("Decide-once policies priced on the", ["a0-policies.dat"]),
+    ("S1 hypotheses", ["s1-forest.dat"]),
+    ("The frozen Fable configuration against plain", ["s1-subgroups.dat"]),
+    ("Medium against default reasoning", ["effort-hosts.dat"]),
+    ("Mean cost per S1 session", ["s1-composition.dat"]),
+    ("Routing to Sonnet against the plain host, per", ["cumulative.dat"]),
+    ("OpenAI Decisions API (GPT-6", ["openai-acc.dat"]),
+]
+
+
+def read_rows(path):
+    lines = (HERE / "generated" / "data" / path).read_text().splitlines()
+    head = lines[0].split()
+    out = []
+    for ln in lines[1:]:
+        lab = re.search(r"\{([^}]*)\}", ln).group(1)
+        rest = ln.replace("{" + lab + "}", "LABEL", 1).split()
+        out.append((lab, rest[head.index("v")]))
+    return out
+
+
+def norm(t):
+    return t.replace("\u2212", "-").replace("\u2013", "-")
+
+
+def check_rows():
+    fails, n = [], 0
+    for prefix, files in ROWS:
+        page, w, cap_y, fig = find_caption(prefix)
+        area = [x for x in w if x[3] < cap_y]
+        rows = []
+        for f in files:
+            for lab, v in read_rows(f):
+                occ = [b for b in seqs(area, lab.split())]
+                if not occ:
+                    fails.append(f"Figure {fig}: row label '{lab}' not found")
+                    continue
+                b = max(occ, key=lambda b: b[1])  # the tick label is the occurrence closest above the caption
+                rows.append((lab, v, b))
+        if not rows:
+            continue
+        label_boxes = [r[2] for r in rows]
+        nums = [x for x in area if num(x[4]) is not None and not any(
+            lb[0] - 0.5 <= x[0] and x[2] <= lb[2] + 0.5 and lb[1] - 0.5 <= x[1] and x[3] <= lb[3] + 0.5 for lb in label_boxes)]
+        assigned = {i: [] for i in range(len(rows))}
+        for x in nums:
+            yc = (x[1] + x[3]) / 2
+            cands = [i for i, r in enumerate(rows) if x[0] > r[2][2]]
+            if not cands:
+                continue
+            # value labels sit just above a marker (forest) or centred on a bar end: their bottom edge is nearest
+            # their own row's centre
+            i = min(cands, key=lambda i: abs((rows[i][2][1] + rows[i][2][3]) / 2 - x[3]))
+            assigned[i].append(norm(x[4]))
+        for i, (lab, v, _) in enumerate(rows):
+            n += 1
+            if norm(v) not in assigned[i]:
+                fails.append(f"Figure {fig}: row '{lab}' expects value {v}, beside it: {assigned[i] or 'nothing'}")
+    print(f"row identity: {n} rows in {len(ROWS)} figures checked, {len(fails)} mismatches")
+    return fails
+
+
 if __name__ == "__main__":
-    failures = check_overlaps() + [f for sp in SCATTERS for f in check_scatter(sp)] + check_legends()
+    failures = check_overlaps() + [f for sp in SCATTERS for f in check_scatter(sp)] + check_legends() + check_rows()
     for f in failures:
         print("FAIL:", f)
     print("OK" if not failures else f"{len(failures)} failure(s)")

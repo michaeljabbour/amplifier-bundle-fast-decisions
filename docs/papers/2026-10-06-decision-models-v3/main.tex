@@ -63,7 +63,7 @@
 
 % ---------------------------------------------------------------- boxes
 \usepackage[most]{tcolorbox}
-\newtcolorbox{keyidea}[1][]{enhanced, breakable, colback=okblue!5, colframe=okblue,
+\newtcolorbox{keyidea}[1][]{enhanced, colback=okblue!5, colframe=okblue,
   boxrule=0.6pt, arc=2pt, left=6pt, right=6pt, top=4pt, bottom=4pt,
   fonttitle=\bfseries\small, coltitle=white, title={Key idea}, #1}
 \newtcolorbox{caution}[1][]{enhanced, breakable, colback=okorange!5, colframe=okorange,
@@ -125,9 +125,9 @@
   \vspace{10pt}
   {\Large Telemetry, benchmarks and paired sessions, from curiosity to configuration\par}
   \vspace{30pt}
-  {\large Amplifier \qquad Michael J.\ Jabbour \qquad David Koleczek\par}
-  \vspace{2pt}
-  {\small\itshape David Koleczek is a Senior Applied Scientist\par}
+  {\large\begin{tabular}[t]{c}Amplifier\end{tabular}\qquad
+   \begin{tabular}[t]{c}Michael J.\ Jabbour\end{tabular}\qquad
+   \begin{tabular}[t]{c}David Koleczek\\[-1pt]{\small\itshape Senior Applied Scientist}\end{tabular}\par}
   \vspace{6pt}
   {\normalsize Microsoft, Office of the CTO\par}
   \vspace{14pt}
@@ -158,5 +158,6 @@
 \appendix
 \input{sections/appendix-a-companion}
 \input{sections/appendix-b-glossary}
+\input{sections/appendix-c-review3}
 
 \end{document}

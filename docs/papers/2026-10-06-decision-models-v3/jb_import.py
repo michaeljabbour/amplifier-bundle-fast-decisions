@@ -14,7 +14,7 @@ import sys
 import tarfile
 from pathlib import Path
 
-REF = "origin/main"
+REF = "94bb7b58ab75b71ce095a4eda9c19822765e7b55"  # pinned commit (origin/main when the v3 review revision was made)
 PATHS = ["docs/evidence/2026-09-30-judge-benchmark", "docs/evidence/2026-09-30-judge-comparison",
          "docs/evidence/2026-10-01-trace-judge-benchmark", "docs/evidence/2026-10-01-caching",
          "evals/judge_bench", "evals/STUDY-DESIGN.md", "docs/papers/2026-09-30-judge-benchmark"]

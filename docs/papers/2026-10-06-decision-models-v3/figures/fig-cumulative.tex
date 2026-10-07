@@ -6,8 +6,8 @@
   xlabel={Cost ratio, routed to Sonnet / plain host (log)}, title={The same answer, study after study},
   title style={font=\small\bfseries}, legend to name=cumlegend, legend columns=1, legend cell align=left]
 \draw[black!70, line width=0.8pt] (axis cs:1,-0.6) -- (axis cs:1,8.6);
-\addplot[only marks, mark=*, mark size=2.4pt, color=okblue, error bars/.cd, x dir=both, x explicit,
-  error bar style={line width=1pt}] table[x=r, y=y, x error minus=rm, x error plus=rp]{generated/data/cumulative.dat};
+\addplot[nodes near coords, point meta=explicit symbolic, nodes near coords style={font=\scriptsize, anchor=south, yshift=2.5pt, text=black!80}, only marks, mark=*, mark size=2.4pt, color=okblue, error bars/.cd, x dir=both, x explicit,
+  error bar style={line width=1pt}] table[meta=v, x=r, y=y, x error minus=rm, x error plus=rp]{generated/data/cumulative.dat};
 \addlegendentry{geometric-mean cost ratio, 95\,\% scenario-cluster CI}
 \end{axis}
 \end{tikzpicture}
