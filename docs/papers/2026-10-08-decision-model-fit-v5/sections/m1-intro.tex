@@ -2,10 +2,10 @@
 
 An AI coding agent spends nearly all of its money on calls to a large \term{host model}. Between those calls sit many
 small choices: which model runs this session, may a file be read without asking the host, how much should the model
-reason, is an action safe. A decision model answers such typed questions with a probability per allowed answer in
-tens to hundreds of milliseconds. Routing single queries to cheaper models is well studied~\cite{routellm,frugalgpt}; an agent session is many
-calls over one cached, growing context, so we measured whole sessions in pairs and tested the decision model against a
-deterministic rule. The report is organised around five takeaways:
+reason, is an action safe. A decision model answers such typed questions in tens to hundreds of milliseconds, with a probability for each
+allowed answer. Routing single queries to cheaper models is well studied~\cite{routellm,frugalgpt}. An agent session, however, is many
+calls over one cached, growing context. We therefore measured whole sessions in pairs and tested the decision model
+against a deterministic rule. We organise the report around five takeaways:
 \begin{enumerate}[leftmargin=1.6em, itemsep=0pt, topsep=2pt]
   \item \textbf{\TkTitle{One}} \TkLabel{One}.
   \item \textbf{\TkTitle{Two}} \TkLabel{Two}.
@@ -13,5 +13,5 @@ deterministic rule. The report is organised around five takeaways:
   \item \textbf{\TkTitle{Four}} \TkLabel{Four}.
   \item \textbf{\TkTitle{Five}} \TkLabel{Five}.
 \end{enumerate}
-\Cref{tab:claims} states each claim with its key numbers and strength. \Cref{sec:setting} describes setting, data and measures once; \cref{sec:recs} gives the configuration and
-\cref{sec:conclusion} restates them. Every supporting result is in the supplement.
+\Cref{tab:claims} states each claim with its key numbers and strength. \Cref{sec:setting} describes the setting, data and measures once. \Cref{sec:recs} gives the configuration, and
+\cref{sec:conclusion} restates the takeaways. \Thesupp{} holds every supporting result.

@@ -19,6 +19,7 @@
 \usepackage{etoolbox}
 \preto\section{\needspace{6\baselineskip}}
 \preto\subsection{\needspace{7\baselineskip}}
+\preto\subsubsection{\needspace{5\baselineskip}}
 \preto\paragraph{\needspace{2\baselineskip}}
 \widowpenalty=10000 \clubpenalty=10000 \displaywidowpenalty=10000
 \renewcommand{\topfraction}{0.9}\renewcommand{\bottomfraction}{0.6}
@@ -72,7 +73,7 @@
   fonttitle=\sffamily\bfseries\small, attach title to upper, after title={.\ }}}
 \newtcolorbox{keyidea}[1][]{fdbox, colback=okblue!6, colframe=okblue, coltitle=okblue!70!black, title={Key idea}, #1}
 \newtcolorbox{caution}[1][]{fdbox, colback=okorange!6, colframe=okorange, coltitle=okorange!75!black, title={Read with care}, #1}
-\newtcolorbox{casecard}[1]{fdbox, colback=okgreen!6, colframe=okgreen, coltitle=okgreen!60!black, title={#1}}
+\newtcolorbox{casecard}[1]{fdbox, breakable, colback=okgreen!6, colframe=okgreen, coltitle=okgreen!60!black, title={#1}}
 \newtcolorbox{processnote}[1]{fdbox, colback=black!4, colframe=okgray, coltitle=black!75, title={#1}}
 % "How to read it" notes: justified even inside \centering floats
 \newcommand{\howtoread}[1]{\par\smallskip{\small\leftskip=0pt\rightskip=0pt\parfillskip=0pt plus 1fil\noindent

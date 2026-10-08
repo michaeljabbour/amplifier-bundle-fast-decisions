@@ -1,5 +1,9 @@
 % Ported from an earlier report section (one-time conversion; edit here).
+\needspace{12\baselineskip}
 \subsection{The paired campaigns: design}\label{vt:sec:design}
+
+This subsection describes how the paired campaigns were designed: the arms, the scenarios, the quality instrument,
+the cost normalization and the power analysis.
 
 \subsubsection{How the design evolved}\label{vt:sec:evolution}
 
@@ -52,11 +56,12 @@ the same scenario differ far less. By comparing each routed session only with it
 analysis looks at the ratio within a pair, and the big differences between scenarios cancel out.
 \end{keyidea}
 
+\needspace{20\baselineskip}
 \subsubsection{Arms and hosts}
 
-\Cref{vt:tab:arms} gives the full numbers for this part.
+\Cref{vt:tab:arms} lists the five arms.
 
-\begin{table}[tbp]
+\begin{table}[H]
 \centering\small
 \caption{The five arms. Every arm except the Sonnet control runs on both host models. Reasoning effort differs by
 arm: the anchor, the A/A copy and the Sonnet control leave it unset (the provider default), while routed Sonnet
@@ -88,7 +93,7 @@ sessions per host that kept the host model used the bundle's effort routing (\Rg
 compare default-effort host sessions with medium-effort routed sessions; \cref{vt:sec:effort,vt:sec:limits} discuss what
 that does to the ratios.
 
-\begin{table}[tbp]
+\begin{table}[!hb]
 \centering\small
 \caption{Main-loop requests by host, arm, model and reasoning effort (``unset'' is the provider default).}
 \label{vt:tab:effortmix}

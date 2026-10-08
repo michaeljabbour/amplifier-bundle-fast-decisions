@@ -14,7 +14,7 @@ ifeq ($(FINAL),1)
 endif
 LTX = $(NICE) $(LATEXMK) -pdf -interaction=nonstopmode -halt-on-error
 
-.PHONY: all assets pdf check clean distclean
+.PHONY: all assets pdf check clean distclean arxiv arxiv-test
 
 all: $(MAIN).pdf
 
@@ -22,6 +22,7 @@ all: $(MAIN).pdf
 check: $(MAIN).pdf
 	$(NICE) $(PYTHON) check_figures.py
 	$(NICE) $(PYTHON) check_alignment.py
+	$(NICE) $(PYTHON) check_abstract.py
 
 assets: generated/numbers.tex
 
@@ -31,18 +32,29 @@ generated/numbers.tex: build_assets.py labelplacer.py jb_import.py $(shell find 
 
 pdf: $(MAIN).pdf
 
-$(MAIN).pdf: generated/numbers.tex main.tex supp.tex preamble.tex $(wildcard sections/*.tex) $(wildcard supp/*.tex) $(wildcard figures/*.tex)
+$(MAIN).pdf: generated/numbers.tex main.tex supp.tex preamble.tex refs.bib $(wildcard sections/*.tex) $(wildcard supp/*.tex) $(wildcard figures/*.tex)
 	$(LTX) -jobname=$(SUPP) supp.tex
 	$(LTX) -jobname=$(MAIN) main.tex
 	$(LTX) -g -jobname=$(SUPP) supp.tex
 	$(LTX) -g -jobname=$(MAIN) main.tex
+
+# arXiv edition: one source (main text + appendices A-I), flattened to arxiv/source and packed as arxiv/arxiv-source.tar.gz.
+arxiv: generated/numbers.tex
+	$(NICE) $(PYTHON) make_arxiv.py
+	$(MAKE) arxiv-test
+
+# Compile the tarball alone in a clean directory with pdflatex, as arXiv does (the .bbl is shipped).
+arxiv-test:
+	rm -rf /tmp/arxiv-test-$$$$ && mkdir -p /tmp/arxiv-test-$$$$ && tar -xzf arxiv/arxiv-source.tar.gz -C /tmp/arxiv-test-$$$$ && \
+	cd /tmp/arxiv-test-$$$$ && for i in 1 2 3; do pdflatex -interaction=nonstopmode -halt-on-error main.tex > /dev/null || exit 1; done && \
+	! grep -E "undefined|Overfull|Underfull|LaTeX Error" main.log && pdfinfo main.pdf | grep Pages && echo "arxiv-test OK"
 
 # Remove build intermediates; keep both PDFs.
 clean:
 	$(LATEXMK) -c -jobname=$(MAIN) main.tex
 	$(LATEXMK) -c -jobname=$(SUPP) supp.tex
 	rm -f *.bbl *.run.xml *.xdv
-	rm -rf __pycache__ generated/src
+	rm -rf __pycache__ generated/src arxiv/build
 
 distclean: clean
 	rm -rf generated $(MAIN).pdf $(SUPP).pdf

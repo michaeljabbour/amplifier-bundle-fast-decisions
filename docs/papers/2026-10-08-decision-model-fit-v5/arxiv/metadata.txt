@@ -1,0 +1,17 @@
+Title: Where a Decision Model Fits in an Agent Harness
+
+Authors: Michael J. Jabbour (1), David Koleczek (1) ((1) Microsoft, Office of the CTO)
+
+Abstract: see abstract.txt (ASCII, 1548 characters; paste without the word "Abstract")
+
+Comments: 11 pages main text + 119-page appendix; 42 figures, 80 tables. Code and data: https://github.com/michaeljabbour/amplifier-bundle-fast-decisions
+
+Primary category: cs.SE (Software Engineering)
+Cross-lists: cs.AI, cs.LG
+ACM-class: D.2.8; I.2.11
+
+License: CC BY 4.0 (recommended; pending Microsoft legal review)
+
+Report-no: none (no institutional report number has been issued)
+Journal-ref: none
+DOI: none

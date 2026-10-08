@@ -50,10 +50,13 @@ def page_text(pdf: Path, first: int, last: int) -> str:
 
 
 fails = []
+for _f in ("sections/m0-abstract.tex", "supp/summary.tex"):
+    if "\\input{sections/abstract-body}" not in (HERE / _f).read_text():
+        fails.append(f"{_f} does not input the shared abstract")
 # ---- source level
-SRC = {"main abstract": ("sections/m0-abstract.tex", "THL"), "main takeaway list": ("sections/m1-intro.tex", "TL"),
+SRC = {"main abstract": ("sections/abstract-body.tex", "THL"), "main takeaway list": ("sections/m1-intro.tex", "TL"),
        "claims table": ("sections/m1b-claims.tex", "TL"), "conclusion": ("sections/m9-limits.tex", "THL"),
-       "supplement summary": ("supp/summary.tex", "THL"), "at-a-glance table": ("generated/tables/takeaways-glance.tex", "THL")}
+       "supplement summary": ("sections/abstract-body.tex", "THL"), "at-a-glance table": ("generated/tables/takeaways-glance.tex", "THL")}
 for name, (f, need) in SRC.items():
     t = (HERE / f).read_text()
     for kind, mac in (("T", "Title"), ("H", "Head"), ("L", "Label")):

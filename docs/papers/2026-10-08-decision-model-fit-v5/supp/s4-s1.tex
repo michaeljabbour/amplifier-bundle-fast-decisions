@@ -2,7 +2,7 @@
 
 S1 tested the configurations frozen from the main campaign on \SOnePanelN\ scenarios disjoint from it, smoke-tested
 before preregistration, with both hosts, two repetitions and a deterministic rule for choosing each host's
-configuration. This section gives every preregistered verdict and the figures behind the main paper's S1 numbers.
+configuration. This section gives every preregistered verdict and the figures behind \mainpaper{}'s S1 numbers.
 
 \paragraph{How the panel was prepared} Before the preregistration was committed, one plain-Sonnet smoke session ran on
 each of the \SmokeN\ scenarios (\$\SmokeUSD). It found prompt or grader defects in \SmokeFixed\ scenarios: prompts that
@@ -62,13 +62,12 @@ not the preregistered
 \begin{center}\small\code{\SFreezeFablePrereg}\end{center} That makes it \emph{selected on holdout}: it must replicate in a follow-up study before it
 ships. It also conflicts with H7, which keeps review and explain on the host. What ships for Fable until a replication study confirms the choice is
 therefore the preregistered configuration plus \code{keep\_on\_host: [review, explain]}, applied through a keyword proxy
-(main paper, Section~\ref{M-sec:recs}). On Opus no candidate qualified, so
+(Section~\ref{M-sec:recs}). On Opus no candidate qualified, so
 Opus keeps the shipped defaults: no routing, default effort.
 
 \begin{keyidea}
-The decision model's start-of-session choice was matched by a one-line rule on these hosts and prices. Where the money
-is, routing on Fable and never on Opus, price arithmetic and a rule decide it. The value of a system-1 model is not in
-this decision.
+On these hosts and prices, a one-line rule matched the decision model's start-of-session choice. Price arithmetic and
+the rule decide where the money is: route on Fable, never on Opus. A system-1 model adds no value to this decision.
 \end{keyidea}
 
 \begin{processnote}{Process note: how the S1 run went}
