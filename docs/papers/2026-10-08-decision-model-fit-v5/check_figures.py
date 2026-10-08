@@ -284,6 +284,7 @@ PATH_PATTERNS = [r"~/", r"/Users/", r"\bdocs/", r"\bevals/", r"\bsrc/", r"\bbeha
 
 def check_paths(pdf):
     text = subprocess.run(["pdftotext", str(pdf), "-"], capture_output=True, text=True, check=True).stdout
+    text = re.sub(r"https?://\S+", " ", text)  # public URLs (references, repository) are not file paths
     fails = []
     for pat in PATH_PATTERNS:
         for m in re.finditer(pat, text):

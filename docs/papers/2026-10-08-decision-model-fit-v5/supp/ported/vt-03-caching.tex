@@ -5,7 +5,7 @@
 definitions, the system prompt, and every earlier turn. Re-processing all of it each time would be slow
 and expensive, so the provider keeps a \term{prompt cache}. The first time a prefix is sent it is
 \term{written} to the cache, at a premium. Later requests that start with the same prefix \term{read} it
-back at a fraction of the normal price. \Cref{vt:tab:prices} gives the prices used throughout this supplement.
+back at a fraction of the normal price. \Cref{vt:tab:prices} gives the prices used throughout \thissupp{}.
 
 \begin{keyidea}[title={Three prices matter}]
 A model has three input prices, not one: fresh input, cache read and cache write. In a long agent session most tokens

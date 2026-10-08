@@ -9,12 +9,12 @@ chooses the session's model and reasoning effort once. The shipped default can r
 route to the cheaper model unless the workspace has more than \AoScopeFiles\ files. It also applies a price gate that
 keeps the host whenever routing cannot pay at current prices.
 
-\paragraph{Models and prices} The hosts were Fable~5.1 and Opus~5.5; the routing target was Sonnet~5. At list prices
+\paragraph{Models and prices} The hosts were Fable~5.1 and Opus~5.5; the routing target was Sonnet~5~\cite{anthropicmodels}. At list prices
 (US dollars per million tokens: input, output, cache read, cache write) Fable costs \PriceFableIn, \PriceFableOut,
 \PriceFableRead\ and \PriceFableWrite; Opus \PriceOpusIn, \PriceOpusOut, \PriceOpusRead\ and \PriceOpusWrite; Sonnet
 \PriceSonnetIn, \PriceSonnetOut, \PriceSonnetRead\ and \PriceSonnetWrite. Sonnet's cache reads cost more than either
-host's. We tested these decision models: Jev (a hosted typed-decision service), GPT-6 Luna and GPT-6.1 Sol prompted for
-probabilities, Cloudflare's Clef and Clef-Flash, OpenAI's Decisions API (Luna behind a native typed-decision endpoint)
+host's. We tested these decision models: Jev (a hosted typed-decision service), GPT-6 Luna and GPT-6.1 Sol~\cite{oapricing} prompted for
+probabilities, Cloudflare's Clef and Clef-Flash~\cite{clefcard,clefdocs}, OpenAI's Decisions API~\cite{oadecisions} (Luna behind a native typed-decision endpoint)
 and seven local models.
 
 \paragraph{Data} \Cref{tab:data} lists the sources and what each can and cannot show. The \emph{production
