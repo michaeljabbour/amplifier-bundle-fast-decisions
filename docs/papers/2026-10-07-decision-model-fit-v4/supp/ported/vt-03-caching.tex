@@ -1,0 +1,112 @@
+% Ported from an earlier report section (one-time conversion; edit here).
+\subsection{How prompt caching works, and what a probe showed}\label{vt:sec:caching}
+
+\paragraph{The idea} Every request an agent sends repeats the whole conversation so far: the tool
+definitions, the system prompt, and every earlier turn. Re-processing all of it each time would be slow
+and expensive, so the provider keeps a \term{prompt cache}. The first time a prefix is sent it is
+\term{written} to the cache, at a premium. Later requests that start with the same prefix \term{read} it
+back at a fraction of the normal price. \Cref{vt:tab:prices} gives the prices used throughout this supplement.
+
+\begin{keyidea}[title={Three prices matter}]
+A model has three input prices, not one: fresh input, cache read and cache write. In a long agent session most tokens
+are cache reads, so the cache-read price, not the list input price, decides which model is cheaper.
+\end{keyidea}
+
+\begin{table}[tbp]
+\centering\small
+\caption{Price per million tokens (US dollars), by model and token class. The same table priced every
+request in the campaign and in the probe.}
+\label{vt:tab:prices}
+\begin{tabular*}{0.8\textwidth}{@{\extracolsep{\fill}}l r r r r@{}}
+\toprule
+Model & uncached input & cache read & cache write & output \\
+\midrule
+Fable 5.1 (host) & \PriceFableIn & \PriceFableRead & \PriceFableWrite & \PriceFableOut \\
+Opus 5.5 (host) & \PriceOpusIn & \PriceOpusRead & \PriceOpusWrite & \PriceOpusOut \\
+Sonnet 5 (cheaper model) & \PriceSonnetIn & \PriceSonnetRead & \PriceSonnetWrite & \PriceSonnetOut \\
+\bottomrule
+\end{tabular*}
+\end{table}
+
+Two things in this table drive the whole report. Fable is expensive on every class, so moving work to
+Sonnet can save a lot. Opus is cheap to \emph{read} from cache: Sonnet reads cost \SonnetOpusReadPriceX\X\
+Opus reads, while Sonnet writes cost only \SonnetOpusWritePriceX\X\ Opus writes. In a long conversation
+that is mostly cache reads, Sonnet can cost more than Opus for the same tokens.
+
+\paragraph{Where the prices come from, and how much the Opus result depends on them}\label{vt:sec:breakeven}
+The table is the bundle's own price table (\code{savings.DEFAULT\_RATES}), last verified against the
+provider's public price list on \RatesVerified. The provider's per-request cost field is computed from the
+same table, so the exact match between our recomputed costs and the provider's (\cref{vt:sec:design}) checks
+that tokens were counted correctly, not that the prices are right. The Opus result rests mainly on one
+number, Opus's cache-read price. \Cref{vt:tab:breakeven} re-prices the recorded tokens of the test split,
+changing only that rate and keeping everything else, including every token count, as measured.
+
+\begin{table}[tbp]
+\centering\small
+\caption{Opus-host cost ratios (test split, tools-normalized) if Opus cache reads cost more than the table's
+\$\PriceOpusRead\ per million tokens. Only that rate changes; every token count is as recorded.}
+\label{vt:tab:breakeven}
+\input{generated/tables/breakeven.tex}
+\end{table}
+\howtoreadtable{The first row reproduces the confirmatory ratios. Reading down a column shows how the extra
+cost of routing shrinks as Opus reads get dearer. Sticky reaches parity (ratio 1) at about
+\$\BEStickyPair\ per million tokens in the pair reading and \$\BEStickyArm\ in the arm reading, roughly
+\BEReadMultiple\X\ the table price; shipped at \$\BEShippedPair\ and plain Sonnet at \$\BESonnetPair\ (pair
+reading). On the raw cost basis with the arm reading the same exercise gives sticky \BERawStickyThirty,
+\BERawStickyThirtyFive\ and \BERawStickyForty\ at \$\RateThirty, \$\RateThirtyFive\ and \$\RateForty.}
+
+So the Opus conclusion is a statement about Opus~5.5 \emph{at these prices}: if its cache reads cost about
+\BEReadMultiple\X\ as much, routing sticky to Sonnet would roughly break even on this workload.
+
+\begin{figure}[tbp]
+\centering
+\begin{adjustbox}{max width=\linewidth}\input{figures/v2-fig-cache.tex}\end{adjustbox}
+\caption{Within one model only the new turn is written to the cache; a switch of model or effort rewrites everything. How the prompt cache behaves over a conversation (schematic, not to scale).}
+\label{vt:fig:cache}
+\howtoread{Each bar is one request; it always re-sends everything before it. Blue parts are read back from
+the cache at the cheap rate; hatched orange parts are written at the expensive rate. Within one model only
+the new turn is written. A switch to another model, or a pause longer than the cache's lifetime, makes the
+whole history expensive again.}
+\end{figure}
+
+\paragraph{What a probe of the provider showed} Before designing the campaign we sent \ProbeRequests\
+deliberately constructed requests straight to the provider (cost \$\ProbeUSD) to pin down the rules that
+the design depends on. \Cref{vt:tab:probe} shows the evidence; each row quotes the tokens written and read by
+one request.
+
+\begin{table}[tbp]
+\centering\small
+\caption{The cache-semantics probe. ``P'' is a prompt prefix of \ProbePTokens\ tokens; ``P+X'' a longer
+prompt of about \ProbeFullTokens\ tokens; ``Y'' a further \ProbeYTokens-token extension.}
+\label{vt:tab:probe}
+{\footnotesize\setlength{\tabcolsep}{2pt}\input{generated/tables/probe.tex}}
+\end{table}
+
+\begin{figure}[tbp]
+\centering
+\pgfplotslegendfromname{probelegend}\par\smallskip
+\input{figures/v2-fig-probe.tex}
+\caption{A request reuses the cache only with the same key, model and effort, within the cache lifetime. The probe requests of \cref{vt:tab:probe}, drawn: tokens written and read by each.}
+\label{vt:fig:probe}
+\howtoread{A tall hatched bar means the request paid to write its prompt into the cache; a tall blue bar means
+it found the prompt already cached. Requests that ``should'' have hit but show only a write (other key, other
+model, other effort level, an expired entry) are the rules the experiment had to respect. Key: \input{generated/tables/probe-key.tex}}
+\end{figure}
+
+\begin{keyidea}
+Six facts from the probe shaped the experiment:
+\begin{enumerate}[leftmargin=1.4em]
+  \item \textbf{A cache entry exists only where a request marked one, for exactly that prefix.} So one unique
+    string at the very start of a session's system prompt (a \term{nonce}) makes every cache entry of that
+    session private to it.
+  \item \textbf{Each model has its own cache}, and on Sonnet each effort level has its own. A switch starts
+    cold, whatever the timing: that cold start \emph{is} the switching cost we want to measure.
+  \item \textbf{Two API keys do not share a cache}, but there were not enough keys for one per arm.
+  \item \textbf{Two identical requests sent at the same instant both pay the write.} The nonce avoids this
+    too, because no two sessions ever send identical requests.
+  \item \textbf{Every read keeps an entry alive.} Staggering the arms in time would not isolate them, because
+    a running session keeps its shared prefix warm.
+  \item \textbf{Entries expire after \CacheTTLMin\ idle minutes.} Long pauses in a conversation are a
+    real cost and must be part of the scenarios.
+\end{enumerate}
+\end{keyidea}

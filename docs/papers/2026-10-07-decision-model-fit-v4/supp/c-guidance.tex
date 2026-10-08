@@ -1,0 +1,45 @@
+\subsection{Guidance and open measurements}\label{sec:cguidance}
+
+\paragraph{Spend against the typical saving} On Fable the plain sessions cost \$\RvSpendAnchor\ on average and sticky
+ones \$\RvSpendSticky, a \RvSpendCutAll\,\% reduction in spend over all \NScenarios\ scenarios (\RvSpendCutTest\,\% on the
+test split). The \CfFableStickySaving\,\% quoted in earlier drafts is the geometric-mean per-session saving, a different
+quantity: spend weights expensive sessions more.
+
+\paragraph{Router or effort} Routing to Sonnet once per session remains the larger saving. Lowering the host's own
+effort to medium is a smaller saving (about \EfCutPct\,\%, \EfRatio\X) with no detectable quality loss
+(\cref{vt:sec:effortfable}); it avoids the task-type quality losses seen with routing, which makes it a reasonable choice
+where explain, review or feature quality matters. The Opus result does not depend on the effort setting: sticky sessions
+that ran Sonnet at medium effort still cost \RvEffVsAnchorOpusTwo\X\ (95\,\% CI \RvEffVsAnchorOpusCI) the plain Opus host.
+
+\begin{keyidea}[title={Caching guidance (hypotheses)}]
+These follow from the mechanisms in \cref{vt:sec:caching,vt:sec:composition}; they are hypotheses drawn from two hosts on
+one provider, not tested findings.
+\begin{itemize}[leftmargin=1.1em]
+  \item \textbf{Compare price per token class, not price per token.} A model that is cheaper on input and output may be
+    dearer in a long conversation if its cache reads cost more.
+  \item \textbf{Every switch re-writes the history.} Switching less often, ideally once at the start, should avoid most
+    rebuild cost.
+  \item \textbf{Count requests, not just tokens.} The cheaper model made more requests for the same scripted work; that
+    volume, not only the price, decided the Opus result.
+  \item \textbf{Pauses matter.} An idle gap longer than the cache lifetime makes the next request pay to write the
+    history again, on any model.
+  \item \textbf{Measure with isolation.} Give every measured session a private cache key, and never start two identical
+    requests at the same instant.
+\end{itemize}
+\end{keyidea}
+
+\paragraph{How to use the numbers} For a deployment that looks like this campaign, use the measured savings per 1,000
+sessions in \cref{vt:tab:per1000,tab:per1000full}. The savings model is suitable for a pooled forecast over a similar
+mix, with its interval; do not use its per-host or per-task figures (\cref{vt:sec:modellimits}).
+
+\paragraph{What to measure next}
+\begin{itemize}[leftmargin=1.2em]
+  \item \textbf{Longer sessions.} Real sessions often run for many dozens of turns; these ran at most \MaxTurns.
+  \item \textbf{Real traffic.} Scripted users do not wait, wander or abandon sessions as people do.
+  \item \textbf{A production measure mode.} Each production session can carry the model's prediction and interval, and
+    sampled offline replays can provide fresh paired measurements.
+  \item \textbf{Other hosts and providers.} A new host model needs its own measurement, or at least a check of its read
+    and write prices against Sonnet's.
+  \item \textbf{The final-pass signal.} A larger sample would settle whether the small excess of final-test losses on
+    routed Fable arms is real (\cref{vt:sec:finalpass}).
+\end{itemize}

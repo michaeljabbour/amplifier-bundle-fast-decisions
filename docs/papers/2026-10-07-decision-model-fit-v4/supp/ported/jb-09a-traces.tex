@@ -1,0 +1,156 @@
+% Ported from an earlier report section (one-time conversion; edit here).
+\subsection{Follow-up: real decisions}\label{jb:sec:followup}
+
+A reviewer of this report raised two objections. First, the constructed cases may be too easy and too
+synthetic: he would rather see fewer cases with higher fidelity, taken from real agent runs. Second, prompt
+caching is the most likely pushback against routing: \emph{``for longer chats you have to be confident in
+savings for the smaller model.''} We ran one follow-up study for each. This section reports the first; the caching study is in \cref{vt:sec:survey}. Nothing in
+\cref{jb:sec:background,jb:sec:method,jb:sec:validate,jb:sec:dev,jb:sec:holdout,jb:sec:failures,jb:sec:latency} was
+re-measured or changed; the follow-ups are separate runs with their own evidence and their own
+preregistration.
+
+\begin{keyidea}
+Two new questions, two new kinds of evidence. \textbf{Real decisions:} do the judges still help when the
+decisions come from real agent sessions instead of hand-written cases? \textbf{Switching cost:} once a
+conversation is long, does moving it to a cheaper model still save money, given that each model keeps its
+own prompt cache?
+\end{keyidea}
+
+\subsubsection{Why real traces, and how the cases were built}\label{jb:sec:traces}
+
+\paragraph{What a trace-derived case is} During earlier benchmark sessions, the bundle's in-session judge
+faced thousands of real \emph{read-shortcut} decisions: ``should the agent just read this file, or think?''
+A \term{trace-derived case} is one such decision point, rebuilt exactly as the judge saw it. We kept only
+steps that the in-session judge had \emph{sent to the host model} (it fell back), because only then do we
+know what the host did next. Steps the judge automated were excluded (\TrFastRouted\ of them): their
+``outcome'' is the judge's own pick, so labelling them would be circular.
+
+\paragraph{Rebuilding and fingerprinting} The request bytes on the wire were never logged, so each request
+was rebuilt from the session transcript. A rebuilt case was eligible only if it reproduced five logged
+state numbers plus the logged hashes of the candidate ids and their order; \TrRebuildFail\ decisions failed
+and were dropped. This is a fingerprint match, not a capture. From \TrMined\ eligible, de-duplicated
+decisions we drew \TrDrawn\ (seed \TrSeed), stratified by suite and ``hard first'' using outcome-side
+features only (more candidates, line-window candidates, clipped observations), never whether a logged judge
+had been wrong. Whole tasks were assigned to holdout or dev before anyone labelled anything.
+
+\paragraph{Labels} Two reviewers labelled every case blind: they saw the judge's view and the host's next
+one or two actions, but not the outcome-derived label or any judge's answer. They agreed with each other
+at Cohen's $\kappa = \TrKappaAB$, and with the outcome label at only $\kappa = \TrKappaOutcome$. The final
+label is the reviewers' shared label: \TrAgreed\ cases matched the outcome label, \TrOverridden\ overrode
+it, and the \TrDropped\ cases where the reviewers disagreed were dropped. The holdout has \TrN\ cases
+(\TrReasonLabels\ labelled \code{reason}, \TrReadCases\ labelled with a read); the dev split has \TrDevN\
+and is a screen.
+
+\begin{keyidea}
+\textbf{``What the host did next'' is not the same as ``what was enough.''} The host model might read a file
+it did not need, or read a different, equally good file. A careful reviewer asks a stricter question: from
+what the judge could see, was one prepared read clearly sufficient? The two disagree often (the low $\kappa$
+above), so the reviewers' label is the primary one and the host's next read is kept as a secondary check.
+\end{keyidea}
+
+\paragraph{Replayed in each judge's own form} Jev received the bundle's own System One request; Laya and
+the Qwen3 models went through the bundle's own local backends. GPT-6 Luna and Sol have no native form and
+got the benchmark's choice question, as did nimble 9B and the tev1 models, because Ollama's System One
+endpoint rejects the bundle's object-valued criteria (\cref{vt:sec:since}). The ``form'' column of
+\cref{jb:tab:trace} records which.
+
+\paragraph{Preregistration} The case hash, endpoints and decision rules were committed before the holdout
+ran, and the runner refuses a holdout run unless they match. Two primary endpoints: the wrong-automatic rate
+on all \TrN\ cases, and the number of \emph{correct automatic reads} among the \TrReadCases\ cases where a
+read was enough (the savings a judge actually delivers). A new rule asks whether the read shortcut is worth
+running at all: a judge is ``useful here'' if it makes at least \TrUsefulMinReads\ correct automatic reads
+with a wrong-automatic upper 95\,\% bound below \TrUsefulMaxUpperPct\,\%. One erratum: a
+\TrSmokeCases-case smoke test of the adapters on dev cases ran about \TrSmokeMinutes\ minutes before the
+preregistration commit, although the file says it was committed before any judge saw a trace case. No
+holdout case was involved. API spend for the whole study was \$\TrSpendTotal.
+
+\subsubsection{Results on real decisions \texorpdfstring{\prereg}{[preregistered]}}\label{jb:sec:traceresults}
+
+\begin{table}[tbp]
+\centering\small
+\caption{Real read-shortcut decisions, holdout \prereg: \TrN\ cases, \TrReps\ repetitions, the bundle's
+read-shortcut gate. Per-case majorities over repetitions. ``Upper'' is the upper end of the 95\,\% Wilson
+interval of the wrong-automatic rate. ``Correct reads'' counts correct automatic reads among the
+\TrReadCases\ cases whose label is a read. Latency pools all valid requests. The last row is the reference
+that never acts.}
+\label{jb:tab:trace}
+{\footnotesize\setlength{\tabcolsep}{2pt}\input{generated/jb/tables/trace-holdout.tex}}
+\end{table}
+\howtoreadtable{A useful judge sits high in the ``correct reads'' column and low in the ``wrong automatic''
+column. Accuracy is shown, but it rewards doing nothing: \TrReasonLabels\ of the \TrN\ labels are
+\code{reason}, so a judge that never acts scores \TrAlwaysK/\TrN.}
+
+\paragraph{No judge met the usefulness bar} \TrNUseful\ of the \NumBase\ judges qualified. \TrNGeMinReads\
+judges took at least \TrUsefulMinReads\ correct reads, and every one of them also made at least one wrong
+automatic read. With \TrN\ cases, an upper bound below \TrUsefulMaxUpperPct\,\% is only possible with zero
+wrong reads, so the rule effectively asked for a judge that saves several steps and never misfires.
+
+\paragraph{Jev captured the most savings, and also misfired} Jev took \TrJevReads\ of the \TrReadCases\
+sufficient reads automatically and made \TrJevWaK\ wrong automatic reads (\TrJevWaPct\,\% of cases, upper
+bound \TrJevWaUpper\,\%). GPT-6 Luna took \TrLunaReads\ with \TrLunaWaK\ wrong; GPT-6.1 Sol \TrSolReads\
+with \TrSolWaK\ wrong, but \TrSolTimeouts\ of its \TrSolAnswers\ answers missed the \TrTimeoutMs\,ms timeout
+(its median per repetition was \TrSolPfiftyRangeS\,s) and it cost \TrSolJevCostX$\times$ as much as Jev.
+Ignoring the timeout, the same Sol answers would have taken \TrSolNoTimeoutReads\ reads with
+\TrSolNoTimeoutWa\ wrong; that is hypothetical, because a slower judge also makes the host wait.
+
+\paragraph{No difference among Jev, Luna and Sol was detected} Jev versus Luna: Holm-adjusted $p = \TrJevLunaAccPHolm$ on
+accuracy and \TrJevLunaWaPHolm\ on wrong automatic reads; Luna versus Sol: \TrLunaSolAccPHolm\ and
+\TrLunaSolWaPHolm. Jev versus Sol was missing from the run's contrast list; a post-hoc exact McNemar test
+gives $p = \TrJevSolAccP$ (accuracy) and \TrJevSolWaP\ (wrong automatic). On the \TrReadCases\ read cases
+alone, Jev's extra reads over Luna and Sol give $p = \TrJevLunaReadsP$ and \TrJevSolReadsP. No candidate
+replaced Jev under the default-judge rule (\TrNReplaces\ did).
+
+\paragraph{The local judges fail in two ways} Laya and tev1 0.8B never cleared the \MinP\ gate, so they
+never acted. Qwen3 4B never gave an answer at all (\cref{vt:sec:since}): all \TrQwenFourAbstained\ of
+its answers became \code{reason} at probability 1. Nimble 9B, Qwen3 0.6B and Qwen3 8B acted freely and were
+often wrong (\TrNimbleWaK, \TrQwenPtSixWaK\ and \TrQwenEightWaK\ wrong automatic reads).
+
+
+
+\paragraph{Why accuracy misleads here} Always falling back scores \TrAlwaysK/\TrN, more than any judge
+that acts. But \TrAlwaysSThreeK\ of those \TrAlwaysK\ come from the \TrSThree\ SWE-bench cases, where the
+judge's view had been clipped before the issue text (\cref{jb:sec:caveats}); on the other \TrSOneTwo\ cases
+it scores \TrAlwaysSOneTwoK. The useful question is not ``how often is the judge right'' but ``how many
+sufficient reads does it capture for each unnecessary one.''
+
+\paragraph{What a wrong automatic read costs} Every candidate here is a read-only file read. A wrong
+automatic read replaces the host's next step with a read it did not need: one lost step and some extra
+context, and no irreversible effect. That is a very different failure from clicking \emph{Buy now}
+(\cref{jb:sec:worked}). Its cost was assumed, not measured. Real states are also long, about
+\TrJevInputTokens\ input tokens, so Jev cost \$\TrJevCost\ per million decisions here, \TrJevCostXFirst$\times$
+its cost on the constructed holdout.
+
+\paragraph{Against the host's own next read} Scored against what the host actually read next (\TrHostReadCases\
+cases where it read something), Jev has \TrJevHostReads\ correct automatic reads and \TrJevHostWa\ wrong;
+Luna \TrLunaHostReads\ and \TrLunaHostWa; Sol \TrSolHostReads\ and \TrSolHostWa. None of Jev's \TrJevWaK\
+wrong automatic reads matched the host's next read (\TrJevWaMatchHost). This analysis was chosen after the
+results were seen and is not preregistered.
+
+\subsubsection{Read this before generalizing}\label{jb:sec:caveats}
+
+\begin{caution}[title={Read this before generalizing}]
+\begin{itemize}[leftmargin=1.1em]
+  \item \textbf{Scope and selection.} These are \TrN\ decisions that some in-session judge had already
+    \emph{declined} and sent to the host. They are not a sample of all decisions: about half are labelled
+    ``a read was enough'' by design, against about \TrPoolReadPct\,\% of the full pool. Jev made
+    \TrJevOwnWa\ wrong automatic reads on the \TrJevOwnN\ cases from its own sessions (cases its
+    in-session self had declined) and \TrJevOtherWa\ on the \TrJevOtherN\ cases from other judges'
+    sessions.
+  \item \textbf{Label overrides.} Reviewers overrode the host-derived label in \TrOverridden\ of
+    \TrKept\ kept cases, leaning strict. Of the \TrHoldOverrides\ holdout overrides, \TrOverReadToReason\
+    turned a read into \code{reason}, \TrOverReasonToRead\ turned \code{reason} into a read and
+    \TrOverReadToRead\ swapped one read for another. Reviewers saw the host's next actions; they were blind
+    only to the proposed label and to judge answers.
+  \item \textbf{Task clipping.} Every case ran at a \TrStateBudget-character state budget (the bundle
+    default is \TrStateDefault). In the \TrSThree\ SWE-bench holdout cases the task text the judge saw ended
+    after about \TrTaskSeen\ characters, inside the operating rules: the judge never saw the issue.
+  \item \textbf{Qwen3 4B is an artifact, not caution.} Its zero wrong automatic reads come from a defect
+    in the candidate path, not from the model's judgement.
+  \item \textbf{Clustering and source.} The \TrN\ cases come from \TrGroups\ task groups; Jev's
+    \TrJevWaK\ wrong reads fall in \TrJevWrongGroups. All cases come from this bundle's own benchmark
+    sessions, not human-driven traffic, and the reviewers are Anthropic models.
+  \item \textbf{Erratum.} A \TrSmokeCases-case dev smoke test ran before the preregistration commit
+    (\cref{jb:sec:traces}); no holdout case was involved.
+\end{itemize}
+\end{caution}
+

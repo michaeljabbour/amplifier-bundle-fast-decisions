@@ -1,0 +1,103 @@
+% Ported from an earlier report section (one-time conversion; edit here).
+\subsection{Response to review}\label{vt:app:review}
+
+An external reviewer read the 48-page draft of this report and raised the points below. Each was checked against
+the committed evidence before the text changed; where the reviewer's premise did not hold, the response says so.
+We thank the reviewer. The review record (the reviewers' points, reconstructed from this response; the verification of
+every round-1 point; and its scripts) is in the review record in the repository.
+
+\begin{enumerate}[leftmargin=1.6em]
+  \item \textbf{``Preregistered'' overstates what was fixed in advance.} Agreed in part. The preregistration fixed the
+    hypotheses, thresholds, split and decision rule, and it already required quality for each savings claim; the
+    estimator, the pair filter and the definition of a savings claim were fixed after the data. The confirmatory
+    section is no longer labelled preregistered, the summary and abstract say what was fixed when, and the text
+    gives the count if quality were required of every routed cell (\RvNHypAllQuality\ of 4; \cref{vt:sec:confirm}).
+  \item \textbf{The \CfFableStickySaving\,\% saving is a geometric mean; the spend reduction is smaller.} Agreed. The
+    figure is now labelled as a typical per-session (geometric-mean) saving, and the actual spend reduction
+    (\RvSpendCutAll\,\% over all scenarios, \RvSpendCutTest\,\% on the test split) is printed next to it; the per-1,000
+    figures are identified as mean-difference measures (\cref{vt:sec:slices} and the companion report's recommendations section (its content is now in \cref{sec:c,sec:d})).
+  \item \textbf{The test split has no docs scenario.} Agreed (\cref{vt:tab:tasksplit}); docs and the Opus docs exception
+    rest on training data only. One premise did not hold: docs is not the largest Fable saving by task type,
+    \RvBestTaskFableSticky\ is (\$\RvSavReviewFableSticky\ against \$\RvSavDocsFableSticky\ per 1,000 for sticky).
+  \item \textbf{The pair filter conditions on an outcome; the quality margin is thin.} Agreed. The unfiltered (arm)
+    reading is now co-primary; the text states that quality passed on the test split only, gives the all-scenario
+    and training values, notes that the \QFableStickyMarginGap\ margin comes from the unfiltered quality test and is
+    thin, though not a bootstrap artefact (\cref{vt:sec:confirm}). Table and figure headers now label both readings
+    co-primary.
+  \item \textbf{The largest savings sit with the largest quality losses.} Agreed at the family level: knowledge on
+    Fable sticky misses the margin (\RvKnowFableSticky; \cref{vt:sec:joint}). It is a family effect, not a general
+    trade-off (scenario-level rank correlation \RvSpearman). Joint savings-and-quality tables now cross-reference the
+    savings and quality tables (\cref{vt:tab:jointfamily,vt:tab:jointtask}).
+  \item \textbf{The tools normalization should be about ten times larger and is asymmetric.} The size premise did not
+    hold: it assumed every session wrote the whole tool prefix, while \RvWarmTotal\ first requests found it cached and
+    only \RvColdTotal\ were cold. The asymmetry is real but lowers the anchors' cost more than the routed arms', so it
+    raises the routed ratios slightly. The cold/warm counts, dollars and raw-versus-normalized ratios are now
+    published (\cref{vt:tab:toolsnorm,vt:tab:toolsratios}).
+  \item \textbf{The sticky arm is not ``mostly plain Sonnet''.} Agreed: it made \RvReqGapFable\,\% (Fable) and
+    \RvReqGapOpus\,\% (Opus) fewer requests than a plain-Sonnet and plain-host mix would. The claim is corrected
+    (\cref{vt:sec:design}).
+  \item \textbf{Two different turn counts.} Agreed; the difference is now explained (\cref{vt:sec:more}).
+  \item \textbf{Empty subsection headings.} Fixed: each subsection of \cref{vt:sec:more} now has text, and figures stay
+    with their sections.
+  \item \textbf{The Opus A/A bias is attributed to launch order without evidence.} Agreed. A regression on start offset
+    shows no association, so the bias is now called unexplained (\cref{vt:sec:aa}).
+  \item \textbf{Sticky on Sonnet was never compared with plain Sonnet.} Agreed, and the comparison changed a
+    conclusion: routed Sonnet ran at medium effort and cost \RvEffFableAll\X\ (Fable) and \RvEffOpusAll\X\ (Opus) the
+    default-effort control. The claim that the router adds little beyond ``use Sonnet'' is withdrawn
+    (\cref{vt:sec:effort} and the companion report's recommendations section (its content is now in \cref{sec:c,sec:d})). \emph{Resolved with data:} a follow-up designed in advance (its plan was committed \EcFirstAfter\ before its
+    first analysed session; \cref{vt:sec:effortfollow}) found medium effort alone makes
+    plain Sonnet cost \EcRatio\X\ the default (\EcCI; turn-pass \EcQual, \EcQualCI), so the effort setting explains
+    most of the gap; medium plain Sonnet against sticky-on-Sonnet was \EcSecRatio, that is, sticky-on-Sonnet cost
+    about \EcSecGapPct\,\% more (exploratory, not concurrent; \cref{vt:sec:effortfollow}). The report now says this
+    campaign shows no benefit of the router beyond the decision to use Sonnet, scopes ``no detectable turn-pass
+    loss'' to the follow-up's \EcScen\ scenarios, and notes a post-hoc hint of a loss on docs, explain and review work.
+    The follow-up cost \$\EcSpend.
+\end{enumerate}
+
+\paragraph{Re-review} A second reading of the revised report asked for text-only fixes, all applied: the 0.0035
+quality margin is described as thin but not a bootstrap artefact; both readings are labelled co-primary in every table
+and figure; the summary's caution count matches its list; the cold tools-prefix rate is reported against start order
+without a causal claim; the effort follow-up carries its provenance caveat wherever it is called designed in advance;
+the router conclusion, the scope of ``no detectable loss'', the cache-isolation exception, the A/A wording, the
+spend split, the wave definition and the Opus effort check are stated as in this version.
+
+\subsubsection*{Round 2}\label{vt:app:round2}
+
+The same reviewer read the revised report and recommended acceptance with minor revisions. In checking the earlier
+tools-normalization point he also corrected his own round-2 reproduction of the \$\ToolsDeltaTotal\ total; we are
+grateful for that care. Each item and the response:
+\begin{enumerate}[leftmargin=1.6em]
+  \item \textbf{Effort on the primary endpoint.} Agreed. \Cref{vt:tab:effortmix} now gives main-request effort by host,
+    arm and model, and the arms table states it. A new limitation explains that the primary endpoints compare
+    default-effort hosts with medium-effort routed Sonnet, biasing the Fable saving optimistically and the Opus
+    penalty conservatively, and gives the reviewer's extrapolation explicitly as an extrapolation from the Sonnet
+    follow-up (effort share about \RgEffShareFable\,\% of the Fable log saving, model-only ratio about
+    \RgModelOnlyFable; Opus effort-matched about \RgOpusMatched\X). The Fable recommendation now says the saving is
+    Sonnet-at-medium relative to the host at default. \emph{Since measured:} a preregistered Fable follow-up found
+    Fable at medium costs \EfRatio\X\ the default (\EfCI) with non-inferior quality, so the host's effort effect is
+    about \EfShare\,\% of the Fable log saving, replacing the extrapolated \RgEffShareFable\,\%; Sonnet-at-medium sticky
+    is about \EfStickyVsMedium\X\ of Fable-at-medium (exploratory, not concurrent; \cref{vt:sec:effortfable}). Opus
+    remains unmeasured. The host-kept sticky sessions are
+    described as an indication of bundle overhead (about \RgOverheadFable--\RgOverheadOpus\,\%), not a finding.
+  \item \textbf{Quality by task type.} Agreed. \Cref{vt:tab:taskfable} adds 95\,\% intervals; \RgNTaskFail\ of \RgNTask\
+    task types miss the margin and the companion report's recommendations section (its content is now in \cref{sec:c,sec:d}) says so. We also accept that the scenario-level rank correlation
+    (\RvSpearman) in our first response was an underpowered test of a between-group effect; it does not show that
+    the task-type pattern is absent.
+  \item \textbf{Cross-arm reads.} Published: \RgCrossTokens\ shared-prefix tokens, \RgCrossShare\,\% of all cache
+    reads, in \RgCrossSessions\ sessions; the text now says exactly what the foreign-read audit tests.
+  \item \textbf{Normalization allowance.} Agreed that the allowance is below the median first-request write
+    (\RgStaticMedian\ tokens). Priced at each request's own model rates, the residual is \$\RgResidFableAnchor\ per
+    Fable anchor session (the reviewer's figure was close) and \$\RgResidFableSticky\ per Fable sticky session (lower
+    than the reviewer's, which priced sticky at the host rate). Removing it moves no confirmatory cell by more than
+    \RgResidShiftMax, somewhat more than the reviewer's estimate; no verdict changes. The \RgBigN\ very large first
+    writes are the sessions that found the shared tool prefix cold.
+  \item \textbf{Effort-control mechanism.} Added: all \RgEcMainMedium\ main requests of the medium arm ran at medium;
+    its \RgEcNonMainDefault\ default-effort requests are background requests.
+  \item \textbf{Tag.} The follow-up is now labelled ``preregistered, provenance-limited''.
+  \item \textbf{The quality instrument.} New \cref{vt:sec:instrument}: what the checks assert, how they were validated,
+    the weak checks found and fixed, difficulty by family, three examples and the turn-pass versus final-test
+    correlation.
+  \item \textbf{What the evidence does not show.} the companion report's recommendations section (its content is now in \cref{sec:c,sec:d}) now says the cumulative evidence does not establish
+    the decision-judge machinery's value, while Jev remains the best judge tested; \cref{vt:sec:limits} adds
+    multiplicity and the \NTest-scenario confirmatory basis.
+\end{enumerate}

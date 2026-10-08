@@ -1,0 +1,20 @@
+% Cost ratio by scripted session length (all splits, 95% CIs).
+\begin{tikzpicture}
+\begin{groupplot}[benchmark, group style={group size=2 by 1, horizontal sep=1.6cm},
+  width=0.46\linewidth, height=5.2cm, xmin=0.5, xmax=3.5, xtick={1,2,3},
+  xticklabels={{$\le$8},{9--12},{$\ge$13}}, xlabel={Scripted turns}, ymajorgrids, title style={font=\small\bfseries}]
+\nextgroupplot[title={Fable host}, ylabel={Cost ratio vs plain host}, ymin=0.4, ymax=0.8,
+  legend to name=bandlegend, legend columns=2, legend cell align=left,
+  legend style={/tikz/every even column/.append style={column sep=10pt}}]
+\addplot[only marks, mark=*, mark size=2.4pt, color=okblue, error bars/.cd, y dir=both, y explicit]
+  table[x=x, y=r, y error minus=m, y error plus=p]{generated/data/band-fable-sticky.dat}; \addlegendentry{sticky}
+\addplot[only marks, mark=square*, mark size=2.4pt, color=okorange, error bars/.cd, y dir=both, y explicit]
+  table[x=x, y=r, y error minus=m, y error plus=p]{generated/data/band-fable-shipped.dat}; \addlegendentry{shipped (re-chooses each turn)}
+\nextgroupplot[title={Opus host}, ymin=0.95, ymax=1.65]
+\draw[black!60] (axis cs:0.5,1) -- (axis cs:3.5,1);
+\addplot[only marks, mark=*, mark size=2.4pt, color=okblue, error bars/.cd, y dir=both, y explicit]
+  table[x=x, y=r, y error minus=m, y error plus=p]{generated/data/band-opus-sticky.dat};
+\addplot[only marks, mark=square*, mark size=2.4pt, color=okorange, error bars/.cd, y dir=both, y explicit]
+  table[x=x, y=r, y error minus=m, y error plus=p]{generated/data/band-opus-shipped.dat};
+\end{groupplot}
+\end{tikzpicture}

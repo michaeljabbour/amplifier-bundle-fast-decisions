@@ -1,0 +1,35 @@
+\subsection{Keeping review and explain work on the host: the keyword proxy, replayed}\label{sec:proxy}
+
+H7 did not establish non-inferiority of Sonnet's turn-pass on review and explain tasks, so the preregistered rule keeps
+those task types on the host. Without a decision model there is no task-type label at session start, so the shipped
+bundle uses a frozen keyword classifier (\code{\KpClassifier}) as a proxy: it keeps a session on the host when its first
+prompt reads as a question. On the \KpPrompts\ scenario prompts of all three panels it catches \KpCaught\ of the
+\KpRexN\ review and explain sessions, but it also keeps \KpOthers\ other read-only questions (precision
+\KpPrecision\,\%); it was not tuned on the holdout. \Cref{tab:proxy} replays three decide-once policies on the holdout
+sessions \expl.
+
+\begin{table}[tbp]
+\centering\small
+\caption{The keyword proxy buys the review and explain safeguard with part of the saving. Three decide-once policies
+replayed on the holdout sessions against plain Fable: cost ratio with its 95\,\% interval and the mean turn-pass
+difference \expl.}
+\label{tab:proxy}
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}l c c c@{}}
+\toprule
+Policy & cost ratio & 95\,\% CI & turn-pass $\Delta$ \\
+\midrule
+Rule R* alone (H1, \prereg) & \SHOneRatio & \SHOneCI & \SHOneDtp \\
+R* with review and explain kept on the host by their true labels & \KpOracleRatio & \KpOracleCI & \KpOracleDtp \\
+R* with the shipped keyword proxy & \KpProxyRatio & \KpProxyCI & \KpProxyDtp \\
+\bottomrule
+\end{tabular*}
+\howtoreadtable{The first row is the preregistered result; the other two are replays of the same sessions, not new
+runs. Keeping review and explain on the host by their true labels costs part of the saving; the proxy, which also keeps
+other questions, costs more of it.}
+\end{table}
+
+\begin{keyidea}
+The proxy trades saving for quality: about \KpProxyTwo\X\ of plain Fable instead of about \KpRstarTwo\X, with no
+measured turn-pass loss. A better task-type classifier would recover most of the gap; the trade has not been
+replicated live.
+\end{keyidea}

@@ -1,0 +1,69 @@
+% Ported from an earlier report section (one-time conversion; edit here).
+\subsection{Limitations and threats to validity of the paired campaigns}\label{vt:sec:limits}
+
+\begin{itemize}
+  \item \textbf{Scripted, synthetic sessions.} The \NScenarios\ scenarios are fixed scripts of
+    \MinTurns--\MaxTurns\ turns with automatic checks. Real users react to answers, pause irregularly and
+    hold much longer conversations.
+  \item \textbf{The judge's own cost is not measured.} Session costs exclude the routing judge's calls
+    (\cref{vt:sec:design}).
+  \item \textbf{Two hosts, one provider.} The conclusions are tied to these models and this price table;
+    they do not transfer to other providers or price changes without new measurement.
+  \item \textbf{A price table, not invoices.} Costs are tokens times list prices from the bundle's own table
+    (verified \RatesVerified). They match the provider's per-request cost field exactly, but that field uses
+    the same table, so the match checks token counting, not prices; discounts and batch pricing are not
+    modelled.
+  \item \textbf{The Opus result depends on one price.} At the table's \$\PriceOpusRead\ per million cached
+    Opus tokens, routing cost more; re-pricing the recorded tokens, sticky reaches parity at about
+    \$\BEStickyPair\ (pair reading) or \$\BEStickyArm\ (arm reading), and at \$\RateForty\ sticky would cost
+    \BEStickyForty\X\ the plain host (\cref{vt:tab:breakeven}). The Opus conclusion is about Opus~5.5 at these
+    prices, not about ``Opus-class'' models in general.
+  \item \textbf{The primary filter selects on an outcome.} The pair reading keeps pairs whose arm did at
+    least as well as its anchor. That conditions on something the treatment affects. The arm reading, which
+    keeps every cost-valid pair, gives the same verdicts; the filter raises the sticky and shipped ratios by
+    \FilterLiftLow\ to \FilterLiftHigh\ (\cref{vt:tab:primary}).
+  \item \textbf{Uncommitted harness code during the run.} The runner that executed the campaign was
+    working-tree code, committed only afterwards (\code{\HarnessSha}). The agent under test was frozen at the
+    preregistration commit, and re-extraction with the committed harness reproduces the rows byte for byte,
+    but the exact runner code was not under version control while it ran.
+  \item \textbf{The estimator was written after the data.} The preregistration fixed hypotheses, thresholds,
+    split and decision rule; the confirmatory script that fixed resamples, seed, the quality filter and the
+    verdict rule was committed about \ConfirmAfterMin\ minutes after the campaign finished, when exploratory
+    summaries over all scenarios existed. The analysis also resolved \NDeviations\ ambiguities or mismatches
+    in the preregistration (\cref{vt:sec:deviations}); only the two non-inferiority readings and the bootstrap
+    seed were varied in sensitivity checks.
+  \item \textbf{The Opus A/A ratio is not centred on 1, for reasons we cannot explain.} Two identical Opus
+    sessions differed by about \AAOpusPct\,\% on average (\AAOpus, \AAOpusCI). The bias is not associated with
+    start offset (\cref{vt:sec:aa}). Removing a bias of that size would put the Opus ratios at about
+    \OpusAdjLow--\OpusAdjHigh; the verdicts hold.
+  \item \textbf{Reasoning effort differs between the routed arms and the Sonnet control.} Routed Sonnet ran at
+    medium effort and the plain-Sonnet control at the provider default, so part of the routing saving is the
+    effort setting (\cref{vt:sec:effort}); the follow-up measured the effort effect on plain Sonnet concurrently
+    (\cref{vt:sec:effortfollow}), but its comparison with the routed sessions is not concurrent. The control also ran only in the Opus waves, hours away from the Fable
+    sessions it is compared with.
+  \item \textbf{The primary endpoints are not effort-matched.} They compare default-effort host sessions with
+    medium-effort routed Sonnet sessions (\cref{vt:tab:effortmix}). That biases the Fable saving optimistically and the Opus
+    penalty conservatively. For Fable this is now measured: Fable at medium costs \EfRatio\X\ the default
+    (\cref{vt:sec:effortfable}), so the host's own effort effect is $\ln \EfRatio / \ln \RgFabStickyPair \approx
+    \EfShare\,\%$ of the sticky log saving (the round-2 extrapolation from the Sonnet follow-up gave
+    \RgEffShareFable\,\%). For Opus it is still an extrapolation: if Opus responded to effort as plain Sonnet did
+    (\EcRatio\X), sticky-on-Sonnet at matched effort would cost about
+    $\RvEffVsAnchorOpus / \EcRatio \approx \RgOpusMatched$\X\ the plain host. Opus's response to effort was not
+    measured.
+  \item \textbf{Multiplicity and a small confirmatory basis.} Many contrasts are reported (hosts, arms, readings,
+    task types, families); only the preregistered hypotheses carry a decision rule, and they rest on \NTest\
+    test scenarios. Exploratory contrasts are not corrected for multiplicity.
+  \item \textbf{No held-out docs scenario.} All \RvDocsTrain\ docs scenarios are in the training split; the test
+    split has \RvDocsTest\ docs, \RvExplainTest\ explain and \RvReviewTest\ review scenarios (\cref{vt:tab:tasksplit}).
+    Docs results, including the Opus docs exception, rest on training data only.
+  \item \textbf{Inferred failure causes.} For \NFailedInferred\ of the \NFailed\ failed attempts the cause
+    was inferred from timing, not recorded. Failed attempts were rerun as whole waves, so they cannot bias
+    the accepted data, but the failure accounting for them is probable, not proven.
+  \item \textbf{One shared API key.} Isolation between arms relies on the per-session nonce and the audit
+    (\AuditFlagged\ flagged sessions), not on separate keys.
+  \item \textbf{Quality is near the margin.} Fable sticky passed the turn-pass margin on the test split by
+    \QFableStickyMarginGap; over all scenarios the margin was not shown, and routed Fable arms passed the
+    final hidden tests \FinalGapLow--\FinalGapHigh\ points less often (exploratory, \cref{vt:sec:finalpass}).
+  \item \textbf{The savings model is additive.} It assumes the same arm and task effects on both hosts and
+    misfits per-host cells (\cref{vt:sec:modellimits}).
+\end{itemize}

@@ -1,0 +1,32 @@
+\subsection{The numbers behind the main paper's routing and decide-once results}\label{sec:ctrace}
+
+\Cref{tab:perrequestsupp} repeats the per-request price model of the main paper's Table~2: one average plain-host
+request of the main campaign (\RqMixRead\ cache-read, \RqMixWrite\ cache-write and \RqMixOut\ output tokens, measured over
+\RqMixAnchors\ sessions) priced at each model's list prices, with the request multipliers (\RpMultFable\X\ on Fable's
+tasks, \RpMultOpus\X\ on Opus's) re-derived by replaying the shipped routing code on recorded sessions \expl.
+\Cref{tab:h3readings} gives the decide-once hypothesis H3 in both readings; the main paper quotes the all-pairs reading.
+
+\begin{table}[tbp]
+\centering\small
+\caption{Sonnet is half Fable's price per request but Opus's equal. Cost of one average plain-host request at list
+prices, its composition, and the routing ratio predicted from the per-request price and the request multiplier
+\expl.}
+\label{tab:perrequestsupp}
+\input{generated/tables/v4-perrequest.tex}
+\end{table}
+
+\begin{table}[tbp]
+\centering\small
+\caption{Deciding the model once cost less than re-deciding every turn, in both readings. H3 on the main campaign's
+test split: decide-once (sticky) arm over the per-turn (shipped) arm, geometric mean with 95\,\% interval. The
+preregistered criterion was only that the ratio stays below \HThreeUpper.}
+\label{tab:h3readings}
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}l c c c c@{}}
+\toprule
+Host & all pairs (arm reading) & triplets & quality-filtered (pair reading) & triplets \\
+\midrule
+Fable 5.1 & \HThreeFableArm\ (\HThreeFableArmCI) & \HThreeFableArmN & \HThreeFable\ (\HThreeFableCI) & \HThreeFableN \\
+Opus 5.5 & \HThreeOpusArm\ (\HThreeOpusArmCI) & \HThreeOpusArmN & \HThreeOpus\ (\HThreeOpusCI) & \HThreeOpusN \\
+\bottomrule
+\end{tabular*}
+\end{table}
