@@ -25,14 +25,14 @@
 \pgfplotslegendfromname{obslegend}\par\smallskip
 \input{figures/fig-obs-latency.tex}
 \caption{A decision call is about thirty times faster than a host call at the median. Latency of decision calls and of
-host model calls recorded in production and test traffic (log scale).}
+host model calls, recorded in production and test traffic (log scale).}
 \label{fig:latency}
-\howtoread{Each row has a median and a 95th-percentile bar; values at the bar ends are p95 in milliseconds.}
+\howtoread{Each row has a median bar and a 95th-percentile bar. The value at each bar end is the p95 in milliseconds.}
 \end{figure}
 
-\paragraph{A corrected projection} Before S1 we projected that the recommended configuration would cost
-\AthreeOld\X\ (\AthreeOldBand) of shipped defaults on this owner's spend mix. That projection assumed medium effort
-saves about as much on Opus as on Sonnet, which the holdout study did not demonstrate (\SHFourRatio\X). With Opus left at default effort and
+\paragraph{A corrected projection} Before the holdout study (S1), we projected that the recommended configuration would cost
+\AthreeOld\X\ (\AthreeOldBand) of shipped defaults on this owner's spend mix. That projection assumed that medium effort
+saves about as much on Opus as on Sonnet. The holdout study did not demonstrate that saving (\SHFourRatio\X). With Opus left at default effort and
 Sonnet at medium (\EcRatio\X), the same spend mix (\AthreeOpusShare\,\% Opus, \AthreeSonnetShare\,\% Sonnet) projects
 \AthreeNew\X\ (\AthreeNewBand) \expl. The supplement documents the correction.
 

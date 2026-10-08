@@ -5,14 +5,15 @@
 \hypersetup{
   pdftitle={Where a Decision Model Fits in an Agent Harness: Supplementary Material},
   pdfauthor={Amplifier; Michael J. Jabbour; David Koleczek},
-  pdfsubject={Supplementary material to technical report v5, October 8, 2026},
+  pdfsubject={Supplementary material to technical report v5.1, October 8, 2026},
   pdflang={en-US}, pdfdisplaydoctitle=true, pdfcreationdate={D:20261008000000}, pdfmoddate={D:20261008000000},
   colorlinks=true, linkcolor=okblue!65!black, urlcolor=okblue!65!black, citecolor=okblue!65!black, filecolor=okblue!65!black, runcolor=okblue!65!black,
   bookmarksnumbered=true, bookmarksopen=true,
 }
 \renewcommand{\thesection}{\Alph{section}}
-\renewcommand{\thefigure}{S\arabic{figure}}
-\renewcommand{\thetable}{S\arabic{table}}
+\counterwithin*{figure}{section}\counterwithin*{table}{section}
+\renewcommand{\thefigure}{\thesection.\arabic{figure}}
+\renewcommand{\thetable}{\thesection.\arabic{table}}
 \newcommand{\mainref}[1]{Section~\ref{M-#1} of the main paper}
 \newcommand{\TkSupp}[1]{\ref{#1}}
 
@@ -21,11 +22,11 @@
 \thispagestyle{plain}
 \begin{center}
   {\Large\sffamily\bfseries Where a Decision Model Fits in an Agent Harness\\[3pt]
-   \large Supplementary material to version 5\par}
+   \large Supplementary material to version 5.1\par}
   \vspace{8pt}
   {\normalsize Amplifier \qquad Michael J.\ Jabbour \qquad David Koleczek\par}
   \vspace{2pt}
-  {\normalsize Microsoft, Office of the CTO \textperiodcentered{} Version 5 \textperiodcentered{} October 8, 2026\par}
+  {\normalsize Microsoft, Office of the CTO \textperiodcentered{} Version 5.1 \textperiodcentered{} October 8, 2026\par}
 \end{center}
 \vspace{4pt}
 \input{supp/summary}

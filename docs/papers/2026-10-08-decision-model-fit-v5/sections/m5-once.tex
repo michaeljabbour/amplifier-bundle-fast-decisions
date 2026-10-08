@@ -27,24 +27,24 @@
 plain host, which never switches, and on requests made after an effort change, by position in the session (main
 campaign re-analysis).}
 \label{fig:cachewrites}
-\howtoread{Compare the two bars in each row. Within a turn the switch multiplies the write cost; after a seven-minute
-pause the two bars are about the same length ($n$ = \CwLongN\ each), consistent with the expired cache being rewritten
-whatever the configuration.}
+\howtoread{Compare the two bars in each row. Within a turn, the switch multiplies the write cost. After a seven-minute
+pause the two bars are about the same length ($n$ = \CwLongN\ each): the expired cache is rewritten whatever the
+configuration.}
 \end{figure}
 
-\paragraph{The start-of-session choice needs no model} In the preregistered holdout study, letting Jev choose the session's
-model and letting the rule ``route unless the workspace has more than \AoScopeFiles\ files'' choose it were
-equivalent within the preregistered $\pm$5\,\% margin: \SHTwoRatio\X\ (90\,\% CI \SHTwoCINinety), and the two disagreed on only \SHTwoDisc\ of \SHTwoReps\
+\paragraph{The start-of-session choice needs no model} In the preregistered holdout study, two deciders chose the session's model: Jev,
+and the rule ``route unless the workspace has more than \AoScopeFiles\ files''. They were equivalent within the
+preregistered $\pm$5\,\% margin: \SHTwoRatio\X\ (90\,\% CI \SHTwoCINinety). They disagreed on only \SHTwoDisc\ of \SHTwoReps\
 scenario-reps \prereg. Live decide-once sessions cost what the reconstruction from pinned sessions predicted
 (\SHSixRatio\X, 90\,\% CI \SHSixCINinety) \prereg.
 
-How much cheaper a new configuration must be to justify a mid-session switch was not measured, and a model switch
-timed to an expired cache was not isolated.
+We did not measure how much cheaper a new configuration must be to justify a mid-session switch. We also did not
+isolate a model switch timed to an expired cache.
 
 \begin{keyidea}[title={For practitioners}]
 Decide once per session with a rule and a price gate. Keep model and effort fixed while the cache is warm. After an idle gap past the
-cache lifetime a switch looked no dearer (effort changes only, $n$ = \CwLongN, exploratory); how much cheaper the new
-configuration must be is untested.
+cache lifetime, a switch looked no dearer (effort changes only, $n$ = \CwLongN, exploratory). How much cheaper the
+new configuration must be is untested.
 \end{keyidea}
 
 Details: Supplement Sections~\ref{S-sec:d} (caching and effort) and~\ref{S-sec:g} (holdout study).

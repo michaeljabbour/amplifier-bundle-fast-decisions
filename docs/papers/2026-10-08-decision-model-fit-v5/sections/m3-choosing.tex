@@ -23,32 +23,32 @@
 \pgfplotslegendfromname{v4frontierlegend}\par\smallskip
 \input{figures/fig-v4-frontier.tex}
 \caption{Jev is the low-cost point on the accuracy--cost frontier. Holdout accuracy against cost per million
-decisions for the cloud judges with a price; labels give correct answers out of \HoldN. Local models are omitted (no
-priced compute).}
+decisions for the cloud judges with a price. Labels give correct answers out of \HoldN. Local models are omitted
+because their compute has no price.}
 \label{fig:frontier}
-\howtoread{Up is more accurate, left is cheaper. Luna and Sol are more accurate at about two and fifty times Jev's price;
-Clef-Flash is cheaper per point than neither. Luna-D, the post hoc Decisions API run, sits above Jev at
+\howtoread{Up is more accurate, left is cheaper. Luna and Sol are more accurate at about two and fifty times Jev's price.
+Clef-Flash costs more than Jev and is less accurate. Luna-D, the post hoc Decisions API run, sits above Jev at
 \OaPriceXLo--\OaPriceXHi\X\ the price.}
 \end{figure}
 
-\paragraph{The Decisions API, post hoc} OpenAI's native typed-decision endpoint was run after the preregistered work,
+\paragraph{The Decisions API, post hoc} We ran OpenAI's native typed-decision endpoint after the preregistered work,
 paired in time with an in-run Jev reference. Against that reference it scored \OaDevLunaK\ vs \OaDevJevK\ on
 development cases, \OaHoldoutLunaK\ vs \OaHoldoutJevK\ on the holdout, and \OaTraceDevLunaK\ vs \OaTraceDevJevK\ and
 \OaTraceHoldoutLunaK\ vs \OaTraceHoldoutJevK\ on the two splits of real read decisions. Only the last gap survived Holm
-correction ($p = \OaTrHoldHolm$; exploratory). It is the main challenger. On real read decisions it automated fewer (\OaTrHoldLunaCovK\ against
-\OaTrHoldJevCovK\ of \OaTrHoldN), so part of its accuracy gain is more fallbacks to the host. Its misfire rate was never
-higher than Jev's and it cost \OaPriceXLo--\OaPriceXHi\X\ as much per decision. Its servers answered in
-\OaServerPninetyfiveLo--\OaServerPninetyfiveHi\,ms at p95, but on a network that was slow for both judges the client saw
-seconds; \OaInvalid\ of its \OaRequests\ requests and \OaInvalidJev\ of Jev's failed in transport.
+correction ($p = \OaTrHoldHolm$; exploratory). It is the main challenger. On real read decisions it automated fewer decisions (\OaTrHoldLunaCovK\ against
+\OaTrHoldJevCovK\ of \OaTrHoldN), so part of its accuracy gain comes from more fallbacks to the host. Its misfire rate was never
+higher than Jev's, and it cost \OaPriceXLo--\OaPriceXHi\X\ as much per decision. Its servers answered in
+\OaServerPninetyfiveLo--\OaServerPninetyfiveHi\,ms at p95. The network was slow for both judges, so the client saw
+seconds. In transport, \OaInvalid\ of its \OaRequests\ requests failed, and \OaInvalidJev\ of Jev's.
 
 \paragraph{On real read decisions} On \TrN\ held-out read decisions, \TrNUseful\ of \NumBase\ judges met the
-preregistered usefulness rule; Jev took the most correct automatic reads (\TrJevReads\ of \TrReadCases) but also made
+preregistered usefulness rule. Jev took the most correct automatic reads (\TrJevReads\ of \TrReadCases) but also made
 \TrJevWaK\ wrong ones. No model was safe enough to act alone there.
 
 \begin{keyidea}[title={For practitioners}]
-Use Jev as the default: it is the cheapest accurate option and fast enough for interactive use on a clean network path.
-Pay for a dearer judge only where 8--11 points of possible accuracy are worth many times the price, and re-test the
-Decisions API, which matched or beat Jev on our cases at \OaPriceXLo--\OaPriceXHi\X\ the price. Keep a fallback to the
+Use Jev as the default. It is the cheapest accurate option, and fast enough for interactive use on a clean network
+path. Pay for a dearer judge only where 8--11 points of possible accuracy are worth many times the price. Re-test the
+Decisions API: it matched or beat Jev on our cases at \OaPriceXLo--\OaPriceXHi\X\ the price. Keep a fallback to the
 host on real read decisions.
 \end{keyidea}
 

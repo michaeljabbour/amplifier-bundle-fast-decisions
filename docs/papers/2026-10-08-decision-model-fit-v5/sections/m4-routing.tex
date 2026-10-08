@@ -16,14 +16,14 @@ Route to a cheaper model only when the host is much dearer once caching and the 
     of \$\PriceOpusRead\ \expl.
 \end{itemize}
 
-\paragraph{Why we measured whole sessions} Per-token list prices misled. Opus's input price is above Sonnet's, but an
+\paragraph{Why we measured whole sessions} Per-token list prices misled. Opus's input price is above Sonnet's. But an
 agent session is mostly cached context, and Sonnet's cache reads cost more than Opus's. So we ran each task twice, on
 the plain host and routed, and compared the bills (\cref{fig:replication}).
 
 \begin{table}[tbp]
 \centering\small
-\caption{Sonnet is half Fable's price per request but Opus's equal. Cost of one average plain-host request at list
-prices, its composition, and the routing ratio predicted from the per-request price and the measured request
+\caption{Sonnet costs half as much as Fable per request, but as much as Opus. Cost of one average plain-host request
+at list prices, its composition, and the routing ratio predicted from the per-request price and the measured request
 multiplier \expl.}
 \label{tab:perrequest}
 \input{generated/tables/v4-perrequest.tex}
@@ -37,15 +37,15 @@ multiplier \expl.}
 main campaign's training scenarios \expl, its test scenarios (sticky arm, all pairs) and the preregistered holdout
 study (the frozen Fable configuration; Sonnet on Opus).}
 \label{fig:replication}
-\howtoread{Each dot is a geometric-mean cost ratio with its 95\,\% interval on a log scale; left of 1 saves money.
-Every Fable row sits near one half and every Opus row above 1; the small Opus pilot is the highest.}
+\howtoread{Each dot is a geometric-mean cost ratio with its 95\,\% interval, on a log scale. Left of 1 saves money.
+Every Fable row sits near one half, and every Opus row above 1. The small Opus pilot is the highest.}
 \end{figure}
 
 ``Much dearer'' is a modelled threshold, not a measured one: we tested two hosts against one cheap model, and none fell between Opus (about Sonnet's price per request) and Fable (about twice Sonnet's).
 
 \begin{keyidea}[title={For practitioners}]
 Before routing, price an average request of your own sessions on both models, including cache reads and writes, and
-multiply by how many more requests the cheaper model makes. Route only when the result is clearly below one; a price
+multiply by how many more requests the cheaper model makes. Route only when the result is clearly below one. A price
 gate that does exactly this predicted both of our directions.
 \end{keyidea}
 
