@@ -1,0 +1,22 @@
+% Prediction model check on the test split: predicted total saving (with 90% PI) vs observed, per arm and host.
+\begin{tikzpicture}
+\begin{axis}[benchmark, scale only axis, width=\ModelAxisW, height=\ModelAxisH,
+  xmin=-70, xmax=150, ymin=-70, ymax=150,
+  xtick={-50,0,50,100,150}, ytick={-50,0,50,100,150},
+  xlabel={Predicted total saving on the test pairs (\$; whisker: 90\,\% interval)},
+  ylabel={Observed total saving (\$)}, xmajorgrids, ymajorgrids, clip=false,
+  legend to name=modellegend, legend columns=3, legend cell align=left,
+  legend style={/tikz/every even column/.append style={column sep=10pt}}]
+\addplot[okgray, dashed, line width=0.8pt, domain=-70:150, samples=2] {x};
+\addlegendentry{prediction = observation}
+\addplot[only marks, mark=*, mark size=2.6pt, color=okblue,
+  error bars/.cd, x dir=both, x explicit, error bar style={okblue!60, line width=0.7pt}]
+  table[x=pred, y=obs, x error minus=minus, x error plus=plus]{generated/data/model-check-fable.dat};
+\addlegendentry{Fable host}
+\addplot[only marks, mark=square*, mark size=2.6pt, color=okorange,
+  error bars/.cd, x dir=both, x explicit, error bar style={okorange!60, line width=0.7pt}]
+  table[x=pred, y=obs, x error minus=minus, x error plus=plus]{generated/data/model-check-opus.dat};
+\addlegendentry{Opus host}
+\input{generated/labels/model-check.tex}
+\end{axis}
+\end{tikzpicture}

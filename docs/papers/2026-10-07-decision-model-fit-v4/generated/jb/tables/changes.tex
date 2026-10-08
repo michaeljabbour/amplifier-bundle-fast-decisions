@@ -1,5 +1,5 @@
 \begin{xltabular}{\textwidth}{@{}>{\raggedright\arraybackslash}p{0.2\textwidth} >{\raggedright\arraybackslash}p{0.15\textwidth} >{\raggedright\arraybackslash}X l@{}}
-\caption{All \ChangesN\ first-pass claims, what the first pass said, and what the validation found, followed by \ChangesPostStudy\ entry recording changes merged after this study (verbatim from \code{changes.json}, where each entry also names its evidence file).}\label{tab:changes}\\
+\caption{All \ChangesN\ first-pass claims, what the first pass said, and what the validation found, followed by \ChangesPostStudy\ entry recording changes merged after this study (verbatim from \code{the change log}, where each entry also names its evidence file).}\label{tab:changes}\\
 \toprule
 First-pass claim & First pass said & What the validation found & Verdict \\
 \midrule
@@ -41,7 +41,7 @@ p95 latency & index int(round(0.95 n)) - 1 & nearest rank; the first pass was on
 \addlinespace[4pt]
 Laya base reproduces the earlier study (35/60) & 35/60 & 35/60 on the original screen in all 7 runs & \vconf \\
 \addlinespace[4pt]
-The OpenAI Decisions API could not be measured & no endpoint visible & POST /v1/decisions returns 403 'Decision API is not enabled for this user' (logged in dev/run.json and holdout/run.json); the openai-decisions arm auto-enables on HTTP 200 & \vconf \\
+The OpenAI Decisions API could not be measured & no endpoint visible & POST /v1/decisions returns 403 'Decision API is not enabled for this user' (logged in the dev and holdout run records); the openai-decisions arm auto-enables on HTTP 200 & \vconf \\
 \addlinespace[4pt]
 Cost per million decisions & Jev \$15.91, Luna \$34.95, Sol \$753.04 & recomputed from logged tokens to the cent; Sol \$750.88 in the validated run & \vconf \\
 \addlinespace[4pt]

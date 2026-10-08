@@ -1,0 +1,14 @@
+% A/A: distribution of log cost ratios between two identical plain-host sessions.
+\begin{tikzpicture}
+\begin{axis}[benchmark, ybar, bar width=6pt, scale only axis, width=10cm, height=4.4cm, xmin=-0.3, xmax=0.3,
+  ymin=0, xlabel={Log cost ratio, second plain session over first}, ylabel={Pairs}, ymajorgrids,
+  title={Two identical sessions}, title style={font=\small\bfseries},
+  legend to name=aalegend, legend columns=2, legend cell align=left,
+  legend style={/tikz/every even column/.append style={column sep=10pt}}]
+\addplot[fill=okblue!60, draw=black!60] table[x=mid, y=fable]{generated/data/aa-hist.dat};
+\addlegendentry{Fable host}
+\addplot[fill=okorange!80, draw=black!60, postaction={pattern=north east lines, pattern color=white}] table[x=mid, y=opus]{generated/data/aa-hist.dat};
+\addlegendentry{Opus host}
+\draw[black!70, line width=0.8pt] (axis cs:0,0) -- (axis cs:0,\pgfkeysvalueof{/pgfplots/ymax});
+\end{axis}
+\end{tikzpicture}

@@ -278,7 +278,8 @@ def check_rows():
 
 
 PATH_PATTERNS = [r"~/", r"/Users/", r"\bdocs/", r"\bevals/", r"\bsrc/", r"\bbehaviors/", r"\bgenerated/",
-                 r"\.(py|yaml|yml|json|jsonl|md|tex|dat|csv)\b"]
+                 r"[\w-]\.(py|yaml|yml|json|jsonl|md|tex|dat|csv)\b(?!\()",
+                 r"\b(?:evidence|scenarios|rows|data|confirm|model|campaign|prereg|pilot|reproduce|latency|label-audit|firstpass-repro|tests|figures|tables|sections|papers|reviews|design|holdout|dev)/(?![A-Za-z]+\()"]
 
 
 def check_paths(pdf):

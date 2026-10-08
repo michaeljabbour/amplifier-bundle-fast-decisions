@@ -1,0 +1,326 @@
+% Ported from an earlier report section (one-time conversion; edit here).
+\subsection{The paired campaigns: design}\label{vt:sec:design}
+
+\subsubsection{How the design evolved}\label{vt:sec:evolution}
+
+The first design (v1, the first design document) wanted to measure the path not taken
+\emph{inside} a live session: at a decision point, fork the session, run the other path on the same state, record
+its cost, and throw the result away. It proposed single-call forks for prepared actions, turn forks for routing,
+and a deferred launch with a ``tail correction'' to undo cache effects. A pre-flight review rejected three parts
+of it, and the second design (v2, the second design document) is what ran:
+\begin{itemize}
+  \item \textbf{Single-call forks are not a savings unit.} The probe showed that when a call is skipped, the cache
+    write it would have made simply moves to the next call (\cref{vt:sec:caching}); a one-call fork only re-derives
+    the estimate it was meant to check.
+  \item \textbf{Turn forks measure the wrong thing.} A fork that switches model in the middle of someone else's
+    history measures a switch from a foreign history, not what the policy costs in its own world.
+  \item \textbf{Power is counted in scenarios.} Cost ratios vary far more between scenarios than within one, so
+    the unit of replication had to be the scenario (\cref{vt:sec:power}).
+\end{itemize}
+v2 replaced forks with whole paired sessions, isolated by a per-session nonce rather than by timing, and treats
+cache state as an outcome to be measured, not a nuisance to be corrected.
+
+\subsubsection{Paired sessions from one frozen snapshot}
+
+The unit of comparison is a \term{pair}: one session of a routed arm and one session of the plain host
+(the \term{anchor}) on the same scenario, repetition and host. Both start from the \emph{same} frozen copy
+of the workspace and receive the \emph{same} scripted user messages, so any difference in their bills
+comes from the policy, not from the task.
+
+All arms of one scenario, repetition and host form a \term{wave}. A wave's sessions are launched within
+seconds of each other, each in its own terminal, so they share the time of day and the provider's load.
+The intended launch order was anchor, A/A, shipped, sticky, Sonnet; measured from the first session of its wave,
+the anchor started on average \StaggerAnchor\,s later, the A/A copy \StaggerAA\,s, shipped \StaggerShipped\,s (at
+most \StaggerShippedMax\,s), sticky \StaggerSticky\,s and Sonnet \StaggerSonnet\,s. The realised order varied:
+the A/A copy started before its anchor in \RvAAFirstFable\,\% of Fable waves and \RvAAFirstOpus\,\% of Opus waves.
+The A/A cost ratio shows no detectable association with start offset (\cref{vt:sec:aa}). One exception to ``same wave'': the plain-Sonnet
+control does not depend on the host, so it ran once per scenario and repetition, in the Opus wave. Its pairs with
+the Fable anchor therefore started a median \RvSonnetWaveMedianH\ hours apart (at most \RvSonnetWaveMaxH\,h), not
+within seconds. Each session carries its own
+nonce, so no arm can read another arm's cache, except the tool-definition prefix, which precedes the nonce and is
+shared (\cref{vt:sec:caching}; the tools normalization below). A per-request audit checked every
+session for cache reads it could not have written itself: a request is flagged as a \term{foreign read} when it reads
+more cached tokens than the session's own earlier writes plus the tool-prefix allowance. The shared prefix is by
+construction never foreign, so the audit tests leakage between arms beyond it, not the prefix itself.
+\AuditFlagged\ sessions were flagged (\RgForeignRequests\ foreign-read requests). Reads of the shared prefix are
+published separately: \RgCrossTokens\ tokens in all, \RgCrossShare\,\% of all cache-read tokens, non-zero in
+\RgCrossSessions\ of \NSessions\ sessions.
+
+\begin{keyidea}
+\textbf{Pairing removes most of the noise.} Two scenarios can differ in cost by a factor of ten; two arms on
+the same scenario differ far less. By comparing each routed session only with its own anchor, the
+analysis looks at the ratio within a pair, and the big differences between scenarios cancel out.
+\end{keyidea}
+
+\subsubsection{Arms and hosts}
+
+\Cref{vt:tab:arms} gives the full numbers for this part.
+
+\begin{table}[tbp]
+\centering\small
+\caption{The five arms. Every arm except the Sonnet control runs on both host models. Reasoning effort differs by
+arm: the anchor, the A/A copy and the Sonnet control leave it unset (the provider default), while routed Sonnet
+requests run at medium (\cref{vt:tab:effortmix}).}
+\label{vt:tab:arms}
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}l >{\raggedright\arraybackslash}p{0.62\textwidth}@{}}
+\toprule
+Arm & What it is, and what comparing it with the anchor tells us \\
+\midrule
+anchor & The plain host model, no routing. The baseline every other arm is compared with. \\
+aa & A second, identical anchor on a seeded \AAPct\,\% subsample. Its ratio to the anchor should be 1: its
+  spread is the run-to-run noise floor. \\
+shipped & The fast-decisions bundle as shipped (orch-default): its judge re-chooses the model (Sonnet or the
+  host) at the start of each turn; it never switched in the middle of a turn (\ShippedMidturn\ mid-turn
+  switches in \NShippedSessions\ sessions). \\
+sticky & Uses the same routing judge, but only once, on the first prompt; the session then stays on the
+  chosen model and never switches. Shipped versus sticky isolates the cost of switching. \\
+sonnet & Plain Sonnet for the whole session (``just use the cheap model''). It does not depend on the host,
+  so one run serves as the control for both hosts. \\
+\bottomrule
+\end{tabular*}
+\end{table}
+
+\paragraph{Reasoning effort, by arm} The arms did not run at the same reasoning effort (\cref{vt:tab:effortmix}). The
+plain-host anchors left effort unset, the provider default (\RgEffAnchorFable\ Fable and \RgEffAnchorOpus\ Opus main
+requests). Every routed Sonnet request, in shipped and in sticky, ran at medium. The \RvStickyHostNFable\ sticky
+sessions per host that kept the host model used the bundle's effort routing (\RgStickyHostHigh\ high,
+\RgStickyHostMedium\ medium and \RgStickyHostLow\ low requests across both hosts). The primary endpoints therefore
+compare default-effort host sessions with medium-effort routed sessions; \cref{vt:sec:effort,vt:sec:limits} discuss what
+that does to the ratios.
+
+\begin{table}[tbp]
+\centering\small
+\caption{Main-loop requests by host, arm, model and reasoning effort (``unset'' is the provider default).}
+\label{vt:tab:effortmix}
+\input{generated/tables/effort-mix.tex}
+\end{table}
+
+The two hosts are Fable 5.1, an expensive model (\cref{vt:tab:prices}), and Opus 5.5, a cheaper one with very
+cheap cache reads. The sticky judge chose Sonnet for
+\NStickySonnetOnly\ of \NStickySessions\ sticky sessions (\StickyCheap\ of \StickyDecisions\ per host,
+\StickyCheapPct\,\%) and the host for the rest. That does not make the sticky arm ``plain Sonnet'': its Sonnet
+sessions ran inside the bundle at medium reasoning effort, and made about \RvReqGapFable\,\% (Fable) and
+\RvReqGapOpus\,\% (Opus) fewer requests than a mix of plain-Sonnet and plain-host sessions in the same proportions
+would predict (\RvReqActFable\ against \RvReqPredFable\ per session on Fable; \RvReqActOpus\ against \RvReqPredOpus\ on
+Opus). \Cref{vt:sec:effort} shows why. The judge's own calls are not part of any session's cost: the sticky decision was made once by the
+harness, and the shipped arm's per-turn decisions went to a separate judge service (Jev). Both used the bundle's
+default judge, Jev; the post-hoc Cloudflare Clef judges of \cref{vt:sec:clef} were never run in the campaign. An earlier benchmark
+measured Jev at \$\JevPerMillion\ per million decisions on comparable real states; at one decision per turn
+that adds about \JudgeShippedCents\ cents to a shipped session, \JudgeShippedShare\,\% of a plain Fable
+session's cost. That estimate comes from another study and is not measured here.
+
+\subsubsection{Scenarios}
+
+There are \NScenarios\ scenarios in \NFamilies\ families: \FamPolyglot\ coding exercises from a
+multi-language benchmark (polyglot), \FamRepos\ bug fixes and features in small public repositories
+(repos), \FamMixed\ mixed coding-and-analysis tasks (mixed), and \FamKnowledge\ documentation, explanation
+and review tasks (knowledge). Each is a fixed script of \MinTurns\ to \MaxTurns\ user turns (\MeanTurns\ on
+average), identical for every arm, with automatic checks after each turn and hidden tests at the end.
+Turns are \ShortGapS\,s apart, except that \NLongGapScen\ scenarios contain \LongGapsPerScen\ pauses of
+\LongGapMin\ minutes, longer than the cache's \CacheTTLMin-minute lifetime, so expiry is part of the
+workload. The full list is in \cref{tab:scenarios}.
+
+\paragraph{The preregistered split} Before any session ran, the scenarios were split with a fixed random
+seed (\SplitSeed) into \NTrain\ \term{training} scenarios and \NTest\ \term{test} scenarios, balanced by
+family and by whether a scenario has long pauses. The savings model is fitted on training scenarios only;
+every confirmatory claim uses test scenarios only.
+
+\Cref{vt:tab:families} gives the full numbers for this part.
+
+\begin{table}[tbp]
+\centering\small
+\caption{Scenarios by family and preregistered split.}
+\label{vt:tab:families}
+\begin{tabular*}{0.7\textwidth}{@{\extracolsep{\fill}}l r r r@{}}
+\toprule
+Family & training & test & total \\
+\midrule
+polyglot & \FamPolyglotTrain & \FamPolyglotTest & \FamPolyglot \\
+repos & \FamReposTrain & \FamReposTest & \FamRepos \\
+mixed & \FamMixedTrain & \FamMixedTest & \FamMixed \\
+knowledge & \FamKnowledgeTrain & \FamKnowledgeTest & \FamKnowledge \\
+\midrule
+all & \NTrain & \NTest & \NScenarios \\
+\bottomrule
+\end{tabular*}
+\end{table}
+
+\subsubsection{Quality}
+
+A routed arm that saves money by doing worse work has not saved anything. Each turn's checks give a
+pass or fail; the \term{turn-pass fraction} is the share of a session's turns that passed. The hidden tests
+at the end give a final pass or fail. A savings claim is allowed only where quality is
+\term{non-inferior}: the 95\,\% lower bound of the mean difference in turn-pass fraction (arm minus anchor)
+must be above \NIMargin, that is, at most \NIMarginPts\ percentage points worse.
+
+\subsubsection{The quality instrument}\label{vt:sec:instrument}
+
+The turn-pass fraction is only as good as its checks. Each of the \RgNTurnsScripted\ scripted turns carries one or
+more automatic checks: \RgCheckKinds. A \code{tests} check runs the project's test suite (or the turn's tests); a
+\code{file\_regex} check looks for a pattern in a named file; \code{keyed\_facts} checks that an answer states given
+facts; \code{doc\_sections} checks that a document has the required headings. The checks were written by agents
+and then validated mechanically (the scenario validation record): every one of the
+\RgValN\ scenarios had to fail its checks on the starting workspace and pass every turn on a reference solution,
+under the memory guard. \RgValOK\ of \RgValN\ passed, in \RgValRuns\ guarded runs with \RgValKills\ resource kills
+or timeouts. The validation also looked for weak checks, ones a plausible wrong answer would pass: it found
+\RgValWeak\ in \RgValWeakScen\ scenarios (patterns that already matched the untouched file) and tightened them before
+the campaign. Three examples, one per family:
+\input{generated/tables/quality-examples.tex}
+
+The families differ in difficulty: the plain host passed \RgAnchorTPPolyglot\ of its turns on polyglot,
+\RgAnchorTPRepos\ on repos, \RgAnchorTPMixed\ on mixed and \RgAnchorTPKnowledge\ on knowledge. Turn-pass fraction
+tracks the final hidden-test outcome only moderately (\cref{vt:tab:tpfinal}): the session-level point-biserial
+correlation is \RgPbisAll\ overall, from \RgPbisRepos\ on repos to \RgPbisPolyglot\ on polyglot. The two
+measures answer different questions (did each step land, and is the end state right), which is why both are
+reported.
+
+\begin{table}[tbp]
+\centering\small
+\caption{Correlation between a session's turn-pass fraction and whether it passed the final hidden tests
+(point-biserial, all sessions), by arm and by family.}
+\label{vt:tab:tpfinal}
+\input{generated/tables/tp-final-corr.tex}
+\end{table}
+
+\subsubsection{What a session costs}
+
+Every request's tokens were priced with the fixed table in \cref{vt:tab:prices}; the recomputed cost matched
+the provider's reported cost on every session (\CostMismatch\ mismatches). One adjustment makes the
+comparison fair. A session's first request on each model carries the shared tool definitions (an allowance of
+\ToolsAllowance\ tokens). In production those tools would usually be cached already. The primary
+\term{tools-normalized} cost re-prices up to that allowance on the first request per model as a cache read; it
+changes the campaign total by \$\ToolsDeltaTotal, and every result is also reported on the raw basis
+(\cref{vt:sec:rawbasis}).
+
+In practice most first requests already found the tool definitions cached: \RvWarmTotal\ of them read the prefix
+from cache (\RvWarmReadFable\ tokens on Fable and Opus, \RvWarmReadSonnet\ on Sonnet, \RvAllowGapFable\ and \RvAllowGapSonnet\ fewer than the
+allowance, so each had a few dozen tokens re-priced, \$\RvWarmUSD\ in all). Only \RvColdTotal\ were cold and had the
+full allowance re-priced (\$\RvColdUSD). The cold ones fell mostly on anchors (\RvColdFableAnchor\ of \NStickyPerHost\ on Fable,
+\RvColdOpusAnchor\ on Opus) and on the Sonnet control (\RvColdSonnet), against \RvColdFableSticky\ to
+\RvColdOpusSticky\ for sticky (\cref{vt:tab:toolsnorm}). The cold rate did not depend on whether the anchor started
+first in its wave (Fable \RvColdFirstFable\ against \RvColdNotFirstFable; Opus \RvColdFirstOpus\ against
+\RvColdNotFirstOpus); the cause is not established. The adjustment therefore lowers the anchors' cost more than the routed arms', which \emph{raises} the routed
+ratios slightly (\cref{vt:tab:toolsratios}): it works against the Fable savings claims, not for them.
+
+The allowance is smaller than a typical first-request write: the median session wrote \RgStaticMedian\ tokens to
+cache on its first main request, against the \ToolsAllowance-token allowance. Most of that is the session's own
+context, which every session writes, warm or cold. Pricing the excess over the allowance at each request's model
+rates leaves an un-normalized cost per session of \$\RgResidFableAnchor\ for Fable anchors against
+\$\RgResidFableSticky\ for Fable sticky, and \$\RgResidOpusAnchor\ against \$\RgResidOpusSticky\ on Opus
+(\cref{vt:tab:staticresid}). Removing it from every session would move the confirmatory sticky ratios from
+\CfFableStickyPair\ to \RgResidAdjFableSticky\ (Fable) and from \CfOpusStickyPair\ to \RgResidAdjOpusSticky\ (Opus),
+and no cell by more than \RgResidShiftMax; no verdict changes. The \RgBigN\ sessions whose first request wrote more
+than \RgBigThreshold\ tokens (\RgBigAnchors\ anchors, \RgBigSonnet\ Sonnet controls, \RgBigSticky\ sticky; between
+\RgBigLow\ and \RgBigHigh\ tokens) are exactly the ones that found the shared tool prefix cold (\RgBigInCold\ of
+\RgBigN): they wrote that prefix and their own context, which gives the second mode of the first-request writes.
+
+\begin{table}[tbp]
+\centering\small
+\caption{Un-normalized static-write cost per session: the first main request's cache write beyond the
+\ToolsAllowance-token allowance, priced at the write-minus-read rate of that request's model.}
+\label{vt:tab:staticresid}
+\input{generated/tables/static-residual.tex}
+\end{table}
+
+\begin{table}[tbp]
+\centering\scriptsize
+\caption{Tools normalization by host and arm: first requests per model that found the tool prefix cold or warm, and
+the dollars moved from the write rate to the read rate.}
+\label{vt:tab:toolsnorm}
+\input{generated/tables/tools-norm.tex}
+\end{table}
+
+\begin{table}[tbp]
+\centering\small
+\caption{Confirmatory cost ratios (test split, pair reading) on the raw and the tools-normalized basis.}
+\label{vt:tab:toolsratios}
+\input{generated/tables/tools-ratios.tex}
+\end{table}
+
+\subsubsection{Hypotheses and the decision rule}
+
+The hypotheses, their thresholds, the train/test split and the decision rule were fixed in the
+preregistration. Each is tested on the test split only:
+\begin{itemize}
+  \item \textbf{H1 (Fable host):} sticky and shipped cost less than the anchor (upper end of the interval
+    below 1).
+  \item \textbf{H2 (Opus host):} routing to Sonnet does not save: sticky, shipped and Sonnet all have a
+    lower end above \HTwoLower.
+  \item \textbf{H3 (both hosts):} sticky costs no more than shipped (upper end of sticky/shipped at most
+    \HThreeUpper).
+  \item \textbf{Quality:} every savings claim has non-inferior turn-pass fraction.
+\end{itemize}
+The decision rule: on a host where H1 holds with non-inferior quality, route (preferring sticky if H3
+holds); on a host where H2 holds, do not route to Sonnet. A savings model fitted on training data must
+also pass a check on the test data: its 90\,\% prediction intervals must cover between \CovLow\ and
+\CovHigh\ of test pairs, and the measured test total must fall inside its predicted interval.
+
+\paragraph{What was fixed later} The \emph{estimator} was not in the preregistration. The confirmatory
+script, the confirmatory script (commit \code{\ConfirmSha}), was written after the data were
+collected, about \ConfirmAfterMin\ minutes after the campaign finished, when exploratory summaries over all
+scenarios (the savings-model output) already existed. It fixed the number of bootstrap
+resamples (\Boot) and the seed (\BootSeed), the pair-level quality filter, which cells count as savings
+claims, and the verdict rule, including what ``contradicted'' means. These choices are listed with the other
+clarifications in \cref{vt:sec:deviations}; the verdicts under the alternative readings are reported alongside.
+
+\paragraph{Ratios and intervals} The cost of a pair is summarized as a \term{ratio}, arm cost divided by
+anchor cost: 0.80 means 20\,\% cheaper. Ratios are averaged as a \term{geometric mean}, which treats
+``twice as expensive'' and ``half as expensive'' symmetrically. A \term{95\,\% confidence interval} gives
+the range of ratios consistent with the data. It is computed with a \term{scenario-cluster bootstrap}:
+resample whole scenarios (then repetitions) with replacement thousands of times, recompute the ratio each
+time, and take the middle 95\,\%. Resampling scenarios rather than single sessions keeps the interval
+honest about how much the conclusions depend on which tasks were chosen.
+
+\subsubsection{How big the experiment had to be}\label{vt:sec:power}
+
+Earlier data gave the spread of log cost ratios between scenarios and within a scenario. Because the
+between-scenario spread dominates, precision is bought with more \emph{scenarios}, not more repetitions.
+\Cref{vt:tab:power} shows the half-widths the design document projected; the campaign used \NScenarios\
+scenarios and \NReps\ repetitions.
+
+\begin{table}[tbp]
+\centering\small
+\caption{Projected precision of the routing ratio, from the design document (before the campaign). The
+projections assumed \PowerSA\ and \PowerSB\ scenarios; the confirmatory test split has \NTest, so its
+intervals are wider than these.}
+\label{vt:tab:power}
+\input{generated/tables/power.tex}
+\end{table}
+
+Behind that table is a variance analysis of \PowerPairs\ earlier pairs (the variance pre-analysis). For the
+shipped router on the Fable host in \CaTurns-turn sessions, the between-scenario standard deviation of the log
+ratio was \PowFableFourSB\ against \PowFableFourSW\ within a scenario; on Opus it was \PowOpusFourSB\ against
+\PowOpusFourSW. \Cref{vt:fig:power} turns these into the interval one should expect for a given number of scenarios.
+
+\begin{figure}[tbp]
+\centering
+\pgfplotslegendfromname{powerlegend}\par\smallskip
+\input{figures/v2-fig-power.tex}
+\caption{Precision improves quickly with more scenarios and then flattens. Projected 95\,\% interval half-width of the cost ratio against the number of scenarios (two repetitions
+each), from the earlier data's between- and within-scenario variance.}
+\label{vt:fig:power}
+\howtoread{Lower is more precise. Each line is one earlier configuration (host, session length). The curves fall
+quickly at first and then flatten: going from \NTest\ to \NScenarios\ scenarios roughly halves the uncertainty.
+The Fable single-turn line is high because those ratios varied a lot between tasks.}
+\end{figure}
+
+\subsubsection{The pilot}
+
+Two small screening pilots preceded the preregistration; the second ran \PilotSessions\ sessions on
+\PilotScen\ scenarios. They confirmed the plumbing (nonce isolation, cache audit, quality checks) and
+measured the A/A noise: a standard deviation of the log ratio of \PilotSDFable\ on Fable and \PilotSDOpus\
+on Opus. Their cost ratios became the hypotheses above, not findings; they are compared with the final
+numbers in \cref{vt:sec:interim}.
+
+\begin{figure}[tbp]
+\centering
+\pgfplotslegendfromname{pilotlegend}\par\smallskip
+\input{figures/v2-fig-pilot.tex}
+\caption{A five-scenario pilot found the direction of the routing effect, not its size. The second screening pilot (\PilotPairs\ pairs on \PilotScenariosN\ scenarios) against the full campaign
+(all scenarios, 95\,\% intervals), for each arm and host. The first pilot was a smoke test of the harness
+(\$\SpendPilotOne) whose rows were not packaged.}
+\label{vt:fig:pilot}
+\howtoread{Diamonds are the pilot, dots and whiskers the final result. On Fable the diamonds sit inside or near
+the whiskers; on Opus the pilot overstated the extra cost. A five-scenario pilot was good for finding the
+direction, not the size.}
+\end{figure}

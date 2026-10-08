@@ -1,0 +1,136 @@
+% Ported from an earlier report section (one-time conversion; edit here).
+\subsection{Results on the preregistered holdout \texorpdfstring{\prereg}{[preregistered]}}\label{jb:sec:holdout}
+
+The holdout run started at \HoldStarted\ UTC from a clean commit (\code{\HoldCommit}) after the
+preregistration was committed. Every arm answered every case in every repetition. Logged API spend was
+\$\HoldSpendUSD\ against a preregistered budget of \$\HoldBudgetUSD.
+
+\subsubsection{Headline numbers}
+
+\begin{table}[tbp]
+\centering\small
+\caption{Holdout \prereg, \HoldN\ cases, \HoldReps\ repetitions, policy \code{bundle-read-shortcut}.
+Same conventions as \cref{jb:tab:headline-dev}.}
+\label{jb:tab:headline-hold}
+\input{generated/jb/tables/headline-holdout.tex}
+\end{table}
+
+\Cref{jb:tab:headline-hold} pools the three repetitions. Per repetition, the client p95 ranged from \JevHoldPninetyfiveRange\,ms for Jev, \LunaHoldPninetyfiveRangeS\,s for GPT-6 Luna and \SolHoldPninetyfiveRangeS\,s for GPT-6.1 Sol; the main paper quotes these ranges.
+
+
+
+Three things stand out in \cref{jb:tab:headline-hold} and \cref{fig:accuracy}.
+\begin{enumerate}
+  \item \textbf{The hosted judges stay on top, and stay close.} Sol was right on \SolHoldAccK/\HoldN,
+    Luna on \LunaHoldAccK, Jev on \JevHoldAccK. The intervals overlap
+    (\SolHoldAccCI, \LunaHoldAccCI, \JevHoldAccCI).
+  \item \textbf{Jev made the fewest wrong automatic decisions among the fast judges.} Its majority
+    count was \JevHoldWaK\ (a yes/no case on code that returns results in completion order rather than
+    input order); Luna's was \LunaHoldWaK\ (\LunaHoldWaRange\ per repetition) and Sol's \SolHoldWaK.
+  \item \textbf{Local judges fell further on fresh cases.} The first pass's suggested offline tier,
+    tev1 0.8B, was right on \TevPtEightHoldAccK/\HoldN\ and made \TevPtEightHoldWaK\ wrong automatic
+    decisions.
+\end{enumerate}
+
+\subsubsection{Rule 1: does anything replace Jev?}\label{jb:sec:rule1}
+
+\Cref{jb:tab:rule1-hold} gives the full numbers for this part.
+
+\begin{table}[tbp]
+\centering\small
+\caption{Rule 1 on the holdout \prereg: each candidate minus Jev, with paired-bootstrap 95\,\% CIs and
+Holm-adjusted exact McNemar $p$ over the \RuleOneFamilyHold\ candidates. Bold Holm $p \le 0.05$. Gates as
+in \cref{jb:tab:rule1-dev}; all candidates also met gate (e), valid answers.}
+\label{jb:tab:rule1-hold}
+\input{generated/jb/tables/rule1-holdout.tex}
+\end{table}
+\howtoreadtable{A positive accuracy difference and a negative wrong-automatic difference favour the
+candidate. A difference only counts as real if its Holm $p$ is at most 0.05. A candidate replaces Jev
+only with a tick in all four gate columns.}
+
+No candidate replaces Jev (\NumReplacesHold\ of \RuleOneFamilyHold). The closest cases:
+\begin{itemize}
+  \item \textbf{GPT-6.1 Sol} was \SolHoldRAccDiff\ points more accurate (95\,\% CI \SolHoldRAccDiffCI),
+    Holm $p = \SolHoldRAccPHolm$: suggestive, not significant. It also fails latency (p95
+    \SolHoldPninetyfive\,ms) and cost (\SolHoldCostX$\times$ Jev).
+  \item \textbf{GPT-6 Luna} was \LunaHoldRAccDiff\ points more accurate (CI \LunaHoldRAccDiffCI), Holm
+    $p = \LunaHoldRAccPHolm$. On wrong automatic decisions it was not shown non-inferior (difference
+    \LunaHoldRWaDiff, CI \LunaHoldRWaDiffCI\ points, whose upper end exceeds $+\NIWaMarginPts$). It fails
+    latency (p95 \LunaHoldPninetyfive\,ms) and cost (\LunaHoldCostX$\times$).
+  \item \textbf{Jev with the I1 clause} was \JevClHoldRAccDiff\ points more accurate (Holm $p =
+    \JevClHoldRAccPHolm$) with the same wrong-automatic count. It passes latency and cost but not gate
+    (b). This is the cheapest candidate to watch.
+\end{itemize}
+
+\begin{caution}
+The bootstrap intervals for Luna's and Sol's accuracy advantage exclude zero, but the Holm-adjusted
+McNemar tests do not reach 0.05. These two tools answer slightly different questions, and the
+preregistration names the Holm test as the deciding one. With \HoldN\ cases, the smallest detectable gap
+is about \HoldMinDetectPts\ points (\cref{jb:sec:stats}); a real advantage of this size or smaller may
+exist and would need a larger holdout to confirm.
+\end{caution}
+
+\paragraph{Local judges versus Jev} On the holdout Jev made significantly fewer wrong automatic
+decisions than every local judge except nimble 9B (Holm $p = \NimbleHoldRWaPHolm$), and was significantly
+more accurate than every local judge except nimble 9B and tev1 4B (both Holm $p = \NimbleHoldRAccPHolm$).
+
+\subsubsection{Declared contrasts}
+
+\begin{table}[tbp]
+\centering\small
+\caption{The \HoldPairwiseFamily\ contrasts declared in the run configuration, on both splits, for
+accuracy and wrong-automatic rate. $A-B$ in percentage points; Holm correction within this family.
+Bold Holm $p \le 0.05$.}
+\label{jb:tab:pairwise}
+\input{generated/jb/tables/pairwise.tex}
+\end{table}
+
+\Cref{jb:tab:pairwise} repeats the main comparisons in the second Holm family and adds two the decision
+rule does not cover: Luna versus Sol, and each I1 arm versus its own base. no difference between Luna and Sol was detected after correction
+on both endpoints and both splits. No I1 arm differs significantly from its base on accuracy.
+
+\subsubsection{Trade-offs on the holdout}
+
+\Cref{vt:fig:jbwacov} is the holdout counterpart of \cref{jb:fig:wacov-dev}: every base judge's
+wrong-automatic rate against its coverage on the \HoldN\ preregistered cases. The hosted judges sit on
+the floor of the chart. GPT-6.1 Sol automated \SolHoldCovPct\,\% of cases with \SolHoldWaK\ wrong
+automatic decisions, Jev \JevHoldCovPct\,\% with \JevHoldWaK\ (\JevHoldWaPct\,\%), and GPT-6 Luna
+\LunaHoldCovPct\,\% with \LunaHoldWaK\ (\LunaHoldWaPct\,\%); their whiskers overlap, which is the
+picture behind the ``no difference detected'' verdicts above. The local judges form a band well above them: nimble
+9B, the local judge with the fewest wrong automatic decisions, automated \NimbleHoldCovPct\,\% but was wrong on \NimbleHoldWaK\ of those
+(\NimbleHoldWaPct\,\% of all cases), and Qwen3 8B \QwenEightHoldCovPct\,\% with \QwenEightHoldWaK\ wrong.
+\Cref{vt:fig:jbacclat} adds the latency axis: only Jev and the local models meet the
+\RuleOneMaxPninetyfive\,ms bar, and even the most accurate local model is \LocalHoldAccGap\ points less
+accurate than Jev.
+
+
+
+
+
+\subsubsection{How the cutoff changes the picture}
+
+The gate's \MinP\ threshold is one point on a curve. \Cref{jb:fig:sweep} re-scores every stored answer at
+\NumCutoffs\ certainty cutoffs (a pure cutoff, without the margin or timeout rules).
+
+\begin{figure}[tbp]
+\centering
+\input{generated/jb/figures/fig-sweep.tex}
+\caption{Raising the certainty cutoff always lowers coverage, but lowers wrong automatic actions only for judges whose confidence is informative. Threshold sweep. Left: coverage; right: wrong-automatic rate, as the certainty cutoff rises from
+\SweepMin\ to \SweepMax. Top: dev \screen; bottom: holdout \prereg. Per-case majorities over repetitions.}
+\label{jb:fig:sweep}
+\howtoread{Raising the cutoff always lowers coverage (left). What matters is how fast wrong automatic
+decisions fall (right). A judge whose right-hand line stays flat while its left-hand line drops is
+\emph{confidently} wrong: raising the bar costs coverage without buying safety. On the holdout, Jev's
+wrong-automatic line reaches zero at a cutoff of \JevHoldZeroCut\ while it still automates
+\JevHoldZeroCutCov\,\% of cases. Luna's and Sol's lines stay flat until the very top of the range,
+because their few errors are given at very high confidence.}
+\end{figure}
+
+\Cref{jb:tab:threshold} gives the full numbers for this part.
+
+\begin{table}[tbp]
+\centering\small
+\caption{Automatic / wrong automatic decisions at selected cutoffs, holdout \prereg\ (out of \HoldN).}
+\label{jb:tab:threshold}
+\input{generated/jb/tables/threshold-holdout.tex}
+\end{table}

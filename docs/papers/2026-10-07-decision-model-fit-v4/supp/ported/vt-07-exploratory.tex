@@ -1,0 +1,171 @@
+% Ported from an earlier report section (one-time conversion; edit here).
+\subsection{Exploratory results \texorpdfstring{\screen}{[screen]}}\label{vt:sec:explore}
+
+Everything in this section was not preregistered, or uses all \NScenarios\ scenarios (training and test
+together). It explains and qualifies the confirmatory results; it does not confirm anything on its own.
+
+\subsubsection{Where the cost comes from}\label{vt:sec:composition}
+
+\begin{figure}[tbp]
+\centering
+\pgfplotslegendfromname{complegendmain}\par\smallskip
+\input{figures/v2-fig-composition.tex}
+\caption{On Fable routing shrinks the largest part of the bill; on Opus it does not (main campaign). Mean cost per session, split by what was paid for (all splits, cost-valid sessions,
+tools-normalized). ``Rebuild after a switch'' is the extra paid for re-writing history to a new model's
+cache.}
+\label{vt:fig:composition}
+\howtoread{Each bar is one kind of session; its length is the average bill and its segments show what the
+bill was for. Compare the three Fable bars with each other, and the three Opus bars with each other. On
+Fable, routing shrinks the large hatched ``cache write'' segment. On Opus, routing lengthens the blue
+``cache read'' segment.}
+\end{figure}
+
+\begin{table}[tbp]
+\centering\small
+\caption{The numbers behind \cref{vt:fig:composition}: dollars per session by token class, main-loop requests per
+session, and cache-read tokens per session (millions).}
+\label{vt:tab:composition}
+{\footnotesize\setlength{\tabcolsep}{2pt}\input{generated/tables/composition.tex}}
+\end{table}
+
+\Cref{vt:fig:composition,vt:tab:composition} show why the two hosts disagree.
+\begin{itemize}
+  \item \textbf{On Fable, routing cuts the most expensive line.} A plain Fable session paid \$\CompFableAnchorWrite\
+    of its \$\CompFableAnchorTotal\ for cache writes (\WriteShareFableAnchor\,\%), and a Sonnet cache write costs
+    \SonnetFableWritePriceX\X\ a Fable one. Moving the session to Sonnet cuts that line by more than the extra reads
+    add.
+  \item \textbf{On Opus, routing makes the session longer and its reads dearer.} A sticky session on the Opus
+    host made \CompOpusStickyReq\ requests against the plain host's \CompOpusAnchorReq\
+    (\ReqRatioOpusSticky\X), read \CompOpusStickyReadTok\ million cached tokens against
+    \CompOpusAnchorReadTok\ million, and paid \SonnetOpusReadPriceX\X\ Opus's price for each read: cache
+    reads rose from \$\CompOpusAnchorRead\ to \$\CompOpusStickyRead\ per session.
+  \item \textbf{Switching adds a rebuild.} The shipped arm re-chooses its model at the start of each turn and
+    switched models \SwitchFable\ times per session on average, always between turns, in \SwitchShareFable\,\% of Fable sessions; rebuilds were \RebuildFable\,\% of its cost on
+    Fable and \RebuildOpus\,\% on Opus. Sticky never switches (\SwitchStickyFable\ switches per session),
+    so it never pays this line.
+\end{itemize}
+
+\subsubsection{By task type, pause pattern and length}\label{vt:sec:slices}
+
+\begin{figure}[tbp]
+\centering
+\pgfplotslegendfromname{savingslegendfable}\par\smallskip
+\input{figures/v2-fig-savings.tex}
+\savingspanel{fable}{Fable host}{\SavMinFable}{\SavMaxFable}\par\medskip
+\savingspanel{opus}{Opus host}{\SavMinOpus}{\SavMaxOpus}
+\caption{On Fable every task type saved money; on Opus most task types cost more. Dollars saved per 1,000 sessions by task type and arm, measured on all \NScenarios\ scenarios, with
+90\,\% scenario-bootstrap ranges. The two panels have different scales.}
+\label{vt:fig:savings}
+\howtoread{Bars to the right of the zero line are savings; bars to the left are extra costs. On Fable every
+bar is to the right. On Opus most bars are to the left, except for the short read-heavy task types (docs,
+explain), which are small and rest on \TaskExplainN\ and \TaskDocsN\ scenarios: treat them as hints, not findings.
+None of the \RvDocsTrain\ docs scenarios is in the test split, so the docs results rest on training data only.}
+\end{figure}
+
+\begin{table}[tbp]
+\centering\small
+\caption{Measured saving per 1,000 sessions (US dollars) by task type, host and arm, all splits. Ranges are in
+\cref{tab:per1000full}.}
+\label{vt:tab:per1000}
+\input{generated/tables/per1000.tex}
+\end{table}
+
+Across all tasks, per 1,000 sessions, sticky saved \$\SavFableSticky\ on Fable (90\,\% range
+\$\SavFableStickyLo--\$\SavFableStickyHi), shipped \$\SavFableShipped\ and Sonnet \$\SavFableSonnet. On Opus
+the same arms \emph{lost} \$\SavOpusSticky, \$\SavOpusShipped\ and \$\SavOpusSonnet. These dollar figures
+assume this campaign's mix of tasks and session lengths. They are mean-difference (spend) measures, not
+geometric means: for Fable sticky, \$\SavFableSticky\ per 1,000 is exactly 1,000 times the drop in mean cost from
+\$\RvSpendAnchor\ to \$\RvSpendSticky. The largest Fable sticky saving by task type is \RvBestTaskFableSticky\
+(\$\RvSavReviewFableSticky), ahead of docs (\$\RvSavDocsFableSticky). \Cref{vt:tab:tasksplit} shows how few
+scenarios some task types have, and that docs has none in the test split. \Cref{vt:tab:jointtask} sets these savings
+next to the quality differences.
+
+\begin{table}[tbp]
+\centering\small
+\caption{Scenarios by task type and preregistered split. The split was stratified by family and pause pattern, not
+by task type.}
+\label{vt:tab:tasksplit}
+\input{generated/tables/task-split.tex}
+\end{table}
+
+Long pauses and session length move the ratios less than the host does (\cref{vt:tab:slicegap,vt:tab:sliceturns}
+in the appendix). On Opus, routed sessions with two long pauses came closer to break-even (shipped
+\GapOpusShippedYes\X\ against \GapOpusShippedNo\X\ without), plausibly because the plain host also has to
+re-write its expired cache after a pause. On Fable the ratios hardly move with pauses or length.
+
+\subsubsection{Final hidden tests: a caution}\label{vt:sec:finalpass}
+
+\Cref{vt:tab:passrates} gives the full numbers for this part.
+
+\begin{table}[tbp]
+\centering\small
+\caption{Final hidden-test pass rate by arm, against the plain host on the same pairs, all splits. McNemar's
+test compares the scenarios only the anchor passed with those only the arm passed.}
+\label{vt:tab:passrates}
+{\footnotesize\setlength{\tabcolsep}{2pt}\input{generated/tables/passrates.tex}}
+\end{table}
+
+The turn-by-turn quality test is the preregistered one, and it passes. The final hidden tests tell a
+slightly less comfortable story. On Fable, each routed arm lost more scenarios that the anchor passed than
+it won: shipped \PassFableShippedAnchorOnly\ to \PassFableShippedArmOnly, sticky
+\PassFableStickyAnchorOnly\ to \PassFableStickyArmOnly, Sonnet \PassFableSonnetAnchorOnly\ to
+\PassFableSonnetArmOnly. \term{McNemar's test} asks whether such a lopsided split could be chance; here
+$p$ ranges from \PassFableMinP\ to \PassFableMaxP, so it could. With so few discordant scenarios the test has
+little power. Pooling the three routed Fable arms gives a clearer picture: they passed the final hidden tests
+\FinalPoolAll\ points less often than the plain host across all scenarios (95\,\% interval
+\FinalPoolAllCI\ points) and \FinalPoolTest\ points less often on the test scenarios (\FinalPoolTestCI).
+This is exploratory and was not preregistered, but it is a real caution: a routed deployment should watch the
+final pass rate.
+
+\subsubsection{The noise floor}\label{vt:sec:aa}
+
+The \term{A/A} arm runs the plain host twice on the same scenario. Its ratio should be 1, and its spread
+says how much two identical sessions differ by chance. The standard deviation of the A/A log ratio was about
+\AAAllSD\ per pair, or \AAAllSDSession\ per session, far smaller than the effects above (\cref{vt:tab:aa}). On
+Fable the A/A ratio was \AAFable\ (\AAFableCI). On Opus it was \AAOpus\ (\AAOpusCI): the interval excludes 1. Two identical Opus
+sessions differed by about \AAOpusPct\,\% on average, and we cannot explain why. A linear start-offset effect does not explain it: a
+regression of the A/A log ratio on the start offset between the two copies gives a slope of
+\RvAASlopeOpus\ per second on Opus (95\,\% CI \RvAASlopeOpusCI) and \RvAASlopeFable\ on Fable (\RvAASlopeFableCI),
+and at zero offset the Opus ratio is still \RvAAInterceptOpus. The A/A log ratio does track the difference in
+request counts between the two copies (correlation \RvAAReqCorrOpus\ on Opus, \RvAAReqCorrFable\ on Fable), which
+suggests run-to-run variation in how the agent works, though a harness cause is not ruled out. With two A/A intervals, one
+excluding 1 is not remarkable. If every Opus arm carried the same bias, removing it would move the Opus ratios from
+\CfOpusStickyPairTwo--\CfOpusSonnetPairTwo\ to about \OpusAdjLow--\OpusAdjHigh, with the lowest lower bound at
+\OpusAdjMinLower; the H2 verdicts would hold.
+
+\subsubsection{Interim numbers versus final}\label{vt:sec:interim}
+
+\begin{figure}[tbp]
+\centering
+\pgfplotslegendfromname{interimlegend}\par\smallskip
+\input{figures/v2-fig-interim.tex}
+\caption{The Fable estimates were right from the pilot onwards; the Opus estimates moved as evidence accumulated. Cost ratio of each routed arm as the evidence accumulated: the screening pilot, the interim dashboard
+during the run (partial training data), the final training and test splits (all cost-valid pairs) and the
+confirmatory test result (pair reading).}
+\label{vt:fig:interim}
+\howtoread{Read each line left to right. A flat line means the early numbers were already right. The Fable
+lines are nearly flat. The Opus lines jump: the pilot overstated the extra cost and the interim dashboard
+understated it.}
+\end{figure}
+
+On Fable, the pilot's ratios (sticky \PilotFableSticky, shipped \PilotFableShipped) were already close to the
+final test values (\FinalTestFableSticky, \FinalTestFableShipped). On Opus, the pilot overstated the
+penalty (sticky \PilotOpusSticky\ against \CfOpusStickyPairTwo\ in the confirmatory test) and the interim
+dashboard understated it (\InterimOpusSticky). Small samples point in the right direction here but not at the
+right size, which is why the decision waited for the preregistered test.
+
+\subsubsection{Limits of the savings model}\label{vt:sec:modellimits}
+
+The model passed its preregistered check, and that check is about \emph{pooled} accuracy: are the intervals
+right across all test pairs, and is the overall total inside its interval? It is not a check of each host and
+arm separately, and the model's structure makes per-host figures unreliable. Each arm effect and each
+task-type effect is shared by both hosts, although the data show the hosts behave very differently.
+\begin{itemize}
+  \item Across the \ModelCells\ host, task-type and arm cells, the model's point prediction lies outside the
+    measured 90\,\% range in \ModelOutside\ (\cref{tab:per1000full}).
+  \item It ranks the arms wrongly within a host. On the Fable test mix it predicts that Sonnet saves
+    \$\TestMixFableSonnetModel\ per 1,000 sessions, less than shipped (\$\TestMixFableShippedModel); the
+    measurement shows the opposite, \$\TestMixFableSonnetObs\ against \$\TestMixFableShippedObs.
+\end{itemize}
+Use the model for what it was validated for, pooled forecasts over a mix like this campaign's, and use the
+measured tables for any per-host, per-task or per-arm figure.

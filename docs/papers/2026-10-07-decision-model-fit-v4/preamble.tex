@@ -47,6 +47,7 @@
         breaklines=false,aboveskip=2pt,belowskip=2pt,xleftmargin=1em}
 \usepackage[font=small,labelfont={bf,sf},skip=5pt,justification=justified,singlelinecheck=false]{caption}
 \usepackage{float}
+\usepackage{placeins}
 \usepackage{pgfplots}
 \usepackage{pgfplotstable}
 \pgfplotsset{compat=1.18}
@@ -87,6 +88,16 @@
 \newcommand{\code}[1]{\texttt{#1}}
 \newcommand{\opt}[1]{\texttt{-{}-#1}}
 \newcommand{\X}{\ensuremath{\times}}
+\newcommand{\screen}{\mbox{\textsf{\small\color{okgray}[screen]}}}
+\newcommand{\symok}{\textcolor{okgreen}{\ding{51}}}
+\newcommand{\symbad}{\textcolor{okorange}{\ding{55}}}
+\newcommand{\symfb}{\textcolor{okgray}{$\curvearrowright$}}
+\newcommand{\vconf}{\textcolor{okgreen}{\textsf{confirmed}}}
+\newcommand{\vref}{\textcolor{okorange}{\textbf{\textsf{refuted}}}}
+\newcommand{\vrev}{\textcolor{okblue}{\textsf{revised}}}
+\newcommand{\vnew}{\textcolor{okgray}{\textsf{new}}}
+\newcommand{\pct}{\,\%}
+
 \input{generated/numbers.tex}
 \input{generated/jb/numbers.tex}
 \usepackage{xr-hyper}

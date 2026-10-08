@@ -125,10 +125,42 @@ def table(spec, head, rows, width=r"\textwidth"):
     return "\n".join(out) + "\n"
 
 
+
+
+# ---- no file paths in either PDF: describe file names in prose (scenario prompts, deviations, imported tables)
+_EXT = {"py": "a Python file", "md": "a Markdown file", "json": "a JSON record", "jsonl": "a JSON-lines log",
+        "yaml": "a YAML file", "yml": "a YAML file", "csv": "a CSV table", "tex": "a TeX file", "dat": "a data file"}
+
+
+_PHRASES = [  # exact rewrites first, so sentences read naturally
+    (r"dev/run.json and holdout/run.json", "the dev and holdout run records"),
+    (r"`paired_model.py` (PREREG constant) and `MODEL.md`", "the savings-model script (its PREREG constant) and the model description"),
+    (r"paired\_model.py (PREREG constant) and MODEL.md", "the savings-model script (its PREREG constant) and the model description"),
+    (r"paired_model.py (PREREG constant) and MODEL.md", "the savings-model script (its PREREG constant) and the model description"),
+    (r"the existing model.json", "the existing fitted model"),
+    (r"from changes.json,", "from the change log,"),
+    (r"changes.json", "the change log"),
+]
+
+
+def nopath(s: str) -> str:
+    """Replace file names and paths (anything ending in a known extension) by a plain description,
+    consuming a preceding determiner so the sentence keeps one article."""
+    for a, b in _PHRASES:
+        s = s.replace(a, b)
+    s = re.sub(r"\\(?:texttt|code|path)\{([^{}]*\.(?:py|md|jsonl|json|yaml|yml|csv|tex|dat))\}", r"\1", s)
+    return re.sub(r"(?:\b(?:[Tt]he|[Ii]ts|[Aa]n?)\s+)?(?<![\w])\.?[\w./\\-]*?[\w-]+(?:\\_[\w-]*)*\.(py|md|jsonl|json|yaml|yml|csv|tex|dat)\b(?!\()",
+                  lambda m: _EXT[m.group(1)], s)
+
 # ------------------------------------------------------------------ inputs
 
 # Part I sources: the judge-benchmark paper's own build, run on evidence extracted from its branch
 JR_SRC, JR_SHA = jb_import.run(REPO, OUT)
+for _f in (OUT / "jb" / "tables").glob("*.tex"):
+    _t = _f.read_text()
+    _n = nopath(_t)
+    if _n != _t:
+        _f.write_text(_n)
 
 CONF = json.loads((EV / "confirm/confirm.json").read_text())
 SUMM = json.loads((EV / "model/summary.json").read_text())
@@ -823,7 +855,7 @@ def tt(text):
 
 
 write(TABLES / "deviations.tex", "\\begin{enumerate}[leftmargin=1.4em]\n" +
-      "\n".join(r"\item " + tt(d) + (r" [This report treats both readings as co-primary.]" if i == 2 else "")
+      "\n".join(r"\item " + nopath(tt(d)) + (r" [This report treats both readings as co-primary.]" if i == 2 else "")
                 for i, d in enumerate(CONF["deviations"])) + "\n\\end{enumerate}\n")
 
 # ================================================================ review fixes (computed, not typed)
@@ -2137,7 +2169,7 @@ for sid, ti in (("go-say", 1), ("fastrand-explain", 4), ("schema-wrongkey", 7)):
         fam_, p_, c_ = ex_turn(sid, ti)
         exs.append(f"\\item \\textbf{{{fam_}, \\code{{{tex_escape(sid)}}} turn {ti}.}} User: ``{p_}'' Check: \\code{{{c_}}}")
 brk = lambda x: x.replace(", ", ",\\allowbreak{} ").replace("/", "/\\allowbreak{}").replace("(", "\\allowbreak{}(")
-write(TABLES / "quality-examples.tex", "{\\raggedright\n\\begin{itemize}[leftmargin=1.2em]\n" + "\n".join(brk(e) for e in exs)
+write(TABLES / "quality-examples.tex", "{\\raggedright\n\\begin{itemize}[leftmargin=1.2em]\n" + "\n".join(brk(nopath(e)) for e in exs)
       + "\n\\end{itemize}\n\\par}\n")
 
 
@@ -2683,7 +2715,7 @@ if s1 is not None:
         ("Medium effort on Opus: saving not demonstrated", f"{hu(H['H4']['estimate']['gm_ratio'], 3)}\\X\\ ({ci2(H['H4']['estimate']['gm_ratio_ci95'])})", "S1, H4", "preregistered"),
         ("Noninferiority not established for review/explain on Sonnet", f"lower bound {hu(H['H7']['estimate']['d_turn_pass_ci95'][0], 3)}", "S1, H7", "preregistered"),
         ("Live decide-once equals its prediction", f"{hu(H['H6']['estimate']['gm_ratio'], 3)}\\X\\ (90\\,\\% {ci2(H['H6']['estimate']['gm_ratio_ci90'])})", "S1, H6", "preregistered"),
-        ("Effort switches rewrite the cache", f"\\AoEcX{{}}\\X\\ cache writes", "main-v1 re-analysis", "exploratory"),
+        ("Effort switches rewrite the cache", f"\\CwWithinX{{}}\\X\\ cache writes vs the plain host", "main-v1 re-analysis", "exploratory"),
         ("Keyword proxy keeps quality at a cost", f"\\KpProxyRatio{{}}\\X, turn-pass \\KpProxyDtp{{}}", "S1 replay", "exploratory"),
     ]
     write(TABLES / "findings.tex", table(r">{\raggedright\arraybackslash}p{0.30\textwidth} >{\raggedright\arraybackslash}p{0.25\textwidth} l >{\raggedright\arraybackslash}p{0.17\textwidth}",
@@ -2982,6 +3014,13 @@ M("CwWithinAnchor", thousands(round(_bp["anchor|unchanged|within_turn"]["mean_ca
 M("CwWithinChanged", thousands(round(_bp["sticky_host|changed|within_turn"]["mean_cache_write"])))
 M("CwWithinX", hu(_bp["sticky_host|changed|within_turn"]["mean_cache_write"] / _bp["anchor|unchanged|within_turn"]["mean_cache_write"], 1))
 M("CwWithinAnchorN", thousands(_bp["anchor|unchanged|within_turn"]["n"]))
+for _pos, _key in (("Within", "within_turn"), ("Short", "turn_first_short_gap"), ("Long", "turn_first_long_gap")):
+    _an, _ch = _bp[f"anchor|unchanged|{_key}"], _bp[f"sticky_host|changed|{_key}"]
+    M(f"Cw{_pos}AnchorVal", thousands(round(_an["mean_cache_write"])))
+    M(f"Cw{_pos}ChangedVal", thousands(round(_ch["mean_cache_write"])))
+    M(f"Cw{_pos}AnchorNn", thousands(_an["n"]))
+    M(f"Cw{_pos}ChangedNn", thousands(_ch["n"]))
+    M(f"Cw{_pos}Ratio", hu(_ch["mean_cache_write"] / _an["mean_cache_write"], 2))
 M("CwLongChanged", thousands(round(_bp["sticky_host|changed|turn_first_long_gap"]["mean_cache_write"])))
 M("CwLongAnchor", thousands(round(_bp["anchor|unchanged|turn_first_long_gap"]["mean_cache_write"])))
 M("CwLongN", _bp["sticky_host|changed|turn_first_long_gap"]["n"])

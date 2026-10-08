@@ -1,4 +1,4 @@
-\section{The main paired campaign and the effort follow-ups}\label{sec:campaign}
+\subsection{The main paired campaign and the effort follow-ups}\label{sec:campaign}
 
 \paragraph{Design} The main campaign ran \NSessions\ sessions on \NScenarios\ scripted scenarios (\MinTurns--\MaxTurns\
 turns) on both hosts, in paired waves: every arm of a scenario started together from one frozen workspace, each with
@@ -26,9 +26,14 @@ both with no detectable turn-pass loss. On Opus, medium effort did not demonstra
 
 \paragraph{Pricing every decide-once policy on the existing sessions} Because a decide-once policy's session equals
 either the plain-host session or the routed session of the same scenario, every such policy can be priced from the
-main campaign without new runs (\cref{fig:a0,tab:a0}) \expl. On Fable the one-line rule was at least as cheap as Jev;
-on Opus every routing policy cost more. The same re-analysis found the cache-rewrite cost of effort switches shown in
-the main paper.
+main campaign without new runs (\cref{fig:a0,tab:a0}) \expl. On Fable, Jev routed \AoFableJevRoute\,\% of sessions
+and cost \AoFableJev\X\ the plain host. The simple rule R* (route unless the workspace has more than \AoScopeFiles\
+files) routed \AoFableRstarRoute\,\% and cost \AoFableRstar\X\ at the same turn-pass difference (\AoFableRstarDtp).
+Jev's ``keep on host'' calls bought nothing: in every scenario-rep where Jev kept the host, the routed session scored
+the same. Jev and R* disagreed on only \AoJevRstarN\ of \AoJevRstarUnits\ scenario-reps, which bounds how much they can
+differ. On Opus the price gate, which never routes there, sat at the oracle (regret \$\AoOpusShippedRegret\ per 1,000
+sessions), while ungated Jev would have cost \AoOpusJev\X. The same re-analysis found the cache-rewrite cost of effort
+switches shown in the main paper (\cref{sec:dtrace}).
 
 \begin{figure}[tbp]
 \centering
