@@ -1,0 +1,23 @@
+\subsection{Review history and responses}\label{sec:review}
+
+The study was reviewed in three rounds. Rounds one and two (an external reviewer) concerned the main campaign: the
+estimator written after the data, the quality filter, effort as a confound and the measurement of quality; every
+point was answered in the companion technical report, and two follow-up effort studies were run in response. Round
+three (an independent reviewer) reran the S1, main-campaign and effort analyses from the published rows, found them
+reproducible, and asked for focused corrections, all applied:
+\begin{enumerate}[leftmargin=1.6em]
+  \item \textbf{Row labels reversed in four figures.} Fixed; every bar and forest chart now prints each row's value
+    beside it, and a build-failing check compares every rendered row label and value with its source table.
+  \item \textbf{Statistical wording.} H7 reads ``non-inferiority not established''; judge accuracy reads ``no accuracy
+    difference was detected after the preregistered correction'' (not equivalence; H2 remains a true equivalence
+    test); H3 reads ``cost-equivalent within the preregistered $\pm$5\,\% margin''; Opus effort reads ``medium effort
+    did not demonstrate a saving''.
+  \item \textbf{Holdout and telemetry descriptions.} The S1 panel is described as disjoint from the main campaign and
+    smoke-tested before preregistration, with the repair account (\cref{sec:s1}); the telemetry window is stated in days.
+  \item \textbf{S1 methods.} Quality, cost and the composed policies are defined (\cref{sec:s1}), with H6 as the
+    empirical check of the cost reconstruction and separate cost and quality denominators.
+  \item \textbf{Effort scale.} A cross-study log-cost share was replaced by the direct follow-up result.
+  \item \textbf{Measurement and rebuild.} The tool-definition normalization is defined and sized (\NormShareMain\,\% in
+    the main campaign, \NormShareSone\,\% in S1), and every input read from version control is pinned to a commit.
+  \item \textbf{Related work, editorial points and author block.} Applied.
+\end{enumerate}

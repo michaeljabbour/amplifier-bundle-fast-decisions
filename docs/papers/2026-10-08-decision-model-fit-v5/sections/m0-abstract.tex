@@ -1,0 +1,18 @@
+\begin{center}\begin{minipage}{0.93\textwidth}\small
+\noindent\textbf{Abstract.} A \emph{system-1 decision model} answers an AI agent's small typed questions (which model
+should run this session, may this file be read, is this action safe) in a fraction of a second. We measured where such
+models fit in an agent harness, using judge benchmarks, paired multi-turn sessions (one study preregistered on
+\SOnePanelN\ fresh scenarios) and \ObDays\ days of production telemetry. Jev is a hosted typed-decision service.
+Five takeaways:
+\begin{enumerate}[leftmargin=1.4em, itemsep=0pt, topsep=2pt]
+  \item \textbf{\TkTitle{One}}: \TkHead{One} \TkLabel{One}. Dearer models were 8--11 points more accurate, which the
+    corrected tests could not confirm; OpenAI's Decisions API matched or beat Jev at \OaPriceXLo--\OaPriceXHi\X\ the price.
+  \item \textbf{\TkTitle{Two}}: \TkHead{Two} \TkLabel{Two}; about \KpProxyTwo\X\ on Fable with the review safeguard we
+    recommend (replayed).
+  \item \textbf{\TkTitle{Three}}: \TkHead{Three} \TkLabel{Three}; a one-line rule matched the decision model at session
+    start.
+  \item \textbf{\TkTitle{Four}}: \TkHead{Four} \TkLabel{Four}.
+  \item \textbf{\TkTitle{Five}}: \TkHead{Five} \TkLabel{Five}.
+\end{enumerate}
+Session results use one provider's models, scripted tasks and list prices.
+\end{minipage}\end{center}

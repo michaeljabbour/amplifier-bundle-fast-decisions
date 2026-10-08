@@ -1,0 +1,21 @@
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}l l r r r r r r r@{}}
+\toprule
+Split & Judge & correct & wrong auto & automatic & p50 ms & p95 ms & $>$\ClTimeoutS\,s & \$/1M \\
+\midrule
+dev & Clef & 85/90 & 1 & 69 & 422 & 725 & 0/540 & 51.4 \\
+ & Clef-Flash & 77/90 & 7 & 70 & 321 & 825 & 6/540 & 19.3 \\
+ & Jev 1.13 (in-run) & 86/90 & 2 & 68 & 152 & 231 & 0/540 & 15.9 \\
+\addlinespace[2pt]
+holdout & Clef & 57/63 & 3 & 46 & 391 & 722 & 0/378 & 65.2 \\
+ & Clef-Flash & 50/63 & 6 & 46 & 328 & 665 & 3/378 & 24.5 \\
+ & Jev 1.13 (in-run) & 56/63 & 1 & 40 & 169 & 231 & 0/378 & 18.4 \\
+\addlinespace[2pt]
+trace-dev & Clef & 17/21 & 2 & 9 & 429 & 663 & 0/126 & 188.2 \\
+ & Clef-Flash & 12/21 & 1 & 5 & 291 & 527 & 0/126 & 70.6 \\
+ & Jev 1.13 (in-run) & 16/21 & 3 & 14 & 160 & 226 & 0/126 & 43.2 \\
+\addlinespace[2pt]
+trace-holdout & Clef & 26/42 & 2 & 6 & 418 & 738 & 0/252 & 203.4 \\
+ & Clef-Flash & 21/42 & 3 & 6 & 337 & 600 & 1/252 & 76.3 \\
+ & Jev 1.13 (in-run) & 26/42 & 5 & 15 & 169 & 252 & 0/252 & 46.1 \\
+\bottomrule
+\end{tabular*}

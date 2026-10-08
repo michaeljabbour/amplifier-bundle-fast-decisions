@@ -1,0 +1,9 @@
+% Main-loop requests per session (box: quartiles, line: median, whiskers: 5th-95th percentile).
+\begin{tikzpicture}
+\begin{axis}[benchmark, scale only axis, width=10.5cm, height=5.6cm, xmin=0, xmajorgrids,
+  ytick={1,...,\ReqBoxN}, yticklabels/.expanded={\ReqBoxLabels},
+  xlabel={Requests per session}, title={How many requests a session made}, title style={font=\small\bfseries},
+  boxplot/draw direction=x, every axis plot/.append style={line width=0.9pt}]
+\input{generated/tables/requests-box.tex}
+\end{axis}
+\end{tikzpicture}

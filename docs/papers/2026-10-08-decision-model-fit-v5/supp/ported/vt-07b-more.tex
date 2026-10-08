@@ -1,0 +1,180 @@
+% Ported from an earlier report section (one-time conversion; edit here).
+\subsection{More explorations of the campaign data \texorpdfstring{\screen}{[screen]}}\label{vt:sec:more}
+
+Everything in this section is exploratory: it uses all \NScenarios\ scenarios, was not preregistered, and is
+meant to show \emph{how} the costs arise. It uses \PerTurnNFmt\ turn rows: the \NTurns\ turn rows of the campaign minus the \RvKilledTurns\ turns of the
+memory-killed session and \RvNSkips\ final turns that were skipped in sessions that otherwise stayed cost-valid
+(\RvSkipList). Each of those two sessions was billed for one turn fewer than its partner, a negligible pair bias.
+
+\subsubsection{How cost accumulates over a session}
+
+\begin{figure}[tbp]
+\centering
+\pgfplotslegendfromname{perturnlegend}\par\smallskip
+\input{figures/v2-fig-perturn.tex}
+\caption{On Fable the routed arms are cheaper at every turn; on Opus they cost more at every turn. Mean cost of each turn by turn index, per arm and host. Later turns are averaged over fewer scenarios,
+because scenarios have \MinTurns\ to \MaxTurns\ turns.}
+\label{vt:fig:perturn}
+\howtoread{Each line is one arm. Turn 1 is expensive for everyone (a cold cache); later turns are cheaper but
+grow as the history grows. On Fable the routed lines stay well below the plain host at every turn; on Opus they
+sit above it.}
+\end{figure}
+
+On the Fable host the first turn alone was \TurnOneShareFable\,\% of a plain session's cost on average.
+\Cref{vt:fig:turncomp} shows what each turn of a plain-host session paid for.
+
+\begin{figure}[tbp]
+\centering
+\pgfplotslegendfromname{turncomplegend}\par\smallskip
+\input{figures/v2-fig-turncomp.tex}
+\caption{Turn 1 is mostly cache writes; later turns are mostly cache reads. What each turn of a plain-host session paid for, by turn index (mean dollars per token class).}
+\label{vt:fig:turncomp}
+\howtoread{Turn 1 is mostly cache writes (hatched): the whole prompt is new. Later turns are dominated by cache
+reads (blue) as the history is re-read each time, and the writes shrink to the new part of the conversation.
+Fable's writes and output are expensive; Opus's reads are cheap.}
+\end{figure}
+
+\subsubsection{Long pauses and the cache}
+
+A pause longer than the cache lifetime should force the next request to write the whole history again.
+\Cref{vt:fig:gapwrites} confirms it: after a \LongGapMin-minute pause, a plain Fable session's first request wrote
+\GapWriteFableLong\ tokens on average, against \GapWriteFableShort\ after a \ShortGapS-second pause
+(\GapWriteFableX\X; \GapWriteOpusX\X\ on Opus).
+
+\begin{figure}[tbp]
+\centering
+\pgfplotslegendfromname{gaplegend}\par\smallskip
+\input{figures/v2-fig-gapwrites.tex}
+\caption{After a long pause the first request rewrites the history on every arm and host. Cache-write tokens on the first request of a turn, after a short pause and after a long pause (turns 2
+onwards), per arm and host.}
+\label{vt:fig:gapwrites}
+\howtoread{Each row has two bars. The hatched bar (after a long pause) is several times longer in every row:
+the expired history is written again, on any model.}
+\end{figure}
+
+\subsubsection{When the shipped arm switched}
+
+The shipped arm re-chooses its model at the start of each turn. Its \SwitchTotal\ switches were all at turn
+boundaries; \SwitchTurnTwoPct\,\% of them led into turn 2 (\cref{vt:fig:switch}). Each switch cost about
+\RebuildPerSwitchCents\ cents of rebuild on average.
+
+\begin{figure}[tbp]
+\centering
+\pgfplotslegendfromname{switchlegend}\par\smallskip
+\input{figures/v2-fig-switch.tex}
+\caption{The shipped router's model switches are spread over the whole session. Shipped arm: number of model switches leading into each turn, by host.}
+\label{vt:fig:switch}
+\howtoread{Each pair of bars is one turn. Switches are spread over the whole session rather than concentrated
+at the start; every one of them re-writes the history to the other model's cache.}
+\end{figure}
+
+
+\subsubsection{Scenario by scenario}
+
+Averaging hides how uneven the saving is. Most scenarios saved money on the Fable host, and the expensive ones
+tended to save the most; \ScNegative\ of \ScN\ scenarios cost more with sticky routing on average.
+\Cref{vt:fig:scenario} shows each scenario once.
+
+\begin{figure}[tbp]
+\centering
+\pgfplotslegendfromname{scenariolegend}\par\smallskip
+\input{figures/v2-fig-scenario.tex}
+\caption{Most scenarios saved money on Fable, and expensive scenarios tended to save more. Scenario by scenario: the mean plain Fable cost against the mean saving of the sticky arm (Fable host). The three
+scenarios where sticky cost the most extra are labelled.}
+\label{vt:fig:scenario}
+\howtoread{Points above the dashed line saved money. Most scenarios did, and expensive scenarios tended to save
+more. \ScNegative\ of \ScN\ scenarios cost more on average; the labelled ones are the worst three.}
+\end{figure}
+
+
+\subsubsection{The noise floor in detail}
+
+The A/A pairs show how far two identical sessions drift apart. \Cref{vt:fig:aahist} shows the whole distribution
+behind the summary in \cref{vt:sec:aa}: most pairs fall within a few per cent, a handful differ by up to a quarter, and
+the Opus distribution sits slightly to the right of zero, a bias we cannot explain (\cref{vt:sec:aa}).
+
+\begin{figure}[tbp]
+\centering
+\pgfplotslegendfromname{aalegend}\par\smallskip
+\input{figures/v2-fig-aahist.tex}
+\caption{Two identical sessions differ by chance; this spread is the noise floor. Distribution of the log cost ratio between two identical plain-host sessions (A/A), by host.}
+\label{vt:fig:aahist}
+\howtoread{A perfectly repeatable system would put every bar at zero. The spread is the noise floor; the Opus
+bars lean slightly to the right, the small bias discussed in \cref{vt:sec:aa}.}
+\end{figure}
+
+
+\subsubsection{Quality by scenario family, and savings next to quality}\label{vt:sec:joint}
+
+\Cref{vt:tab:qualityfamily} gives the turn-pass difference by family; \cref{vt:tab:jointfamily,vt:tab:jointtask} put each
+cell's saving per 1,000 sessions (as in \cref{vt:tab:per1000}) next to its turn-pass difference. The family with the
+largest Fable sticky saving, knowledge, also has the largest quality loss: \RvKnowFableSticky\ (95\,\% CI
+\RvKnowFableStickyCI), below the \NIMargin\ margin. Inside knowledge the losses come from the explain and review
+scenarios. This is a family effect, not a general rule that bigger savings cost quality: across scenarios, the rank
+correlation between saving and turn-pass difference for Fable sticky is \RvSpearman.
+
+\begin{table}[tbp]
+\centering\small
+\caption{Mean difference in turn-pass fraction (arm minus plain host) by scenario family, all splits. Negative
+means the arm passed fewer scripted turns.}
+\label{vt:tab:qualityfamily}
+\input{generated/tables/quality-family.tex}
+\end{table}
+
+\begin{table}[tbp]
+\centering\scriptsize
+\caption{Savings and quality together, by family: saving per 1,000 sessions (US dollars) / mean turn-pass
+difference, all splits. $\dagger$: the mean difference is below the \NIMargin\ margin.}
+\label{vt:tab:jointfamily}
+\input{generated/tables/joint-family.tex}
+\end{table}
+
+\begin{table}[tbp]
+\centering\scriptsize
+\caption{Savings and quality together, by task type (same layout as \cref{vt:tab:jointfamily}). Docs has no test-split
+scenario (\cref{vt:tab:tasksplit}).}
+\label{vt:tab:jointtask}
+\input{generated/tables/joint-task.tex}
+\end{table}
+
+\begin{table}[tbp]
+\centering\small
+\caption{Fable sticky by task type, all splits, with 95\,\% scenario-cluster bootstrap intervals on the saving per
+1,000 sessions (US dollars) and on the turn-pass difference. $\dagger$: below the \NIMargin\ margin.}
+\label{vt:tab:taskfable}
+\input{generated/tables/task-fable-sticky.tex}
+\end{table}
+
+
+\subsubsection{Requests per session}
+
+Sessions on Sonnet needed more main-loop requests for the same scripted work than plain-host sessions did, and
+that volume is part of why routing cost more on the Opus host. The sticky arm made fewer requests than its mix of
+Sonnet and host sessions would suggest (\cref{vt:sec:effort}). \Cref{vt:fig:requests} shows the spread.
+
+\begin{figure}[tbp]
+\centering
+\input{figures/v2-fig-requests.tex}
+\caption{Sonnet-heavy sessions made more requests for the same scripted work. Main-loop requests per session by kind of session: box from the 25th to the 75th percentile, line at
+the median, whiskers from the 5th to the 95th percentile.}
+\label{vt:fig:requests}
+\howtoread{Boxes further right made more requests for the same scripted work. Sonnet-heavy sessions sit to the
+right of the plain Opus sessions, which is part of why routing cost more on Opus.}
+\end{figure}
+
+
+\subsubsection{Session length}
+
+Within the \MinTurns\ to \MaxTurns\ scripted turns of this campaign, session length moved the cost ratios little (\cref{vt:fig:band}).
+On Fable the saving held at every length; on Opus the longer sessions came slightly closer to break-even.
+
+\begin{figure}[tbp]
+\centering
+\pgfplotslegendfromname{bandlegend}\par\smallskip
+\input{figures/v2-fig-band.tex}
+\caption{The routing ratio barely depended on scripted session length. Cost ratio by scripted session length, all splits, with 95\,\% intervals.}
+\label{vt:fig:band}
+\howtoread{Flat rows mean the ratio does not depend on session length within 8--16 turns. Longer sessions moved
+the Opus ratios slightly toward 1; on Fable the saving held at every length.}
+\end{figure}
+

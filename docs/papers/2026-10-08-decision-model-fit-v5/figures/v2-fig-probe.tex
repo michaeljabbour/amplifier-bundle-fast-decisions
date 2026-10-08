@@ -1,0 +1,14 @@
+% Cache-semantics probe: tokens written and read by each probe request (thousands).
+\begin{tikzpicture}
+\begin{axis}[benchmark, ybar, bar width=6pt, scale only axis, width=12cm, height=4.6cm, ymin=0, ymax=18,
+  xmin=-0.6, xmax=\ProbeRows.6, xtick={0,...,\ProbeRows}, xticklabel={P\pgfmathparse{int(\tick+1)}\pgfmathresult},
+  ylabel={Tokens (thousands)}, ymajorgrids, title={What each probe request paid for}, title style={font=\small\bfseries},
+  legend to name=probelegend, legend columns=2, legend cell align=left,
+  legend style={/tikz/every even column/.append style={column sep=10pt}}]
+\addplot[fill=okorange!80, draw=black!60, postaction={pattern=north east lines, pattern color=white}]
+  table[x=idx, y=written]{generated/data/probe.dat};
+\addlegendentry{written to cache (expensive)}
+\addplot[fill=okblue!45, draw=black!60] table[x=idx, y=read]{generated/data/probe.dat};
+\addlegendentry{read from cache (cheap)}
+\end{axis}
+\end{tikzpicture}

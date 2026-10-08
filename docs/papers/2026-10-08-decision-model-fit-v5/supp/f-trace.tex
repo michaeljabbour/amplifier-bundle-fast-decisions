@@ -1,0 +1,25 @@
+\subsection{The numbers behind the main paper's telemetry section}\label{sec:ftrace}
+
+\Cref{tab:telemetrynums} collects the telemetry figures quoted in the main paper's Section~\ref{M-sec:telemetry} and Figure~\ref{M-fig:latency} \expl.
+
+\begin{table}[tbp]
+\centering\small
+\caption{Decisions are fast, and real usage routes and switches far less than the lab. Telemetry figures behind the
+main paper's Section~\ref{M-sec:telemetry}, from one owner's harness over \ObDays\ days \expl.}
+\label{tab:telemetrynums}
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}l l@{}}
+\toprule
+Measure & Value \\
+\midrule
+Jev session-start decision latency, p50 / p95 & \ObJevPfifty\,ms / \ObJevPninetyfive\,ms \\
+Local Qwen3 0.6B decision latency, p50 / p95 & \ObQwenPfifty\,ms / \ObQwenPninetyfive\,ms \\
+Host model call latency, p50 / p95 & \ObHostPfifty\,s / \ObHostPninetyfive\,s \\
+Jev faster than a host call, at p50 / p95 & \ObJevHostXFifty\X\ / \ObJevHostXNinetyfive\X \\
+Sessions kept on the host by the workspace-size gate (production) & \ObStScopePct\,\% \\
+Sessions Jev routed, of those it judged: production / test / main campaign & \ObJevRouteProd\,\% / \ObJevRouteTest\,\% / \AoFableJevRoute\,\% \\
+Effort changes: production / test requests & \ObEffSwitchProd\ of \ObEffReqProd\ / \ObEffSwitchTest\ of \ObEffReqTest \\
+Proposal matched the host's next action: production / test & \ObProdRate\,\% / \ObTestRate\,\% \\
+Production sessions hosted on Fable & \ObFableProdSessions \\
+\bottomrule
+\end{tabular*}
+\end{table}

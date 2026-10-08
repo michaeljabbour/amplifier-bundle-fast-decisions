@@ -1,0 +1,133 @@
+% Ported from an earlier report section (one-time conversion; edit here).
+\subsection{The effort confound \texorpdfstring{\screen}{[screen]}}\label{vt:sec:effort}
+
+An external reviewer asked the question this campaign should have asked itself: when the sticky router chose Sonnet,
+was its session the same as the plain-Sonnet control? It was not. Every routed Sonnet main request ran at
+\emph{medium} reasoning effort (\RvEffMediumSticky\ of \RvEffStickyTotal\ requests in the sticky sessions that chose
+Sonnet), because the bundle's composed configuration sets that start effort. The plain-Sonnet control sets no effort
+(\RvEffNoneControl\ of \RvEffControlTotal\ requests), which the design document describes as the provider default,
+high. So the comparison ``routed versus plain Sonnet'' also compares two effort levels.
+
+\Cref{vt:tab:effort} gives the full numbers for this part.
+
+\begin{table}[tbp]
+\centering\small
+\caption{Sticky sessions that chose Sonnet against the plain-Sonnet control on the same scenario and repetition
+(geometric-mean cost ratio, 95\,\% scenario-cluster bootstrap intervals). Exploratory.}
+\label{vt:tab:effort}
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}l r r r r@{}}
+\toprule
+ & \multicolumn{2}{c}{All scenarios} & \multicolumn{2}{c}{Test split} \\
+\cmidrule(lr){2-3}\cmidrule(l){4-5}
+Host & sessions & cost ratio & sessions & cost ratio \\
+\midrule
+Fable & \RvEffFableAllN & \RvEffFableAll\ (\RvEffFableAllCI) & \RvEffFableTestN & \RvEffFableTest\ (\RvEffFableTestCI) \\
+Opus & \RvEffOpusAllN & \RvEffOpusAll\ (\RvEffOpusAllCI) & \RvEffOpusTestN & \RvEffOpusTest\ (\RvEffOpusTestCI) \\
+\bottomrule
+\end{tabular*}
+\end{table}
+
+\paragraph{What the medium-effort sessions did differently} Against the control on the same scenarios, the sticky
+sessions that ran on Sonnet made about \RvEffReqFable\,\% fewer requests on Fable (\RvEffReqOpus\,\% on Opus),
+produced about \RvEffOutFable\,\% fewer output tokens (\RvEffOutOpus\,\%) and finished about \RvEffTimeFable\,\%
+faster (\RvEffTimeOpus\,\%). Quality showed no detectable difference: turn-pass fraction moved by \RvEffDtpFable\
+on Fable (95\,\% CI \RvEffDtpFableCI) and \RvEffDtpOpus\ on Opus (\RvEffDtpOpusCI). The sessions were not using the
+read shortcut; the difference is the effort setting, possibly together with the bundle's own context, which this
+data cannot separate.
+
+\paragraph{Two further corrections}
+\begin{itemize}
+  \item \textbf{The control ran in the Opus waves only.} Because it does not depend on the host, the plain-Sonnet
+    control ran once per scenario and repetition, alongside the Opus sessions. Fable sessions and their Sonnet
+    control started a median \RvSonnetWaveMedianH\ hours apart (at most \RvSonnetWaveMaxH\,h). The Opus result,
+    with the control in the same wave, is about the same size, so timing is not what drives the gap.
+  \item \textbf{Sticky sessions that kept the host cost more than the plain host.} The \RvStickyHostNFable\ sticky
+    sessions per host that stayed on the host model cost \RvStickyHostFable\X\ the plain host on Fable and
+    \RvStickyHostOpus\X\ on Opus. On Fable, sticky-on-Sonnet cost \RvEffVsAnchorFable\X\ the plain host where the
+    control cost \RvCtlVsAnchorFable\X\ on the same scenarios; the dearer host-kept sessions offset most of that
+    difference, which is why sticky and plain Sonnet look alike overall. Because those host-kept sessions ran the
+    host near its default effort mix, \RvStickyHostFable\X\ and \RvStickyHostOpus\X\ are a near-effort-matched estimate
+    of the bundle's own overhead on the host, about \RgOverheadFable--\RgOverheadOpus\,\%. With \RvStickyHostNFable\
+    sessions per host and an approximate effort match, this is an indication, not a finding.
+\end{itemize}
+
+\subsubsection{Follow-up: plain Sonnet at medium versus default effort \texorpdfstring{[preregistered, provenance-limited]}{[preregistered, provenance-limited]}}\label{vt:sec:effortfollow}
+
+To separate the effort setting from the routing, a preregistered, provenance-limited follow-up (effort-control-v1) ran plain Sonnet
+twice on the \EcScen\ test scenarios, \EcReps\ repetitions each: once at the provider's default effort and once at
+medium effort, nothing else changed (all \RgEcMainMedium\ of \RgEcMainTotal\ main requests of the medium arm ran at
+medium; its \RgEcNonMainDefault\ default-effort requests are all background, not main-loop). Each pair started together from the same frozen workspace with separate cache
+nonces, so this comparison is concurrent. Intervals come from \EcResamples\ scenario-cluster resamples (seed
+\EcSeed). The preregistered hypothesis (medium is cheaper, with non-inferior turn-pass fraction) was \EcHE.
+
+\Cref{vt:tab:effortfollow} gives the full numbers for this part.
+
+\begin{table}[tbp]
+\centering\small
+\caption{Effort-control follow-up (evidence package in \cref{tab:evidence}). Cost rows are
+geometric-mean ratios of tools-normalized session cost; below 1 means the first arm is cheaper.}
+\label{vt:tab:effortfollow}
+\input{generated/tables/effort-control.tex}
+\end{table}
+
+\paragraph{Result} Medium effort cost \EcRatio\X\ the default (95\,\% CI \EcCI), about \EcCutPct\,\% cheaper, and
+was cheaper in \EcCheaperPairs\ of \EcPairs\ pairs. Turn-pass fraction moved by \EcQual\ (\EcQualCI): \EcQualVerdict\
+at the \NIMarginPts-point margin. An exploratory comparison of medium plain Sonnet with the main-campaign sticky
+sessions that ran on Sonnet (also at medium effort) gives \EcSecRatio\ (\EcSecCI, \EcSecN\ scenarios). Those
+sessions ran on different dates, so this second comparison is not concurrent and has no decision rule. Read the
+other way round, sticky-on-Sonnet cost about \EcSecGapPct\,\% more than medium plain Sonnet; that gap is within what
+bundle behaviour or timing could produce.
+
+\paragraph{Provenance caveat} The follow-up's schedule and plan were created \EcScheduleBefore\ \emph{before} the
+preregistration was committed (\code{\EcPreregSha}), and the first analysed session started \EcFirstAfter\ after it.
+The design file and the analysis script were first committed in that same commit, so the evidence package cannot
+prove that the working-tree copies used to build the schedule match the committed ones. No outcome data from the
+analysed sessions existed before the commit. The follow-up cost \$\EcSpend\ (including a \$\EcPreflight\ preflight).
+
+\begin{keyidea}
+The effort setting alone explains most of the gap between sticky-on-Sonnet and plain Sonnet: in a concurrent test,
+medium effort cost \EcRatio\X\ the default. On Fable~5.1 at the \cref{vt:tab:prices} prices, the saving comes from
+running the session on Sonnet at medium effort. On the Sonnet sessions the router's extra machinery did not help: sticky-on-Sonnet cost about \EcSecGapPct\,\% more
+than plain Sonnet at medium effort (\EcSecRatio\ the other way round; exploratory, not concurrent), and the
+\RvStickyHostNFable\ sessions per host that kept the host cost \RvStickyHostFableTwo\X\ (Fable) and
+\RvStickyHostOpusTwo\X\ (Opus) the plain host. This campaign shows no benefit of this router beyond the decision to use
+Sonnet. The finding also applies to anyone running plain Sonnet:
+medium effort cut cost by about \EcCutPct\,\% with no detectable turn-pass loss on these \EcScen\ scenarios (\RvDocsTest\ docs, \RvExplainTest\ explain, \RvReviewTest\ review); the main campaign
+hints at a loss on docs, explain and review work (sticky-on-Sonnet at medium minus the default-effort control:
+\RvKTDtp\ [\RvKTDtpCI] on those \RvKTN\ scenarios against \RvRestDtp\ [\RvRestDtpCI] on the rest; post hoc, and
+confounded with the bundle's context) that the follow-up is too small to settle.
+\end{keyidea}
+
+\subsubsection{Follow-up: plain Fable at medium versus default effort \texorpdfstring{[preregistered]}{[preregistered]}}\label{vt:sec:effortfable}
+
+The round-2 review asked how the host itself responds to effort. A second preregistered follow-up
+(effort-control-fable-v1) ran plain Fable~5.1 twice on the \EcScen\ test scenarios, \EcReps\ repetitions each, at the
+provider default and at medium effort, concurrently, with the same design and \EcResamples\ scenario-cluster resamples
+(seed \EcSeed). This time the preregistration was committed (\code{\EfPreregSha}) before the schedule was created
+(\EfScheduleAfter\ later); a throwaway feasibility schedule and a two-session mechanism check made before the commit
+are disclosed in its provenance record.
+
+\Cref{vt:tab:effortfable} gives the full numbers for this part.
+
+\begin{table}[tbp]
+\centering\small
+\caption{Fable effort follow-up (evidence package in \cref{tab:evidence}). Cost rows are
+geometric-mean ratios of tools-normalized session cost; below 1 means the first arm is cheaper.}
+\label{vt:tab:effortfable}
+{\footnotesize\setlength{\tabcolsep}{2pt}\input{generated/tables/effort-fable.tex}}
+\end{table}
+
+\paragraph{Result} Plain Fable at medium effort cost \EfRatio\X\ the default (95\,\% CI \EfCI; \EfValid\ cost-valid of
+\EfPairs\ pairs), about \EfCutPct\,\% cheaper. Turn-pass fraction moved by \EfQual\ (\EfQualCI), non-inferior, and the
+final hidden tests passed in both arms in \EfFinalBoth\ pairs, only at medium in \EfFinalMed\ and only at default in
+\EfFinalDef. The preregistered hypothesis was supported. Two sessions in the default arm were flagged and are explained
+in the evidence (the flag log): one anchor read \EfSurplusTokens\ more cache tokens than the audit could account
+for, worth about half a cent, and one anchor was stopped by the memory guard when the agent's own verification script
+ran away. Excluding the flagged pair gives \EfStrict\ (\EfStrictCI). The follow-up cost \$\EfSpend.
+
+\paragraph{What it replaces} The round-2 extrapolation from the Sonnet follow-up is now a measurement. Fable's own
+effort effect, $\ln \EfRatio / \ln \RgFabStickyPair$, is about \EfShare\,\% of the log saving of sticky routing on
+Fable, not the \RgEffShareFable\,\% extrapolated. Keeping Fable and lowering its effort leaves most of the saving on the
+table: exploratory and not concurrent, Fable at medium cost \EfVsSticky\X\ the main campaign's Fable sticky sessions
+(\EfVsStickyCI), so Sonnet-at-medium sticky is about \EfStickyVsMedium\X\ of Fable-at-medium, and \EfVsAnchor\X\ the
+main campaign's Fable anchors (\EfVsAnchorCI). How Opus responds to effort is still unmeasured.

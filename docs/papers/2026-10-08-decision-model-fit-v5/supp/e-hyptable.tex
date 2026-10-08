@@ -1,0 +1,27 @@
+\subsection{The side-effect interventions at a glance}\label{sec:ehyp}
+
+\Cref{tab:ehyp} states the three interventions against wrong automatic actions with side effects in plain words. I1 and
+I2 were tested on the preregistered holdout; I3 on the development split (a screen).
+
+\begin{table}[tbp]
+\centering\footnotesize
+\caption{The deterministic guard removed every side-effect error; the prompt clause and the yes/no gate were not
+confirmed overall.}
+\label{tab:ehyp}
+\begin{tabularx}{\textwidth}{@{}l >{\raggedright\arraybackslash}p{0.2\textwidth} >{\raggedright\arraybackslash}p{0.17\textwidth}
+  >{\raggedright\arraybackslash}p{0.22\textwidth} >{\raggedright\arraybackslash}p{0.1\textwidth} >{\raggedright\arraybackslash}X@{}}
+\toprule
+ & Question & Threshold & Result & Verdict & Meaning \\
+\midrule
+I1 & Does a one-sentence risk clause in the prompt stop side-effect actions? & fewer targeted errors, no accuracy loss &
+  \IOneHoldBefore\ to \IOneHoldAfter\ targeted errors; \IOneHoldNArmConfirmed\ of \IOneHoldNApplicable\ judges \prereg &
+  \IOneHoldConfirmed & Helps some judges; not a guarantee. \\
+I2 & Does a deterministic guard on irreversible verbs stop them? & fewer targeted errors, no accuracy loss &
+  \ITwoHoldBefore\ to \ITwoHoldAfter\ for \ITwoHoldNApplicable\ judges; coverage cost \ITwoHoldCovCostRange\ points
+  \prereg & \ITwoHoldConfirmed & Ship the guard. \\
+I3 & Does gating yes/no answers stop them? & fewer targeted errors, no accuracy loss & \IThreeDevBefore\ to
+  \IThreeDevAfter; \IThreeDevNArmConfirmed\ of \IThreeDevNApplicable\ judges; coverage cost \IThreeDevCovCostRange\ points
+  \screen & \IThreeDevConfirmed & Too costly in coverage to ship. \\
+\bottomrule
+\end{tabularx}
+\end{table}

@@ -1,0 +1,112 @@
+% Shared preamble for the main paper and the supplement.
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{libertinus}
+\usepackage{libertinust1math}
+\usepackage[scaled=0.85]{beramono}
+\usepackage[letterpaper,textwidth=6.1in,top=1in,bottom=1in,footskip=0.45in]{geometry}
+\usepackage{microtype}
+\input{glyphtounicode}\pdfgentounicode=1
+\usepackage{parskip}
+\usepackage{titlesec}
+\titleformat*{\section}{\large\sffamily\bfseries\color{black!85}}
+\titleformat*{\subsection}{\normalsize\sffamily\bfseries\color{black!85}}
+\titleformat{\paragraph}[runin]{\normalsize\sffamily\bfseries}{}{0pt}{}[.]
+\titlespacing*{\section}{0pt}{2.0ex plus 1ex minus .2ex}{0.8ex plus .2ex}
+\titlespacing*{\subsection}{0pt}{1.6ex plus 1ex minus .2ex}{0.5ex plus .2ex}
+\titlespacing*{\paragraph}{0pt}{0.8ex plus .4ex}{0.6em}
+\usepackage{needspace}
+\usepackage{etoolbox}
+\preto\section{\needspace{6\baselineskip}}
+\preto\subsection{\needspace{7\baselineskip}}
+\preto\paragraph{\needspace{2\baselineskip}}
+\widowpenalty=10000 \clubpenalty=10000 \displaywidowpenalty=10000
+\renewcommand{\topfraction}{0.9}\renewcommand{\bottomfraction}{0.6}
+\renewcommand{\textfraction}{0.1}\renewcommand{\floatpagefraction}{0.75}
+\setcounter{topnumber}{3}\setcounter{bottomnumber}{2}\setcounter{totalnumber}{4}
+\usepackage{fancyhdr}
+\pagestyle{fancy}\fancyhf{}\fancyfoot[C]{\footnotesize\sffamily\thepage}
+\renewcommand{\headrulewidth}{0pt}
+\fancypagestyle{plain}{\fancyhf{}\fancyfoot[C]{\footnotesize\sffamily\thepage}\renewcommand{\headrulewidth}{0pt}}
+\usepackage[table]{xcolor}
+\definecolor{okblue}{HTML}{0072B2}
+\definecolor{okorange}{HTML}{D55E00}
+\definecolor{okgreen}{HTML}{009E73}
+\definecolor{okgray}{HTML}{8A8A85}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs,array,tabularx,xltabular,multirow}
+\usepackage{graphicx}
+\usepackage[export]{adjustbox}
+\usepackage{pifont}
+\usepackage[inline]{enumitem}
+\setlist{itemsep=2pt,topsep=4pt}
+\usepackage{siunitx}
+\sisetup{group-separator={,},group-digits=integer,group-minimum-digits=4}
+\usepackage{listings}
+\lstset{basicstyle=\ttfamily\small,columns=fullflexible,keepspaces=true,frame=none,
+        breaklines=false,aboveskip=2pt,belowskip=2pt,xleftmargin=1em}
+\usepackage[font=small,labelfont={bf,sf},skip=5pt,justification=justified,singlelinecheck=false]{caption}
+\usepackage{float}
+\usepackage{placeins}
+\usepackage{pgfplots}
+\usepackage{pgfplotstable}
+\pgfplotsset{compat=1.18}
+\usepgfplotslibrary{groupplots,statistics}
+\usetikzlibrary{patterns,plotmarks,calc,arrows.meta,positioning,decorations.pathreplacing}
+\tikzset{
+  scatterlabel/.style={font=\scriptsize, inner sep=2pt, outer sep=0pt, fill=white, fill opacity=0.85, text opacity=1},
+  scatterlabelmulti/.style={align=left, font=\scriptsize\linespread{1.15}\selectfont},
+  leader/.style={okgray, line width=0.5pt},
+}
+\pgfplotsset{
+  benchmark/.style={
+    tick label style={font=\small}, label style={font=\small},
+    legend style={font=\small, draw=okgray!60, fill=white, fill opacity=0.9, text opacity=1},
+    grid style={okgray!25}, major grid style={okgray!25},
+    axis line style={black!70}, every axis plot/.append style={line width=0.9pt},
+  },
+}
+\usepackage[most]{tcolorbox}
+\tcbset{fdbox/.style={enhanced, breakable=false, boxrule=0pt, leftrule=2.5pt, arc=0pt, outer arc=0pt,
+  left=7pt, right=7pt, top=4pt, bottom=4pt, before skip=6pt, after skip=6pt,
+  fonttitle=\sffamily\bfseries\small, attach title to upper, after title={.\ }}}
+\newtcolorbox{keyidea}[1][]{fdbox, colback=okblue!6, colframe=okblue, coltitle=okblue!70!black, title={Key idea}, #1}
+\newtcolorbox{caution}[1][]{fdbox, colback=okorange!6, colframe=okorange, coltitle=okorange!75!black, title={Read with care}, #1}
+\newtcolorbox{casecard}[1]{fdbox, colback=okgreen!6, colframe=okgreen, coltitle=okgreen!60!black, title={#1}}
+\newtcolorbox{processnote}[1]{fdbox, colback=black!4, colframe=okgray, coltitle=black!75, title={#1}}
+% "How to read it" notes: justified even inside \centering floats
+\newcommand{\howtoread}[1]{\par\smallskip{\small\leftskip=0pt\rightskip=0pt\parfillskip=0pt plus 1fil\noindent
+  {\sffamily\bfseries How to read it.}\ #1\par}}
+\newcommand{\howtoreadtable}[1]{\howtoread{#1}}
+\newcommand{\prereg}{\mbox{\textsf{\small\color{okblue}[preregistered]}}}
+\newcommand{\posthoc}{\mbox{\textsf{\small\color{okgray}[post hoc]}}}
+\newcommand{\confpost}{\mbox{\textsf{\small\color{okblue}[confirmatory; estimator post hoc]}}}
+\newcommand{\expl}{\mbox{\textsf{\small\color{okgray}[exploratory]}}}
+\hyphenation{pre-reg-is-tered equi-va-lence}
+\newcommand{\ok}{\textcolor{okgreen}{\ding{51}}}
+\newcommand{\no}{\textcolor{okorange}{\ding{55}}}
+\newcommand{\term}[1]{\emph{#1}}
+\newcommand{\code}[1]{\texttt{#1}}
+\newcommand{\opt}[1]{\texttt{-{}-#1}}
+\newcommand{\X}{\ensuremath{\times}}
+\newcommand{\screen}{\mbox{\textsf{\small\color{okgray}[screen]}}}
+\newcommand{\symok}{\textcolor{okgreen}{\ding{51}}}
+\newcommand{\symbad}{\textcolor{okorange}{\ding{55}}}
+\newcommand{\symfb}{\textcolor{okgray}{$\curvearrowright$}}
+\newcommand{\vconf}{\textcolor{okgreen}{\textsf{confirmed}}}
+\newcommand{\vref}{\textcolor{okorange}{\textbf{\textsf{refuted}}}}
+\newcommand{\vrev}{\textcolor{okblue}{\textsf{revised}}}
+\newcommand{\vnew}{\textcolor{okgray}{\textsf{new}}}
+\newcommand{\pct}{\,\%}
+% v5: the five takeaways come from one source (build_assets.py TAKEAWAYS -> \Tk<Key>Title/Head/Label)
+\newcommand{\TkTitle}[1]{\csname Tk#1Title\endcsname}
+\newcommand{\TkHead}[1]{\csname Tk#1Head\endcsname}
+\newcommand{\TkLabel}[1]{\textsf{\small\color{okblue!70!black}[\csname Tk#1Label\endcsname]}}
+\newtcolorbox{claimbox}[1][]{fdbox, colback=okblue!8, colframe=okblue!80!black, coltitle=okblue!70!black, title={Claim}, #1}
+
+\input{generated/numbers.tex}
+\input{generated/jb/numbers.tex}
+\usepackage{xr-hyper}
+\usepackage{hyperref}
+\usepackage{bookmark}
+\usepackage[nameinlink,capitalise,noabbrev]{cleveref}

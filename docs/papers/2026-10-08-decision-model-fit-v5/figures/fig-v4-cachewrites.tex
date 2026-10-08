@@ -1,0 +1,15 @@
+% Mean cache-write tokens per request: plain host (never switches) vs request after an effort change.
+\begin{tikzpicture}
+\begin{axis}[benchmark, xbar, bar width=6pt, scale only axis, width=8.4cm, height=4.0cm, xmin=0, xmax=80, xmajorgrids,
+  ymin=-0.6, ymax=2.6, ytick={0,1,2}, yticklabels from table={generated/data/v4-cachewrites.dat}{label},
+  y tick label style={font=\small}, xlabel={Mean cache-write tokens per request (thousands)},
+  legend to name=v4cwlegend, legend columns=2, legend cell align=left,
+  legend style={/tikz/every even column/.append style={column sep=10pt}}]
+\addplot[bar shift=5pt, fill=okgray!55, draw=black!60, nodes near coords, point meta=explicit symbolic,
+  nodes near coords style={font=\scriptsize, fill=white, fill opacity=0.85, text opacity=1, inner sep=1pt, text=black!80}] table[meta=av, x=anchor, y=y]{generated/data/v4-cachewrites.dat};
+\addlegendentry{plain host, never switches}
+\addplot[bar shift=-5pt, fill=okorange!80, draw=black!60, postaction={pattern=north east lines, pattern color=white}, nodes near coords,
+  point meta=explicit symbolic, nodes near coords style={font=\scriptsize, fill=white, fill opacity=0.85, text opacity=1, inner sep=1pt, text=black!80}] table[meta=v, x=changed, y=y]{generated/data/v4-cachewrites.dat};
+\addlegendentry{after an effort change}
+\end{axis}
+\end{tikzpicture}

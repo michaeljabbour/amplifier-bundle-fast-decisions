@@ -1,0 +1,40 @@
+% Ported from an earlier report section (one-time conversion; edit here).
+\subsection{Reproducing the judge benchmark}\label{jb:sec:repro}
+
+\paragraph{Evidence} Everything is in its evidence package (\cref{tab:evidence}). Each split
+directory holds the case manifest (the cases and their hash), the run record (commit, arms, prices,
+determinism settings, host load per arm block and the Decisions API probe), the request log
+(every request and answer: \DevRequestsLogged\ rows for dev, \HoldRequestsLogged\ for the holdout) and
+the summary record (every metric, contrast and decision). Separate parts of the package hold the first pass
+and its three reruns, the blind label reviews and the latency study;
+the change log the claim-by-claim comparison with the first pass.
+
+\paragraph{Runs} The dev run used commit \code{\DevCommit} (working tree \DevDirty) from \DevStarted\ to
+\DevEnded\ UTC; the holdout used commit \code{\HoldCommit} (working tree \HoldDirty) from \HoldStarted\ to
+\HoldEnded\ UTC, both with Ollama \HoldOllama\ on an \HoldCPUs-core Apple M5 Max. Logged API spend was
+\$\DevSpendUSD\ (dev), \$\HoldSpendUSD\ (holdout) and \$\LatencySpendUSD\ (latency study),
+\$\LoggedSpendTotal\ in total.
+
+\paragraph{Follow-up evidence} The evidence of the real-decision benchmark is in the directory
+its evidence package (\cref{tab:evidence}) (the same file layout per split, plus
+the usefulness record and the post hoc trace analysis), with its preregistration, final
+labels, case pool and findings in the repository. Its holdout ran from commit
+\code{\TrCommit}; API spend was \$\TrSpendHold\ (holdout), \$\TrSpendDev\ (dev) and \$\TrSpendSmoke\
+(adapter smoke test). The caching re-analysis is in its evidence package (\cref{tab:evidence})
+(the results record, the pairs table, the sessions table); it made no model calls, and regenerating it
+needs local session logs that are not committed.
+
+\paragraph{Replaying the numbers} Summaries are pure functions of the request logs: the repository test
+the judge replay test recomputes every committed summary record from its request log: every count, label and
+key exactly, and every float to within $10^{-9}$ relative, because platform math libraries differ in the
+last digit. The judge runner has three modes: a dev run with three repetitions, a holdout run under a fixed spending cap, and a replay mode that recomputes every summary from a committed request log without any model call.
+The holdout command refuses to run unless the preregistration and the cases are committed and unmodified.
+
+\paragraph{This document} The source of this report lives in
+the repository. Running \code{make} there runs
+the asset build script, which reads only the evidence files above and writes every number
+(the numbers file), table (the generated tables) and plotted datum
+(the plotted data), then builds the PDF with \code{latexmk}. No number in the text is typed by hand.
+The script also re-scores every stored answer with its own copy of the bundle gate and checks it against
+the committed summaries for every arm and repetition, so the per-case tables in
+\cref{jb:sec:worked,jb:app:cases} agree with the aggregates.

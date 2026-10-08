@@ -1,0 +1,27 @@
+[
+ {
+  "key": "One",
+  "title": "Jev is the cheapest accurate decision model we tested",
+  "label": "preregistered; challenger post hoc"
+ },
+ {
+  "key": "Two",
+  "title": "Route to a cheaper model only when the host is much dearer once caching is counted",
+  "label": "preregistered, replicated"
+ },
+ {
+  "key": "Three",
+  "title": "Configure model and effort once per session",
+  "label": "preregistered criterion; cache expiry exploratory"
+ },
+ {
+  "key": "Four",
+  "title": "Guard risky actions with a deterministic rule",
+  "label": "preregistered; editable criteria not measured"
+ },
+ {
+  "key": "Five",
+  "title": "Use telemetry for latency and usage, not accuracy",
+  "label": "exploratory, one owner"
+ }
+]

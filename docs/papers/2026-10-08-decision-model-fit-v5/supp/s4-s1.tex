@@ -1,0 +1,86 @@
+\subsection{Design, verdicts and how the run went}\label{sec:s1}
+
+S1 tested the configurations frozen from the main campaign on \SOnePanelN\ scenarios disjoint from it, smoke-tested
+before preregistration, with both hosts, two repetitions and a deterministic rule for choosing each host's
+configuration. This section gives every preregistered verdict and the figures behind the main paper's S1 numbers.
+
+\paragraph{How the panel was prepared} Before the preregistration was committed, one plain-Sonnet smoke session ran on
+each of the \SmokeN\ scenarios (\$\SmokeUSD). It found prompt or grader defects in \SmokeFixed\ scenarios: prompts that
+did not state what a check required, and checks that rejected correct answers. These were repaired; genuine agent
+mistakes were left as they were; every scenario was then revalidated mechanically (the starting workspace fails, the
+reference passes, wrong variants fail). The smoke results enter no hypothesis and are not pooled with S1.
+
+\begin{casecard}{S1 methods in brief}
+\textbf{Quality.} Each scripted turn carries automated checks (tests, file patterns, required facts or document
+sections); the \term{turn-pass fraction} is the share of a session's turns whose checks passed, and a final-state check
+on the hidden tests is reported as additional evidence. The graders were validated before the run: the starting
+workspace must fail, the reference solution must pass every turn, and plausible wrong answers must fail.
+Non-inferiority means the 95\,\% lower bound of the turn-pass difference is above \NIMargin, that is, no worse than the
+specified \NIMarginPts-point margin. These are claims about these automated checks, not about human judgement of, for
+example, the quality of a code review or an explanation.
+
+\textbf{Cost.} The primary cost is the tools-normalized list-price cost of each session, plus estimated decider charges
+where a decider runs. The normalization reprices the first shared tool-definition prefix from the cache-write to the
+cache-read rate; it changed the accepted sessions' recomputed cost by \NormShareMain\,\% in main-v1 and \NormShareSone\,\%
+in S1 (data dictionary in the evidence package).
+
+\textbf{Composed policies.} S1 executed pinned-host, pinned-Sonnet and shipped-policy sessions. H1 and H2 evaluate
+decide-once policies by selecting the corresponding pinned outcome for each scenario and repetition: the rule or recorded
+Jev decision determines which session contributes its cost and quality. These policies therefore reuse executed outcomes
+rather than running a separate session for every configuration. Intervals resample whole scenarios. H6 separately
+compares live shipped sessions with their matched reconstructions, providing an empirical check of this cost
+decomposition (not of every quality property of every reconstructed policy).
+\end{casecard}
+\input{generated/s1-section.tex}
+\ifnum\SOnePending=0
+S1 ran \SOneSessions\ sessions on \SOneScen\ scenarios. Table~\ref{tab:s1hyp} lists the verdicts; in plain words:
+\begin{itemize}
+  \item \textbf{H1 (Fable value), \SHOneVerdict.} The frozen Fable configuration cost \SHOneRatio\X\ plain Fable (95\,\% CI
+    \SHOneCI) with turn-pass \SHOneDtp\ (\SHOneDtpCI). The saving is real, but smaller than predicted: the frozen
+    prediction from main-v1 was \SPredRatio\ (\SPredCI), and the observed ratio lies above that interval.
+  \item \textbf{H2 (decision model against a rule), \SHTwoVerdict.} Letting Jev choose the session's model and letting
+    the one-line rule R* choose it were equivalent: \SHTwoRatio\X\ (90\,\% CI \SHTwoCINinety), turn-pass \SHTwoDtp. They
+    disagreed on only \SHTwoDisc\ of \SHTwoReps\ scenario-reps. The preregistered decision follows: ship the simpler rule
+    R*, with no external call and no consent needed; Jev becomes an opt-in decider.
+  \item \textbf{H3 (bundle overhead), \SHThreeVerdict.} The shipped bundle on Opus cost \SHThreeRatio\X\ plain Opus (90\,\%
+    CI \SHThreeCINinety): cost-equivalent within the preregistered $\pm$5\,\% margin. On Fable, the bundle with the host pinned cost \SHThreeBRatio\X\ (descriptive).
+  \item \textbf{H4 (Opus at medium effort), \SHFourVerdict.} Opus at medium cost \SHFourRatio\X\ its default (95\,\% CI
+    \SHFourCI): medium effort did not demonstrate a saving, unlike Sonnet (\EcRatio\X) and Fable (\EfRatio\X).
+  \item \textbf{H5 (routing on Opus), \SHFiveVerdict.} Routing to Sonnet still lost on Opus: \SHFiveRatio\X\ (\SHFiveCI),
+    on fresh scenarios and without the effort-switch artefact.
+  \item \textbf{H6 (live equals predicted), \SHSixVerdict.} Live decide-once sessions cost what the decomposition predicted
+    (\SHSixRatio\X, 90\,\% CI \SHSixCINinety).
+  \item \textbf{H7 (review and explain on Sonnet), \SHSevenVerdict.} On the \SHSevenQualN\ review and explain scenarios
+    (\SHSevenN\ for cost, after the gate-failed scenario is excluded), the turn-pass lower bound for Sonnet against the host was \SHSevenDtpLow, below the \NIMargin\ margin: non-inferiority was not
+    established (the interval also includes zero, so a loss is not shown either). The preregistered
+    rule therefore keeps these task types on the host (\code{keep\_on\_host: [review, explain]}).
+\end{itemize}
+
+\paragraph{What the freeze rule chose} On Fable the rule picked the configuration (\SFreezeFableRatio\X)
+\begin{center}\small\code{\SFreezeFable}\end{center}
+not the preregistered
+\begin{center}\small\code{\SFreezeFablePrereg}\end{center} That makes it \emph{selected on holdout}: it must replicate in a follow-up study before it
+ships. It also conflicts with H7, which keeps review and explain on the host. What ships for Fable until a replication study confirms the choice is
+therefore the preregistered configuration plus \code{keep\_on\_host: [review, explain]}, applied through a keyword proxy
+(main paper, Section~\ref{M-sec:recs}). On Opus no candidate qualified, so
+Opus keeps the shipped defaults: no routing, default effort.
+
+\begin{keyidea}
+The decision model's start-of-session choice was matched by a one-line rule on these hosts and prices. Where the money
+is, routing on Fable and never on Opus, price arithmetic and a rule decide it. The value of a system-1 model is not in
+this decision.
+\end{keyidea}
+
+\begin{processnote}{Process note: how the S1 run went}
+\raggedright The study spent \$\SSpend. \SGateFail\ Fable sessions of one scenario
+(a code-review scenario) were served partly by Opus, most likely the provider's fallback (an inference); the preregistered rule
+excluded them from cost, so Fable cost contrasts use \SHOneN\ scenarios. The stop rule for gate failures was not followed
+to the letter, because the gate is evaluated when rows are extracted, not live; this is a disclosed deviation. A Forge
+outage made \SInfraAttempts\ of \SAttempts\ wave attempts (\SInfraPct\,\%) fail on infrastructure; every failed wave was
+rerun whole. The budget cap was raised from \$\SBudgetOrig\ to \$\SBudgetFinal\ during the run, though the final spend
+stayed under the original cap, and concurrency changed several times. The A/A copies differed in turn-pass by
+\SNoiseOpusDtp\ on Opus (\SNoiseN\ pairs), so small quality differences cannot be interpreted. Rerunning the analysis
+without the flagged scenarios changed no verdict and no freeze choice.
+\end{processnote}
+
+\input{supp/s4b-s1figs}

@@ -1,0 +1,12 @@
+% Routing cost ratio per host across the studies (replication view).
+\begin{tikzpicture}
+\begin{axis}[benchmark, xmode=log, log ticks with fixed point, xtick={0.5,0.6,0.8,1,1.2,1.5,1.8}, xmin=0.42, xmax=1.95,
+  scale only axis, width=8.5cm, height=5.6cm, xmajorgrids, ymin=-0.6, ymax=9.0, ytick={\CumTicks},
+  yticklabels/.expanded={\CumLabels}, y tick label style={font=\footnotesize},
+  xlabel={Cost ratio, routed to Sonnet / plain host (log)},  legend to name=cumlegend, legend columns=1, legend cell align=left]
+\draw[black!70, line width=0.8pt] (axis cs:1,-0.6) -- (axis cs:1,8.6);
+\addplot[nodes near coords, point meta=explicit symbolic, nodes near coords style={font=\scriptsize, fill=white, fill opacity=0.85, text opacity=1, inner sep=1pt, anchor=south, yshift=2.5pt, text=black!80}, only marks, mark=*, mark size=2.4pt, color=okblue, error bars/.cd, x dir=both, x explicit,
+  error bar style={line width=1pt}] table[meta=v, x=r, y=y, x error minus=rm, x error plus=rp]{generated/data/cumulative.dat};
+\addlegendentry{geometric-mean cost ratio, 95\,\% scenario-cluster CI}
+\end{axis}
+\end{tikzpicture}

@@ -1,0 +1,26 @@
+\subsection{The judge benchmark's decision rules at a glance}\label{sec:bhyp}
+
+\Cref{tab:bhyp} states the judge benchmark's preregistered decision rules in plain words, with their thresholds, results
+and meaning. Accuracy differences are paired against Jev on the constructed holdout (\HoldN\ cases, \HoldReps\
+repetitions); Holm-adjusted $p$ values correct for the preregistered family.
+
+\begin{table}[tbp]
+\centering\footnotesize
+\caption{No challenger met the rule to replace Jev, and no judge met the usefulness rule on real read decisions.}
+\label{tab:bhyp}
+\begin{tabularx}{\textwidth}{@{}l >{\raggedright\arraybackslash}p{0.2\textwidth} >{\raggedright\arraybackslash}p{0.2\textwidth}
+  >{\raggedright\arraybackslash}p{0.2\textwidth} >{\raggedright\arraybackslash}p{0.08\textwidth} >{\raggedright\arraybackslash}X@{}}
+\toprule
+ & Question & Threshold & Result & Verdict & Meaning \\
+\midrule
+Rule 1 & Should a challenger replace Jev as the default judge? & better accuracy or fewer misfires (Holm $p<0.05$), p95
+  within 500\,ms, at most twice the cost & Luna \LunaHoldRAccDiff\ points (\LunaHoldRAccDiffCI), $p$ = \LunaHoldRAccPHolm;
+  Sol \SolHoldRAccDiff\ (\SolHoldRAccDiffCI), $p$ = \SolHoldRAccPHolm & not met & Keep Jev; the accuracy gap was not
+  confirmed. \\
+Rule 2 & Is any local judge safe enough to act alone offline? & the preregistered safety bar under the strictest policy
+  & no local judge met it (\cref{jb:tab:rule2}) & not met & No offline tier. \\
+Usefulness & Does any judge pay off on real read decisions? & at least \TrUsefulMinReads\ correct automatic reads with
+  few misfires & \TrNUseful\ of \NumBase\ judges & not met & Keep the host fallback on real reads. \\
+\bottomrule
+\end{tabularx}
+\end{table}

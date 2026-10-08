@@ -1,0 +1,20 @@
+% S1: per-scenario paired cost ratios, sorted (log y).
+\begin{tikzpicture}
+\begin{axis}[benchmark, name=f, ymode=log, log ticks with fixed point, ytick={0.4,0.6,0.8,1,1.5,2}, ymin=0.33, ymax=2.4,
+  scale only axis, width=5.6cm, height=5cm, ymajorgrids, xmin=0, xmax=61, xlabel={Scenario (sorted)},
+  ylabel={Cost ratio (log)}, title={Fable: frozen config / plain}, title style={font=\small\bfseries},
+  legend to name=pslegend, legend columns=2, legend cell align=left,
+  legend style={/tikz/every even column/.append style={column sep=10pt}}]
+\draw[black!70, line width=0.8pt] (axis cs:0,1) -- (axis cs:61,1);
+\addplot[only marks, mark=*, mark size=1.6pt, color=okblue] table[x=x, y=r]{generated/data/perscen-fable.dat};
+\addlegendentry{one scenario (mean of its reps)}
+\addplot[only marks, mark=triangle*, mark size=1.9pt, color=okorange] coordinates {(-10,1)};
+\addlegendentry{Opus panel}
+\end{axis}
+\begin{axis}[benchmark, at={(f.south east)}, xshift=1.2cm, ymode=log, log ticks with fixed point,
+  ytick={0.4,0.6,0.8,1,1.5,2}, ymin=0.33, ymax=2.4, scale only axis, width=5.6cm, height=5cm, ymajorgrids,
+  xmin=0, xmax=61, xlabel={Scenario (sorted)}, title={Opus: Sonnet / plain}, title style={font=\small\bfseries}]
+\draw[black!70, line width=0.8pt] (axis cs:0,1) -- (axis cs:61,1);
+\addplot[only marks, mark=triangle*, mark size=1.9pt, color=okorange] table[x=x, y=r]{generated/data/perscen-opus.dat};
+\end{axis}
+\end{tikzpicture}

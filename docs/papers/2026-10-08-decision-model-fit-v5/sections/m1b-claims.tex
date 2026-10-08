@@ -1,0 +1,25 @@
+\begin{table}[tbp]
+\centering\footnotesize
+\caption{Claims and evidence. One row per takeaway: the claim, its key numbers with 95\,\% intervals, the study and its
+size, the strength of the evidence, and where the supplement gives the details.}
+\label{tab:claims}
+\begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}p{0.2\textwidth} >{\raggedright\arraybackslash}X
+  >{\raggedright\arraybackslash}p{0.19\textwidth} >{\raggedright\arraybackslash}p{0.14\textwidth} l@{}}
+\toprule
+Claim & Key numbers (95\,\% CI) & Study, $n$ & Strength & Details \\
+\midrule
+1.~\TkTitle{One} & Jev \JevHoldAccK/\HoldN\ correct (\JevHoldAccCI) at \$\JevHoldCost\ per million; Luna
+  \LunaHoldRAccDiff\ points (\LunaHoldRAccDiffCI), Holm $p$ = \LunaHoldRAccPHolm & Constructed holdout, \HoldN\ cases
+  $\times$ \HoldReps & \TkLabel{One} & \S\ref{sec:choose}; \TkSupp{sec:b} \\
+2.~\TkTitle{Two} & Fable \SHOneRatio\X\ (\SHOneCI); Opus \SHFiveRatio\X\ (\SHFiveCI); model only on Fable
+  \CfFableSonnetArm\X\ (\CfFableSonnetArmCIThree) & Holdout study, \SOnePanelN\ scenarios (\SHOneN\ usable for Fable); main campaign & \TkLabel{Two} & \S\ref{sec:routing}; \TkSupp{sec:c}, \TkSupp{sec:g} \\
+3.~\TkTitle{Three} & Decide once \HThreeFableArmTwo\X\ (\HThreeFableArmCI) and \HThreeOpusArmTwo\X\ (\HThreeOpusArmCI) of
+  per turn; rule vs model \SHTwoRatio\X\ (90\,\%: \SHTwoCINinety); switch \CwWithinX\X\ cache writes & Main campaign,
+  \HThreeFableArmN\ triplets per host; holdout study & \TkLabel{Three} & \S\ref{sec:once}; \TkSupp{sec:d}, \TkSupp{sec:g} \\
+4.~\TkTitle{Four} & Side-effect errors \ITwoHoldBefore\ to \ITwoHoldAfter\ for \ITwoHoldNApplicable\ judges; coverage
+  cost \ITwoHoldCovCostRange\ points & Constructed holdout, \HoldN\ cases & \TkLabel{Four} & \S\ref{sec:gate}; \TkSupp{sec:e} \\
+5.~\TkTitle{Five} & Jev \ObJevPfifty\,ms vs host \ObHostPfifty\,s at p50; Jev routed \ObJevRouteProd\,\% in production
+  vs \AoFableJevRoute\,\% in the main campaign & One owner, \ObDays\ days, \ObProdSessions\ sessions & \TkLabel{Five} & \S\ref{sec:telemetry}; \TkSupp{sec:f} \\
+\bottomrule
+\end{tabularx}
+\end{table}

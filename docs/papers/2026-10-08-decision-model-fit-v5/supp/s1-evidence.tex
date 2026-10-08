@@ -1,0 +1,33 @@
+\subsection{Evidence packages and provenance}\label{sec:evidence}
+
+Every number in the paper and this supplement is regenerated from committed evidence packages by the build in the
+repository. \Cref{tab:evidence} lists them by their evidence package IDs in the repository; each carries its own data dictionary, checksums and,
+where preregistered, the preregistration and its provenance record.
+
+\begin{table}[tbp]
+\centering\small
+\caption{Evidence packages used in this report, by evidence package ID in the repository.}
+\label{tab:evidence}
+\begin{tabularx}{\textwidth}{@{}l >{\raggedright\arraybackslash}X l@{}}
+\toprule
+Evidence package ID & Contents & Status \\
+\midrule
+\texttt{2026-09-30-judge-benchmark} & Constructed judge benchmark: development and holdout cases, label audit, latency
+  & preregistered \\
+\texttt{2026-10-01-trace-judge-benchmark} & Real-decision benchmark, \TrN\ holdout cases & preregistered \\
+\texttt{2026-10-01-caching} & Retrospective caching survey of earlier runs & exploratory \\
+\texttt{2026-10-02-paired-campaign} & Main paired campaign, \NSessions\ sessions & preregistered \\
+\texttt{2026-10-04-clef-judges} & Clef and Clef-Flash on all four judge splits & post hoc \\
+\texttt{2026-10-05-effort-control} & Sonnet medium against default effort & designed in advance \\
+\texttt{2026-10-06-effort-control-fable} & Fable medium against default effort & preregistered \\
+\texttt{2026-10-05-defaults-replay} & Replay of the shipped routing code on recorded sessions & exploratory \\
+\texttt{2026-10-v3-offline} & Telemetry analysis, decide-once counterfactual, projection inputs & exploratory \\
+\texttt{2026-10-06-holdout-v3} & S1 holdout study, \SOneSessions\ sessions & preregistered \\
+\texttt{2026-10-06-openai-decisions} & OpenAI Decisions API against an in-run Jev reference & post hoc \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\paragraph{Spend} The main campaign cost \$\SpendLedger, the effort follow-ups \$\EcSpend\ and \$\EfSpend, S1
+\$\SSpend, the judge benchmarks \$\LoggedSpendTotal\ (constructed) and \$\TrSpendTotal\ (real decisions), Clef
+\$\ClSpend. Telemetry and the counterfactual analyses made no model calls.

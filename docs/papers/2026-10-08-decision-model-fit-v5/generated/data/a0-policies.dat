@@ -1,0 +1,8 @@
+y label r m p v
+7 {Fable: Jev decides once} 0.5453 0.0353 0.0392 0.545
+6 {Fable: rule R* (always route, scope gate)} 0.5094 0.0255 0.0283 0.509
+5 {Fable: oracle, equal quality} 0.5834 0.0389 0.0432 0.583
+3 {Opus: shipped (price gate, never routes)} 1.0000 0.0000 0.0000 1.000
+2 {Opus: Jev decides once, no gate} 1.1592 0.0674 0.0731 1.159
+1 {Opus: always route} 1.1970 0.0721 0.0758 1.197
+0 {Opus: oracle, equal quality} 0.9914 0.0169 0.0161 0.991

@@ -1,0 +1,57 @@
+\begin{xltabular}{\textwidth}{@{}>{\raggedright\arraybackslash}p{0.2\textwidth} >{\raggedright\arraybackslash}p{0.15\textwidth} >{\raggedright\arraybackslash}X l@{}}
+\caption{All \ChangesN\ first-pass claims, what the first pass said, and what the validation found, followed by \ChangesPostStudy\ entry recording changes merged after this study (verbatim from \code{the change log}, where each entry also names its evidence file).}\label{tab:changes}\\
+\toprule
+First-pass claim & First pass said & What the validation found & Verdict \\
+\midrule
+\endfirsthead
+\multicolumn{4}{@{}l}{\small\emph{(continued)}}\\
+\toprule
+First-pass claim & First pass said & What the validation found & Verdict \\
+\midrule
+\endhead
+\bottomrule
+\endlastfoot
+GPT-6 Luna was right on all 90 cases & 90/90 & 89/90 in the first pass itself when scored on its probabilities; 87-89 in 3 reproduction runs; 85-86 (majority 86/90) in the validated 3-rep run -- the same as Jev (86/90, McNemar p = 1.0) & \vref \\
+\addlinespace[4pt]
+Luna made no wrong automatic decisions at any cutoff & 0 at every cutoff & 2 per repetition under the bundle policy (0-2 in reproduction); it clicked Buy now at p 0.96-0.99 in all 3 validated repetitions after deferring in the first 4 runs & \vref \\
+\addlinespace[4pt]
+Jev is the best default: 95.6\% correct, 147 ms, about \$16 per million & 86/90, 4 wrong automatic at 0.75 & 85-86 per repetition in 7 runs (majority 86/90, 95\% CI 89-98\%); 2-3 wrong automatic per repetition under the bundle's 0.90 gate; p50 152-163 ms; \$15.91 per million & \vconf \\
+\addlinespace[4pt]
+A stronger OpenAI model is not a better judge (Sol 88/90, both misses side effects at 0.98-0.99) & 88/90 & 88/90 in all 7 runs; its misses are always cua-18 and cua-19; 13-23\% of calls exceed the 3 s timeout, so bundle coverage is 52-66 of 90 & \vconf \\
+\addlinespace[4pt]
+Best local judges reach 82-86\%, not Jev's 96\% & Qwen3 8B 77, Qwen3 4B 76, nimble 74 & identical answers in all 7 runs (fully deterministic); every local judge is less accurate than Jev after Holm correction (Holm-adjusted p $\le$ 0.03) & \vconf \\
+\addlinespace[4pt]
+tev1 0.8B is a credible fast tier with zero wrong automatic decisions from a 0.85 cutoff & 0 wrong automatic at 0.85, 20 automatic & true only under the study rule, where a confident 'no' can abstain. The bundle acts on every yes/no answer, so under its policy tev1 0.8B makes 12 wrong automatic decisions of 90 (10 are accepted wrong code). With the no-abstention gap closed (I3) it automates under 30\% of cases & \vref \\
+\addlinespace[4pt]
+Automatic means p $\ge$ 0.75 & study rule (stated choice, 0.75, confident no abstains, no timeout) & the bundle's read-shortcut gate is argmax, p $\ge$ 0.90 and margin $\ge$ 0.20, 3 s timeout, and no abstention for yes/no; results are now reported under that policy, with the study rule kept for replay & \vrev \\
+\addlinespace[4pt]
+Local latency: tev1 0.8B 38 ms, nimble 157 ms, Laya 21 ms & single run & with identical answers, reproduction medians moved from 33\% faster (Qwen3 8B) to 95\% slower (Laya) on a loaded host (load average 15-36 when sampled); nonce-controlled warm medians: tev1 0.8B 48 ms, nimble 261 ms, Laya 46 ms via their decision endpoints & \vrev \\
+\addlinespace[4pt]
+Luna is about 8x slower than Jev because of OpenAI, not the client & 1.19 s median; about 980 ms is server time & server time is 95\% of the Luna-Jev gap and 98\% of the Sol-Jev gap; the client adds about 1 ms; round trip to both hosts is about 13 ms & \vconf \\
+\addlinespace[4pt]
+service\_\allowbreak{}tier priority cuts Luna's median about 14\% & about 14\% at 2x price & 32\% lower wall median (768 vs 1135 ms, 20 requests, one time window, not interleaved) & \vrev \\
+\addlinespace[4pt]
+Every judge except Luna fails on side-effect actions & Luna the exception & Luna also acts on side effects in the validated run; the root cause is the instruction, which lists writing and sending but not purchase or delete. A one-sentence clause removed all of Jev's side-effect errors on dev (5 to 0 over 3 repetitions); a deterministic host guard removed them for every judge at 1-4 points of coverage & \vrev \\
+\addlinespace[4pt]
+Labels are hand-authored, not independently audited & not audited & two blind reviewers agreed with all 90 frozen labels (Cohen's kappa 1.00). cua-18 and cua-19 depend on a rule the instructions do not state; fresh-cua-09 and search-11 are real failures & \vnew \\
+\addlinespace[4pt]
+Order flips: Qwen3 0 & 0 flips & not comparable: the bundle's OllamaBackend averages both option orders inside every decision & \vrev \\
+\addlinespace[4pt]
+p95 latency & index int(round(0.95 n)) - 1 & nearest rank; the first pass was one rank low for the 30-case slices (banker's rounding), unchanged for n = 90 & \vrev \\
+\addlinespace[4pt]
+Laya base reproduces the earlier study (35/60) & 35/60 & 35/60 on the original screen in all 7 runs & \vconf \\
+\addlinespace[4pt]
+The OpenAI Decisions API could not be measured & no endpoint visible & POST /v1/decisions returns 403 'Decision API is not enabled for this user' (logged in the dev and holdout run records); the openai-decisions arm auto-enables on HTTP 200 & \vconf \\
+\addlinespace[4pt]
+Cost per million decisions & Jev \$15.91, Luna \$34.95, Sol \$753.04 & recomputed from logged tokens to the cent; Sol \$750.88 in the validated run & \vconf \\
+\addlinespace[4pt]
+Suggested routing: tev1 0.8B at a cutoff of 0.85 or higher as the offline fallback & zero wrong automatic from 0.85 (dev) & holdout: 35/63 correct and 14 wrong automatic decisions under the bundle policy; no local judge meets the preregistered offline-tier rule (best, tev1 4B: 3 wrong automatic at 44\% coverage with guards, upper 95\% bound 13\% \textgreater{} 10\%) & \vref \\
+\addlinespace[4pt]
+Keep Jev as the default judge & recommended & holdout (preregistered): Jev 55/63 correct, 1 wrong automatic; GPT-6 Luna 60/63 and GPT-6.1 Sol 62/63 are more accurate, but neither difference survives Holm correction (p 0.16 and 0.09) and both fail the p95 $\le$ 500 ms and $\le$ 2x cost rules. Jev's misses mostly fall back at low certainty; Luna's are confident (refund at 0.98-0.99, an injected submit at 0.97-0.99) & \vconf \\
+\addlinespace[4pt]
+Deterministic host guards on side-effect actions whatever judge is used & recommended, untested & preregistered intervention I2 confirmed on holdout: it removed every side-effect wrong automatic decision in all 9 applicable judges, with no accuracy change and 1.6-7.9 points of coverage & \vconf \\
+\midrule
+\multicolumn{4}{@{}l}{\emph{After this study (see \cref{sec:since}); ``first pass said'' here means ``before the change''}}\\
+\addlinespace[2pt]
+Changes since this study (main at 180f919, PR \#56) & jev\_\allowbreak{}cua gate 0.75 with no margin; no side-effect guard or clause in jev\_\allowbreak{}cua; the local backend dropped a question's own \texttt{reason} option (worked around in the harness) & PR \#56, merged after these measurements: jev\_\allowbreak{}cua uses the read-shortcut gate (0.90 with a 0.20 margin, configurable), refuses targets whose label names an irreversible or external change (the I2 guard, returning side\_\allowbreak{}effect\_\allowbreak{}requires\_\allowbreak{}confirmation), names those changes in its instructions (I1), and the local backend answers a question's own \texttt{reason} option again. jevgrep and jev\_\allowbreak{}cua descriptions now say Jev is the default. Results in this directory are unchanged: they were measured before the merge. & \vnew \\
+\end{xltabular}
