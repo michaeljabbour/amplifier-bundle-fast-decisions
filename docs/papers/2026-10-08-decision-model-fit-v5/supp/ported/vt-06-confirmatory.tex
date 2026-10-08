@@ -1,0 +1,117 @@
+% Ported from an earlier report section (one-time conversion; edit here).
+\subsection{Confirmatory results}\label{vt:sec:confirm}
+
+Everything in this section uses the \NTest\ test scenarios only (\NTestPairs\ pairs). The hypotheses,
+thresholds and decision rule are the preregistered ones; the estimator (resamples, seed, quality filter,
+verdict rule) was fixed afterwards in the confirmatory script (\cref{vt:sec:design}). The results below depend on
+that estimator, so this section is labelled confirmatory but not preregistered. The preregistration said the cost ratio is computed ``among pairs where quality is
+non-inferior.'' That sentence has two readings, so both are reported:
+\begin{itemize}
+  \item \textbf{Pair reading (co-primary):} keep a pair only if its own turn-pass fraction is not worse than
+    its anchor's by more than \NIMarginPts\ points. In this design that keeps pairs where the arm did at
+    least as well. Because this filter conditions on an outcome the arm affects, it is not reported alone.
+  \item \textbf{Arm reading (co-primary, unfiltered):} keep every cost-valid pair, and require non-inferiority of
+    the arm as a whole.
+\end{itemize}
+
+\begin{table}[tbp]
+\centering\small
+\caption{Primary endpoint: geometric-mean cost ratio, arm over plain host, test split, with 95\,\%
+scenario-cluster bootstrap intervals. ``Pairs kept'' counts pairs that pass the pair-level quality filter
+out of all cost-valid test pairs.}
+\label{vt:tab:primary}
+\input{generated/tables/primary.tex}
+\end{table}
+\howtoreadtable{A ratio below 1 is a saving: \CfFableStickyPair\ means the routed arm paid about
+\CfFableStickyCents\ cents for every dollar the plain host paid. If the whole interval is below 1, the
+cost difference is not explained by chance; if it is above 1, neither is the extra cost. The pair-level filter drops sessions
+that were cheaper but did worse, so for sticky and shipped it raises the ratio by \FilterLiftLow\ to
+\FilterLiftHigh; on Opus the arm reading gives \CfOpusStickyArmExtra--\CfOpusSonnetArmExtra\,\% more
+than the plain host.}
+
+
+
+\subsubsection{The hypotheses}
+
+\Cref{vt:tab:hyp} gives the full numbers for this part.
+
+\begin{table}[tbp]
+\centering\small
+\caption{The preregistered hypotheses, test split, pair reading. The arm reading gives the same verdicts.}
+\label{vt:tab:hyp}
+\input{generated/tables/hypotheses.tex}
+\end{table}
+
+\begin{itemize}
+  \item \textbf{H1, confirmed.} On the Fable host, sticky cost \CfFableStickyPair\X\ (95\,\% CI
+    \CfFableStickyPairCI) and shipped \CfFableShippedPair\X\ (\CfFableShippedPairCI) of the plain host.
+  \item \textbf{H2, confirmed.} On the Opus host, sticky cost \CfOpusStickyPair\X\ (\CfOpusStickyPairCI),
+    shipped \CfOpusShippedPair\X\ (\CfOpusShippedPairCI) and plain Sonnet \CfOpusSonnetPair\X\
+    (\CfOpusSonnetPairCI): routing to Sonnet costs about \CfOpusStickyExtra--\CfOpusSonnetExtra\,\% more.
+  \item \textbf{H3, confirmed.} The preregistered test was only that sticky costs no more than shipped
+    (upper end at most \HThreeUpper). Sticky cost \HThreeFable\X\ of shipped on Fable (\HThreeFableCI) and
+    \HThreeOpus\X\ on Opus (\HThreeOpusCI), on \HThreeFableN\ and \HThreeOpusN\ matched scenario
+    repetitions. On Fable the upper end, \HThreeFableUpper, is close to 1.
+\end{itemize}
+
+\subsubsection{Quality}
+
+\Cref{vt:tab:quality} gives the full numbers for this part.
+
+\begin{table}[tbp]
+\centering\small
+\caption{Quality: mean difference in turn-pass fraction, arm minus plain host, test split, all quality-valid
+pairs. Non-inferior when the lower end of the interval is above \NIMargin.}
+\label{vt:tab:quality}
+\input{generated/tables/quality.tex}
+\end{table}
+
+Every Fable savings claim passes the quality test. (A \term{savings claim} here is any arm and host whose
+own cost interval shows a saving; only those cells are tested for quality.) The closest call is Fable sticky,
+whose lower bound is \QFableStickyLow, inside the \NIMargin\ margin by only \QFableStickyMarginGap.
+Across all \QAllScen\ scenarios (exploratory) its mean difference is \QAllFableSticky\ with a 95\,\%
+interval of \QAllFableStickyCI: there the margin is not shown, and on the \NTrain\ training scenarios it is
+\RvQTrainFableSticky\ (\RvQTrainFableStickyCI). So quality passed on the test split only. The quality test itself
+is unfiltered: it uses every quality-valid test pair, so the \QFableStickyMarginGap\ margin does not depend on the
+pair-level cost filter. That margin is thin but is not an artefact of bootstrap randomness: re-drawing the
+resamples moves the lower bound by only \RvQNoise\ (to \RvQAltLow). It is small against the sampling uncertainty (the
+interval is about \RvQWidth\ wide), and the margin is not shown on the training or all-scenario data. Opus sticky did not show
+non-inferior quality (\QOpusSticky, 95\,\% CI \QOpusStickyCI; ``not shown'', which is not the same as ``worse'').
+The preregistration requires quality for each savings claim, and no savings claim is made on Opus, so the quality
+hypothesis is confirmed under that scope; if quality were required of every routed cell, \RvNQualCells\ of
+\RvNRoutedCells\ cells would pass and \RvNHypAllQuality\ of 4 hypotheses would be confirmed.
+
+\subsubsection{The savings model}\label{vt:sec:modelcheck}
+
+The preregistered deliverable is a model that predicts the saving of a new session from what is known before
+it starts: arm, host, task type, number of turns, long pauses and the size of the first prompt. It was fitted
+on the training scenarios only and then asked to predict the \MCPairs\ held-out test pairs.
+
+\begin{figure}[tbp]
+\centering
+\pgfplotslegendfromname{modellegend}\par\smallskip
+\input{figures/v2-fig-model.tex}
+\caption{Every observed total saving fell inside the savings model's 90\,\% prediction interval. The savings model on the test split: predicted total saving (with its 90\,\% interval) against the
+observed total, for each arm and host.}
+\label{vt:fig:model}
+\howtoread{A point on the dashed diagonal is a perfect prediction. Every whisker crosses the diagonal, so
+every observed total lies inside its predicted 90\,\% interval. Points above zero are savings (Fable);
+points below zero are extra costs (Opus).}
+\end{figure}
+
+The model passed both preregistered checks. Its 90\,\% intervals covered \MCCovLog\ of test pairs on the log
+ratio and \MCCovUSD\ on the dollar saving, both inside [\CovLow, \CovHigh]. The observed test total,
+\$\MCObserved, lay inside the predicted interval of \$\MCPILow\ to \$\MCPIHigh\ (point prediction
+\$\MCPredicted). The intervals are conservative: they covered \MCCovLog\ of pairs against a nominal
+\MCNominal. The pooled total nets Fable savings (\$\MCFableTotal) against Opus losses (\$\MCOpusTotal), so
+it says little about either host on its own. The design document's stricter criteria (coverage
+\DesignCovLow--\DesignCovHigh, calibration slope \DesignSlopeLow--\DesignSlopeHigh) are also met (slope
+\MCSlope). \Cref{vt:tab:modelcheck} in the appendix gives the check for each arm and host. The verdict is
+``\MCVerdict''; its limits are discussed in \cref{vt:sec:modellimits}.
+
+\subsubsection{Decision}
+
+Applying the preregistered rule: on the Fable host, \textbf{\DecisionFable}; on the Opus host,
+\textbf{\DecisionOpus}. Every verdict was re-derived under both non-inferiority readings and under
+\NSeeds\ other bootstrap seeds (\SeedLo--\SeedHi); \SeedsChanged\ verdicts changed. The other
+clarifications of the preregistration (\cref{vt:sec:deviations}) were not re-run separately.

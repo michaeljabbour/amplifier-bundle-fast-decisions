@@ -1,0 +1,41 @@
+\subsection{OpenAI Decisions API (post hoc)}\label{sec:openai}
+OpenAI's Decisions API is a native endpoint for exactly this kind of typed question: GPT-6 Luna returns a probability per
+allowed answer. We ran it after the preregistered work, so everything here is post hoc and exploratory, against an
+in-run Jev 1.13 reference on the same cases: three repetitions in two option orders, the bundle's gate with its
+3\,s deadline, and the per-case majority over repetitions (\cref{tab:openai,fig:openai}).
+\begin{itemize}
+  \item \textbf{Accuracy.} Luna was right on \OaDevLunaK/\OaDevLunaN\ development cases (Jev \OaDevJevK/\OaDevJevN),
+    \OaHoldoutLunaK/\OaHoldoutLunaN\ holdout cases (Jev \OaHoldoutJevK/\OaHoldoutJevN), \OaTraceDevLunaK/\OaTraceDevLunaN\
+    real trace-dev decisions (Jev \OaTraceDevJevK/\OaTraceDevJevN) and \OaTraceHoldoutLunaK/\OaTraceHoldoutLunaN\
+    trace-holdout decisions (Jev \OaTraceHoldoutJevK/\OaTraceHoldoutJevN). Only the trace-holdout accuracy difference
+    survived the Holm correction ($p = \OaTrHoldHolm$; exploratory).
+  \item \textbf{Misfires.} Luna's wrong-automatic rate was no higher than Jev's on every split; none of these differences
+    was significant. Under the trace usefulness rule, neither judge was useful on either trace split.
+  \item \textbf{Speed.} OpenAI's servers reported \OaServerPfiftyLo--\OaServerPfiftyHi\,ms at the median and
+    \OaServerPninetyfiveLo--\OaServerPninetyfiveHi\,ms at p95, but from our machine the client saw
+    \OaClientPfiftyLo--\OaClientPfiftyHi\,s at the median and \OaClientPninetyfiveLo--\OaClientPninetyfiveHi\,s at p95.
+    The network was slow in this run for both providers: Jev's client median was \OaJevClientLo--\OaJevClientHi\,s,
+    against \OaJevEarlierLo--\OaJevEarlierHi\,s on \OaJevEarlierDate. The comparison between the two judges is paired in
+    time; the absolute latencies are not comparable with earlier evidence.
+  \item \textbf{Cost and reliability.} \$\OaUsdLo--\OaUsdHi\ per million decisions against Jev's \$\OaJevUsdLo--\OaJevUsdHi.
+    In transport, \OaInvalid\ of \OaRequests\ Luna requests and \OaInvalidJev\ of Jev's failed.
+\end{itemize}
+\begin{figure}[htbp]
+\centering
+\pgfplotslegendfromname{oalegend}\par\smallskip
+\input{figures/fig-openai.tex}
+\caption{The Decisions API was at or above Jev on every split (post hoc). OpenAI Decisions API (GPT-6 Luna) against the in-run Jev reference: per-case majority accuracy with 95\,\%
+Wilson intervals on the four splits (post hoc).}
+\label{fig:openai}
+\howtoread{Each pair of rows is one split. Luna is at or above Jev on every split; only the trace-holdout gap survived the
+correction. Overlapping whiskers mean no difference was detected, not that the judges are equivalent.}
+\end{figure}
+\begin{table}[htbp]\centering\footnotesize\setlength\tabcolsep{4pt}
+\caption{OpenAI Decisions API (post hoc) against the in-run Jev reference: correct decisions, wrong automatic actions,
+coverage, client latency (from our machine, slow network in this run) and dollars per million decisions.}\label{tab:openai}
+\input{generated/tables/openai-decisions.tex}\end{table}
+\begin{keyidea}
+A native typed-decision endpoint from OpenAI matched or exceeded Jev's accuracy on our cases at \OaPriceXLo--\OaPriceXHi\X\ the price, but automated fewer real reads. Its
+servers answer in tens of milliseconds, but from here each call took seconds. It does not change the session-start
+finding: a one-line rule matched the decision model there.
+\end{keyidea}

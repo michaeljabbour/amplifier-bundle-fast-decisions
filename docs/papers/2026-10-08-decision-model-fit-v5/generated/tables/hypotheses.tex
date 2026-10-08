@@ -1,0 +1,13 @@
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}>{\raggedright\arraybackslash}p{0.33\textwidth} l l r r l@{}}
+\toprule
+Hypothesis (test split, pair reading) & Host & Arm & ratio & 95\,\% CI & verdict \\
+\midrule
+H1: routing is cheaper (upper end $<$ 1) & Fable & sticky & \CfFableStickyPair & \CfFableStickyPairCI & \vconf \\
+H1: routing is cheaper (upper end $<$ 1) & Fable & shipped & \CfFableShippedPair & \CfFableShippedPairCI & \vconf \\
+H2: no saving (lower end $>$ \HTwoLower) & Opus & sticky & \CfOpusStickyPair & \CfOpusStickyPairCI & \vconf \\
+ & Opus & shipped & \CfOpusShippedPair & \CfOpusShippedPairCI & \vconf \\
+ & Opus & sonnet & \CfOpusSonnetPair & \CfOpusSonnetPairCI & \vconf \\
+H3: sticky/shipped (upper end $\le$ \HThreeUpper) & Fable & sticky/shipped & \HThreeFable & \HThreeFableCI & \vconf \\
+ & Opus & sticky/shipped & \HThreeOpus & \HThreeOpusCI & \vconf \\
+\bottomrule
+\end{tabular*}

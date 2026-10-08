@@ -1,0 +1,40 @@
+% Ported from an earlier report section (one-time conversion; edit here).
+\subsection{Glossary}\label{vt:app:glossary}
+
+\begin{description}[leftmargin=1.2em,style=nextline,itemsep=3pt]
+  \item[A/A] Running the same configuration twice on the same task to measure how much two identical
+    sessions differ by chance.
+  \item[Anchor] The plain host model with no routing; every other arm is compared with it.
+  \item[Arm] One configuration of the agent in the experiment: anchor, aa, shipped, sticky or sonnet.
+  \item[Bootstrap (scenario-cluster)] Estimating uncertainty by resampling whole scenarios with replacement
+    many times and recomputing the result each time.
+  \item[Cache read, cache write] Re-using a prefix already in the provider's cache is billed as a cheap
+    read; storing a new prefix is billed as a more expensive write.
+  \item[Cache rebuild] Re-writing the conversation history to a new model's cache after a switch.
+  \item[Confidence interval (95\,\%)] The range of values consistent with the data; built so that over
+    many repeats of the study it contains the true value 95\,\% of the time.
+  \item[Confirmatory] A result that tests a hypothesis fixed in advance, on data held out for that purpose.
+  \item[Exploratory] Any other result: useful for understanding, not for confirming.
+  \item[Geometric mean] The average of ratios that treats ``twice'' and ``half'' symmetrically: the
+    exponential of the mean of the log ratios.
+  \item[Host model] The large model an agent session normally runs on (here Fable 5.1 or Opus 5.5).
+  \item[McNemar's test] A test for paired yes/no outcomes that looks only at the pairs where the two sides
+    disagree.
+  \item[Non-inferior] Not worse than the baseline by more than a set margin (here \NIMarginPts\ points of
+    turn-pass fraction).
+  \item[Nonce] A unique string at the start of each session's system prompt that makes its cache entries
+    private.
+  \item[Pair] A routed session and the anchor session on the same scenario, repetition and host.
+  \item[Preregistration] A dated, committed plan of hypotheses, analysis and decision rules made before
+    the data exist.
+  \item[Prediction interval (90\,\%)] The range a new observation is expected to fall in 90\,\% of the time.
+  \item[Routing] Sending some of a session's requests to a different, usually cheaper, model.
+  \item[Shipped] The bundle's default routing policy; it re-chooses its model at the start of each turn and never
+    switches in the middle of a turn.
+  \item[Sticky] A policy that chooses the model once, from the first prompt, and never switches.
+  \item[Tools-normalized cost] Cost with the shared tool definitions on a session's first request priced as
+    a cache read, as they would usually be in production.
+  \item[Turn-pass fraction] The share of a session's turns whose automatic checks passed.
+  \item[Wave] All arms of one scenario, repetition and host, launched within seconds of each other from the same
+    workspace. The host-independent Sonnet control runs only in the Opus wave.
+\end{description}

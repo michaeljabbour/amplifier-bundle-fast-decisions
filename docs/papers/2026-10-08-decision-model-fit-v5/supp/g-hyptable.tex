@@ -1,0 +1,35 @@
+\subsection{The hypotheses at a glance}\label{sec:ghyp}
+
+\Cref{tab:ghyp} states each preregistered hypothesis of the holdout study in plain words, with its preregistered
+threshold, its result and what it means. Cost ratios are geometric means against the plain host; equivalence tests
+(H2, H3, H3b, H6) use 90\,\% intervals, all others 95\,\%.
+
+\begin{table}[H]
+\centering\footnotesize
+\caption{Seven preregistered hypotheses (plus a descriptive H3b): routing pays on Fable and loses on Opus, the rule
+matches the decision model, and review and explain work stays on the host.}
+\label{tab:ghyp}
+\begin{tabularx}{\textwidth}{@{}l >{\raggedright\arraybackslash}p{0.2\textwidth} >{\raggedright\arraybackslash}p{0.19\textwidth}
+  >{\raggedright\arraybackslash}p{0.17\textwidth} >{\raggedright\arraybackslash}p{0.11\textwidth} >{\raggedright\arraybackslash}X@{}}
+\toprule
+ & Question & Threshold & Result & Verdict & Meaning \\
+\midrule
+H1 & Does the frozen Fable configuration save money without losing quality? & cost upper $<$ \SThreshOne; turn-pass lower
+  $>$ \NIMargin & \SHOneRatio\ (\SHOneCI); $\Delta$ \SHOneDtp\ (\SHOneDtpCI) & \SHOneVerdict & Routing pays on Fable. \\
+H2 & Does Jev choose the session model better than the one-line rule? & equivalence: 90\,\% CI within 0.95--1.05 &
+  \SHTwoRatio\ (\SHTwoCINinety) & \SHTwoVerdict & Equivalent; ship the rule. \\
+H3 & Does the shipped bundle add cost on Opus? & equivalence: 90\,\% CI within 0.95--1.05 & \SHThreeRatio\
+  (\SHThreeCINinety) & \SHThreeVerdict & Cost-equivalent within $\pm$5\,\%. \\
+H3b & Same, on Fable with the host pinned & descriptive & \SHThreeBRatio\ (\SHThreeBCINinety) & descriptive & No
+  verdict. \\
+H4 & Does medium effort save money on Opus? & cost upper $<$ 1; turn-pass lower $>$ \NIMargin & \SHFourRatio\
+  (\SHFourCI) & \SHFourVerdict & Medium effort did not demonstrate a saving. \\
+H5 & Does routing to Sonnet cost more on Opus? & cost lower $>$ 1 & \SHFiveRatio\ (\SHFiveCI) & \SHFiveVerdict & Never
+  route on Opus. \\
+H6 & Do live decide-once sessions cost what the reconstruction predicts? & equivalence: 90\,\% CI within 0.95--1.05 &
+  \SHSixRatio\ (\SHSixCINinety) & \SHSixVerdict & The cost reconstruction holds. \\
+H7 & Is Sonnet non-inferior on review and explain tasks? & turn-pass lower $>$ \NIMargin & $\Delta$ \SHSevenDtp\
+  (\SHSevenDtpCI) & \SHSevenVerdict & Non-inferiority not established; keep these on the host. \\
+\bottomrule
+\end{tabularx}
+\end{table}

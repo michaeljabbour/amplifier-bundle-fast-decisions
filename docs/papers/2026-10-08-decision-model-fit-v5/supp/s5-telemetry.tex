@@ -1,0 +1,44 @@
+\subsection{Production telemetry in detail}\label{sec:telemetrydetail}
+
+The telemetry window ran from \ObWeekStart\ to the \ObCutoff\ snapshot (\ObDays\ days, \ObEvents\ events). Of the
+\ObProdSessions\ production sessions, \ObProdTagged\ carried an explicit production tag and \ObProdDefault\ were
+classified as production because they carried no test tag. \Cref{fig:obsmix} shows what the store holds.
+
+\begin{figure}[tbp]
+\centering
+\pgfplotslegendfromname{mixlegend}\par\smallskip
+\input{figures/fig-obs-mix.tex}
+\caption{Most recorded events are bookkeeping; decision-bearing events are a thin slice. What the observatory store holds: the seven most common kinds of recorded event, as a share of all events.}
+\label{fig:obsmix}
+\howtoread{The longest bar, \ObMixTop, is \ObMixTopPct\,\% of everything recorded. Decision-bearing events are a thin
+slice. A store this dominated by bookkeeping can tell you that decisions happen, not whether they were right.}
+\end{figure}
+
+\paragraph{The 7.1\,\% that was not what it seemed} The telemetry reported that the read-shortcut proposals agreed
+with the host's next action only \ObAllRate\,\% of the time (\ObAllMatch\ of \ObAllN). Taken at face value, that
+condemns the idea. Decomposed, it says little about the decision model:
+\begin{itemize}
+  \item \ObUnmatchN\ of the \ObAllN\ decisions followed a host call to a tool the proposal could not contain, so they
+    could never match. ``Agreement'' was partly a labelling artefact.
+  \item \ObDemoN\ were scored by a synthetic demo backend that always picks the first candidate.
+  \item Where a match was possible, the real local scorer agreed with the host \ObCandRate\,\% of the time
+    (\ObCandMatch\ of \ObCandN; 95\,\% CI \ObCandCI).
+\end{itemize}
+Agreement is still not correctness: the store keeps no state text, so whether a disagreement was a mistake cannot be
+judged from it.
+
+\paragraph{Claimed savings were estimates} The bundle's own receipts claimed \$\ObKeepaliveUSD\ saved by keeping
+caches warm (\ObKeepaliveN\ production receipts) and showed per-step routing to Sonnet costing money (the receipts summed to \ObCheaperUSD\ dollars).
+The read shortcut ``would have'' avoided \ObClaimTurns\ host turns in \ObClaimDecisions\ decisions. None of these was
+measured as a saving; later measurement turned the per-step routing off. In production, the first start-tier decision
+of a session was most often the scope gate keeping the host (\ObStScope\ of \ObStTotal\ sessions,
+\ObStScopePct\,\%); Jev judged \ObStJevStrong\ sessions strong and \ObStJevCheap\ cheap.
+
+
+\paragraph{The corrected projection} Before S1, a provisional projection combined this owner's recorded spend mix
+(\AthreeOpusShare\,\% Opus, \AthreeSonnetShare\,\% Sonnet) with per-host ratios and gave \AthreeOld\X\ (\AthreeOldBand)
+of shipped defaults. It used a prior of \AthreeOpusPriorLo--\AthreeOpusPriorHi\ for Opus at medium effort, taken from
+the Sonnet and Fable effort studies. S1 tested that directly and medium effort did not demonstrate a saving on Opus
+(\SHFourRatio\X). With Opus at default effort and Sonnet hosts at medium (\EcRatio, \EcCI), the same mix gives
+\AthreeNew\X\ (\AthreeNewBand). Neither figure meets the program's cost target of \AthreeGoal\X. No production session
+ran on Fable, so the configuration's main saving has no production exposure yet.

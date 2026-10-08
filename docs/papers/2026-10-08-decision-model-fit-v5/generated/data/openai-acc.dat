@@ -1,0 +1,9 @@
+y label r rm rp v
+0 {trace-holdout: Jev 1.13} 0.5476 0.1481 0.1401 0.548
+1 {trace-holdout: Luna (Decisions API)} 0.7143 0.1500 0.1140 0.714
+3 {trace-dev: Jev 1.13} 0.7619 0.2128 0.1318 0.762
+4 {trace-dev: Luna (Decisions API)} 0.7619 0.2128 0.1318 0.762
+6 {holdout: Jev 1.13} 0.8730 0.1041 0.0612 0.873
+7 {holdout: Luna (Decisions API)} 0.9365 0.0887 0.0385 0.937
+9 {dev: Jev 1.13} 0.9556 0.0643 0.0270 0.956
+10 {dev: Luna (Decisions API)} 0.9778 0.0552 0.0161 0.978

@@ -1,0 +1,5 @@
+y label inp rd wr out v
+0 {plain Opus} 0.0004 0.5644 0.9904 0.3570 1.91
+1 {Sonnet decided once (Pc)} 0.0003 1.2667 0.7955 0.2767 2.34
+2 {shipped, Fable host} 0.0005 1.1319 1.3494 0.5453 3.03
+3 {plain Fable} 0.0038 0.8836 2.6060 1.0596 4.55

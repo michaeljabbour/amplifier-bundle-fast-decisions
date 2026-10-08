@@ -1,0 +1,31 @@
+% Ported from an earlier report section (one-time conversion; edit here).
+\subsection{Reproducing the paired campaigns}\label{vt:sec:repro}
+
+\paragraph{Evidence} Everything is in its evidence package (\cref{tab:evidence}):
+It holds the published rows with a data dictionary that documents every field (\NSessions\ session rows, \NTurns\
+turn rows, \NRequests\ request rows and \NPairs\ pair rows); the preregistered confirmatory analysis with its
+confirmation record and note; the savings model, its summaries and its test-split predictions; the campaign schedule,
+state, ledger, sticky decisions and failure log; the preregistration, the split and the provenance record; and the pilot
+and reproduction notes (commands, versions, price table, spend).
+The agent under test was frozen at commit \code{\BuildSha} (the preregistration commit) in every session.
+
+\paragraph{The effort-control follow-up} Its evidence package is listed in \cref{tab:evidence}. It holds the summary record, the result note, the effort result record, the provenance record and the
+published rows. The follow-up ran \EcPairs\ concurrent pairs on the \EcScen\ test scenarios and cost
+\$\EcSpend\ (including a \$\EcPreflight\ preflight), so the measured spend across the main campaign and the
+follow-up is \$\SpendWithFollowup. The Fable effort follow-up
+(its evidence package (\cref{tab:evidence}); preregistration \code{\EfPreregSha}) cost \$\EfSpend. Its preregistration was committed as \code{\EcPreregSha}; the timing caveat is
+in \cref{vt:sec:effortfollow}.
+
+\paragraph{Re-running the analysis} No model call is needed. From the published rows, the savings model
+re-fits byte for byte: link the published session and pair rows into an empty working folder, run the savings-model script on it (all stages, fallback engine), then run the confirmatory script on the same folder.
+Re-extracting the rows themselves needs the raw campaign tree and per-session event files, which are not
+published; on the machine that ran the campaign, the row-extraction command reproduces them byte for byte.
+
+\paragraph{This document} The source is in the repository. Running
+\code{make} there runs the asset build script, which reads only the committed files listed at its top
+(including the earlier caching survey) and writes every number
+(the numbers file), table, plotted datum and label position, then builds the PDF. No number in
+the text is typed by hand. The script recovers the price table from the request rows themselves and checks
+that it prices every request to within \PriceResidual\ dollars. \code{make check} re-checks the figures'
+geometry on the built PDF: every scatter label nearest its own marker, every legend above its plot, and no
+overlapping text anywhere.

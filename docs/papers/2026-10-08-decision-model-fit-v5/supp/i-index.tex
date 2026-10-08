@@ -1,0 +1,11 @@
+\clearpage
+\section{Index of figures and tables}\label{sec:index}
+Every figure and table of this supplement, in order, with its page.
+\begingroup
+\renewcommand{\listfigurename}{Figures}\renewcommand{\listtablename}{Tables}
+\let\clearpage\relax
+\small
+\renewcommand{\section}[2]{\subsection*{#2}}
+\listoffigures
+\listoftables
+\endgroup

@@ -1,0 +1,60 @@
+% Ported from an earlier report section (one-time conversion; edit here).
+\subsubsection{Preregistered holdout result \texorpdfstring{\prereg}{[preregistered]}}
+
+
+
+The default judge, Jev~1.13, was right on \JevHoldAccK\ of \HoldN\ holdout cases (95\,\% CI \JevHoldAccCI) and
+made \JevHoldWaK\ wrong automatic decision, at a p95 latency of \JevHoldPninetyfive\,ms and \$\JevHoldCost\ per
+million decisions. GPT-6 Luna (\LunaHoldAccK/\HoldN) and GPT-6.1 Sol (\SolHoldAccK/\HoldN) were more accurate,
+but neither difference survives the preregistered Holm correction (adjusted $p = \LunaHoldRAccPHolm$ and
+\SolHoldRAccPHolm), and both fail the latency and cost rules (p95 \LunaHoldPninetyfive\ and
+\SolHoldPninetyfive\,ms; \$\LunaHoldCost\ and \$\SolHoldCost\ per million). Jev stays the default. No local model
+qualified as an offline tier. The OpenAI Decisions API returned HTTP \HoldProbeStatus\ in the preregistered runs (a later post hoc run is in \cref{sec:openai}), so nothing is claimed there
+for it.
+
+\paragraph{Post-hoc arms in the figures} Two Cloudflare models, Clef and Clef-Flash (\cref{vt:sec:clef}), were run on
+the same frozen cases with the same scorer \emph{after} the preregistered results were known. \term{Post-hoc} means
+exactly that: they were not in the preregistration, so no preregistered verdict applies to them and their results
+are exploratory. They were run together with a fresh Jev~1.13 reference (``in-run Jev''), and every direct Clef-vs-Jev
+comparison below uses that in-run Jev. The preregistered Jev numbers above come from an earlier run. In the figures
+the post-hoc points are black pentagons (in-run Jev: an open orange square), labelled ``(post-hoc)''.
+
+
+
+\begin{figure}[tbp]
+\centering
+\input{figures/v2-fig-ph-wacov.tex}
+\begin{adjustbox}{max width=\linewidth}\phwacovpanel{holdout}{Holdout}\end{adjustbox}
+\caption{The cloud judges and Jev rarely act wrongly; the local models misfire more. Wrong-automatic rate against coverage on the holdout: the safety--usefulness trade-off of each judge,
+with the post-hoc Clef arms.}
+\label{vt:fig:jbwacov}
+\howtoread{Right means the judge acts more often; up means it is more often wrong when it does. Good judges sit
+low and to the right. The cloud judges and Jev sit on the floor; the local models are higher. Clef and Clef-Flash
+act about as often as Luna but are wrong more often (\ClHoldClefWa\ and \ClHoldFlashWa\ wrong automatic cases of
+\HoldN). The in-run Jev landed on the same point as the preregistered Jev.}
+\end{figure}
+
+\begin{figure}[tbp]
+\centering
+\input{figures/v2-fig-ph-acclat.tex}
+\begin{adjustbox}{max width=\linewidth}\phacclatpanel{holdout}{Holdout}\end{adjustbox}
+\caption{Jev is the only judge that is both fast and among the most accurate. Accuracy against p95 latency (log scale) on the holdout, with the post-hoc Clef arms. Latencies are client
+wall time measured from this Mac, network included.}
+\label{vt:fig:jbacclat}
+\howtoread{Up is more accurate; left is faster. Jev is the only judge that is both fast and among the most
+accurate; the cloud LLMs were more accurate, by margins the corrected tests could not confirm, at seconds of latency. Clef sits between: Jev-level
+accuracy at about three times Jev's p95.}
+\end{figure}
+
+\begin{figure}[tbp]
+\centering
+\pgfplotslegendfromname{phcostlegend}\par\smallskip
+\input{figures/v2-fig-ph-costacc.tex}
+\caption{Jev is the cheapest judge near the top of the accuracy range (95\,\% Wilson intervals). Cost per million decisions (log scale) against holdout accuracy, for the judges that have a price.
+Blue: preregistered run; black pentagons: post-hoc run (Clef, Clef-Flash and the in-run Jev reference).}
+\label{vt:fig:jbcost}
+\howtoread{Left is cheaper; up is more accurate. Jev is the cheapest point near the top. Clef matches Jev's accuracy
+at \ClHoldClefCost\ rather than \ClHoldJevCost\ dollars per million decisions; Sol buys its extra accuracy at
+\$\SolHoldCost.}
+\end{figure}
+

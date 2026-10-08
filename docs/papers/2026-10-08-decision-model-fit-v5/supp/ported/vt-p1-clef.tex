@@ -1,0 +1,64 @@
+% Ported from an earlier report section (one-time conversion; edit here).
+\subsubsection{Cloudflare Clef and Clef-Flash \texorpdfstring{\screen}{[screen]} (post-hoc)}\label{vt:sec:clef}
+
+{\raggedright
+\paragraph{What the models are} Clef and Clef-Flash are Cloudflare Workers AI \emph{decision models}: given a state
+and a schema of typed questions, they return a probability for every allowed option, the same contract as Jev.
+According to their model cards, Clef is built on a 27B Qwen3.8 backbone and Clef-Flash on a 9B Qwen3.5 backbone, both
+with a small ``joint schema head'' that scores all options of all questions together. They accept the same System One
+request body as Jev, so the bench calls them through the same adapter. Workers AI bills \$\ClClefPrice\ (Clef) and
+\$\ClFlashPrice\ (Clef-Flash) per million input tokens. Sources: model cards
+\url{https://huggingface.co/Cloudflare/clef} and \url{https://huggingface.co/Cloudflare/clef-flash}; Cloudflare docs
+\url{https://developers.cloudflare.com/workers-ai/models/clef/} and
+\url{https://developers.cloudflare.com/workers-ai/models/clef-flash/}. These descriptions were not verified
+independently.\par}
+
+\paragraph{What was run} Both models ran on all four judge splits (dev, holdout, trace-dev, trace-holdout), \HoldReps\
+repetitions, scored under the bundle's gate. In the same run, Jev~1.13 ran again as a reference. The holdout and
+trace-holdout runs are \emph{post-hoc} (marked \code{posthoc: true} in the evidence): the arms were added after the
+preregistered results were known, on unchanged cases and scorer, so the preregistered rules below are applied
+\emph{descriptively}, not as verdicts. The whole run cost \$\ClSpend.
+
+\Cref{vt:tab:clefresults} gives the full numbers for this part.
+
+\begin{table}[tbp]
+\centering\scriptsize
+\caption{Post-hoc run: Clef, Clef-Flash and the in-run Jev reference on all four splits (per-case majority over
+\HoldReps\ repetitions; latency is client wall time from this Mac, network included).}
+\label{vt:tab:clefresults}
+\input{generated/tables/clef-results.tex}
+\end{table}
+
+\paragraph{Results} On the holdout, Clef was right on \ClHoldClefAcc/\HoldN\ cases, Clef-Flash on \ClHoldFlashAcc/\HoldN\
+and the in-run Jev on \ClHoldJevAcc/\HoldN; the preregistered Jev run got \JevHoldAccK/\HoldN. Clef against Jev is not
+significant on any split (Holm $p = \ClDevClefJevHolm$ on dev and \ClHoldClefJevHolm\ on holdout). Clef-Flash is less
+accurate than Jev; that is significant only on dev (Holm $p = \ClDevFlashJevHolm$; holdout \ClHoldFlashJevHolm). Clef
+beats Clef-Flash on dev (Holm $p = \ClDevClefFlashHolm$) and holdout (\ClHoldClefFlashHolm). \Cref{vt:tab:clefcontrasts}
+gives every contrast.
+
+\begin{table}[tbp]
+\centering\scriptsize
+\caption{Post-hoc paired contrasts (McNemar exact test on per-case majority). Holm over the rule-1 family of the two
+new arms for comparisons with Jev, and over the pairwise family for Clef against Clef-Flash.}
+\label{vt:tab:clefcontrasts}
+\input{generated/tables/clef-contrasts.tex}
+\end{table}
+
+\paragraph{Would either replace Jev?} Applying the preregistered default-judge rule descriptively (\cref{vt:tab:clefrule1}),
+neither would on any split. Clef fails on latency (p95 \ClClefPninetyfiveLow--\ClClefPninetyfiveHigh\,ms against the
+\ClRuleOneMaxPninetyfive\,ms ceiling) and on cost (\ClClefCostXLow--\ClClefCostXHigh\X\ Jev per decision against the
+\ClRuleOneCostX\X\ limit). Clef-Flash passes the cost limit but fails accuracy non-inferiority and the p95 ceiling.
+
+\begin{table}[tbp]
+\centering\small
+\caption{The preregistered default-judge rule applied descriptively to the post-hoc arms (NI: non-inferior to the
+in-run Jev).}
+\label{vt:tab:clefrule1}
+\input{generated/tables/clef-rule1.tex}
+\end{table}
+
+\begin{keyidea}
+Clef matches Jev's accuracy but costs several times more per decision and answers about three times slower from
+this machine; Clef-Flash is cheaper but less accurate and has a timeout tail. Neither replaces Jev. Clef would be
+worth re-testing if it were hosted close to the agent, or if Cloudflare's measured latency from the agent improved.
+\end{keyidea}

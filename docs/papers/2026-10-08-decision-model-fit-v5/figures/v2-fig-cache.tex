@@ -1,0 +1,38 @@
+% How a prompt cache behaves over a conversation: a schematic (no data).
+\begin{tikzpicture}[x=1cm, y=1cm, font=\small,
+  seg/.style={draw=black!60, minimum height=0.55cm, inner sep=0pt},
+  wr/.style={seg, fill=okorange!75, postaction={pattern=north east lines, pattern color=white}},
+  rd/.style={seg, fill=okblue!35},
+  lab/.style={anchor=east, align=right, font=\small},
+  note/.style={anchor=west, align=left, font=\footnotesize, text=black!75}]
+  % row 1: first request
+  \node[lab] at (0,0) {Turn 1, first request};
+  \node[wr, minimum width=3.0cm, anchor=west] (a1) at (0.2,0) {tools + system};
+  \node[wr, minimum width=1.2cm, anchor=west] at (a1.east) {turn 1};
+  \node[note] at (4.6,0) {everything is written to the cache (cold start)};
+  % row 2: same model, next turn
+  \node[lab] at (0,-0.9) {Turn 2, same model};
+  \node[rd, minimum width=3.0cm, anchor=west] (b1) at (0.2,-0.9) {tools + system};
+  \node[rd, minimum width=1.2cm, anchor=west] (b2) at (b1.east) {turn 1};
+  \node[wr, minimum width=1.2cm, anchor=west] at (b2.east) {turn 2};
+  \node[note] at (5.8,-0.9) {old part read cheaply, only the new turn is written};
+  % row 3: switch model
+  \node[lab] at (0,-1.8) {Turn 3, other model};
+  \node[wr, minimum width=3.0cm, anchor=west] (c1) at (0.2,-1.8) {tools + system};
+  \node[wr, minimum width=1.2cm, anchor=west] (c2) at (c1.east) {turn 1};
+  \node[wr, minimum width=1.2cm, anchor=west] (c3) at (c2.east) {turn 2};
+  \node[wr, minimum width=1.2cm, anchor=west] at (c3.east) {turn 3};
+  \node[note] at (7.0,-1.8) {each model has its own cache:\\ the whole history is written again};
+  % row 4: long gap
+  \node[lab] at (0,-2.9) {After a \LongGapMin-minute gap};
+  \node[wr, minimum width=3.0cm, anchor=west] (d1) at (0.2,-2.9) {tools + system};
+  \node[wr, minimum width=1.2cm, anchor=west] (d2) at (d1.east) {turn 1};
+  \node[wr, minimum width=1.2cm, anchor=west] (d3) at (d2.east) {turn 2};
+  \node[wr, minimum width=1.2cm, anchor=west] at (d3.east) {turn 3};
+  \node[note] at (7.0,-2.9) {entries expire after \CacheTTLMin\ idle minutes:\\ written again};
+  % key
+  \node[rd, minimum width=0.6cm, anchor=west] (k1) at (0.2,-4.0) {};
+  \node[anchor=west, font=\footnotesize] at (k1.east) {\ read from cache (Opus: \$\PriceOpusRead\ per million tokens)};
+  \node[wr, minimum width=0.6cm, anchor=west] (k2) at (6.6,-4.0) {};
+  \node[anchor=west, font=\footnotesize] at (k2.east) {\ written to cache (Opus: \$\PriceOpusWrite)};
+\end{tikzpicture}

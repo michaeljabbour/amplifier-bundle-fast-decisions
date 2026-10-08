@@ -1,0 +1,26 @@
+\section{Risky actions: a deterministic guard works; editable criteria are untested}\label{sec:gate}
+
+\begin{claimbox}
+\TkTitle{Four} and the model's plain-text policy for actions with side effects; the guard is measured, editable criteria are not.
+\end{claimbox}
+
+\paragraph{Evidence}
+\begin{itemize}[leftmargin=1.2em]
+  \item In one development case (cua-18, \screen) all \ExClickedAll\ judges, Jev included, ranked ``Buy now'' first because the task said ``purchase'' and no policy said otherwise; \ExClickedRepOne\ of \ExRowsN\ would have clicked it automatically.
+  \item A deterministic guard on irreversible verbs removed every side-effect wrong automatic action for all
+    \ITwoHoldNApplicable\ applicable judges on the holdout (\ITwoHoldBefore\ to \ITwoHoldAfter), at a coverage cost of
+    \ITwoHoldCovCostRange\ points and no accuracy loss \prereg. Jev made no such error on the holdout; on the development
+    cases it made \IOneDevJevClBefore.
+  \item A one-sentence risk clause in the prompt was \IOneHoldConfirmed\ overall (\IOneHoldBefore\ to \IOneHoldAfter\
+    targeted errors; \IOneHoldNArmConfirmed\ of \IOneHoldNApplicable\ judges) \prereg.
+  \item The shipped tool hard-codes clause and guard; editability, live risky actions and a comparison with a trained
+    risk classifier are untested.
+\end{itemize}
+
+\begin{keyidea}[title={For practitioners}]
+Put the guarantee in a deterministic guard and the policy in plain text the model reads. Keep the confidence gate
+strict and let the host approve anything the model hands back. Treat editable criteria as the decision model's
+potential advantage over a fixed classifier, and measure it before relying on it.
+\end{keyidea}
+
+Details: Supplement Section~\ref{S-sec:e}.

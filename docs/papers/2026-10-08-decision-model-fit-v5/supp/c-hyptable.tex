@@ -1,0 +1,23 @@
+\subsection{The main campaign's confirmatory hypotheses at a glance}\label{sec:chyp}
+
+\Cref{tab:chyp} states the main campaign's three preregistered hypotheses in plain words (test split; ratios against the
+plain host, pair reading as in \cref{vt:tab:hyp}; the estimator was written after the data). All three were confirmed.
+
+\begin{table}[tbp]
+\centering\footnotesize
+\caption{Routing was cheaper on Fable, gave no saving on Opus, and deciding once cost no more than re-deciding.}
+\label{tab:chyp}
+\begin{tabularx}{\textwidth}{@{}l >{\raggedright\arraybackslash}p{0.22\textwidth} >{\raggedright\arraybackslash}p{0.17\textwidth}
+  >{\raggedright\arraybackslash}p{0.24\textwidth} >{\raggedright\arraybackslash}X@{}}
+\toprule
+ & Question & Threshold & Result (95\,\% CI) & Meaning \\
+\midrule
+H1 & Is routing cheaper on Fable? & upper end $<$ 1 & sticky \CfFableStickyPair\ (\CfFableStickyPairCI); shipped
+  \CfFableShippedPair\ (\CfFableShippedPairCI) & Confirmed: routing pays on Fable. \\
+H2 & Does routing fail to save on Opus? & lower end $>$ \HTwoLower & sticky \CfOpusStickyPair\ (\CfOpusStickyPairCI);
+  Sonnet \CfOpusSonnetPair\ (\CfOpusSonnetPairCI) & Confirmed: routing costs more on Opus. \\
+H3 & Does deciding once cost no more than re-deciding each turn? & upper end $\le$ \HThreeUpper & Fable \HThreeFable\
+  (\HThreeFableCI); Opus \HThreeOpus\ (\HThreeOpusCI) & Confirmed; the size of the saving is descriptive. \\
+\bottomrule
+\end{tabularx}
+\end{table}

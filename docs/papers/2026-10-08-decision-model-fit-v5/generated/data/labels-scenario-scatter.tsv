@@ -1,0 +1,4 @@
+key	text	x	y	px	py	x0	y0	x1	y1	own_dist	nearest_other	nearest_other_dist	leader
+arch-explain	arch-explain	7.7791	-4.1312	205.53	28.63	155.84	22.88	200.83	34.38	4.70	_unlabelled52	32.33	no
+py-go-counting	py-go-counting	9.2815	-3.2406	245.22	42.28	249.92	36.71	304.70	47.84	4.70	py-sgf-parsing	22.32	no
+py-sgf-parsing	py-sgf-parsing	12.3685	-2.6644	326.78	51.10	300.94	55.80	352.62	67.30	4.70	py-go-counting	57.33	no

@@ -1,0 +1,17 @@
+% Cost per million decisions (log scale) against holdout accuracy, priced judges only.
+\begin{tikzpicture}
+\begin{axis}[benchmark, scale only axis, width=\CostAxisW, height=\CostAxisH, xmode=log, log ticks with fixed point,
+  xmin=8, xmax=2000, ymin=70, ymax=102, xtick={10,30,100,300,1000}, ytick={70,80,90,100},
+  xlabel={Cost per million decisions (US dollars, log scale)}, ylabel={Holdout accuracy (\%)},
+  xmajorgrids, ymajorgrids, clip=false, title={What a point of accuracy costs}, title style={font=\small\bfseries},
+  legend to name=phcostlegend, legend columns=2, legend cell align=left,
+  legend style={/tikz/every even column/.append style={column sep=10pt}}]
+\addplot[only marks, mark=*, mark size=2.6pt, color=okblue, error bars/.cd, y dir=both, y explicit,
+  error bar style={okblue!55, line width=0.6pt}] table[x=cost, y=acc, y error minus=minus, y error plus=plus]{generated/data/ph-cost-pre.dat};
+\addlegendentry{preregistered run (Jev, Luna, Sol)}
+\addplot[only marks, mark=pentagon*, mark size=3.2pt, color=black!75, error bars/.cd, y dir=both, y explicit,
+  error bar style={black!45, line width=0.6pt, densely dashed}] table[x=cost, y=acc, y error minus=minus, y error plus=plus]{generated/data/ph-cost-post.dat};
+\addlegendentry{post hoc run (Clef, Clef-Flash, in-run Jev)}
+\input{generated/labels/costacc-holdout.tex}
+\end{axis}
+\end{tikzpicture}

@@ -1,0 +1,37 @@
+% Ported from an earlier report section (one-time conversion; edit here).
+\subsection{Limitations of the judge benchmark}\label{jb:sec:limits}
+
+\begin{itemize}
+  \item \textbf{Constructed cases, small samples.} \DevN\ dev and \HoldN\ holdout text decisions, written
+    for this bundle's instructions. They are not live browser tasks, tool executions or production
+    traffic. With these sample sizes, differences of a few cases cannot be detected.
+  \item \textbf{Labelers share a vendor.} The holdout author and both blind reviewers are Anthropic
+    models. Perfect agreement ($\kappa = \KappaHoldAB$) shows the labels follow from the guide, not that
+    the guide matches every operator's preferences.
+  \item \textbf{The side-effect rule is in the labels but not in the instruction.} By design: it is the
+    I1 treatment. This makes the ``acted on side effect'' class partly a measure of how judges interpret
+    an under-specified instruction. Cases \code{cua-18} and \code{cua-19} depend on it.
+  \item \textbf{Self-reported probabilities.} GPT-6 Luna and GPT-6.1 Sol write their probabilities as
+    text. Their calibration numbers (ECE) are reported but are not comparable with the others, and the
+    gate's thresholds mean something different for them.
+  \item \textbf{Adversarial mix.} The cost-at-scale and wrong-action projections assume the benchmark's
+    deliberately hard case mix, not real traffic.
+  \item \textbf{Host-dependent latency.} Local latency was measured on one Apple M5 Max under varying load
+    and with Ollama serving one request at a time. Cloud latency depends on provider load; the priority
+    tier was measured in a single window.
+  \item \textbf{A bundle defect was worked around, not fixed, in these runs.} When measured, the
+    bundle's local backend dropped options literally named \code{reason}, so in production a local judge
+    could not answer such questions correctly; the harness disabled that rule for comparability. PR
+    \#\SincePR\ has since fixed the defect on main (\cref{jb:sec:since}). The local-judge numbers here are
+    from the harness path and are reported as measured.
+  \item \textbf{Main has changed since.} PR \#\SincePR\ (commit \code{\SinceCommit}) tightened the
+    computer-use gate and added the side-effect guard and clause to \code{jev\_cua} after these
+    measurements (\cref{jb:sec:since}). This report describes the system as it was measured.
+  \item \textbf{Decisions API not measured.} It returned HTTP \HoldProbeStatus\ in the preregistered runs, so they make no claim about it; a later post hoc run is in \cref{sec:openai}.
+  \item \textbf{The follow-ups have their own limits.} The real-decision benchmark covers \TrN\ decisions
+    that an in-session judge had already declined, with strict labels and a clipped task view; the caching
+    re-analysis covers at most \CaTurns-turn synthetic sessions and does not isolate the switch. Both are
+    set out in \cref{jb:sec:caveats,vt:sec:survey}.
+  \item \textbf{Only the first option order is scored.} The second order is logged but used only for
+    latency and order-flip counts.
+\end{itemize}

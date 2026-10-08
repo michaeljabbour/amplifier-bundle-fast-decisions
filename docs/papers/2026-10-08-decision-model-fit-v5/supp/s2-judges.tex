@@ -1,0 +1,51 @@
+\subsection{Decision-model benchmarks in detail}\label{sec:judges}
+
+\paragraph{Constructed cases} \NumBase\ judges answered \DevN\ development cases (a screen) and \HoldN\ holdout cases
+whose analysis was preregistered, \HoldReps\ times each, under the harness's gate (act only when the top probability
+is at least \MinP\ and leads by \MinMargin, within \TimeoutS\,s). Two blind reviewer agents (language models, not people) checked the labels
+against a written guide; their agreement with the final labels was $\kappa$ = \KappaHoldAB, which shows the labels
+follow the guide, not that they match operator preference. \Cref{fig:accuracy} gives holdout
+accuracy for every judge, including the post hoc Clef run. No accuracy difference between Jev and the preregistered
+cloud judges was detected after the preregistered Holm correction; the paired bootstrap intervals for Luna and Sol
+(\LunaHoldRAccDiffCI\ and \SolHoldRAccDiffCI\ points) exclude zero.
+
+\begin{figure}[tbp]
+\centering
+\pgfplotslegendfromname{phacclegend}\par\smallskip
+\input{figures/fig-ph-accuracy.tex}
+\caption{No accuracy difference between the top judges was detected after the preregistered correction. Holdout accuracy with 95\,\% Wilson intervals: the preregistered run, then (above the gap) the post hoc run
+of Clef, Clef-Flash and the in-run Jev reference.}
+\label{fig:accuracy}
+\howtoread{Each row is a judge; the dot is its accuracy and the whisker its 95\,\% interval. The top judges'
+whiskers overlap: no accuracy difference was detected after the preregistered correction (which is not the same as
+showing the judges equivalent). Jev sits among them at a fraction of
+the cost and latency of the cloud models.}
+\end{figure}
+
+\paragraph{Real decisions} A second preregistered study rebuilt \TrN\ held-out read decisions from earlier agent
+sessions by fingerprint matching, with the state clipped to the decision model's input budget, and asked every judge
+again. The reviewer agents (again language models) agreed with each other ($\kappa$ = \TrKappaAB) more than with what
+the host actually did next ($\kappa$ = \TrKappaOutcome). The usefulness rule asked for at least \TrUsefulMinReads\ correct automatic reads
+with few misfires; \TrNUseful\ of \NumBase\ judges met it (\cref{fig:reads}).
+
+\begin{figure}[tbp]
+\centering
+\begin{adjustbox}{max width=\linewidth}\input{figures/fig-ph-reads.tex}\end{adjustbox}
+\caption{On real read decisions, no judge reached the usefulness zone. Real decisions: correct automatic reads against wrong automatic reads on trace-holdout, with 95\,\% Wilson
+intervals: the preregistered run, plus the post hoc Clef arms (black pentagons). The shaded strip is where the
+preregistered rule would call a judge useful.}
+\label{fig:reads}
+\howtoread{Right is more saved host calls; up is more misfires. No judge reaches the shaded strip: every judge with
+enough correct reads also misfired.}
+\end{figure}
+
+\paragraph{Risky actions: the side-effect interventions} Two interventions targeted wrong automatic actions with side
+effects. The deterministic guard (a short list of irreversible verbs matched on the proposed action) was
+\ITwoHoldConfirmed\ on the holdout: it removed every side-effect wrong automatic action for all
+\ITwoHoldNApplicable\ applicable judges (\ITwoHoldBefore\ to \ITwoHoldAfter), at a coverage cost of
+\ITwoHoldCovCostRange\ points. The natural-language risk clause (``\IOneClause'') was \IOneHoldConfirmed\ on the
+holdout (\IOneHoldBefore\ to \IOneHoldAfter\ targeted errors; \IOneHoldNArmConfirmed\ of \IOneHoldNApplicable\
+applicable judges confirmed); on the development screen it removed all of Jev's side-effect errors
+(\IOneDevJevClBefore\ to \IOneDevJevClAfter).
+
+\input{generated/openai-section.tex}

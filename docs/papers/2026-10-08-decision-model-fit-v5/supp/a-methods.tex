@@ -1,0 +1,44 @@
+\section{Setting, data and methods}\label{sec:methods}
+
+This section is the complete methods record behind Section~\ref{M-sec:setting} of the main paper: how the study
+program unfolded, how each data source was built, the arms, scenarios and quality instrument of the paired campaigns,
+the power analysis and savings model, the noise floor, how the campaign ran, and the judge benchmark's design,
+labelling guide and case examples.
+
+\subsection{Study timeline and findings at a glance}\label{sec:timeline}
+\Cref{tab:glance} gives the five takeaways exactly as the main paper states them, with the same headline numbers and
+strength labels. \Cref{fig:timeline} shows the order of the studies; \cref{tab:findings} lists every headline finding with its number,
+study and evidence label.
+\begin{figure}[!ht]
+\centering
+\input{figures/fig-timeline.tex}
+\caption{Each stage answered the question the previous one left open. The study program in order, with what each stage
+measured, how big it was and what it cost in model calls.}
+\label{fig:timeline}
+\howtoread{Follow the arrows. Telemetry could not say whether decisions were right, so we built judge benchmarks;
+benchmarks could not say what a decision saves, so we ran whole sessions; whole sessions raised the effort and decider
+questions that the follow-ups and the holdout study settled.}
+\end{figure}
+\begin{table}[!ht]
+\centering\small
+\caption{The five takeaways at a glance, in the main paper's order, with the same headline numbers and strength
+labels as both abstracts.}
+\label{tab:glance}
+\input{generated/tables/takeaways-glance.tex}
+\end{table}
+\begin{table}[tbp]
+\centering\small
+\caption{Findings at a glance. ``Preregistered'' means the hypothesis and its threshold were fixed before the data;
+``replicated'' means an independent set of scenarios gave the same answer; ``exploratory'' findings are hypotheses.}
+\label{tab:findings}
+\input{generated/tables/findings.tex}
+\end{table}
+
+\input{supp/ported/vt-04-design}
+\input{supp/ported/vt-05-running}
+\input{supp/ported/vt-09-limitations}
+\input{supp/ported/jb-03-method}
+\input{supp/ported/jb-04-validating-first-pass}
+\input{supp/ported/jb-10-limitations}
+\input{supp/ported/jb-appendix-b-labeling-guide}
+\input{supp/ported/jb-appendix-c-case-examples}

@@ -1,0 +1,20 @@
+\section{Conclusion: what matters most}\label{sec:conclusion}
+
+The five takeaways, in the order of the paper, with their strength:
+\begin{enumerate}[leftmargin=1.6em]
+  \item \textbf{\TkTitle{One}:} \TkHead{One} \TkLabel{One}. Jev is the cheapest accurate judge; the dearer models' accuracy edge was not confirmed, and the Decisions API matched or beat Jev at higher price \posthoc.
+  \item \textbf{\TkTitle{Two}:} \TkHead{Two} \TkLabel{Two}. A price check that weighs cache reads and writes and the cheaper model's extra requests predicted both directions.
+  \item \textbf{\TkTitle{Three}:} \TkHead{Three} \TkLabel{Three}. Switches rewrite the cache \expl; a one-line rule made the start-of-session choice as well as the decision model \prereg.
+  \item \textbf{\TkTitle{Four}:} \TkHead{Four} \TkLabel{Four}. Plain-text, editable criteria are promising but untested.
+  \item \textbf{\TkTitle{Five}:} \TkHead{Five} \TkLabel{Five}. Telemetry cannot say whether a decision was right or what it saved.
+\end{enumerate}
+A fast decision model therefore belongs where a cheap typed judgement changes an expensive or risky action and no rule
+does as well. The open question is decisions whose right answer changes during a session, such as escalating to the
+host or delegating a sub-task. \emph{Scope:} these results come from one provider's host models, scripted tasks of at
+most \MaxTurns\ turns, automated quality checks, list prices and one owner's telemetry; the judge comparison spans
+several vendors but uses model-written labels.
+
+\paragraph{Data and code availability} All analysis code, the evidence packages and the build that regenerates every
+number in this paper and its supplement are in the repository
+\url{https://github.com/michaeljabbour/amplifier-bundle-fast-decisions} at commit \RepoCommit; the evidence package IDs
+are listed in Supplement Table~\ref{S-tab:evidence}.
