@@ -237,7 +237,7 @@ class ReorderAndAdaptedTests(unittest.TestCase):
     def test_yaml_declares_which_arms_run_native(self):
         cfg = judges.load_config()
         env = {"TYPESAFE_API_KEY": "x", "OPENAI_API_KEY": "x", "CLOUDFLARE_API_TOKEN": "x",
-               "CLOUDFLARE_ACCOUNT_ID": "x"}
+               "CLOUDFLARE_ACCOUNT_ID": "x", "OPENROUTER_MS_DECISIONS_API_KEY": "x"}
         got = {n: arms.native_form_of(arms.build_arm(s, cfg["arms"], env)) for n, s in cfg["arms"].items()}
         self.assertEqual(got["jev-1.13"], "systemone_body")
         self.assertEqual(got["jev-1.13+sideeffect-clause"], "systemone_body")

@@ -192,6 +192,23 @@ arms:
     est_tokens_out: 0
     determinism: {temperature_sent: null, seed_sent: null}
 
+  # Microsoft Decision 1 via OpenRouter's Decisions API (alpha), post-hoc addition 2026-10-11; not in the
+  # preregistration. POST https://openrouter.ai/api/alpha/decisions with System One typed questions
+  # (noul / choice / score) 1:1. Billed $0.042 per million input tokens, output free; a provider-reported cost
+  # is recorded per row when present. No native_form: it runs `form: adapted` on the trace splits.
+  microsoft-decision-1:
+    adapter: openrouter-decisions
+    model: microsoft/microsoft-decision-1
+    key_env: OPENROUTER_MS_DECISIONS_API_KEY
+    call_timeout_ms: 30000
+    local: false
+    external_state: true
+    price_in: 0.042
+    price_out: 0.0
+    est_tokens_in: 800
+    est_tokens_out: 0
+    determinism: {temperature_sent: null, seed_sent: null}
+
   # Pre-declared prompt interventions: the same clause appended to choice instructions.
   jev-1.13+sideeffect-clause:
     adapter: instruction_clause
@@ -282,3 +299,4 @@ contrasts:
   - [jev-1.13, clef-flash]
   - [clef, clef-flash]
   - [jev-1.13, luna-decisions]
+  - [jev-1.13, microsoft-decision-1]

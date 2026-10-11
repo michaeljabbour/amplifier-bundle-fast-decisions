@@ -22,6 +22,7 @@ LAYA_URL = "http://127.0.0.1:8090/v1/decide"
 OLLAMA_ORIGIN = "http://127.0.0.1:11434"
 OPENAI_URL = "https://api.openai.com/v1/chat/completions"
 OPENAI_DECISIONS_URL = "https://api.openai.com/v1/decisions"
+OPENROUTER_DECISIONS_URL = "https://openrouter.ai/api/alpha/decisions"
 
 
 class ArmUnavailable(RuntimeError):
@@ -477,6 +478,159 @@ class DecisionsApiArm:
             raise ArmParseError(f"{type(exc).__name__}: {exc}", usage_pair, response.status_code) from exc
 
 
+class OpenRouterDecisionsArm:
+    """OpenRouter Decisions API (POST /api/alpha/decisions, microsoft/microsoft-decision-1), adapter
+    `openrouter-decisions`.
+
+    The request is the System One question schema 1:1: `questions` is an object keyed by question name, each
+    {type: noul|choice|score, instructions, criteria}. A noul question carries `criteria` only when the bench
+    question has them (the bench ones do not) or the arm spec sets `noul_criteria`. choice criteria are
+    value -> description text (an object-valued criterion is serialized as JSON text). score criteria are
+    the list of level descriptions. The response `answers` object is parsed defensively (probabilities as a
+    dict, or a list of {value|label, probability}, or a bare list in criteria order) into the bench format
+    with probabilities in the request's criteria order. Nothing is synthesized: errors raise and the runner
+    records an invalid row. HTTP 404 "All providers have been ignored" is an account-routing block (the
+    account's provider settings exclude every provider for this model), reported as such and never as a
+    model failure. Usage tokens, any provider-reported cost and any timing headers are recorded."""
+
+    SENT = {"temperature_sent": None, "seed_sent": None}
+    ROUTING_BLOCK = "ACCOUNT_ROUTING_BLOCK"
+    TIMING_HINTS = ("ms", "time", "latency", "openrouter", "generation", "request-id")
+
+    def __init__(self, name, token, model, url: str = OPENROUTER_DECISIONS_URL, timeout_ms: int = 30000,
+                 noul_criteria: dict | None = None):
+        self.name, self.token, self.model, self.url = name, token, model, url
+        self.timeout_s, self.noul_criteria = timeout_ms / 1000, noul_criteria
+
+    @property
+    def determinism(self) -> dict:
+        return dict(self.SENT)
+
+    def question(self, spec: dict) -> dict:
+        kind, text = spec["type"], spec["instructions"]
+        if kind == "noul":
+            out = {"type": "noul", "instructions": text}
+            criteria = spec.get("criteria") or self.noul_criteria
+            if criteria:
+                out["criteria"] = criteria
+            return out
+        if kind == "choice":
+            return {"type": "choice", "instructions": text,
+                    "criteria": {k: d if isinstance(d, str) else json.dumps(d, ensure_ascii=False)
+                                 for k, d in spec["criteria"].items()}}
+        if kind == "score":
+            crit = spec["criteria"]
+            levels = list(crit.values()) if isinstance(crit, dict) else list(crit)
+            return {"type": "score", "instructions": text,
+                    "criteria": [d if isinstance(d, str) else json.dumps(d, ensure_ascii=False) for d in levels]}
+        raise ValueError(f"unsupported question type {kind!r}")
+
+    def request_body(self, payload: dict) -> dict:
+        return {"model": self.model, "state": payload["state"],
+                "questions": {n: self.question(q) for n, q in payload["questions"].items()}}
+
+    @staticmethod
+    def _by_label(probs, labels: list[str]) -> dict:
+        """probabilities as {label: p} in `labels` order, from a dict, a list of {value|label|choice, probability}
+        or a bare list of numbers in `labels` order. Anything else, or a label mismatch, raises."""
+        if isinstance(probs, dict):
+            stated = {str(k): v for k, v in probs.items()}
+        elif isinstance(probs, list) and probs and all(isinstance(p, dict) for p in probs):
+            stated = {}
+            for p in probs:
+                key = next((p[k] for k in ("value", "label", "choice", "name") if k in p), None)
+                val = p.get("probability", p.get("p"))
+                if key is None or val is None:
+                    raise ValueError("unrecognized probability entry")
+                stated[str(key)] = val
+        elif isinstance(probs, list) and len(probs) == len(labels) and all(isinstance(p, (int, float)) for p in probs):
+            stated = dict(zip(labels, probs))
+        else:
+            raise ValueError("probabilities missing or in an unrecognized shape")
+        if set(stated) != set(labels):
+            raise ValueError("probabilities do not match the criteria asked")
+        return {k: stated[k] for k in labels}
+
+    @classmethod
+    def parse_answer(cls, spec: dict, answer: dict) -> dict:
+        kind = spec["type"]
+        if not isinstance(answer, dict) or answer.get("type") != kind:
+            got = answer.get("type") if isinstance(answer, dict) else type(answer).__name__
+            raise ValueError(f"expected a {kind} answer, got {got!r}")
+        if kind == "noul":
+            return {"type": "noul", "noul": answer["noul"]}
+        if kind == "choice":
+            labels = list(spec["criteria"])
+            out = {"type": "choice", "choice": answer.get("choice"),
+                   "probabilities": cls._by_label(answer.get("probabilities"), labels)}
+            if answer.get("confidence") is not None:
+                out["confidence"] = answer["confidence"]
+            return out
+        crit = spec["criteria"]
+        labels = list(crit) if isinstance(crit, dict) else [str(i) for i in range(len(crit))]
+        out = {"type": "score", "score": answer["score"]}
+        if answer.get("probabilities") is not None:
+            out["probabilities"] = cls._by_label(answer["probabilities"], labels)
+        return out
+
+    @classmethod
+    def usage_of(cls, data: dict) -> tuple:
+        """(input tokens, output tokens, provider-reported cost in USD or None) from OpenRouter-style usage."""
+        usage = data.get("usage") or {}
+        tin = usage.get("input_tokens", usage.get("prompt_tokens"))
+        tout = usage.get("output_tokens", usage.get("completion_tokens"))
+        cost = usage.get("cost", data.get("cost"))
+        return tin, tout, (float(cost) if isinstance(cost, (int, float)) else None)
+
+    @classmethod
+    def timing_headers(cls, headers) -> dict:
+        items = headers.items() if headers is not None else []
+        return {str(k).lower(): str(v) for k, v in items
+                if any(h in str(k).lower() for h in cls.TIMING_HINTS)}
+
+    def request_headers(self) -> dict:
+        return {"Authorization": "Bearer " + self.token, "Content-Type": "application/json",
+                "HTTP-Referer": "https://github.com/michaeljabbour/amplifier-fast-decisions",
+                "X-Title": "fast-decisions-benchmark"}
+
+    @classmethod
+    def http_error(cls, response) -> "ArmParseError":
+        try:
+            err = response.json().get("error")
+            detail = err.get("message") if isinstance(err, dict) else err
+        except Exception:
+            detail = None
+        detail = str(detail or response.text[:200])
+        if response.status_code == 404 and "all providers have been ignored" in detail.lower():
+            return ArmParseError(f"{cls.ROUTING_BLOCK}: HTTP 404 {detail} (account provider settings exclude every "
+                                 "provider for this model; not a model failure)", http_status=404)
+        return ArmParseError(f"HTTP {response.status_code}: {detail}", http_status=response.status_code)
+
+    async def decide(self, client, payload):
+        if not self.token:
+            raise ArmUnavailable(f"OPENROUTER_MS_DECISIONS_API_KEY is not set (needed by arm {self.name})")
+        response = await client.post(self.url, json=self.request_body(payload), headers=self.request_headers(),
+                                     timeout=self.timeout_s)
+        if not response.is_success:
+            raise self.http_error(response)
+        usage_pair = (None, None)
+        try:
+            data = response.json()
+            tin, tout, reported = self.usage_of(data)
+            usage_pair = (tin, tout)
+            answers = data["answers"]
+            if isinstance(answers, list):
+                answers = {a["name"]: a for a in answers}
+            name, spec = next(iter(payload["questions"].items()))
+            result = _result(self.parse_answer(spec, answers[name]), data.get("model") or self.model, tin, tout,
+                             server_ms(response.headers, ("x-processing-ms", "openrouter-processing-ms", "server-timing")),
+                             response.status_code, reported_cost_usd=reported)
+            result["timing"]["headers"] = self.timing_headers(response.headers)
+            return result
+        except Exception as exc:
+            raise ArmParseError(f"{type(exc).__name__}: {exc}", usage_pair, response.status_code) from exc
+
+
 class InstructionClauseArm:
     """A pre-declared prompt intervention: append `clause` to the instructions of
     choice questions only, then delegate to the wrapped arm unchanged."""
@@ -551,6 +705,10 @@ def build_arm(spec: dict, specs: dict | None = None, env=None):
     if adapter == "openai-decisions":
         return DecisionsApiArm(name, key("OPENAI_API_KEY"), spec["model"], spec.get("url", OPENAI_DECISIONS_URL),
                                spec.get("call_timeout_ms", 30000))
+    if adapter == "openrouter-decisions":
+        return OpenRouterDecisionsArm(name, key("OPENROUTER_MS_DECISIONS_API_KEY"), spec["model"],
+                                      spec.get("url", OPENROUTER_DECISIONS_URL), spec.get("call_timeout_ms", 30000),
+                                      spec.get("noul_criteria"))
     if adapter == "instruction_clause":
         if not specs or spec["base"] not in specs:
             raise KeyError(f"arm {name}: unknown base {spec.get('base')!r}")

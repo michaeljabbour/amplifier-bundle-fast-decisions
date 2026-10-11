@@ -312,7 +312,10 @@ async def _one(arm, name, case, order, rep, client, log, spend, specs, sem):
                        http_status=result["http_status"])
             if result.get("reasoning_tokens") is not None:
                 row["reasoning_tokens"] = result["reasoning_tokens"]
-            spend.total += request_cost(name, specs, result["input_tokens"], result["output_tokens"])
+            if result.get("reported_cost_usd") is not None:  # provider-reported cost, kept beside the computed one
+                row["reported_cost_usd"] = result["reported_cost_usd"]
+            spend.total += (result["reported_cost_usd"] if result.get("reported_cost_usd") is not None
+                            else request_cost(name, specs, result["input_tokens"], result["output_tokens"]))
             validate_answer(case, result["answer"])
             row["valid"] = True
         except Exception as exc:
