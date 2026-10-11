@@ -1,0 +1,17 @@
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}l l r r r r r r S[table-format=2.1]@{}}
+\toprule
+Split & Judge & correct & {wrong auto.} & {acted} & {invalid} & {p50 ms} & {p95 ms} & {\$ / 1M} \\
+\midrule
+dev & Microsoft-Decision-1 & 84/90 & 5 & 73 & 0 & 292 & 392 & 4.4 \\
+dev & Jev 1.13 (in-run reference) & 85/90 & 3 & 69 & 0 & 232 & 284 & 15.9 \\
+\addlinespace[2pt]
+holdout & Microsoft-Decision-1 & 57/63 & 5 & 49 & 0 & 292 & 356 & 7.0 \\
+holdout & Jev 1.13 (in-run reference) & 55/63 & 1 & 40 & 0 & 234 & 347 & 18.4 \\
+\addlinespace[2pt]
+trace-dev & Microsoft-Decision-1 & 16/21 & 4 & 15 & 0 & 316 & 551 & 29.8 \\
+trace-dev & Jev 1.13 (in-run reference) & 16/21 & 3 & 14 & 0 & 239 & 523 & 43.2 \\
+\addlinespace[2pt]
+trace-holdout & Microsoft-Decision-1 & 25/42 & 8 & 18 & 0 & 312 & 378 & 31.8 \\
+trace-holdout & Jev 1.13 (in-run reference) & 23/42 & 5 & 15 & 0 & 239 & 326 & 46.1 \\
+\bottomrule
+\end{tabular*}

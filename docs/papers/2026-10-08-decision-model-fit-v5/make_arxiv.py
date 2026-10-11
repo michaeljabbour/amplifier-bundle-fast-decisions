@@ -36,9 +36,9 @@ HEADER = r"""\documentclass[11pt,letterpaper]{article}
 \hypersetup{
   pdftitle={Where a Decision Model Fits in an Agent Harness},
   pdfauthor={Michael J. Jabbour; David Koleczek},
-  pdfsubject={Decision models in AI agent harnesses (arXiv edition of technical report v5.1, October 8, 2026)},
+  pdfsubject={Decision models in AI agent harnesses (arXiv edition of technical report v5.2, October 11, 2026)},
   pdfkeywords={decision models; model routing; prompt caching; reasoning effort; AI agents; preregistration; paired measurement},
-  pdflang={en-US}, pdfdisplaydoctitle=true, pdfcreationdate={D:20261008000000}, pdfmoddate={D:20261008000000},
+  pdflang={en-US}, pdfdisplaydoctitle=true, pdfcreationdate={D:20261011000000}, pdfmoddate={D:20261011000000},
   colorlinks=true, linkcolor=okblue!65!black, urlcolor=okblue!65!black, citecolor=okblue!65!black,
   bookmarksnumbered=true, bookmarksopen=true,
 }
@@ -62,7 +62,7 @@ HEADER = r"""\documentclass[11pt,letterpaper]{article}
   \vspace{3pt}
   {\normalsize Microsoft, Office of the CTO\par}
   \vspace{3pt}
-  {\normalsize October 8, 2026\par}
+  {\normalsize Version 5.2 \textperiodcentered{} October 11, 2026\par}
 \end{center}
 \vspace{4pt}
 \input{sections/m0-abstract}
@@ -105,7 +105,7 @@ Report-no: none (no institutional report number has been issued)
 Journal-ref: none
 DOI: none
 """)
-    (OUT / "README.txt").write_text(f"""arXiv edition of "Where a Decision Model Fits in an Agent Harness" (technical report v5.1, October 8, 2026)
+    (OUT / "README.txt").write_text(f"""arXiv edition of "Where a Decision Model Fits in an Agent Harness" (technical report v5.2, October 11, 2026)
 
 Contents of this directory
   arxiv-source.tar.gz              upload this file (flat TeX source: main.tex, main.bbl, plotted data and label files)
@@ -134,7 +134,7 @@ Before submitting (decisions for the lead; not changed by the build)
   - Endorsement: the submitting account needs cs.SE endorsement (institutional email or an endorser).
   - Authorship: the two review PDFs list Amplifier as an author; arXiv forbids AI authors, so this edition lists
     only Michael J. Jabbour and David Koleczek and discloses Amplifier's role in the AI-use statement.
-  - Data and code: the statement cites git tag report-v5.1; create and push that tag before submitting.
+  - Data and code: the statement cites git tag report-v5.2; create and push that tag before submitting.
 
 Notes
   - Figures are pgfplots drawn at compile time from the shipped data files; there are no image files.
