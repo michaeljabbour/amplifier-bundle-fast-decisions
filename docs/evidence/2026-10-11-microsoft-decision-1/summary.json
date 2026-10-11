@@ -1,0 +1,574 @@
+{
+ "description": "Microsoft Decision 1 via the OpenRouter Decisions API (POST /api/alpha/decisions, model microsoft/microsoft-decision-1) as a post-hoc judge arm (microsoft-decision-1) against the in-run Jev reference (jev-1.13), 3 repetitions x 2 option orders on dev (90), holdout (63), trace-dev (21), trace-holdout (42). Primary policy bundle-read-shortcut (0.90 / 0.20 margin / 3 s deadline), per-case majority over repetitions, every case in the denominator. Latency is client wall time from a Mac over the network, not server time. holdout and trace-holdout are post-hoc for microsoft-decision-1: no preregistered verdict applies.",
+ "rows": [
+  {
+   "split": "dev",
+   "arm": "microsoft-decision-1",
+   "accuracy": 0.9333,
+   "n": 90,
+   "wrong_automatic": 0.0556,
+   "coverage": 0.8111,
+   "p50_ms": 292.3,
+   "p95_ms": 392.1,
+   "usd_per_1m": 4.42
+  },
+  {
+   "split": "dev",
+   "arm": "jev-1.13",
+   "accuracy": 0.9444,
+   "n": 90,
+   "wrong_automatic": 0.0333,
+   "coverage": 0.7667,
+   "p50_ms": 231.7,
+   "p95_ms": 284.1,
+   "usd_per_1m": 15.91
+  },
+  {
+   "split": "holdout",
+   "arm": "microsoft-decision-1",
+   "accuracy": 0.9048,
+   "n": 63,
+   "wrong_automatic": 0.0794,
+   "coverage": 0.7778,
+   "p50_ms": 292.4,
+   "p95_ms": 355.5,
+   "usd_per_1m": 6.95
+  },
+  {
+   "split": "holdout",
+   "arm": "jev-1.13",
+   "accuracy": 0.873,
+   "n": 63,
+   "wrong_automatic": 0.0159,
+   "coverage": 0.6349,
+   "p50_ms": 234.0,
+   "p95_ms": 347.3,
+   "usd_per_1m": 18.41
+  },
+  {
+   "split": "trace-dev",
+   "arm": "microsoft-decision-1",
+   "accuracy": 0.7619,
+   "n": 21,
+   "wrong_automatic": 0.1905,
+   "coverage": 0.7143,
+   "p50_ms": 316.2,
+   "p95_ms": 550.9,
+   "usd_per_1m": 29.84
+  },
+  {
+   "split": "trace-dev",
+   "arm": "jev-1.13",
+   "accuracy": 0.7619,
+   "n": 21,
+   "wrong_automatic": 0.1429,
+   "coverage": 0.6667,
+   "p50_ms": 239.3,
+   "p95_ms": 523.2,
+   "usd_per_1m": 43.18
+  },
+  {
+   "split": "trace-holdout",
+   "arm": "microsoft-decision-1",
+   "accuracy": 0.5952,
+   "n": 42,
+   "wrong_automatic": 0.1905,
+   "coverage": 0.4286,
+   "p50_ms": 311.6,
+   "p95_ms": 378.2,
+   "usd_per_1m": 31.8
+  },
+  {
+   "split": "trace-holdout",
+   "arm": "jev-1.13",
+   "accuracy": 0.5476,
+   "n": 42,
+   "wrong_automatic": 0.119,
+   "coverage": 0.3571,
+   "p50_ms": 239.1,
+   "p95_ms": 325.5,
+   "usd_per_1m": 46.1
+  }
+ ],
+ "no_deadline_rows": [
+  {
+   "split": "dev",
+   "arm": "microsoft-decision-1",
+   "accuracy": 0.9333,
+   "n": 90,
+   "wrong_automatic": 0.0556,
+   "coverage": 0.8111,
+   "p50_ms": 292.3,
+   "p95_ms": 392.1,
+   "usd_per_1m": 4.42
+  },
+  {
+   "split": "dev",
+   "arm": "jev-1.13",
+   "accuracy": 0.9444,
+   "n": 90,
+   "wrong_automatic": 0.0333,
+   "coverage": 0.7667,
+   "p50_ms": 231.7,
+   "p95_ms": 284.1,
+   "usd_per_1m": 15.91
+  },
+  {
+   "split": "holdout",
+   "arm": "microsoft-decision-1",
+   "accuracy": 0.9048,
+   "n": 63,
+   "wrong_automatic": 0.0794,
+   "coverage": 0.7778,
+   "p50_ms": 292.4,
+   "p95_ms": 355.5,
+   "usd_per_1m": 6.95
+  },
+  {
+   "split": "holdout",
+   "arm": "jev-1.13",
+   "accuracy": 0.873,
+   "n": 63,
+   "wrong_automatic": 0.0159,
+   "coverage": 0.6349,
+   "p50_ms": 234.0,
+   "p95_ms": 347.3,
+   "usd_per_1m": 18.41
+  },
+  {
+   "split": "trace-dev",
+   "arm": "microsoft-decision-1",
+   "accuracy": 0.7619,
+   "n": 21,
+   "wrong_automatic": 0.1905,
+   "coverage": 0.7143,
+   "p50_ms": 316.2,
+   "p95_ms": 550.9,
+   "usd_per_1m": 29.84
+  },
+  {
+   "split": "trace-dev",
+   "arm": "jev-1.13",
+   "accuracy": 0.7619,
+   "n": 21,
+   "wrong_automatic": 0.1429,
+   "coverage": 0.6667,
+   "p50_ms": 239.3,
+   "p95_ms": 523.2,
+   "usd_per_1m": 43.18
+  },
+  {
+   "split": "trace-holdout",
+   "arm": "microsoft-decision-1",
+   "accuracy": 0.5952,
+   "n": 42,
+   "wrong_automatic": 0.1905,
+   "coverage": 0.4286,
+   "p50_ms": 311.6,
+   "p95_ms": 378.2,
+   "usd_per_1m": 31.8
+  },
+  {
+   "split": "trace-holdout",
+   "arm": "jev-1.13",
+   "accuracy": 0.5476,
+   "n": 42,
+   "wrong_automatic": 0.119,
+   "coverage": 0.3571,
+   "p50_ms": 239.1,
+   "p95_ms": 325.5,
+   "usd_per_1m": 46.1
+  }
+ ],
+ "contrasts": [
+  {
+   "split": "dev",
+   "a": "microsoft-decision-1",
+   "b": "jev-1.13",
+   "metric": "accuracy",
+   "a_rate": 0.9333333333333333,
+   "b_rate": 0.9444444444444444,
+   "diff": -0.011111111111111112,
+   "diff_ci95": [
+    -0.06666666666666667,
+    0.044444444444444446
+   ],
+   "a_only": 3,
+   "b_only": 4,
+   "p": 1.0,
+   "p_holm": 1.0
+  },
+  {
+   "split": "dev",
+   "a": "microsoft-decision-1",
+   "b": "jev-1.13",
+   "metric": "wrong automatic",
+   "a_rate": 0.05555555555555555,
+   "b_rate": 0.03333333333333333,
+   "diff": 0.022222222222222223,
+   "diff_ci95": [
+    -0.022222222222222223,
+    0.06666666666666667
+   ],
+   "a_only": 3,
+   "b_only": 1,
+   "p": 0.625,
+   "p_holm": 0.625
+  },
+  {
+   "split": "holdout",
+   "a": "microsoft-decision-1",
+   "b": "jev-1.13",
+   "metric": "accuracy",
+   "a_rate": 0.9047619047619048,
+   "b_rate": 0.873015873015873,
+   "diff": 0.031746031746031744,
+   "diff_ci95": [
+    -0.047619047619047616,
+    0.1111111111111111
+   ],
+   "a_only": 4,
+   "b_only": 2,
+   "p": 0.6875,
+   "p_holm": 0.6875
+  },
+  {
+   "split": "holdout",
+   "a": "microsoft-decision-1",
+   "b": "jev-1.13",
+   "metric": "wrong automatic",
+   "a_rate": 0.07936507936507936,
+   "b_rate": 0.015873015873015872,
+   "diff": 0.06349206349206349,
+   "diff_ci95": [
+    0.0,
+    0.14285714285714285
+   ],
+   "a_only": 5,
+   "b_only": 1,
+   "p": 0.21875,
+   "p_holm": 0.21875
+  },
+  {
+   "split": "trace-dev",
+   "a": "microsoft-decision-1",
+   "b": "jev-1.13",
+   "metric": "accuracy",
+   "a_rate": 0.7619047619047619,
+   "b_rate": 0.7619047619047619,
+   "diff": 0.0,
+   "diff_ci95": [
+    0.0,
+    0.0
+   ],
+   "a_only": 0,
+   "b_only": 0,
+   "p": 1.0,
+   "p_holm": 1.0
+  },
+  {
+   "split": "trace-dev",
+   "a": "microsoft-decision-1",
+   "b": "jev-1.13",
+   "metric": "wrong automatic",
+   "a_rate": 0.19047619047619047,
+   "b_rate": 0.14285714285714285,
+   "diff": 0.047619047619047616,
+   "diff_ci95": [
+    0.0,
+    0.14285714285714285
+   ],
+   "a_only": 1,
+   "b_only": 0,
+   "p": 1.0,
+   "p_holm": 1.0
+  },
+  {
+   "split": "trace-holdout",
+   "a": "microsoft-decision-1",
+   "b": "jev-1.13",
+   "metric": "accuracy",
+   "a_rate": 0.5952380952380952,
+   "b_rate": 0.5476190476190477,
+   "diff": 0.047619047619047616,
+   "diff_ci95": [
+    -0.07142857142857142,
+    0.16666666666666666
+   ],
+   "a_only": 4,
+   "b_only": 2,
+   "p": 0.6875,
+   "p_holm": 0.6875
+  },
+  {
+   "split": "trace-holdout",
+   "a": "microsoft-decision-1",
+   "b": "jev-1.13",
+   "metric": "wrong automatic",
+   "a_rate": 0.19047619047619047,
+   "b_rate": 0.11904761904761904,
+   "diff": 0.07142857142857142,
+   "diff_ci95": [
+    0.0,
+    0.16666666666666666
+   ],
+   "a_only": 3,
+   "b_only": 0,
+   "p": 0.25,
+   "p_holm": 0.25
+  }
+ ],
+ "latency": [
+  {
+   "split": "dev",
+   "arm": "microsoft-decision-1",
+   "n_valid": 540,
+   "n_requests": 540,
+   "client_wall_ms": {
+    "p50": 292.3,
+    "p90": 347.3,
+    "p95": 392.1,
+    "p99": 775.6,
+    "max": 1373.7,
+    "min": 271.5
+   },
+   "server_ms": {
+    "n": 0,
+    "p50": null,
+    "p95": null,
+    "max": null
+   },
+   "valid_over_3000ms": 0,
+   "share_valid_over_3000ms": 0.0
+  },
+  {
+   "split": "dev",
+   "arm": "jev-1.13",
+   "n_valid": 540,
+   "n_requests": 540,
+   "client_wall_ms": {
+    "p50": 231.7,
+    "p90": 268.0,
+    "p95": 284.1,
+    "p99": 368.8,
+    "max": 389.5,
+    "min": 205.3
+   },
+   "server_ms": {
+    "n": 0,
+    "p50": null,
+    "p95": null,
+    "max": null
+   },
+   "valid_over_3000ms": 0,
+   "share_valid_over_3000ms": 0.0
+  },
+  {
+   "split": "holdout",
+   "arm": "microsoft-decision-1",
+   "n_valid": 378,
+   "n_requests": 378,
+   "client_wall_ms": {
+    "p50": 292.4,
+    "p90": 334.7,
+    "p95": 355.5,
+    "p99": 550.3,
+    "max": 1038.1,
+    "min": 267.9
+   },
+   "server_ms": {
+    "n": 0,
+    "p50": null,
+    "p95": null,
+    "max": null
+   },
+   "valid_over_3000ms": 0,
+   "share_valid_over_3000ms": 0.0
+  },
+  {
+   "split": "holdout",
+   "arm": "jev-1.13",
+   "n_valid": 378,
+   "n_requests": 378,
+   "client_wall_ms": {
+    "p50": 234.0,
+    "p90": 302.1,
+    "p95": 347.3,
+    "p99": 526.5,
+    "max": 643.6,
+    "min": 203.0
+   },
+   "server_ms": {
+    "n": 0,
+    "p50": null,
+    "p95": null,
+    "max": null
+   },
+   "valid_over_3000ms": 0,
+   "share_valid_over_3000ms": 0.0
+  },
+  {
+   "split": "trace-dev",
+   "arm": "microsoft-decision-1",
+   "n_valid": 126,
+   "n_requests": 126,
+   "client_wall_ms": {
+    "p50": 316.2,
+    "p90": 378.5,
+    "p95": 550.9,
+    "p99": 941.1,
+    "max": 1099.0,
+    "min": 286.6
+   },
+   "server_ms": {
+    "n": 0,
+    "p50": null,
+    "p95": null,
+    "max": null
+   },
+   "valid_over_3000ms": 0,
+   "share_valid_over_3000ms": 0.0
+  },
+  {
+   "split": "trace-dev",
+   "arm": "jev-1.13",
+   "n_valid": 126,
+   "n_requests": 126,
+   "client_wall_ms": {
+    "p50": 239.3,
+    "p90": 500.5,
+    "p95": 523.2,
+    "p99": 546.7,
+    "max": 546.9,
+    "min": 212.7
+   },
+   "server_ms": {
+    "n": 0,
+    "p50": null,
+    "p95": null,
+    "max": null
+   },
+   "valid_over_3000ms": 0,
+   "share_valid_over_3000ms": 0.0
+  },
+  {
+   "split": "trace-holdout",
+   "arm": "microsoft-decision-1",
+   "n_valid": 252,
+   "n_requests": 252,
+   "client_wall_ms": {
+    "p50": 311.6,
+    "p90": 360.2,
+    "p95": 378.2,
+    "p99": 528.8,
+    "max": 640.1,
+    "min": 284.6
+   },
+   "server_ms": {
+    "n": 0,
+    "p50": null,
+    "p95": null,
+    "max": null
+   },
+   "valid_over_3000ms": 0,
+   "share_valid_over_3000ms": 0.0
+  },
+  {
+   "split": "trace-holdout",
+   "arm": "jev-1.13",
+   "n_valid": 252,
+   "n_requests": 252,
+   "client_wall_ms": {
+    "p50": 239.1,
+    "p90": 286.5,
+    "p95": 325.5,
+    "p99": 526.6,
+    "max": 925.8,
+    "min": 208.4
+   },
+   "server_ms": {
+    "n": 0,
+    "p50": null,
+    "p95": null,
+    "max": null
+   },
+   "valid_over_3000ms": 0,
+   "share_valid_over_3000ms": 0.0
+  }
+ ],
+ "invalid": [],
+ "cost": [
+  {
+   "split": "dev",
+   "arm": "microsoft-decision-1",
+   "requests": 540,
+   "input_tokens": 56784,
+   "computed_usd": 0.002385,
+   "reported_usd": 0.002385,
+   "rows_with_reported_cost": 540
+  },
+  {
+   "split": "dev",
+   "arm": "jev-1.13",
+   "requests": 540,
+   "input_tokens": 204516,
+   "computed_usd": null,
+   "reported_usd": null,
+   "rows_with_reported_cost": 0
+  },
+  {
+   "split": "holdout",
+   "arm": "microsoft-decision-1",
+   "requests": 378,
+   "input_tokens": 62535,
+   "computed_usd": 0.002626,
+   "reported_usd": 0.002626,
+   "rows_with_reported_cost": 378
+  },
+  {
+   "split": "holdout",
+   "arm": "jev-1.13",
+   "requests": 378,
+   "input_tokens": 165684,
+   "computed_usd": null,
+   "reported_usd": null,
+   "rows_with_reported_cost": 0
+  },
+  {
+   "split": "trace-dev",
+   "arm": "microsoft-decision-1",
+   "requests": 126,
+   "input_tokens": 89520,
+   "computed_usd": 0.00376,
+   "reported_usd": 0.00376,
+   "rows_with_reported_cost": 126
+  },
+  {
+   "split": "trace-dev",
+   "arm": "jev-1.13",
+   "requests": 126,
+   "input_tokens": 129546,
+   "computed_usd": null,
+   "reported_usd": null,
+   "rows_with_reported_cost": 0
+  },
+  {
+   "split": "trace-holdout",
+   "arm": "microsoft-decision-1",
+   "requests": 252,
+   "input_tokens": 190815,
+   "computed_usd": 0.008014,
+   "reported_usd": 0.008014,
+   "rows_with_reported_cost": 252
+  },
+  {
+   "split": "trace-holdout",
+   "arm": "jev-1.13",
+   "requests": 252,
+   "input_tokens": 276606,
+   "computed_usd": null,
+   "reported_usd": null,
+   "rows_with_reported_cost": 0
+  }
+ ]
+}

@@ -803,6 +803,82 @@
 \newcommand{\ModelAxisW}{9cm}
 \newcommand{\ModelCells}{42}
 \newcommand{\ModelOutside}{28}
+\newcommand{\MsCostMatches}{yes}
+\newcommand{\MsDevJevCov}{69}
+\newcommand{\MsDevJevK}{85}
+\newcommand{\MsDevJevN}{90}
+\newcommand{\MsDevJevUsd}{15.9}
+\newcommand{\MsDevJevWa}{3}
+\newcommand{\MsDevMsCov}{73}
+\newcommand{\MsDevMsK}{84}
+\newcommand{\MsDevMsN}{90}
+\newcommand{\MsDevMsUsd}{4.4}
+\newcommand{\MsDevMsWa}{5}
+\newcommand{\MsGapHi}{77}
+\newcommand{\MsGapLo}{58}
+\newcommand{\MsGateFailN}{4}
+\newcommand{\MsHoldoutJevCov}{40}
+\newcommand{\MsHoldoutJevK}{55}
+\newcommand{\MsHoldoutJevN}{63}
+\newcommand{\MsHoldoutJevUsd}{18.4}
+\newcommand{\MsHoldoutJevWa}{1}
+\newcommand{\MsHoldoutMsCov}{49}
+\newcommand{\MsHoldoutMsK}{57}
+\newcommand{\MsHoldoutMsN}{63}
+\newcommand{\MsHoldoutMsUsd}{7.0}
+\newcommand{\MsHoldoutMsWa}{5}
+\newcommand{\MsInvalid}{0}
+\newcommand{\MsJevPfiftyHi}{239}
+\newcommand{\MsJevPfiftyLo}{232}
+\newcommand{\MsJevUsdHi}{46.1}
+\newcommand{\MsJevUsdLo}{15.9}
+\newcommand{\MsLabels}{{trace-holdout: Jev 1.13},{trace-holdout: MSD1},{trace-dev: Jev 1.13},{trace-dev: MSD1},{holdout: Jev 1.13},{holdout: MSD1},{dev: Jev 1.13},{dev: MSD1}}
+\newcommand{\MsLunaHoldK}{59}
+\newcommand{\MsLunaHoldUsd}{25.6}
+\newcommand{\MsLunaHoldWa}{1}
+\newcommand{\MsLunaTrHoldK}{30}
+\newcommand{\MsLunaTrHoldUsd}{76.3}
+\newcommand{\MsLunaTrHoldWa}{1}
+\newcommand{\MsNSig}{0}
+\newcommand{\MsNiWa}{0.03}
+\newcommand{\MsOverDeadline}{0}
+\newcommand{\MsPfiftyHi}{316}
+\newcommand{\MsPfiftyLo}{292}
+\newcommand{\MsPninetyfiveHi}{551}
+\newcommand{\MsPninetyfiveLo}{356}
+\newcommand{\MsPriceXHi}{0.69}
+\newcommand{\MsPriceXLo}{0.28}
+\newcommand{\MsRequests}{1{,}296}
+\newcommand{\MsServerN}{0}
+\newcommand{\MsSpend}{0.017}
+\newcommand{\MsSplitsN}{4}
+\newcommand{\MsTicks}{0,1,3,4,6,7,9,10}
+\newcommand{\MsTraceDevJevCov}{14}
+\newcommand{\MsTraceDevJevK}{16}
+\newcommand{\MsTraceDevJevN}{21}
+\newcommand{\MsTraceDevJevUsd}{43.2}
+\newcommand{\MsTraceDevJevWa}{3}
+\newcommand{\MsTraceDevMsCov}{15}
+\newcommand{\MsTraceDevMsK}{16}
+\newcommand{\MsTraceDevMsN}{21}
+\newcommand{\MsTraceDevMsUsd}{29.8}
+\newcommand{\MsTraceDevMsWa}{4}
+\newcommand{\MsTraceDevReadCases}{11}
+\newcommand{\MsTraceDevReads}{11}
+\newcommand{\MsTraceHoldoutJevCov}{15}
+\newcommand{\MsTraceHoldoutJevK}{23}
+\newcommand{\MsTraceHoldoutJevN}{42}
+\newcommand{\MsTraceHoldoutJevUsd}{46.1}
+\newcommand{\MsTraceHoldoutJevWa}{5}
+\newcommand{\MsTraceHoldoutMsCov}{18}
+\newcommand{\MsTraceHoldoutMsK}{25}
+\newcommand{\MsTraceHoldoutMsN}{42}
+\newcommand{\MsTraceHoldoutMsUsd}{31.8}
+\newcommand{\MsTraceHoldoutMsWa}{8}
+\newcommand{\MsTraceHoldoutReadCases}{13}
+\newcommand{\MsTraceHoldoutReads}{10}
+\newcommand{\MsUsdHi}{31.8}
+\newcommand{\MsUsdLo}{4.4}
 \newcommand{\NAAPairs}{56}
 \newcommand{\NAttempts}{329}
 \newcommand{\NDeviations}{10}
@@ -1579,9 +1655,9 @@
 \newcommand{\TkFourHead}{\ITwoHoldBefore\ side-effect errors to \ITwoHoldAfter}
 \newcommand{\TkFourLabel}{preregistered; editable criteria not measured}
 \newcommand{\TkFourTitle}{Guard risky actions with a deterministic rule}
-\newcommand{\TkOneHead}{\JevHoldAccK/\HoldN\ correct at \$\JevHoldCost\ per million decisions}
-\newcommand{\TkOneLabel}{preregistered; challenger post hoc}
-\newcommand{\TkOneTitle}{Jev is the cheapest accurate decision model we tested}
+\newcommand{\TkOneHead}{\JevHoldAccK/\HoldN\ correct at \$\JevHoldCost\ per million decisions; Microsoft-Decision-1 matched its accuracy more cheaply but made more wrong automatic decisions; OpenAI's Decisions API cost more}
+\newcommand{\TkOneLabel}{preregistered; challengers post hoc}
+\newcommand{\TkOneTitle}{Jev gave the best balance of accuracy, safety and cost among the decision models we tested}
 \newcommand{\TkThreeHead}{deciding once about \HThreeOpusArmSaving--\HThreeFableArmSaving\,\% cheaper than per turn (descriptive; Fable 95\,\% interval \HThreeFableArmSaveLo--\HThreeFableArmSaveHi\,\%)}
 \newcommand{\TkThreeLabel}{preregistered criterion; cache expiry exploratory}
 \newcommand{\TkThreeTitle}{Configure model and effort once per session}
@@ -4030,9 +4106,9 @@
  \hypersetup{
   pdftitle={Where a Decision Model Fits in an Agent Harness},
   pdfauthor={Michael J. Jabbour; David Koleczek},
-  pdfsubject={Decision models in AI agent harnesses (arXiv edition of technical report v5.1, October 8, 2026)},
+  pdfsubject={Decision models in AI agent harnesses (arXiv edition of technical report v5.2, October 11, 2026)},
   pdfkeywords={decision models; model routing; prompt caching; reasoning effort; AI agents; preregistration; paired measurement},
-  pdflang={en-US}, pdfdisplaydoctitle=true, pdfcreationdate={D:20261008000000}, pdfmoddate={D:20261008000000},
+  pdflang={en-US}, pdfdisplaydoctitle=true, pdfcreationdate={D:20261011000000}, pdfmoddate={D:20261011000000},
   colorlinks=true, linkcolor=okblue!65!black, urlcolor=okblue!65!black, citecolor=okblue!65!black,
   bookmarksnumbered=true, bookmarksopen=true,
 }
@@ -4068,19 +4144,18 @@
   \vspace{3pt}
   {\normalsize Microsoft, Office of the CTO\par}
   \vspace{3pt}
-  {\normalsize October 8, 2026\par}
+  {\normalsize Version 5.2 \textperiodcentered{} October 11, 2026\par}
 \end{center}
 \vspace{4pt}
 \begin{center}\begin{minipage}{0.93\textwidth}\small
 \noindent\textbf{Abstract.} %
-AI coding agents make many small decisions: which model runs a session, whether a file may be read, whether an action
-is safe. A system-1 decision model answers such typed questions in a fraction of a second. We measured where these
-models fit in an agent harness, using judge benchmarks, paired multi-turn sessions on two host models, Fable and Opus (one study preregistered on
-\SOnePanelN\ fresh scenarios) and \ObDays\ days of production telemetry. Jev is a hosted typed-decision service. We
-report five findings. (1) \TkTitle{One}: \TkHead{One} \TkLabel{One}. (2) \TkTitle{Two}: \TkHead{Two}
+AI coding agents make many small decisions, such as which model runs a session or whether an action is safe. A system-1 decision model answers such typed questions in a fraction of a second. We measured where they
+fit using judge benchmarks, paired multi-turn sessions on two host models, Fable and Opus (one study preregistered on
+\SOnePanelN\ fresh scenarios) and \ObDays\ days of production telemetry. Jev is a hosted typed-decision service.
+(1) \TkTitle{One}: \TkHead{One} \TkLabel{One}. (2) \TkTitle{Two}: \TkHead{Two}
 \TkLabel{Two}. (3) \TkTitle{Three}: \TkHead{Three} \TkLabel{Three}. (4) \TkTitle{Four}: \TkHead{Four}
-\TkLabel{Four}. (5) \TkTitle{Five}: \TkHead{Five} \TkLabel{Five}. A fast decision model therefore belongs where a
-cheap typed judgement changes an expensive or risky action and no simple rule does as well. Session results use one
+\TkLabel{Four}. (5) \TkTitle{Five}: \TkHead{Five} \TkLabel{Five}. Such models belong where a cheap typed judgement
+changes a costly or risky action and no simple rule does as well. Session results use one
 provider's models, scripted tasks and list prices.
  \par\smallskip\noindent\textbf{Keywords:} decision models; model routing; prompt caching; reasoning effort; AI agents;
 preregistration; paired measurement
@@ -4205,7 +4280,7 @@ or \expl. \emph{Terms}: the \emph{main campaign} is the paired study on the scen
 \emph{holdout study (S1)} tested a \emph{frozen configuration} fixed before it ran; its hypotheses are H1--H7. Holm
 correction adjusts $p$ values for testing several hypotheses at once. Appendix figures and tables are numbered by appendix (Figure~B.1, Table~G.1); ``S1'' always means the
 holdout study.
-\section{Choosing the decision model: Jev is the best price--quality choice}\label{sec:choose}
+\section{Choosing the decision model: Jev gives the best balance of accuracy, safety and cost}\label{sec:choose}
 
 \begin{claimbox}
 \TkTitle{One}: no dearer model was shown more accurate in the preregistered test.
@@ -4221,6 +4296,9 @@ holdout study.
     not confirmed ($p$ = \LunaHoldRAccPHolm\ and \SolHoldRAccPHolm) \prereg.
   \item Clef scored \ClHoldClefAcc\ against an in-run Jev's \ClHoldJevAcc\ at \ClClefCostXLow--\ClClefCostXHigh\X\ the cost
     \posthoc; Clef-Flash \ClHoldFlashAcc; the seven local models were less accurate and none met the safety bar.
+  \item Microsoft-Decision-1~\cite{msd1router}, tested post hoc against an in-run Jev, matched Jev's accuracy on all four
+    splits (holdout \MsHoldoutMsK/\MsHoldoutMsN\ vs \MsHoldoutJevK/\MsHoldoutJevN) at \MsPriceXLo--\MsPriceXHi\X\ the price,
+    but made more wrong automatic decisions on every split, so it fails the rule-1 safety gate \posthoc.
   \item No challenger met the preregistered rule for replacing the incumbent (better accuracy or fewer misfires, p95
     within 500\,ms, at most twice the cost) \prereg.
 \end{itemize}
@@ -4230,7 +4308,7 @@ holdout study.
 \pgfplotslegendfromname{v4frontierlegend}\par\smallskip
 \begin{tikzpicture}
 \begin{axis}[benchmark, scale only axis, width=10cm, height=5.6cm, xmode=log, log ticks with fixed point,
-  xmin=8, xmax=3000, ymin=74, ymax=102, xtick={10,30,100,300,1000}, ytick={75,80,85,90,95,100},
+  xmin=4, xmax=3000, ymin=74, ymax=102, xtick={5,10,30,100,300,1000}, ytick={75,80,85,90,95,100},
   xlabel={Cost per million decisions (US dollars, log scale)}, ylabel={Holdout accuracy (\%)},
   xmajorgrids, ymajorgrids, clip=false, 
   legend to name=v4frontierlegend, legend columns=2, legend cell align=left,
@@ -4245,6 +4323,7 @@ holdout study.
 \node[scatterlabel, anchor=west] at ($(axis cs:65.2000,90.4762)+(4.700pt,0.000pt)$) {Clef 57};
 \node[scatterlabel, anchor=west] at ($(axis cs:24.5000,79.3651)+(4.700pt,0.000pt)$) {Clef-Flash 50};
 \node[scatterlabel, anchor=east] at ($(axis cs:25.5600,93.6508)+(-4.700pt,0.000pt)$) {Luna-D 59};
+\node[scatterlabel, anchor=west] at ($(axis cs:6.9500,90.4762)+(4.700pt,0.000pt)$) {MSD1 57};
  \end{axis}
 \end{tikzpicture}
  \caption{Jev is the low-cost point on the accuracy--cost frontier. Holdout accuracy against cost per million
@@ -4271,8 +4350,8 @@ preregistered usefulness rule. Jev took the most correct automatic reads (\TrJev
 \TrJevWaK\ wrong ones. No model was safe enough to act alone there.
 
 \begin{keyidea}[title={For practitioners}]
-Use Jev as the default. It is the cheapest accurate option, and fast enough for interactive use on a clean network
-path. Pay for a dearer judge only where 8--11 points of possible accuracy are worth many times the price. Re-test the
+Use Jev as the default. It is accurate, made few wrong automatic decisions, and is fast enough for interactive use on a
+clean network path. A cheaper judge that acts more often, such as Microsoft-Decision-1, needs a stricter gate first. Pay for a dearer judge only where 8--11 points of possible accuracy are worth many times the price. Re-test the
 Decisions API: it matched or beat Jev on our cases at \OaPriceXLo--\OaPriceXHi\X\ the price. Keep a fallback to the
 host on real read decisions.
 \end{keyidea}
@@ -4532,7 +4611,7 @@ The shipped configuration finds review and explain tasks with a keyword classifi
 
 The five takeaways, in the order of the paper, with their strength:
 \begin{enumerate}[leftmargin=1.6em]
-  \item \textbf{\TkTitle{One}:} \TkHead{One} \TkLabel{One}. Jev is the cheapest accurate judge; the dearer models' accuracy edge was not confirmed, and the Decisions API matched or beat Jev at higher price \posthoc.
+  \item \textbf{\TkTitle{One}:} \TkHead{One} \TkLabel{One}. The dearer models' accuracy edge was not confirmed; Microsoft-Decision-1 was cheaper but failed the safety gate, and the Decisions API was dearer \posthoc.
   \item \textbf{\TkTitle{Two}:} \TkHead{Two} \TkLabel{Two}. A price check that weighs cache reads and writes and the cheaper model's extra requests predicted both directions.
   \item \textbf{\TkTitle{Three}:} \TkHead{Three} \TkLabel{Three}. Switches rewrite the cache \expl; a one-line rule made the start-of-session choice as well as the decision model \prereg.
   \item \textbf{\TkTitle{Four}:} \TkHead{Four} \TkLabel{Four}. Plain-text, editable criteria are promising but untested.
@@ -4552,14 +4631,15 @@ points and our responses are in \StSec{sec:h}.
 \paragraph{Funding} Microsoft funded this work. Model and service calls were paid at list price.
 
 \paragraph{Data and code availability} The public repository
-\url{https://github.com/michaeljabbour/amplifier-bundle-fast-decisions}, at git tag \texttt{report-v5.1}, contains the
+\url{https://github.com/michaeljabbour/amplifier-bundle-fast-decisions}, at git tag \texttt{report-v5.2}, contains the
 full sources of this paper and its \suppword{}, the build scripts (including the arXiv build) that regenerate every number,
 table and figure, the analysis code, and the evidence packages. \StTab{tab:evidence} lists the evidence package IDs.
 
 \paragraph{Competing interests} The authors are Microsoft employees. The evaluated agent harness and its
 fast-decisions bundle are Microsoft software. Jev, GPT-6 Luna, GPT-6.1 Sol, the OpenAI Decisions API, Clef and
 Clef-Flash are third-party services; we used them at list price and have no financial relationship with their
-providers beyond that use.
+providers beyond that use. Microsoft-Decision-1 is a Microsoft model, evaluated post hoc through a third-party
+endpoint at list price; the authors are Microsoft employees.
 
 \paragraph{AI-use disclosure} Amplifier, Microsoft's AI agent system, running on Anthropic Claude models (the Opus 5.5
 and Sonnet 5 families), orchestrated the experiments, wrote the analysis code, generated the figures and drafted the
@@ -6149,6 +6229,105 @@ trace-holdout & Jev 1.13 (in-run reference) & 23/42 & 11.9 & 35.7 & 1.39 & 3.44 
 A native typed-decision endpoint from OpenAI matched or exceeded Jev's accuracy on our cases at \OaPriceXLo--\OaPriceXHi\X\ the price, but automated fewer real reads. Its
 servers answer in tens of milliseconds, but from here each call took seconds. It does not change the session-start
 finding: a one-line rule matched the decision model there.
+\end{keyidea}
+ 
+\subsection{Microsoft-Decision-1 (post hoc)}\label{sec:msd1}
+Microsoft-Decision-1 (MSD1), released on October~9, 2026, is a typed-decision model that returns a probability per
+allowed answer~\cite{msd1router,msd1foundry}. We reached it through OpenRouter's alpha decisions endpoint (one Azure
+provider) and ran it on October~11 with the same method as the Decisions API run (\cref{sec:openai}): all four splits,
+three repetitions in two option orders, the bundle's gate with its 3\,s deadline, the per-case majority over
+repetitions, and an in-run Jev 1.13 reference on the same cases. Everything here is post hoc and exploratory
+(\cref{tab:msd1,tab:msd1con,fig:msd1}).
+\begin{itemize}
+  \item \textbf{Accuracy.} MSD1 was right on \MsDevMsK/\MsDevMsN\ development cases (Jev \MsDevJevK/\MsDevJevN),
+    \MsHoldoutMsK/\MsHoldoutMsN\ holdout cases (Jev \MsHoldoutJevK/\MsHoldoutJevN), \MsTraceDevMsK/\MsTraceDevMsN\
+    trace-dev decisions (Jev \MsTraceDevJevK/\MsTraceDevJevN) and \MsTraceHoldoutMsK/\MsTraceHoldoutMsN\ trace-holdout
+    decisions (Jev \MsTraceHoldoutJevK/\MsTraceHoldoutJevN). No accuracy difference was detected after Holm correction.
+  \item \textbf{Misfires.} MSD1 acted on more decisions than Jev on every split and made more wrong automatic decisions
+    on every split (\MsDevMsWa\ vs \MsDevJevWa, \MsHoldoutMsWa\ vs \MsHoldoutJevWa, \MsTraceDevMsWa\ vs \MsTraceDevJevWa,
+    \MsTraceHoldoutMsWa\ vs \MsTraceHoldoutJevWa). None of these differences was significant on its own, but the
+    preregistered rule-1 gate for replacing Jev requires the upper 95\,\% bound of the wrong-automatic difference to
+    stay below \MsNiWa; it failed on \MsGateFailN\ of \MsSplitsN\ splits. MSD1 therefore cannot replace Jev under the
+    rule.
+  \item \textbf{Real reads.} Under the trace usefulness rule MSD1 was not useful on either trace split, like every judge
+    (\MsTraceHoldoutReads\ correct automatic reads of \MsTraceHoldoutReadCases\ read cases on trace-holdout).
+  \item \textbf{Speed.} The client median was \MsPfiftyLo--\MsPfiftyHi\,ms against Jev's \MsJevPfiftyLo--\MsJevPfiftyHi\,ms in
+    the same run, \MsGapLo--\MsGapHi\,ms slower; p95 \MsPninetyfiveLo--\MsPninetyfiveHi\,ms. OpenRouter reports no server
+    time, so the gap mixes model and routing latency. No answer exceeded the 3\,s deadline (\MsOverDeadline\ of
+    \MsRequests), so the no-deadline view is identical.
+  \item \textbf{Cost and reliability.} \$\MsUsdLo--\MsUsdHi\ per million decisions against Jev's \$\MsJevUsdLo--\MsJevUsdHi\
+    (\MsPriceXLo--\MsPriceXHi\X\ Jev's price); the computed cost matches OpenRouter's reported cost. \MsInvalid\ of
+    \MsRequests\ requests failed; the whole run cost \$\MsSpend.
+  \item \textbf{Three post hoc typed-decision endpoints, side by side (descriptive).} The Decisions API run was
+    separate (October~6), with its own Jev reference, so these are not paired comparisons. On trace-holdout, Luna
+    (Decisions API) was right on \MsLunaTrHoldK/\MsTraceHoldoutMsN\ with \MsLunaTrHoldWa\ wrong automatic decision; MSD1
+    on \MsTraceHoldoutMsK/\MsTraceHoldoutMsN\ with \MsTraceHoldoutMsWa. Luna was more accurate and more cautious; MSD1
+    was the cheapest of the three.
+\end{itemize}
+\begin{figure}[htbp]
+\centering
+\pgfplotslegendfromname{mslegend}\par\smallskip
+\begin{tikzpicture}
+\begin{axis}[benchmark, scale only axis, width=8.5cm, height=5.4cm, xmin=0.3, xmax=1.05, xtick={0.4,0.6,0.8,1},
+  xmajorgrids, ymin=-0.7, ymax=11.0, ytick={\MsTicks}, yticklabels/.expanded={\MsLabels},
+  y tick label style={font=\footnotesize}, xlabel={Accuracy (share of cases decided correctly)},
+  title={MSD1 vs Jev, same run}, title style={font=\small\bfseries},
+  legend to name=mslegend, legend columns=1, legend cell align=left]
+\addplot[only marks, mark=*, mark size=2.4pt, color=okblue, nodes near coords, point meta=explicit symbolic,
+  nodes near coords style={font=\scriptsize, fill=white, fill opacity=0.85, text opacity=1, inner sep=1pt, anchor=south, yshift=2.5pt, text=black!80}, error bars/.cd, x dir=both, x explicit,
+  error bar style={line width=1pt}] table[meta=v, x=r, y=y, x error minus=rm, x error plus=rp]{generated/data/msd1-acc.dat};
+\addlegendentry{accuracy, 95\,\% Wilson interval (post hoc)}
+\end{axis}
+\end{tikzpicture}
+ \caption{Microsoft-Decision-1 matched Jev's accuracy on every split (post hoc). Per-case majority accuracy with 95\,\%
+Wilson intervals against the in-run Jev reference.}
+\label{fig:msd1}
+\howtoread{Each pair of rows is one split. The whiskers overlap on every split: no difference was detected, which is
+not evidence that the judges are equivalent.}
+\end{figure}
+\begin{table}[htbp]\centering\footnotesize\setlength\tabcolsep{4pt}
+\caption{Microsoft-Decision-1 (post hoc) against the in-run Jev reference: correct decisions, wrong automatic decisions,
+decisions acted on, invalid answers, client latency and dollars per million decisions.}\label{tab:msd1}
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}l l r r r r r r S[table-format=2.1]@{}}
+\toprule
+Split & Judge & correct & {wrong auto.} & {acted} & {invalid} & {p50 ms} & {p95 ms} & {\$ / 1M} \\
+\midrule
+dev & Microsoft-Decision-1 & 84/90 & 5 & 73 & 0 & 292 & 392 & 4.4 \\
+dev & Jev 1.13 (in-run reference) & 85/90 & 3 & 69 & 0 & 232 & 284 & 15.9 \\
+\addlinespace[2pt]
+holdout & Microsoft-Decision-1 & 57/63 & 5 & 49 & 0 & 292 & 356 & 7.0 \\
+holdout & Jev 1.13 (in-run reference) & 55/63 & 1 & 40 & 0 & 234 & 347 & 18.4 \\
+\addlinespace[2pt]
+trace-dev & Microsoft-Decision-1 & 16/21 & 4 & 15 & 0 & 316 & 551 & 29.8 \\
+trace-dev & Jev 1.13 (in-run reference) & 16/21 & 3 & 14 & 0 & 239 & 523 & 43.2 \\
+\addlinespace[2pt]
+trace-holdout & Microsoft-Decision-1 & 25/42 & 8 & 18 & 0 & 312 & 378 & 31.8 \\
+trace-holdout & Jev 1.13 (in-run reference) & 23/42 & 5 & 15 & 0 & 239 & 326 & 46.1 \\
+\bottomrule
+\end{tabular*}
+\end{table}
+\begin{table}[htbp]\centering\footnotesize\setlength\tabcolsep{4pt}
+\caption{Paired contrasts, MSD1 minus Jev, on the per-case majority (McNemar exact, Holm over the rule-1 tests of each
+split). Differences are in percentage points.}\label{tab:msd1con}
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}l l r l r r@{}}
+\toprule
+Split & Metric & {difference (points)} & 95\,\% interval & {MSD1 only / Jev only} & {Holm $p$} \\
+\midrule
+dev & accuracy & -1.1 & -6.7 to $+$4.4 & 3/4 & 1.000 \\
+dev & wrong automatic & $+$2.2 & -2.2 to $+$6.7 & 3/1 & 0.625 \\
+holdout & accuracy & $+$3.2 & -4.8 to $+$11.1 & 4/2 & 0.688 \\
+holdout & wrong automatic & $+$6.3 & $+$0.0 to $+$14.3 & 5/1 & 0.219 \\
+trace-dev & accuracy & $+$0.0 & $+$0.0 to $+$0.0 & 0/0 & 1.000 \\
+trace-dev & wrong automatic & $+$4.8 & $+$0.0 to $+$14.3 & 1/0 & 1.000 \\
+trace-holdout & accuracy & $+$4.8 & -7.1 to $+$16.7 & 4/2 & 0.688 \\
+trace-holdout & wrong automatic & $+$7.1 & $+$0.0 to $+$16.7 & 3/0 & 0.250 \\
+\bottomrule
+\end{tabular*}
+\end{table}
+\begin{keyidea}
+Microsoft-Decision-1 matched Jev's accuracy at \MsPriceXLo--\MsPriceXHi\X\ Jev's price per decision, but it acted on more decisions
+and made more wrong automatic ones; the preregistered rule keeps Jev as the default. This is a single post hoc run
+through one provider; we claim nothing about other providers, other prompts or later model versions.
 \end{keyidea}
 \subsection{Results on the dev split \texorpdfstring{\screen}{[screen]}}\label{jb:sec:dev}
 
@@ -10529,6 +10708,7 @@ Evidence package ID & Contents & Status \\
 \texttt{2026-10-v3-offline} & Telemetry analysis, decide-once counterfactual, projection inputs & exploratory \\
 \texttt{2026-10-06-holdout-v3} & Holdout study (S1), \SOneSessions\ sessions & preregistered \\
 \texttt{2026-10-06-openai-decisions} & OpenAI Decisions API against an in-run Jev reference & post hoc \\
+\texttt{2026-10-11-microsoft-decision-1} & Microsoft-Decision-1 (via OpenRouter) against an in-run Jev reference & post hoc \\
 \bottomrule
 \end{tabularx}
 \end{table}

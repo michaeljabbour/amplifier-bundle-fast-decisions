@@ -1,8 +1,8 @@
-arXiv edition of "Where a Decision Model Fits in an Agent Harness" (technical report v5.1, October 8, 2026)
+arXiv edition of "Where a Decision Model Fits in an Agent Harness" (technical report v5.2, October 11, 2026)
 
 Contents of this directory
   arxiv-source.tar.gz              upload this file (flat TeX source: main.tex, main.bbl, plotted data and label files)
-  decision-model-fit-v5-arxiv.pdf  the PDF this source compiles to (130 pages: main text, then appendices A-I)
+  decision-model-fit-v5-arxiv.pdf  the PDF this source compiles to (132 pages: main text, then appendices A-I)
   abstract.txt                     ASCII abstract for the metadata form (no "Abstract" prefix)
   metadata.txt                     title, authors, comments, categories, license
   source/                          the unpacked tarball, for inspection
@@ -27,7 +27,7 @@ Before submitting (decisions for the lead; not changed by the build)
   - Endorsement: the submitting account needs cs.SE endorsement (institutional email or an endorser).
   - Authorship: the two review PDFs list Amplifier as an author; arXiv forbids AI authors, so this edition lists
     only Michael J. Jabbour and David Koleczek and discloses Amplifier's role in the AI-use statement.
-  - Data and code: the statement cites git tag report-v5.1; create and push that tag before submitting.
+  - Data and code: the statement cites git tag report-v5.2; create and push that tag before submitting.
 
 Notes
   - Figures are pgfplots drawn at compile time from the shipped data files; there are no image files.

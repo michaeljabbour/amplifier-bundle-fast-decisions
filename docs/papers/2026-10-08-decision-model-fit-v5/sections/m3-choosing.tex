@@ -1,4 +1,4 @@
-\section{Choosing the decision model: Jev is the best price--quality choice}\label{sec:choose}
+\section{Choosing the decision model: Jev gives the best balance of accuracy, safety and cost}\label{sec:choose}
 
 \begin{claimbox}
 \TkTitle{One}: no dearer model was shown more accurate in the preregistered test.
@@ -14,6 +14,9 @@
     not confirmed ($p$ = \LunaHoldRAccPHolm\ and \SolHoldRAccPHolm) \prereg.
   \item Clef scored \ClHoldClefAcc\ against an in-run Jev's \ClHoldJevAcc\ at \ClClefCostXLow--\ClClefCostXHigh\X\ the cost
     \posthoc; Clef-Flash \ClHoldFlashAcc; the seven local models were less accurate and none met the safety bar.
+  \item Microsoft-Decision-1~\cite{msd1router}, tested post hoc against an in-run Jev, matched Jev's accuracy on all four
+    splits (holdout \MsHoldoutMsK/\MsHoldoutMsN\ vs \MsHoldoutJevK/\MsHoldoutJevN) at \MsPriceXLo--\MsPriceXHi\X\ the price,
+    but made more wrong automatic decisions on every split, so it fails the rule-1 safety gate \posthoc.
   \item No challenger met the preregistered rule for replacing the incumbent (better accuracy or fewer misfires, p95
     within 500\,ms, at most twice the cost) \prereg.
 \end{itemize}
@@ -46,8 +49,8 @@ preregistered usefulness rule. Jev took the most correct automatic reads (\TrJev
 \TrJevWaK\ wrong ones. No model was safe enough to act alone there.
 
 \begin{keyidea}[title={For practitioners}]
-Use Jev as the default. It is the cheapest accurate option, and fast enough for interactive use on a clean network
-path. Pay for a dearer judge only where 8--11 points of possible accuracy are worth many times the price. Re-test the
+Use Jev as the default. It is accurate, made few wrong automatic decisions, and is fast enough for interactive use on a
+clean network path. A cheaper judge that acts more often, such as Microsoft-Decision-1, needs a stricter gate first. Pay for a dearer judge only where 8--11 points of possible accuracy are worth many times the price. Re-test the
 Decisions API: it matched or beat Jev on our cases at \OaPriceXLo--\OaPriceXHi\X\ the price. Keep a fallback to the
 host on real read decisions.
 \end{keyidea}

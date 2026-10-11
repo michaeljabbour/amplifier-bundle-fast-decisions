@@ -1,0 +1,14 @@
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}l l r l r r@{}}
+\toprule
+Split & Metric & {difference (points)} & 95\,\% interval & {MSD1 only / Jev only} & {Holm $p$} \\
+\midrule
+dev & accuracy & -1.1 & -6.7 to $+$4.4 & 3/4 & 1.000 \\
+dev & wrong automatic & $+$2.2 & -2.2 to $+$6.7 & 3/1 & 0.625 \\
+holdout & accuracy & $+$3.2 & -4.8 to $+$11.1 & 4/2 & 0.688 \\
+holdout & wrong automatic & $+$6.3 & $+$0.0 to $+$14.3 & 5/1 & 0.219 \\
+trace-dev & accuracy & $+$0.0 & $+$0.0 to $+$0.0 & 0/0 & 1.000 \\
+trace-dev & wrong automatic & $+$4.8 & $+$0.0 to $+$14.3 & 1/0 & 1.000 \\
+trace-holdout & accuracy & $+$4.8 & -7.1 to $+$16.7 & 4/2 & 0.688 \\
+trace-holdout & wrong automatic & $+$7.1 & $+$0.0 to $+$16.7 & 3/0 & 0.250 \\
+\bottomrule
+\end{tabular*}

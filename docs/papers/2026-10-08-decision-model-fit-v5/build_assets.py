@@ -2938,6 +2938,155 @@ elif FINAL:
 write(OUT / "openai-section.tex", oai_tex)
 
 
+# ================================================================ v5.2: Microsoft-Decision-1 via OpenRouter (post hoc)
+MSD1 = REPO / "docs" / "evidence" / "2026-10-11-microsoft-decision-1"
+msd_tex = ""
+if (MSD1 / "summary.json").exists():
+    mj = json.loads((MSD1 / "summary.json").read_text())
+    MRW = {(r["split"], r["arm"]): r for r in mj["rows"]}
+    MSP = ["dev", "holdout", "trace-dev", "trace-holdout"]
+    MS, MJ = "microsoft-decision-1", "jev-1.13"
+    assert all((s_, a_) in MRW for s_ in MSP for a_ in (MS, MJ)), "MSD1 summary.json lacks expected rows"
+    _ni = re.search(r"NI_WRONG_AUTO\s*=\s*([\d.]+)", (REPO / "evals/judge_bench/decisions.py").read_text())
+    NI_WA = float(_ni.group(1))
+    M("MsNiWa", f"{NI_WA:.2f}")
+    mtrows, mfrows = [], []
+    for i, s_ in enumerate(MSP):
+        for j, a_ in enumerate((MS, MJ)):
+            r = MRW[(s_, a_)]
+            k = round(r["accuracy"] * r["n"]); w = round(r["wrong_automatic"] * r["n"]); c = round(r["coverage"] * r["n"])
+            K = "".join(x.capitalize() for x in s_.split("-")) + ("Ms" if a_ == MS else "Jev")
+            M(f"Ms{K}K", k); M(f"Ms{K}N", r["n"]); M(f"Ms{K}Wa", w); M(f"Ms{K}Cov", c)
+            M(f"Ms{K}Usd", hu(r["usd_per_1m"], 1))
+            inv = len([x for x in mj["invalid"] if x.get("arm") == a_ and x.get("split") == s_])
+            mtrows.append(f"{s_} & {'Microsoft-Decision-1' if a_ == MS else 'Jev 1.13 (in-run reference)'} & {k}/{r['n']} & "
+                          f"{w} & {c} & {inv} & {r['p50_ms']:.0f} & {r['p95_ms']:.0f} & {r['usd_per_1m']:.1f} \\\\")
+            lo, hi = _wil(k, r["n"])
+            y = (len(MSP) - 1 - i) * 3 + (1 - j)
+            mfrows.append([y, "{" + f"{s_}: {'MSD1' if a_ == MS else 'Jev 1.13'}" + "}", f"{k / r['n']:.4f}",
+                           f"{k / r['n'] - lo:.4f}", f"{hi - k / r['n']:.4f}", f"{k / r['n']:.3f}"])
+        if i < len(MSP) - 1:
+            mtrows.append(r"\addlinespace[2pt]")
+    write(TABLES / "msd1.tex", table("l l r r r r r r S[table-format=2.1]", [
+        r"Split & Judge & correct & {wrong auto.} & {acted} & {invalid} & {p50 ms} & {p95 ms} & {\$ / 1M} \\"], mtrows))
+    mfrows.sort(key=lambda r: r[0])
+    dat("msd1-acc.dat", ["y", "label", "r", "rm", "rp", "v"], mfrows)
+    M("MsTicks", ",".join(str(r[0]) for r in mfrows))
+    M("MsLabels", ",".join(r[1] for r in mfrows))
+    mcons = {(c["split"], c["metric"]): c for c in mj["contrasts"]}
+    crow = []
+    for s_ in MSP:
+        for met in ("accuracy", "wrong automatic"):
+            c = mcons[(s_, met)]
+            crow.append(f"{s_} & {met} & {100 * c['diff']:+.1f} & {100 * c['diff_ci95'][0]:+.1f} to {100 * c['diff_ci95'][1]:+.1f} & "
+                        f"{c['a_only']}/{c['b_only']} & {c['p_holm']:.3f} \\\\".replace("+", "$+$").replace("-", "$-$", 0))
+    write(TABLES / "msd1-contrasts.tex", table("l l r l r r", [
+        r"Split & Metric & {difference (points)} & 95\,\% interval & {MSD1 only / Jev only} & {Holm $p$} \\"], crow))
+    M("MsNSig", len([c for c in mj["contrasts"] if c["p_holm"] < 0.05]))
+    assert all(mcons[(s_, m_)]["p_holm"] >= 0.05 for s_ in MSP for m_ in ("accuracy", "wrong automatic")), "text says nothing significant"
+    assert all(MRW[(s_, MS)]["wrong_automatic"] > MRW[(s_, MJ)]["wrong_automatic"] for s_ in MSP), "text says more wrong automatic on every split"
+    assert all(MRW[(s_, MS)]["coverage"] > MRW[(s_, MJ)]["coverage"] for s_ in MSP), "text says higher coverage on every split"
+    gate_fail = [s_ for s_ in MSP if mcons[(s_, "wrong automatic")]["diff_ci95"][1] >= NI_WA]
+    M("MsGateFailN", len(gate_fail)); M("MsSplitsN", len(MSP))
+    assert len(gate_fail) == len(MSP), "text says the wrong-automatic gate fails on every split"
+    mlat = {(l["split"], l["arm"]): l for l in mj["latency"]}
+    m50 = [mlat[(s_, MS)]["client_wall_ms"]["p50"] for s_ in MSP]; j50 = [mlat[(s_, MJ)]["client_wall_ms"]["p50"] for s_ in MSP]
+    m95 = [mlat[(s_, MS)]["client_wall_ms"]["p95"] for s_ in MSP]
+    gap = [a_ - b_ for a_, b_ in zip(m50, j50)]
+    M("MsPfiftyLo", f"{min(m50):.0f}"); M("MsPfiftyHi", f"{max(m50):.0f}")
+    M("MsPninetyfiveLo", f"{min(m95):.0f}"); M("MsPninetyfiveHi", f"{max(m95):.0f}")
+    M("MsJevPfiftyLo", f"{min(j50):.0f}"); M("MsJevPfiftyHi", f"{max(j50):.0f}")
+    M("MsGapLo", f"{min(gap):.0f}"); M("MsGapHi", f"{max(gap):.0f}")
+    M("MsServerN", sum(mlat[(s_, MS)]["server_ms"]["n"] for s_ in MSP))
+    M("MsOverDeadline", sum(mlat[(s_, MS)]["valid_over_3000ms"] for s_ in MSP))
+    M("MsRequests", thousands(sum(mlat[(s_, MS)]["n_requests"] for s_ in MSP)))
+    M("MsInvalid", len([x for x in mj["invalid"] if x.get("arm") == MS]))
+    usdM = [MRW[(s_, MS)]["usd_per_1m"] for s_ in MSP]; usdJ_ = [MRW[(s_, MJ)]["usd_per_1m"] for s_ in MSP]
+    M("MsUsdLo", hu(min(usdM), 1)); M("MsUsdHi", hu(max(usdM), 1))
+    M("MsJevUsdLo", hu(min(usdJ_), 1)); M("MsJevUsdHi", hu(max(usdJ_), 1))
+    _rat = [m_ / j_ for m_, j_ in zip(usdM, usdJ_)]
+    M("MsPriceXLo", hu(min(_rat), 2)); M("MsPriceXHi", hu(max(_rat), 2))
+    mcost = [c for c in mj["cost"] if c["arm"] == MS]
+    M("MsSpend", f"{sum(c['computed_usd'] for c in mcost):.3f}")
+    M("MsCostMatches", "yes" if all(c["reported_usd"] is not None and abs(c["computed_usd"] - c["reported_usd"]) < 1e-6 for c in mcost) else "no")
+    assert all(c["reported_usd"] is not None and abs(c["computed_usd"] - c["reported_usd"]) < 1e-6 for c in mcost)
+    museful = []
+    for s_ in ("trace-dev", "trace-holdout"):
+        r2 = json.loads((MSD1 / s_ / "rule2.json").read_text())
+        museful.append(r2[MS]["useful"])
+        K = "".join(x.capitalize() for x in s_.split("-"))
+        M(f"Ms{K}Reads", r2[MS]["correct_automatic_reads"]); M(f"Ms{K}ReadCases", r2[MS]["read_cases"])
+    assert not any(museful), "text says MSD1 is not useful under rule 2"
+    # descriptive three-way comparison on trace-holdout with Luna-Decisions (separate run, 2026-10-06)
+    _lu = ORW[("trace-holdout", "luna-decisions")]
+    M("MsLunaTrHoldK", round(_lu["accuracy"] * _lu["n"])); M("MsLunaTrHoldWa", round(_lu["wrong_automatic"] * _lu["n"]))
+    M("MsLunaTrHoldUsd", hu(_lu["usd_per_1m"], 1))
+    _lh = ORW[("holdout", "luna-decisions")]
+    M("MsLunaHoldK", round(_lh["accuracy"] * _lh["n"])); M("MsLunaHoldWa", round(_lh["wrong_automatic"] * _lh["n"]))
+    M("MsLunaHoldUsd", hu(_lh["usd_per_1m"], 1))
+    _rd = (MSD1 / "README.md").read_text()
+    msd_tex = r"""\subsection{Microsoft-Decision-1 (post hoc)}\label{sec:msd1}
+Microsoft-Decision-1 (MSD1), released on October~9, 2026, is a typed-decision model that returns a probability per
+allowed answer~\cite{msd1router,msd1foundry}. We reached it through OpenRouter's alpha decisions endpoint (one Azure
+provider) and ran it on October~11 with the same method as the Decisions API run (\cref{sec:openai}): all four splits,
+three repetitions in two option orders, the bundle's gate with its 3\,s deadline, the per-case majority over
+repetitions, and an in-run Jev 1.13 reference on the same cases. Everything here is post hoc and exploratory
+(\cref{tab:msd1,tab:msd1con,fig:msd1}).
+\begin{itemize}
+  \item \textbf{Accuracy.} MSD1 was right on \MsDevMsK/\MsDevMsN\ development cases (Jev \MsDevJevK/\MsDevJevN),
+    \MsHoldoutMsK/\MsHoldoutMsN\ holdout cases (Jev \MsHoldoutJevK/\MsHoldoutJevN), \MsTraceDevMsK/\MsTraceDevMsN\
+    trace-dev decisions (Jev \MsTraceDevJevK/\MsTraceDevJevN) and \MsTraceHoldoutMsK/\MsTraceHoldoutMsN\ trace-holdout
+    decisions (Jev \MsTraceHoldoutJevK/\MsTraceHoldoutJevN). No accuracy difference was detected after Holm correction.
+  \item \textbf{Misfires.} MSD1 acted on more decisions than Jev on every split and made more wrong automatic decisions
+    on every split (\MsDevMsWa\ vs \MsDevJevWa, \MsHoldoutMsWa\ vs \MsHoldoutJevWa, \MsTraceDevMsWa\ vs \MsTraceDevJevWa,
+    \MsTraceHoldoutMsWa\ vs \MsTraceHoldoutJevWa). None of these differences was significant on its own, but the
+    preregistered rule-1 gate for replacing Jev requires the upper 95\,\% bound of the wrong-automatic difference to
+    stay below \MsNiWa; it failed on \MsGateFailN\ of \MsSplitsN\ splits. MSD1 therefore cannot replace Jev under the
+    rule.
+  \item \textbf{Real reads.} Under the trace usefulness rule MSD1 was not useful on either trace split, like every judge
+    (\MsTraceHoldoutReads\ correct automatic reads of \MsTraceHoldoutReadCases\ read cases on trace-holdout).
+  \item \textbf{Speed.} The client median was \MsPfiftyLo--\MsPfiftyHi\,ms against Jev's \MsJevPfiftyLo--\MsJevPfiftyHi\,ms in
+    the same run, \MsGapLo--\MsGapHi\,ms slower; p95 \MsPninetyfiveLo--\MsPninetyfiveHi\,ms. OpenRouter reports no server
+    time, so the gap mixes model and routing latency. No answer exceeded the 3\,s deadline (\MsOverDeadline\ of
+    \MsRequests), so the no-deadline view is identical.
+  \item \textbf{Cost and reliability.} \$\MsUsdLo--\MsUsdHi\ per million decisions against Jev's \$\MsJevUsdLo--\MsJevUsdHi\
+    (\MsPriceXLo--\MsPriceXHi\X\ Jev's price); the computed cost matches OpenRouter's reported cost. \MsInvalid\ of
+    \MsRequests\ requests failed; the whole run cost \$\MsSpend.
+  \item \textbf{Three post hoc typed-decision endpoints, side by side (descriptive).} The Decisions API run was
+    separate (October~6), with its own Jev reference, so these are not paired comparisons. On trace-holdout, Luna
+    (Decisions API) was right on \MsLunaTrHoldK/\MsTraceHoldoutMsN\ with \MsLunaTrHoldWa\ wrong automatic decision; MSD1
+    on \MsTraceHoldoutMsK/\MsTraceHoldoutMsN\ with \MsTraceHoldoutMsWa. Luna was more accurate and more cautious; MSD1
+    was the cheapest of the three.
+\end{itemize}
+\begin{figure}[htbp]
+\centering
+\pgfplotslegendfromname{mslegend}\par\smallskip
+\input{figures/fig-msd1.tex}
+\caption{Microsoft-Decision-1 matched Jev's accuracy on every split (post hoc). Per-case majority accuracy with 95\,\%
+Wilson intervals against the in-run Jev reference.}
+\label{fig:msd1}
+\howtoread{Each pair of rows is one split. The whiskers overlap on every split: no difference was detected, which is
+not evidence that the judges are equivalent.}
+\end{figure}
+\begin{table}[htbp]\centering\footnotesize\setlength\tabcolsep{4pt}
+\caption{Microsoft-Decision-1 (post hoc) against the in-run Jev reference: correct decisions, wrong automatic decisions,
+decisions acted on, invalid answers, client latency and dollars per million decisions.}\label{tab:msd1}
+\input{generated/tables/msd1.tex}\end{table}
+\begin{table}[htbp]\centering\footnotesize\setlength\tabcolsep{4pt}
+\caption{Paired contrasts, MSD1 minus Jev, on the per-case majority (McNemar exact, Holm over the rule-1 tests of each
+split). Differences are in percentage points.}\label{tab:msd1con}
+\input{generated/tables/msd1-contrasts.tex}\end{table}
+\begin{keyidea}
+Microsoft-Decision-1 matched Jev's accuracy at \MsPriceXLo--\MsPriceXHi\X\ Jev's price per decision, but it acted on more decisions
+and made more wrong automatic ones; the preregistered rule keeps Jev as the default. This is a single post hoc run
+through one provider; we claim nothing about other providers, other prompts or later model versions.
+\end{keyidea}
+"""
+elif FINAL:
+    raise SystemExit(f"build_assets.py: FINAL=1 but the Microsoft-Decision-1 evidence is missing ({MSD1}/summary.json)")
+write(OUT / "msd1-section.tex", msd_tex)
+
+
 # ================================================================ v4: takeaway-organised paper (main + supplement)
 _jbn = dict(re.findall(r"\\newcommand\{\\(\w+)\}\{([^}]*)\}", (OUT / "jb" / "numbers.tex").read_text()))
 # --- T2: per-request cost under the price gate's reference request mix (DERIVED from list prices x replay mix)
@@ -2993,13 +3142,15 @@ _fr = [("jev", "Jev 1.13", float(_jbn["JevHoldCost"]), int(_jbn["JevHoldAccK"]),
        ("clef", "Clef", float(MACROS["ClHoldClefCost"]), int(MACROS["ClHoldClefAcc"]), "post"),
        ("flash", "Clef-Flash", float(MACROS["ClHoldFlashCost"]), int(MACROS["ClHoldFlashAcc"]), "post"),
        ("lunad", "Luna, Decisions API", _orw[("holdout", "luna-decisions")]["usd_per_1m"],
-        round(_orw[("holdout", "luna-decisions")]["accuracy"] * _orw[("holdout", "luna-decisions")]["n"]), "post")]
+        round(_orw[("holdout", "luna-decisions")]["accuracy"] * _orw[("holdout", "luna-decisions")]["n"]), "post"),
+       ("msd1", "Microsoft-Decision-1", MRW[("holdout", MS)]["usd_per_1m"],
+        round(MRW[("holdout", MS)]["accuracy"] * MRW[("holdout", MS)]["n"]), "post")]
 _hn = int(_jbn["HoldN"])
 dat("v4-frontier-pre.dat", ["x", "y", "k"], [[f"{c:.2f}", f"{100 * a / _hn:.2f}", k] for k, _, c, a, s in _fr if s == "pre"])
 dat("v4-frontier-post.dat", ["x", "y", "k"], [[f"{c:.2f}", f"{100 * a / _hn:.2f}", k] for k, _, c, a, s in _fr if s == "post"])
 LP.configure(OUT, DATA, 10.0, 5.6)
-_short = {"jev": "Jev", "luna": "Luna", "sol": "Sol", "clef": "Clef", "flash": "Clef-Flash", "lunad": "Luna-D"}
-LP.place_labels("v4-frontier", [(k, f"{_short[k]} {a}", c, 100 * a / _hn) for k, lab, c, a, s in _fr], (8, 3000), (74, 102), xlog=True)
+_short = {"jev": "Jev", "luna": "Luna", "sol": "Sol", "clef": "Clef", "flash": "Clef-Flash", "lunad": "Luna-D", "msd1": "MSD1"}
+LP.place_labels("v4-frontier", [(k, f"{_short[k]} {a}", c, 100 * a / _hn) for k, lab, c, a, s in _fr], (4, 3000), (74, 102), xlog=True)
 
 # --- F3: cache writes after an effort change vs never switching, by position in the session (A0 re-analysis of main-v1)
 _bp = A0["effort_cache"]["by_position"]
@@ -3080,8 +3231,9 @@ M("ExRowsN", len(_cua_rows))
 
 # ================================================================ v5: one source for the five takeaways (abstracts, lists, tables)
 TAKEAWAYS = [  # key, title, headline (TeX, built from macros), strength label, main section label, supplement section label
-    ("One", r"Jev is the cheapest accurate decision model we tested",
-     r"\JevHoldAccK/\HoldN\ correct at \$\JevHoldCost\ per million decisions", r"preregistered; challenger post hoc", "sec:choose", "sec:b"),
+    ("One", r"Jev gave the best balance of accuracy, safety and cost among the decision models we tested",
+     r"\JevHoldAccK/\HoldN\ correct at \$\JevHoldCost\ per million decisions; Microsoft-Decision-1 matched its accuracy "
+     r"more cheaply but made more wrong automatic decisions; OpenAI's Decisions API cost more", r"preregistered; challengers post hoc", "sec:choose", "sec:b"),
     ("Two", r"Route to a cheaper model only when the host is much dearer once caching is counted",
      r"\SHOneRatio\X\ the plain host on Fable (shipped configuration about \KpProxyTwo\X, replayed), \SHFiveRatio\X\ on Opus", r"preregistered, replicated", "sec:routing", "sec:c,sec:g"),
     ("Three", r"Configure model and effort once per session",

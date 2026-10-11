@@ -2,7 +2,7 @@
 
 The five takeaways, in the order of the paper, with their strength:
 \begin{enumerate}[leftmargin=1.6em]
-  \item \textbf{\TkTitle{One}:} \TkHead{One} \TkLabel{One}. Jev is the cheapest accurate judge; the dearer models' accuracy edge was not confirmed, and the Decisions API matched or beat Jev at higher price \posthoc.
+  \item \textbf{\TkTitle{One}:} \TkHead{One} \TkLabel{One}. The dearer models' accuracy edge was not confirmed; Microsoft-Decision-1 was cheaper but failed the safety gate, and the Decisions API was dearer \posthoc.
   \item \textbf{\TkTitle{Two}:} \TkHead{Two} \TkLabel{Two}. A price check that weighs cache reads and writes and the cheaper model's extra requests predicted both directions.
   \item \textbf{\TkTitle{Three}:} \TkHead{Three} \TkLabel{Three}. Switches rewrite the cache \expl; a one-line rule made the start-of-session choice as well as the decision model \prereg.
   \item \textbf{\TkTitle{Four}:} \TkHead{Four} \TkLabel{Four}. Plain-text, editable criteria are promising but untested.

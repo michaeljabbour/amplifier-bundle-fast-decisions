@@ -7,7 +7,7 @@ MAIN := decision-model-fit-v5
 SUPP := decision-model-fit-v5-supplement
 EVIDENCE := ../../evidence/2026-10-02-paired-campaign ../../evidence/2026-10-05-effort-control ../../evidence/2026-10-06-effort-control-fable \
 	../../evidence/2026-10-v3-offline ../../evidence/2026-10-05-defaults-replay ../../evidence/2026-10-06-holdout-v3 \
-	../../evidence/2026-10-06-openai-decisions
+	../../evidence/2026-10-06-openai-decisions ../../evidence/2026-10-11-microsoft-decision-1
 FINAL ?= 0
 ifeq ($(FINAL),1)
 .PHONY: generated/numbers.tex
