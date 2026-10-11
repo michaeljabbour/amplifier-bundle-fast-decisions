@@ -164,15 +164,16 @@ def check_holdout_guard(root: Path = ROOT, holdout_dir: Path | None = None, spli
     return actual
 
 
-def check_posthoc_config(root: Path, cfg: dict) -> list[str]:
-    """Names of the arms in `cfg` that the committed (HEAD) judges.yaml does not have. Raises GuardError
+def check_posthoc_config(root: Path, cfg: dict, base: str = "HEAD") -> list[str]:
+    """Names of the arms in `cfg` that the judges.yaml at `base` (default HEAD; `--posthoc-base` names another
+    ref, e.g. origin/main once the arm is committed on a branch) does not have. Raises GuardError
     unless the working judges.yaml is the committed one plus new arms and contrasts: schema, defaults
     (reps, policies, primary policy, timeout), budget, every existing arm spec and every existing contrast
     must be unchanged."""
     import yaml
-    done = _git(root, "show", "HEAD:evals/judges.yaml")
+    done = _git(root, "show", f"{base}:evals/judges.yaml")
     if done.returncode != 0:
-        raise GuardError("posthoc guard: cannot read evals/judges.yaml at HEAD")
+        raise GuardError(f"posthoc guard: cannot read evals/judges.yaml at {base}")
     old = yaml.safe_load(done.stdout)
 
     def bare(spec):
@@ -524,6 +525,8 @@ def main(argv=None) -> int:
     parser.add_argument("--concurrency", type=int, default=1, help="in-flight requests per arm (latency tests)")
     parser.add_argument("--replay", type=Path, help="recompute summary.json from a requests.jsonl, offline")
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--posthoc-base", default="HEAD", help="git ref whose judges.yaml defines which arms are "
+                        "preregistered (default HEAD; use origin/main when the new arm is already committed)")
     parser.add_argument("--posthoc-arms", action="store_true",
                         help="run arms added after the preregistration on the frozen holdout / trace-holdout cases; "
                              "run.json records posthoc: true and the summary is labeled post-hoc")
@@ -559,7 +562,7 @@ def main(argv=None) -> int:
         if args.split in PREREGISTERED_SPLITS:
             prereg_sha = check_holdout_guard(split=args.split, posthoc=args.posthoc_arms)
             if args.posthoc_arms:
-                new = check_posthoc_config(ROOT, cfg)
+                new = check_posthoc_config(ROOT, cfg, args.posthoc_base)
                 added = [a for a in args.arms if a in new]
                 if not added:
                     raise GuardError("posthoc guard: none of --arms is new relative to the committed judges.yaml")
